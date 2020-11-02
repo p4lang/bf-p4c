@@ -141,6 +141,19 @@ class AlignmentConstraint : IntegerConstraint {
     }
 };
 
+class ContainerSizeConstraint : IntegerConstraint {
+ public:
+    enum ContainerSizeReason {
+        NONE = 0,
+        PRAGMA = 1
+    };
+
+    ~ContainerSizeConstraint() {}
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(unsigned source, unsigned v) { reason = source; value = v; }
+    unsigned getContainerSize() const { return value; }
+};
+
 class GroupConstraint {
  protected:
     unsigned reason = 0;

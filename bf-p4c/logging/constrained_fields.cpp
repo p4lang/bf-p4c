@@ -16,6 +16,10 @@ void ConstrainedSlice::setAlignment(const Constraints::AlignmentConstraint &alig
     ConstrainedSlice::alignment = alignment;
 }
 
+void ConstrainedSlice::setContainerSize(const Constraints::ContainerSizeConstraint &containerSize) {
+    ConstrainedSlice::containerSize = containerSize;
+}
+
 bool ConstrainedSlice::operator<(const ConstrainedSlice &other) const {
     if (parent.getName() != other.parent.getName())
         return parent.getName() < other.parent.getName();
@@ -32,7 +36,7 @@ ConstrainedField::ConstrainedField(const cstring &name) : name(name) {
     logger = new Constraint(nullptr);
 }
 
-void ConstrainedField::addSlice(ConstrainedSlice &slice) {
+void ConstrainedField::addSlice(const ConstrainedSlice &slice) {
     slices.insert(slice);
 }
 
@@ -46,6 +50,10 @@ void ConstrainedField::setAlignment(const Constraints::AlignmentConstraint &alig
 
 void ConstrainedField::setDigest(const Constraints::DigestConstraint &digest) {
     ConstrainedField::digest = digest;
+}
+
+void ConstrainedField::setContainerSize(const Constraints::ContainerSizeConstraint &containerSize) {
+    ConstrainedField::containerSize = containerSize;
 }
 
 void ConstrainedField::setBottomBits(bool b) {

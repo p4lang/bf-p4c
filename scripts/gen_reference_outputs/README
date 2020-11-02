@@ -33,3 +33,8 @@ This README serves for sample programs for P4I. It lists various edge cases usef
         - arista_lb_v4v6 (ingress::Millstone.Guion.Wilmore)
  * No Split
     * tofino2_switch_16_32q (ingress::smac_src_move)
+ * Container Size
+    * Constraint is applied to whole field:
+        - tofino2_switch_16_32q (ingress::ig_md.egress_port_lag_index)
+    * Constraint is applied to slices:
+        - tofino2_switch_16_32q (ingress::hdr.ethernet.dst_addr)

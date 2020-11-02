@@ -57,6 +57,9 @@ struct CollectPhvLoggingInfo : public MauInspector {
     /// Superclusters used to extract certain group constraints (MAU groups, equivalent alignment)
     const std::list<PHV::SuperCluster*> *superclusters;
 
+    /// Pointer to pragma object computed during PHV Analysis
+    const PragmaContainerSize *paContainerSize;
+
     /// Extracted no pack (different container) constraints
     ordered_map<cstring, ordered_map<cstring, bool>> noPackConstraints;
 
@@ -135,7 +138,8 @@ class PhvLogging : public MauInspector {
         SolitaryExceptSameDigest,
         DifferentContainer,
         MAUGroup,
-        NoSplit
+        NoSplit,
+        ContainerSize
     };
 
  private:
@@ -260,6 +264,8 @@ class PhvLogging : public MauInspector {
     void logMauGroupConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     void logNoSplitConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logContainerSizeConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.

@@ -659,6 +659,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/constrained_fields.h
+  logging/container_size_extractor.h
   logging/filelog.h
   logging/logging.h
   logging/manifest.h
@@ -670,6 +671,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_SRCS
   logging/constrained_fields.cpp
+  logging/container_size_extractor.cpp
   logging/filelog.cpp
   logging/manifest.cpp
   logging/mau_group_extractor.cpp
@@ -1216,6 +1218,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/clot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/constrained_field_map_builder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_size_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp

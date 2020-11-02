@@ -39,6 +39,7 @@ class ConstrainedSlice : public LoggableEntity, public LiftCompare<ConstrainedSl
     le_bitrange range;
 
     Constraints::AlignmentConstraint alignment;
+    Constraints::ContainerSizeConstraint containerSize;
 
  public:
     ConstrainedSlice(const ConstrainedField &parent, le_bitrange range);
@@ -49,6 +50,9 @@ class ConstrainedSlice : public LoggableEntity, public LiftCompare<ConstrainedSl
     /// Constraints
     void setAlignment(const Constraints::AlignmentConstraint &alignment);
     const Constraints::AlignmentConstraint &getAlignment() const  { return alignment; }
+
+    void setContainerSize(const Constraints::ContainerSizeConstraint &containerSize);
+    const Constraints::ContainerSizeConstraint getContainerSize() const { return containerSize; }
 
     /// Comparators implementation for LiftCompare
     bool operator<(const ConstrainedSlice &other) const override;
@@ -67,6 +71,8 @@ class ConstrainedField : public LoggableEntity {
     Constraints::SolitaryConstraint solitary;
     Constraints::AlignmentConstraint alignment;
     Constraints::DigestConstraint digest;
+    Constraints::ContainerSizeConstraint containerSize;
+
 
     bool deparsedBottomBits = false;
     bool noSplit = false;
@@ -77,7 +83,7 @@ class ConstrainedField : public LoggableEntity {
 
     const cstring &getName() const                                        { return name; }
 
-    void addSlice(ConstrainedSlice &slice);
+    void addSlice(const ConstrainedSlice &slice);
     ordered_set<ConstrainedSlice> &getSlices()                            { return slices; }
     const ordered_set<ConstrainedSlice> &getSlices() const                { return slices; }
 
@@ -90,6 +96,9 @@ class ConstrainedField : public LoggableEntity {
 
     void setDigest(const Constraints::DigestConstraint &digest);
     const Constraints::DigestConstraint &getDigest() const                { return digest; }
+
+    void setContainerSize(const Constraints::ContainerSizeConstraint &containerSize);
+    const Constraints::ContainerSizeConstraint getContainerSize() const { return containerSize; }
 
     void setBottomBits(bool b);
     bool hasBottomBits() const                                       { return deparsedBottomBits; }

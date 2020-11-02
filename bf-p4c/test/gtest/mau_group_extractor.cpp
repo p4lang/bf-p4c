@@ -104,8 +104,8 @@ TEST_F(MauGroupExtractorTest, ExtractsWholeSlices) {
         EXPECT_TRUE(extractor.isFieldInAnyGroup(field.name));
 
         auto mgroups = extractor.getGroups(field.name);
-        ASSERT_EQ(mgroups.size(), 1U) << "Failed with field: " << field;
-        ASSERT_EQ(mgroups[0]->size(), 3U) << "Failed with field: " << field;
+        ASSERT_EQ(mgroups.size(), 1u) << "Failed with field: " << field;
+        ASSERT_EQ(mgroups[0]->size(), 3u) << "Failed with field: " << field;
     }
 
     auto mgroups = extractor.getGroups("ingress::hdr.vn_tag.$valid");
@@ -138,10 +138,10 @@ TEST_F(MauGroupExtractorTest, ExtractsPartialSlices) {
     EXPECT_TRUE(extractor.isFieldInAnyGroup("ingress::hdr.vlan_tag.$stkvalid"));
 
     auto mgroups = extractor.getGroups("ingress::hdr.vlan_tag.$stkvalid");
-    ASSERT_EQ(mgroups.size(), 1U);
+    ASSERT_EQ(mgroups.size(), 1u);
 
     auto &group = *mgroups[0];
-    ASSERT_EQ(group.size(), 3U);  // three items in group (2 slices + dummy)
+    ASSERT_EQ(group.size(), 3u);  // three items in group (2 slices + dummy)
 
     EXPECT_EQ(group[0].getParent().getName(), "ingress::hdr.vlan_tag.$stkvalid");
     EXPECT_EQ(group[0].getRange(), le_bitrange(0, 0));
@@ -175,10 +175,10 @@ TEST_F(MauGroupExtractorTest, ExtractFieldInMultipleGroups) {
     EXPECT_TRUE(extractor.isFieldInAnyGroup("ingress::Millstone.Guion.Wilmore"));
 
     auto mgroups = extractor.getGroups("ingress::Millstone.Guion.Wilmore");
-    ASSERT_EQ(mgroups.size(), 2U);
+    ASSERT_EQ(mgroups.size(), 2u);
 
-    ASSERT_EQ(mgroups[0]->size(), 4U);  // cluster_multi_a
-    ASSERT_EQ(mgroups[1]->size(), 3U);  // cluster_multi_b
+    ASSERT_EQ(mgroups[0]->size(), 4u);  // cluster_multi_a
+    ASSERT_EQ(mgroups[1]->size(), 3u);  // cluster_multi_b
 
     auto &group0 = *mgroups[0];
     auto &group1 = *mgroups[1];

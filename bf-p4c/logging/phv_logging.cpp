@@ -1,9 +1,12 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/logging/manifest.h"
 #include "bf-p4c/logging/phv_logging.h"
+#include "bf-p4c/logging/container_size_extractor.h"
 
 void CollectPhvLoggingInfo::collectConstraints() {
     fieldConstraints = ConstrainedFieldMapBuilder::buildMap(phv, *superclusters);
+    ContainerSizeExtractor::extract(*paContainerSize, fieldConstraints);
+
     mauGroupConstraints = new MauGroupExtractor(*superclusters, fieldConstraints);
 
     for (auto &f : phv) {
@@ -314,6 +317,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     logNoPackConstraint(cfield, fieldInfo, srcLoc);
     logMauGroupConstraint(cfield, srcLoc);
     logNoSplitConstraint(cfield, srcLoc);
+    logContainerSizeConstraint(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -472,6 +476,25 @@ void PhvLogging::logNoSplitConstraint(ConstrainedField &field, const SourceLocat
     field.getLogger()->append(nsc);
 }
 
+void PhvLogging::logContainerSizeConstraint(ConstrainedField &field,
+                                                const SourceLocation *srcLoc) {
+    auto &c = field.getContainerSize();
+    if (c.hasConstraint()) {
+        auto csc = new IntConstraint(c.getContainerSize(),
+            int(ConstraintReason::ContainerSize), "ContainerSize", srcLoc);
+        field.getLogger()->append(csc);
+    }
+
+    for (auto &slice : field.getSlices()) {
+        auto &c = slice.getContainerSize();
+        if (!c.hasConstraint()) continue;
+
+        auto csc = new IntConstraint(c.getContainerSize(),
+            int(ConstraintReason::ContainerSize), "ContainerSize", srcLoc);
+        slice.getLogger()->append(csc);
+    }
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -560,6 +583,10 @@ void PhvLogging::logConstraintReasons() {
         }, {
             ConstraintReason::NoSplit,
             "No Split: This field cannot be split into multiple slices."
+        }, {
+            ConstraintReason::ContainerSize,
+            "Container Size: Slices of this field can only be placed into containers of"
+            " specific sizes. Container size is in bits."
         }
     };
 
