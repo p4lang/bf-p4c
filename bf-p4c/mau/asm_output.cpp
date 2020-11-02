@@ -3167,6 +3167,7 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         out << gw_indent << "match: {";
         const char *sep = " ";
         PHV::FieldUse use(PHV::FieldUse::READ);
+        bitvec bits_done;
         for (auto &f : collect.info) {
             auto *field = f.first.field();
             if (!f.second.xor_offsets.empty())
@@ -3174,9 +3175,13 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             for (auto &offset : f.second.offsets) {
                 field->foreach_alloc(offset.second, tbl, &use,
                         [&](const PHV::AllocSlice &sl) {
-                    out << sep << (offset.first + (sl.field_slice().lo - offset.second.lo));
-                    out << ": " << Slice(field, sl.field_slice());
+                    int bit = offset.first + (sl.field_slice().lo - offset.second.lo);
+                    if (bits_done[bit]) return;  // supress duplicates
+                    out << sep << bit << ": " << Slice(field, sl.field_slice());
                     sep = ", ";
+                    BUG_CHECK(bits_done.getrange(bit, sl.width()) == 0,
+                              "partial overlapping gateway fields in %s", tbl);
+                    bits_done.setrange(bit, sl.width());
                 });
             }
         }
@@ -3184,14 +3189,19 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         if (have_xor) {
             out << gw_indent << "xor: {";
             sep = " ";
+            bits_done.clear();
             for (auto &f : collect.info) {
                 auto *field = f.first.field();
                 for (auto &offset : f.second.xor_offsets) {
                     field->foreach_alloc(offset.second, tbl, &use,
                                          [&](const PHV::AllocSlice &sl) {
-                        out << sep << (offset.first + (sl.field_slice().lo - offset.second.lo));
-                        out << ": " << Slice(field, sl.field_slice());
+                        int bit = offset.first + (sl.field_slice().lo - offset.second.lo);
+                        if (bits_done[bit]) return;  // supress duplicates
+                        out << sep << bit << ": " << Slice(field, sl.field_slice());
                         sep = ", ";
+                        BUG_CHECK(bits_done.getrange(bit, sl.width()) == 0,
+                                  "partial overlapping gateway fields in %s", tbl);
+                        bits_done.setrange(bit, sl.width());
                     });
                 }
             }

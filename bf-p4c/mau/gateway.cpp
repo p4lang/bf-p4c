@@ -713,6 +713,7 @@ bool CollectGatewayFields::compute_offsets() {
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first.size() > b->first.size(); });
+    std::map<std::pair<PHV::Container, unsigned>, int>       alloc_bytes;
     PHV::FieldUse use_read(PHV::FieldUse::READ);
     for (auto &i : this->info) {
         auto &field = i.first;
@@ -721,12 +722,18 @@ bool CollectGatewayFields::compute_offsets() {
             auto &with = this->info[xor_with];
             int shift = field.range().lo - xor_with.range().lo;
             xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                with.offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U, sl.field_slice());
-                info.xor_offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U,
-                                              sl.field_slice().shiftedByBits(shift));
-                LOG5("  byte " << bytes << " " << field << "(" << info.xor_offsets.back().second <<
-                     ") xor " << xor_with << sl << " (" << with.offsets.back().second << ")");
-                ++bytes;
+                auto alloc_byte = std::make_pair(sl.container(), sl.container_slice().lo/8U);
+                bool duplicate = alloc_bytes.count(alloc_byte);
+                auto bit = (duplicate ? alloc_bytes.at(alloc_byte) : bytes) * 8U +
+                           sl.container_slice().lo % 8U;
+                with.offsets.emplace_back(bit, sl.field_slice());
+                info.xor_offsets.emplace_back(bit, sl.field_slice().shiftedByBits(shift));
+                LOG5("  " << (duplicate ? "duplicate " : "") << "byte " << (bit/8) << " " <<
+                     field << "(" << info.xor_offsets.back().second << ") xor " << xor_with <<
+                     ' ' << sl << " (" << with.offsets.back().second << ")");
+                if (!duplicate) {
+                    alloc_bytes[alloc_byte] = bytes;
+                    ++bytes; }
             }); } }
     for (auto *it : sort_by_size) {
         const PHV::FieldSlice &field = it->first;
@@ -760,16 +767,23 @@ bool CollectGatewayFields::compute_offsets() {
         } else {
             field.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
                 if (size_t(field_bits.ffs(sl.field_slice().lo)) > size_t(sl.field_slice().hi)) {
-                    LOG5(DBPrint::Brief << sl << " already done via hash" << DBPrint::Reset);
+                    LOG5(sl << " already done via hash");
                     return; }
-                info.offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U, sl.field_slice());
+                auto alloc_byte = std::make_pair(sl.container(), sl.container_slice().lo/8U);
+                bool duplicate = alloc_bytes.count(alloc_byte);
+                auto bit = (duplicate ? alloc_bytes.at(alloc_byte) : bytes) * 8U +
+                           sl.container_slice().lo % 8U;
+                info.offsets.emplace_back(bit, sl.field_slice());
                 field_bits.clrrange(sl.field_slice().lo, sl.width());
-                LOG5(DBPrint::Brief << "  byte " << bytes << " " << field << ' ' << sl <<
-                     DBPrint::Reset);
-                if (bytes == 4 && bits == 0) {
-                    bits += 8;
-                } else {
-                    ++bytes; } }); }
+                LOG5("  " << (duplicate ? "duplicate " : "") << "byte " << (bit/8) <<
+                     " " << field << ' ' << sl);
+                if (!duplicate) {
+                    alloc_bytes[alloc_byte] = bytes;
+                    if (bytes == 4 && bits == 0) {
+                        bits += sl.width();
+                    } else {
+                        ++bytes; } }
+            }); }
 #if 0
         // FIXME -- should check this, but sometimes this gets run when PHV allocation has failed
         // to allocate this field, in which case we don't want to crash here.
