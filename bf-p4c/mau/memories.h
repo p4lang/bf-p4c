@@ -259,7 +259,7 @@ struct Memories {
         safe_vector<UniqueId>                    dleft_match;
 
         int get_way(int row, int col) {
-            for (int i = 0; i < ways.size(); i++) {
+            for (size_t i = 0; i < ways.size(); i++) {
                 auto w = ways[i];
                 for (auto ram : w.rams) {
                     if ((ram.first == row) && (ram.second == col))
