@@ -75,9 +75,6 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# Generate the licence file.
-scripts/generate-license.sh
-
 # Check for git version: 2.11.0 does not support virtual links
 git_version=`git --version | head -1 | awk '{ print $3; }'`
 if [[ $git_version == "2.11.0" ]]; then
