@@ -38,3 +38,8 @@ This README serves for sample programs for P4I. It lists various edge cases usef
         - tofino2_switch_16_32q (ingress::ig_md.egress_port_lag_index)
     * Constraint is applied to slices:
         - tofino2_switch_16_32q (ingress::hdr.ethernet.dst_addr)
+ * Alignment
+    * Constraint is applied to whole field:
+        - tofino2_switch_16_32q (ingress::hdr.ipv4.version)
+    * Constraint is applied to slices:
+        - tofino2_switch_16_32q (ingress::hdr.ipv4.version)

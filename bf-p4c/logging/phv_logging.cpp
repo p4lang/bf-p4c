@@ -318,6 +318,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     logMauGroupConstraint(cfield, srcLoc);
     logNoSplitConstraint(cfield, srcLoc);
     logContainerSizeConstraint(cfield, srcLoc);
+    logAlignmentConstraint(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -495,6 +496,22 @@ void PhvLogging::logContainerSizeConstraint(ConstrainedField &field,
     }
 }
 
+void PhvLogging::logAlignmentConstraint(ConstrainedField &field, const SourceLocation *srcLoc) {
+    if (field.getAlignment().hasConstraint()) {
+        auto ac = new IntConstraint(field.getAlignment().getAlignment(),
+            int(ConstraintReason::Alignment), "Alignment", srcLoc);
+        field.getLogger()->append(ac);
+    }
+
+    for (auto slice : field.getSlices()) {
+        if (slice.getAlignment().hasConstraint()) {
+            auto ac = new IntConstraint(slice.getAlignment().getAlignment(),
+                int(ConstraintReason::Alignment), "Alignment", srcLoc);
+            slice.getLogger()->append(ac);
+        }
+    }
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -587,6 +604,9 @@ void PhvLogging::logConstraintReasons() {
             ConstraintReason::ContainerSize,
             "Container Size: Slices of this field can only be placed into containers of"
             " specific sizes. Container size is in bits."
+        }, {
+            ConstraintReason::Alignment,
+            "Alignment: Field has to be placed at a given offset within a container."
         }
     };
 

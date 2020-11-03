@@ -11,6 +11,8 @@ namespace Test {
 
 class ConstrainedFieldMapBuilderTest : public TofinoBackendTest {
  protected:
+    using AR = Constraints::AlignmentConstraint::AlignmentReason;
+
     std::istringstream SUPERCLUSTER = std::istringstream(R"(SUPERCLUSTER Uid: 41
     slice lists:	
         [ ingress::hdr.test<32> ^0 [0:19]
@@ -76,7 +78,7 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFieldConstraints) {
     // Additional setup
     auto field = phv.field("ingress::hdr.test");
     field->set_solitary(1);
-    field->set_alignment(1, 4);
+    field->updateAlignment(AR::PARSER, FieldAlignment(le_bitrange(4, 4)));
 
     // Compute map
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);
@@ -85,7 +87,7 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFieldConstraints) {
     auto &cf = fields.at("ingress::hdr.test");
     EXPECT_TRUE(cf.getSolitary().hasConstraint());
     EXPECT_TRUE(cf.getAlignment().hasConstraint());
-    EXPECT_EQ(cf.getAlignment().getAlignment(), 4U);
+    EXPECT_EQ(cf.getAlignment().getAlignment(), 4u);
 }
 
 TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSliceConstraints) {
@@ -96,7 +98,7 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSliceConstraints) {
 
     // Additional setup
     auto field = phv.field("ingress::hdr.test");
-    field->set_alignment(1, 0);
+    field->updateAlignment(AR::PARSER, FieldAlignment(le_bitrange(4, 4)));
 
     // Compute map
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);

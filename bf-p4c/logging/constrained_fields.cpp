@@ -75,7 +75,16 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
 
         // Extract constraints for a field
         result[f.name].setSolitary(f.getSolitaryConstraint());
-        result[f.name].setAlignment(f.getAlignmentConstraint());
+
+        if (f.alignment) {
+            // NOTE: Bridge packing can overwrite alignment constraint of a field
+            // so information about original reason can be lost
+            Constraints::AlignmentConstraint alignment;
+            alignment.addConstraint(
+                f.getAlignmentConstraint().getReason(), f.alignment.get().align);
+            result[f.name].setAlignment(alignment);
+        }
+
         result[f.name].setDigest(f.getDigestConstraint());
         result[f.name].setBottomBits(f.deparsed_bottom_bits());
         result[f.name].setNoSplit(f.no_split());

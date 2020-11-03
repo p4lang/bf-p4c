@@ -139,7 +139,8 @@ class PhvLogging : public MauInspector {
         DifferentContainer,
         MAUGroup,
         NoSplit,
-        ContainerSize
+        ContainerSize,
+        Alignment
     };
 
  private:
@@ -266,6 +267,8 @@ class PhvLogging : public MauInspector {
     void logNoSplitConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     void logContainerSizeConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logAlignmentConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.
