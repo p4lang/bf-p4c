@@ -541,6 +541,7 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
 
 void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
                                            ActionData::FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     ActionData::Format af(phv, tbl, att_info);
     af.set_uses(&cache_action_formats[std::make_pair(tbl->name, format_type)]);
 
@@ -552,6 +553,7 @@ void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
    data if immediate is possible */
 void LayoutChoices::setup_ternary_layout_options(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     LOG2("Setup TCAM match layouts " << tbl->name << ":" << format_type);
     int index = 0;
     for (auto &use : get_action_formats(tbl, format_type)) {
@@ -583,6 +585,7 @@ void LayoutChoices::setup_ternary_layout_options(const IR::MAU::Table *tbl,
 void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     static constexpr int MIN_PACK = 1;
     static constexpr int MAX_PACK = 9;
     // FIXME: Technically this is 5, but need to update version bit information
@@ -686,6 +689,7 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
    different ram widths, and immediate data on and off */
 void LayoutChoices::setup_layout_options(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     LOG2("Determining SRAM match layouts " << tbl->name << ":" << format_type << IndentCtl::indent);
 
     bool hash_action_only = false;
@@ -704,6 +708,7 @@ void LayoutChoices::setup_layout_options(const IR::MAU::Table *tbl,
    within the assembly so that all tables that do not require match can possibly work */
 void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     LOG2("Determining no match table layouts " << tbl->name << ":" << format_type);
     GetActionRequirements ghdr;
     tbl->attached.apply(ghdr);
@@ -742,6 +747,7 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
  */
 void LayoutChoices::setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
         ActionData::FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     ValidateAttachedOfSingleTable::TypeToAddressMap type_to_addr_map;
     ValidateAttachedOfSingleTable validate_attached(type_to_addr_map, tbl);
     tbl->attached.apply(validate_attached);
@@ -820,6 +826,7 @@ bool DoTableLayout::can_be_hash_action(const IR::MAU::Table *tbl, std::string &r
 void LayoutChoices::add_hash_action_option(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         bool &hash_action_only) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     std::string hash_action_reason = "";
     bool possible = DoTableLayout::can_be_hash_action(tbl, hash_action_reason);
     hash_action_only = false;
@@ -969,6 +976,7 @@ bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
 
 void LayoutChoices::compute_layout_options(const IR::MAU::Table *tbl,
                                            ActionData::FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     BUG_CHECK(cache_layout_options.count(std::make_pair(tbl->name, format_type)) == 0,
               "LayoutChoices::compute_layout_options cache already present");
     cache_layout_options[std::make_pair(tbl->name, format_type)];

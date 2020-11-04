@@ -487,7 +487,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason ("tofino3"
-  "error: tofino3 supports up to 20 stages, using 23"
+  "error: tofino3 supports up to 20 stages, using 22"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
 )
 

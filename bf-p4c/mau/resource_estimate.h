@@ -28,7 +28,7 @@ struct StageUseEstimate {
     int meter_alus = 0;
     int stats_alus = 0;
 
-    ActionData::FormatType_t             format_type;
+    ActionData::FormatType_t             format_type = ActionData::INVALID;
     safe_vector<LayoutOption>            layout_options;
     safe_vector<ActionData::Format::Use> action_formats;
     MeterALU::Format::Use                meter_format;

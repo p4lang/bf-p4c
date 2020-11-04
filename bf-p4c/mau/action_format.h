@@ -24,7 +24,7 @@ enum ModConditionally_t { NONE, VALUE, /* MASK */ };
 
 // Currently only three format types, still debating how to support more long term,
 // i.e. if multiple format types overlap with each other (such as including a gateway)
-enum FormatType_t { NORMAL, PRE_SPLIT_ATTACHED, POST_SPLIT_ATTACHED, FORMAT_TYPES };
+enum FormatType_t { NORMAL, PRE_SPLIT_ATTACHED, POST_SPLIT_ATTACHED, FORMAT_TYPES, INVALID };
 
 /**
  * The purpose of this class is the base abstract class for any parameter that can appear

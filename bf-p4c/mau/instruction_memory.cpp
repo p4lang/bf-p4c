@@ -201,6 +201,7 @@ bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &a
 
 bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
         bool gw_linked, ActionData::FormatType_t format_type, SplitAttachedInfo &sai) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
     // Action Profiles always have the same instructions for every table
     LOG1("Allocating instruction memory for " << tbl->name << " " << format_type);
 

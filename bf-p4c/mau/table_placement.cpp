@@ -336,7 +336,8 @@ struct TablePlacement::Placed {
                     BUG_CHECK(attached_entries.at(ba->attached).entries == 0 ||
                               attached_entries.at(ba->attached).entries == it->second.entries,
                               "inconsistent size for %s", ba->attached);
-                    attached_entries.at(ba->attached) = it->second; }
+                    attached_entries.at(ba->attached) = it->second;
+                    use.format_type = ActionData::INVALID; }
                 if (attached_entries.at(ba->attached).need_more)
                     need_more = true; }
             if (!need_more) {
@@ -630,16 +631,20 @@ static int count_sful_actions(const IR::MAU::Table *tbl) {
  *
  * Thus, some layouts may not actually be possible that were precalculated.  This will adjust
  * potential layouts if the allocation can not fit within the pack format.
+ *
+ * If the 'estimate_set' argument is true, we do not call StageUseEstimate (again), as we
+ * assume everything in it is correct for the placement.  It needs to be called again if
+ * the entries or attached_entries has changed, as it determines the format_type to use
+ * for the layout(s)
  */
 bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
     bool table_format = true;
 
     int initial_entries = next->entries;
 
-    if (!estimate_set)
+    if (!estimate_set || next->use.format_type == ActionData::INVALID)
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
                                      next->stage_split > 0, next->gw != nullptr);
-    // FIXME: This is not the appropriate way to check if a table is a single gateway
 
     if (next->use.format_type == ActionData::POST_SPLIT_ATTACHED &&
         count_sful_actions(next->table) > 1) {
@@ -685,6 +690,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             LOG3("  - splitting " << att->name << " to later stage(s)");
             next->attached_entries.at(att).entries = 0;
             next->attached_entries.at(att).need_more = true;
+            next->use.format_type = ActionData::INVALID;
             // may need new layout&format type
             return pick_layout_option(next, false);
         } else {
@@ -701,6 +707,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
                 LOG3("  - reducing size of " << att->name << " by " << delta << " to " <<
                      next->attached_entries.at(att).entries);
                 if (redo_layout) {
+                    next->use.format_type = ActionData::INVALID;
                     // need new layout to allow for chain_vpn
                     return pick_layout_option(next, false); }
                 return true; }
@@ -992,52 +999,48 @@ bool TablePlacement::try_alloc_imem(TablePlacement::Placed *next) {
 
 bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
         const char *what, bool no_memory) {
-    // FIXME -- for some reason, if we reallocate the format/ixbar/adb for other tables in
-    // stage 0 when trying to place a starter pistol (even though that alocation ends up
-    // unchanged), placement of memory for the starter pistol may then fail.  So we hack
-    // not doing the reallication (just) for starter pistols to avoid the problem.
     bool done_next = false;
-    if (!next->table->created_during_tp) {
-        for (auto *p : boost::adaptors::reverse(whole_stage)) {
-            if (p->prev == next) {
-                if (!pick_layout_option(next, false)) {
-                    LOG3("    " << what << " ixbar allocation did not fit");
-                    return false; }
-                done_next = true; }
-            if (!pick_layout_option(p, false)) {
-                LOG3("    redo of " << p->name << " ixbar allocation did not fit");
-                return false; } } }
+    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+        if (p->prev == next) {
+            if (!pick_layout_option(next, false)) {
+                LOG3("    " << what << " ixbar allocation did not fit");
+                return false; }
+            done_next = true; }
+        if (!pick_layout_option(p, true)) {
+            LOG3("    redo of " << p->name << " ixbar allocation did not fit");
+            return false; } }
     if (!done_next && !pick_layout_option(next, false)) {
         LOG3("    " << what << " ixbar allocation did not fit");
         return false; }
+
     done_next = false;
-    if (!next->table->created_during_tp) {
-        for (auto *p : boost::adaptors::reverse(whole_stage)) {
-            if (p->prev == next) {
-                if (!try_alloc_adb(next)) {
-                    LOG3("    " << what << " of action data bus did not fit");
-                    return false; }
-                done_next = true; }
-            if (!try_alloc_adb(p)) {
-                LOG3("    redo of " << p->name << " action data bus did not fit");
-                return false; } } }
+    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+        if (p->prev == next) {
+            if (!try_alloc_adb(next)) {
+                LOG3("    " << what << " of action data bus did not fit");
+                return false; }
+            done_next = true; }
+        if (!try_alloc_adb(p)) {
+            LOG3("    redo of " << p->name << " action data bus did not fit");
+            return false; } }
     if (!done_next && !try_alloc_adb(next)) {
         LOG3("    " << what << " of action data bus did not fit");
         return false; }
+
     done_next = false;
-    if (!next->table->created_during_tp) {
-        for (auto *p : boost::adaptors::reverse(whole_stage)) {
-            if (p->prev == next) {
-                if (!try_alloc_imem(next)) {
-                    LOG3("    " << what << " of instruction memory did not fit");
-                    return false; }
-                done_next = true; }
-            if (!try_alloc_imem(p)) {
-                LOG3("    redo of " << p->name << " instruction memory did not fit");
-                return false; } } }
+    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+        if (p->prev == next) {
+            if (!try_alloc_imem(next)) {
+                LOG3("    " << what << " of instruction memory did not fit");
+                return false; }
+            done_next = true; }
+        if (!try_alloc_imem(p)) {
+            LOG3("    redo of " << p->name << " instruction memory did not fit");
+            return false; } }
     if (!done_next && !try_alloc_imem(next)) {
         LOG3("    " << what << " of instruction memory did not fit");
         return false; }
+
     if (no_memory) return true;
     if (auto ran_out = get_current_stage_use(next).ran_out()) {
         LOG3("    " << what << " of memory allocation ran out of " << ran_out);
@@ -1087,6 +1090,7 @@ bool TablePlacement::can_split(const IR::MAU::AttachedMemory *att) {
 }
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) {
+    rv->use.format_type = ActionData::INVALID;  // will need to be recomputed
     auto *t = rv->table;
     if (t->match_table) {
         rv->entries = 512;  // default number of entries -- FIXME does this really make sense?
@@ -1351,7 +1355,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                 att.second.need_more = true; } } }
 
     if (!rv->table->created_during_tp) {
-        assert(!rv->placed[tblInfo.at(rv->table).uid]);
+        BUG_CHECK(!rv->placed[tblInfo.at(rv->table).uid],
+                  "try_place_table(%s) when it is already placed?", rv->name);
     }
 
     StageUseEstimate stage_current = current;
@@ -1420,12 +1425,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                     if (ba->attached->direct) {
                         rv->attached_entries.at(ba->attached).entries = rv->entries;
                         rv->attached_entries.at(ba->attached).need_more = true;
+                        rv->use.format_type = ActionData::INVALID;
                     } else if (!can_duplicate(ba->attached)) {
                         if (can_split(ba->attached)) {
                             // FIXME -- we can't currently have an indirect attached table in
                             // the same stage as part of the match but not all of it.
                             rv->attached_entries.at(ba->attached).entries = 0;
                             rv->attached_entries.at(ba->attached).need_more = true;
+                            rv->use.format_type = ActionData::INVALID;
                         } else {
                             advance_to_next_stage = true;
                             break; } } }
@@ -1433,6 +1440,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                 // If the table is split for the first time, then the stage_split is set to 0
                 if (rv->initial_stage_split == -1)
                     rv->stage_split = 0;
+                if (rv->use.format_type == ActionData::INVALID && !pick_layout_option(rv, false)) {
+                    LOG2("shrinking table " << rv->name << " can't find layout option");
+                    advance_to_next_stage = true;
+                    break; }
             }
 
             if (!try_alloc_adb(rv)) {
@@ -2302,6 +2313,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             /* look for a table that could be backfilled */
             for (auto &bf : backfill) {
                 if (placed->is_placed(bf.table)) continue;
+                if (partly_placed.count(bf.table)) continue;
                 if ((backfilled = try_backfill_table(placed, bf.table, bf.before))) {
                     BUG_CHECK(backfilled->is_placed(bf.table), "backfill !is_placed abort");
                     /* Found one -- currently we don't priorities if mulitple tables could
@@ -2353,12 +2365,15 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         for (auto &att : p->attached_entries)
             LOG3("    attached table " << att.first->name << " entries=" << att.second.entries <<
                  (att.second.need_more ? " (need_more)" : ""));
-        assert(p->name == p->table->name);
-        assert(p->need_more || self.table_placed.count(p->name) == 0);
+        BUG_CHECK(p->name == p->table->name, "table name mismatch %s != %s", p->name,
+                  p->table->name);
+        BUG_CHECK(p->need_more || self.table_placed.count(p->name) == 0,
+                  "Table %s placed more than once?", p->name);
         self.table_placed.emplace_hint(self.table_placed.find(p->name), p->name, p);
         if (p->gw) {
             LOG2("  Gateway " << p->gw->name << " is also logical id 0x" << hex(p->logical_id));
-            assert(p->need_more || self.table_placed.count(p->gw->name) == 0);
+            BUG_CHECK(p->need_more || self.table_placed.count(p->gw->name) == 0,
+                      "Gateway %s placed more than once?", p->gw->name);
             self.table_placed.emplace_hint(self.table_placed.find(p->gw->name), p->gw->name, p); } }
     LOG1("Finished table placement decisions " << pipe->name);
     return false;
@@ -2522,7 +2537,7 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
 
         if (!rv) {
             rv = table_part;
-            assert(!prev);
+            BUG_CHECK(!prev, "First logical table for %s is not first?", tbl->name);
         } else {
             prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
             prev->next.erase("$miss");
@@ -2981,7 +2996,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             prev = atcam_last;
         prev_entries += pl->entries;
     }
-    assert(!rv->empty());
+    BUG_CHECK(!rv->empty(), "Failed to place any stage tables for %s", tbl->name);
     return rv;
 }
 

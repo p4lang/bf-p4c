@@ -2799,6 +2799,7 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
 }
 
 bool Format::analyze_actions(FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format");
     if (format_type != NORMAL) {
         auto at = att_info.attached_from_table(tbl);
         if (at == nullptr)
@@ -3593,6 +3594,7 @@ void Format::build_potential_format(bool immediate_forced) {
  */
 void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
                              FormatType_t format_type) {
+    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format");
     LOG1("Determining Formats for table " << tbl->name << " with immediate ctrl " << imm_ctrl);
     bool possible = analyze_actions(format_type);
     if (!possible)
