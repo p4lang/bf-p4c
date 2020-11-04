@@ -257,8 +257,12 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
-  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
   extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error.*Power worst case estimated budget.*exceeded by.*"
+  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
 )
 
 # P4C-1400, P4C-1123
