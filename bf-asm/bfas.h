@@ -41,6 +41,7 @@ extern struct option_t {
     bool                nowarn;
     bool                log_hashes;
     std::string         output_dir;
+    int                 num_stages_override;
 } options;
 
 extern unsigned unique_action_handle;

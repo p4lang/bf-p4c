@@ -274,6 +274,13 @@ int main(int ac, char **av) {
     options.setInputFile();
     Device::init(options.target);
 
+    if (options.num_stages_override) {
+        Device::overrideNumStages(options.num_stages_override);
+        if (::errorCount() > 0) {
+            return INVOCATION_ERROR;
+        }
+    }
+
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS

@@ -39,7 +39,10 @@ class Device {
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static const MauPowerSpec& mauPowerSpec() { return Device::get().getMauPowerSpec(); }
     static int numPipes() { return Device::get().getNumPipes(); }
-    static int numStages() { return Device::get().getNumStages(); }
+    static int numStages() {
+        return numStagesRuntimeOverride_ ? numStagesRuntimeOverride_ : Device::get().getNumStages();
+    }
+    static void overrideNumStages(int num);
     static int numLongBranchTags() { return Device::get().getLongBranchTags(); }
     static bool hasLongBranches() { return numLongBranchTags() > 0; }
     static int alwaysRunIMemAddr() { return Device::get().getAlwaysRunIMemAddr(); }
@@ -92,6 +95,7 @@ class Device {
 
  private:
     static Device* instance_;
+    static int numStagesRuntimeOverride_;
     cstring name_;
 };
 

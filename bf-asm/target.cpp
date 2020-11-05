@@ -341,9 +341,19 @@ void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::
 }
 #endif  // HAVE_CLOUDBREAK
 
+int Target::numMauStagesOverride = 0;
+
 int Target::encodeConst(int src) {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::encodeConst(src); );
     BUG(); return 0;
+}
+
+int Target::OVERRIDE_NUM_MAU_STAGES(int num) {
+    int allowed = NUM_MAU_STAGES_PRIVATE();
+    BUG_CHECK(num > 0 && num <= allowed,
+        "Invalid override for NUM_MAU_STAGES. Allowed range is <1, %d>, got %d.", allowed, num);
+
+    numMauStagesOverride = num;
 }
 
 // should these be inline in the header file?

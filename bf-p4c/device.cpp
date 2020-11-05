@@ -1,7 +1,9 @@
 #include "device.h"
 #include <algorithm>
+#include "lib/error.h"
 
 Device* Device::instance_ = nullptr;
+int Device::numStagesRuntimeOverride_ = 0;
 
 void Device::init(cstring name) {
     instance_ = nullptr;
@@ -27,4 +29,15 @@ void Device::init(cstring name) {
 #endif /* HAVE_CLOUDBREAK */
     else
         BUG("Unknown device %s", name);
+}
+
+void Device::overrideNumStages(int num) {
+    int realNumStages = Device::get().getNumStages();
+    if (num < 0 || num > realNumStages) {
+        ::error("Trying to override mau stages count to %d but device is capped to %d.",
+            num, realNumStages);
+        return;
+    }
+
+    numStagesRuntimeOverride_ = num;
 }

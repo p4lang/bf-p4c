@@ -55,7 +55,7 @@
     M(int, INSTR_SRC2_BITS) \
     M(int, LONG_BRANCH_TAGS) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
-    M(int, NUM_MAU_STAGES) M(int, END_OF_PIPE) \
+    M(int, NUM_MAU_STAGES_PRIVATE) M(int, END_OF_PIPE) \
     M(bool, SUPPORT_TRUE_EOP) \
     M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
@@ -66,7 +66,7 @@
     M(bool, SUPPORT_CONCURRENT_STAGE_DEP) \
     M(bool, SUPPORT_OVERFLOW_BUS) \
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
-    M(bool, OUTPUT_STAGE_EXTENSION) \
+    M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(int, NUM_PARSERS)
 
@@ -79,6 +79,19 @@ class Target {
     PER_TARGET_CONSTANTS(DECLARE_PER_TARGET_CONSTANT)
 
     static int encodeConst(int src);
+
+    static int NUM_MAU_STAGES() {
+        return numMauStagesOverride ? numMauStagesOverride : NUM_MAU_STAGES_PRIVATE();
+    }
+
+    static int OUTPUT_STAGE_EXTENSION() {
+        return numMauStagesOverride ? 1 : OUTPUT_STAGE_EXTENSION_PRIVATE();
+    }
+
+    static int OVERRIDE_NUM_MAU_STAGES(int num);
+
+ private:
+    static int numMauStagesOverride;
 };
 
 #include "gen/tofino/memories.pipe_addrmap.h"
@@ -141,7 +154,7 @@ class Target::Tofino : public Target {
     enum {
         PARSER_CHECKSUM_UNITS = 2,
         MATCH_BYTE_16BIT_PAIRS = true,
-        NUM_MAU_STAGES = 12,
+        NUM_MAU_STAGES_PRIVATE = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
         DEPARSER_CHECKSUM_UNITS = 6,
         DEPARSER_CONSTANTS = 0,
@@ -170,7 +183,7 @@ class Target::Tofino : public Target {
         SUPPORT_SALU_FAST_CLEAR = 0,
         MINIMUM_INSTR_CONSTANT = -8,
         NUM_PARSERS = 18,
-        OUTPUT_STAGE_EXTENSION = 0,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
     };
     static int encodeConst(int src) {
         return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
@@ -245,11 +258,11 @@ class Target::JBay : public Target {
         PARSER_CHECKSUM_UNITS = 5,
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
-        NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT,
-        OUTPUT_STAGE_EXTENSION = 1,
+        NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
 #else
-        NUM_MAU_STAGES = 20,
-        OUTPUT_STAGE_EXTENSION = 0,
+        NUM_MAU_STAGES_PRIVATE = 20,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
@@ -300,8 +313,8 @@ class Target::Tofino2H : public Target::JBay {
     typedef Target::Tofino2H target_type;
     class Phv;
     enum {
-        NUM_MAU_STAGES = 6,
-        OUTPUT_STAGE_EXTENSION = 1,
+        NUM_MAU_STAGES_PRIVATE = 6,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
     };
 };
 
@@ -312,8 +325,8 @@ class Target::Tofino2M : public Target::JBay {
     typedef Target::Tofino2M target_type;
     class Phv;
     enum {
-        NUM_MAU_STAGES = 12,
-        OUTPUT_STAGE_EXTENSION = 1,
+        NUM_MAU_STAGES_PRIVATE = 12,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
     };
 };
 
@@ -324,7 +337,7 @@ class Target::Tofino2U : public Target::JBay {
     typedef Target::Tofino2U target_type;
     class Phv;
     enum {
-        NUM_MAU_STAGES = 20
+        NUM_MAU_STAGES_PRIVATE = 20
     };
 };
 
@@ -391,11 +404,11 @@ class Target::Cloudbreak : public Target {
         PARSER_CHECKSUM_UNITS = 5,
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
-        NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT,
-        OUTPUT_STAGE_EXTENSION = 1,
+        NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
 #else
-        NUM_MAU_STAGES = 20,
-        OUTPUT_STAGE_EXTENSION = 0,
+        NUM_MAU_STAGES_PRIVATE = 20,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,

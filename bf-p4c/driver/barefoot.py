@@ -180,6 +180,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--schema-versions",
                                     help="Print all used schema versions",
                                     action="store_true", default=False)
+        self._argGroup.add_argument("--num-stages-override",
+                                    help="Override default number of available MAU stages",
+                                    action="store", default=0, type=int)
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x assembler-with-cpp")
@@ -365,6 +368,13 @@ class BarefootBackend(BackendDriver):
             schema_versions_file = open(os.path.join(os.environ['P4C_CFG_PATH'], 'schema_versions'), 'r')
             print(schema_versions_file.read().rstrip('\n'))
             schema_versions_file.close()
+
+        if opts.num_stages_override:
+            if 'assembler' in self._commandsEnabled and 'compiler' in self._commandsEnabled:
+                self.add_command_option('assembler',
+                    "--num-stages-override{}".format(opts.num_stages_override))
+                self.add_command_option('compiler',
+                    "--num-stages-override={}".format(opts.num_stages_override))
 
         if opts.bf_rt_schema is None and opts.language == 'p4-16' and \
            not (self._arch == 'v1model' or self._arch == 'psa' or opts.no_bf_rt_schema):

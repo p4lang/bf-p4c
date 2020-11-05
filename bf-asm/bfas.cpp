@@ -43,7 +43,8 @@ option_t options = {
     .werror = false,
     .nowarn = false,
     .log_hashes = false,
-    .output_dir = "."
+    .output_dir = ".",
+    .num_stages_override = 0
 };
 
 std::string asmfile_name;
@@ -204,6 +205,8 @@ int main(int ac, char **av) {
           options.stage_dependency_pattern = av[i];
         } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 && val >= 0 && val < 4) {
             unique_table_offset = val;
+        } else if (sscanf(av[i], "--num-stages-override%d", &val) > 0 && val >= 0) {
+            options.num_stages_override = val;
         } else if (!strcmp(av[i], "--target")) {
             ++i;
             if (!av[i]) {
@@ -329,6 +332,11 @@ int main(int ac, char **av) {
                               << arg[-1] << std::endl;
                     error_count++; }
         } else if (FILE *fp = fopen(av[i], "r")) {
+            // asm_parse_file needs to know correct number of stages
+            if (options.num_stages_override) {
+                Target::OVERRIDE_NUM_MAU_STAGES(options.num_stages_override);
+            }
+
             if (!srcfiles++) firstsrc = av[i];
             error_count += asm_parse_file(av[i], fp);
             if (error_count > 0) return 1;

@@ -390,17 +390,16 @@ class Test:
 
         """
         rcCode = self.runCompiler(options, xfail_msg)
-        #if rc == 0 and xfail_msg is None:
+
+        if xfail_msg is not None:
+            if rcCode == 0: return "XFAIL"
+            else: return "XPASS"
+
         ctCode = self.checkTest(options, file_list)
         if rcCode == 0 and ctCode == 0 and xfail_msg is None:
             return "PASS"
         elif ctCode != 0: return "VALIDATION_FAIL"
-        if xfail_msg is None:
-            if rcCode == 0: return "PASS"
-            else: return "FAIL"
-        else:
-            if rcCode == 0: return "XFAIL"
-            else: return "XPASS"
+        else: return "FAIL"
 
 
 def load_test_file(testfile):

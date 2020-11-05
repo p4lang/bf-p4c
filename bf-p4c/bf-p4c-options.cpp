@@ -262,6 +262,21 @@ BFN_Options::BFN_Options() {
     registerOption("--quick-phv-alloc", nullptr,
         [this](const char *) { quick_phv_alloc = true; return true; },
          "Reduce PHV allocation search space for faster compilation");
+    registerOption("--num-stages-override", "num",
+        [this] (const char *arg) {
+            std::string argStr(arg);
+            try {
+                std::size_t end;
+                int tmp = std::stoi(argStr, &end);
+                if (end != argStr.size() || tmp <= 0) throw;
+                num_stages_override = tmp;
+            } catch(...) {
+                ::error("Invalid number of MAU stages %s. Enter positive integer.", arg);
+                return false;
+            }
+            return true;
+        }, "Reduce number of MAU stages available for compiler. Defaults to "
+           "max number of stages available for given device. This may affect table placement");
 }
 
 using Target = std::pair<cstring, cstring>;

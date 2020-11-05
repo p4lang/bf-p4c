@@ -114,6 +114,12 @@ test_matrix = {
     'p4_14_jbay': (['--std', 'p4-14',
                     '--target', 'tofino2', '--arch', 'v1model', p4_14_program], None, None),
     'p4_16_jbay_t2na': (['--target', 'tofino2', '--arch', 't2na', '-I', p4_16_includes_dir, t2na_program], None, None),
+    'p4_16_jbay_t2na_too_few_stages': (['--target', 'tofino2', '--arch', 't2na', '-I', p4_16_includes_dir,
+                                        '-o', 'override_too_few', '--num-stages-override', '3', t2na_program],
+                                        'tofino2 supports up to 3 stages, using 4', None),
+    'p4_16_jbay_t2na_too_many_stages': (['--target', 'tofino2', '--arch', 't2na', '-I', p4_16_includes_dir,
+                                         '-o', 'override_too_many', '--num-stages-override', '30', t2na_program],
+                                         'Trying to override mau stages count to 30 but device is capped to 20', None),
     'p4_16_jbay_v1model': (['--target', 'tofino2', '--arch', 'v1model', v1model_program], None, None),
     # 'p4_16_jbay_tna': (['--target', 'tofino2', '--arch', 'tna', tna_program], None, None),
 
