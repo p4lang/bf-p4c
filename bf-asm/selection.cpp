@@ -74,7 +74,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
 }
 
 void SelectionTable::pass1() {
-    LOG1("### Selection table " << name() << " pass1");
+    LOG1("### Selection table " << name() << " pass1 " << loc());
     if (!p4_table)
         p4_table = P4Table::alloc(P4Table::Selection, this);
     else
@@ -117,7 +117,7 @@ void SelectionTable::pass1() {
 }
 
 void SelectionTable::pass2() {
-    LOG1("### Selection table " << name() << " pass2");
+    LOG1("### Selection table " << name() << " pass2 " << loc());
     if (input_xbar) {
         input_xbar->pass2();
         if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
@@ -127,7 +127,7 @@ void SelectionTable::pass2() {
 }
 
 void SelectionTable::pass3() {
-    LOG1("### Selection table " << name() << " pass3");
+    LOG1("### Selection table " << name() << " pass3 " << loc());
 }
 
 int SelectionTable::indirect_shiftcount() const {
@@ -269,7 +269,7 @@ template<> void SelectionTable::setup_physical_alu_map(Target::Cloudbreak::mau_r
 
 template<class REGS>
 void SelectionTable::write_regs(REGS &regs) {
-    LOG1("### Selection table " << name() << " write_regs");
+    LOG1("### Selection table " << name() << " write_regs " << loc());
     if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;

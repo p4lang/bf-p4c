@@ -88,7 +88,7 @@ CounterTable::lrt_params::lrt_params(const value_t &m)
 }
 
 void CounterTable::pass1() {
-    LOG1("### Counter table " << name() << " pass1");
+    LOG1("### Counter table " << name() << " pass1 " << loc());
     if (!p4_table)
         p4_table = P4Table::alloc(P4Table::Statistics, this);
     else
@@ -125,13 +125,13 @@ void CounterTable::pass1() {
 }
 
 void CounterTable::pass2() {
-    LOG1("### Counter table " << name() << " pass2");
+    LOG1("### Counter table " << name() << " pass2 " << loc());
     if (logical_id < 0)
         warning(lineno, "counter %s appears unused by any table", name());
 }
 
 void CounterTable::pass3() {
-    LOG1("### Counter table " << name() << " pass3");
+    LOG1("### Counter table " << name() << " pass3 " << loc());
 }
 
 static int counter_size[]         = { 0, 0, 1, 2, 3, 0, 4 };
@@ -198,7 +198,7 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
 }
 
 template<class REGS> void CounterTable::write_regs(REGS &regs) {
-    LOG1("### Counter table " << name() << " write_regs");
+    LOG1("### Counter table " << name() << " write_regs " << loc());
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common MeterTable::write_regs

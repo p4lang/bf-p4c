@@ -67,16 +67,16 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
 }
 
 void Synth2Port::pass1() {
-    LOG1("### Synth2Port table " << name() << " pass1");
+    LOG1("### Synth2Port table " << name() << " pass1 " << loc());
     AttachedTable::pass1();
 }
 
 void Synth2Port::pass2() {
-    LOG1("### Synth2Port table " << name() << " pass2");
+    LOG1("### Synth2Port table " << name() << " pass2 " << loc());
 }
 
 void Synth2Port::pass3() {
-    LOG1("### Synth2Port table " << name() << " pass3");
+    LOG1("### Synth2Port table " << name() << " pass3 " << loc());
 }
 
 template<class REGS>

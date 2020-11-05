@@ -349,7 +349,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
 }
 
 void ActionTable::pass1() {
-    LOG1("### Action table " << name() << " pass1");
+    LOG1("### Action table " << name() << " pass1 " << loc());
     if (default_action.empty()) default_action = get_default_action();
     if (!p4_table)
         p4_table = P4Table::alloc(P4Table::ActionData, this);
@@ -444,7 +444,7 @@ void ActionTable::pass1() {
 }
 
 void ActionTable::pass2() {
-    LOG1("### Action table " << name() << " pass2");
+    LOG1("### Action table " << name() << " pass2 " << loc());
     if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
     if (!format)
@@ -469,7 +469,7 @@ void ActionTable::pass2() {
  * formats before context JSON generation
  */
 void ActionTable::pass3() {
-    LOG1("### Action table " << name() << " pass3");
+    LOG1("### Action table " << name() << " pass3 " << loc());
     action_bus->pass3(this);
 
     if (!actions) {
@@ -546,7 +546,7 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
 
 template<class REGS>
 void ActionTable::write_regs(REGS &regs) {
-    LOG1("### Action table " << name() << " write_regs");
+    LOG1("### Action table " << name() << " write_regs " << loc());
     unsigned fmt_log2size = format->log2size;
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
     for (auto fmt : Values(action_formats)) {

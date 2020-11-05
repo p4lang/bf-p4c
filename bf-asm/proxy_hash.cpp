@@ -42,7 +42,7 @@ int ProxyHashMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, 
 }
 
 void ProxyHashMatchTable::pass1() {
-    LOG1("### Proxy Hash table " << name() << " pass1");
+    LOG1("### Proxy Hash match table " << name() << " pass1 " << loc());
     SRamMatchTable::pass1();
 }
 
@@ -71,7 +71,7 @@ void ProxyHashMatchTable::setup_word_ixbar_group() {
 }
 
 void ProxyHashMatchTable::pass2() {
-    LOG1("### Proxy Hash table " << name() << " pass2");
+    LOG1("### Proxy Hash match table " << name() << " pass2 " << loc());
     input_xbar->pass2();
     setup_word_ixbar_group();
 
@@ -82,11 +82,11 @@ void ProxyHashMatchTable::pass2() {
 }
 
 void ProxyHashMatchTable::pass3() {
-    LOG1("### Proxy Hash match table " << name() << " pass3");
+    LOG1("### Proxy Hash match table " << name() << " pass3 " << loc());
 }
 
 template<class REGS> void ProxyHashMatchTable::write_regs(REGS &regs) {
-    LOG1("### Proxy Hash match table " << name() << " write_regs");
+    LOG1("### Proxy Hash match table " << name() << " write_regs " << loc());
     SRamMatchTable::write_regs(regs);
 
     for (auto &row : layout) {

@@ -36,7 +36,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
 
 
 void HashActionTable::pass1() {
-    LOG1("### Hash Action " << name() << " pass1");
+    LOG1("### Hash Action " << name() << " pass1 " << loc());
     MatchTable::pass1();
     for (auto &hd : hash_dist) {
         if (hd.xbar_use == 0)
@@ -47,7 +47,7 @@ void HashActionTable::pass1() {
 }
 
 void HashActionTable::pass2() {
-    LOG1("### Hash Action " << name() << " pass2");
+    LOG1("### Hash Action " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
     if (layout.size() != 1 || (layout[0].bus < 0 && layout[0].result_bus < 0))
         error(lineno, "Need explicit row/bus in hash_action table");
@@ -77,7 +77,7 @@ void HashActionTable::determine_word_and_result_bus() {
 }
 
 void HashActionTable::pass3() {
-    LOG1("### Hash Action " << name() << " pass3");
+    LOG1("### Hash Action " << name() << " pass3 " << loc());
     MatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
@@ -89,7 +89,7 @@ void HashActionTable::write_merge_regs(REGS &regs, int type, int bus) {
 
 template<class REGS>
 void HashActionTable::write_regs(REGS &regs) {
-    LOG1("### Hash Action " << name() << " write_regs");
+    LOG1("### Hash Action " << name() << " write_regs " << loc());
     /* FIXME -- setup layout with no rams so other functions can write registers properly */
     int bus_type = layout[0].bus >> 1;
     MatchTable::write_regs(regs, bus_type, this);

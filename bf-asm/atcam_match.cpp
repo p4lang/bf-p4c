@@ -205,7 +205,7 @@ void AlgTcamMatchTable::verify_format() {
 }
 
 void AlgTcamMatchTable::pass1() {
-    LOG1("### ATCAM match table " << name() << " pass1");
+    LOG1("### ATCAM match table " << name() << " pass1 " << loc());
     SRamMatchTable::pass1();
     if (format) {
         setup_column_priority();
@@ -282,7 +282,7 @@ void AlgTcamMatchTable::find_tcam_match() {
 }
 
 void AlgTcamMatchTable::pass2() {
-    LOG1("### ATCAM match table " << name() << " pass2");
+    LOG1("### ATCAM match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
     input_xbar->pass2();
     setup_word_ixbar_group();
@@ -309,13 +309,13 @@ void AlgTcamMatchTable::pass2() {
 }
 
 void AlgTcamMatchTable::pass3() {
-    LOG1("### ATCAM match table " << name() << " pass3");
+    LOG1("### ATCAM match table " << name() << " pass3 " << loc());
     SRamMatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
 
 template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
-    LOG1("### ATCAM match table " << name() << " write_regs");
+    LOG1("### ATCAM match table " << name() << " write_regs " << loc());
     SRamMatchTable::write_regs(regs);
 
     for (auto &row : layout) {

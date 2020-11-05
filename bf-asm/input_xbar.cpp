@@ -602,7 +602,7 @@ void InputXbar::pass2() {
 
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {
-    LOG1("### Input xbar " << table->name() << " write_regs");
+    LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
     auto &xbar = regs.dp.xbar_hash.xbar;
     auto gress = timing_thread(table->gress);
     for (auto &group : groups) {

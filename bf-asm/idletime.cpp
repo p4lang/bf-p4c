@@ -50,16 +50,16 @@ void IdletimeTable::setup(VECTOR(pair_t) &data) {
 }
 
 void IdletimeTable::pass1() {
-    LOG1("### Idletime table " << name() << " pass1");
+    LOG1("### Idletime table " << name() << " pass1 " << loc());
     alloc_vpns();
 }
 
 void IdletimeTable::pass2() {
-    LOG1("### Idletime table " << name() << " pass2");
+    LOG1("### Idletime table " << name() << " pass2 " << loc());
 }
 
 void IdletimeTable::pass3() {
-    LOG1("### Idletime table " << name() << " pass3");
+    LOG1("### Idletime table " << name() << " pass3 " << loc());
 }
 
 static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
@@ -84,7 +84,7 @@ int IdletimeTable::direct_shiftcount() const { return 67 - precision_bits[precis
 
 template<class REGS>
 void IdletimeTable::write_regs(REGS &regs) {
-    LOG1("### Idletime table " << name() << " write_regs");
+    LOG1("### Idletime table " << name() << " write_regs " << loc());
     auto &map_alu = regs.rams.map_alu;
     auto &adrdist = regs.rams.match.adrdist;
     int minvpn = 1000000, maxvpn = -1;

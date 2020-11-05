@@ -302,7 +302,7 @@ void GatewayTable::verify_format() {
 }
 
 void GatewayTable::pass1() {
-    LOG1("### Gateway table " << name() << " pass1");
+    LOG1("### Gateway table " << name() << " pass1 " << loc());
     Table::pass1();
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
@@ -450,7 +450,7 @@ static int find_next_lut_entry(Table *tbl, const Table::NextTables &next) {
 }
 
 void GatewayTable::pass2() {
-    LOG1("### Gateway table " << name() << " pass2");
+    LOG1("### Gateway table " << name() << " pass2 " << loc());
     if (logical_id < 0)  {
         if (match_table)
             logical_id = match_table->logical_id;
@@ -541,7 +541,7 @@ void GatewayTable::pass2() {
 }
 
 void GatewayTable::pass3() {
-    LOG1("### Gateway table " << name() << " pass3");
+    LOG1("### Gateway table " << name() << " pass3 " << loc());
     if (layout[0].bus >= 0) {
         auto *tbl = stage->sram_search_bus_use[layout[0].row][layout[0].bus];
         // Sharing with an exact match -- make sure it is ok
@@ -783,7 +783,7 @@ template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
 
 template<class REGS>
 void GatewayTable::write_regs(REGS &regs) {
-    LOG1("### Gateway table " << name() << " write_regs");
+    LOG1("### Gateway table " << name() << " write_regs " << loc());
     auto &row = layout[0];
     if (input_xbar) {
         // FIXME -- if there's no ixbar in the gateway, we should look for a group with
@@ -904,7 +904,7 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     // associated with a match table, we should only output it to json once.
     auto gwName = gateway_name.empty() ? name() : gateway_name;
     if (gateways_in_json.count(gwName)) return;
-    LOG3("### Gateway table " << gwName << " gen_tbl_cfg");
+    LOG3("### Gateway table " << gwName << " gen_tbl_cfg " << loc());
     json::map gTable;
     gTable["direction"] = P4Table::direction_name(gress);
     gTable["attached_to"] = match_table ? match_table->p4_name() : "-";

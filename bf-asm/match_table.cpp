@@ -143,7 +143,7 @@ METER_ACCESS_TYPE MatchTable::default_meter_access_type(bool for_stateful) {
 }
 
 void MatchTable::pass0() {
-    LOG1("### match table " << name() << " pass0");
+    LOG1("### match table " << name() << " pass0 " << loc());
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     if (action.check() && action->set_match_table(this, !action.is_direct_call()) != ACTION)

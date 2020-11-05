@@ -191,7 +191,7 @@ void TernaryMatchTable::pass0() {
 }
 
 void TernaryMatchTable::pass1() {
-    LOG1("### Ternary match table " << name() << " pass1");
+    LOG1("### Ternary match table " << name() << " pass1 " << loc());
     if (action_bus) action_bus->pass1(this);
     MatchTable::pass1();
     stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
@@ -305,7 +305,7 @@ void TernaryMatchTable::pass1() {
 
 
 void TernaryMatchTable::pass2() {
-    LOG1("### Ternary match table " << name() << " pass2");
+    LOG1("### Ternary match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
     if (input_xbar) input_xbar->pass2();
     if (!indirect && indirect_bus < 0) {
@@ -338,7 +338,7 @@ void TernaryMatchTable::pass2() {
 }
 
 void TernaryMatchTable::pass3() {
-    LOG1("### Ternary match table " << name() << " pass3");
+    LOG1("### Ternary match table " << name() << " pass3 " << loc());
     MatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
@@ -407,7 +407,7 @@ static void set_tcam_mode_logical_table(ubits<8> &reg, int tcam_id, int logical_
 
 template<class REGS>
 void TernaryMatchTable::write_regs(REGS &regs) {
-    LOG1("### Ternary match table " << name() << " write_regs");
+    LOG1("### Ternary match table " << name() << " write_regs " << loc());
     MatchTable::write_regs(regs, 1, indirect);
     unsigned word = 0;
     auto &merge = regs.rams.match.merge;

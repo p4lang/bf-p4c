@@ -808,6 +808,7 @@ class Table {
     bitvec reachable_tables() {
         if (!reachable_tables_) reachable_tables_ = compute_reachable_tables();
         return reachable_tables_; }
+    std::string loc() const;
 };
 
 class FakeTable : public Table {

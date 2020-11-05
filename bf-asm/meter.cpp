@@ -141,7 +141,7 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
 }
 
 void MeterTable::pass1() {
-    LOG1("### Meter table " << name() << " pass1");
+    LOG1("### Meter table " << name() << " pass1 " << loc());
     if (!p4_table)
         p4_table = P4Table::alloc(P4Table::Meter, this);
     else
@@ -181,7 +181,7 @@ void MeterTable::pass1() {
 }
 
 void MeterTable::pass2() {
-    LOG1("### Meter table " << name() << " pass2");
+    LOG1("### Meter table " << name() << " pass2 " << loc());
     if (input_xbar) input_xbar->pass2();
 
     for (auto match_table : get_match_tables()) {
@@ -197,7 +197,7 @@ void MeterTable::pass2() {
 }
 
 void MeterTable::pass3() {
-    LOG1("### Meter table " << name() << " pass3");
+    LOG1("### Meter table " << name() << " pass3 " << loc());
 }
 
 int MeterTable::direct_shiftcount() const {
@@ -298,7 +298,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
 
 template<class REGS>
 void MeterTable::write_regs(REGS &regs) {
-    LOG1("### Meter table " << name() << " write_regs");
+    LOG1("### Meter table " << name() << " write_regs " << loc());
     if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;

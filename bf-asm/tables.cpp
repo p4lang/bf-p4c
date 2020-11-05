@@ -856,6 +856,12 @@ bitvec Table::compute_reachable_tables() {
     return reachable_tables_;
 }
 
+std::string Table::loc() const {
+    std::stringstream ss;
+    ss << "(" << gress << ", stage=" << stage->stageno << ")";
+    return ss.str();
+}
+
 void Table::pass1() {
     alloc_vpns();
     check_next();

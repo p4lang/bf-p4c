@@ -25,23 +25,23 @@ void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
 }
 
 void Phase0MatchTable::pass1() {
-    LOG1("### Phase 0 match table " << name() << " pass1");
+    LOG1("### Phase 0 match table " << name() << " pass1 " << loc());
     MatchTable::pass1();
     if (actions)
         actions->pass1(this);
 }
 
 void Phase0MatchTable::pass2() {
-    LOG1("### Phase 0 match table " << name() << " pass2");
+    LOG1("### Phase 0 match table " << name() << " pass2 " << loc());
 }
 
 void Phase0MatchTable::pass3() {
-    LOG1("### Phase 0 match table " << name() << " pass3");
+    LOG1("### Phase 0 match table " << name() << " pass3 " << loc());
 }
 
 template<class REGS>
 void Phase0MatchTable::write_regs(REGS &) {
-    LOG1("### Phase 0 match table " << name() << " write_regs");
+    LOG1("### Phase 0 match table " << name() << " write_regs " << loc());
 }
 
 void Phase0MatchTable::gen_tbl_cfg(json::vector &out) const {

@@ -144,7 +144,7 @@ void StatefulTable::MathTable::check() {
 }
 
 void StatefulTable::pass1() {
-    LOG1("### Stateful table " << name() << " pass1");
+    LOG1("### Stateful table " << name() << " pass1 " << loc());
     if (!p4_table)
         p4_table = P4Table::alloc(P4Table::Stateful, this);
     else
@@ -241,7 +241,7 @@ int StatefulTable::get_const(int lineno, int64_t v) {
 }
 
 void StatefulTable::pass2() {
-    LOG1("### Stateful table " << name() << " pass2");
+    LOG1("### Stateful table " << name() << " pass2 " << loc());
     if (input_xbar) input_xbar->pass2();
     if (actions)
         actions->stateful_pass2(this);
@@ -256,7 +256,7 @@ void StatefulTable::pass2() {
 }
 
 void StatefulTable::pass3() {
-    LOG1("### Stateful table " << name() << " pass3");
+    LOG1("### Stateful table " << name() << " pass3 " << loc());
 }
 
 int StatefulTable::direct_shiftcount() const {
@@ -323,7 +323,7 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
 }
 
 template<class REGS> void StatefulTable::write_regs(REGS &regs) {
-    LOG1("### Stateful table " << name() << " write_regs");
+    LOG1("### Stateful table " << name() << " write_regs " << loc());
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common CounterTable::write_regs

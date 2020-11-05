@@ -602,7 +602,7 @@ void SRamMatchTable::common_sram_checks() {
 }
 
 void SRamMatchTable::pass1() {
-    LOG1("### SRam match table " << name() << " pass1");
+    LOG1("### SRam match table " << name() << " pass1 " << loc());
     alloc_busses(stage->sram_search_bus_use);
     if (format) {
         verify_format();
@@ -796,7 +796,7 @@ int SRamMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int h
 }
 
 template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
-    LOG1("### SRam match table " << name() << " write_regs");
+    LOG1("### SRam match table " << name() << " write_regs " << loc());
     MatchTable::write_regs(regs, 0, this);
     auto &merge = regs.rams.match.merge;
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;

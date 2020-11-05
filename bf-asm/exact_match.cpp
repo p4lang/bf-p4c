@@ -76,7 +76,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 }
 
 void ExactMatchTable::pass1() {
-    LOG1("### Exact match table " << name() << " pass1");
+    LOG1("### Exact match table " << name() << " pass1 " << loc());
     SRamMatchTable::pass1();
     // Check if stashes are allocated (only for exact match tables). Note
     // stashes are disabled on JBAY
@@ -203,7 +203,7 @@ void ExactMatchTable::determine_ghost_bits() {
 }
 
 void ExactMatchTable::pass2() {
-    LOG1("### Exact match table " << name() << " pass2");
+    LOG1("### Exact match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
     input_xbar->pass2();
     setup_word_ixbar_group();
@@ -229,7 +229,7 @@ void ExactMatchTable::pass2() {
 }
 
 void ExactMatchTable::pass3() {
-    LOG1("### Exact match table " << name() << " pass3");
+    LOG1("### Exact match table " << name() << " pass3 " << loc());
     SRamMatchTable::pass3();
     if (action_bus) action_bus->pass3(this);
 }
@@ -263,7 +263,7 @@ void ExactMatchTable::generate_stash_overhead_rows() {
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
  * from write_regs? */
 template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
-    LOG1("### Exact match table " << name() << " write_regs");
+    LOG1("### Exact match table " << name() << " write_regs " << loc());
     SRamMatchTable::write_regs(regs);
 
     for (auto &row : layout) {
@@ -357,7 +357,7 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
 }
 
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
-    LOG3("### Exact match table " << name() << " gen_tbl_cfg");
+    LOG3("### Exact match table " << name() << " gen_tbl_cfg " << loc());
     unsigned size = get_number_entries();
     json::map &tbl = *base_tbl_cfg(out, "match", size);
     add_all_reference_tables(tbl);
