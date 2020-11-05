@@ -1178,7 +1178,7 @@ int ALUOperation::hw_right_shift() const {
         if (range.lo == -1) continue;
         int slot_lo = range.lo;
         int potential_right_shift = param.phv_bits.lo - slot_lo;
-        if (potential_right_shift < 0)
+        while (potential_right_shift < 0)
             potential_right_shift += _container.size();
         if (calculated_right_shift < 0)
             calculated_right_shift = potential_right_shift;
