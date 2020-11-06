@@ -75,6 +75,8 @@ p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
   # P4C-2743
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
+  # P4C-3295
+  extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
 )
 
 p4c_add_xfail_reason("tofino2"
