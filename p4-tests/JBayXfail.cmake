@@ -403,26 +403,27 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
 )
 
-# P4C-2799
-p4c_add_xfail_reason("tofino2"
-  "error: PHV allocation creates an invalid container action within a Tofino ALU"
-  # P4C-3043
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
-)
+# Enable in a subsequent PR for nightly regression with deprecated Arista p4s
+# # P4C-2799
+# p4c_add_xfail_reason("tofino2"
+#   "error: PHV allocation creates an invalid container action within a Tofino ALU"
+#   # P4C-3043
+#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-baremetal_tofino2_2.p4
+# )
 
-# P4C-2953
-p4c_add_xfail_reason("tofino2"
-  "error: Use of uninitialized parser value"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4
-)
+# # P4C-2953
+# p4c_add_xfail_reason("tofino2"
+#   "error: Use of uninitialized parser value"
+#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_2.p4
+# )
 
-p4c_add_xfail_reason("tofino2"
-  "error: This program violates action constraints imposed by Tofino2"
-  # P4C-2800
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
-  # P4C-3091
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_4.p4
-)
+# p4c_add_xfail_reason("tofino2"
+#   "error: This program violates action constraints imposed by Tofino2"
+#   # P4C-2800
+#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_3.p4
+#   # P4C-3091
+#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_4.p4
+# )
 
 # P4C-2836
 p4c_add_xfail_reason("tofino2"
@@ -489,4 +490,10 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Call to getNonGatewayGroupDominator with tables of different gresses."
   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
+)
+
+# P4C-3300
+p4c_add_xfail_reason("tofino2"
+  "error: tofino2 supports up to 20 stages, using 21"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
 )

@@ -24,27 +24,18 @@ set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 
 # Arista profiles
 set (P16_TNA_ARISTA_FILES
-  "obfuscated-ref-baremetal.p4"
-  "obfuscated-ref-baremetal_2.p4"
-  "obfuscated-ref-default.p4"
-  "obfuscated-ref-default_2.p4"
-  "obfuscated-ref-default_3.p4"
-  "obfuscated-ref-default_4.p4"
-  "obfuscated-ref-firewall.p4"
-  "obfuscated-ref-l2_subintf.p4"
-  "obfuscated-ref-map.p4"
-  "obfuscated-ref-media.p4"
-  "obfuscated-ref-mpls-baremetal.p4"
-  "obfuscated-ref-nat.p4"
-  "obfuscated-ref-nat_2.p4"
-  "obfuscated-ref-nat-static.p4"
-  "obfuscated-ref-nat-static_2.p4"
-  "obfuscated-ref-nat-static_3.p4"
-  "obfuscated-ref-packet-filter.p4"
-  "obfuscated-ref-qinq.p4"
-  "obfuscated-ref-small-scale-test.p4"
-  "obfuscated-ref-stateless-load-balance.p4"
-  "obfuscated-ref-stateless-load-balance-v4v6.p4"
+  "obfuscated-baremetal.p4"
+  "obfuscated-default.p4"
+  "obfuscated-firewall.p4"
+  "obfuscated-l2subintf.p4"
+  "obfuscated-map.p4"
+  "obfuscated-media.p4"
+  "obfuscated-mpls_baremetal.p4"
+  "obfuscated-nat.p4"
+  "obfuscated-nat_static.p4"
+  "obfuscated-packet_filter.p4"
+  "obfuscated-small_scale_test.p4"
+  "obfuscated-stateless_load_balance_v4v6.p4"
 )
 
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
@@ -138,11 +129,8 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2030.
 # Disable power check on these Arista profiles
 # P4C-3039
 set (P16_TNA_ARISTA_NO_POWER_CHECK_FILES
-  "obfuscated-ref-nat.p4"
-  "obfuscated-ref-nat_2.p4"
-  "obfuscated-ref-nat-static.p4"
-  "obfuscated-ref-nat-static_2.p4"
-  "obfuscated-ref-nat-static_3.p4"
+  "obfuscated-nat.p4"
+  "obfuscated-nat_static.p4"
 )
 
 cmake_policy(SET CMP0057 NEW)

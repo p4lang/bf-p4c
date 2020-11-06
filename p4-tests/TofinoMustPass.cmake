@@ -104,23 +104,19 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2370.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default_2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default_3.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default_4.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-l2_subintf.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-map.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-media.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-mpls-baremetal.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat_2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-packet-filter.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-small-scale-test.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-stateless-load-balance.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-stateless-load-balance-v4v6.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-baremetal.p4
+# P4C-3298
+# extensions/p4_tests/p4_16/customer/arista/obfuscated-default.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-firewall.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-l2subintf.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-map.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-media.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-mpls_baremetal.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-nat.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-packet_filter.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-small_scale_test.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1809-1.p4

@@ -1783,17 +1783,18 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
 )
 
-# P4C-2817
-p4c_add_xfail_reason("tofino"
-  "error: tofino supports up to 12 stages, using .*"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-qinq.p4
-)
+# Enable in a subsequent PR for nightly regressions for deprecated Arista profiles
+# # P4C-2817
+# p4c_add_xfail_reason("tofino"
+#   "error: tofino supports up to 12 stages, using .*"
+#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-qinq.p4
+# )
 
-# P4C-2614
-p4c_add_xfail_reason("tofino"
-  "error: syntax error, unexpected '.'"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static_2.p4
-)
+# # P4C-2614
+# p4c_add_xfail_reason("tofino"
+#   "error: syntax error, unexpected '.'"
+#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-nat-static_2.p4
+# )
 
 p4c_add_xfail_reason("tofino"
   "error: PHV allocation creates an invalid container action within a Tofino ALU"
@@ -1906,3 +1907,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ptf/large_indirect_count.p4
 )
 
+# P4C-3298
+p4c_add_xfail_reason("tofino"
+  "error: tofino supports up to 12 stages, using 13"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-default.p4
+)

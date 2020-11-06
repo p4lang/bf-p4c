@@ -363,13 +363,8 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-1719.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2490.p4
   extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_4.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-msee-eft_tofino2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
