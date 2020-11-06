@@ -416,10 +416,11 @@ void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id,
         break; }
 }
 
-// Used for field dictionary logging. Using fd entry and pov, a json::map
-// is filled with appropriate field names
+// Used for field dictionary logging and deparser resoureces.
+// Using fd entry and pov, a json::map is filled with appropriate field names
 void write_field_name_in_json(const Phv::Register* phv, const Phv::Register* pov, int povBit,
-                              json::map& chunk_byte, int stageno, gress_t gress) {
+                              json::map& chunk_byte, json::map& fd_entry_chunk_byte,
+                              int stageno, gress_t gress) {
     auto povName_ = Phv::get_pov_name(pov->mau_id(), povBit);
     StringRef povName = povName_;
     StringRef headerName;
@@ -432,11 +433,39 @@ void write_field_name_in_json(const Phv::Register* phv, const Phv::Register* pov
          if (fieldName.find(headerName.string()) != std::string::npos)
              fieldNames += (fieldName + ", ");
     }
+    fd_entry_chunk_byte["phv_container"] = phv->uid;
     chunk_byte["PHV"] = phv->uid;
     chunk_byte["Field"] = fieldNames;
     return;
 }
 
+void write_pov_resources_in_json(ordered_map<const Phv::Register *, unsigned> &pov,
+                                 json::map& pov_resources) {
+    unsigned pov_size = 0;
+    json::vector pov_bits;
+    // ent will be tuple of (register ref, pov position start)
+    for (auto const &ent : pov) {
+        // Go through all the bits
+        unsigned used_bits = 0;
+        for (unsigned i = 0; i < ent.first->size; i++) {
+            json::map pov_bit;
+            std::string pov_name = Phv::get_pov_name(ent.first->uid, i);
+            // Check if this POV bit is used
+            if (pov_name.compare(" ") != 0) {
+                pov_bit["pov_bit"] = ent.second + i;
+                pov_bit["phv_container"] = ent.first->uid;
+                pov_bit["phv_container_bit"] = i;
+                pov_bit["pov_name"] = pov_name;
+                pov_bits.push_back(std::move(pov_bit));
+                used_bits++;
+            }
+        }
+        if (pov_size < (ent.second + used_bits))
+            pov_size = ent.second + used_bits;
+    }
+    pov_resources["size"] = pov_size;
+    pov_resources["pov_bits"] = std::move(pov_bits);
+}
 
 // Used for field dictionary logging. Using fd entry and pov, a json::map
 // is filled with appropriate checksum or constant
@@ -462,6 +491,112 @@ void write_csum_const_in_json(int deparserPhvIdx,
 #endif
     }
     return;
+}
+
+/// Get JSON for deparser resources from digest of deparser table
+/// @param tab_digest Digest for the deparser table, nullptr if the table does not exist
+/// @return JSON node representation of the table for deparser resources
+json::map deparser_table_digest_to_json(Deparser::Digest* tab_digest) {
+    json::map dep_table;
+    json::vector table_phv;
+
+    // nullptr means the table is not used, create JSON node for empty table
+    // and return it
+    if (tab_digest == nullptr) {
+        dep_table["nTables"] = 0;
+        dep_table["maxBytes"] = 0;
+        dep_table["table_phv"] = std::move(table_phv);
+        return dep_table;
+    }
+
+    unsigned int max_bytes = 0;
+    // Prepare tables of the deparser table type
+    for (auto &set : tab_digest->layout) {
+        json::map table;
+        table["table_id"] = set.first;
+        // TODO: field_list_name?
+        json::vector bytes;
+        unsigned byte_n = 0;
+        for (auto &reg : set.second) {
+            json::map byte;
+            byte["byte_number"] = byte_n++;
+            byte["phv_container"] = reg->reg.uid;
+            bytes.push_back(std::move(byte));
+        }
+        if (byte_n > max_bytes)
+            max_bytes = byte_n;
+        table["bytes"] = std::move(bytes);
+        table_phv.push_back(std::move(table));
+    }
+    dep_table["nTables"] = tab_digest->layout.size();
+    dep_table["maxBytes"] = max_bytes;
+    dep_table["index_phv"] = tab_digest->select->reg.uid;
+    dep_table["table_phv"] = std::move(table_phv);
+    
+    // Now we have a digest
+    return dep_table;
+}
+
+/// Create resources_deparser.json with the deparser node
+/// for resources.json
+/// @param fde_entries_i JSON vector of field dictionary entries from Ingress
+/// @param fde_entries_e JSON vector of field dictionary entries from Egress
+void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
+                                              json::vector& fde_entries_e) {
+    json::map resources_deparser_ingress;
+    json::map resources_deparser_egress;
+    
+    // Set gress property
+    resources_deparser_ingress["gress"] = "ingress";
+    resources_deparser_egress["gress"] = "egress";
+    // Fill out POV resource information for ingress
+    json::map pov_resources;
+    write_pov_resources_in_json(pov[INGRESS], pov_resources);
+    resources_deparser_ingress["pov"] = std::move(pov_resources);
+    // Fill out POV resoure information for egress
+    write_pov_resources_in_json(pov[EGRESS], pov_resources);
+    resources_deparser_egress["pov"] = std::move(pov_resources);
+    // Fill out field dictionaries
+    resources_deparser_ingress["nFdeEntries"] = fde_entries_i.size();
+    resources_deparser_ingress["fde_entries"] = std::move(fde_entries_i);
+    resources_deparser_egress["nFdeEntries"] = fde_entries_e.size();
+    resources_deparser_egress["fde_entries"] = std::move(fde_entries_e);
+    // Fill deparser tables
+    Digest *learning_table[2] = { nullptr, nullptr };
+    Digest *resubmit_table[2] = { nullptr, nullptr };
+    Digest *mirror_table[2] = { nullptr, nullptr };
+    for (auto &digest : digests) {
+        // Check if this is egress/ingress
+        if (digest.type->gress != INGRESS && digest.type->gress != EGRESS)
+            continue;
+        if (digest.type->name == "learning")
+            learning_table[digest.type->gress] = &digest;
+        else if (digest.type->name == "resubmit")
+            resubmit_table[digest.type->gress] = &digest;
+        else if (digest.type->name == "mirror")
+            mirror_table[digest.type->gress] = &digest;
+    }
+    resources_deparser_ingress["mirror_table"] =
+        deparser_table_digest_to_json(mirror_table[INGRESS]);
+    resources_deparser_egress["mirror_table"] =
+        deparser_table_digest_to_json(mirror_table[EGRESS]);
+    resources_deparser_ingress["resubmit_table"] =
+        deparser_table_digest_to_json(resubmit_table[INGRESS]);
+    resources_deparser_egress["resubmit_table"] =
+        deparser_table_digest_to_json(resubmit_table[EGRESS]);
+    resources_deparser_ingress["learning_table"] =
+        deparser_table_digest_to_json(learning_table[INGRESS]);
+    resources_deparser_egress["learning_table"] =
+        deparser_table_digest_to_json(learning_table[EGRESS]);
+
+    // Create the main deparser resources node
+    json::vector resources_deparser;
+    resources_deparser.push_back(std::move(resources_deparser_ingress));
+    resources_deparser.push_back(std::move(resources_deparser_egress));
+    
+    // Dump resources to file 
+    auto deparser_json_dump = open_output("logs/resources_deparser.json");
+    *deparser_json_dump << &resources_deparser;
 }
 
 #include "tofino/deparser.cpp"    // tofino template specializations

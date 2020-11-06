@@ -163,13 +163,22 @@ class Deparser : public Section {
         return -1; }
 
     // Writes POV information in json used for field dictionary logging
-    static void write_pov_in_json(json::map& fd, const Phv::Register* pov, int bit) {
-        auto povName = Phv::get_pov_name(pov->uid, bit);
-        fd["POV PHV"] = pov->uid;
+    // and deparser resources
+    static void write_pov_in_json(json::map& fd, json::map& fd_entry, const Phv::Register* phv, int bit, int offset) {
+        auto povName = Phv::get_pov_name(phv->uid, offset);
+        // Field dictionary logging
+        fd["POV PHV"] = phv->uid;
         fd["POV Field bit"] =  bit;
         fd["POV Field Name"] = povName;
+        // Deparser resources
+        fd_entry["pov_bit"] =  bit;
+        fd_entry["pov_name"] = povName;
         return;
     }
+
+ private:
+    // Report deparser resources to JSON file
+    void report_resources_deparser_json(json::vector& fde_entries_i, json::vector& fde_entries_e);
 };
 
 #endif /* BF_ASM_DEPARSER_H_ */

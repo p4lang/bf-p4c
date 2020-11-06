@@ -258,12 +258,14 @@ using WriteChunk = std::function<void(unsigned & /* chunk_index */ ,
 
 /// A callback to finish writing a PHV, constant, or checksum chunk to the field dictionary.
 using FinishChunk = std::function<void(unsigned /* chunk_index */ ,
+                                       unsigned /* dictionary entry number */ ,
                                        const Phv::Slice & /* pov_bit */ ,
                                        unsigned /* byte */ )>;
 
 /// A callback for writing a CLOT to the field dictionary. This increments the chunk index if the
 /// CLOT spans multiple chunks.
 using WriteClot = std::function<void(unsigned & /* chunk_index */ ,
+                                     unsigned & /* dictionary entry number */ ,
                                      int /* segment_tag */ ,
                                      int /* clot_tag */ ,
                                      const Phv::Ref & /* pov_bit */ ,
@@ -282,7 +284,7 @@ void output_jbay_field_dictionary_helper(int lineno,
     const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
     const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
     const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
-    unsigned ch = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
+    unsigned ch = 0, entry_n = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
     Phv::Slice prev_pov;
     int prev = -1;
 
@@ -300,8 +302,7 @@ void output_jbay_field_dictionary_helper(int lineno,
         if (byte && (clot || byte + size > CHUNK_SIZE ||
                      (prev_pov && *ent.pov != prev_pov))) {
             if (!check_chunk(lineno, ch)) break;
-
-            finish_chunk(ch++, prev_pov, byte);
+            finish_chunk(ch++, entry_n++, prev_pov, byte);
             byte = 0;
         }
 
@@ -320,7 +321,7 @@ void output_jbay_field_dictionary_helper(int lineno,
             if (!check_chunk(lineno, ch)) break;
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
-            write_clot(ch, seg_tag, clot_tag, ent.pov, clot);
+            write_clot(ch, entry_n, seg_tag, clot_tag, ent.pov, clot);
 
             prev = -1;
         } else {
@@ -335,7 +336,7 @@ void output_jbay_field_dictionary_helper(int lineno,
 
     if (byte > 0) {
         if (check_chunk(lineno, ch))
-            finish_chunk(ch, prev_pov, byte);
+            finish_chunk(ch, entry_n, prev_pov, byte);
     }
 }
 
@@ -368,7 +369,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             error(ent_lineno, "16 and 32-bit container cannot be repeatedly deparsed");
     };
 
-    auto finish_chunk = [&](unsigned ch, const Phv::Slice &pov_bit, unsigned byte) {
+    auto finish_chunk = [&](unsigned ch, unsigned entry_n, const Phv::Slice &pov_bit, unsigned byte) {
         regs.chunk_info[ch].chunk_vld = 1;
         regs.chunk_info[ch].pov = pov.at(&pov_bit.reg) + pov_bit.lo;
         regs.chunk_info[ch].seg_vld = 0;
@@ -377,6 +378,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
     };
 
     auto write_clot = [&](unsigned &ch,
+                          unsigned &entry_n,
                           int seg_tag,
                           int clot_tag,
                           const Phv::Ref &pov_bit,
@@ -404,9 +406,12 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
 // Also used for outputting Cloudbreak field dictionary slices.
 template<class CHUNKS, class CLOTS, class POV, class DICT>
 void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov,
-                                        DICT &dict, json::vector& fd_gress, gress_t gress) {
+                                        DICT &dict, json::vector& fd_gress,
+                                        json::vector& fd_entries, gress_t gress) {
     json::map fd;
+    json::map fd_entry;
     json::vector chunk_bytes;
+    json::vector fd_entry_chunk_bytes;
 
     auto write_chunk = [&](unsigned ch,
                            const Phv::Slice& prev_pov,
@@ -418,33 +423,41 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                            unsigned size) {
         while (size--) {
             json::map chunk_byte;
+            json::map fd_entry_chunk_byte;
             chunk_byte["Byte"] = byte;
+            fd_entry_chunk_byte["chunk_number"] = byte;
+            fd_entry_chunk_byte["is_phv"] = true;
             if (ent_what->encode() < 224) {
                 auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent_what);
                 auto phv_reg = phv->reg();
                 write_field_name_in_json(phv_reg, &ent_pov->reg, ent_pov->lo,
-                                         chunk_byte, 19, gress);
+                                         chunk_byte, fd_entry_chunk_byte, 19, gress);
             } else {
                 write_csum_const_in_json(ent_what->encode(), chunk_byte, gress);
             }
             chunk_bytes.push_back(std::move(chunk_byte));
+            fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));
             chunk[ch].is_phv |= 1 << byte;
             chunk[ch].byte_off.phv_offset[byte++] = ent_what->encode();
         }
     };
 
-    auto finish_chunk = [&](unsigned ch, const Phv::Slice &pov_bit, unsigned byte) {
-        fd["Field Dictionary Number"] = ch;
-        Deparser::write_pov_in_json(fd, &pov_bit.reg, pov_bit.lo);
+    auto finish_chunk = [&](unsigned ch, unsigned entry_n, const Phv::Slice &pov_bit, unsigned byte) {
+        fd["Field Dictionary Number"] = entry_n;
+        fd_entry["entry"] = entry_n;
+        Deparser::write_pov_in_json(fd, fd_entry, &pov_bit.reg, pov.at(&pov_bit.reg) + pov_bit.lo, pov_bit.lo);
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;
         chunk[ch].cfg.seg_sel = byte >> 3;
 
         fd["Content"] = std::move(chunk_bytes);
+        fd_entry["chunks"] = std::move(fd_entry_chunk_bytes);
+        fd_entries.push_back(std::move(fd_entry));
         fd_gress.push_back(std::move(fd));
     };
 
     auto write_clot = [&](unsigned &ch,
+                          unsigned &entry_n,
                           int seg_tag,
                           int clot_tag,
                           const Phv::Ref &pov_bit,
@@ -454,14 +467,15 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
         clots[group].segment_tag[seg_tag] = clot_tag;
         auto phv_repl = clot->phv_replace.begin();
         auto csum_repl = clot->csum_replace.begin();
-        for (int i = 0; i < clot->length; i += 8, ++ch) {
+        for (int i = 0; i < clot->length; i += 8, ++ch, ++entry_n) {
             if (!check_chunk(lineno, ch)) break;
 
             // CLOTs cannot span multiple groups.
             BUG_CHECK(ch/CHUNKS_PER_GROUP == group);
 
-            fd["Field Dictionary Number"] = ch;
-            Deparser::write_pov_in_json(fd, &pov_bit->reg, pov_bit->lo);
+            fd["Field Dictionary Number"] = entry_n;
+            fd_entry["entry"] = entry_n;
+            Deparser::write_pov_in_json(fd, fd_entry, &pov_bit->reg, pov.at(&pov_bit->reg) + pov_bit->lo, pov_bit->lo);
 
             chunk[ch].cfg.seg_vld = 1;
             chunk[ch].cfg.seg_sel = seg_tag;
@@ -469,13 +483,16 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
 
             for (int j = 0; j < 8 && i + j < clot->length; ++j) {
                 json::map chunk_byte;
+                json::map fd_entry_chunk_byte;
                 if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
                     chunk[ch].is_phv |= 1 << j;
                     chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
                     chunk_byte["Byte"] = j;
+                    fd_entry_chunk_byte["chunk_number"] = j;
+                    fd_entry_chunk_byte["is_phv"] = false;
                     auto phv_reg = &phv_repl->second->reg;
                     write_field_name_in_json(phv_reg, &pov_bit->reg,
-                                              pov_bit->lo, chunk_byte, 19, gress);
+                                              pov_bit->lo, chunk_byte, fd_entry_chunk_byte, 19, gress);
                     if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
                         ++phv_repl;
                 } else if (csum_repl != clot->csum_replace.end()
@@ -483,17 +500,25 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                     chunk[ch].is_phv |= 1 << j;
                     chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
                     chunk_byte["Byte"] = j;
+                    fd_entry_chunk_byte["chunk_number"] = j;
+                    fd_entry_chunk_byte["is_phv"] = false;
                     write_csum_const_in_json(csum_repl->second.encode(), chunk_byte, gress);
                     if (int(csum_repl->first + 2) <= i + j + 1)
                         ++csum_repl;
                 } else {
                     chunk[ch].byte_off.phv_offset[j] = i + j;
                     chunk_byte["Byte"] = j;
+                    fd_entry_chunk_byte["chunk_number"] = j;
+                    fd_entry_chunk_byte["is_phv"] = false;
                     chunk_byte["CLOT"] = clot_tag;
+                    fd_entry_chunk_byte["clot_offset"] = clot_tag;
                 }
                 chunk_bytes.push_back(std::move(chunk_byte));
+                fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));
             }
             fd["Content"] = std::move(chunk_bytes);
+            fd_entry["chunks"] = std::move(fd_entry_chunk_bytes);
+            fd_entries.push_back(std::move(fd_entry));
             fd_gress.push_back(std::move(fd));
 
         }
@@ -703,23 +728,34 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
     json::map field_dictionary_alloc;
+    json::vector fde_entries_i;
+    json::vector fde_entries_e;
+    json::vector fde_entries;
     json::vector fd_gress;
     for (auto &rslice : regs.dprsrreg.ho_i) {
         output_jbay_field_dictionary_slice(lineno[INGRESS], rslice.him.fd_compress.chunk,
-            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS], fd_gress, INGRESS);
-            field_dictionary_alloc["ingress"] = std::move(fd_gress);
+            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS], fd_gress,
+            fde_entries, INGRESS);
+        field_dictionary_alloc["ingress"] = std::move(fd_gress);
+        fde_entries_i = std::move(fde_entries);
     }
     output_jbay_field_dictionary(lineno[EGRESS], regs.dprsrreg.inp.icr.egr,
         regs.dprsrreg.inp.ipp.main_e.pov.phvs, pov[EGRESS], dictionary[EGRESS]);
     for (auto &rslice : regs.dprsrreg.ho_e) {
         output_jbay_field_dictionary_slice(lineno[EGRESS], rslice.hem.fd_compress.chunk,
-            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS], fd_gress, EGRESS);
-            field_dictionary_alloc["egress"] = std::move(fd_gress);
+            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS], fd_gress,
+            fde_entries, EGRESS);
+        field_dictionary_alloc["egress"] = std::move(fd_gress);
+        fde_entries_e = std::move(fde_entries);
     }
+    
     if (Log::verbosity() > 0) {
         auto json_dump = open_output("logs/field_dictionary.log");
         *json_dump  << &field_dictionary_alloc;
     }
+    // Output deparser resources
+    report_resources_deparser_json(fde_entries_i, fde_entries_e);
+
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         if (!options.match_compiler) {
             error(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",

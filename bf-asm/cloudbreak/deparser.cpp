@@ -266,26 +266,34 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
     json::map field_dictionary_alloc;
+    json::vector fde_entries_i;
+    json::vector fde_entries_e;
+    json::vector fde_entries;
+    json::vector fd_gress;
     for (auto &rslice : regs.dprsrreg.ho_i) {
-        json::vector fd_ingress;
         output_jbay_field_dictionary_slice(lineno[INGRESS], rslice.him.fd_compress.chunk,
-            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS], fd_ingress,
-            INGRESS);
-        field_dictionary_alloc["ingress"] = fd_ingress.clone();
+            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS], fd_gress,
+            fde_entries, INGRESS);
+        field_dictionary_alloc["ingress"] = std::move(fd_gress);
+        fde_entries_i = std::move(fde_entries);
     }
     output_jbay_field_dictionary(lineno[EGRESS], regs.dprsrreg.inp.icr.egr,
         regs.dprsrreg.inp.ipp.main_e.pov.phvs, pov[EGRESS], dictionary[EGRESS]);
     for (auto &rslice : regs.dprsrreg.ho_e) {
-        json::vector fd_egress;
         output_jbay_field_dictionary_slice(lineno[EGRESS], rslice.hem.fd_compress.chunk,
-            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS], fd_egress,
-            EGRESS);
-        field_dictionary_alloc["egress"] = fd_egress.clone();
+            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS], fd_gress,
+            fde_entries, EGRESS);
+        field_dictionary_alloc["egress"] = std::move(fd_gress);
+        fde_entries_e = std::move(fde_entries);
     }
+    
     if (Log::verbosity() > 0) {
         auto json_dump = open_output("logs/field_dictionary.log");
         *json_dump  << &field_dictionary_alloc;
     }
+    // Output deparser resources
+    report_resources_deparser_json(fde_entries_i, fde_entries_e);
+    
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         if (!options.match_compiler) {
             error(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",

@@ -686,6 +686,7 @@ class BarefootBackend(BackendDriver):
         filesToRemove = []
         filesToRemove.append('.dynhash.json')
         filesToRemove.append('.prim.json')
+        filesToRemove.append('resources_deparser.json')
 
         self.add_command_option('cleaner', '-f'); 
         filesFound = 0
@@ -726,6 +727,42 @@ class BarefootBackend(BackendDriver):
         elif language == "p4-16" and arch == 'default':
             self._arch = "tna"
             self.backend = target + '-' + 'tna'
+
+    def aggregate_deparser_resources_json(self,pipe):
+        """
+        This method joins together all files from the p4c-barefoot and 
+        assembler generator.
+
+        Parameters:
+            - pipe - object with available pipes
+        """
+        # Prepare path for output files
+        log_dir = os.path.join(self._output_directory,pipe["pipe_name"],"logs")
+        deparser_file = os.path.join(log_dir,"resources_deparser.json")
+        if "resources" in pipe.keys():
+            resources_file = pipe["resources"]
+        else:
+            # No resources generated, nothing to add
+            return
+
+        if not(os.path.exists(resources_file)) or not(os.path.exists(deparser_file)):
+            # Any of required files doesn't exist
+            return 
+
+        # So far so good, open both files and add the bf-asm file to the resources
+        # file under deparser node
+        resources_json = open(resources_file,"r+")
+        deparser_json = open(deparser_file,"r")
+
+        # Append the deparer node to the output 
+        deparser_data = json.load(deparser_json)
+        resources_data = json.load(resources_json)
+        resources_data["resources"]["pipes"][0]["deparser"] = deparser_data
+
+        # Dump the node to the output - don't forget to rewind the file
+        resources_json.seek(0)
+        json.dump(resources_data,resources_json,indent=2)
+        resources_json.close()
 
     def run(self):
         """
@@ -797,6 +834,9 @@ class BarefootBackend(BackendDriver):
                 # Although the context.json schema has an optional compile_command and
                 # we could add it here, it is a potential performance penalty to re-write
                 # a large context.json file. So we don't!
+
+                # Add resources from deparser
+                self.aggregate_deparser_resources_json(pipe)
 
                 rc_ver = 0
                 if run_verifier:

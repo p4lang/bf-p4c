@@ -104,11 +104,14 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                              checked_array_base<fde_phv> &fde_data,
                              checked_array_base<ubits<8>> &pov_layout,
                              std::vector<Phv::Ref> &pov_order,
+                             ordered_map<const Phv::Register *, unsigned> &reg_pov,
                              std::vector<Deparser::FDEntry> &dict,
                              json::vector& fd_gress,
+                             json::vector& fd_entries,
                              gress_t gress) {
     std::map<unsigned, unsigned>        pov;
     json::vector chunk_bytes;
+    json::vector fd_entry_chunk_bytes;
     unsigned pov_byte = 0, pov_size = 0, total_headers = 0;
     for (auto &ent : pov_order)
         if (pov.count(ent->reg.deparser_id()) == 0) {
@@ -167,26 +170,36 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 pos = 0; }
             if (prev_row != row) {
                 json::map fd;
+                json::map fd_entry;
                 fd["Field Dictionary Number"] = prev_row;
+                fd_entry["entry"] = prev_row;
                 auto prevPovReg = Phv::reg(pov_layout[fde_control[prev_row].pov_sel.value/8]);
-                auto prevPovBit = fde_control[prev_row].pov_sel.value % prevPovReg->size;
-                Deparser::write_pov_in_json(fd, prevPovReg, prevPovBit);
+                auto prevPovBit = fde_control[prev_row].pov_sel.value;
+                auto prevPovOffset = prevPovBit - reg_pov[prevPovReg];
+                Deparser::write_pov_in_json(fd, fd_entry, prevPovReg, prevPovBit, prevPovOffset);
                 fd["Content"] = std::move(chunk_bytes);
+                fd_entry["bytes"] = std::move(fd_entry_chunk_bytes);
                 fd_gress.push_back(std::move(fd));
+                fd_entries.push_back(std::move(fd_entry));
                 prev_row = row;
             }
             auto povReg = Phv::reg(pov_layout[fde_control[row].pov_sel.value/8]);
             auto povBit = fde_control[row].pov_sel.value % povReg->size;
             json::map chunk_byte;
+            json::map fd_entry_chunk_byte;
             chunk_byte["Byte"] = pos;
+            fd_entry_chunk_byte["byte_number"] = pos;
             auto phvReg = Phv::reg(ent.what->encode());
             if (ent.what->encode() < 224 || ent.what->encode() > 235) {
                 write_field_name_in_json(phvReg, povReg,
-                                         povBit, chunk_byte, 11, gress);
+                                         povBit, chunk_byte, fd_entry_chunk_byte,
+                                         11, gress);
             } else {
+                // TODO: what to do in this case for deparser resources?
                 write_csum_const_in_json(ent.what->encode(), chunk_byte, gress);
             }
             chunk_bytes.push_back(std::move(chunk_byte.clone()));
+            fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte.clone()));
             fde_data[row].phv[pos++] = ent.what->encode();
             prev_pov = pov_bit;
         }
@@ -432,20 +445,32 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.header.him.hi_edf_cfg.disable();
 
     tofino_checksum_units(regs, checksum_unit);
+
     json::map field_dictionary_alloc;
     json::vector fd_gress;
+    json::vector fde_entries_i;
+    json::vector fde_entries_e;
+
+    // Deparser resources
+    json::vector resources_deparser;
+
+    // Create field dictionaries for ingress
     tofino_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov, regs.header.him.hi_fde_phv.fde_phv,
-                            regs.input.iir.main_i.pov.phvs, pov_order[INGRESS],
-                            dictionary[INGRESS], fd_gress, INGRESS);
+                            regs.input.iir.main_i.pov.phvs, pov_order[INGRESS], pov[INGRESS],
+                            dictionary[INGRESS], fd_gress, fde_entries_i, INGRESS);
     field_dictionary_alloc["ingress"] = std::move(fd_gress);
+    // Create field dictionaries for egress
     tofino_field_dictionary(regs.input.iem.ie_fde_pov.fde_pov, regs.header.hem.he_fde_phv.fde_phv,
-                            regs.input.ier.main_e.pov.phvs, pov_order[EGRESS], dictionary[EGRESS],
-                            fd_gress, EGRESS);
+                            regs.input.ier.main_e.pov.phvs, pov_order[EGRESS], pov[EGRESS],
+                            dictionary[EGRESS], fd_gress, fde_entries_e, EGRESS);
     field_dictionary_alloc["egress"] = std::move(fd_gress);
+    
     if (Log::verbosity() > 0) {
         auto json_dump = open_output("logs/field_dictionary.log");
         *json_dump  << &field_dictionary_alloc;
     }
+    // Output deparser resources
+    report_resources_deparser_json(fde_entries_i, fde_entries_e);
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         warning(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
