@@ -1027,6 +1027,13 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 if (r_bus >= 0)
                     write_attached_merge_regs(regs, r_bus, word, word_group);
             }
+        } else if (format) {
+            // If we have a result bus without any attached memories, program
+            // the registers on this row because a subset of the registers have been
+            // programmed elsewhere and it can break things if we have a partial configuration.
+            // FIXME: avoid programming any registers if we don't actually use the result bus.
+            if (r_bus >= 0)
+                write_attached_merge_regs(regs, r_bus, 0, 0);
         }
         for (auto col : row.cols) {
             int word_group = 0;
