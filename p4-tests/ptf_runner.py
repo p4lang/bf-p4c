@@ -292,7 +292,10 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
         if '2pipe' in port_map_path:
-            cmd.extend(['--int-port-loop=0xa'])
+            if device is 'tofino':
+                cmd.extend(['--int-port-loop=0xa'])
+            else:
+                cmd.extend(['--int-port-loop=0xc'])
     if device is not None and 'tofino3' in device:
         cmd.extend(['--chip-type=6']) # default CHIPTYPE=6 for Cloudbreak
     elif device is not None and 'tofino2' in device:

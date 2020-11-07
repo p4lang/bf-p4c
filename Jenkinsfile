@@ -77,7 +77,7 @@ node ('compiler-nodes') {
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
-                            sh "docker pull barefootnetworks/model:tofino_master"
+                            sh "docker pull barefootnetworks/model:tofino_debug"
                             sh "docker build -f docker/Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg MAKEFLAGS=j16 --build-arg BFN_P4C_GIT_SHA=${git_sha} ."
                             sh "echo 'Tag and push docker image'"
                             sh "docker tag bf-p4c-compilers_${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}"
@@ -154,7 +154,8 @@ node ('compiler-travis') {
                     sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_dc_basic' -LE 'UNSTABLE'"
                     sh "echo 'Running stful, meters and hash_driven tests'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_stful|smoketest_programs_meters|smoketest_programs_hash_driven'"
+                    // Disable stful test (DRV-4189)
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_meters|smoketest_programs_hash_driven'"
                     sh "echo 'Running remaining customer must passes that are excluded in Travis jobs'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
                 }

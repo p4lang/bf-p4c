@@ -450,12 +450,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
 )
 
-# STF bug with inserting default action with wide+deep action data table
-p4c_add_xfail_reason("tofino3"
-  "cb_test_harness CRASH"
-  extensions/p4_tests/p4_16/stf/p4c-2738.p4
-)
-
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino3"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
