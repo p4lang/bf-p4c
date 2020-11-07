@@ -1,5 +1,5 @@
 # and 'jarvis' for jarvis image
-ARG MODEL_TAG=tofino_debug
+ARG MODEL_TAG=tofino_master
 
 FROM barefootnetworks/model:${MODEL_TAG}
 
