@@ -321,13 +321,6 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2h", 3}
     };
 
-    // BFN_Options::process is called twice: once from the main, and once
-    // from applyPragmaOptions to handle pragma command_line.
-    // This variable prevents doing the actions below twice, since the
-    // pragma command line will only invoke the callbacks for the
-    // respective options.
-    static bool processed = false;
-
     // need this before processing options in the base class for gtest
     // which is corrupting outputDir data member (on Linux!). Why?
     // Don't know, and I'm at the end of my patience with it ...

@@ -205,11 +205,11 @@ TEST(testBfGtestHelper, TestCodeTestCodeGood) {
 }
 
 TEST(testBfGtestHelperDeathTest, TestCodeTestCodeOptions) {
-    // What is the best way to test the option arguments are being read?
+    // N.B. The first argument is always 'TestCode<N>' followed by the 'options' arguments.
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_EXIT(TestCode(TestCode::Hdr::Tofino1arch, Code,
-                         {EmptyDefs, EmptyAppy}, Marker, {"test app", "--version"}),
-        ::testing::ExitedWithCode(0), "test app[^V]*Version");
+                         {EmptyDefs, EmptyAppy}, Marker, {"--version"}),
+        ::testing::ExitedWithCode(0), "TestCode[^V]*Version");
 }
 
 TEST(testBfGtestHelper, TestCodeTestCodeBad) {
@@ -313,6 +313,14 @@ TEST(testBfGtestHelper, TestCodeApplyPassMutating) {
                              << "\n    '" << blk.get_block(res.pos) << "'\n";
 }
 #endif
+
+TEST(testBfGtestHelper, TestCodeApplyPreconstructedPasses) {
+    std::string EmptyDefs = "struct local_metadata_t{}; struct headers_t{};";
+    auto blk = TestCode(TestCode::Hdr::TofinoMin, TestCode::tofino_shell(),
+            {EmptyDefs, TestCode::empty_state(), TestCode::empty_appy(), TestCode::empty_appy()});
+    EXPECT_TRUE(blk.CreateBlockThreadLocalInstances());
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
+}
 
 TEST(testBfGtestHelper, TestCodeMatch) {
     auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);

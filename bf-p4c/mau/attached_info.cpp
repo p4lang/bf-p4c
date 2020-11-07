@@ -135,24 +135,34 @@ bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::ActionData *ad) {
     return false;
 }
 
+
 bool SplitAttachedInfo::BuildSplitMaps::preorder(const IR::MAU::Table *tbl) {
-    const IR::MAU::AttachedMemory *at = nullptr;
-    for (auto back_at : tbl->attached) {
-        if (back_at->attached->direct)
-            continue;
-        // FIXME -- need to deal with multiple tables attached to one match table.  Currently
-        // we only allow the first non-duplicatable table to be split, or the first found if
-        // there are no non-duplicatable
-        if (at) {
-            if (TablePlacement::can_duplicate(back_at->attached))
-                continue;
-            if (TablePlacement::can_duplicate(at))
-                at = nullptr; }
-        BUG_CHECK(at == nullptr, "A single table %1% has multiple meters/stateful ALUs", tbl->name);
-        at = back_at->attached; }
-    if (at) {
+    // At present table placement only supports the splitting one attached table.
+    // Look for a splitable attached memory to map:
+    //    either a splitable counter (duplicatable)
+    const IR::MAU::AttachedMemory* splitable_counter = nullptr;
+    //    or a splitable meter/stateful (nonduplicatable).
+    const IR::MAU::AttachedMemory* splitable_meterStateful = nullptr;
+
+    for (auto at : tbl->attached) {
+        if (at->attached->direct)
+            continue;   // Not splitable.
+        if (TablePlacement::can_duplicate(at->attached)) {
+            // We can only attach one, even if multiple are split in the same way.
+            if (!splitable_counter)
+                splitable_counter = at->attached;
+        } else {
+            if (!splitable_meterStateful)
+                splitable_meterStateful = at->attached;
+            else
+                return true;  // More than one! Don't attach any to this table.
+        }
+    }
+    // Prefer the splitable_meterStateful if found.
+    if (auto at = splitable_meterStateful? splitable_meterStateful : splitable_counter) {
         self.attached_to_table_map[at->name].insert(tbl);
-        self.table_to_attached_map[tbl->name] = at; }
+        self.table_to_attached_map[tbl->name] = at;
+    }
     return true;
 }
 

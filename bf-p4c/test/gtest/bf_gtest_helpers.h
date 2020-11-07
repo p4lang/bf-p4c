@@ -19,7 +19,11 @@ class Visitor;
 struct Visitor_Context;
 namespace IR {
 class P4Program;
+namespace BFN {
+class Pipe;
+}  // namespace BFN
 }  // namespace IR
+
 
 namespace Test {
 
@@ -123,7 +127,9 @@ std::string get_ends(char opening);
 class TestCode {
     // AutoCompileContext adds to the stack a new compilation context for the test to run in.
     AutoCompileContext context;
-    const IR::P4Program* program = nullptr;     // N.B. The sharing of this object is not clear!
+    const IR::P4Program* program = nullptr;  // Used by frontend and midend passes
+    const IR::BFN::Pipe* pipe = nullptr;     // Used by backend passes
+
     Match::Flag flag = Match::TrimWhiteSpace;   // N.B. common to match() & get_block().
     std::regex marker;      // Optional search string for the block we are interested in.
     std::string ends;       // How our optional block starts and ends.
@@ -165,11 +171,16 @@ class TestCode {
 
 
     /**  The header file to prefix the 'code' with.
-     *  N.B. 98% of the test time can be taken up processing boiler-plate.
-     *       Front-end and Mid-end passes, where possible, should minimise unnecessary code
-     *       e.g. preferably use 'Hdr::None', or 'Hdr::V1model_*', rather than 'Hdr::Tofino1arch'.
+     *  N.B. 98% of the test time can be taken up processing boiler-plate for Front-end tests.
+     *       But Mid-end & Back-end test also run faster by minimising unnecessary code.
+     *       e.g. preferably use 'Hdr::None', or 'Hdr::TofinoMin', rather than 'Hdr::Tofino1arch'.
+     *  1. Get your tests running with 'Hdr::Tofino1arch' & 'tofino_shell()'.
+     *  2. Prune the dead code before you finish.
      */
-    enum class Hdr {None, Tofino1arch, Tofino2arch, Tofino3arch, V1model_2018, V1model_2020};
+    enum class Hdr {None,       // You need to provide the 'package' - see min_control_shell().
+                    TofinoMin,  // For building an empty tofino_shell() - add only what you need.
+                    Tofino1arch, Tofino2arch, Tofino3arch,  // The regular header files.
+                    V1model_2018, V1model_2020};  // The regular header files.
 
     /** See test_bf_gtest_helpers.cpp for example usage of 'TestCode'.
      *  State the 'header' needed and the 'code' (with optional %N% insertion points).
@@ -186,11 +197,12 @@ class TestCode {
      *              "control ti" + any_to_brace(),                  // The start of the block.
      *              {"-S"});                                        // Commandline options.
      */
-    TestCode(Hdr header,
-             std::string code,
+    TestCode(Hdr header,  ///< Required header.
+             std::string code,  ///< Program, with insertions points.
              const std::initializer_list<std::string>& insertion = {},  ///< Default: none.
-             const std::string& blockMarker = "",                       ///< Default: all code.
-             const std::initializer_list<std::string>& options = {});   ///< Default: tna & P4_16.
+             const std::string& blockMarker = "",  ///< Default: all code.
+             const std::initializer_list<std::string>& options = {});  ///< Default: P4_16,
+                        ///< tofino, tna (or tofinoX, tXna when using TofinoXarch header file)
 
     /** See test_bf_gtest_helpers.cpp for example usage of 'TestControlBlock'.
      *  TestControlBlock() is a handy wrapper for testing minimal control block P4 programs.
@@ -200,21 +212,38 @@ class TestCode {
      * @param defines   Must contain a definition of 'struct Headers'.
      * @param block     The code inserted into 'control testingress(inout Headers headers){%1%}'.
      */
-    static TestCode TestControlBlock(const std::string& defines, const std::string& block) {
+    static TestCode TestControlBlock(const std::string& defines,
+                                     const std::string& block) {
         std::initializer_list<std::string> insert = {defines, block};
-        return TestCode(TestCode::Hdr::None, min_control_shell(),
-                        insert, min_control_shell_marker());
+        return TestCode(Hdr::None, min_control_shell(), insert, min_control_shell_marker());
     }
 
     /// Sets the flags to be used by other member functions.
     void flags(Match::Flag f) { flag = f; }
 
-    /// Runs the pass over the control block.
-    bool apply_pass(Visitor* pass, const Visitor_Context* context = nullptr);
+    /// Runs the pass over either the pipe (if created) else the program.
+    bool apply_pass(Visitor& pass, const Visitor_Context* context = nullptr);
+    bool apply_pass(Visitor* pass, const Visitor_Context* context = nullptr) {
+        return apply_pass(*pass, context);
+    }
+    /// Runs a preconstructed pass over the pipe or program.
+    enum class Pass {FullFrontend,                  ///< Remove the pipe and run over the program.
+                     FullMidend,                    ///< Remove the pipe and run over the program.
+                     ConverterToBackend,            ///< Run over the program and create the pipe.
+                     FullBackend,                   ///< Run over the pipe.
+                     ThreadLocalInstances,          ///< Run over the pipe.
+                     MinimumFrontend, MinimumBackend};  // Experimental.
+    bool apply_pass(Pass pass);
 
-    /// Runs a preconstructed pass over the control block.
-    enum class Pass {FullFrontend, MinimumFrontend, MinimumBackend};
-    bool apply_pass(Pass pass);  // Copy the implemenation & edit if not what you want!
+    /// Runs all the necessary passes to create a backend ready for testing.
+    bool CreateBackend() {
+        return apply_pass(Pass::FullFrontend) &&
+               apply_pass(Pass::FullMidend) &&
+               apply_pass(Pass::ConverterToBackend);
+    }
+    bool CreateBlockThreadLocalInstances() {
+        return CreateBackend() && apply_pass(Pass::ThreadLocalInstances);
+    }
 
     /// Calls Match::match() on the code identified by 'blockMarker'.
     Match::Result match(const Match::CheckList& exprs) const;

@@ -1214,6 +1214,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/add_always_run.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/attached_info.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/clot.cpp

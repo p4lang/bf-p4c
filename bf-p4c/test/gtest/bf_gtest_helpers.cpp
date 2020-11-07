@@ -1,6 +1,7 @@
 
 #include "bf_gtest_helpers.h"
 
+#include <climits>
 #include <regex>
 #include <exception>
 #include <sstream>
@@ -12,7 +13,9 @@
 #include "p4headers.h"
 #include "lib/exceptions.h"
 #include "lib/sourceCodeBuilder.h"
+#include "bf-p4c/arch/bridge.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/phv/create_thread_local_instances.h"
 #include "frontends/parsers/parserDriver.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
@@ -52,6 +55,10 @@
 #include "frontends/p4/uniqueNames.h"
 #include "frontends/p4/unusedDeclarations.h"
 #include "frontends/p4/uselessCasts.h"
+
+#include "bf-p4c/midend.h"
+
+#include "bf-p4c/backend.h"
 
 namespace Test {
 
@@ -206,6 +213,7 @@ std::string get_ends(char opening) {
     }
 }
 
+
 }  // namespace Match
 
 
@@ -245,6 +253,156 @@ char marker_last_char(const std::string& blockMarker) {
         return blockMarker[len - 1];
     return 0;
 }
+
+std::string TofinoMin() {
+    return R"(
+    typedef bit<9>  PortId_t;
+    typedef bit<16> MulticastGroupId_t;
+    typedef bit<5>  QueueId_t;
+    typedef bit<3>  MirrorType_t;
+    extern packet_in {
+        void extract<T>(out T hdr);
+        void extract<T>(out T variableSizeHeader, in bit<32> variableFieldSizeInBits);
+        T lookahead<T>();
+        void advance(in bit<32> sizeInBits);
+        bit<32> length();
+    }
+    extern packet_out {
+        void emit<T>(in T hdr);
+    }
+    header ingress_intrinsic_metadata_t {
+        bit<1> resubmit_flag;
+        bit<1> _pad1;
+        bit<2> packet_version;
+        bit<3> _pad2;
+        PortId_t ingress_port;
+        bit<48> ingress_mac_tstamp;
+    }
+    struct ingress_intrinsic_metadata_for_tm_t {
+        PortId_t ucast_egress_port;
+        bit<1> bypass_egress;
+        bit<1> deflect_on_drop;
+        bit<3> ingress_cos;
+        QueueId_t qid;
+        bit<3> icos_for_copy_to_cpu;
+        bit<1> copy_to_cpu;
+        bit<2> packet_color;
+        bit<1> disable_ucast_cutthru;
+        bit<1> enable_mcast_cutthru;
+        MulticastGroupId_t mcast_grp_a;
+        MulticastGroupId_t mcast_grp_b;
+        bit<13> level1_mcast_hash;
+        bit<13> level2_mcast_hash;
+        bit<16> level1_exclusion_id;
+        bit<9> level2_exclusion_id;
+        bit<16> rid;
+    }
+    struct ingress_intrinsic_metadata_from_parser_t {
+        bit<48> global_tstamp;
+        bit<32> global_ver;
+        bit<16> parser_err;
+    }
+    header egress_intrinsic_metadata_t {
+        bit<7> _pad0;
+        PortId_t egress_port;
+        bit<5> _pad1;
+        bit<19> enq_qdepth;
+        bit<6> _pad2;
+        bit<2> enq_congest_stat;
+        bit<14> _pad3;
+        bit<18> enq_tstamp;
+        bit<5> _pad4;
+        bit<19> deq_qdepth;
+        bit<6> _pad5;
+        bit<2> deq_congest_stat;
+        bit<8> app_pool_congest_stat;
+        bit<14> _pad6;
+        bit<18> deq_timedelta;
+        bit<16> egress_rid;
+        bit<7> _pad7;
+        bit<1> egress_rid_first;
+        bit<3> _pad8;
+        QueueId_t egress_qid;
+        bit<5> _pad9;
+        bit<3> egress_cos;
+        bit<7> _pad10;
+        bit<1> deflection_flag;
+        bit<16> pkt_length;
+    }
+    struct egress_intrinsic_metadata_from_parser_t {
+        bit<48> global_tstamp;
+        bit<32> global_ver;
+        bit<16> parser_err;
+    }
+    struct ingress_intrinsic_metadata_for_deparser_t {
+        bit<3> drop_ctl;
+        bit<3> digest_type;
+        bit<3> resubmit_type;
+        MirrorType_t mirror_type;
+    }
+    struct egress_intrinsic_metadata_for_deparser_t {
+        bit<3> drop_ctl;
+        MirrorType_t mirror_type;
+        bit<1> coalesce_flush;
+        bit<7> coalesce_length;
+    }
+    struct egress_intrinsic_metadata_for_output_port_t {
+        bit<1> capture_tstamp_on_tx;
+        bit<1> update_delay_on_tx;
+        bit<1> force_tx_error;
+    }
+    parser IngressParserT<H, M>(
+        packet_in pkt,
+        out H hdr,
+        out M ig_md,
+        @optional out ingress_intrinsic_metadata_t ig_intr_md,
+        @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+        @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr);
+    parser EgressParserT<H, M>(
+        packet_in pkt,
+        out H hdr,
+        out M eg_md,
+        @optional out egress_intrinsic_metadata_t eg_intr_md,
+        @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
+    control IngressT<H, M>(
+        inout H hdr,
+        inout M ig_md,
+        @optional in ingress_intrinsic_metadata_t ig_intr_md,
+        @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+        @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+        @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
+    control EgressT<H, M>(
+        inout H hdr,
+        inout M eg_md,
+        @optional in egress_intrinsic_metadata_t eg_intr_md,
+        @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+        @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+        @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
+    control IngressDeparserT<H, M>(
+        packet_out pkt,
+        inout H hdr,
+        in M metadata,
+        @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+        @optional in ingress_intrinsic_metadata_t ig_intr_md);
+    control EgressDeparserT<H, M>(
+        packet_out pkt,
+        inout H hdr,
+        in M metadata,
+        @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+        @optional in egress_intrinsic_metadata_t eg_intr_md,
+        @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
+    package Pipeline<IH, IM, EH, EM>(
+        IngressParserT<IH, IM> ingress_parser,
+        IngressT<IH, IM> ingress,
+        IngressDeparserT<IH, IM> ingress_deparser,
+        EgressParserT<EH, EM> egress_parser,
+        EgressT<EH, EM> egress,
+        EgressDeparserT<EH, EM> egress_deparser);
+    package Switch<IH0, IM0, EH0, EM0>(
+        Pipeline<IH0, IM0, EH0, EM0> pipe);
+    )";
+}
+
 }  // namespace
 
 TestCode::TestCode(Hdr header, std::string code,
@@ -253,23 +411,40 @@ TestCode::TestCode(Hdr header, std::string code,
                    const std::initializer_list<std::string>& options) :
                    context(new BFNContext()) {
     // Set up default options.
-    auto& o = BFNContext::get().options();
+    auto& o = BackendOptions();
     o.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    o.target = "tofino";
-    o.arch = "tna";
-    if (options.size()) {
-        // Overwrite with user options.
-        std::vector<char*> argv;
-        for (const auto& arg : options)
-            argv.push_back(const_cast<char*>(arg.data()));
-        argv.push_back(nullptr);
-        o.process(argv.size() - 1, argv.data());
+    switch (header) {
+        default:
+            o.target = "tofino";
+            o.arch = "tna";
+            break;
+        case Hdr::Tofino2arch:
+            o.target = "tofino2";
+            o.arch = "t2na";
+           break;
+        case Hdr::Tofino3arch:
+            o.target = "tofino3";
+            o.arch = "t3na";
+            break;
     }
 
-    // Add the header first.
+    std::vector<char*> argv;
+    // We must have at least one command-line option viz the name.
+    static const char* testcode = "TestCode";
+    argv.push_back(const_cast<char*>(testcode));
+    // Add the input options.
+    for (const auto& arg : options)
+        argv.push_back(const_cast<char*>(arg.data()));
+    argv.push_back(nullptr);
+    o.process(argv.size() - 1, argv.data());
+    Device::init(o.target);
+
     std::stringstream source;
     switch (header) {
         case Hdr::None:
+            break;
+        case Hdr::TofinoMin:
+            source << TofinoMin();
             break;
         case Hdr::Tofino1arch:
             source << p4headers().tofino1arch_p4;
@@ -297,7 +472,7 @@ TestCode::TestCode(Hdr header, std::string code,
     }
     source << code;
 
-    program = P4::P4ParserDriver::parse(source, "test program");
+    program = P4::P4ParserDriver::parse(source, testcode);
     if (::errorCount() || !program)
         throw std::invalid_argument("TestCode built a bad program.");
 
@@ -352,7 +527,7 @@ std::string TestCode::tofino_shell() {return R"(
     Switch(pipeline) main;)";}
 
 namespace {
-Visitor* minimum_frontend_passes(bool skipSideEffectOrdering) {
+Visitor* minimum_frontend_passes(bool skip_side_effect_ordering) {
     // TODO Can the number of passes be reduced further  - to reduce the processing time?
     auto refMap = new P4::ReferenceMap();
     auto typeMap = new P4::TypeMap();
@@ -392,7 +567,7 @@ Visitor* minimum_frontend_passes(bool skipSideEffectOrdering) {
         new P4::UniqueNames(refMap),  // Give each local declaration a unique internal name
         new P4::MoveDeclarations(),  // Move all local declarations to the beginning
         new P4::MoveInitializers(refMap),
-        new P4::SideEffectOrdering(refMap, typeMap, skipSideEffectOrdering),
+        new P4::SideEffectOrdering(refMap, typeMap, skip_side_effect_ordering),
         new P4::SimplifyControlFlow(refMap, typeMap),
         new P4::MoveDeclarations(),  // Move all local declarations to the beginning
         new P4::SimplifyDefUse(refMap, typeMap),
@@ -462,23 +637,69 @@ Visitor* minimum_backend_passes(const CompilerOptions& options) {
 
 }  // namespace
 
-bool TestCode::apply_pass(Visitor* pass, const Visitor_Context* context) {
+bool TestCode::apply_pass(Visitor& pass, const Visitor_Context* context) {
     auto before = ::errorCount();
-    program = program->apply(*pass, context);
+    if (pipe) {
+        pipe = pipe->apply(pass, context);
+        if (!pipe)
+            std::cerr << "apply_pass to pipe failed\n";
+    } else {
+        program = program->apply(pass, context);
+        if (!program)
+            std::cerr << "apply_pass to program failed\n";
+    }
     return ::errorCount() == before;
 }
 
+
 bool TestCode::apply_pass(Pass pass) {
+    constexpr bool skip_side_effect_ordering = true;
+    auto options = BackendOptions();
     switch (pass) {
         case Pass::FullFrontend: {
+            pipe = nullptr;
             auto before = ::errorCount();
-            program = P4::FrontEnd().run(BFNContext::get().options(), program, true);
+            // The 'frontendPasses' are encapsulated in a run method, so we have to call that.
+            program = P4::FrontEnd().run(options, program, skip_side_effect_ordering);
             return ::errorCount() == before;
         }
+
+        case Pass::FullMidend: {
+            pipe = nullptr;
+            BFN::MidEnd midend{options};
+            return apply_pass(midend);
+        }
+
+        case Pass::ConverterToBackend: {
+            pipe = nullptr;
+            ordered_map<cstring, const IR::Type_StructLike*> empty{};
+            BFN::SubstitutePackedHeaders extractPipes{options, empty};
+            if (!apply_pass(extractPipes) || !extractPipes.pipe.size())
+                return false;
+            pipe = extractPipes.pipe[0];
+            return pipe != nullptr;
+        }
+
+        case Pass::FullBackend: {
+            if (!pipe) throw std::invalid_argument("ConverterToBackend must be run first");
+            static int pipe_id = INT_MAX;  // TableSummary requires a unique pipe ID.
+            BFN::Backend backend{options, pipe_id--};
+            return apply_pass(backend);
+        }
+
+        case Pass::ThreadLocalInstances: {
+            if (!pipe) throw std::invalid_argument("ConverterToBackend must be run first");
+            CreateThreadLocalInstances ctli;
+            return apply_pass(ctli);
+        }
+
         case Pass::MinimumFrontend:
-            return apply_pass(minimum_frontend_passes(true), nullptr);
+            if (pipe) pipe = nullptr;
+            return apply_pass(minimum_frontend_passes(skip_side_effect_ordering));
+
         case Pass::MinimumBackend:
-            return apply_pass(minimum_backend_passes(BFNContext::get().options()), nullptr);
+            if (!pipe) throw std::invalid_argument("ConverterToBackend must be run first");
+            return apply_pass(minimum_backend_passes(options));
     }
     return false;
 }

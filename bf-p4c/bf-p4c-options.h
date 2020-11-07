@@ -63,6 +63,14 @@ class BFN_Options : public CompilerOptions {
 
     /// Process the command line arguments and set options accordingly.
     std::vector<const char*>* process(int argc, char* const argv[]) override;
+
+// private:
+    // BFN_Options::process is called twice: once from the main, and once
+    // from applyPragmaOptions to handle pragma command_line.
+    // This variable prevents doing the actions below twice, since the
+    // pragma command line will only invoke the callbacks for the
+    // respective options.
+    bool processed = false;
 };
 
 // forward declarations so we do not include ir-generated.h
