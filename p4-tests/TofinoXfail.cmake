@@ -1906,9 +1906,3 @@ p4c_add_xfail_reason("tofino"
   "error: .*: type Counter has no matching constructor"
   extensions/p4_tests/p4_16/ptf/large_indirect_count.p4
 )
-
-# P4C-3298
-p4c_add_xfail_reason("tofino"
-  "error: tofino supports up to 12 stages, using 13"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-default.p4
-)

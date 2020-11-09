@@ -347,6 +347,16 @@ struct TablePlacement::Placed {
         if (prev)
             placed |= prev->placed; }
 
+    void update_need_more(int needed_entries) {
+        if (entries < needed_entries) {
+            need_more = need_more_match = true;
+        } else {
+            need_more = need_more_match = false;
+            for (auto *ba : table->attached) {
+                if (!ba->attached->direct && attached_entries.at(ba->attached).need_more) {
+                    need_more = true;
+                    break; } } } }
+
 #if 0
     // now unused -- maybe rotted
     // update the 'placed' bitvec to reflect tables that were previously partly placed and
@@ -632,17 +642,13 @@ static int count_sful_actions(const IR::MAU::Table *tbl) {
  * Thus, some layouts may not actually be possible that were precalculated.  This will adjust
  * potential layouts if the allocation can not fit within the pack format.
  *
- * If the 'estimate_set' argument is true, we do not call StageUseEstimate (again), as we
- * assume everything in it is correct for the placement.  It needs to be called again if
- * the entries or attached_entries has changed, as it determines the format_type to use
- * for the layout(s)
  */
-bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
+bool TablePlacement::pick_layout_option(Placed *next) {
     bool table_format = true;
 
     int initial_entries = next->entries;
 
-    if (!estimate_set || next->use.format_type == ActionData::INVALID)
+    if (next->use.format_type == ActionData::INVALID)
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
                                      next->stage_split > 0, next->gw != nullptr);
 
@@ -679,20 +685,30 @@ bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
 }
 
 bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_left,
-        int min_entries) {
+        int min_entries, bool &update_whole_stage) {
     if (next->table->is_a_gateway_table_only() || next->table->match_key.empty())
         return false;
 
+    bool done_shrink = false;
     for (auto *ba : next->table->attached) {
         auto *att = ba->attached;
-        if (att->direct || !can_split(att) || next->attached_entries.at(att).entries == 0) continue;
+        if (att->direct || next->attached_entries.at(att).entries == 0) continue;
+        if (!can_split(att)) {
+            if (!can_duplicate(att)) return false;
+            continue; }
+        if (attached_to.at(att).size() > 1 &&
+            !next->attached_entries.at(att).need_more) {
+            // a shared attached table may be shared by tables in whole_stage,
+            // so they need recomputing layout, etc as well.
+            update_whole_stage = true;
+            BUG_CHECK(next->complete_shared > 0, "inconsistent shared table");
+            next->complete_shared--; }
         if (next->entries > 0) {
             LOG3("  - splitting " << att->name << " to later stage(s)");
             next->attached_entries.at(att).entries = 0;
             next->attached_entries.at(att).need_more = true;
             next->use.format_type = ActionData::INVALID;
-            // may need new layout&format type
-            return pick_layout_option(next, false);
+            done_shrink = true;
         } else {
             // FIXME -- need a better way of reducing the size to what will fit in the stage
             // Also need to fix the memories.cpp code to adjust the numbers to match how
@@ -702,17 +718,16 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             int delta = 1 << std::max(10, ceil_log2(next->attached_entries.at(att).entries) - 4);
             if (delta < next->attached_entries.at(att).entries) {
                 next->attached_entries.at(att).entries -= delta;
-                auto redo_layout = !next->attached_entries.at(att).need_more;
-                next->attached_entries.at(att).need_more = true;
+                if (!next->attached_entries.at(att).need_more) {
+                    next->use.format_type = ActionData::INVALID;
+                    next->attached_entries.at(att).need_more = true; }
                 LOG3("  - reducing size of " << att->name << " by " << delta << " to " <<
                      next->attached_entries.at(att).entries);
-                if (redo_layout) {
-                    next->use.format_type = ActionData::INVALID;
-                    // need new layout to allow for chain_vpn
-                    return pick_layout_option(next, false); }
-                return true; }
+                done_shrink = true; }
         }
     }
+    if (done_shrink)
+        return true;
 
     auto t = next->table;
     if (t->for_dleft()) {
@@ -747,10 +762,10 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
         tcams_left--;
 
     LOG3("  - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
-    if (!pick_layout_option(next, true)) {
-        LOG5("\tIXbarAllocation/Table Format error after previous allocation? Table " << t->name);
-        return false;
-    }
+    for (auto *ba : next->table->attached)
+        if (ba->attached->direct)
+            next->attached_entries.at(ba->attached).entries = next->entries;
+
     return true;
 }
 
@@ -1002,14 +1017,14 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
     bool done_next = false;
     for (auto *p : boost::adaptors::reverse(whole_stage)) {
         if (p->prev == next) {
-            if (!pick_layout_option(next, false)) {
+            if (!pick_layout_option(next)) {
                 LOG3("    " << what << " ixbar allocation did not fit");
                 return false; }
             done_next = true; }
-        if (!pick_layout_option(p, true)) {
+        if (!pick_layout_option(p)) {
             LOG3("    redo of " << p->name << " ixbar allocation did not fit");
             return false; } }
-    if (!done_next && !pick_layout_option(next, false)) {
+    if (!done_next && !pick_layout_option(next)) {
         LOG3("    " << what << " ixbar allocation did not fit");
         return false; }
 
@@ -1332,6 +1347,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         rv->placed |= rv->prev->placed;
         BUG_CHECK(rv->match_placed == rv->prev->match_placed, "match_placed out of date?"); }
 
+    int needed_entries = rv->entries;
     int initial_entries = rv->requested_stage_entries > 0 ? rv->requested_stage_entries :
         rv->entries;
     attached_entries_t initial_attached_entries = rv->attached_entries;
@@ -1371,19 +1387,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
     /* Loop to find the right size of entries for a table to place into stage */
     do {
-        rv->need_more = false;
-        rv->need_more_match = false;
         rv->entries = initial_entries;
         rv->attached_entries = initial_attached_entries;
 
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false;
-        if (rv->table->for_dleft() && initial_entries > rv->entries) {
-            advance_to_next_stage = true;
-            LOG3("    Cannot split a dleft hash table");
-            error_message = "splitting dleft tables not supported";
-        }
 
         if (!try_alloc_all(min_placed, whole_stage, "Min use") ||
             !try_alloc_all(rv, whole_stage, "Table use", true)) {
@@ -1413,49 +1422,40 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                 advance_to_next_stage = true;
                 break;
             }
-            if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries)) {
+            bool need_update_whole_stage = false;
+            if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries,
+                                 need_update_whole_stage)) {
                 error_message = "Can't split this table across stages and it's "
                                 "too big for one stage";
                 advance_to_next_stage = true;
                 break;
             }
 
-            if (rv->entries < initial_entries) {
-                for (auto *ba : rv->table->attached) {
-                    if (ba->attached->direct) {
-                        rv->attached_entries.at(ba->attached).entries = rv->entries;
-                        rv->attached_entries.at(ba->attached).need_more = true;
-                        rv->use.format_type = ActionData::INVALID;
-                    } else if (!can_duplicate(ba->attached)) {
-                        if (can_split(ba->attached)) {
-                            // FIXME -- we can't currently have an indirect attached table in
-                            // the same stage as part of the match but not all of it.
-                            rv->attached_entries.at(ba->attached).entries = 0;
-                            rv->attached_entries.at(ba->attached).need_more = true;
-                            rv->use.format_type = ActionData::INVALID;
-                        } else {
-                            advance_to_next_stage = true;
-                            break; } } }
-                rv->need_more = rv->need_more_match = true;
-                // If the table is split for the first time, then the stage_split is set to 0
-                if (rv->initial_stage_split == -1)
-                    rv->stage_split = 0;
-                if (rv->use.format_type == ActionData::INVALID && !pick_layout_option(rv, false)) {
+            rv->update_need_more(needed_entries);
+            // If the table is split for the first time, then the stage_split is set to 0
+            if (rv->need_more && rv->initial_stage_split == -1)
+                rv->stage_split = 0;
+
+            if (need_update_whole_stage) {
+                for (auto *p : boost::adaptors::reverse(whole_stage))
+                    p->update_attached(rv);
+                if (!try_alloc_all(rv, whole_stage, "Table use (redo)", true)) {
+                    LOG1("ERROR: realloc after shrink failed?");
+                    advance_to_next_stage = true;
+                    break; }
+            } else {
+                if (!pick_layout_option(rv)) {
                     LOG2("shrinking table " << rv->name << " can't find layout option");
                     advance_to_next_stage = true;
                     break; }
-            }
-
-            if (!try_alloc_adb(rv)) {
-                LOG1("ERROR: Action Data Bus Allocation error after previous allocation?");
-                advance_to_next_stage = true;
-                break;
-            }
-
-            if (!try_alloc_imem(rv)) {
-                LOG1("ERROR: Instruction Memory Allocation error after previous allocation?");
-                advance_to_next_stage = true;
-                break;
+                if (!try_alloc_adb(rv)) {
+                    LOG1("ERROR: Action Data Bus Allocation error after previous allocation?");
+                    advance_to_next_stage = true;
+                    break; }
+                if (!try_alloc_imem(rv)) {
+                    LOG1("ERROR: IMem Allocation error after previous allocation?");
+                    advance_to_next_stage = true;
+                    break; }
             }
         }
 
@@ -1470,25 +1470,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             rv->prev = min_placed->prev = done;
             stage_current.clear();
             for (auto *p : whole_stage) delete p;  // help garbage collector
-            whole_stage.clear();
-        } else if (rv->requested_stage_entries > 0 && rv->requested_stage_entries <= rv->entries) {
-            // If the table had a stage pragma, we placed the slice of the table requested by
-            // stage pragma and we need to make sure that the rest of entries are going to be
-            // placed in subsequent stages.
-            rv->requested_stage_entries = -1;
-            rv->need_more = rv->need_more_match = true;
-        }
+            whole_stage.clear(); }
     } while (!allocated && rv->stage <= furthest_stage);
 
-    for (auto *ba : rv->table->attached) {
-        auto *att = ba->attached;
-        if (att->direct) continue;
-        // indirect attached tables that could not be completely placed (due to needing other
-        // tables placed first, or not enough room) mean we may need more...
-        if (rv->attached_entries.at(att).need_more) {
-            rv->need_more = true;
-            break; } }
-
+    rv->update_need_more(needed_entries);
     rv->update_formats();
     for (auto *t : whole_stage)
         t->update_formats();

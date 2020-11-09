@@ -1930,6 +1930,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                     << r.stash_col << ", unit: " << r.stash_unit);
         }
     }
+    BUG_CHECK(!row.empty(), "empty memory use");
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) {

@@ -1285,7 +1285,7 @@ void Memories::compress_row(Use &alloc) {
             if ((t = a.bus - b.bus) != 0) return t < 0;
             return a.alloc < b.alloc;
         });
-    for (size_t i = 0; i < alloc.row.size() - 1; i++) {
+    for (size_t i = 0; i + 1 < alloc.row.size(); i++) {
         if (alloc.row[i].row == alloc.row[i+1].row &&
             alloc.row[i].bus == alloc.row[i+1].bus) {
             BUG_CHECK(alloc.row[i].word == alloc.row[i+1].word, "SRAMs that share a row "
