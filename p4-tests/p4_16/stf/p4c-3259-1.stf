@@ -1,0 +1,17 @@
+# packet generated with follow scapy command
+# a=Ether(dst="00:11:22:33:44:55",src="00:11:11:11:11:11")/IP(src="172.168.1.2",dst="0.0.0.1",ttl=17)
+# hexdump(a)
+
+add forward ingress_port:0 hit(port:0)
+add overlay_nexthop hdr.ipv4.dst_addr:1 set_overlay_nexthop_properties(g_l3_encap:1040)
+
+# broken
+add mpls_tunnel2_rewrite ig_md.route.mpls_l3_encap_id:1040 push_tunnel_five_labels(label0:1040, label1:40, label2:41, label3:42, label4:43, exp0:3, ttl0:0xDD, exp_mode:1, label_num:5)
+add mpls_tunnel2_rewrite ig_md.route.mpls_l3_encap_id:16 push_tunnel_five_labels(label0:0xf, label1:0xf, label2:0xf, label3:0xf, label4:0xf, exp0:3, ttl0:0xDD, exp_mode:1, label_num:5)
+
+# test
+# add mpls_tunnel2_rewrite eg_md.route.mpls_l3_encap_id:1040 push_tunnel_five_labels(label0:1040, exp0:3, ttl0:0xDD, exp_mode:1, label_num:5)
+#add mpls_tunnel2_rewrite eg_md.route.mpls_l3_encap_id:16 push_tunnel_five_labels(label0:0xf, exp0:3, ttl0:0xDD, exp_mode:1, label_num:5)
+
+expect 0 001122334455 001111111111 0800 45000014000100001100FC3E ACA80102 00000001 004106DD 000286DD 000296DD 0002AADD 0002B2DD
+packet 0 001122334455 001111111111 0800 45000014000100001100FC3E ACA80102 00000001

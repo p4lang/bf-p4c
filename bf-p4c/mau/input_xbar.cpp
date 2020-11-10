@@ -4062,19 +4062,68 @@ void IXBar::XBarHashDist::hash_action() {
         return;
 
     IR::Vector<IR::Expression> components;
-    int bits_required = 0;
-    for (auto read : tbl->match_key) {
-        if (read->for_match()) {
-            le_bitrange bits;
-            phv.field(read->expr, &bits);
-            bits_required += bits.size();
-            components.push_back(read->expr);
+
+    /**
+     * When action data is more than 128 bits, the compiler must add extra
+     * Huffman bits to the VPN bits as specified in figure 6-34 in uArch doc.
+     * Compiler assumes that the first match key field is allocated to the lower bits of the hash output, e.g.:
+     *   key = {
+     *       f0 : exact   // f0 is bit<4>
+     *       f1 : exact.  // f1 is bit<10>
+     *   }
+     * The HashGenExpression saves the field list as { f0, f1 }
+     *
+     * Subsequently, the field list is translated to assembly as:
+     *   hash:
+     *      0..9 : f1
+     *      10..13 : f0
+     *
+     * If a gap for Huffman bits is required, the offset of the gap starts at bit offset 10.
+     * If the gap is in the middle of a field, that field would be sliced.
+     *
+     * { f0, 1b0, f1 }
+     *
+     * And the corresponding assembly is:
+     * hash:
+     *   0..9: f1
+     *   10: 0
+     *   11..14: f0
+     */
+    int huffman_vpn_bits = ActionDataHuffmanVPNBits(&lo->layout);
+    bool add_vpn_gap = huffman_vpn_bits > 0;
+    int offset_from_bit_zero = 0;
+    for (auto read = tbl->match_key.rbegin(); read != tbl->match_key.rend(); read++) {
+        if (!(*read)->for_match())
+            continue;
+        le_bitrange bits;
+        phv.field((*read)->expr, &bits);
+
+        offset_from_bit_zero += bits.size();
+        bool add_gap_to_current_field = (offset_from_bit_zero > RAM_LINE_SELECT_BITS);
+        if (add_vpn_gap && add_gap_to_current_field) {
+            auto num_bits_for_vpn = offset_from_bit_zero - RAM_LINE_SELECT_BITS;
+            auto vpn_start = bits.size() - num_bits_for_vpn;
+            if (vpn_start - 1 >= 0) {
+                auto slice = new IR::Slice((*read)->expr, vpn_start - 1, 0);
+                components.insert(components.begin(), slice); }
+            BUG_CHECK(huffman_vpn_bits != 0, "vpn shift cannot be zero");
+            components.insert(components.begin(),
+                    new IR::Constant(IR::Type::Bits::get(huffman_vpn_bits),
+                        ActionDataVPNStartPosition(&lo->layout)));
+            if (bits.size() - 1 >= vpn_start) {
+                auto slice = new IR::Slice((*read)->expr, bits.size() - 1, vpn_start);
+                components.insert(components.begin(), slice); }
+            add_vpn_gap = false;
+            offset_from_bit_zero += huffman_vpn_bits;
+        } else {
+            components.insert(components.begin(), (*read)->expr);
         }
     }
     IR::ListExpression *field_list = new IR::ListExpression(components);
 
-    auto hge = new IR::MAU::HashGenExpression(tbl->srcInfo, IR::Type::Bits::get(bits_required),
-                       field_list, IR::MAU::HashFunction::identity());
+    auto hge = new IR::MAU::HashGenExpression(tbl->srcInfo,
+            IR::Type::Bits::get(offset_from_bit_zero),
+            field_list, IR::MAU::HashFunction::identity());
 
     auto hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
     for (auto ba : tbl->attached) {
