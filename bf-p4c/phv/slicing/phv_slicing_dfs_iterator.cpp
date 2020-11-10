@@ -12,6 +12,7 @@
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
+#include "lib/error.h"
 #include "lib/exceptions.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
@@ -112,6 +113,20 @@ void no_slicelist_itr(const IterateCb& yield, const SuperCluster* sc) {
 
 namespace PHV {
 namespace Slicing {
+
+// return a std::map<int, FieldSlice> that maps i to the fieldslice on the i-th bit of @p sl.
+const std::map<int, FieldSlice> make_fs_bitmap(const SuperCluster::SliceList* sl) {
+    std::map<int, FieldSlice> rst;
+    int offset = 0;
+    for (const auto& fs : *sl) {
+        for (int i = 0; i < fs.size(); i++) {
+            rst[offset + i] = fs;
+        }
+        offset += fs.size();
+    }
+    return rst;
+}
+
 
 boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
     const AfterSplitConstraint& other) const {
@@ -371,6 +386,50 @@ std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
     return {schema, decisions};
 }
 
+std::list<SuperCluster*> DfsItrContext::split_by_adjacent_no_pack(SuperCluster* sc) const {
+    // group fieldslices by the byte it locates, and then check no_pack constraint
+    // between adjacent byte groups. If there are no_pack constraints, mark split
+    // at the byte boundary.
+    SplitSchema schema;
+    for (auto* sl : sc->slice_lists()) {
+        schema[sl] = bitvec();
+        const std::map<int, FieldSlice> fs_bitmap = make_fs_bitmap(sl);
+        const int n_bits = SuperCluster::slice_list_total_bits(*sl);
+        const int n_bytes = n_bits / 8 + int(n_bits % 8 != 0);
+        std::vector<ordered_set<const Field*>> group_by_byte(n_bytes);
+        for (int i = 0; i < n_bytes; i++) {
+            // group fieldslices by the byte they are in.
+            for (int bit = i * 8; bit < (i + 1) * 8; bit++) {
+                if (fs_bitmap.count(bit)) {
+                    group_by_byte[i].insert(fs_bitmap.at(bit).field());
+                }
+            }
+            if (i > 0) {
+                for (const auto* fi : group_by_byte[i - 1]) {
+                    for (const auto* fj : group_by_byte[i]) {
+                        if (fi != fj && has_pack_conflict_i(fi, fj)) {
+                            schema[sl].setbit(i * 8);
+                            break;
+                        }
+                    }
+                    if (schema[sl].getbit(i * 8)) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    LOG5("split_by_adjacent_no_pack schema: " << schema);
+    auto rst = PHV::Slicing::split(sc, schema);
+    if (rst) {
+        return *rst;
+    } else {
+        ::warning("supercluster cannot be split at no_pack byte boundary: %1%",
+                  cstring::to_cstring(sc));
+        return { sc };
+    }
+}
+
 // split by pa_container_size for those pragmas that are not up-casting,
 // i.e. ignore cases like pa_container_sz(f1<8>, 32); Those will be left
 // to be iterated by the allocation algorithm to figure out the best way.
@@ -388,35 +447,52 @@ bool DfsItrContext::split_by_pa_container_size(const SuperCluster* sc,
     });
     // filter out exact_size pragmas;
     pa_container_size_upcastings_i.clear();
+    // map (field, range) to AfterSplitConstraint::size when
+    // pa_container_size pragma is applied.
+    ordered_map<const Field*, ordered_map<le_bitrange, int>> expected_size;
     ordered_set<const Field*> exact_size_pragmas;
     for (const auto& kv : pa) {
-        int total_sz = std::accumulate(kv.second.begin(), kv.second.end(), 0,
-                                       [](int a, int s) { return a + int(s); });
+        const auto* field = kv.first;
+        const auto& sizes = kv.second;
+        int total_sz =
+            std::accumulate(sizes.begin(), sizes.end(), 0, [](int a, int s) { return a + int(s); });
         // invalid pragma, ignore, the earlier passes should catch and error it,
         // if it's supposed to be errored out.
-        if (total_sz < kv.first->size) {
-            LOG6("Invalid pragma, ingored: " << kv.first);
-        } else if (total_sz == kv.first->size) {
-            LOG6("Found pa_container_size with same-size: " << kv.first);
-            exact_size_pragmas.insert(kv.first);
+        if (total_sz < field->size) {
+            LOG6("Invalid pragma, ingored: " << field);
+        } else if (total_sz == field->size) {
+            LOG6("Found pa_container_size with same-size: " << field);
+            exact_size_pragmas.insert(field);
+            int offset = 0;
+            for (const int sz : sizes) {
+                expected_size[field][StartLen(offset, sz)] = sz;
+                offset += sz;
+            }
         } else {
-            LOG6("Found upcasting pa_container_size pragma: " << kv.first << " to "
-                                                              << kv.second.front());
+            LOG6("Found upcasting pa_container_size pragma: " << field);
             // upcasting pragma, recorded for pruning.
-            if (kv.second.size() == 1) {
-                pa_container_size_upcastings_i[kv.first] = {StartLen(0, kv.first->size),
-                                                            kv.second.front()};
+            if (sizes.size() == 1) {
+                pa_container_size_upcastings_i[field] = {StartLen(0, field->size), sizes.front()};
             } else {
                 // multiple-sized upcasting pragma, only the tail needs to be upcasted.
-                const int prefix_size = total_sz - kv.second.back();
-                pa_container_size_upcastings_i[kv.first] = {StartLen(prefix_size, kv.second.back()),
-                                                            kv.second.back()};
+                const int prefix_size = total_sz - sizes.back();
+                pa_container_size_upcastings_i[field] = {StartLen(prefix_size, sizes.back()),
+                                                         sizes.back()};
+                // other than the tail, others will be split as specified, so we record them here.
+                int offset = 0;
+                for (const int sz : sizes) {
+                    if (offset == prefix_size) {
+                        break;
+                    }
+                    expected_size[field][StartLen(offset, sz)] = sz;
+                    offset += sz;
+                }
             }
         }
     }
+
     // split
     SplitSchema schema;
-    SplitDecision decisions;
     for (auto* sl : sc->slice_lists()) {
         schema[sl] = bitvec();
         int offset = 0;
@@ -438,8 +514,8 @@ bool DfsItrContext::split_by_pa_container_size(const SuperCluster* sc,
                 }
             } else if (pa.at(field).size() > 1) {
                 // expect for exact sizes pragma,
-                // multiple container sized fields should mark the beginning
-                // boundary to split as well.
+                // multiple-container-sized fields, if not exact_size_pragmas,
+                // should mark the beginning boundary to split as well.
                 if (fs.range().lo == 0) {
                     schema[sl].setbit(offset);
                 }
@@ -452,18 +528,6 @@ bool DfsItrContext::split_by_pa_container_size(const SuperCluster* sc,
                 if (split_offset < fs.range().lo) {
                     continue;
                 } else if (split_offset >= fs.range().lo && split_offset <= fs.range().hi + 1) {
-                    auto partial_fs = FieldSlice(field, StartLen(split_offset - int(sz), int(sz)));
-                    if (fs.field()->exact_containers()) {
-                        decisions[partial_fs] = {
-                            .t = AfterSplitConstraint::ConstraintType::EXACT,
-                            .size = int(sz),
-                        };
-                    } else {
-                        decisions[partial_fs] = {
-                            .t = AfterSplitConstraint::ConstraintType::MIN,
-                            .size = int(sz),
-                        };
-                    }
                     schema[sl].setbit(offset + split_offset - fs.range().lo);
                 } else {
                     break;
@@ -482,8 +546,22 @@ bool DfsItrContext::split_by_pa_container_size(const SuperCluster* sc,
         LOG5("split by pa_container_size result: ");
         for (const auto& sc : *rst) {
             LOG5(sc);
+            sc->forall_fieldslices([&](const FieldSlice& fs) {
+                if (!expected_size.count(fs.field())) {
+                    return;
+                }
+                for (const auto& kv : expected_size.at(fs.field())) {
+                    if (fs.range().intersectWith(kv.first).size() > 0) {
+                        split_decisions_i[fs] = AfterSplitConstraint{
+                            .t = AfterSplitConstraint::ConstraintType::EXACT,
+                            .size = kv.second,
+                        };
+                        LOG1("pa_container_size enforced AfterSplitConstraint: "
+                             << fs << " must be " << split_decisions_i[fs]);
+                    }
+                }
+            });
         }
-        split_decisions_i.insert(decisions.begin(), decisions.end());
         to_be_split_i.insert(rst->begin(), rst->end());
         return true;
     } else {
@@ -518,11 +596,22 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // apply pa_container_sizes-driven preslicing on clusters with
     // slicelists only.
     bool ok = split_by_pa_container_size(sc_i, pa_i);
-    if (ok) {
-        dfs(cb);
-    } else {
+    if (!ok) {
         LOG1("split by pa_container_sizes failed, iteration stopped.");
+        return;
     }
+    // preslicing by adjacent no_pack fields at byte boundary.
+    ordered_set<SuperCluster*> split_by_no_pack;
+    for (auto* sc : to_be_split_i) {
+        auto after = split_by_adjacent_no_pack(sc);
+        split_by_no_pack.insert(after.begin(), after.end());
+    }
+    to_be_split_i = split_by_no_pack;
+    LOG1("after split by adjacent no_pack:");
+    for (const auto& sc : to_be_split_i) {
+        LOG1(sc);
+    }
+    dfs(cb);
 }
 
 bool DfsItrContext::need_further_split(const SuperCluster::SliceList* sl) const {
@@ -774,19 +863,6 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_max_size(
         }
         return false;
     });
-}
-
-// return a std::map<int, FieldSlice> that maps i to the fieldslice on the i-th bit of @p sl.
-const std::map<int, FieldSlice> make_fs_bitmap(const SuperCluster::SliceList* sl) {
-    std::map<int, FieldSlice> rst;
-    int offset = 0;
-    for (const auto& fs : *sl) {
-        for (int i = 0; i < fs.size(); i++) {
-            rst[offset + i] = fs;
-        }
-        offset += fs.size();
-    }
-    return rst;
 }
 
 // return true if constraints for a slice list cannot be *all* satisfied.

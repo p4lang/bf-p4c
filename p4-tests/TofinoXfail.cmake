@@ -460,6 +460,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "compiler only supports allocation of meter color destination field .* to an 8-bit container"
+  # Expected to fail, which means that constraint conflicts are being correctly detected.
+  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
   testdata/p4_14_samples/05-FullTPHV.p4
@@ -469,9 +475,6 @@ p4c_add_xfail_reason("tofino"
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
-
-  # Expected to fail, which means that constraint conflicts are being correctly detected.
-  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 
   # p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4

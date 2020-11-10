@@ -294,6 +294,18 @@ mergeContiguousSlices(const PHV::SuperCluster::SliceList* list) {
     return rv;
 }
 
+bool satisfies_container_type_constraints(const PHV::ContainerGroup& group,
+                                          const PHV::AlignedCluster& cluster) {
+    // Check that these containers support the operations required by fields in
+    // this cluster.
+    for (auto t : group.types()) {
+        if (cluster.okIn(t.kind())) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }  // namespace
 
 const std::vector<MetricName> AllocScore::g_general_metrics = {
@@ -365,6 +377,8 @@ AllocScore::AllocScore(
 
     general[n_bitmasked_set] = bitmasks;
 
+    ordered_set<std::pair<const PHV::Field*, PHV::Container>> wasted_bits_counted;
+
     // Forall allocated slices group by container.
     for (const auto& kv : alloc.getTransactionStatus()) {
         const auto& container = kv.first;
@@ -394,8 +408,11 @@ AllocScore::AllocScore(
 
         // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {
-            if (slice.field()->is_solitary())
-                by_kind[kind][n_wasted_bits] += (container.size() - slice.width());
+            if (slice.field()->is_solitary() &&
+                !wasted_bits_counted.count({slice.field(), container})) {
+                by_kind[kind][n_wasted_bits] += (container.size() - slice.field()->size);
+                wasted_bits_counted.insert({slice.field(), container});
+            }
 
             // Loop over all CLOT-allocated slices that overlap with "slice" and add the number of
             // overlapping bits to the score.
@@ -620,23 +637,6 @@ bool CoreAllocation::can_overlay(
         if (!mutex(f->id, slice.field()->id))
             return false;
     return true;
-}
-
-boost::optional<bitvec> CoreAllocation::satisfies_constraints(
-        const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const {
-    // Check that these containers support the operations required by fields in
-    // this cluster.
-    bool isOkIn = false;
-    for (auto t : group.types()) {
-        if (cluster.okIn(t.kind()))
-            isOkIn = true; }
-    if (!isOkIn) {
-        LOG5("    ...but cluster cannot be placed in " << group.width() << " containers");
-        return boost::none; }
-
-    // Check that a valid start alignment exists for containers of this size.
-    // An empty bitvec indicates no valid starting positions.
-    return cluster.validContainerStart(group.width());
 }
 
 bool CoreAllocation::satisfies_constraints(
@@ -1136,8 +1136,19 @@ CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::S
                  " is too small for slice list width " << size);
             return false; } }
 
-    return true;
-}
+        // Check container type.
+        for (const auto* rot : sc.clusters()) {
+            for (const auto* ali : rot->clusters()) {
+                auto rst = satisfies_container_type_constraints(g, *ali);
+                if (!rst) {
+                    LOG5("    ...but ContainerGroup type cannot satisfy cluster constraints");
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 
 boost::optional<PHV::Transaction>
 CoreAllocation::tryAllocSliceList(
@@ -1978,7 +1989,15 @@ std::vector<AllocAlignment> CoreAllocation::build_alignments(
     for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists()) {
         auto curr_sl_alignment = build_slicelist_alignment(
             container_group, super_cluster, slice_list);
+        if (curr_sl_alignment.size() == 0) {
+            LOG5("cannot build alignment for " << slice_list);
+            break;
+        }
         all_alignments.push_back(curr_sl_alignment);
+    }
+    // not all slice list has valid alignment, simply skip.
+    if (all_alignments.size() < super_cluster.slice_lists().size()) {
+        return {};
     }
 
     // find max_n alignments which is a 'intersection' of one allocAlignemnt for
@@ -2009,28 +2028,18 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
   const PHV::SuperCluster& super_cluster,
   const PHV::SuperCluster::SliceList* slice_list) const {
     std::vector<AllocAlignment> rst;
-    auto valid_list_starts = satisfies_constraints(
-        container_group, super_cluster.aligned_cluster(slice_list->front()));
-    if (valid_list_starts == boost::none) {
-        LOG5("    ...but there are no valid slice list starting position: "
-             << slice_list->front());
-        return rst;
-    }
-
-    for (const int le_offset_start : *valid_list_starts) {
+    auto valid_list_starts = super_cluster.aligned_cluster(slice_list->front())
+                                 .validContainerStart(container_group.width());
+    for (const int le_offset_start : valid_list_starts) {
         int le_offset = le_offset_start;
         AllocAlignment curr;
         bool success = true;
         for (auto& slice : *slice_list) {
             const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
-            auto valid_start_options = satisfies_constraints(container_group, cluster);
-            if (valid_start_options == boost::none) {
-                success = false;
-                break;
-            }
+            auto valid_start_options = cluster.validContainerStart(container_group.width());
 
             // if the slice 's cluster cannot be placed at the current offset.
-            if (!valid_start_options->getbit(le_offset)) {
+            if (!valid_start_options.getbit(le_offset)) {
                 LOG6("    ...but slice list requires slice to start at " << le_offset <<
                      " which its cluster cannot support: " << slice <<
                      " with list starts with " << le_offset_start);
@@ -2117,19 +2126,16 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             if (alignment.cluster_alignment.count(aligned_cluster)) {
                 starts = bitvec(alignment.cluster_alignment.at(aligned_cluster), 1);
             } else {
-                auto optStarts = satisfies_constraints(container_group, *aligned_cluster);
-                if (!optStarts) {
-                    // Other constraints not satisfied, eg. container type mismatch.
-                    return boost::none;
-                }
-                if (optStarts && optStarts->empty()) {
+                auto optStarts = aligned_cluster->validContainerStart(container_group.width());
+                if (optStarts.empty()) {
                     // Other constraints satisfied, but alignment constraints
                     // cannot be satisfied.
                     LOG5("    ...but no valid start positions");
-                    return boost::none; }
+                    return boost::none;
+                }
                 // Constraints satisfied so long as aligned_cluster is placed
                 // starting at a bit position in `starts`.
-                starts = *optStarts;
+                starts = optStarts;
             }
 
             // Compute all possible alignments
@@ -2239,11 +2245,11 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     LOG5("build alignments");
     std::vector<AllocAlignment> alignments = build_alignments(
         max_alignment_tries, container_group, super_cluster);
+    LOG5("found " << alignments.size() << " valid alignemtns");
     if (alignments.empty()) {
         LOG5("SuperCluster is not allocate-able due to alignment: " << super_cluster);
         return boost::none;
     }
-    LOG5("found " << alignments.size() << " valid alignemtns");
 
     // try different alignments.
     boost::optional<PHV::Transaction> best_alloc = boost::none;
@@ -3848,7 +3854,7 @@ BruteForceAllocationStrategy::tryAllocSlicing(
         boost::optional<PHV::Transaction> best_slice_alloc = boost::none;
 
         for (PHV::ContainerGroup* container_group : container_groups) {
-            LOG4("Try container group: " << container_group);
+            LOG4("Try to allocate to container group: " << container_group);
 
             if (auto partial_alloc =
                 core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
@@ -3862,6 +3868,8 @@ BruteForceAllocationStrategy::tryAllocSlicing(
                     best_slice_score = score;
                     best_slice_alloc = partial_alloc;
                 }
+            } else {
+                LOG4("Failed to allocate to " << container_group);
             }
         }
 

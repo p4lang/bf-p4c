@@ -261,18 +261,9 @@ class CoreAllocation {
             const PHV::Field* f,
             const ordered_set<PHV::AllocSlice>& slices);
 
-    /** Checks whether @group can satisfy the group/cluster constraints for
-     * @cluster. If so, returns group-specific information for placing
-     * @cluster. At present, this is the set of valid starting bit locations
-     * for fields of @cluster in containers of @group.
-     */
-    boost::optional<bitvec> satisfies_constraints(
-        const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const;
-
     /// @returns true if slice list<-->container constraints are satisfied.
-    bool satisfies_constraints(
-            std::vector<PHV::AllocSlice> slices,
-            const PHV::Allocation& alloc) const;
+    bool satisfies_constraints(std::vector<PHV::AllocSlice> slices,
+                               const PHV::Allocation& alloc) const;
 
     /// @returns true if field<-->group constraints are satisfied.
     bool satisfies_constraints(const PHV::ContainerGroup& group, const PHV::Field* f) const;

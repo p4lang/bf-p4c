@@ -5,6 +5,8 @@
 
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/slicing/types.h"
+#include "bf-p4c/phv/utils/utils.h"
+#include "lib/ordered_set.h"
 
 namespace PHV {
 namespace Slicing {
@@ -116,6 +118,10 @@ class DfsItrContext : public IteratorInterface {
 
     /// split_by_pa_container_size will split @p sc by @p pa container size.
     bool split_by_pa_container_size(const SuperCluster* sc, const PHVContainerSizeLayout& pa);
+
+    /// split_by_adjacent_no_pack will split @p sc at byte boundary if two adjacent fields
+    /// cannot be packed into one container.
+    std::list<SuperCluster*> split_by_adjacent_no_pack(SuperCluster* sc) const;
 
     /// return possible SplitChoice on @p target. The result is sorted that better choices
     /// are at lower indexes.
