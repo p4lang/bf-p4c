@@ -2339,12 +2339,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
         if (spare_mem.size() == 1)
             mra["spare_bank_memory_unit"] = spare_mem[0]->clone();
         else
-#if 0
-            // FIXME: Emit the vector once supported by the driver
             mra["spare_bank_memory_unit"] = spare_mem.clone();
-#else
-            mra["spare_bank_memory_unit"] = spare_mem[0]->clone();
-#endif
     }
     return json::mkuniq<json::map>(std::move(mra));
 }

@@ -347,12 +347,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
     if (home_rows.size() > 1)
-#if 0
-        // FIXME: Emit the vector once supported by the driver
         add_alu_indexes(stage_tbl, "stats_alu_index");
-#else
-        add_alu_index(stage_tbl, "stats_alu_index");
-#endif
     else
         add_alu_index(stage_tbl, "stats_alu_index");
     // FIXME: Eliminated by DRV-1856
