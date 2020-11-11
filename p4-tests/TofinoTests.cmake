@@ -374,6 +374,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4"
           test.TestMacRW
           test.TestExm3way4Entries
           test.TestTcamScopesMax")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000 -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
@@ -388,6 +389,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_2"
           test.TestNoKeyNoParamTables
           test.TestAddRoute
           test.TestDefaultEntriesAllStage")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_basic_ipv4_2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_3" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000 -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_3"
@@ -402,6 +404,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_3"
           test.TestTernaryValidMatch
           test.TestRmHdr
           test.TestTcamScopes1")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_basic_ipv4_3" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000 -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_4"
@@ -413,9 +416,7 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_4"
           test.TestExm6way3Entries
           test.TestRangeTernaryValid
           test.TestTcamDuplicateEntries")
-# test.TestExmStateRestoreLarge
-# test.TestTcamStateRestore
-# test.TestUdpDstPort
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_basic_ipv4_4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_5" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000 -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_5"
@@ -429,10 +430,12 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_5"
           test.TestTblDbgCounters
           test.TestLogTblCounter
           test.TestExmSnapshot")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_basic_ipv4_5" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_TestLearning" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000 -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_TestLearning"
          "test.TestLearning")
+bfn_set_ptf_ports_json_file("tofino" "smoketest_programs_basic_ipv4_TestLearning" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/ports.json")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "COMPILER-1186" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1186/case9213b.p4"
     "${testExtraArgs} -pd -to 2000" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1186")
