@@ -2,10 +2,12 @@
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 header data_t {
+    bit<128> l1;
     bit<48> f1;
     bit<48> f2;
     bit<8>  b1;
     bit<8>  b2;
+    bit<8>  b3;
 }
 
 struct metadata {
@@ -49,6 +51,10 @@ control IngressP(inout headers hdr,
         hdr.data.b2 = b2;
     }
 
+    action setb3(bit<8> b3) {
+        hdr.data.b3 = b3;
+    }
+
     table slice_it0 {
         key = { 
             hdr.data.f1 & 0x00000000FF00 : exact @name("hdr.data.f1");
@@ -69,9 +75,18 @@ control IngressP(inout headers hdr,
         default_action = setb2(0x77);
     }
 
+    table long_mask {
+        key = { 
+            hdr.data.l1 & 0xFFFFFFFFFFFFFFFF0000000000000000: exact @name("hdr.data.l1");
+        }
+        actions = { setb3; }
+        default_action = setb3(0x77);
+    }
+
     apply {
         slice_it0.apply();
         slice_it1.apply();
+        long_mask.apply();
     }
 }
 

@@ -190,13 +190,13 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
             if (rv == INT)
                 val->i += *s - 'a' + 10;
             else
-                val->bigi.data[0] += *s - 'a' + 10;
+                bigint_add(val->bigi, *s - 'a' + 10);
             break;
         case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
             if (rv == INT)
                 val->i += *s - 'A' + 10;
             else
-                val->i += *s - 'A' + 10;
+                bigint_add(val->bigi, *s - 'A' + 10);
             break;
         default:
             assert(0); }
