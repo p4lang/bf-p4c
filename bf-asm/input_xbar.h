@@ -152,6 +152,20 @@ class InputXbar {
                 if (bit <= p.hi && bit >= p.lo)
                     return p.what.name(); } }
         return ""; }
+    bool is_p4_param_bit_in_hash(std::string p4_param_name, int bit) {
+        for (auto &g : groups) {
+            for (auto &p : g.second) {
+                std::string phv_field_name = p.what.name();
+                auto phv_field_lobit = remove_name_tail_range(phv_field_name);
+                phv_field_lobit += p.what.fieldlobit();
+                auto phv_field_hibit = phv_field_lobit + p.size() - 1;
+                if (p4_param_name == phv_field_name
+                    && bit <= phv_field_hibit && bit >= phv_field_lobit)
+                    return true;
+            }
+        }
+        return false;
+    }
     unsigned get_seed_bit(unsigned group, unsigned bit) const {
         if (hash_groups.count(group))
             return ((hash_groups.at(group).seed >> bit) & 0x1);

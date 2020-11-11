@@ -120,17 +120,27 @@ void HashActionTable::write_regs(REGS &regs) {
  * This is under the guarantee that the compiler will allocate the hash in reverse p4 param
  * order as well.
  *
- * FIXME: Possibly this should be validated before this is the output, but currently the 
- * compiler will set up the hash in that order 
+ * FIXME: Possibly this should be validated before this is the output, but currently the
+ * compiler will set up the hash in that order
  */
 void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+
+    if (!input_xbar) return;
+    auto &ht = input_xbar->get_hash_tables();
+    if (ht.size() == 0) return;
+
     int hash_bit_index = 0;
     json::map hash_function;
     json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
     for (auto it = p4_params_list.rbegin(); it != p4_params_list.rend(); it++) {
         auto& p4_param = *it;
         for (size_t i = p4_param.start_bit; i < p4_param.start_bit + p4_param.bit_width; i++) {
+            // Check if the param bit is used in hash function before adding to
+            // json. E.g. The param can have a mask which will exclude some bits
+            // to not be a part of the hash function
+            if (!input_xbar->is_p4_param_bit_in_hash(p4_param.name, i)) continue;
+
             json::map hash_bit;
             hash_bit["hash_bit"] = hash_bit_index;
             hash_bit["seed"] = 0;
@@ -142,6 +152,7 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
             field["hash_match_group_bit"] = 0;
             bits_to_xor.push_back(std::move(field));
             hash_bits.push_back(std::move(hash_bit));
+
             hash_bit_index++;
         }
     }
