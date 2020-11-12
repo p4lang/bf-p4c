@@ -45,6 +45,10 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
   bool updated_deps = true;
   auto& spec = Device::mauPowerSpec();
   double max_power = (options_.max_power > 0.0) ? options_.max_power : spec.get_max_power();
+  // P4C-3312 Limit power max to never exceed spec value
+  if (max_power > spec.get_absolute_max_power()) {
+      max_power = spec.get_absolute_max_power();
+  }
   LOG2("Max Power allowed : " << max_power);
   double rounding = max_power / 104729.0;
   double total_power = 0.0;
@@ -136,7 +140,7 @@ void WalkPowerGraph::clear_mpr_settings() {
  * forwarded (or not), so as long as different threads agree on who is using each bit, they
  * can use different match/action dependency for each stage.  So we might have:
  *
- * 
+ *
  *  stage    0   1   2   3   4   5   6   7   8  ...
  *         +---+---+---+---+---+---+---+---+---+
  * ingress | M | M | A | A | A | M | M | A | A |

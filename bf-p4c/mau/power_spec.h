@@ -22,6 +22,9 @@ class MauPowerSpec {
     */
   virtual double get_excess_power_threshold() const = 0;
 
+  virtual double get_absolute_max_power() const {
+      return get_max_power() + get_excess_power_threshold(); }
+
   /**
     * Memory access power consumption (in Watts)
     * Note that these numbers are not to be made available in any
@@ -76,7 +79,7 @@ class TofinoMauPowerSpec : public MauPowerSpec {
   TofinoMauPowerSpec() { }
 
   double get_max_power() const override { return 40.0; }
-  double get_excess_power_threshold() const override { return 10.0; }
+  double get_excess_power_threshold() const override { return 22.0; }
 
   /**
     * Memory access power consumption (in Watts)
