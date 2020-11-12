@@ -71,6 +71,7 @@ toolsdevice="tofino"
 arch="v1model"
 target="tofino"
 p4info=true
+stf_bin=false
 
 force_link=false
 
@@ -188,6 +189,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -ptf           run PTF tests if available"
         echo >&2 "   -ptfdir <dir>  directory containing PTF tests"
         echo >&2 "   -p4c <p4cpath> p4c compiler path for PD tests (glass/brig)"
+        echo >&2 "   -stfbin        use .bin instead of .conf in STF"
         echo >&2 "   -keep-logs     if specified, keep PTF logs"
         echo >&2 "   -time          time commands as they run"
         echo >&2 "   -tofino        target tofino (default) -- deprecate"
@@ -289,6 +291,9 @@ while [ $# -gt 1 ]; do
         run_stf2ptf=true
         run_ptf=true
         run_stf=false
+        ;;
+    -stfbin)
+        stf_bin=true
         ;;
     -v) if $verbose; then
             P4C_ARGS+=("$1")
@@ -583,12 +588,16 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
 
     #obsLog=$name.p4.obs
 
-    conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
-    run ./p4c-gen-bfrt-conf $conf_args
+    if $stf_bin ; then
+        output_dir=$testout/${pipes[0]}/${device}.bin.gz
+    else
+        conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
+        run ./p4c-gen-bfrt-conf $conf_args
 
-    output_dir=$testout
-    if [ $p4_version == "p4-16" ]; then
-        output_dir=$output_dir/${name}.conf
+        output_dir=$testout
+        if [ $p4_version == "p4-16" ]; then
+            output_dir=$output_dir/${name}.conf
+        fi
     fi
 
     run $STF -l $output_dir $test | \

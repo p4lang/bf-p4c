@@ -1,0 +1,7 @@
+# For this test, we just want to verify that the model doesn't crash.
+# Send a single packet that will be absorbed; no expected packet.
+
+###      DA              SA              Ether
+packet 0 0000 0000 0000  0000 0000 0000  0000
+
+sleep 2
