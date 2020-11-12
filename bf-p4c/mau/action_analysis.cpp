@@ -487,8 +487,6 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
 
 
 void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, FieldAction &fa) {
-    le_bitrange write_range = { 0, 0 };
-    auto write_field = phv.field(fa.write.expr, &write_range);
     int op_idx = 0;
 
     BUG_CHECK(fa.reads.size() == 2 || fa.reads.size() == 3, "Conditional set instruction not "
@@ -498,10 +496,6 @@ void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, Fie
         auto param = fa.reads[op_idx];
         BUG_CHECK(param.type == ActionParam::PHV, "Conditional write instruction PHV "
                                                   "field not built correctly");
-        le_bitrange read_range = { 0, 0 };
-        auto read_field = phv.field(param.expr, &read_range);
-        BUG_CHECK(!(read_field == write_field && write_range == read_range), "Conditional write "
-            "is setting itself, which should have been eliminated");
         op_idx++;
     }
 

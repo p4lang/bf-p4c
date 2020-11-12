@@ -1036,17 +1036,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
                                                             cond_arg_name, arg);
                 cstring instr_name = "conditionally-set";
                 IR::MAU::Instruction *rv = nullptr;
-                if (equiv(prim->operands[0], mux->e2) && checkActionBus(mux->e1)) {
-                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
-                             { prim->operands[0], mux->e1, cond_arg });
-                } else if (equiv(prim->operands[0], mux->e1) && checkActionBus(mux->e2)) {
-                    cond_arg->one_on_true = false;
-                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
-                            { prim->operands[0], mux->e2, cond_arg });
-                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditional assignment must "
-                          "be reversed, as the non PHV parameter must be on the true branch for "
-                          "support in the driver", prim->srcInfo);
-                } else if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
+                if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e2, mux->e1, cond_arg });
                 } else if (checkActionBus(mux->e2) && checkPHV(mux->e1)) {
