@@ -135,6 +135,7 @@ class RewriteConcatToSlices : public Transform {
         return blk;
     }
     const IR::Node* preorder(IR::AssignmentStatement* stmt) override;
+    const IR::Node* postorder(IR::AssignmentStatement* stmt) override;
     const IR::Node* preorder(IR::IfStatement* stmt) override;
     const IR::Node* preorder(IR::Equ *eq) override;
     const IR::Node* preorder(IR::Neq *ne) override;

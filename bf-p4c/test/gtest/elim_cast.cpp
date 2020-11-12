@@ -569,4 +569,46 @@ TEST(ElimCast, AssignExplicitSlicePlus) {
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
+TEST(ElimCast, AssignBooleanExpr) {
+    auto input = R"(
+        apply {
+            bool b = ((headers.h.field1 ++ headers.h.field2) == headers.h.field3);
+            if (b) {
+                headers.h.field4 = 32w0;
+            }
+        })";
+    Match::CheckList expected = {
+        "bool b_0;",
+        "apply {",
+            "b_0 = headers.h.field1 == headers.h.field3[15:8] &&",
+                  "headers.h.field2 == headers.h.field3[7:0];",
+            "if (b_0) {",
+                "headers.h.field4 = 32w0;",
+            "}",
+        "}"
+    };
+    RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
+}
+
+TEST(ElimCast, AssignBooleanExpr2) {
+    auto input = R"(
+        apply {
+            bit<8> v = ((headers.h.field1 ++ headers.h.field2) == headers.h.field3)? 8w1 : 8w2;
+            if (v == 8w1) {
+                headers.h.field4 = 32w0;
+            }
+        })";
+    Match::CheckList expected = {
+        "bit<8> v_0;",
+        "apply {",
+            "v_0 = (headers.h.field1 == headers.h.field3[15:8] &&",
+                   "headers.h.field2 == headers.h.field3[7:0] ? 8w1 : 8w2);",
+            "if (v_0 == 8w1) {",
+                "headers.h.field4 = 32w0;",
+            "}",
+        "}"
+    };
+    RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
+}
+
 }  // namespace Test

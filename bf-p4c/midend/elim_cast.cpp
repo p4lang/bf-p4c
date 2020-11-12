@@ -202,8 +202,10 @@ struct Statements {
     safe_vector<const IR::AssignmentStatement*> rd_tmp;
 };
 
+bool nested_nonsliceable(const IR::Expression* expr);
+
 SlicePair slice_value(const IR::Expression* value, const IR::Concat* concatOp) {
-    // We should have removed all nonsliceable sub-expressions (apart from IR::Equ, IR::Neq).
+    // We have removed all nonsliceable sub-expressions (the check is a bit expensive).
     // BUG_CHECK(!nested_nonsliceable(value), "value expression not sliceable");
     int lsize = concatOp->left->type->width_bits();
     int rsize = concatOp->right->type->width_bits();
@@ -265,7 +267,6 @@ bool nonsliceable(const IR::Operation_Binary* binOp) {
                      binOp->is<IR::BOr>() ||
                      binOp->is<IR::BXor>() ||
     // We also include comparison operations.
-    // TODO handle comparison expressions in IR::AssignmentStatement.
                      binOp->is<IR::Equ>() ||
                      binOp->is<IR::Neq>();
     return !sliceable;
@@ -376,7 +377,9 @@ const IR::Expression* remove_nonsliceable_from_sliceable(const IR::Expression* e
                                                          Statements& stmts) {
     if (auto ternOp = expr->to<IR::Operation_Ternary>()) {
         if (auto sliceOp = expr->to<IR::Slice>()) {
-            // BUG_CHECK(!nonsliceable(sliceOp->e1) && !nonsliceable(sliceOp->e2), "!!");
+            // We don't expect the ranges to contain nonsliceable expressions!
+            // BUG_CHECK(!nested_nonsliceable(sliceOp->e1) &&
+            //           !nested_nonsliceable(sliceOp->e2), "Is this legal?!?");
             return remove_nonsliceable_from_sliceable(sliceOp->e0, stmts);
         }
         return assign_expr_to_temp(ternOp, stmts);
@@ -433,6 +436,15 @@ const IR::Node* RewriteConcatToSlices::preorder(IR::AssignmentStatement* stmt) {
             stmt->right = newright;
             return create_block(stmts, stmt);
         }
+        // Before we can slice the entire assignment, we need to handle boolean expresions.
+        // Delay completion for postorder...
+    }
+    return stmt;
+}
+const IR::Node* RewriteConcatToSlices::postorder(IR::AssignmentStatement* stmt) {
+    // ...any boolean expression have now been sliced, so we can continue.
+    Statements stmts;
+    if (find_nested_concat(stmt->right)) {
         // Now we can slice the entire assignment.
         slice_assignment(stmt->left, stmt->right, stmts);
         return create_block(stmts);
