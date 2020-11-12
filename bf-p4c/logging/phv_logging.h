@@ -18,6 +18,7 @@
 #include "bf-p4c/logging/logging.h"
 #include "bf-p4c/logging/constrained_fields.h"
 #include "bf-p4c/logging/mau_group_extractor.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/version.h"
 #include "ir/ir.h"
 #include "phv_schema.h"
@@ -58,7 +59,7 @@ struct CollectPhvLoggingInfo : public MauInspector {
     const std::list<PHV::SuperCluster*> *superclusters;
 
     /// Pointer to pragma object computed during PHV Analysis
-    const PragmaContainerSize *paContainerSize;
+    const PHV::Pragmas *pragmas;
 
     /// Extracted no pack (different container) constraints
     ordered_map<cstring, ordered_map<cstring, bool>> noPackConstraints;
@@ -140,7 +141,8 @@ class PhvLogging : public MauInspector {
         MAUGroup,
         NoSplit,
         ContainerSize,
-        Alignment
+        Alignment,
+        NoOverlay
     };
 
  private:
@@ -269,6 +271,8 @@ class PhvLogging : public MauInspector {
     void logContainerSizeConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     void logAlignmentConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logNoOverlayConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.

@@ -43,3 +43,5 @@ This README serves for sample programs for P4I. It lists various edge cases usef
         - tofino2_switch_16_32q (ingress::hdr.ipv4.version)
     * Constraint is applied to slices:
         - tofino2_switch_16_32q (ingress::hdr.ipv4.version)
+ * NoOverlay
+    * tofino_leaf (ingress::egress_metadata.routed)

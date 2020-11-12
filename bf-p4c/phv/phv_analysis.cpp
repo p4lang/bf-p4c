@@ -125,6 +125,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         });
 
     phvLoggingInfo->superclusters = &clustering.cluster_groups();
-    phvLoggingInfo->paContainerSize = &pragmas.pa_container_sizes();
+    phvLoggingInfo->pragmas = &pragmas;
     setName("PHV Analysis");
 }

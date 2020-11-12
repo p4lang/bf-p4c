@@ -64,6 +64,10 @@ void ConstrainedField::setNoSplit(bool b) {
     noSplit = b;
 }
 
+void ConstrainedField::setNoOverlay(bool b) {
+    noOverlay = b;
+}
+
 /* ConstrainedFieldMap */
 
 ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,

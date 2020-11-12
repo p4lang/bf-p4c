@@ -5,10 +5,11 @@
 
 void CollectPhvLoggingInfo::collectConstraints() {
     fieldConstraints = ConstrainedFieldMapBuilder::buildMap(phv, *superclusters);
-    ContainerSizeExtractor::extract(*paContainerSize, fieldConstraints);
+    ContainerSizeExtractor::extract(pragmas->pa_container_sizes(), fieldConstraints);
 
     mauGroupConstraints = new MauGroupExtractor(*superclusters, fieldConstraints);
 
+    // Extract no pack
     for (auto &f : phv) {
         for (auto &f2 : phv) {
             if (f == f2) continue;
@@ -16,6 +17,14 @@ void CollectPhvLoggingInfo::collectConstraints() {
             noPackConstraints[f.name][f2.name] = phv.isFieldNoPack(&f, &f2);
             noPackConstraints[f2.name][f.name] = phv.isFieldNoPack(&f, &f2);
         }
+    }
+
+    // Extract no overlay
+    for (auto field : pragmas->pa_no_overlay().getFields()) {
+        BUG_CHECK(fieldConstraints.find(field->name) != fieldConstraints.end(),
+            "No overlay constraint for field %s which is not in fieldConstraints map.",
+            field->name);
+        fieldConstraints[field->name].setNoOverlay(true);
     }
 }
 
@@ -319,6 +328,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     logNoSplitConstraint(cfield, srcLoc);
     logContainerSizeConstraint(cfield, srcLoc);
     logAlignmentConstraint(cfield, srcLoc);
+    logNoOverlayConstraint(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -512,6 +522,13 @@ void PhvLogging::logAlignmentConstraint(ConstrainedField &field, const SourceLoc
     }
 }
 
+void PhvLogging::logNoOverlayConstraint(ConstrainedField &field, const SourceLocation *srcLoc) {
+    if (!field.hasNoOverlay()) return;
+
+    auto noc = new BoolConstraint(false, int(ConstraintReason::NoOverlay), "NoOverlay", srcLoc);
+    field.getLogger()->append(noc);
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -607,6 +624,9 @@ void PhvLogging::logConstraintReasons() {
         }, {
             ConstraintReason::Alignment,
             "Alignment: Field has to be placed at a given offset within a container."
+        }, {
+            ConstraintReason::NoOverlay,
+            "No Overlay: Field cannot be overlayed with any other field."
         }
     };
 
