@@ -39,7 +39,6 @@ class BFN_Options : public CompilerOptions {
     bool disable_gfm_parity = true;
     int relax_phv_init = 0;
     bool quick_phv_alloc = false;
-    int num_stages_override = 0;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in
@@ -47,6 +46,7 @@ class BFN_Options : public CompilerOptions {
     // corruption.  So we always include these fields; they're just unused in release
     // The particular problem seems to be with gtest -- gtest source files are built
     // with BAREFOOT_INTERNAL unset, whil backend files are built with it set.
+    int num_stages_override = 0;
     std::set<cstring> skipped_pipes;
     bool no_power_check = false;
     bool stage_allocation = false;

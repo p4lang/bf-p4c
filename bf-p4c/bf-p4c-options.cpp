@@ -262,6 +262,7 @@ BFN_Options::BFN_Options() {
     registerOption("--quick-phv-alloc", nullptr,
         [this](const char *) { quick_phv_alloc = true; return true; },
          "Reduce PHV allocation search space for faster compilation");
+#if BAREFOOT_INTERNAL
     registerOption("--num-stages-override", "num",
         [this] (const char *arg) {
             std::string argStr(arg);
@@ -277,6 +278,7 @@ BFN_Options::BFN_Options() {
             return true;
         }, "Reduce number of MAU stages available for compiler. Defaults to "
            "max number of stages available for given device. This may affect table placement");
+#endif
 }
 
 using Target = std::pair<cstring, cstring>;

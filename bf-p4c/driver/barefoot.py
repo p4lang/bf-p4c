@@ -177,12 +177,12 @@ class BarefootBackend(BackendDriver):
                                         help="run context.json validation")
             self._argGroup.add_argument("--validate-manifest", action="store_true", default=False,
                                         help="run manifest validation")
+            self._argGroup.add_argument("--num-stages-override",
+                                        help="Override default number of available MAU stages",
+                                        action="store", default=0, type=int)
         self._argGroup.add_argument("--schema-versions",
                                     help="Print all used schema versions",
                                     action="store_true", default=False)
-        self._argGroup.add_argument("--num-stages-override",
-                                    help="Override default number of available MAU stages",
-                                    action="store", default=0, type=int)
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x assembler-with-cpp")
@@ -369,7 +369,7 @@ class BarefootBackend(BackendDriver):
             print(schema_versions_file.read().rstrip('\n'))
             schema_versions_file.close()
 
-        if opts.num_stages_override:
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and opts.num_stages_override:
             if 'assembler' in self._commandsEnabled and 'compiler' in self._commandsEnabled:
                 self.add_command_option('assembler',
                     "--num-stages-override{}".format(opts.num_stages_override))
