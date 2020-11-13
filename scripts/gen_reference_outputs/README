@@ -45,3 +45,7 @@ This README serves for sample programs for P4I. It lists various edge cases usef
         - tofino2_switch_16_32q (ingress::hdr.ipv4.version)
  * NoOverlay
     * tofino_leaf (ingress::egress_metadata.routed)
+ * ExactContainers (formerly Left/Right equivalent alignment)
+    - tofino2_switch_16_32q (ingress::hdr.ethernet.ether_type)
+ * Equivalent Alignment
+    - tofino2_switch_16_32q (egress::hdr.ipv4.total_len)

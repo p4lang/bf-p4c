@@ -68,6 +68,10 @@ void ConstrainedField::setNoOverlay(bool b) {
     noOverlay = b;
 }
 
+void ConstrainedField::setExactContainer(bool b) {
+    exactContainer = b;
+}
+
 /* ConstrainedFieldMap */
 
 ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
@@ -92,6 +96,7 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
         result[f.name].setDigest(f.getDigestConstraint());
         result[f.name].setBottomBits(f.deparsed_bottom_bits());
         result[f.name].setNoSplit(f.no_split());
+        result[f.name].setExactContainer(f.exact_containers());
     }
 
     // Extract slices based on clustering

@@ -112,7 +112,7 @@ TEST_F(ContainerSizeExtractorTest, CanBindConstraintToField) {
 
     auto &c = field.getContainerSize();
     EXPECT_TRUE(c.hasConstraint());
-    EXPECT_EQ(c.getContainerSize(), 8);
+    EXPECT_EQ(c.getContainerSize(), 8u);
 }
 
 TEST_F(ContainerSizeExtractorTest, CanBindConstraintToField2) {
@@ -124,7 +124,7 @@ TEST_F(ContainerSizeExtractorTest, CanBindConstraintToField2) {
 
     auto &c = field.getContainerSize();
     EXPECT_TRUE(c.hasConstraint());
-    EXPECT_EQ(c.getContainerSize(), 32);
+    EXPECT_EQ(c.getContainerSize(), 32u);
 }
 
 TEST_F(ContainerSizeExtractorTest, CanBindConstraintToSlices) {

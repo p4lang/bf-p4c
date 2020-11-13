@@ -17,8 +17,8 @@
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/logging/logging.h"
 #include "bf-p4c/logging/constrained_fields.h"
-#include "bf-p4c/logging/mau_group_extractor.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c/logging/group_constraint_extractor.h"
 #include "bf-p4c/version.h"
 #include "ir/ir.h"
 #include "phv_schema.h"
@@ -66,6 +66,8 @@ struct CollectPhvLoggingInfo : public MauInspector {
 
     /// Extracted MAU group constraints
     MauGroupExtractor *mauGroupConstraints;
+
+    EquivalentAlignExtractor *equivAlignConstraints;
 
     void collectConstraints();
 
@@ -142,7 +144,9 @@ class PhvLogging : public MauInspector {
         NoSplit,
         ContainerSize,
         Alignment,
-        NoOverlay
+        NoOverlay,
+        ExactContainer,
+        EquivalentAlignment
     };
 
  private:
@@ -264,6 +268,9 @@ class PhvLogging : public MauInspector {
                                                  const FieldInfo *fieldInfo,
                                                  const SourceLocation *srcLoc);
 
+    void logGroupConstraint(ConstrainedField &field, ListConstraint *c,
+                                                 std::vector<ConstrainedSlice> &group);
+
     void logMauGroupConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     void logNoSplitConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
@@ -273,6 +280,10 @@ class PhvLogging : public MauInspector {
     void logAlignmentConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     void logNoOverlayConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logExactContainerConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logEquivalentAlignConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.

@@ -73,10 +73,10 @@ class ConstrainedField : public LoggableEntity {
     Constraints::DigestConstraint digest;
     Constraints::ContainerSizeConstraint containerSize;
 
-
     bool deparsedBottomBits = false;
     bool noSplit = false;
     bool noOverlay = false;
+    bool exactContainer = false;
 
  public:
     ConstrainedField() {}
@@ -109,12 +109,16 @@ class ConstrainedField : public LoggableEntity {
 
     void setNoOverlay(bool b);
     bool hasNoOverlay() const                                             { return noOverlay; }
+
+    void setExactContainer(bool b);
+    bool hasExactContainer() const                                       { return exactContainer; }
 };
 
 typedef std::map<cstring, ConstrainedField> ConstrainedFieldMap;
 
 /**
- *  \brief 
+ *  \brief Initialize map of constrained fields by information present in PhvInfo
+ *  and their slices based on slicing computed by SuperClusters.
  */
 class ConstrainedFieldMapBuilder {
  public:
