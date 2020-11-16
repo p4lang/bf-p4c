@@ -1771,8 +1771,9 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
     }
     for (int hash_group = 0; hash_group < IXBar::HASH_GROUPS; hash_group++) {
         unsigned hash_table_input = use->hash_table_inputs[hash_group];
+        bitvec hash_seed = use->hash_seed[hash_group];
         int ident_bits_prev_alloc = 0;
-        if (hash_table_input) {
+        if (hash_table_input || hash_seed) {
             for (int ht : bitvec(hash_table_input)) {
                 out << indent++ << "hash " << ht << ":" << std::endl;
                 safe_vector<Slice> match_data;
@@ -1787,9 +1788,10 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                 --indent;
             }
             out << indent++ << "hash group " << hash_group << ":" << std::endl;
-            out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
-                << std::endl;
-            out << indent << "seed: 0x" << use->hash_seed[hash_group] << std::endl;
+            if (hash_table_input)
+                out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
+                    << std::endl;
+            out << indent << "seed: 0x" << hash_seed << std::endl;
             if (use->is_parity_enabled())
                 out << indent << "seed_parity: true" << std::endl;
             --indent;

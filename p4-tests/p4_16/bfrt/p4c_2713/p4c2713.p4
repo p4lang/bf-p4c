@@ -318,8 +318,7 @@ control Ingress(
     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) hash1;
 
     action apply_hash1() {
-        // hash = hash1.get<tuple<bit<8>, bit<8>>>({ meta1, version });
-        hash = hash1.get<tuple<bit<8>, bit<8>>>({ 8w3, version });
+        hash = hash1.get<tuple<bit<8>, bit<8>>>({ 8w3, 8w0 });
     }
 
     apply {
