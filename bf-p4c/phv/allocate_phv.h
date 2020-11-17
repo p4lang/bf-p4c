@@ -479,6 +479,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const ClotInfo& clot_i;
     const CollectStridedHeaders& strided_headers_i;
     const PhvUse& uses_i;
+    const Clustering& clustering_i;
     const BruteForceStrategyConfig& config_i;
     PHV::Slicing::PackConflictChecker has_pack_conflict_i;
     PHV::Slicing::IsReferencedChecker is_referenced_i;
@@ -490,6 +491,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                                  const CoreAllocation& alloc, const CalcParserCriticalPath& ccp,
                                  const CalcCriticalPathClusters& cpc, const ClotInfo& clot,
                                  const CollectStridedHeaders& hs, const PhvUse& uses,
+                                 const Clustering& clustering,
                                  const BruteForceStrategyConfig& config, int pipeId);
 
     AllocResult

@@ -1,7 +1,9 @@
 #ifndef BF_P4C_PHV_MAKE_CLUSTERS_H_
 #define BF_P4C_PHV_MAKE_CLUSTERS_H_
 
+#include "bf-p4c/ir/bitrange.h"
 #include "ir/ir.h"
+#include "ir/visitor.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
@@ -55,6 +57,10 @@ class Clustering : public PassManager {
     /// Groups of rotational clusters that must be placed in the same MAU
     /// group.  Every rotational cluster is in exactly one super cluster.
     std::list<PHV::SuperCluster *> super_clusters_i;
+
+    /// field pairs that cannot be packed in a container because of inconsistent
+    /// extractions from flexible header fields.
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> inconsistent_extract_no_packs_i;
 
     /// Maps fields to their slices.  Slice lists are ordered from LSB to MSB.
     ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>> fields_to_slices_i;
@@ -214,6 +220,70 @@ class Clustering : public PassManager {
         : self(self), phv_i(self.phv_i) { }
     };
 
+    /// CollectIncorrectFlexibleFieldExtract finds extraction that the offset
+    /// of input buffer is not consistent with offset of the field in the header.
+    /// For example,
+    /// Assume we have a flexible header h1:
+    /// header h1 {
+    ///   @flexible
+    ///   bit<9> f1;
+    ///   @flexible
+    ///   bit<9> f2;
+    /// }, and a non-flexible header h2:
+    /// header h2 {
+    ///   bit<7> xx;
+    ///   bit<9> f1;
+    ///   bit<7> yy;
+    ///   bit<9> f2;
+    /// }.
+    /// If flexible_packing pass decided to pack h1 to
+    /// header h1 {
+    ///   bit<7> pad1;
+    ///   bit<9> f2;
+    ///   bit<7> pad2;
+    ///   bit<9> f1;
+    /// }.
+    /// and if user wrote a parser state that
+    /// state example {
+    ///     h1 fheader;
+    ///     h2 normal;
+    ///     parser.extract<h1>(fheader);
+    ///     normal.xx = (bit<7>)7w0;
+    ///     normal.f1 = fheader.f1;
+    ///     normal.yy = (bit<7>)7w0;
+    ///     Gotham.f2 = fheader.f2;
+    ///     .....
+    /// }
+    /// then normal.f1 and normal.f2 cannot be packed into a W container because
+    /// the offset on the buffer is different from the offset of the header.
+    /// see P4C-3254 for more details.
+    /// The output of this pass is a set of fieldslice that the header needs to be split after
+    /// the fieldslice.
+    class CollectInconsistentFlexibleFieldExtract : public Inspector {
+        Clustering& self;
+        const PhvInfo& phv_i;
+        std::map<int, std::vector<const PHV::Field*>> headers_i;
+        using ExtractVec = std::set<std::pair<nw_bitrange, const PHV::Field*>>;
+        std::vector<ExtractVec> extracts_i;
+
+        Visitor::profile_t init_apply(const IR::Node * root) override {
+            auto rv = Inspector::init_apply(root);
+            headers_i.clear();
+            extracts_i.clear();
+            return rv;
+        }
+
+        void save_header_layout(const IR::HeaderRef* hr);
+        bool preorder(const IR::ConcreteHeaderRef*) override;
+        bool preorder(const IR::HeaderStackItemRef*) override;
+        bool preorder(const IR::BFN::ParserState* state) override;
+        void end_apply() override;
+
+     public:
+        explicit CollectInconsistentFlexibleFieldExtract(Clustering& self, const PhvInfo& phv)
+            : self(self), phv_i(phv) {}
+    };
+
     /// CollectPlaceTogetherConstraints
     /// Place Together constraint is expressed as SliceList in backend.
     /// There are multiple sources of this constraint, Headers, Digest Field Lists.
@@ -224,6 +294,7 @@ class Clustering : public PassManager {
         PhvInfo& phv_i;
         const PackConflicts& conflicts_i;
         const ActionPhvConstraints& actions_i;
+        const CollectInconsistentFlexibleFieldExtract& inconsistent_extract_i;
 
         // Reason of why fieldslices must be placed together.
         // NOTE: the lower the number, the higher the priority(more constraints).
@@ -311,13 +382,16 @@ class Clustering : public PassManager {
         bool preorder(const IR::BFN::ParserState* state) override;
 
      public:
-        explicit CollectPlaceTogetherConstraints(Clustering& self,
-                                                 const ActionPhvConstraints& actions)
-            : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i), actions_i(actions) {}
+        explicit CollectPlaceTogetherConstraints(
+            Clustering& self, const ActionPhvConstraints& actions,
+            const CollectInconsistentFlexibleFieldExtract& inconsistent)
+            : self(self),
+              phv_i(self.phv_i),
+              conflicts_i(self.conflicts_i),
+              actions_i(actions),
+              inconsistent_extract_i(inconsistent) {}
 
-        ordered_set<PHV::SuperCluster::SliceList*> get_slice_lists() const {
-            return slice_lists_i;
-        }
+        ordered_set<PHV::SuperCluster::SliceList*> get_slice_lists() const { return slice_lists_i; }
     };
 
     class MakeSuperClusters : public Inspector {
@@ -353,6 +427,9 @@ class Clustering : public PassManager {
 
         profile_t init_apply(const IR::Node* root) override;
 
+        // basic checks: slicelist is not empty, no duplicated fieldslices.
+        static void validate_basics(const std::list<PHV::SuperCluster*> clusters);
+
         /** For the deparser zero optimization, we need to make sure that every deparser zero
          * optimizable field is never in a supercluster that also contains non deparser zero fields.
          * This class performs that validation after superclusters are generated.
@@ -367,6 +444,11 @@ class Clustering : public PassManager {
         static void validate_alignments(const std::list<PHV::SuperCluster*> clusters,
                                         const PhvUse& uses);
 
+        // inconsistent extractions cannot share fields in a same byte of a header.
+        static void validate_extract_from_flexible(
+            const std::list<PHV::SuperCluster*> clusters,
+            std::function<bool(const PHV::Field* a, const PHV::Field* b)> no_pack);
+
      public:
         explicit ValidateClusters(Clustering& c) : self(c) { }
     };
@@ -375,21 +457,31 @@ class Clustering : public PassManager {
     Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa,
                const ActionPhvConstraints& a)
         : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this, pa) {
-        auto* place_togethers = new CollectPlaceTogetherConstraints(*this, a);
+        auto* inconsistent_extracts =
+            new CollectInconsistentFlexibleFieldExtract(*this, this->phv_i);
+        auto* place_togethers =
+            new CollectPlaceTogetherConstraints(*this, a, *inconsistent_extracts);
         addPasses({
             new ClearClusteringStructs(*this),   // clears pre-existing maps
             new FindComplexValidityBits(*this),  // populates complex_validity_bits_i
             &slice_i,
             new MakeAlignedClusters(*this),     // populates aligned_clusters_i
             new MakeRotationalClusters(*this),  // populates rotational_clusters_i
-            place_togethers,
-            new MakeSuperClusters(*this, *place_togethers),     // populates super_clusters_i
-            new ValidateClusters(*this)  // validate clustering is correct.
+            inconsistent_extracts, place_togethers,
+            new MakeSuperClusters(*this, *place_togethers),  // populates super_clusters_i
+            new ValidateClusters(*this)                      // validate clustering is correct.
         });
     }
 
     /// @returns all clusters, where every slice is in exactly one cluster.
     const std::list<PHV::SuperCluster*>& cluster_groups() const { return super_clusters_i; }
+
+    /// return true if two fields cannot be packed into one container because there
+    /// are inconsistent extraction to them from @flexible headers.
+    bool no_pack(const PHV::Field* a, const PHV::Field* b) const {
+        return inconsistent_extract_no_packs_i.count(a) &&
+               inconsistent_extract_no_packs_i.at(a).count(b);
+    }
 };
 
 #endif /* BF_P4C_PHV_MAKE_CLUSTERS_H_ */

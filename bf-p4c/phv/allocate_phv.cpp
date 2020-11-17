@@ -2505,7 +2505,8 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
         BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
             empty_alloc, config.name, core_alloc_i, parser_critical_path_i,
-            critical_path_clusters_i, clot_i, strided_headers_i, uses_i, config, pipeId);
+            critical_path_clusters_i, clot_i, strided_headers_i, uses_i, clustering_i, config,
+            pipeId);
         result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
         if (result.status == AllocResultCode::SUCCESS) {
             break;
@@ -2549,7 +2550,8 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
             };
             BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
                 empty_alloc, config.name, core_alloc_i, parser_critical_path_i,
-                critical_path_clusters_i, clot_i, strided_headers_i, uses_i, config, pipeId);
+                critical_path_clusters_i, clot_i, strided_headers_i, uses_i, clustering_i, config,
+                pipeId);
             auto new_result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
             if (new_result.status == AllocResultCode::SUCCESS) {
                 result = new_result;
@@ -2929,8 +2931,8 @@ void AllocatePHV::formatAndThrowUnsat(const std::list<PHV::SuperCluster*>& unsat
 BruteForceAllocationStrategy::BruteForceAllocationStrategy(
     const PHV::Allocation& empty_alloc, const cstring name, const CoreAllocation& alloc,
     const CalcParserCriticalPath& ccp, const CalcCriticalPathClusters& cpc, const ClotInfo& clot,
-    const CollectStridedHeaders& hs, const PhvUse& uses, const BruteForceStrategyConfig& config,
-    int pipeId)
+    const CollectStridedHeaders& hs, const PhvUse& uses, const Clustering& clustering,
+    const BruteForceStrategyConfig& config, int pipeId)
     : AllocationStrategy(name, alloc),
       empty_alloc_i(empty_alloc),
       parser_critical_path_i(ccp),
@@ -2938,12 +2940,14 @@ BruteForceAllocationStrategy::BruteForceAllocationStrategy(
       clot_i(clot),
       strided_headers_i(hs),
       uses_i(uses),
+      clustering_i(clustering),
       config_i(config),
       pipe_id_i(pipeId) {
     has_pack_conflict_i = [&](const PHV::Field* f1, const PHV::Field* f2) {
         if (f1 == f2) return false;
         if (core_alloc_i.mutex()(f1->id, f2->id)) return false;
-        return core_alloc_i.actionConstraints().hasPackConflict(f1, f2);
+        return clustering_i.no_pack(f1, f2) ||
+               core_alloc_i.actionConstraints().hasPackConflict(f1, f2);
     };
     is_referenced_i = [&](const PHV::Field* f) { return uses_i.is_referenced(f); };
 }

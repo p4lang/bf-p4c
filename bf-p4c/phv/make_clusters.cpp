@@ -3,6 +3,7 @@
 #include <sstream>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
@@ -17,6 +18,7 @@ Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node
     self.super_clusters_i.clear();
     self.fields_to_slices_i.clear();
     self.complex_validity_bits_i.clear();
+    self.inconsistent_extract_no_packs_i.clear();
     return rv;
 }
 
@@ -391,6 +393,118 @@ void Clustering::MakeRotationalClusters::end_apply() {
         self.rotational_clusters_i.emplace_back(new PHV::RotationalCluster(*cluster_set));
 }
 
+bool Clustering::CollectInconsistentFlexibleFieldExtract::preorder(
+    const IR::BFN::ParserState* state) {
+    ExtractVec extracts;
+    for (const auto* primitive : state->statements) {
+        const auto* extract = primitive->to<IR::BFN::Extract>();
+        if (!extract) {
+            continue;
+        }
+        auto* buf = extract->source->to<IR::BFN::PacketRVal>();
+        if (!buf) {
+            continue;
+        }
+        le_bitrange f_bits;
+        auto* field = phv_i.field(extract->dest->field, &f_bits);
+        extracts.insert({buf->range, field});
+    }
+    if (extracts.size() > 0) {
+        LOG3("extract of state " << state->name);
+        for (const auto& e : extracts) {
+            LOG3(e.first << ": " << e.second->name);
+        }
+        extracts_i.push_back(extracts);
+    }
+    return true;
+}
+
+void Clustering::CollectInconsistentFlexibleFieldExtract::save_header_layout(
+    const IR::HeaderRef* hr) {
+    const PhvInfo::StructInfo& struct_info = phv_i.struct_info(hr);
+    if (struct_info.metadata || struct_info.size == 0) {
+        return;
+    }
+
+    if (headers_i.count(struct_info.first_field_id)) return;
+
+    std::vector<const PHV::Field*> fields;
+    for (int fid : struct_info.field_ids()) {
+        const PHV::Field* field = phv_i.field(fid);
+        BUG_CHECK(field != nullptr, "No PHV info for field in header reference %1%",
+                  cstring::to_cstring(hr));
+        fields.push_back(field);
+    }
+
+    headers_i[struct_info.first_field_id] = fields;
+    return;
+}
+
+bool Clustering::CollectInconsistentFlexibleFieldExtract::preorder(
+    const IR::ConcreteHeaderRef* hr) {
+    save_header_layout(hr);
+    return true;
+}
+
+bool Clustering::CollectInconsistentFlexibleFieldExtract::preorder(
+    const IR::HeaderStackItemRef* hr) {
+    save_header_layout(hr);
+    return true;
+}
+
+void Clustering::CollectInconsistentFlexibleFieldExtract::end_apply() {
+    ordered_map<const PHV::Field*, ordered_map<const PHV::Field*, int>> relative_distances;
+    for (const auto& h : headers_i) {
+        const auto& fields = h.second;
+        for (int i = 0; i < int(fields.size()); i++) {
+            int offset = fields[i]->size;
+            for (int j = i + 1; j < int(fields.size()); j++) {
+                relative_distances[fields[i]][fields[j]] = offset;
+                relative_distances[fields[j]][fields[i]] = -offset;
+                offset += fields[j]->size;
+                if (offset > 32) {
+                    break;
+                }
+            }
+        }
+    }
+    if (LOGGING(3)) {
+        LOG3("print relative order in header");
+        for (const auto& kv : relative_distances) {
+            for (const auto& dis : kv.second) {
+                LOG3(kv.first->name << " is " << dis.second << " bits before " << dis.first->name);
+            }
+        }
+    }
+    for (const auto& state : extracts_i) {
+        for (auto i = state.begin(); i != state.end(); i++) {
+            const nw_bitrange i_range = i->first;
+            const PHV::Field* i_field = i->second;
+            for (auto j = std::next(i); j != state.end(); j++) {
+                const nw_bitrange j_range = j->first;
+                const PHV::Field* j_field = j->second;
+                int extract_dist = j_range.lo - i_range.lo;
+                if (extract_dist >= 32) {
+                    break;
+                }
+                if (relative_distances.count(i_field) &&
+                    relative_distances.at(i_field).count(j_field)) {
+                    if (relative_distances.at(i_field).at(j_field) != extract_dist) {
+                        self.inconsistent_extract_no_packs_i[i_field].insert(j_field);
+                        self.inconsistent_extract_no_packs_i[j_field].insert(i_field);
+                        LOG1("InconsistentFlexibleFieldExtract no_pack because "
+                             << i_field->name << " and " << j_field->name
+                             << " are extracted with distance of " << extract_dist
+                             << " bits but they are "
+                             << relative_distances.at(i_field).count(j_field)
+                             << " bits away in the header");
+                    }
+                }
+            }
+        }
+    }
+}
+
 // add valid bridged_extracted_together_i field slices to a slice list.
 void Clustering::CollectPlaceTogetherConstraints::pack_bridged_extracted_together() {
     for (auto* sl : bridged_extracted_together_i) {
@@ -726,7 +840,7 @@ struct SliceListAccumulator {
         PHV::SuperCluster::SliceList* rst = nullptr;
         if (accumulator->size() > 0) {
             rst = accumulator;
-            LOG1("accumulator(" << log_prefix << ") make slicelist: " << accumulator);
+            LOG3("accumulator(" << log_prefix << ") make slicelist: " << accumulator);
             if (slices_used != nullptr) {
                 for (const auto& fs : *accumulator) {
                     slices_used->insert(fs);
@@ -746,6 +860,7 @@ struct BreakSliceListCtx {
     Itr curr;
     boost::optional<Itr> prev;
     boost::optional<Itr> next;
+    const SliceListAccumulator* accumulator;
 };
 
 // break_slicelist_by break slicelists by @p condition.
@@ -767,6 +882,7 @@ std::vector<PHV::SuperCluster::SliceList*> break_slicelist_by(
             ctx.prev = (itr == sl->begin() ? boost::none : boost::make_optional(std::prev(itr)));
             ctx.next =
                 (std::next(itr) == sl->end() ? boost::none : boost::make_optional(std::next(itr)));
+            ctx.accumulator = &accumulator;
             if (cond(ctx)) {
                 auto* last = accumulator.start_new();
                 if (last != nullptr) {
@@ -838,7 +954,7 @@ bool break_cond_deparsed_zero(const BreakSliceListCtx& ctx) {
 // digest fields are special, they should be split out from the original slice list,
 // along with the padding fields after them.
 bool break_cond_digest_field(const BreakSliceListCtx& ctx,
-                             const ordered_set<PHV::FieldSlice> digest_fields) {
+                             const ordered_set<PHV::FieldSlice>& digest_fields) {
     // if next or current field is digest field and it's byte-aligned, break.
     if (ctx.next && ctx.next.get()->field() != ctx.curr->field()) {
         auto next = ctx.next.get();
@@ -1096,6 +1212,24 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
     }
 }
 
+void Clustering::ValidateClusters::validate_basics(const std::list<PHV::SuperCluster*> clusters) {
+    ordered_set<PHV::FieldSlice> showed;
+    for (auto* sc : clusters) {
+        for (const auto* sl : sc->slice_lists()) {
+            if (sl->empty()) {
+                BUG("SuperCluster with empty slice list: %1%", sc);
+            }
+            for (const auto& fs : *sl) {
+                if (showed.count(fs)) {
+                    BUG("SuperCluster has duplicated FieldSlice: %1%, FieldSlice: %2%", sc, fs);
+                } else {
+                    showed.insert(fs);
+                }
+            }
+        }
+    }
+}
+
 void Clustering::ValidateClusters::validate_deparsed_zero_clusters(
     const std::list<PHV::SuperCluster*> clusters) {
     // Flag an error if the supercluster has a mix of deparsed zero fields and non deparsed zero
@@ -1113,7 +1247,7 @@ void Clustering::ValidateClusters::validate_deparsed_zero_clusters(
 }
 
 void Clustering::ValidateClusters::validate_exact_container_lists(
-        const std::list<PHV::SuperCluster*> clusters, const PhvUse& uses) {
+    const std::list<PHV::SuperCluster*> clusters, const PhvUse& uses) {
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
             bool has_padding = false;
@@ -1152,13 +1286,10 @@ void Clustering::ValidateClusters::validate_exact_container_lists(
     }
 }
 
-void Clustering::ValidateClusters::validate_alignments(
-    const std::list<PHV::SuperCluster*> clusters, const PhvUse& uses) {
+void Clustering::ValidateClusters::validate_alignments(const std::list<PHV::SuperCluster*> clusters,
+                                                       const PhvUse& uses) {
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
-            if (sl->size() == 0) {
-                continue;
-            }
             bool is_used = false;
             int offset = sl->begin()->field()->exact_containers()
                              ? 0
@@ -1186,10 +1317,43 @@ void Clustering::ValidateClusters::validate_alignments(
     }
 }
 
+void Clustering::ValidateClusters::validate_extract_from_flexible(
+    const std::list<PHV::SuperCluster*> clusters,
+    std::function<bool(const PHV::Field* a, const PHV::Field* b)> no_pack) {
+    for (auto* sc : clusters) {
+        for (const auto* sl : sc->slice_lists()) {
+            int offset = 0;
+            for (auto itr = sl->begin(); itr != sl->end(); itr++) {
+                offset += itr->size();  // offset of next bit
+                if (offset % 8 == 0) {
+                    continue;
+                }
+                int next_offset = offset;
+                for (auto next = std::next(itr); next != sl->end();
+                     next_offset += next->size(), next++) {
+                    LOG1("check " << *next << " vs " << *itr);
+                    if (next_offset / 8 > offset / 8) {
+                        break;
+                    }
+                    if (no_pack(itr->field(), next->field())) {
+                        BUG("Flexible packing bug found. Two fields in a same byte in header are "
+                            "extracted from different bytes in the parser (likely by an assignment "
+                            "from @flexible headers): %1% and %2%",
+                            itr->field()->name, next->field()->name);
+                    }
+                }
+            }
+        }
+    }
+}
+
 Visitor::profile_t Clustering::ValidateClusters::init_apply(const IR::Node* root) {
     validate_deparsed_zero_clusters(self.cluster_groups());
     validate_exact_container_lists(self.cluster_groups(), self.uses_i);
     validate_alignments(self.cluster_groups(), self.uses_i);
+    validate_extract_from_flexible(
+        self.cluster_groups(),
+        [this](const PHV::Field* a, const PHV::Field* b) { return self.no_pack(a, b); });
     return Inspector::init_apply(root);
 }
 

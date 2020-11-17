@@ -348,9 +348,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
-  p4c_1585_b
 )
 
 # Negative tests to test slice list creation
