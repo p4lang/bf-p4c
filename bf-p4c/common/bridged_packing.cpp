@@ -1695,13 +1695,6 @@ const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
 
 const IR::Node*
 ReplaceFlexibleType::postorder(IR::StructExpression* expr) {
-    auto isFlexible = [&](const IR::Type_StructLike* st) -> bool {
-        for (auto f : st->fields) {
-            auto anno = f->getAnnotation("flexible");
-            if (anno != nullptr)
-                return true; }
-        return false; };
-
     auto isPadding = [&](const IR::StructField* f) -> bool {
         if (f->getAnnotation("padding"))
             return true;

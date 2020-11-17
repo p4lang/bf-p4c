@@ -2419,7 +2419,7 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
         auto mtr = c->to<MeterTable>();
         if (mtr && mtr->uses_colormaprams()) {
             BUG_CHECK(mtr->color_mapram_addr != MeterTable::NO_COLOR_MAP,
-                      "inconsistent color mapram address bus for %s", mtr->name_);
+                      "inconsistent color mapram address bus for %s", mtr->name());
             table_ref["color_mapram_addr_type"]
                 = mtr->color_mapram_addr == MeterTable::IDLE_MAP_ADDR ? "idle" : "stats"; }
 

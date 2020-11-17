@@ -8,6 +8,7 @@
 #include "bf-p4c/arch/psa/psa_model.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/midend/path_linearizer.h"
+#include "bf-p4c/midend/type_categories.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "midend/eliminateSerEnums.h"
@@ -98,43 +99,6 @@ struct ProgramStructure : BFN::ProgramStructure {
 
 }  // namespace PSA
 
-static const IR::Parameter* getContainingParameter(const LinearPath& path,
-                                            P4::ReferenceMap* refMap) {
-    auto* topLevelPath = path.components[0]->to<IR::PathExpression>();
-    BUG_CHECK(topLevelPath, "Path-like expression tree was rooted in "
-        "non-path expression: %1%", path.components[0]);
-    auto* decl = refMap->getDeclaration(topLevelPath->path);
-    BUG_CHECK(decl, "No declaration for top level path in path-like "
-        "expression: %1%", topLevelPath);
-    return decl->to<IR::Parameter>();
-}
-
-static bool isHeaderType(const IR::Type* type) {
-    BUG_CHECK(!type->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
-        "you can avoid this problem by getting types from a TypeMap");
-    return type->is<IR::Type_Header>();
-}
-
-static bool isSameHeaderType(const IR::Type* ltype, const IR::Type* rtype) {
-    BUG_CHECK(!ltype->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
-        "you can avoid this problem by getting types from a TypeMap");
-    BUG_CHECK(!rtype->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
-        "you can avoid this problem by getting types from a TypeMap");
-    if (!isHeaderType(ltype) || !isHeaderType(rtype))
-        return false;
-    auto lheaderType = ltype->to<IR::Type_Header>();
-    auto rheaderType = rtype->to<IR::Type_Header>();
-    return lheaderType->name == rheaderType->name;
-}
-
-static bool isCompilerGeneratedType(const IR::Type* type) {
-    BUG_CHECK(!type->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
-        "you can avoid this problem by getting types from a TypeMap");
-    auto* annotated = type->to<IR::IAnnotated>();
-    if (!annotated) return false;
-    auto* intrinsicMetadata = annotated->getAnnotation("__compiler_generated");
-    return bool(intrinsicMetadata);
-}
 }  // namespace BFN
 
 #endif  /* EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_ */

@@ -11,6 +11,7 @@
 #include "bf-p4c/arch/collect_bridged_fields.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/midend/path_linearizer.h"
+#include "bf-p4c/midend/type_categories.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "rewrite_bridge_metadata.h"
 
@@ -175,6 +176,18 @@ struct FindBridgeMetadataAssignment : public Transform {
     FindBridgeMetadataAssignment(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                  PSA::ProgramStructure* structure)
         : refMap(refMap), typeMap(typeMap), structure(structure) { }
+
+    bool isSameHeaderType(const IR::Type* ltype, const IR::Type* rtype) {
+        BUG_CHECK(!ltype->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
+                "you can avoid this problem by getting types from a TypeMap");
+        BUG_CHECK(!rtype->is<IR::Type_Name>(), "Trying to categorize a Type_Name; "
+                "you can avoid this problem by getting types from a TypeMap");
+        if (!isHeaderType(ltype) || !isHeaderType(rtype))
+            return false;
+        auto lheaderType = ltype->to<IR::Type_Header>();
+        auto rheaderType = rtype->to<IR::Type_Header>();
+        return lheaderType->name == rheaderType->name;
+    }
 
     IR::Node* postorder(IR::AssignmentStatement* assignment) override {
         auto ctxt = findOrigCtxt<IR::BFN::TnaDeparser>();

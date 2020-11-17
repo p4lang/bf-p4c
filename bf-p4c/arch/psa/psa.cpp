@@ -449,15 +449,10 @@ class TranslateProgram : public Inspector {
         }
     }
 
-    void postorder(const IR::P4Control* control) {
-        gress_t gress;
-        if (control->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
-            gress = INGRESS;
-        } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
-            gress = EGRESS;
-        } else {
+    void postorder(const IR::P4Control* control) override {
+        if (control->name != structure->getBlockName(ProgramStructure::INGRESS_DEPARSER) &&
+            control->name != structure->getBlockName(ProgramStructure::EGRESS_DEPARSER))
             return;
-        }
         auto body = control->body->to<IR::BlockStatement>();
         std::map<cstring, IR::Vector<IR::Expression>> fieldListMap;
         for (auto comp : body->components) {
@@ -874,7 +869,7 @@ struct CreateErrorStates : public Transform {
         : structure(structure) { }
 
     const IR::ParserState* create_error_state(const IR::ParserState* origState,
-                                              const IR::Member* member, int error_idx,
+                                              int error_idx,
                                               cstring metaParam) {
         auto statements = new IR::IndexedVector<IR::StatOrDecl>();
         auto parser_err = new IR::Member(new IR::PathExpression(metaParam),
@@ -909,7 +904,7 @@ struct CreateErrorStates : public Transform {
             } else {
                 ::error("Verify statement not supported %1%", stmt);
             }
-            auto errorState = create_error_state(state, member, error_idx, metaParam);
+            auto errorState = create_error_state(state, error_idx, metaParam);
             newStates[parser->thread].insert(errorState);
             auto stateName = IR::ID(cstring("__" + state->name + "_non_error"));
             auto statements = new IR::IndexedVector<IR::StatOrDecl>();
@@ -950,8 +945,7 @@ struct AddParserStates : public Transform {
 };
 
 struct RewriteParserVerify : public PassManager {
-    explicit RewriteParserVerify(PSA::ProgramStructure* structure,
-                            P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
+    explicit RewriteParserVerify(PSA::ProgramStructure* structure) {
         auto createErrorStates = new BFN::PSA::CreateErrorStates(structure);
         addPasses({ createErrorStates,
                     new BFN::PSA::AddParserStates(createErrorStates),
@@ -986,7 +980,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::ConvertNames(structure, refMap, typeMap),
         new AddIntrinsicMetadata(refMap, typeMap),
         new PSA::RewritePacketPath(refMap, typeMap, structure),
-        new PSA::RewriteParserVerify(structure, refMap, typeMap),
+        new PSA::RewriteParserVerify(structure),
         new AddPsaBridgeMetadata(refMap, typeMap, structure),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),
