@@ -742,6 +742,7 @@ class Action : VLIWInstruction, IAnnotated {
     cstring disallowed_reason = "none";
     inline Vector<Argument> default_params = {};
     bool exitAction = false;  // should exit pipeline after action (next == EOP)
+    bool parallel = false;    // visit children parallelly? 
 
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.
@@ -766,6 +767,17 @@ class Action : VLIWInstruction, IAnnotated {
     validate {
         ERROR_CHECK(!(hit_only() && miss_only()), "Action %s cannot be both a hit only and a "
                     "miss only action.  Can only be at most one of those categories", name);
+    }
+
+    visit_children {
+        VLIWInstruction::visit_children(v);
+        if (parallel)
+            action.parallel_visit_children(v);
+        else
+            action.visit_children(v);
+        v.visit(annotations, "annotations");
+        default_params.visit_children(v);
+        stateful_calls.visit_children(v);
     }
 #apply
 }

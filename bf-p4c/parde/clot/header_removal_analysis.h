@@ -77,6 +77,7 @@ class HeaderRemovalAnalysis : public MauInspector {
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Instruction* instruction) override;
+    bool preorder(const IR::MAU::Action *act) override;
 
     HeaderRemovalAnalysis* clone() const override;
     HeaderRemovalAnalysis& flow_clone() override;

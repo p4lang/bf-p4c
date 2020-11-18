@@ -209,8 +209,16 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
     // stateful table arguments are read before the the action code runs which reads
     // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
     // not all of them.
+    // Only multistage_fifo.p4 needs visit stateful call before the action code runs.
     visit(act->stateful_calls, "stateful");
-    visit(act->action, "action");
+    if (act->parallel) {
+        mode = VisitJustReads;
+        visit(act->action, "action");
+        mode = VisitJustWrites;
+        visit(act->action, "action");
+        mode = VisitAll;
+    } else {
+        visit(act->action, "action"); }
     return false;
 }
 
@@ -223,10 +231,11 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
     // visiting IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
     if (prim->operands.size() > 0) {
-        for (size_t i = 1; i < prim->operands.size(); ++i) {
-            visit(prim->operands[i], "operands", i);
-        }
-        visit(prim->operands[0], "dest", 0);
+        if (mode != VisitJustWrites) {
+            for (size_t i = 1; i < prim->operands.size(); ++i) {
+                visit(prim->operands[i], "operands", i); } }
+        if (mode != VisitJustReads) {
+            visit(prim->operands[0], "dest", 0); }
     }
     return false;
 }

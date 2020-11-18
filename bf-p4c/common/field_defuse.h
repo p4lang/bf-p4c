@@ -37,6 +37,14 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     typedef std::pair<const IR::BFN::Unit *, const IR::Expression*>  locpair;
     typedef ordered_set<locpair> LocPairSet;
 
+    enum VisitMode {
+      VisitJustReads,
+      VisitJustWrites,
+      VisitAll
+    };
+
+    VisitMode mode = VisitAll;
+
  private:
     const PhvInfo               &phv;
     SymBitMatrix                &conflict;
@@ -84,8 +92,8 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     bool preorder(const IR::BFN::Pipe *p) override;
     bool preorder(const IR::BFN::Parser *p) override;
     bool preorder(const IR::BFN::LoweredParser *p) override;
-    bool preorder(const IR::MAU::Action *p) override;
     bool preorder(const IR::MAU::Primitive* prim) override;
+    bool preorder(const IR::MAU::Action *p) override;
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;

@@ -295,6 +295,7 @@ class BackendCopyPropagation : public MauTransform, TofinoWriteContext {
     const IR::Expression *preorder(IR::Expression *a) override;
     void update(const IR::MAU::Instruction *instr, const IR::Expression *e);
     const IR::Expression *propagate(const IR::MAU::Instruction *instr, const IR::Expression *e);
+    const IR::MAU::Action *postorder(IR::MAU::Action *) override;
 
  public:
     explicit BackendCopyPropagation(const PhvInfo &p) : phv(p) { visitDagOnce = false; }

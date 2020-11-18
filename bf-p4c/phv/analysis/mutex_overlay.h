@@ -77,6 +77,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     virtual void mark(const PHV::Field*);
 
     bool preorder(const IR::Expression*) override;
+    bool preorder(const IR::MAU::Action *act) override;
     void flow_merge(Visitor &) override;
     void end_apply() override;
 

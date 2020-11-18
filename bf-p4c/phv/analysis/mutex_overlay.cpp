@@ -82,6 +82,11 @@ void BuildMutex::mark(const PHV::Field* f) {
     mutually_inclusive[new_field] |= fields_encountered;
 }
 
+bool BuildMutex::preorder(const IR::MAU::Action *act) {
+    act->action.visit_children(*this);
+    return false;
+}
+
 bool BuildMutex::preorder(const IR::Expression *e) {
     if (auto *f = phv.field(e)) {
         mark(f);

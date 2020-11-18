@@ -27,6 +27,11 @@ Visitor::profile_t HeaderRemovalAnalysis::init_apply(const IR::Node* root) {
     return result;
 }
 
+bool HeaderRemovalAnalysis::preorder(const IR::MAU::Action *act) {
+    act->action.visit_children(*this);
+    return false;
+}
+
 bool HeaderRemovalAnalysis::preorder(const IR::MAU::Instruction* instruction) {
     // Make sure we have a call to "set".
     if (instruction->name != "set") return true;

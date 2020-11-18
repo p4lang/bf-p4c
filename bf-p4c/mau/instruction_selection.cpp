@@ -2157,6 +2157,12 @@ const IR::Expression *BackendCopyPropagation::preorder(IR::Expression *expr) {
     return expr;
 }
 
+const IR::MAU::Action *BackendCopyPropagation::postorder(IR::MAU::Action *action) {
+    // Instructions in actions are now parallel
+    action->parallel = true;
+    return action;
+}
+
 /** The purpose of this pass is to verify that an action is able to be performed in parallel
  *  Because the semantics of P4 are that instructions are sequential, and the actions in
  *  Tofino are parallel, this guarantees that an action is possible as a single action.
