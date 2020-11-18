@@ -1,1 +1,6 @@
-# TODO
+add test1 foo.f1:0x0202ACDC set_foo_f1(val:0x03030303)
+add test2 bar.f1:0xBEED5333 set_bar_f1(val:0xB0B0B0B0)
+
+#        f1       f2       csum f1       f2       csum
+expect 1 03030303 0404ACDC f1f1 B0B0B0B0 ABCD4444 3948
+packet 0 0202ACDC 0404ACDC 4919 BEED5333 ABCD4444 8888

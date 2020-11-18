@@ -73,7 +73,8 @@ struct OutputDictionary : public Inspector {
 
     bool preorder(const IR::BFN::LoweredEmitChecksum* emit) override {
         AutoIndent emitIndent(indent);
-        out << indent << "checksum " << emit->unit << ": " << emit->povBit;
+        out << indent << "full_checksum ";
+        out << emit->unit << ": " << emit->povBit;
         outputDebugInfo(out, indent, emit->povBit) << std::endl;
         return false;
     }
@@ -112,7 +113,7 @@ struct OutputDictionary : public Inspector {
             auto f = entry.second;
             BUG_CHECK(emit->clot->csum_field_to_csum_id.count(f),
                       "Checksum field %s is missing a checksum ID in the deparser", f->name);
-            out << indent << offset << " : checksum " <<
+            out << indent << offset << " : full_checksum " <<
                 emit->clot->csum_field_to_csum_id.at(f) << std::endl;
         }
 
@@ -128,18 +129,17 @@ struct OutputDictionary : public Inspector {
 
 /// Generate assembly which configures the deparser checksum units.
 struct OutputChecksums : public Inspector {
+    std::set<unsigned> visited;
     explicit OutputChecksums(std::ostream& out) : out(out), indent(1) { }
 
-    bool preorder(const IR::BFN::ChecksumUnitConfig* checksum) override {
-        out << indent << "checksum " << checksum->unit << ": " << std::endl;
 
+    bool preorder(const IR::BFN::PartialChecksumUnitConfig* partial) override {
+        if (visited.count(partial->unit)) return false;
+        if (!partial->phvs.size()) return false;
+        out << indent << "partial_checksum " << partial->unit << ": " << std::endl;
+        visited.insert(partial->unit);
         AutoIndent checksumIndent(indent);
-        if (checksum->povBit) {
-            out << indent <<  "- " << "pov: " <<  checksum->povBit << std::endl;
-        }
-        if (checksum->zeros_as_ones)
-            out << indent << "- " << "zeros_as_ones: " << checksum->zeros_as_ones << std::endl;
-        for (auto* input : checksum->phvs) {
+        for (auto* input : partial->phvs) {
             out << indent << "- " << input->source;
             out << ": {";
             if (input->swap != 0) {
@@ -156,14 +156,36 @@ struct OutputChecksums : public Inspector {
             outputDebugInfo(out, indent, input->source, input->povBit);
             out << std::endl;
         }
+       return false;
+    }
 
-#if HAVE_JBAY
-        for (auto* input : checksum->clots) {
-            out << indent << "- clot " << input->clot.tag << ": ";
-            out << input->povBit << std::endl;
+    void postorder(const IR::BFN::FullChecksumUnitConfig* checksum) override {
+        out << indent << "full_checksum " << checksum->unit << ": " << std::endl;
+        AutoIndent checksumIndent(indent);
+        if (checksum->zeros_as_ones) {
+            out << indent << "- " << "zeros_as_ones: true" << std::endl;
         }
-#endif
-        return false;
+        for (auto* partial : checksum->partialUnits) {
+           if (partial->phvs.size()) {
+                out << indent << "- partial_checksum " << partial->unit << ": {";
+                if (Device::currentDevice() != Device::TOFINO) {
+                    out << " pov: " << partial->povBit;
+                    if (partial->invert) {
+                        out << " , invert: true";
+                    }
+                }
+                out << " }" << std::endl;
+            }
+        }
+        for (auto* clot : checksum->clots) {
+            out << indent << "- clot " << clot->clot.tag << ": {";
+            out << " pov: " << clot->povBit;
+            if (clot->invert) {
+                out << " , invert: true";
+            }
+            out << " }" << std::endl;
+        }
+        return;
     }
 
  private:

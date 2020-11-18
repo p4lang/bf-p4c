@@ -5,7 +5,8 @@
 
 #define JBAY_POV(GRESS, VAL, REG)                                                               \
     if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
-    else error(VAL.val.lineno, "POV bit required for Tofino2");
+    else                                                                                        \
+        error(VAL.val.lineno, "POV bit required for Tofino2");                                  \
 
 #define JBAY_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                         \
     REG.phv = VAL.val->reg.deparser_id();                                                       \
@@ -142,7 +143,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
             for (auto &reg : set.second) {                                                      \
                 if (first) {                                                                    \
                     first = false;                                                              \
-                    IFID( REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue; ) }        \
+                    IFID(REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue;) }          \
                 if (last == reg->reg.deparser_id()) continue;                                   \
                 for (int i = reg->reg.size/8; i > 0; i--) {                                     \
                     if (idx > maxidx) {                                                         \
@@ -151,7 +152,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
                         break; }                                                                \
                     REG IFIDX([id]).phvs[REVERSE(maxidx -) idx++] = reg->reg.deparser_id(); }   \
                 last = reg->reg.deparser_id(); }                                                \
-            IFVALID( REG IFIDX([id]).valid = 1; )                                               \
+            IFVALID(REG IFIDX([id]).valid = 1;)                                               \
             REG IFIDX([id]).len = idx; }
 
 JBAY_SIMPLE_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
@@ -229,7 +230,6 @@ void tof2lab44_workaround(int lineno, unsigned& chunk_index) {
         static std::set<unsigned> skipped_chunks = {
             24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120
         };
-    
         while (skipped_chunks.count(chunk_index)) chunk_index++;
     }
 }
@@ -242,7 +242,7 @@ bool check_chunk(int lineno, unsigned& chunk) {
     if (chunk >= TOTAL_CHUNKS) {
         error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
         return false;
-    };
+    }
     return true;
 }
 
@@ -254,13 +254,13 @@ using WriteChunk = std::function<void(unsigned & /* chunk_index */ ,
                                       const Phv::Ref & /* entry_pov */ ,
                                       Deparser::FDEntry::Base * /* entry_what */ ,
                                       unsigned /* byte */ ,
-                                      unsigned /* size */ )>;
+                                      unsigned /* size */)>;
 
 /// A callback to finish writing a PHV, constant, or checksum chunk to the field dictionary.
 using FinishChunk = std::function<void(unsigned /* chunk_index */ ,
                                        unsigned /* dictionary entry number */ ,
                                        const Phv::Slice & /* pov_bit */ ,
-                                       unsigned /* byte */ )>;
+                                       unsigned /* byte */)>;
 
 /// A callback for writing a CLOT to the field dictionary. This increments the chunk index if the
 /// CLOT spans multiple chunks.
@@ -269,7 +269,7 @@ using WriteClot = std::function<void(unsigned & /* chunk_index */ ,
                                      int /* segment_tag */ ,
                                      int /* clot_tag */ ,
                                      const Phv::Ref & /* pov_bit */ ,
-                                     Deparser::FDEntry::Clot * /* clot */ )>;
+                                     Deparser::FDEntry::Clot * /* clot */)>;
 
 /// Implements common control functionality for outputting field dictionaries and field dictionary
 /// slices.
@@ -369,7 +369,8 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             error(ent_lineno, "16 and 32-bit container cannot be repeatedly deparsed");
     };
 
-    auto finish_chunk = [&](unsigned ch, unsigned entry_n, const Phv::Slice &pov_bit, unsigned byte) {
+    auto finish_chunk = [&](unsigned ch, unsigned entry_n, const Phv::Slice &pov_bit,
+                                                           unsigned byte) {
         regs.chunk_info[ch].chunk_vld = 1;
         regs.chunk_info[ch].pov = pov.at(&pov_bit.reg) + pov_bit.lo;
         regs.chunk_info[ch].seg_vld = 0;
@@ -442,10 +443,12 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
         }
     };
 
-    auto finish_chunk = [&](unsigned ch, unsigned entry_n, const Phv::Slice &pov_bit, unsigned byte) {
+    auto finish_chunk = [&](unsigned ch, unsigned entry_n,
+                            const Phv::Slice &pov_bit, unsigned byte) {
         fd["Field Dictionary Number"] = entry_n;
         fd_entry["entry"] = entry_n;
-        Deparser::write_pov_in_json(fd, fd_entry, &pov_bit.reg, pov.at(&pov_bit.reg) + pov_bit.lo, pov_bit.lo);
+        Deparser::write_pov_in_json(fd, fd_entry, &pov_bit.reg,
+                                    pov.at(&pov_bit.reg) + pov_bit.lo, pov_bit.lo);
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;
         chunk[ch].cfg.seg_sel = byte >> 3;
@@ -475,7 +478,8 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
 
             fd["Field Dictionary Number"] = entry_n;
             fd_entry["entry"] = entry_n;
-            Deparser::write_pov_in_json(fd, fd_entry, &pov_bit->reg, pov.at(&pov_bit->reg) + pov_bit->lo, pov_bit->lo);
+            Deparser::write_pov_in_json(fd, fd_entry, &pov_bit->reg,
+                                        pov.at(&pov_bit->reg) + pov_bit->lo, pov_bit->lo);
 
             chunk[ch].cfg.seg_vld = 1;
             chunk[ch].cfg.seg_sel = seg_tag;
@@ -492,7 +496,7 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                     fd_entry_chunk_byte["is_phv"] = false;
                     auto phv_reg = &phv_repl->second->reg;
                     write_field_name_in_json(phv_reg, &pov_bit->reg,
-                                              pov_bit->lo, chunk_byte, fd_entry_chunk_byte, 19, gress);
+                                          pov_bit->lo, chunk_byte, fd_entry_chunk_byte, 19, gress);
                     if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
                         ++phv_repl;
                 } else if (csum_repl != clot->csum_replace.end()
@@ -520,7 +524,6 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
             fd_entry["chunks"] = std::move(fd_entry_chunk_bytes);
             fd_entries.push_back(std::move(fd_entry));
             fd_gress.push_back(std::move(fd));
-
         }
     };
 
@@ -579,8 +582,8 @@ static short jbay_phv2cksum[224][2] = {
     { 49, 48}, { 51, 50}, { 53, 52}, { 55, 54}, { 57, 56}, { 59, 58}, { 61, 60}, { 63, 62},
     { 65, 64}, { 67, 66}, { 69, 68}, { 71, 70}, { 73, 72}, { 75, 74}, { 77, 76}, { 79, 78},
     { 81, 80}, { 83, 82}, { 85, 84}, { 87, 86}, { 89, 88}, { 91, 90}, { 93, 92}, { 95, 94},
-    { 97, 96}, { 99, 98}, {101,100}, {103,102}, {105,104}, {107,106}, {109,108}, {111,110},
-    {113,112}, {115,114}, {117,116}, {119,118}, {121,120}, {123,122}, {125,124}, {127,126},
+    { 97, 96}, { 99, 98}, {101, 100}, {103, 102}, {105, 104}, {107, 106}, {109, 108}, {111, 110},
+    {113, 112}, {115, 114}, {117, 116}, {119, 118}, {121, 120}, {123, 122}, {125, 124}, {127, 126},
     {128, -1}, {129, -1}, {130, -1}, {131, -1}, {132, -1}, {133, -1}, {134, -1}, {135, -1},
     {136, -1}, {137, -1}, {138, -1}, {139, -1}, {140, -1}, {141, -1}, {142, -1}, {143, -1},
     {144, -1}, {145, -1}, {146, -1}, {147, -1}, {148, -1}, {149, -1}, {150, -1}, {151, -1},
@@ -601,7 +604,6 @@ static short jbay_phv2cksum[224][2] = {
     {264, -1}, {265, -1}, {266, -1}, {267, -1}, {268, -1}, {269, -1}, {270, -1}, {271, -1},
     {272, -1}, {273, -1}, {274, -1}, {275, -1}, {276, -1}, {277, -1}, {278, -1}, {279, -1},
     {280, -1}, {281, -1}, {282, -1}, {283, -1}, {284, -1}, {285, -1}, {286, -1}, {287, -1},
-
 };
 
 template<class ENTRIES> static
@@ -610,75 +612,144 @@ void write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
     write_checksum_entry(entry, mask, swap, id, reg);
     entry.pov = pov;
 }
+
 template<class POV>
-int jbay_csum_pov_config(Phv::Ref povRef, POV &pov_cfg,
+void jbay_csum_pov_config(Phv::Ref povRef, POV &pov_cfg,
                          ordered_map<const Phv::Register *, unsigned> &pov,
-                         std::map<unsigned, unsigned> &pov_map, unsigned prev_byte) {
+                         std::map<unsigned, unsigned> &pov_map, unsigned *prev_byte) {
     unsigned bit = pov.at(&povRef->reg) + povRef->lo;
-    if (pov_map.count(bit)) return prev_byte;
-    for (unsigned i = 0; i < prev_byte; ++i) {
+    if (pov_map.count(bit)) return;
+    for (unsigned i = 0; i < (*prev_byte); ++i) {
         if (pov_cfg.byte_sel[i] == bit/8U) {
             pov_map[bit] = i*8U + bit%8U;
             break; } }
-    if (pov_map.count(bit)) return prev_byte;
-    pov_map[bit] = prev_byte*8U + bit%8U;
-    pov_cfg.byte_sel[prev_byte++] = bit/8U;
-    return prev_byte;
+    if (pov_map.count(bit)) return;
+    pov_map[bit] = (*prev_byte)*8U + bit%8U;
+    pov_cfg.byte_sel[(*prev_byte)++] = bit/8U;
+    return;
 }
 
-template<class CSUM, class POV, class ENTRIES>
-void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, int unit,
-        Deparser::ChecksumUnit &data, ordered_map<const Phv::Register *, unsigned> &pov) {
-    std::map<unsigned, unsigned> pov_map;
-    unsigned byte = 0;
-    for (auto &val : data.entries) {
+template<class POV>
+void set_jbay_pov_cfg(POV &pov_cfg, std::map<unsigned, unsigned> &pov_map,
+                      Deparser::FullChecksumUnit &full_csum,
+                      ordered_map<const Phv::Register *, unsigned> &pov, int csum_unit,
+                      unsigned *prev_byte) {
+    for (auto &unit_entry : full_csum.entries) {
+        for (auto val : unit_entry.second) {
+            if (!val.pov) {
+                error(val.val.lineno, "POV bit required for Tofino2");
+                continue;
+            }
+            jbay_csum_pov_config(val.pov, pov_cfg, pov, pov_map, prev_byte);
+        }
+    }
+    for (auto &val : full_csum.clot_entries) {
         if (!val.pov) {
             error(val.val.lineno, "POV bit required for Tofino2");
             continue;
         }
-        byte = jbay_csum_pov_config(val.pov, pov_cfg, pov, pov_map, byte);
-        if (byte == 4) {
-            error(val.pov.lineno, "POV bits for checksum %d don't fit in 4 bytes", unit);
-            return; }
+        jbay_csum_pov_config(val.pov, pov_cfg, pov, pov_map, prev_byte);
     }
-    if (data.pov) {
-        byte = jbay_csum_pov_config(data.pov, pov_cfg, pov, pov_map, byte);
+    for (auto &checksum_pov : full_csum.pov) {
+        jbay_csum_pov_config(checksum_pov.second, pov_cfg, pov, pov_map, prev_byte);
     }
-    unsigned tag_idx = 0;
-    for (auto &val : data.entries) {
-        if (!val.pov) continue;
-        int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
-        if (val.is_clot()) {
-            if (tag_idx == 16)
-                error(-1, "Ran out of clot entries in deparser checksum unit %d", unit);
-            csum.clot_entry[tag_idx].pov = povbit;
-            csum.clot_entry[tag_idx].vld = 1;
-            csum.tags[tag_idx].tag = val.tag;
-            tag_idx++;
-        } else {
+    return;
+}
+
+template<class CSUM, class ENTRIES>
+void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
+                                     std::set<int> &visited, std::map<unsigned, unsigned> &pov_map,
+                                     Deparser::FullChecksumUnit &full_csum,
+                                     ordered_map<const Phv::Register *, unsigned> &pov) {
+    for (auto &unit_entry : full_csum.entries) {
+        // Same partial checksum unit can be used in multiple full checksum unit.
+        // No need to rewrite the checksum entries multiple times for the same unit
+        if (visited.count(unit_entry.first)) continue;
+        visited.insert(unit_entry.first);
+        for (auto val : unit_entry.second) {
+            if (!val.pov) continue;
+            int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
             int mask = val.mask;
             int swap = val.swap;
             auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
-            write_jbay_checksum_entry(phv_entries.entry[remap[0]], mask & 3, swap & 1, povbit,
-                                              unit, val->reg.name);
+            write_jbay_checksum_entry(phv_entries[unit_entry.first].entry[remap[0]],
+                                      mask & 3, swap & 1, povbit,
+                                      unit_entry.first, val->reg.name);
             if (remap[1] >= 0)
-                write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap >> 1, povbit,
-                                                  unit, val->reg.name);
-            else BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
+                write_jbay_checksum_entry(phv_entries[unit_entry.first].entry[remap[1]],
+                                          mask >> 2, swap >> 1, povbit,
+                                          unit_entry.first, val->reg.name);
+            else
+                BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
         }
     }
-
-    // XXX(zma) -- each checksum output can combine any set of checksum units
-    // This opens up optimization opportunities where we can selectively
-    // combine a set of header checksums depending which ones are valid in
-    // the packet.
-    if (data.pov) {
-        csum.phv_entry[unit].pov = pov_map.at(pov.at(&data.pov->reg) + data.pov->lo);
-        csum.phv_entry[unit].vld = 1;
+    int tag_idx = 0;
+    for (auto &val : full_csum.clot_entries) {
+        int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
+        if (tag_idx == 16)
+                error(-1, "Ran out of clot entries in deparser checksum unit %d", unit);
+        csum.clot_entry[tag_idx].pov = povbit;
+        csum.clot_entry[tag_idx].vld = 1;
+        csum.tags[tag_idx].tag = val.tag;
+        tag_idx++;
     }
-    csum.zeros_as_ones.en = data.zeros_as_ones_en;
+    for (auto &checksum_pov : full_csum.pov) {
+        csum.phv_entry[checksum_pov.first].pov = pov_map.at(
+                       pov.at(&checksum_pov.second->reg) + checksum_pov.second->lo);
+        csum.phv_entry[checksum_pov.first].vld = 1;
+    }
+    csum.zeros_as_ones.en = full_csum.zeros_as_ones_en;
 
     // FIXME -- use/set csum.csum_constant?
+}
+// Engine 0: scratch[23:0]
+// Engine 1: { scratch2[15:0], scratch[31:24] }
+// Engine 2: { scratch[7:0] , scratch2[31:16] }
+// Engine 3: scratch[31:8]
+// So each engine gets a cfg_vector[23:0]
+// There are 16 CLOT csums and 8 PHV csums that can be inverted:
+// CLOT csum [15:0] are controlled by cfg_vector [15:0]
+// PHV csums [7:0] are controlled by cfg_vector [23:16]
+
+template<class SCRATCH1, class SCRATCH2, class SCRATCH3>
+void write_jbay_full_checksum_invert_config(SCRATCH1 &scratch1, SCRATCH2 & scratch2,
+                                            SCRATCH3 &scratch3, int unit,
+                                            Deparser::FullChecksumUnit &full_csum) {
+    ubits<32> value1;
+    ubits<32> value2;
+    ubits<32> value3;
+    for (auto checksum_unit : full_csum.checksum_unit_invert) {
+        if (unit == 0) {
+            value1 |= (1 << (16 + checksum_unit));
+        } else if (unit == 1) {
+            value1 |= (1 << (8 + checksum_unit));
+        } else if (unit == 2) {
+            value3 |= (1 << checksum_unit);
+        } else if (unit == 3) {
+             value3 |= (1 << (24 + checksum_unit));
+        }
+    }
+    for (auto clot_tag : full_csum.clot_tag_invert) {
+        if (unit == 0) {
+            value1 |= (1 << clot_tag);
+        } else if (unit == 1) {
+            if (clot_tag > 7) {
+                value1 |= (1 << (clot_tag - 8));
+            } else {
+                value3 |= (1 << (16 + clot_tag));
+            }
+        } else if (unit == 2) {
+           value2 |= (1 << (16 + clot_tag));
+       } else if (unit == 3) {
+           value3 |= (1 << (8 + clot_tag));
+       }
+    }
+    if (value1 || value2 || value3) {
+        scratch1.value |= value1;
+        scratch2.value |= value2;
+        scratch3.value |= value3;
+    }
+    return;
 }
 
 template<class CONS>
@@ -699,6 +770,9 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.inp.icr.egr_meta_pov.enable();
     regs.dprsrreg.inp.icr.ingr.enable();
     regs.dprsrreg.inp.icr.ingr_meta_pov.enable();
+    regs.dprsrreg.inp.icr.scratch.enable();
+    regs.dprsrreg.inp.icr.scratch2.enable();
+    regs.dprsrreg.inp.ipp.scratch.enable();
     regs.dprsrreg.inp.iim.disable();
     regs.dprsrreg.inpslice.disable();
     for (auto &r : regs.dprsrreg.ho_i)
@@ -710,21 +784,49 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         write_jbay_constant_config(r.hir.h.hdr_xbar_const.value, constants[INGRESS]);
     for (auto &r : regs.dprsrreg.ho_e)
         write_jbay_constant_config(r.her.h.hdr_xbar_const.value, constants[EGRESS]);
+    std::set<int> visited_i;
+    for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS; csum_unit++) {
+        unsigned prev_byte = 0;
+        std::map<unsigned, unsigned> pov_map;
+        if (full_checksum_unit[INGRESS][csum_unit].clot_entries.empty() &&
+            full_checksum_unit[INGRESS][csum_unit].entries.empty())
+            continue;
+        set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
+                         pov_map, full_checksum_unit[INGRESS][csum_unit], pov[INGRESS],
+                         csum_unit, &prev_byte);
+        regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = INGRESS;
+        write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+                                        regs.dprsrreg.inp.ipp_m.i_csum.engine,
+                                        csum_unit, visited_i, pov_map,
+                                        full_checksum_unit[INGRESS][csum_unit],
+                                        pov[INGRESS]);
+         write_jbay_full_checksum_invert_config(regs.dprsrreg.inp.icr.scratch,
+                                                regs.dprsrreg.inp.icr.scratch2,
+                                                regs.dprsrreg.inp.ipp.scratch, csum_unit,
+                                                full_checksum_unit[INGRESS][csum_unit]);
+    }
+    std::set<int> visited_e;
+    for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS; csum_unit++) {
+         std::map<unsigned, unsigned> pov_map;
+         unsigned prev_byte = 0;
+         if (full_checksum_unit[EGRESS][csum_unit].clot_entries.empty() &&
+             full_checksum_unit[EGRESS][csum_unit].entries.empty())
+            continue;
+         set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
+                          pov_map, full_checksum_unit[EGRESS][csum_unit], pov[EGRESS],
+                          csum_unit, &prev_byte);
+          regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = EGRESS;
+          write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+                                        regs.dprsrreg.inp.ipp_m.i_csum.engine,
+                                        csum_unit, visited_e, pov_map,
+                                        full_checksum_unit[EGRESS][csum_unit],
+                                        pov[EGRESS]);
+          write_jbay_full_checksum_invert_config(regs.dprsrreg.inp.icr.scratch,
+                                                 regs.dprsrreg.inp.icr.scratch2,
+                                                 regs.dprsrreg.inp.ipp.scratch, csum_unit,
+                                                 full_checksum_unit[EGRESS][csum_unit]);
+    }
 
-    for (int i = 0; i < Target::JBay::DEPARSER_CHECKSUM_UNITS; i++) {
-        if (!checksum_unit[INGRESS][i].entries.empty()) {
-            regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = INGRESS;
-            write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
-                regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[INGRESS][i], pov[INGRESS]);
-            if (!checksum_unit[EGRESS][i].entries.empty()) {
-                error(checksum_unit[INGRESS][i].entries[0].lineno, "checksum %d used in both ingress", i);
-                error(checksum_unit[EGRESS][i].entries[0].lineno, "...and egress"); }
-        } else if (!checksum_unit[EGRESS][i].entries.empty()) {
-            regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = EGRESS;
-            write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
-               regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[EGRESS][i], pov[EGRESS]); } }
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
     json::map field_dictionary_alloc;
@@ -748,7 +850,6 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         field_dictionary_alloc["egress"] = std::move(fd_gress);
         fde_entries_e = std::move(fde_entries);
     }
-    
     if (Log::verbosity() > 0) {
         auto json_dump = open_output("logs/field_dictionary.log");
         *json_dump  << &field_dictionary_alloc;
@@ -774,9 +875,11 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.inp.icr.i_phv8_grp.enable();
     regs.dprsrreg.inp.icr.i_phv16_grp.enable();
     regs.dprsrreg.inp.icr.i_phv32_grp.enable();
+    //  regs.dprsrreg.inp.icr.scratch.enable();
     regs.dprsrreg.inp.icr.i_phv8_grp.val = 0;
     regs.dprsrreg.inp.icr.i_phv16_grp.val = 0;
     regs.dprsrreg.inp.icr.i_phv32_grp.val = 0;
+    //  regs.dprsrreg.inp.icr.scratch.value = 0;
     setup_jbay_ownership(phv_use[INGRESS], regs.dprsrreg.inp.icr.i_phv8_grp.val,
         regs.dprsrreg.inp.icr.i_phv16_grp.val, regs.dprsrreg.inp.icr.i_phv32_grp.val);
     regs.dprsrreg.inp.icr.e_phv8_grp.enable();
@@ -793,7 +896,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
        time. If the compiler determines that no resubmit is possible, then it can set this
        bit, which should lower latency in some circumstances.
        0 = Resubmit is allowed.  1 = Resubmit is not allowed */
-    bool resubmit=false;
+    bool resubmit = false;
     for (auto &digest : digests) {
         if (digest.type->name == "resubmit") {
             resubmit = true;
@@ -801,7 +904,8 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         }
     }
     if (resubmit) regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 0;
-    else regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
+    else
+        regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
 
     for (auto &digest : digests)
         digest.type->setregs(regs, *this, digest);
@@ -810,56 +914,56 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     for (auto &digest : digests) {
         if (digest.type->name == "learning") {
             regs.dprsrreg.inp.icr.lrnmask.enable();
-            for(auto &set : digest.layout) {
+            for (auto &set : digest.layout) {
                 int id = set.first;
                 int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
-                if (len == 0) continue; // Allow empty param list
+                if (len == 0) continue;  // Allow empty param list
 
                 // Fix for TF2LAB-37s:
-                // This fixes a hardware limitation where the container following 
+                // This fixes a hardware limitation where the container following
                 // the last PHV used cannot be the same non 8 bit container as the last entry.
                 // E.g. For len = 5, (active entries start at index 47)
-                // Used   - PHV[47] ... PHV[43] = 0; 
+                // Used   - PHV[47] ... PHV[43] = 0;
                 // Unused - PHV[42] ... PHV[0] = 0; // Defaults to 0
-                // This causes issues in hardware as container 0 is used. 
+                // This causes issues in hardware as container 0 is used.
                 // We fix by setting the default as 64 an 8 - bit container. It can be any
                 // other 8 bit container value.
                 // The hardware does not cause any issues for 8 bit conatiners.
                 for (int i = 47 - len; i >= 0; i--)
                     regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].phvs[i] = 64;
-                // Fix for TF2LAB-37 end
+        // Fix for TF2LAB-37 end
 
-                // Create a bitvec of all phv masks stacked up next to each
-                // other in big-endian. 'setregs' above stacks the digest fields
-                // in a similar manner to setup the phvs per byte on learn_tbl
-                // regs. To illustrate with an example - tna_digest.p4 (since
-                // this is not clear based on reg descriptions);
-                //
-                // BFA Output:
-                //
-                //   learning:
-                //      select: { B1(0..2): B0(1) }  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
-                //      0:
-                //        - B1(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
-                //        - MW0  # ingress::hdr.ethernet.dst_addr.16-47
-                //        - MH1  # ingress::hdr.ethernet.dst_addr.0-15
-                //        - MH0(0..8)  # L[0..8]b: ingress::ig_md.port
-                //        - MW1  # ingress::hdr.ethernet.src_addr.16-47
-                //        - MH2  # ingress::hdr.ethernet.src_addr.0-15
-                //
-                // PHV packing for digest,
-                //
-                //    B1(7..0) | MW0 (31..24) | MW0(23..16) | MW0(15..8)  |
-                //   MW0(7..0) | MH1 (15..8)  | MH1(7..0)   | MH0(16..8)  |
-                //   MH0(7..0) | MW1 (31..24) | MW1(23..16) | MW1(15..8)  |
-                //   MW1(7..0) | MH2 (15..8)  | MH2(7..0)   | ----------  |
-                //
-                // Learn Mask Regs for above digest
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[11] = 4294967047 (0x07ffffff)
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[10] = 4294967295 (0xffffff01)
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[9]  = 4278321151 (0xffffffff)
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[8]  = 4294967040 (0xffffff00)
-                //
+        // Create a bitvec of all phv masks stacked up next to each
+        // other in big-endian. 'setregs' above stacks the digest fields
+        // in a similar manner to setup the phvs per byte on learn_tbl
+        // regs. To illustrate with an example - tna_digest.p4 (since
+        // this is not clear based on reg descriptions);
+        //
+        // BFA Output:
+        //
+        //   learning:
+        //      select: { B1(0..2): B0(1) }  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
+        //      0:
+        //        - B1(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
+        //        - MW0  # ingress::hdr.ethernet.dst_addr.16-47
+        //        - MH1  # ingress::hdr.ethernet.dst_addr.0-15
+        //        - MH0(0..8)  # L[0..8]b: ingress::ig_md.port
+        //        - MW1  # ingress::hdr.ethernet.src_addr.16-47
+        //        - MH2  # ingress::hdr.ethernet.src_addr.0-15
+        //
+        // PHV packing for digest,
+        //
+        //    B1(7..0) | MW0 (31..24) | MW0(23..16) | MW0(15..8)  |
+        //   MW0(7..0) | MH1 (15..8)  | MH1(7..0)   | MH0(16..8)  |
+        //   MH0(7..0) | MW1 (31..24) | MW1(23..16) | MW1(15..8)  |
+        //   MW1(7..0) | MH2 (15..8)  | MH2(7..0)   | ----------  |
+        //
+        // Learn Mask Regs for above digest
+        //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[11] = 4294967047 (0x07ffffff)
+        //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[10] = 4294967295 (0xffffff01)
+        //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[9]  = 4278321151 (0xffffffff)
+        //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[8]  = 4294967040 (0xffffff00)
+
                 bitvec lrnmask;
                 int startBit = 0;
                 int size = 0;
@@ -867,18 +971,18 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
                     if (size > 0)
                         lrnmask <<= p->reg.size;
                     auto psliceSize = p.size();
-                    startBit = p.lobit(); 
+                    startBit = p.lobit();
                     lrnmask.setrange(startBit, psliceSize);
                     size += p->reg.size;
                 }
                 // Pad to a 32 bit word
                 auto shift = (size % 32) ? (32 - (size % 32)) : 0;
-                lrnmask <<= shift; 
+                lrnmask <<= shift;
                 int num_words = (size + 31)/32;
                 int quanta_index = 11;
                 for (int index = num_words - 1; index >= 0; index--) {
                     BUG_CHECK(quanta_index >= 0);
-                    unsigned word = lrnmask.getrange(index * 32, 32); 
+                    unsigned word = lrnmask.getrange(index * 32, 32);
                     regs.dprsrreg.inp.icr.lrnmask[id].mask[quanta_index--] = word;
                 }
             }
@@ -900,7 +1004,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
 namespace {
 static struct JbayChecksumReg : public Phv::Register {
     JbayChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+232, 16) {
-        sprintf(name, "csum%d", unit); }
+        snprintf(name, "csum%d", unit); }
     int deparser_id() const override { return uid; }
 } jbay_checksum_units[8] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7} };
 }
@@ -921,5 +1025,6 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::JBay>() {
     return 224 + Deparser::constant_idx(gress, val);
 }
 
-template<> void Deparser::gen_learn_quanta(Target::JBay::parser_regs &regs, json::vector &learn_quanta) {
+template<> void Deparser::gen_learn_quanta(Target::JBay::parser_regs &regs,
+                                           json::vector &learn_quanta) {
 }

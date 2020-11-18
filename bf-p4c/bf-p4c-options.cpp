@@ -293,6 +293,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2h", "v1model"},
         {"tofino2m", "v1model"},
         {"tofino2u", "v1model"},
+        {"tofino2a0", "v1model"},
   #endif  /* BAREFOOT_INTERNAL */
         {"tofino2", "tna"},
         {"tofino2", "t2na"},
@@ -304,6 +305,8 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2m", "t2na"},
         {"tofino2u", "tna"},
         {"tofino2u", "t2na"},
+        {"tofino2a0", "tna"},
+        {"tofino2a0", "t2na"},
   #if HAVE_CLOUDBREAK
         {"tofino3", "v1model"},
         {"tofino3", "tna"},
@@ -320,7 +323,8 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2",  1},
         {"tofino2u", 1},
         {"tofino2m", 2},
-        {"tofino2h", 3}
+        {"tofino2h", 3},
+        {"tofino2a0", 4}
     };
 
     // need this before processing options in the base class for gtest
@@ -342,7 +346,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         if (target == "tofino") {
             preprocessor_options += " -D__TARGET_TOFINO__=1";
         } else if (target == "tofino2" || target == "tofino2h" || target == "tofino2m" ||
-                   target == "tofino2u") {
+                   target == "tofino2u" || target == "tofino2a0") {
             preprocessor_options += " -D__TARGET_TOFINO__=2";
             preprocessor_options += " -D__TOFINO2_VARIANT__=" +
                 std::to_string(supportedT2Variants.at(target));

@@ -266,11 +266,6 @@ p4c_add_xfail_reason("tofino3"
   )
 
 p4c_add_xfail_reason("tofino3"
-  "Nested checksum updates is currently unsupported"
-  extensions/p4_tests/p4_14/stf/update_checksum_7.p4
-)
-
-p4c_add_xfail_reason("tofino3"
   "HashAlgorithm_t.CSUM16: Invalid enum tag"
   testdata/p4_14_samples/issue894.p4
 )

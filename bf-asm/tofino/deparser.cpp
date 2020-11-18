@@ -6,14 +6,14 @@
 #define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT)                                       \
     DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                                           \
         PFX.NAME.phv = intrin.vals[0].val->reg.deparser_id();                           \
-        IF_SHIFT( PFX.NAME.shft = intrin.vals[0].val->lo; )                             \
+        IF_SHIFT(PFX.NAME.shft = intrin.vals[0].val->lo;)                               \
         if (intrin.vals[0].pov)                                                         \
             error(intrin.vals[0].pov.lineno, "No POV support in tofino "#NAME);         \
         PFX.NAME.valid = 1; }
 #define SIMPLE_INTRINSIC_RENAME(GR, PFX, NAME, REGNAME, IF_SHIFT)                       \
     DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                                           \
         PFX.REGNAME.phv = intrin.vals[0].val->reg.deparser_id();                        \
-        IF_SHIFT( PFX.REGNAME.shft = intrin.vals[0].val->lo; )                          \
+        IF_SHIFT(PFX.REGNAME.shft = intrin.vals[0].val->lo;)                            \
         PFX.REGNAME.valid = 1; }
 #define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
 #define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.input.iir.ingr, NAME, SHFT)
@@ -61,9 +61,9 @@ HER_INTRINSIC(ecos, YES)
 #undef HER_INTRINSIC
 
 #define TOFINO_DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                        \
-    DEPARSER_DIGEST(Tofino, GRESS, NAME, CNT, IFSHIFT( can_shift = true; )) {           \
+    DEPARSER_DIGEST(Tofino, GRESS, NAME, CNT, IFSHIFT(can_shift = true;)) {             \
         CFG.phv = data.select->reg.deparser_id();                                       \
-        IFSHIFT( CFG.shft = data.shift + data.select->lo; )                             \
+        IFSHIFT(CFG.shft = data.shift + data.select->lo;)                               \
         CFG.valid = 1;                                                                  \
         if (data.select.pov)                                                            \
             error(data.select.pov.lineno, "No POV bit support in tofino %s digest",     \
@@ -77,7 +77,7 @@ HER_INTRINSIC(ecos, YES)
             for (auto &reg : set.second) {                                              \
                 if (first) {                                                            \
                     first = false;                                                      \
-                    IFID( TBL[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
+                    IFID(TBL[id].id_phv = reg->reg.deparser_id(); continue;) }          \
                 if (last == reg->reg.deparser_id()) continue;                           \
                 for (int i = reg->reg.size/8; i > 0; i--) {                             \
                     if (idx > maxidx) {                                                 \
@@ -220,23 +220,28 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     // Each phase can do 240 bytes, corresponding to 18 QFDEs (4 * 18 * 4 bytes = 288 bytes)
     // This means that average occupancy must be better than 240 / 288 bytes, or roughly 83%.
     // This is the value we will check.
-    // We gate the check on total bytes occupied being greater than 64 bytes in an attempt to consider the
-    // QFDE constraint that it can only drive four stage 2 buses for compression.
+    // We gate the check on total bytes occupied being greater than 64 bytes in an attempt
+    // to consider the QFDE constraint that it can only drive four stage 2 buses for compression.
 
     unsigned max_bytes_for_rows_occupied = 4 * (row + 1);
     double occupancy = 0.0;
 
     if (max_bytes_for_rows_occupied > 0)
-        occupancy = (double)total_bytes / (double)max_bytes_for_rows_occupied;
+        occupancy = static_cast<double>(total_bytes) /
+                    static_cast<double>(max_bytes_for_rows_occupied);
 
     if (total_bytes > 64 && occupancy < (240.0 / 288.0)) {
          std::stringstream warn_msg;
          warn_msg.precision(4);
          warn_msg << "Deparser field dictionary occupancy is too sparse.";
-         warn_msg << "\nHardware requires an occupancy of " << 100.0 * 240.0 / 288.0 << " to deparse the output header,";
-         warn_msg << "\nbut the PHV layout for the header structures was such that the occupancy was only " << 100.0 * occupancy << ".";
-         warn_msg << "\nThis situation is usually caused by a program that has one or more of the following requirements:";
-         warn_msg << "\n  1. many 'short' headers that are not guaranteed to coexist (e.g. less than 4 bytes)";
+         warn_msg << "\nHardware requires an occupancy of " << 100.0 * 240.0 / 288.0
+                                                  << " to deparse the output header,";
+         warn_msg << "\nbut the PHV layout for the header structures was such that"
+                             "  the occupancy was only " << 100.0 * occupancy << ".";
+         warn_msg << "\nThis situation is usually caused by a program that has one or"
+                                 " more of the following requirements:";
+         warn_msg << "\n  1. many 'short' headers that are not guaranteed to coexist"
+                                 " (e.g. less than 4 bytes)";
          warn_msg << "\n  2. many packet headers that are not multiples of 4 bytes";
          warn_msg << "\n  3. many conditionally updated checksums";
          warning(0, "%s", warn_msg.str().c_str());
@@ -247,8 +252,7 @@ template <typename IN_GRP, typename IN_SPLIT, typename EG_GRP, typename EG_SPLIT
 void tofino_phv_ownership(bitvec phv_use[2],
                           IN_GRP &in_grp, IN_SPLIT &in_split,
                           EG_GRP &eg_grp, EG_SPLIT &eg_split,
-                          unsigned first, unsigned count)
-{
+                          unsigned first, unsigned count) {
     BUG_CHECK(in_grp.val.size() == eg_grp.val.size());
     BUG_CHECK(in_split.val.size() == eg_split.val.size());
     BUG_CHECK((in_grp.val.size() + 1) * in_split.val.size() == count);
@@ -365,7 +369,7 @@ void init_tofino_checksum_entry(ENTRIES &entry) {
 template<typename IPO, typename HPO> static
 void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                            checked_array_base<HPO> &tagalong_csum_units,
-                           gress_t gress, Deparser::ChecksumUnit checksum_unit[]) {
+                           gress_t gress, Deparser::FullChecksumUnit checksum_unit[]) {
     BUG_CHECK(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
@@ -377,7 +381,12 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
             init_tofino_checksum_entry(ent);
         if (checksum_unit[i].entries.empty())
             continue;
-        for (auto &reg : checksum_unit[i].entries) {
+        // Tofino does not support checksum calculation using multiple
+        // partial checksum unit.
+        // Full checksum unit and partial checksum unit will always be same
+        BUG_CHECK(checksum_unit[i].entries.size() == 1);
+        auto& checksum_unit_entries = checksum_unit[i].entries[i];
+        for (auto &reg : checksum_unit_entries) {
             int mask = reg.mask;
             int swap = reg.swap;
             int idx = reg->reg.deparser_id();
@@ -387,15 +396,21 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
             auto cksum_idx1 = tofino_phv2cksum[idx][1];
             BUG_CHECK(cksum_idx0 >= 0);
             if (idx >= 256) {
-                write_checksum_entry(tagalong_unit[cksum_idx0], mask & 3, swap & 1, i, reg->reg.name);
+                write_checksum_entry(tagalong_unit[cksum_idx0], mask & 3, swap & 1, i,
+                                                                reg->reg.name);
                 if (cksum_idx1 >= 0)
-                    write_checksum_entry(tagalong_unit[cksum_idx1], mask >> 2, swap >> 1, i, reg->reg.name);
-                else BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
+                    write_checksum_entry(tagalong_unit[cksum_idx1], mask >> 2, swap >> 1, i,
+                                                                    reg->reg.name);
+                else
+                    BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
             } else {
-                write_checksum_entry(main_unit[cksum_idx0], mask & 3, swap & 1, i, reg->reg.name);
+                write_checksum_entry(main_unit[cksum_idx0], mask & 3, swap & 1, i,
+                                                            reg->reg.name);
                 if (cksum_idx1 >= 0)
-                    write_checksum_entry(main_unit[cksum_idx1], mask >> 2, swap >> 1, i, reg->reg.name);
-                else BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
+                    write_checksum_entry(main_unit[cksum_idx1], mask >> 2, swap >> 1, i,
+                                                                reg->reg.name);
+                else
+                    BUG_CHECK((mask >> 2 == 0) && (swap >> 1 == 0));
             }
         }
         // Thread non-tagalong checksum results through the tagalong unit
@@ -409,16 +424,20 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
 
 static
 void tofino_checksum_units(Target::Tofino::deparser_regs &regs,
-                           Deparser::ChecksumUnit checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
+                           Deparser::FullChecksumUnit
+                           full_checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
     for (unsigned id = 2; id < MAX_DEPARSER_CHECKSUM_UNITS; id++) {
-        if (!checksum_unit[0][id].entries.empty() && !checksum_unit[1][id].entries.empty())
+        if (!full_checksum_unit[0][id].entries.empty() &&
+            !full_checksum_unit[1][id].entries.empty())
             error(-1, "deparser checksum unit %d used in both ingress and egress", id);
     }
 
     tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
-                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum_unit[INGRESS]);
+                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS,
+                          full_checksum_unit[INGRESS]);
     tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
-                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum_unit[EGRESS]);
+                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS,
+                          full_checksum_unit[EGRESS]);
 
     // make sure shared units are configured identically
     for (unsigned id = 2; id < Target::Tofino::DEPARSER_CHECKSUM_UNITS; id++) {
@@ -428,10 +447,10 @@ void tofino_checksum_units(Target::Tofino::deparser_regs &regs,
         auto& eg_tphv_unit = regs.header.hem.he_tphv_csum.csum_cfg[id].csum_cfg_entry;
         auto& ig_tphv_unit = regs.header.him.hi_tphv_csum.csum_cfg[id].csum_cfg_entry;
 
-        if (!checksum_unit[0][id].entries.empty()) {
+        if (!full_checksum_unit[0][id].entries.empty()) {
             copy_csum_cfg_entry(eg_main_unit, ig_main_unit);
             copy_csum_cfg_entry(eg_tphv_unit, ig_tphv_unit);
-        } else if (!checksum_unit[1][id].entries.empty()) {
+        } else if (!full_checksum_unit[1][id].entries.empty()) {
             copy_csum_cfg_entry(ig_main_unit, eg_main_unit);
             copy_csum_cfg_entry(ig_tphv_unit, eg_tphv_unit);
         }
@@ -444,8 +463,7 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.header.hem.he_edf_cfg.disable();
     regs.header.him.hi_edf_cfg.disable();
 
-    tofino_checksum_units(regs, checksum_unit);
-
+    tofino_checksum_units(regs, full_checksum_unit);
     json::map field_dictionary_alloc;
     json::vector fd_gress;
     json::vector fde_entries_i;
@@ -535,5 +553,6 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::Tofino>() {
     return -1;
 }
 
-template<> void Deparser::gen_learn_quanta(Target::Tofino::parser_regs &regs, json::vector &learn_quanta) {
+template<> void Deparser::gen_learn_quanta(Target::Tofino::parser_regs &regs,
+                                            json::vector &learn_quanta) {
 }

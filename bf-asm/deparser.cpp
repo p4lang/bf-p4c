@@ -8,6 +8,7 @@
 #include "target.h"
 #include "top_level.h"
 #include "../lib/stringref.h"
+#include "ubits.h"
 
 static unsigned unique_field_list_handle = FIELD_HANDLE_START;
 
@@ -97,7 +98,7 @@ struct Deparser::FDEntry {
                             error(kv.value.lineno, "Duplicate value at offset %" PRId64 "",
                                   kv.key.i);
                         if (kv.value.type == tCMD && kv.value.vec.size == 2 &&
-                            kv.value == "checksum")
+                            kv.value == "full_checksum")
                             csum_replace.emplace(kv.key.i, Checksum(gress, kv.value.vec[1]));
                         else
                             phv_replace.emplace(kv.key.i,
@@ -134,7 +135,7 @@ struct Deparser::FDEntry {
         lineno = v.lineno;
         if (v.type == tCMD && v.vec.size == 2 && v == "clot") {
             what = new Clot(gress, v.vec[1], p, pov);
-        } else if (v.type == tCMD && v.vec.size == 2 && v == "checksum") {
+        } else if (v.type == tCMD && v.vec.size == 2 && v == "full_checksum") {
             what = new Checksum(gress, v.vec[1]);
             pov = ::Phv::Ref(gress, DEPARSER_STAGE, p);
         } else if (v.type == tINT) {
@@ -270,7 +271,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
                     pov_order[gress].emplace_back(gress, DEPARSER_STAGE, ent);
-            } else if (kv.key == "checksum") {
+            } else if (kv.key == "partial_checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
                     kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS()) {
                     error(kv.key.lineno, "Invalid deparser checksum unit number");
@@ -279,17 +280,44 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     int unit = kv.key[1].i;
                     if (unit < 0) error(kv.key.lineno, "Invalid checksum unit %d", unit);
                     for (auto &ent : kv.value.map) {
-                        if (ent.key == "pov") {
-                           checksum_unit[gress][unit].pov
-                               = ::Phv::Ref(gress, DEPARSER_STAGE, ent.value);
-                        } else if (ent.key == "zeros_as_ones") {
-                           checksum_unit[gress][unit].zeros_as_ones_en = ent.value.i;
+                        checksum_entries[gress][unit].emplace_back(gress, ent.key, ent.value);
+                    }
+                }
+            } else if (kv.key == "full_checksum") {
+                if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
+                    kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS()) {
+                    error(kv.key.lineno, "Invalid deparser checksum unit number");
+                } else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
+                    collapse_list_of_maps(kv.value);
+                    int unit = kv.key[1].i;
+                    if (unit < 0) error(kv.key.lineno, "Invalid checksum unit %d", unit);
+                    for (auto &ent : kv.value.map) {
+                        if (ent.key == "partial_checksum") {
+                            full_checksum_unit[gress][unit].entries[ent.key[1].i] =
+                                                          checksum_entries[gress][ent.key[1].i];
+                            collapse_list_of_maps(ent.value);
+                            for (auto &a  : ent.value.map) {
+                                if (a.key == "pov") {
+                                    full_checksum_unit[gress][unit].pov[ent.key[1].i]  =
+                                                      ::Phv::Ref(gress, DEPARSER_STAGE, a.value);
+                                } else if (a.key == "invert") {
+                                    full_checksum_unit[gress][unit].checksum_unit_invert.
+                                                                              insert(ent.key[1].i);
+                                }
+                            }
                         } else if (ent.key == "clot") {
-                            checksum_unit[gress][unit].entries.emplace_back(gress,
-                                    ent.key[1].i, ent.value);
-                        } else {
-                            checksum_unit[gress][unit].entries.emplace_back(gress,
-                                    ent.key, ent.value);
+                            collapse_list_of_maps(ent.value);
+                            for (auto &a  : ent.value.map) {
+                                if (a.key == "pov") {
+                                    full_checksum_unit[gress][unit].clot_entries.emplace_back(
+                                                                    gress, ent.key[1].i, a.value);
+                                } else if (a.key == "invert") {
+                                    full_checksum_unit[gress][unit].clot_tag_invert.insert(
+                                                                     a.value.i);
+                                }
+                            }
+                        } else if (ent.key == "zeros_as_ones") {
+                            full_checksum_unit[gress][unit].zeros_as_ones_en = ent.value.i;
                         }
                     }
                 }
@@ -334,9 +362,11 @@ void Deparser::process() {
                     pov_order[gress].emplace_back(ent.pov->reg, gress);
                     pov_use[gress][ent.pov->reg.uid] = 1; } } }
         for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
-            for (auto &ent : checksum_unit[gress][i].entries)
-                if (!ent.check())
-                    error(ent.lineno, "Invalid checksum entry"); }
+            for (auto &ent : full_checksum_unit[gress][i].entries) {
+                for (auto entry : ent.second) {
+                    if (!entry.check())
+                        error(entry.lineno, "Invalid checksum entry"); }}
+    }
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.vals) {
             if (el.check())
@@ -532,7 +562,6 @@ json::map deparser_table_digest_to_json(Deparser::Digest* tab_digest) {
     dep_table["maxBytes"] = max_bytes;
     dep_table["index_phv"] = tab_digest->select->reg.uid;
     dep_table["table_phv"] = std::move(table_phv);
-    
     // Now we have a digest
     return dep_table;
 }
@@ -545,7 +574,6 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
                                               json::vector& fde_entries_e) {
     json::map resources_deparser_ingress;
     json::map resources_deparser_egress;
-    
     // Set gress property
     resources_deparser_ingress["gress"] = "ingress";
     resources_deparser_egress["gress"] = "egress";
@@ -593,7 +621,6 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
     json::vector resources_deparser;
     resources_deparser.push_back(std::move(resources_deparser_ingress));
     resources_deparser.push_back(std::move(resources_deparser_egress));
-    
     // Dump resources to file 
     auto deparser_json_dump = open_output("logs/resources_deparser.json");
     *deparser_json_dump << &resources_deparser;

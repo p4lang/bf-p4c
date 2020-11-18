@@ -16,6 +16,7 @@
     M(Tofino2H, ##__VA_ARGS__) \
     M(Tofino2M, ##__VA_ARGS__) \
     M(Tofino2U, ##__VA_ARGS__) \
+    M(Tofino2A0, ##__VA_ARGS__) \
     M(Cloudbreak, ##__VA_ARGS__)
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
@@ -27,7 +28,8 @@
     M(JBay, ##__VA_ARGS__)     \
     M(Tofino2H, ##__VA_ARGS__) \
     M(Tofino2M, ##__VA_ARGS__) \
-    M(Tofino2U, ##__VA_ARGS__)
+    M(Tofino2U, ##__VA_ARGS__) \
+    M(Tofino2A0. ##__VA_ARS__) \
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
     M(JBay, ##__VA_ARGS__)
@@ -335,6 +337,17 @@ class Target::Tofino2U : public Target::JBay {
     static constexpr const char * const name = "tofino2u";
     static constexpr target_t tag = TOFINO2U;
     typedef Target::Tofino2U target_type;
+    class Phv;
+    enum {
+        NUM_MAU_STAGES_PRIVATE = 20
+    };
+};
+
+class Target::Tofino2A0 : public Target::JBay {
+ public:
+    static constexpr const char * const name = "tofino2a0";
+    static constexpr target_t tag = TOFINO2A0;
+    typedef Target::Tofino2A0 target_type;
     class Phv;
     enum {
         NUM_MAU_STAGES_PRIVATE = 20

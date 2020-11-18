@@ -205,6 +205,13 @@ class JBayUDevice : public JBayDevice {
     cstring get_name() const override { return "Tofino2U"; }
 };
 
+class JBayA0Device : public JBayDevice {
+ public:
+    const JBayA0PardeSpec parde_;
+    const PardeSpec& getPardeSpec() const override { return parde_; }
+    cstring get_name() const override { return "Tofino2A0"; }
+};
+
 #if HAVE_CLOUDBREAK
 class CloudbreakDevice : public Device {
     const CloudbreakPhvSpec phv_;

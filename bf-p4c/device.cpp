@@ -23,6 +23,8 @@ void Device::init(cstring name) {
         instance_ = new JBayMDevice();
     else if (lower_name == "tofino2u")
         instance_ = new JBayUDevice();
+    else if (lower_name == "tofino2a0")
+        instance_ = new JBayA0Device();
 #if HAVE_CLOUDBREAK
     else if (lower_name == "tofino3")
         instance_ = new CloudbreakDevice();

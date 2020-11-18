@@ -2,7 +2,6 @@
 #define BF_ASM_DEPARSER_H_
 
 #include <vector>
-
 #include "bitops.h"
 #include "sections.h"
 #include "phv.h"
@@ -60,7 +59,6 @@ class Deparser : public Section {
         ChecksumVal(gress_t gr, const value_t &v, const value_t &m) : Val(gr, v) {
             if ((val->lo % 8 != 0) || (val->hi % 8 != 7))
                 error(lineno, "Can only do checksums on byte-aligned container slices");
-
             mask = ((1 << (val->hi + 1)/8) - 1) ^ ((1 << val->lo/8) - 1);
 
             if (CHECKTYPE(m, tMAP)) {
@@ -71,10 +69,7 @@ class Deparser : public Section {
                     } else if (kv.key == "swap" && CHECKTYPE(kv.value, tINT)) {
                         swap = kv.value.i;
                     } else {
-                        error(m.lineno, "Unknown key for checksum: %s", value_desc(kv.key));
-                    }
-                }
-            }
+                        error(m.lineno, "Unknown key for checksum: %s", value_desc(kv.key)); } } }
         }
         ChecksumVal(gress_t gr, int tag, const value_t &p) : Val(gr, tag, p) {}
         ChecksumVal &operator=(const ChecksumVal &a) {
@@ -90,20 +85,26 @@ class Deparser : public Section {
             return Val::check();
         }
     };
-    struct ChecksumUnit {
-        std::vector<ChecksumVal> entries;
+
+    struct FullChecksumUnit {
+        std::map<int, std::vector<ChecksumVal>> entries;
+        std::map<int, Phv::Ref> pov;
+        std::set<int> checksum_unit_invert;
+        std::set<int> clot_tag_invert;
+        std::vector<ChecksumVal> clot_entries;
         bool zeros_as_ones_en = false;
-        Phv::Ref pov;
     };
 
     struct FDEntry;
-    ChecksumUnit                                    checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS];
-    int                                             lineno[2];
-    std::vector<FDEntry>                            dictionary[2];
-    std::vector<Phv::Ref>                           pov_order[2];
-    ordered_map<const Phv::Register *, unsigned>    pov[2];
-    bitvec                                          phv_use[2];
-    std::set<int>                                   constants[2];
+    std::vector<ChecksumVal>            checksum_entries[2][MAX_DEPARSER_CHECKSUM_UNITS];
+    FullChecksumUnit                    full_checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS];
+    int                                 lineno[2];
+    std::vector<FDEntry>                dictionary[2];
+    std::vector<Phv::Ref>               pov_order[2];
+    ordered_map<const Phv::Register *,
+                 unsigned>              pov[2];
+    bitvec                              phv_use[2];
+    std::set<int>                       constants[2];
     struct Intrinsic {
         struct Type;
         Type                    *type;

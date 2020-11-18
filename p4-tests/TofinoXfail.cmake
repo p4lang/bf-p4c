@@ -1380,12 +1380,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Tofino does not support nested checksum updates"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_12.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1039/comp_1039.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129/comp_1129.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129b/comp_1129b.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1130/comp_1130b.p4
   ../glass/testsuite/p4_tests/cisco/COMPILER-393/case2277.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
+  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
 )
 
 p4c_add_xfail_reason("tofino"

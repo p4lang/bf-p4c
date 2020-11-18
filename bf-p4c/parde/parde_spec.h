@@ -90,6 +90,9 @@ class PardeSpec {
 
     // Number deparser checksum units each gress can support
     virtual unsigned numDeparserChecksumUnits() const = 0;
+
+    // Number of deparser checksum units that can invert its output
+    virtual unsigned numDeparserInvertChecksumUnits() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -139,6 +142,7 @@ class TofinoPardeSpec : public PardeSpec {
 
     unsigned numDeparserConstantBytes() const override { return 0; }
     unsigned numDeparserChecksumUnits() const override { return 6; }
+    unsigned numDeparserInvertChecksumUnits() const override { return 0; }
 };
 
 class JBayPardeSpec : public PardeSpec {
@@ -197,10 +201,19 @@ class JBayPardeSpec : public PardeSpec {
 
     unsigned numDeparserConstantBytes() const override { return 8; }
     unsigned numDeparserChecksumUnits() const override { return 8; }
+    unsigned numDeparserInvertChecksumUnits() const override { return 4; }
+};
+
+class JBayA0PardeSpec : public JBayPardeSpec {
+ public:
+    unsigned numDeparserInvertChecksumUnits() const override { return 0; }
 };
 
 #if HAVE_CLOUDBREAK
-class CloudbreakPardeSpec : public JBayPardeSpec { };
+class CloudbreakPardeSpec : public JBayPardeSpec {
+ public:
+    unsigned numDeparserInvertChecksumUnits() const override { return 8; }
+};
 #endif /* HAVE_CLOUDBREAK */
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_ */

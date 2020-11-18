@@ -574,6 +574,10 @@ class EmitChecksum : Emit {
     bool zeros_as_ones = false;
 
     ChecksumLVal dest;
+
+    // Needed for nested checksums in JBayB0.
+    // This checksum will need the checksum of these destination.
+    optional inline Vector<EmitChecksum> nested_checksum;
 }
 
 /// Configures the location from which an intrinsic deparser parameter should

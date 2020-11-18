@@ -905,31 +905,23 @@ struct AbsorbNestedChecksum : public Transform {
        checksumUpdateInfoMap(checksumUpdateInfoMap), dest_to_nested_csum(dest_to_nested_csum) { }
 
     void print_error(const IR::BFN::EmitChecksum* a, const IR::BFN::EmitChecksum* b) {
-        if (Device::currentDevice() == Device::TOFINO) {
-            std::stringstream hint;
+        std::stringstream hint;
 
-            hint << "Consider using checksum units in both ingress and egress deparsers";
+        hint << "Consider using checksum units in both ingress and egress deparsers";
 
-            if (BackendOptions().arch == "v1model") {
-                hint << " (@pragma calculated_field_update_location/";
-                hint << "residual_checksum_parser_update_location)";
-            }
-
-            hint << ".";
-
-            ::fatal_error("Tofino does not support nested checksum updates in the same deparser:"
-                          " %1%, %2%\n%3%", a->dest->field, b->dest->field, hint.str());
-
-        } else if (Device::currentDevice() != Device::TOFINO) {
-            P4C_UNIMPLEMENTED("Nested checksum updates is currently "
-                              "unsupported by the compiler for Tofino2: %1%, %2%",
-                              a->dest->field, b->dest->field);
-        } else {
-            BUG("Unknown device");
+        if (BackendOptions().arch == "v1model") {
+            hint << " (@pragma calculated_field_update_location/";
+            hint << "residual_checksum_parser_update_location)";
         }
+
+        hint << ".";
+
+        ::fatal_error("Tofino does not support nested checksum updates in the same deparser:"
+                          " %1%, %2%\n%3%", a->dest->field, b->dest->field, hint.str());
     }
 
     const IR::Node* preorder(IR::BFN::EmitChecksum* emitChecksum) override {
+        auto nestedVec = new IR::Vector<IR::BFN::EmitChecksum>();
         auto parentDest = emitChecksum->dest->toString();
         if (!dest_to_nested_csum.count(parentDest)) return emitChecksum;
         for (auto& nestedCsum : dest_to_nested_csum.at(parentDest)) {
@@ -946,12 +938,16 @@ struct AbsorbNestedChecksum : public Transform {
                 }
                 if (!match) {
                     dest_to_delete_entries.erase(emitChecksum->dest->toString());
-                    // Nesting of checksum not supported/implemented
-                    print_error(emitChecksum, nestedCsum);
+                    nestedVec->push_back(nestedCsum);
+                    // Nesting of checksum supported only from JbayB0 and Cloudbreak
+                    if (Device::pardeSpec().numDeparserInvertChecksumUnits() == 0) {
+                        print_error(emitChecksum, nestedCsum);
+                    }
                     break;
                 }
             }
         }
+        emitChecksum->nested_checksum = *nestedVec;
         return emitChecksum;
     }
 
@@ -962,6 +958,30 @@ struct AbsorbNestedChecksum : public Transform {
         if (!dest_to_delete_entries.count(dest)) return entry;
         if (dest_to_delete_entries.at(dest).count(fieldString)) {
             return nullptr;
+        }
+        return entry;
+    }
+};
+
+// Remove the nested checksum destination from the parent checksum update field list
+// if the parent checksum is unconditional.
+// Use the "deparse_original" bit as gating pov bit for the nested checksum destination
+// in the parent checksum update if the parent checksum is conditional
+struct DeleteChecksumField : public Transform {
+    const ChecksumUpdateInfoMap& checksumInfo;
+    explicit DeleteChecksumField(const ChecksumUpdateInfoMap& checksumInfo) :
+             checksumInfo(checksumInfo) {}
+    const IR::Node* preorder(IR::BFN::ChecksumEntry* entry) override {
+        auto emitChecksum = findContext<IR::BFN::EmitChecksum>();
+        for (auto nest : emitChecksum->nested_checksum) {
+            if (nest->dest->field->equiv(*entry->field->field)) {
+                auto nestCsum = checksumInfo.at(nest->dest->toString());
+                if (nestCsum->isUnconditional) {
+                    return nullptr;
+                } else {
+                    entry->povBit =  new IR::BFN::FieldLVal(nestCsum->deparseOriginal);
+                }
+            }
         }
         return entry;
     }
@@ -1016,6 +1036,11 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
         AbsorbNestedChecksum absorbNestedChecksum(checksums,
                                        collectNestedChecksumInfo.dest_to_nested_csum);
         pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(absorbNestedChecksum);
+        // Only for JbayB0 and Cloudbreak
+        if (Device::pardeSpec().numDeparserInvertChecksumUnits()) {
+            DeleteChecksumField deleteChecksumField(checksums);
+            pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(deleteChecksumField);
+        }
     }
 
     return pipe;

@@ -10,7 +10,7 @@
 
 enum config_version_t { CONFIG_OLD = 1, CONFIG_NEW = 2, CONFIG_BOTH = 3 };
 enum target_t { NO_TARGET = 0, TOFINO, TOFINO2, JBAY = TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
-                TOFINO3, CLOUDBREAK = TOFINO3,
+                TOFINO2A0, TOFINO3, CLOUDBREAK = TOFINO3,
                 TARGET_INDEX_LIMIT };
 enum binary_type_t { NO_BINARY,
     FOUR_PIPE,  // binary replicating to all 4 pipes

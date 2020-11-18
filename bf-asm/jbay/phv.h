@@ -1,5 +1,5 @@
-#ifndef _jbay_phv_h_
-#define _jbay_phv_h_
+#ifndef BF_ASM_JBAY_PHV_H_
+#define BF_ASM_JBAY_PHV_H_
 
 #include "../phv.h"
 
@@ -10,7 +10,8 @@ class Target::JBay::Phv : public Target::Phv {
         int parser_id() const override { return parser_id_; }
         int mau_id() const override { return uid < 280 ? uid : -1; }
         int ixbar_id() const override {
-            static const int ixbar_permute[16] = { 0,0,0,0,0,0,2,2,2,2,2,2,-6,-6,0,0 };
+            static const int ixbar_permute[16] =
+                    {0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, -6, -6, 0, 0};
             return deparser_id_ + ixbar_permute[deparser_id_&0xf]; }
         int deparser_id() const override { return deparser_id_; }
     };
@@ -31,4 +32,8 @@ class Target::Tofino2U::Phv : public Target::JBay::Phv {
     target_t type() const override { return TOFINO2U; }
 };
 
-#endif /* _jbay_phv_h_ */
+class Target::Tofino2A0::Phv : public Target::JBay::Phv {
+    target_t type() const override { return TOFINO2A0; }
+};
+
+#endif /* BF_ASM_JBAY_PHV_H_ */

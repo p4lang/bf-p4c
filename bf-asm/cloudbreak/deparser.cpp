@@ -1,11 +1,13 @@
-/* deparser template specializations for cloudbreak -- #included directly in top-level deparser.cpp */
+/* deparser template specializations for cloudbreak --
+ #included directly in top-level deparser.cpp */
 
 #define YES(X)  X
 #define NO(X)
 
 #define CLOUDBREAK_POV(GRESS, VAL, REG)                                                         \
     if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
-    else error(VAL.val.lineno, "POV bit required for Tofino2");
+    else                                                                                        \
+        error(VAL.val.lineno, "POV bit required for Tofino2");                                  \
 
 #define CLOUDBREAK_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                   \
     REG.phv = VAL.val->reg.deparser_id();                                                       \
@@ -30,7 +32,7 @@
 #define II_INTRINSIC(NAME, IFSHIFT)                                                             \
     DEPARSER_INTRINSIC(Cloudbreak, INGRESS, NAME, 1) {                                          \
         CLOUDBREAK_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0],                                    \
-                                    regs.dprsrreg.inp.ipp.ingr.m_##NAME,IFSHIFT) }
+                                    regs.dprsrreg.inp.ipp.ingr.m_##NAME, IFSHIFT) }
 #define II_INTRINSIC_RENAME(NAME, REGNAME, IFSHIFT)                                             \
     DEPARSER_INTRINSIC(Cloudbreak, INGRESS, NAME, 1) {                                          \
         CLOUDBREAK_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0],                                    \
@@ -135,7 +137,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
         SEL.shft = data.shift + data.select->lo;                                                \
         SEL.disable_ = 0;
 
-#define CLOUDBREAK_DIGEST_TABLE(GRESS, NAME, REG, IFID, IFVALID, CNT, REVERSE, IFIDX)                 \
+#define CLOUDBREAK_DIGEST_TABLE(GRESS, NAME, REG, IFID, IFVALID, CNT, REVERSE, IFIDX)           \
         for (auto &set : data.layout) {                                                         \
             int id = set.first >> data.shift;                                                   \
             int idx = 0;                                                                        \
@@ -145,7 +147,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
             for (auto &reg : set.second) {                                                      \
                 if (first) {                                                                    \
                     first = false;                                                              \
-                    IFID( REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue; ) }        \
+                    IFID(REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue;) }         \
                 if (last == reg->reg.deparser_id()) continue;                                   \
                 for (int i = reg->reg.size/8; i > 0; i--) {                                     \
                     if (idx > maxidx) {                                                         \
@@ -154,7 +156,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
                         break; }                                                                \
                     REG IFIDX([id]).phvs[REVERSE(maxidx -) idx++] = reg->reg.deparser_id(); }   \
                 last = reg->reg.deparser_id(); }                                                \
-            IFVALID( REG IFIDX([id]).valid = 1; )                                               \
+            IFVALID(REG IFIDX([id]).valid = 1;)                                                \
             REG IFIDX([id]).len = idx; }
 
 CLOUDBREAK_SIMPLE_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
@@ -226,6 +228,18 @@ CLOUDBREAK_SIMPLE_DIGEST(INGRESS, pktgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
     M(NO, , regs.dprsrreg.inp.ipp.ingr.m_pgen_len, disable_) \
     M(NO, , regs.dprsrreg.inp.ipp.ingr.m_resub_sel, disable_)
 
+template<class CSUM>
+void write_cloudbreak_full_checksum_invert_config(CSUM &csum,
+                                                  Deparser::FullChecksumUnit &full_csum) {
+    csum.invert.enable();
+    for (auto checksum_unit : full_csum.checksum_unit_invert) {
+        csum.invert.phv[checksum_unit] = 1;
+    }
+    for (auto clot : full_csum.clot_tag_invert) {
+        csum.invert.clot[clot] = 1;
+    }
+}
+
 template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) {
     regs.dprsrreg.dprsr_csr_ring.disable();
     regs.dprsrreg.dprsr_pbus.disable();
@@ -248,21 +262,44 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
     for (auto &r : regs.dprsrreg.ho_e)
         write_jbay_constant_config(r.her.h.hdr_xbar_const.value, constants[EGRESS]);
 
-    for (int i = 0; i < Target::Cloudbreak::DEPARSER_CHECKSUM_UNITS; i++) {
-        if (!checksum_unit[INGRESS][i].entries.empty()) {
-            regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = INGRESS;
-            write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
-                regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[INGRESS][i], pov[INGRESS]);
-            if (!checksum_unit[EGRESS][i].entries.empty()) {
-                error(checksum_unit[INGRESS][i].entries[0].lineno, "checksum %d used in both ingress", i);
-                error(checksum_unit[EGRESS][i].entries[0].lineno, "...and egress"); }
-        } else if (!checksum_unit[EGRESS][i].entries.empty()) {
-            regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = EGRESS;
-            write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
-               regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[EGRESS][i], pov[EGRESS]); } }
-
+    std::set<int> visited_i;
+    for (int csum_unit = 0; csum_unit < Target::Cloudbreak::DEPARSER_CHECKSUM_UNITS; csum_unit++) {
+        unsigned prev_byte = 0;
+        std::map<unsigned, unsigned> pov_map;
+        if (full_checksum_unit[INGRESS][csum_unit].clot_entries.empty() &&
+            full_checksum_unit[INGRESS][csum_unit].entries.empty())
+            continue;
+        set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
+                         pov_map, full_checksum_unit[INGRESS][csum_unit], pov[INGRESS],
+                         csum_unit, &prev_byte);
+        regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = INGRESS;
+        write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+                                        regs.dprsrreg.inp.ipp_m.i_csum.engine,
+                                        csum_unit, visited_i, pov_map,
+                                        full_checksum_unit[INGRESS][csum_unit],
+                                        pov[INGRESS]);
+        write_cloudbreak_full_checksum_invert_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+                                                     full_checksum_unit[INGRESS][csum_unit]);
+    }
+    std::set<int> visited_e;
+    for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS; csum_unit++) {
+        unsigned prev_byte = 0;
+        std::map<unsigned, unsigned> pov_map;
+        if (full_checksum_unit[EGRESS][csum_unit].clot_entries.empty() &&
+            full_checksum_unit[EGRESS][csum_unit].entries.empty())
+            continue;
+        set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
+                         pov_map, full_checksum_unit[EGRESS][csum_unit], pov[EGRESS],
+                         csum_unit, &prev_byte);
+         regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = EGRESS;
+         write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+                                       regs.dprsrreg.inp.ipp_m.i_csum.engine,
+                                       csum_unit, visited_e, pov_map,
+                                       full_checksum_unit[EGRESS][csum_unit],
+                                       pov[EGRESS]);
+         write_cloudbreak_full_checksum_invert_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+                                                full_checksum_unit[EGRESS][csum_unit]);
+    }
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
     json::map field_dictionary_alloc;
@@ -286,14 +323,12 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
         field_dictionary_alloc["egress"] = std::move(fd_gress);
         fde_entries_e = std::move(fde_entries);
     }
-    
     if (Log::verbosity() > 0) {
         auto json_dump = open_output("logs/field_dictionary.log");
         *json_dump  << &field_dictionary_alloc;
     }
     // Output deparser resources
     report_resources_deparser_json(fde_entries_i, fde_entries_e);
-    
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         if (!options.match_compiler) {
             error(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
@@ -331,7 +366,7 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
        time. If the compiler determines that no resubmit is possible, then it can set this
        bit, which should lower latency in some circumstances.
        0 = Resubmit is allowed.  1 = Resubmit is not allowed */
-    bool resubmit=false;
+    bool resubmit = false;
     for (auto &digest : digests) {
         if (digest.type->name == "resubmit") {
             resubmit = true;
@@ -339,7 +374,8 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
         }
     }
     if (resubmit) regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 0;
-    else regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
+    else
+        regs.dprsrreg.inp.ipp.ingr.resubmit_mode.mode = 1;
 
     for (auto &digest : digests)
         digest.type->setregs(regs, *this, digest);
@@ -348,18 +384,18 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
     for (auto &digest : digests) {
         if (digest.type->name == "learning") {
             regs.dprsrreg.inp.icr.lrnmask.enable();
-            for(auto &set : digest.layout) {
+            for (auto &set : digest.layout) {
                 int id = set.first;
                 int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
-                if (len == 0) continue; // Allow empty param list
+                if (len == 0) continue;  // Allow empty param list
 
                 // Fix for TF2LAB-37s:
-                // This fixes a hardware limitation where the container following 
+                // This fixes a hardware limitation where the container following
                 // the last PHV used cannot be the same non 8 bit container as the last entry.
                 // E.g. For len = 5, (active entries start at index 47)
-                // Used   - PHV[47] ... PHV[43] = 0; 
+                // Used   - PHV[47] ... PHV[43] = 0;
                 // Unused - PHV[42] ... PHV[0] = 0; // Defaults to 0
-                // This causes issues in hardware as container 0 is used. 
+                // This causes issues in hardware as container 0 is used.
                 // We fix by setting the default as 64 an 8 - bit container. It can be any
                 // other 8 bit container value.
                 // The hardware does not cause any issues for 8 bit conatiners.
@@ -367,37 +403,37 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
                     regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].phvs[i] = 64;
                 // Fix for TF2LAB-37 end
 
-                // Create a bitvec of all phv masks stacked up next to each
-                // other in big-endian. 'setregs' above stacks the digest fields
-                // in a similar manner to setup the phvs per byte on learn_tbl
-                // regs. To illustrate with an example - tna_digest.p4 (since
-                // this is not clear based on reg descriptions);
-                //
-                // BFA Output:
-                //
-                //   learning:
-                //      select: { B1(0..2): B0(1) }  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
-                //      0:
-                //        - B1(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
-                //        - MW0  # ingress::hdr.ethernet.dst_addr.16-47
-                //        - MH1  # ingress::hdr.ethernet.dst_addr.0-15
-                //        - MH0(0..8)  # L[0..8]b: ingress::ig_md.port
-                //        - MW1  # ingress::hdr.ethernet.src_addr.16-47
-                //        - MH2  # ingress::hdr.ethernet.src_addr.0-15
-                //
-                // PHV packing for digest,
-                //
-                //    B1(7..0) | MW0 (31..24) | MW0(23..16) | MW0(15..8)  |
-                //   MW0(7..0) | MH1 (15..8)  | MH1(7..0)   | MH0(16..8)  |
-                //   MH0(7..0) | MW1 (31..24) | MW1(23..16) | MW1(15..8)  |
-                //   MW1(7..0) | MH2 (15..8)  | MH2(7..0)   | ----------  |
-                //
-                // Learn Mask Regs for above digest
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[11] = 4294967047 (0x07ffffff)
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[10] = 4294967295 (0xffffff01)
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[9]  = 4278321151 (0xffffffff)
-                //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[8]  = 4294967040 (0xffffff00)
-                //
+     // Create a bitvec of all phv masks stacked up next to each
+     // other in big-endian. 'setregs' above stacks the digest fields
+     // in a similar manner to setup the phvs per byte on learn_tbl
+     // regs. To illustrate with an example - tna_digest.p4 (since
+     // this is not clear based on reg descriptions);
+     //
+     // BFA Output:
+     //
+     //   learning:
+     //      select: { B1(0..2): B0(1) }  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
+     //      0:
+     //        - B1(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.digest_type
+     //        - MW0  # ingress::hdr.ethernet.dst_addr.16-47
+     //        - MH1  # ingress::hdr.ethernet.dst_addr.0-15
+     //        - MH0(0..8)  # L[0..8]b: ingress::ig_md.port
+     //        - MW1  # ingress::hdr.ethernet.src_addr.16-47
+     //        - MH2  # ingress::hdr.ethernet.src_addr.0-15
+     //
+     // PHV packing for digest,
+     //
+     //    B1(7..0) | MW0 (31..24) | MW0(23..16) | MW0(15..8)  |
+     //   MW0(7..0) | MH1 (15..8)  | MH1(7..0)   | MH0(16..8)  |
+     //   MH0(7..0) | MW1 (31..24) | MW1(23..16) | MW1(15..8)  |
+     //   MW1(7..0) | MH2 (15..8)  | MH2(7..0)   | ----------  |
+     //
+     // Learn Mask Regs for above digest
+     //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[11] = 4294967047 (0x07ffffff)
+     //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[10] = 4294967295 (0xffffff01)
+     //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[9]  = 4278321151 (0xffffffff)
+     //   deparser.regs.dprsrreg.inp.icr.lrnmask[0].mask[8]  = 4294967040 (0xffffff00)
+
                 bitvec lrnmask;
                 int startBit = 0;
                 int size = 0;
@@ -405,18 +441,18 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
                     if (size > 0)
                         lrnmask <<= p->reg.size;
                     auto psliceSize = p.size();
-                    startBit = p.lobit(); 
+                    startBit = p.lobit();
                     lrnmask.setrange(startBit, psliceSize);
                     size += p->reg.size;
                 }
                 // Pad to a 32 bit word
                 auto shift = (size % 32) ? (32 - (size % 32)) : 0;
-                lrnmask <<= shift; 
+                lrnmask <<= shift;
                 int num_words = (size + 31)/32;
                 int quanta_index = 11;
                 for (int index = num_words - 1; index >= 0; index--) {
                     BUG_CHECK(quanta_index >= 0);
-                    unsigned word = lrnmask.getrange(index * 32, 32); 
+                    unsigned word = lrnmask.getrange(index * 32, 32);
                     regs.dprsrreg.inp.icr.lrnmask[id].mask[quanta_index--] = word;
                 }
             }
@@ -442,5 +478,6 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::Cloudbreak>() {
     return 224 + Deparser::constant_idx(gress, val);
 }
 
-template<> void Deparser::gen_learn_quanta(Target::Cloudbreak::parser_regs &regs, json::vector &learn_quanta) {
+template<> void Deparser::gen_learn_quanta(Target::Cloudbreak::parser_regs &regs,
+                                           json::vector &learn_quanta) {
 }

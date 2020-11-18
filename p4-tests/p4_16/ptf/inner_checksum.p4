@@ -1,6 +1,7 @@
 #include <core.p4> 
 #if __TARGET_TOFINO__ == 2
 #include <t2na.p4>
+#__TOFINO2_VARIANT__== {3}
 #elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
 #endif

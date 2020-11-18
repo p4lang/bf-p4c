@@ -360,14 +360,20 @@ void IR::BFN::ChecksumClotInput::dbprint(std::ostream &out) const {
     if (povBit) out << " if " << povBit;
 }
 
-void IR::BFN::ChecksumUnitConfig::dbprint(std::ostream &out) const {
+void IR::BFN::PartialChecksumUnitConfig::dbprint(std::ostream &out) const {
     out << "checksum unit " << unit << " {";
 
     for (auto* phv : phvs)
         out << endl << indent << *phv << unindent;
 
-    for (auto* clot : clots)
-        out << endl << indent << clot << unindent;
+    out << " }";
+}
+
+void IR::BFN::FullChecksumUnitConfig::dbprint(std::ostream &out) const {
+    out << "checksum unit " << unit << " {";
+
+    for (auto* partial : partialUnits)
+        out << endl << indent << *partial << unindent;
 
     out << " }";
 }

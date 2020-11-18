@@ -22,8 +22,18 @@ header_type data_t {
     }
 }
 
+header_type meta_t {
+    fields {
+        a : 1;
+        b : 1;
+        padding : 6;
+    }
+}
+
 header data_t foo;
 header data_t bar;
+header data_t pat;
+header meta_t meta;
 
 field_list foo_cksum_list {
     foo.f1;
@@ -40,7 +50,7 @@ field_list_calculation foo_cksum {
 }
 
 calculated_field foo.cksum  {
-    update foo_cksum;
+    update foo_cksum if (meta.a == 1);
 }
 
 field_list bar_cksum_list {
@@ -58,7 +68,7 @@ field_list_calculation bar_cksum {
 }
 
 calculated_field bar.cksum  {
-    update bar_cksum;
+    update bar_cksum if (meta.b == 1);
 }
 
 parser start {
@@ -69,6 +79,11 @@ parser start {
 
 parser parse_bar {
     extract(bar);
+    return parse_pat;
+}
+
+parser parse_pat {
+    extract(pat);
     return ingress;
 }
 
@@ -89,6 +104,12 @@ table test1 {
 
 action set_bar_f1(val) {
     modify_field(bar.f1, val);
+    modify_field(meta.a, 1);
+    modify_field(meta.b, 1);
+}
+
+action set_foo_cond() {
+    modify_field(meta.a, 1);
 }
 
 table test2 {
@@ -97,6 +118,7 @@ table test2 {
     }
     actions {
         set_bar_f1;
+        set_foo_cond;
         noop;
     }
 }

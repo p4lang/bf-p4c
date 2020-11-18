@@ -274,11 +274,6 @@ p4c_add_xfail_reason("tofino2"
   )
 
 p4c_add_xfail_reason("tofino2"
-  "Nested checksum updates is currently unsupported"
-  extensions/p4_tests/p4_14/stf/update_checksum_7.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "HashAlgorithm_t.CSUM16: Invalid enum tag"
   testdata/p4_14_samples/issue894.p4
 )
@@ -493,4 +488,17 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: tofino2 supports up to 20 stages, using 21"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
+)
+
+# Fails only for tofino2a0
+p4c_add_xfail_reason("tofino2"
+  "Expected packet was not received on device .*, port .*"
+  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+)
+
+# Fails only for tofino2a0
+p4c_add_xfail_reason("tofino2"
+   "mismatch from expected.* at byte .*"
+   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
+   extensions/p4_tests/p4_14/stf/update_checksum_12.p4
 )
