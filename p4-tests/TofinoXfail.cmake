@@ -391,7 +391,6 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
   )
 
 p4c_add_xfail_reason("tofino"

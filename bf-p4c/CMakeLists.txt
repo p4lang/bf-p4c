@@ -161,6 +161,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/rewrite_egress_intrinsic_metadata_header.h
   midend/simplify_args.h
   midend/simplifyIfStatement.h
+  midend/simplify_key_policy.h
   midend/simplify_nested_if.h
   midend/simplify_references.h
   midend/type_categories.h
@@ -1244,6 +1245,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/simplify_key_elim_casts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_mutex.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp

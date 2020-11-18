@@ -213,9 +213,10 @@ class TestCode {
      * @param block     The code inserted into 'control testingress(inout Headers headers){%1%}'.
      */
     static TestCode TestControlBlock(const std::string& defines,
-                                     const std::string& block) {
+                                     const std::string& block,
+                                     Hdr header = Hdr::None) {
         std::initializer_list<std::string> insert = {defines, block};
-        return TestCode(Hdr::None, min_control_shell(), insert, min_control_shell_marker());
+        return TestCode(header, min_control_shell(), insert, min_control_shell_marker());
     }
 
     /// Sets the flags to be used by other member functions.

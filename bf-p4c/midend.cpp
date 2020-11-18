@@ -56,6 +56,7 @@
 #include "bf-p4c/midend/simplify_nested_if.h"
 #include "bf-p4c/midend/simplify_args.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/midend/simplify_key_policy.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
@@ -223,41 +224,6 @@ class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
     : refMap(refMap), typeMap(typeMap), skip(skip) { CHECK_NULL(skip); }
 };
 
-class IsPhase0 : public P4::KeyIsSimple {
- public:
-    IsPhase0() { }
-
-    bool isSimple(const IR::Expression *, const Visitor::Context *ctxt) override {
-        while (true) {
-            if (ctxt == nullptr)
-                return false;
-            auto *n = ctxt->node;
-            if (n->is<IR::P4Program>())
-                return false;
-            if (auto table = n->to<IR::P4Table>()) {
-                auto annot = table->getAnnotations();
-                if (annot->getSingle("phase0")) {
-                    return true;
-                }
-                return false;
-            }
-            ctxt = ctxt->parent;
-        }
-        return false;
-    }
-};
-
-class IsSlice : public P4::KeyIsSimple {
- public:
-    IsSlice() { }
-
-    bool isSimple(const IR::Expression *expr, const Visitor::Context *) override {
-        return expr->to<IR::Slice>() != nullptr;
-    }
-};
-
-
-
 /**
  * This function implements a policy suitable for the LocalCopyPropagation pass.
  * The policy is: do not local copy propagate for assignment statement
@@ -345,13 +311,6 @@ MidEnd::MidEnd(BFN_Options& options) {
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
     auto *enum_policy = new EnumOn32Bits;
 
-    auto simplifyKeyPolicy =
-        new P4::OrPolicy(
-            new P4::OrPolicy(
-                new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
-                new BFN::IsPhase0()),
-            new BFN::IsSlice());
-
     addPasses({
         new P4::RemoveMiss(&refMap, &typeMap),
         new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
@@ -368,11 +327,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
-        new BFN::ElimCasts(&refMap, &typeMap),
-        new P4::SimplifyKey(&refMap, &typeMap, simplifyKeyPolicy, typeChecking),
+        new P4::SimplifyKey(&refMap, &typeMap,
+            BFN::KeyIsSimple::getPolicy(refMap, typeMap), typeChecking),
         Device::currentDevice() != Device::TOFINO || options.disable_direct_exit ?
             new P4::RemoveExits(&refMap, &typeMap, typeChecking) : nullptr,
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+        new BFN::ElimCasts(&refMap, &typeMap),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectCases(&refMap, &typeMap, true, typeChecking),  // constant keysets
         new P4::ExpandLookahead(&refMap, &typeMap, typeChecking),

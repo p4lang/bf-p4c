@@ -29,8 +29,21 @@ namespace BFN {
  * bit<8> b8 = (bit<8>)i8;  // RHS is represented with IR::BFN::ReinterpretCast
  * bit<16> h1 = 8w0++b8;
  *
+ * This pass does not simplify key elements. These are processed in the P4::SimplifyKey
+ * pass, which transforms them in order to be simplified in the BFN::ElimCasts pass.
  */
-class EliminateWidthCasts : public Transform {
+
+/**
+ * Auxiliary transformer to avoid processing IR::KeyElement nodes.
+ * When this should become too complex, use a custom policy instead,
+ * the same way it is used in P4::KeyIsSimple.
+ */
+class IgnoreKeyElementTransform : public Transform {
+ public:
+    const IR::Node *preorder(IR::KeyElement *n) final override { prune(); return n; }
+};
+
+class EliminateWidthCasts : public IgnoreKeyElementTransform {
  public:
     EliminateWidthCasts() { }
     const IR::Node* preorder(IR::Cast* cast) override;
@@ -65,7 +78,7 @@ class EliminateWidthCasts : public Transform {
  *
  * IR::BFN::ReinterpretCast is handled in the backend.
  */
-class RewriteCastToReinterpretCast : public Transform {
+class RewriteCastToReinterpretCast : public IgnoreKeyElementTransform {
     P4::TypeMap* typeMap;
 
  public:
@@ -83,7 +96,7 @@ class RewriteCastToReinterpretCast : public Transform {
  *
  * This usually happens as the result of a copy-propagation.
  */
-class SimplifyRedundantCasts : public Transform {
+class SimplifyRedundantCasts : public IgnoreKeyElementTransform {
  public:
     SimplifyRedundantCasts() {}
     const IR::Node* preorder(IR::Cast* expression) override;
@@ -101,7 +114,7 @@ class SimplifyRedundantCasts : public Transform {
  *
  * Caveat: we currently do not support more than two levels of casting.
  */
-class SimplifyNestedCasts : public Transform {
+class SimplifyNestedCasts : public IgnoreKeyElementTransform {
  public:
     SimplifyNestedCasts() {}
     const IR::Node* preorder(IR::Cast* expression) override;
@@ -116,14 +129,14 @@ class SimplifyNestedCasts : public Transform {
  * We only simplifies add/sub, addsat/subsat,
  * bitwise operations (and, or, xor) on unsigned bit types.
  */
-class SimplifyOperationBinary : public Transform {
+class SimplifyOperationBinary : public IgnoreKeyElementTransform {
  public:
     SimplifyOperationBinary() {}
     const IR::Node* preorder(IR::Cast *expression) override;
 };
 
 /// replace concat ++ operations with multiple operations on slices in the contexts.
-class RewriteConcatToSlices : public Transform {
+class RewriteConcatToSlices : public IgnoreKeyElementTransform {
  public:
     // do not simplify '++' in apply functions.
     const IR::Node* preorder(IR::Function* func) override {
