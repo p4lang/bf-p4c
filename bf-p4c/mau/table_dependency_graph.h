@@ -1063,4 +1063,6 @@ class FindDependencyGraph : public Logging::PassManager {
         cstring dotFileName = "", cstring passContext = "");
 };
 
+std::ostream &operator<<(std::ostream &, DependencyGraph::dependencies_t);
+
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

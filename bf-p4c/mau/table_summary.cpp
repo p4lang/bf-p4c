@@ -253,7 +253,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
             std::to_string(curr_stage),
             std::to_string(*t->global_id()),
             std::string(1, (t->gress ? 'E' : 'I')),
-            std::string(t->name.c_str()),
+            std::string(t->externalName().c_str()),
             std::to_string(t->layout.ixbar_bytes),
             std::to_string(t->layout.match_width_bits),
             std::string(1, (t->uses_gateway() ? 'Y' : 'N')),

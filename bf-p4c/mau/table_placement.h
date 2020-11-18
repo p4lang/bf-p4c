@@ -130,6 +130,8 @@ class TablePlacement : public PassManager {
 
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
+    void find_dependency_stages(const IR::MAU::Table *tbl,
+            std::map<int, ordered_map<const Placed *, DependencyGraph::dependencies_t>> &) const;
 
     template <class... Args> void error(Args... args) {
         auto &ctxt = BaseCompileContext::get();

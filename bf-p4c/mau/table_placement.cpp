@@ -31,6 +31,11 @@
 #include "lib/safe_vector.h"
 #include "lib/set.h"
 
+#ifndef LOGGING_FEATURE
+// FIXME -- should be in p4c code in log.h -- remove this once it is added there
+#define LOGGING_FEATURE(TAG, N) ((N) <= MAX_LOGGING_LEVEL && ::Log::fileLogLevelIsAtLeast(TAG, N))
+#endif
+
 /********************************************************************************************
  ** Table placement is done with a fairly simple greedy allocator in a single Transform pass
  ** organized so as to allow backtracking within the greedy allocation, though we do not
@@ -2342,6 +2347,10 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             partly_placed.erase(placed->table); }
     LOG1("Table placement placed " << count(placed) << " tables in " <<
          (placed ? placed->stage+1 : 0) << " stages");
+    if (placed) {
+        LOG_FEATURE("stage_advance", 2,
+                    "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
+                    StageSummary(placed->stage, placed) << IndentCtl::unindent); }
     self.placement = placed;
     self.table_placed.clear();
     for (auto p = self.placement; p; p = p->prev) {
@@ -2784,6 +2793,28 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
             tbl->next[gw.second] = new IR::MAU::TableSeq();
 }
 
+void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
+            std::map<int, ordered_map<const Placed *,
+                                      DependencyGraph::dependencies_t>> &earliest_stage) const {
+    auto &need_different_stage = deps.happens_phys_after_map.at(tbl);
+    for (auto *pred : deps.happens_logi_after_map.at(tbl)) {
+        auto dep_kind = deps.get_dependency(tbl, pred);
+        if (!dep_kind) continue;  // not a real dependency?
+        auto pl = find_placed(pred->name);
+        BUG_CHECK(pl != table_placed.end(), "no placement for table %s", pred->name);
+        BUG_CHECK(pl->second->table == pred || pl->second->gw == pred, "found wrong placement(%s) "
+                  "for %s", pl->second->name, pred->name);
+        if (pl->second->table == pred) {
+            while (pl->second->need_more_match) {
+                ++pl;
+                BUG_CHECK(pl != table_placed.end() && pl->second->table == pred,
+                          "incomplete placement for table %s", pred->name); } }
+        int stage = pl->second->stage;
+        if (need_different_stage.count(pred)) ++stage;
+        earliest_stage[stage].emplace(pl->second, dep_kind);
+    }
+}
+
 IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     auto it = self.table_placed.find(tbl->name);
     if (it == self.table_placed.end()) {
@@ -2791,6 +2822,38 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         return tbl; }
     if (tbl->is_placed())
         return tbl;
+
+    if (LOGGING_FEATURE("stage_advance", 2)) {
+        // look for tables that were delayed (not placed in the earliest stage they could have
+        // been based on depedencies) and log that
+        std::map<int, ordered_map<const TablePlacement::Placed *,
+                                  DependencyGraph::dependencies_t>> earliest_stage;
+        self.find_dependency_stages(it->second->table, earliest_stage);
+        if (it->second->gw) self.find_dependency_stages(it->second->gw, earliest_stage);
+        if (earliest_stage.empty()) {
+            if (it->second->stage != 0)
+                LOG_FEATURE("stage_advance", 2, "Table " << it->second->name << " with no "
+                            "predecessors delayed until stage " << it->second->stage);
+        } else if (earliest_stage.rbegin()->first < it->second->stage) {
+            LOG_FEATURE("stage_advance", 2, "Table " << it->second->name << " delayed to stage " <<
+                        it->second->stage << " from stage " << earliest_stage.rbegin()->first);
+            ordered_set<const TablePlacement::Placed *> filter;
+            // filter out duplicates due to multiple kinds of dependencies
+            for (auto i = earliest_stage.end(); i != earliest_stage.begin();) {
+                --i;
+                for (auto *p : filter) i->second.erase(p);
+                if (i->second.empty()) {
+                    i = earliest_stage.erase(i);
+                } else {
+                    for (auto &p : i->second) filter.insert(p.first); } }
+            for (auto i = earliest_stage.rbegin(); i != earliest_stage.rend(); ++i) {
+                for (auto &p : i->second) {
+                    LOG_FEATURE("stage_advance", 2, "  stage " << i->first << ": " <<
+                                "dependency (" << p.second << ") on " << p.first->name <<
+                                " in stage " << p.first->stage); } }
+        }
+    }
+
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
     IR::MAU::Table::Layout gw_layout;

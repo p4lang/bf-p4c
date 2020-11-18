@@ -38,6 +38,13 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
             for (auto &way : ways) out << " " << (way.entries/1024U) << "K";
             out << "]"; }
         out << " }"; }
+    /* FIXME -- should have a flags (like TableNoActions) to control this -- need a better
+     * way to allocate target-specific DBPrint flags */
+    if (!match_key.empty()) {
+        out << indent;
+        for (auto *key : match_key)
+            out << endl << key->expr << ": " << key->match_type;
+        out << unindent; }
     if (!(dbgetflags(out) & TableNoActions)) {
         out << TableNoActions;
         for (auto &a : Values(actions))

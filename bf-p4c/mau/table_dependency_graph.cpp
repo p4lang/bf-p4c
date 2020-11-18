@@ -2089,3 +2089,22 @@ void FindDependencyGraph::end_apply(const IR::Node *root) {
                                                   INGRESS);  // this should be both really!
     }
 }
+
+std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps) {
+    static const char *bit_names[] = {
+            "NONE", "CONTROL_ACTION", "CONTROL_COND_TRUE", "CONTROL_COND_FALSE",
+            "CONTROL_TABLE_HIT", "CONTROL_TABLE_MISS", "CONTROL_DEFAULT_NEXT_TABLE",
+            "IXBAR_READ", "ACTION_READ", "OUTPUT", "REDUCTION_OR_READ", "REDUCTION_OR_OUTPUT",
+            "CONT_CONFLICT", "ANTI_EXIT", "ANTI_TABLE_READ", "ANTI_ACTION_READ",
+            "ANTI_NEXT_TABLE_DATA", "ANTI_NEXT_TABLE_CONTROL", "ANTI_NEXT_TABLE_METADATA" };
+
+    bool first = true;
+    uint64_t bits = static_cast<uint64_t>(deps);
+    for (int i = 0; i < sizeof(bit_names)/sizeof(bit_names[0]); ++i) {
+        if (bits & (1U << i)) {
+            out << (first ? "" : "|") << bit_names[i];
+            first = false; } }
+    if (first || bits >= (1U << sizeof(bit_names)/sizeof(bit_names[0])))
+        out << "<0x" << hex(bits) << ">";
+    return out;
+}
