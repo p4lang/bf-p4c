@@ -241,8 +241,6 @@ void write_cloudbreak_full_checksum_invert_config(CSUM &csum,
 }
 
 template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) {
-    regs.dprsrreg.dprsr_csr_ring.disable();
-    regs.dprsrreg.dprsr_pbus.disable();
     regs.dprsrreg.inp.icr.disable();            // disable this whole tree
     regs.dprsrreg.inp.icr.disabled_ = false;    // then enable just certain subtrees
     regs.dprsrreg.inp.icr.csum_engine.enable();

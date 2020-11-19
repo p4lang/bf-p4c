@@ -761,8 +761,6 @@ void write_jbay_constant_config(CONS &cons, const std::set<int> &vals) {
 }
 
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
-    regs.dprsrreg.dprsr_csr_ring.disable();
-    regs.dprsrreg.dprsr_pbus.disable();
     regs.dprsrreg.inp.icr.disable();            // disable this whole tree
     regs.dprsrreg.inp.icr.disabled_ = false;    // then enable just certain subtrees
     regs.dprsrreg.inp.icr.csum_engine.enable();

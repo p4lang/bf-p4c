@@ -65,6 +65,13 @@ class Parser {
         explicit operator bool() const { return lineno >= 0; }
         template<class REGS> void write_config(REGS &);
     };
+    struct RateLimit {
+        int             lineno = -1;
+        int             inc = -1, dec = -1, max = -1, interval = -1;
+        void parse(const VECTOR(pair_t) &);
+        explicit operator bool() const { return lineno >= 0; }
+        template<class REGS> void write_config(REGS &, gress_t);
+    };
 
  public:
     struct State {
@@ -282,6 +289,7 @@ class Parser {
     static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use;
     static unsigned                                                     max_handle;
     int                                                                 parser_handle = -1;
+    RateLimit                           rate_limit;
 
     Parser(bitvec (&phv_use)[2], gress_t gr, int idx)
     : gress(gr), parser_no(idx), phv_use(phv_use) {}

@@ -234,6 +234,11 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                     for (auto &st : kv.value.map)
                         define_state(gress, st);
                 continue; }
+            if (kv.key == "bubble") {   // obfuscated name for reverse engineering
+                if (CHECKTYPE(kv.value, tMAP)) {
+                    rate_limit.lineno = kv.key.lineno;
+                    rate_limit.parse(kv.value.map); }
+                continue; }
             if (gress == EGRESS && kv.key == "meta_opt") {
                 if (CHECKTYPE(kv.value, tINT))
                     meta_opt = kv.value.i;
@@ -405,6 +410,10 @@ void Parser::output(json::map& ctxt_json) {
         output_default_ports(default_ports, port_use);
         parser_ctxt_json["default_parser_id"] = std::move(default_ports);
         write_config(*regs, parser_ctxt_json, false);
+        // FIXME -- rate limit config regs are per-pipe, not per parser, so if more than
+        // one parser wants to set different rate limits, there will be a problem
+        if (rate_limit)
+            rate_limit.write_config(TopLevel::regs<TARGET>()->reg_pipe, gress);
         cjson.push_back(std::move(parser_ctxt_json));
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )
@@ -422,6 +431,8 @@ void Parser::output_legacy(json::map& ctxt_json) {
         declare_registers(regs);
         parser_handle = next_handle();
         write_config(*regs, ctxt_json["parser"], true);
+        if (rate_limit)
+            rate_limit.write_config(TopLevel::regs<TARGET>()->reg_pipe, gress);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )
 }
@@ -717,6 +728,29 @@ bool Parser::PriorityUpdate::parse(const value_t &exp, int what) {
     return false;
 }
 
+void Parser::RateLimit::parse(const VECTOR(pair_t) &data) {
+    inc = dec = 1;
+    for (auto &kv : MapIterChecked(data)) {
+        if (kv.key == "inc") {
+            if (CHECKTYPE(kv.value, tINT))
+                inc = kv.value.i;
+        } else if (kv.key == "dec") {
+            if (CHECKTYPE(kv.value, tINT))
+                dec = kv.value.i;
+        } else if (kv.key == "max") {
+            if (CHECKTYPE(kv.value, tINT))
+                max = kv.value.i;
+        } else if (kv.key == "interval") {
+            if (CHECKTYPE(kv.value, tINT))
+                interval = kv.value.i;
+        } else {
+            warning(kv.key.lineno, "ignoring unknown item %s in bubble spec", value_desc(kv.key));
+        }
+    }
+    if (max < 0)
+        error(lineno, "no max limit in bubble spec");
+}
+
 Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
     lineno = v.lineno;
     ptr.clear();
@@ -969,8 +1003,7 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                 if (from_ctr_init_ram) {
                     ctr_ld_src = 1;
                     if (ctr_instr) {
-                        error(kv.key.lineno, 
-                                "Tofino does not allow multiple counters on a match");
+                        error(kv.key.lineno, "Tofino does not allow multiple counters on a match");
                         continue;
                     }
                     ctr_instr = new CounterInit(gress, kv);

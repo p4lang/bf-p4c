@@ -155,6 +155,12 @@ parser [<thread>] [<port_use>, ...]:
         # values OR'd with previous values
     parser_error: <phv_location>
         # define a phv location to receive parser error codes
+    bubble:
+        # configure rate limit registers for pipe
+        inc: <int>
+        dec: <int>
+        max: <int>
+        interval: <int>  # tofino2+ only
 stage <constant> <thread>:
     # Defines a single stage of the MAU.  The order of the tables within the
     # stage is the logical table ordering, so order matters

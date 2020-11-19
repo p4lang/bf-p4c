@@ -90,7 +90,9 @@ ignore:
     # mau
     # pardereg
     # parde_glue_stn_reg
-    - parb_reg
+    # parb_reg
+    - ebuf900_reg
+    - pbus_station_regs_rspec
     - pgr_reg_rspec  # pgrreg
     - s2p_reg
     - p2s_reg
@@ -98,3 +100,4 @@ ignore:
     # mirr_ebuf_reg  # mirefreg
     # dprsr_reg
     # dprsr_reg_rspec
+    - parde_dprsr_reg_rspec

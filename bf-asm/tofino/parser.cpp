@@ -27,6 +27,22 @@ template <> void Parser::CounterInit::write_config(Target::Tofino::parser_regs &
     ctr_init_ram.src = src;
 }
 
+template <> void Parser::RateLimit::write_config(::Tofino::regs_pipe &regs, gress_t gress) {
+    if (gress == INGRESS) {
+        auto &ctrl = regs.pmarb.parb_reg.parb_group.i_output_rate_ctrl;
+        ctrl.ratectrl_inc = inc;
+        ctrl.ratectrl_dec = dec;
+        ctrl.ratectrl_max = max;
+        ctrl.ratectrl_ena = 1;
+    } else if (gress == EGRESS) {
+        auto &ctrl = regs.pmarb.parb_reg.parb_group.e_output_rate_ctrl;
+        ctrl.ratectrl_inc = inc;
+        ctrl.ratectrl_dec = dec;
+        ctrl.ratectrl_max = max;
+        ctrl.ratectrl_ena = 1;
+    }
+}
+
 template<> void Parser::State::Match::write_lookup_config(Target::Tofino::parser_regs &regs,
                                                           State *state, int row) const {
     auto &word0 = regs.memory[state->gress].ml_tcam_row_word0[row];

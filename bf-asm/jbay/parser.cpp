@@ -47,6 +47,21 @@ template <> void Parser::CounterInit::write_config(Target::JBay::parser_regs &re
     ctr_init_ram.src = src;
 }
 
+// generic for jbay or cloudbreak (tofino1 is specialized)
+template <class REGS> void Parser::RateLimit::write_config(REGS &regs, gress_t gress) {
+    if (gress == INGRESS) {
+        auto &ctrl = regs.pardereg.pgstnreg.parbreg.left.i_phv_rate_ctrl;
+        ctrl.inc = inc;
+        ctrl.interval = interval;
+        ctrl.max = max;
+    } else if (gress == EGRESS) {
+        auto &ctrl = regs.pardereg.pgstnreg.parbreg.right.e_phv_rate_ctrl;
+        ctrl.inc = inc;
+        ctrl.interval = interval;
+        ctrl.max = max;
+    }
+}
+
 template<> void Parser::State::Match::write_lookup_config(Target::JBay::parser_regs &regs,
                                                           State *state, int r) const {
     auto &row = regs.memory[state->gress].ml_tcam_row[r];

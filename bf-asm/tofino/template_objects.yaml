@@ -78,7 +78,7 @@ ignore:
     # pmarb_rspec
     # ebp_rspec
     - egrNx_regs
-    - parb_regs
+    # parb_regs
     - pbus_station_regs
     - party_pgr_reg_rspec
     - party_glue_reg_rspec
