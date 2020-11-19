@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "bf-p4c/common/run_id.h"
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/logging/manifest.h"
 #include "bf-p4c/mau/build_power_graph.h"
@@ -26,7 +27,12 @@
 namespace MauPower {
 
 bool WalkPowerGraph::preorder(const IR::MAU::Table* t) {
-  external_names_.emplace(t->unique_id(), t->externalName());
+  // Strip the possible "." at the beginning
+  // This uses canon_name class, which does this when writting to output
+  canon_name strip_dot_prefix(t->externalName());
+  std::stringstream strip_dot_prefix_stream;
+  strip_dot_prefix_stream << strip_dot_prefix;
+  external_names_.emplace(t->unique_id(), strip_dot_prefix_stream.str());
   gress_map_.emplace(t->unique_id(), t->gress);
   stages_.emplace(t->unique_id(), t->stage());
   if (longest_table_name_ < t->externalName().size())

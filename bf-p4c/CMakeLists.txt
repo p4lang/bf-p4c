@@ -1264,6 +1264,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/equiv_align_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 
