@@ -301,3 +301,19 @@ bool FindFlowGraphs::preorder(const IR::MAU::TableSeq* thread) {
     // Prune the visitor.
     return false;
 }
+
+bool FindFlowGraphs::preorder(const IR::BFN::Deparser* dep)  {
+    // We need to check if the given egress already exists in the sequence.
+    // * yes - just continue
+    // * no - we need to insert empty flow graph which will be later used in dominator tree code
+    auto gress = dep->gress;
+    if (!flow_graphs.count(gress)) {
+        LOG1("Non-existing gress has been detected for " <<
+            gress << ", inserting the empty flow graph.");
+        auto& empty = flow_graphs[gress];
+        empty.gress = gress;
+    }
+
+    // Prune the visitor
+    return false;
+}

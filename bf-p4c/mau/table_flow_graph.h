@@ -362,6 +362,7 @@ class FindFlowGraphs : public MauInspector {
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::TableSeq*) override;
+    bool preorder(const IR::BFN::Deparser*) override;
 
  public:
     explicit FindFlowGraphs(ordered_map<gress_t, FlowGraph>& out) : flow_graphs(out) {}

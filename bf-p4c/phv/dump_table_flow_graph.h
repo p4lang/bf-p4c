@@ -94,6 +94,8 @@ struct DumpTableFlowGraph : public Visitor {
         root->apply(ffg);
 
         for (auto& kv : graphs) {
+            if (kv.second.emptyFlowGraph) continue;
+
             auto fs = open_file(kv.first, root->to<IR::BFN::Pipe>()->id);
             kv.second.dump_viz(*fs, new PhvDetails(phv));
         }
