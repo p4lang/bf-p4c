@@ -79,7 +79,14 @@ namespace P4V1 {
 static const std::set<cstring> tna_architectures = {"tna", "t2na", "TNA", "T2NA", "Tna", "T2na"};
 
 static bool using_tna_arch() {
-    if (tna_architectures.count(BackendOptions().arch) != 0)
+    // Don't assume we have Barefoot-specific options, in case the current compiler context is not
+    // a Barefoot-specific one. This occurs when this compilation unit is linked into an
+    // executable, but the user elects to use a non-Barefoot backend with non-Barefoot options.
+    // In this scenario, this function still gets called from primitive converters that are
+    // statically registered by this compilation unit.
+    auto& options = P4CContext::get().options();
+
+    if (tna_architectures.count(options.arch) != 0)
         return true;
     return false;
 }
