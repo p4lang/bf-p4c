@@ -185,7 +185,7 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table,
 }
 
 void P4Table::set_partition_action_handle(unsigned handle) {
-    alpms[this].set_partition_action_handle = handle;
+    alpms[this].set_partition_action_handle.insert(handle);
 }
 
 void P4Table::set_partition_field_name(std::string name) {
@@ -198,10 +198,10 @@ std::string P4Table::get_partition_field_name() const {
     return "";
 }
 
-unsigned P4Table::get_partition_action_handle() const {
-    if (alpms.count(this))
-        return alpms[this].set_partition_action_handle;
-    return 0;
+std::set<unsigned> P4Table::get_partition_action_handle() const {
+    if (alpms.count(this)) {
+        return alpms[this].set_partition_action_handle; }
+    return {};
 }
 
 unsigned P4Table::get_alpm_atcam_table_handle() const {

@@ -191,11 +191,17 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
         layout.partition_count = partition_count;
 }
 
-void DoTableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table *tbl,
-                                  cstring &partition_index) {
-    auto hdr_instance_name = tbl->name + "__metadata";
-    auto pidx_field_name = tbl->name + "_partition_index";
-    partition_index = hdr_instance_name + "." + pidx_field_name;
+void TableLayout::check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table *tbl,
+                                  cstring &partition_index, const PhvInfo& phv) {
+    for (auto ixbar_read : tbl->match_key) {
+        if (ixbar_read->for_atcam_partition_index()) {
+            if (auto var = ixbar_read->expr->to<IR::TempVar>()) {
+                partition_index = var->name;
+            } else {
+                BUG("Unhandled type for alpm partition_index %1%", ixbar_read);
+            }
+        }
+    }
     ERROR_CHECK(phv.field(partition_index) != nullptr, ErrorType::ERR_NOT_FOUND,
                 "partition index %2% for table %1% in the PHV.",
                 tbl, partition_index);
@@ -390,7 +396,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
 
     cstring partition_index;
     if (layout.alpm)
-        check_for_alpm(layout, tbl, partition_index);
+        TableLayout::check_for_alpm(layout, tbl, partition_index, phv);
     if (!layout.atcam)
         TableLayout::check_for_atcam(layout, tbl, partition_index, phv);
     if (!layout.atcam)
@@ -457,7 +463,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
     if (layout.atcam) {
         ERROR_CHECK(partition_found, ErrorType::ERR_INVALID,
                     "partition index %2%. Table %1% is specified to be an atcam, but partition "
-                    "index %3% is not found within the table key.", tbl, partition_index);
+                    "index %2% is not found within the table key.", tbl, partition_index);
         if (partition_found) {
             int possible_partitions = 1 << layout.partition_bits;
             ERROR_CHECK(layout.partition_count <= possible_partitions, ErrorType::ERR_INSUFFICIENT,

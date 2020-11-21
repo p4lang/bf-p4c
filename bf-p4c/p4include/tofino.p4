@@ -791,7 +791,8 @@ extern Atcam {
 // instance of the extern to the 'implementation' attribute of the table.
 extern Alpm {
     /// define the parameters for ALPM table.
-    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
+    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition,
+         @optional bit<32> atcam_subset_width, @optional bit<32> shift_granularity);
 }
 
 #endif  /* _TOFINO_P4_ */

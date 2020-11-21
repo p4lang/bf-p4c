@@ -28,7 +28,6 @@
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/selector_update.h"
-#include "bf-p4c/mau/split_alpm.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/mau/validate_actions.h"
@@ -185,7 +184,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
             new InferPayloadOffset(phv, defuse) : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
-        new AlpmSetup,
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.

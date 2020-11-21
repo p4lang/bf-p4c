@@ -986,15 +986,61 @@ class FixP4Table : public Inspector {
             }
         }
 
-        auto alpm = getExternInstanceFromProperty(tc, "alpm", refMap, typeMap);
-        if (alpm != boost::none) {
-            if (alpm->type->name == "Alpm") {
-                tt->layout.partition_count =
-                    alpm->arguments->at(0)->expression->to<IR::Constant>()->asInt();
-                tt->layout.subtrees_per_partition =
-                    alpm->arguments->at(1)->expression->to<IR::Constant>()->asInt();
-            }
+        // BEGIN: ALPM_OPT
+        // internal table property to implement alpm optimization (P4C-2282)
+        // We choose to implement alpm in the midend as a transformation to
+        // atcam and preclassifier tcam based on the intuition that the ALPM
+        // extern definition in TNA is a library extern, not a primitive
+        // extern.
+        auto as_atcam = getExpressionFromProperty(tc, "as_atcam");
+        if (as_atcam != boost::none) {
+            auto bool_lit = (*as_atcam)->expression->to<IR::BoolLiteral>();
+            tt->layout.atcam = bool_lit->value;
         }
+
+        auto as_alpm = getExpressionFromProperty(tc, "as_alpm");
+        if (as_alpm != boost::none) {
+            auto bool_lit = (*as_alpm)->expression->to<IR::BoolLiteral>();
+            tt->layout.alpm = bool_lit->value;
+        }
+
+        auto alpm_preclassifier = getExpressionFromProperty(tc, "alpm_preclassifier");
+        if (alpm_preclassifier != boost::none) {
+            auto bool_lit = (*alpm_preclassifier)->expression->to<IR::BoolLiteral>();
+            tt->layout.pre_classifier = bool_lit->value;
+        }
+
+
+        auto partition_count = getExpressionFromProperty(tc, "atcam_partition_count");
+        if (partition_count != boost::none) {
+            auto int_lit = (*partition_count)->expression->to<IR::Constant>()->asInt();
+            tt->layout.partition_count = int_lit;
+        }
+
+        auto subtrees_per_partition = getExpressionFromProperty(tc, "atcam_subtrees_per_partition");
+        if (subtrees_per_partition != boost::none) {
+            auto int_lit = (*subtrees_per_partition)->expression->to<IR::Constant>()->asInt();
+            tt->layout.subtrees_per_partition = int_lit;
+        }
+
+        auto number_entries = getExpressionFromProperty(tc, "alpm_preclassifier_number_entries");
+        if (number_entries != boost::none) {
+            auto int_lit = (*number_entries)->expression->to<IR::Constant>()->asInt();
+            tt->layout.pre_classifer_number_entries = int_lit;
+        }
+
+        auto atcam_subset_width = getExpressionFromProperty(tc, "atcam_subset_width");
+        if (atcam_subset_width != boost::none) {
+            auto int_lit = (*atcam_subset_width)->expression->to<IR::Constant>()->asInt();
+            tt->layout.atcam_subset_width = int_lit;
+        }
+
+        auto shift_granularity = getExpressionFromProperty(tc, "shift_granularity");
+        if (shift_granularity != boost::none) {
+            auto int_lit = (*shift_granularity)->expression->to<IR::Constant>()->asInt();
+            tt->layout.shift_granularity = int_lit;
+        }
+        // END:: ALPM_OPT
 
         auto hash = getExternInstanceFromProperty(tc, "proxy_hash", refMap, typeMap);
         if (hash != boost::none) {
@@ -1459,6 +1505,13 @@ class GetBackendTables : public MauInspector {
                 ixbar_read->partition_index = true;
                 ixbar_read->p4_param_order = p4_param_order;
                 ixbar_read->annotations = key_elem->getAnnotations();
+                // annotate if atcam is used in alpm, if yes, the
+                // atcam_partition_index field is managed by driver, therefore
+                // does not need to be emitted as p4 param in assembly and
+                // context.json.
+                auto as_alpm = getExpressionFromProperty(table, "as_alpm");
+                if (as_alpm != boost::none) {
+                    ixbar_read->used_in_alpm = true; }
                 tt->match_key.push_back(ixbar_read);
             } else {
                 auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);

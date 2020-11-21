@@ -127,6 +127,8 @@ class Table : BFN::Unit, IAnnotated  {
         int             partition_count = 0;
         int             pre_classifer_number_entries = 0;
         int             subtrees_per_partition = 0;
+        int             atcam_subset_width = 0;
+        int             shift_granularity = 0;
         int             total_actions = 0;
         int             sel_len_bits = 0;
         int             proxy_hash_width = 0;
@@ -998,10 +1000,13 @@ class TableKey : Expression, IAnnotated {
     int p4_param_order = -1;
     bool from_mask = false;
     bool partition_index = false;
+    bool used_in_alpm = false;
 
     bool for_selection() const { return match_type.name == "selector"; }
     bool for_dleft() const { return match_type.name == "dleft_hash"; }
     bool for_atcam_partition_index() const { return match_type.name == "atcam_partition_index"; }
+    bool for_alpm_partition_index() const { return match_type.name == "atcam_partition_index" &&
+                                                   used_in_alpm == true; }
     bool for_range() const { return match_type.name == "range"; }
     bool for_match() const { return !for_selection() && !for_dleft(); }
 

@@ -320,21 +320,13 @@ void TernaryMatchTable::pass2() {
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
-    // If ternary is a pre-classifier to an ALPM table, check that it has only 1
-    // action. This action sets the partition index and must be specified
-    // separately in the ALPM context json
     if (is_alpm()) {
         if (auto *acts = get_actions()) {
-            if (acts->count() == 1) {
-                auto act = acts->begin();
+            for (auto act =acts->begin(); act != acts->end(); act++) {
                 set_partition_action_handle(act->handle);
                 if (act->p4_params_list.size() == 1)
                     set_partition_field_name(act->p4_params_list[0].name);
-            } else {
-                error(lineno,
-                    "For ALPM pre_classifier '%s-%s' only 1 action expected "
-                    "to set parition index but found %d",
-                    p4_name(), name(), acts->count()); } } }
+            } } }
 }
 
 void TernaryMatchTable::pass3() {

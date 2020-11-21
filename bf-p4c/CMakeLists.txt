@@ -138,6 +138,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/simplifyIfStatement.cpp
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
+  midend/alpm.cpp
   midend/type_categories.cpp
   midend/type_checker.cpp
   )
@@ -164,6 +165,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/simplify_key_policy.h
   midend/simplify_nested_if.h
   midend/simplify_references.h
+  midend/alpm.h
   midend/type_categories.h
   midend/type_checker.h
   )
@@ -312,7 +314,6 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/resource.cpp
   mau/selector_update.cpp
   mau/simple_power_graph.cpp
-  mau/split_alpm.cpp
   mau/split_gateways.cpp
   mau/stateful_alu.cpp
   mau/table_dependency_graph.cpp
@@ -372,7 +373,6 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/resource.h
   mau/selector_update.h
   mau/simple_power_graph.h
-  mau/split_alpm.h
   mau/split_gateways.h
   mau/stateful_alu.h
   mau/static_entries_const_prop.h

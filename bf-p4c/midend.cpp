@@ -36,6 +36,7 @@
 #include "midend/simplifyKey.h"
 #include "midend/simplifySelectCases.h"
 #include "midend/simplifySelectList.h"
+#include "midend/alpm.h"
 #include "midend/tableHit.h"
 #include "midend/validateProperties.h"
 #include "bf-p4c/arch/arch.h"
@@ -322,6 +323,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.
+        new BFN::SetDefaultSize(true /* warn */),  // set default table size to 512 if not set.
         new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),
         new P4::ConvertEnums(&refMap, &typeMap, enum_policy, typeChecking),
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
@@ -329,6 +331,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new P4::SimplifyKey(&refMap, &typeMap,
             BFN::KeyIsSimple::getPolicy(refMap, typeMap), typeChecking),
+        new BFN::AlpmImplementation(&refMap, &typeMap),
         Device::currentDevice() != Device::TOFINO || options.disable_direct_exit ?
             new P4::RemoveExits(&refMap, &typeMap, typeChecking) : nullptr,
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
@@ -386,7 +389,6 @@ MidEnd::MidEnd(BFN_Options& options) {
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap),
-        new BFN::SetDefaultSize(true /* warn */),
         new MidEndLast,
     });
 }

@@ -1094,6 +1094,8 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     int                                   number_partitions = 0;
     int                                   max_subtrees_per_partition = 0;
     int                                   bins_per_partition = 0;
+    int                                   atcam_subset_width = 0;
+    int                                   shift_granularity = 0;
     std::string                           partition_field_name = "";
     std::vector<int>                      ixbar_subgroup, ixbar_mask;
     struct match_element {
@@ -1129,9 +1131,9 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
                 "'lpm' type field not found in alpm atcam '%s-%s' p4 param order",
                     name(), p4_name());
         return ""; }
-    unsigned get_partition_action_handle() const {
+    std::set<unsigned> get_partition_action_handle() const {
         if (p4_table) return p4_table->get_partition_action_handle();
-        return 0; }
+        return {}; }
     void no_overhead_determine_result_bus_usage() override;
     std::string get_partition_field_name() const {
         if (!p4_table) return "";

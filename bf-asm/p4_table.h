@@ -14,7 +14,7 @@ struct alpm_t {
     std::string partition_field_name = "";
     unsigned alpm_atcam_table_handle = 0;
     unsigned alpm_pre_classifier_table_handle = 0;
-    unsigned set_partition_action_handle = 0;
+    std::set<unsigned> set_partition_action_handle;
     json::map *alpm_atcam_table_cfg = 0;  // handle to cjson alpm table
     json::map *alpm_pre_classifier_table_cfg = 0;  // handle to cjson ternary pre classifier table
 };
@@ -58,7 +58,7 @@ class P4Table {
     void set_partition_action_handle(unsigned handle);
     void set_partition_field_name(std::string name);
     std::string get_partition_field_name() const;
-    unsigned get_partition_action_handle() const;
+    std::set<unsigned> get_partition_action_handle() const;
     unsigned get_alpm_atcam_table_handle() const;
     static std::string direction_name(gress_t);
 };
