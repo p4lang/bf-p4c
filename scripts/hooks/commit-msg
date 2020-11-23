@@ -4,9 +4,9 @@
 
 If the name of the current branch contains a JIRA ticket number (e.g.,
 p4c-1234), this script augments the body of the commit message with a stanza
-that transitions the associated JIRA ticket:
+that assigns JIRA ticket to the commiter.
 
-  p4c-1234 #assign #start-work [COMMIT SUMMARY]
+  p4c-1234 #assign [AUTHOR NAME]
 
 It also adds the JIRA ticket number to the beginning of the commit summary if
 it's not there already.
@@ -38,6 +38,11 @@ class Decorator:
         name = subprocess.Popen("git symbolic-ref -q HEAD", shell=True,
                                 stdout=subprocess.PIPE).stdout.read().decode()
         return '/'.join(name.rstrip('\n').split('/')[2:])
+    
+    def get_user_mail(self):
+        name = subprocess.Popen("git config user.email", shell=True,
+                                stdout=subprocess.PIPE).stdout.read().decode()
+        return name.rstrip('\n')
 
     """Parses the branch name for information about the JIRA ticket.
 
@@ -62,6 +67,7 @@ class Decorator:
         self.summary = None  # Omits the project and ticket number.
         self.body = []  # Excludes comment lines.
         self.pragmas = []
+        self.author = self.get_user_mail()
 
         lines = self.orig_msg.split('\n')
 
@@ -143,9 +149,9 @@ You can retrieve your commit message from %s"""
                 (self.project, self.ticket_number, self.summary)]
         result.extend(self.body)
 
-        # This is the stanza for transitioning the JIRA ticket.
-        stanza = "%s-%s #assign #start-work %s" % \
-              (self.project, self.ticket_number, self.summary)
+        # This is the stanza for assigning the JIRA ticket.
+        stanza = "%s-%s #assign %s" % \
+              (self.project, self.ticket_number, self.author)
 
         # See if we already have the JIRA stanza.
         have_stanza = False
