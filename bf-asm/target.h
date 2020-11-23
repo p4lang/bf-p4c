@@ -29,7 +29,7 @@
     M(Tofino2H, ##__VA_ARGS__) \
     M(Tofino2M, ##__VA_ARGS__) \
     M(Tofino2U, ##__VA_ARGS__) \
-    M(Tofino2A0. ##__VA_ARS__) \
+    M(Tofino2A0, ##__VA_ARGS__)
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
     M(JBay, ##__VA_ARGS__)
