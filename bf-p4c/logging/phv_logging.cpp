@@ -773,6 +773,10 @@ PhvLogging::getAllDeparserUses(const PHV::Field* f, ordered_set<PhvLogging::Pard
 void
 PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeInfo>& rv) const {
     if (f->padding) return;
+    // Check for any aliases - this sweeps and collects all of the
+    // aliesed fields' defs (for example when all of the extracts
+    // are done to field X, which is then just assigned to field Y)
+    if (f->aliasSource) getAllParserDefs(f->aliasSource, rv);
     LOG4("Parser defs of Field: " << f);
     for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
         const IR::BFN::Unit *def_unit = def.first;
