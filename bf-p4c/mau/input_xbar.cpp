@@ -2535,7 +2535,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     bool xor_required = false;
     CollectGatewayFields *collect;
 
-    if (lo && (lo->layout.hash_action && lo->layout.gateway)) {
+    if (lo && lo->layout.gateway_match) {
         collect = new CollectMatchFieldsAsGateway(phv);
     } else {
         collect = new CollectGatewayFields(phv);

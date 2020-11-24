@@ -502,3 +502,9 @@ p4c_add_xfail_reason("tofino2"
    extensions/p4_tests/p4_14/stf/update_checksum_7.p4
    extensions/p4_tests/p4_14/stf/update_checksum_12.p4
 )
+
+#Needs model update 7dfece3
+p4c_add_xfail_reason("tofino2"
+  "mismatch from expected[(]00[)] at byte 0x8"
+  extensions/p4_tests/p4_16/stf/hash_action1.p4
+)

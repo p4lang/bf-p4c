@@ -514,7 +514,7 @@ void GatewayTable::pass2() {
         int ternary = tbl ? 0 : -1;
         if (auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl)) {
             ternary = 1;
-            tbl = tmatch->indirect; }
+            tbl = tmatch->indirect ? tmatch->indirect : tmatch; }
         if (!tbl) tbl = this;
         for (int i = payload_unit; i < 4; i += 2) {
             if (ternary >= 0 && (i >> 1) != ternary) continue;

@@ -493,3 +493,9 @@ p4c_add_xfail_reason("tofino3"
   "Call to getNonGatewayGroupDominator with tables of different gresses."
   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
 )
+
+#Needs model update 7dfece3
+p4c_add_xfail_reason("tofino3"
+  "mismatch from expected[(]00[)] at byte 0x8"
+  extensions/p4_tests/p4_16/stf/hash_action1.p4
+)

@@ -80,7 +80,7 @@ void ExactMatchTable::pass1() {
     SRamMatchTable::pass1();
     // Check if stashes are allocated (only for exact match tables). Note
     // stashes are disabled on JBAY
-    if (stash_rows.size() == 0 && options.target == TOFINO)
+    if (stash_rows.size() == 0 && options.target == TOFINO && layout_size() > 0)
         error(lineno, "No stashes allocated for exact match table %s in stage %d",
             name(), stage->stageno);
 }
@@ -429,8 +429,14 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
     if (size == 0) {
         if (!match_attributes.count("match_type"))
             match_attributes["match_type"] = "match_with_no_key";
-        stage_tbl["stage_table_type"] = "match_with_no_key";
-        stage_tbl["size"] = 1024; }
+        if (!stage_tbl["stage_table_type"])
+            stage_tbl["stage_table_type"] = "match_with_no_key";
+        stage_tbl["size"] = 1; }
+    if (stage_tbl["stage_table_type"] == "hash_match") {
+        // hash_match table schema requires 'hash_functions' and 'ways' so add (empty) if
+        // they are not present
+        if (!stage_tbl["hash_functions"]) stage_tbl["hash_functions"] = json::vector();
+        if (!stage_tbl["ways"]) stage_tbl["ways"] = json::vector(); }
 }
 
 /**

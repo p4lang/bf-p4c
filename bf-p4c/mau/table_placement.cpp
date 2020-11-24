@@ -924,8 +924,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
-    gw_linked |= next->use.preferred()->layout.gateway &&
-                 next->use.preferred()->layout.hash_action;
+    gw_linked |= next->use.preferred()->layout.gateway_match;
     TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
                                next->resources.proxy_hash_ixbar, next->table,
                                immediate_mask, gw_linked, lc.fpc);
@@ -997,8 +996,7 @@ bool TablePlacement::try_alloc_imem(TablePlacement::Placed *next) {
     }
 
     bool gw_linked = next->gw != nullptr;
-    gw_linked |= next->use.preferred()->layout.gateway &&
-                 next->use.preferred()->layout.hash_action;
+    gw_linked |= next->use.preferred()->layout.gateway_match;
     if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
                             next->use.format_type, att_info)) {
         error_message = "The table " + next->table->name + " could not fit within the "
@@ -2860,9 +2858,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     bool gw_only = true;
     bool gw_layout_used = false;
 
-    if (it->second->use.preferred() &&
-        it->second->use.preferred()->layout.hash_action &&
-        it->second->use.preferred()->layout.gateway) {
+    if (it->second->use.preferred() && it->second->use.preferred()->layout.gateway_match) {
         tbl = self.lc.fpc.convert_to_gateway(tbl);
         gw_only = false;
     } else if (it->second->gw && it->second->gw->name == tbl->name) {

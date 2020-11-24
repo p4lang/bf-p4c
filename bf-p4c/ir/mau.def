@@ -106,6 +106,7 @@ class Table : BFN::Unit, IAnnotated  {
         bool            exact = false;
         bool            ternary = false;
         bool            hash_action = false;
+        bool            gateway_match = false;  // match table moved into gateway test
         bool            atcam = false;
         bool            alpm = false;
         bool            has_range = false;
@@ -159,7 +160,7 @@ class Table : BFN::Unit, IAnnotated  {
          *  configured by the driver when the control plane requests a change
          */
         bool no_match_miss_path() const {
-            return no_match_rams() && !no_match_hit_path();
+            return no_match_rams() && !no_match_hit_path() && !gateway_match;
         }
 
 

@@ -560,7 +560,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
-        if (lo.layout.hash_action || lo.way.match_groups == 0 || lo.layout.gateway == true) {
+        if (lo.layout.hash_action || lo.way.match_groups == 0 || lo.layout.gateway_match) {
             lo.entries = entries;
             lo.srams = 0;
             continue;
@@ -963,7 +963,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     if (gateway_attached) {
         auto it = layout_options.begin();
         while (it != layout_options.end()) {
-            if (it->layout.gateway)
+            if (it->layout.gateway_match)
                 it = layout_options.erase(it);
             else
                 it++;

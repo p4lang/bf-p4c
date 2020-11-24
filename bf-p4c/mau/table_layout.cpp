@@ -74,9 +74,8 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
 void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
         const LayoutOption &base_option) {
     LayoutOption lo;
-    lo.layout.gateway = true;
-    lo.layout.hash_action = true;
-    lo.layout.ternary = false;
+    lo.layout.gateway = lo.layout.gateway_match = true;
+    lo.layout.hash_action = lo.layout.ternary = false;
     lo.layout.action_data_bytes = base_option.layout.action_data_bytes;
     lo.layout.action_data_bytes_in_table = base_option.layout.action_data_bytes_in_table;
     lo.layout.meter_addr = base_option.layout.meter_addr;
@@ -971,7 +970,7 @@ bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
             }
         }
     }
-    if (!tbl->layout.gateway && !tbl->layout.no_match_data() && !tbl->layout.ternary) {
+    if (!tbl->layout.gateway_match && !tbl->layout.no_match_data() && !tbl->layout.ternary) {
         int possible_pack_formats = layouts.size();
         ERROR_CHECK(possible_pack_formats > 0, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "The table %1% cannot find a valid packing, and cannot be placed. "
@@ -988,7 +987,7 @@ void LayoutChoices::compute_layout_options(const IR::MAU::Table *tbl,
     cache_layout_options[std::make_pair(tbl->name, format_type)];
     auto layout = tbl->layout;
     setup_indirect_ptrs(layout, tbl, format_type);
-    if (tbl->layout.gateway) {
+    if (tbl->layout.gateway_match) {
         /* do nothing */
     } else if (tbl->layout.no_match_data()) {
         setup_layout_option_no_match(tbl, layout, format_type);

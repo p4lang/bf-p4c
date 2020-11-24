@@ -389,6 +389,7 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     entries += a.entries;
     gateway |= a.gateway;
     ternary |= a.ternary;
+    gateway_match |= a.gateway_match;
     hash_action |= a.hash_action;
     atcam |= a.atcam;
     has_range |= a.has_range;

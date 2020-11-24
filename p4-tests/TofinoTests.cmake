@@ -913,6 +913,10 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2713" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2713/p4c2713.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2713/p4c2713.ptf")
 
+p4c_add_ptf_test_with_ptfdir (
+    "tofino" "t2na_static_entry" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry/t2na_static_entry.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry")
+
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)

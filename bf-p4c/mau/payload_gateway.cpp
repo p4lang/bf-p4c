@@ -214,7 +214,7 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
     }
     // No match key, all on the gateway rows
     gw_tbl->match_key.clear();
-    gw_tbl->layout.gateway = true;
+    gw_tbl->layout.gateway = gw_tbl->layout.gateway_match = true;
 
     // This is the miss entry.  On miss, similar to a hash action table, we want to
     // run_table, and let the miss_entry of the table set up the next table.

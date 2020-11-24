@@ -3906,12 +3906,6 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
 
     emit_table_hitmap(out, indent, tbl, next_hit, gw_miss, no_match_hit, gw_can_miss);
     emit_static_entries(out, indent, tbl);
-    bitvec source;
-    source.setbit(ActionData::IMMEDIATE);
-    source.setbit(ActionData::METER_ALU);
-    if (!tbl->layout.ternary && !tbl->layout.no_match_miss_path())
-        emit_action_data_bus(out, indent, tbl, source);
-
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto back_at : tbl->attached) {
@@ -3928,8 +3922,15 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     BUG_CHECK(have_action || tbl->layout.action_data_bytes_in_table == 0,
               "have action data with no action data table?");
 
-    if (!have_indirect)
+    bitvec source;
+    source.setbit(ActionData::IMMEDIATE);
+    source.setbit(ActionData::METER_ALU);
+
+    if (!have_indirect) {
+        if (!tbl->layout.no_match_miss_path())
+            emit_action_data_bus(out, indent, tbl, source);
         emit_table_indir(out, indent, tbl, nullptr);
+    }
 
     const IR::MAU::IdleTime* idletime = nullptr;
     for (auto back_at : tbl->attached) {
@@ -4206,8 +4207,11 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             indent--;
             break;
         }
-        if (!found_def_act)
-            BUG("No default action found in table %s", tbl->name);
+        BUG_CHECK(found_def_act || tbl->layout.no_match_hit_path(),
+                  "No default action found in table %s", tbl->name);
+        // FIXME -- no_match_hit_path should never have default actions -- they do not
+        // use the miss path.  Driver currently understands to ignore the default actions
+        // on such tables, but it is ugly
     }
 }
 

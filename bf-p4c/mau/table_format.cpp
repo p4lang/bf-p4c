@@ -477,7 +477,20 @@ bool TableFormat::find_format(Use *u) {
         return true;
     }
 
-    if (layout_option.layout.no_match_miss_path()) {
+    if (layout_option.layout.gateway_match) {
+        BUG_CHECK(layout_option.way.match_groups > 0 &&
+                  layout_option.way.match_groups <= Device::uniqueGatewayShifts(),
+                  "Unsupported immediate profile on a gateway payload table");
+        overhead_groups_per_RAM.push_back(layout_option.way.match_groups);
+        LOG3("Gateway payload table");
+        for (int i = 0; i < layout_option.way.match_groups; i++)
+            use->match_groups.emplace_back();
+        if (!allocate_overhead())
+            return false;
+        if (Device::uniqueGatewayShifts() > 1)
+            build_payload_map();
+        return true;
+    } else if (layout_option.layout.no_match_miss_path()) {
         overhead_groups_per_RAM.push_back(1);
         LOG3("No match miss");
         use->match_groups.emplace_back();
@@ -494,9 +507,6 @@ bool TableFormat::find_format(Use *u) {
             use->match_groups.emplace_back();
         if (!allocate_overhead())
             return false;
-        if (layout_option.layout.gateway && Device::uniqueGatewayShifts() > 1) {
-            build_payload_map();
-        }
         return true;
     }
 

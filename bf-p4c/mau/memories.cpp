@@ -272,7 +272,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     table_alloc *ta;
     if (!t->conditional_gateway_only()) {
         const IXBar::Use *match_ixbar = &resources->match_ixbar;
-        if (lo->layout.gateway && lo->layout.hash_action)
+        if (lo->layout.gateway_match)
             match_ixbar = &resources->gateway_ixbar;
         ta = new table_alloc(t, match_ixbar, &resources->table_format, &resources->instr_mem, af,
                              &resources->memuse, lo, ft, entries, stage_table,
@@ -410,6 +410,7 @@ class SetupAttachedTables : public MauInspector {
         if (ta->layout_option == nullptr) return rv;
         bool tind_check = ta->layout_option->layout.ternary &&
                           !ta->layout_option->layout.no_match_miss_path() &&
+                          !ta->layout_option->layout.gateway_match &&
                           ta->format_type != ActionData::POST_SPLIT_ATTACHED;
         if (tind_check) {
             if (ta->table_format->has_overhead()) {
@@ -677,7 +678,11 @@ bool Memories::analyze_tables(mem_info &mi) {
             }
         } else if (ta->layout_option->layout.no_match_rams()) {
             mi.logical_tables += ta->layout_option->logical_tables();
-            if (ta->layout_option->layout.no_match_hit_path()) {
+            if (ta->layout_option->layout.no_match_hit_path() ||
+                ta->layout_option->layout.gateway_match) {
+                // payload gateway tables are realy "no_match_hit_and_miss" -- they need
+                // both the hit path from the gateway and the miss path.  So they really should
+                // be allocated as empty exact match tables, but this is the closest we have
                 no_match_hit_tables.push_back(ta);
                 set_logical_memuse_type(ta, Use::EXACT);
             } else {
@@ -3707,7 +3712,7 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
         if (ta->table_link) {
             u_ids = ta->table_link->allocation_units(nullptr, true);
         } else {
-            BUG_CHECK(ta->layout_option->layout.gateway, "Payload requiring gateway must "
+            BUG_CHECK(ta->layout_option->layout.gateway_match, "Payload requiring gateway must "
                 "have been originally a match table");
             u_ids = ta->allocation_units(nullptr, true);
         }
@@ -3883,7 +3888,7 @@ bool Memories::allocate_all_gw() {
             }
         }
 
-        if (ta_nm->layout_option->layout.gateway) {
+        if (ta_nm->layout_option->layout.gateway_match) {
             payload_gws.push_back(ta_nm);
             linked = true;
         }
