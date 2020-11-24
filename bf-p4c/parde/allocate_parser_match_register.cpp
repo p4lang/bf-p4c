@@ -1121,9 +1121,10 @@ class MatchLayout {
             }
 
             BUG_CHECK(val_shifted == val_size, "value not entirely shifted?");
-        } else if (auto cntr = select->source->to<IR::BFN::ParserCounterRVal>()) {
-            BUG_CHECK(!values[cntr->declName], "value aleady exists for %1%", cntr->declName);
-            values[cntr->declName] = val;
+        } else if (auto cntr = select->source->to<IR::BFN::ParserCounterIsZero>()) {
+            values[cntr->declName + ".ctr_zero"] = val;
+        } else if (auto cntr = select->source->to<IR::BFN::ParserCounterIsNegative>()) {
+            values[cntr->declName + ".ctr_neg"] = val;
         } else {
             BUG("Unknown parser select source");
         }
@@ -1143,10 +1144,15 @@ class MatchLayout {
                         total_size += reg.size * 8;
                     }
                 }
-            } else if (auto cntr = select->source->to<IR::BFN::ParserCounterRVal>()) {
-                sources.push_back(cntr->declName);
-                values[cntr->declName] = match_t();
-                sizes[cntr->declName] = 1;
+            } else if (auto cntr = select->source->to<IR::BFN::ParserCounterIsZero>()) {
+                sources.push_back(cntr->declName + ".ctr_zero");
+                values[cntr->declName + ".ctr_zero"] = match_t();
+                sizes[cntr->declName + ".ctr_zero"] = 1;
+                total_size += 1;
+            } else if (auto cntr = select->source->to<IR::BFN::ParserCounterIsNegative>()) {
+                sources.push_back(cntr->declName + ".ctr_neg");
+                values[cntr->declName + ".ctr_neg"] = match_t();
+                sizes[cntr->declName + ".ctr_neg"] = 1;
                 total_size += 1;
             }
         }
@@ -1188,16 +1194,8 @@ class MatchLayout {
         int shift = 0;
         match_t rv;
         for (const auto& src : boost::adaptors::reverse(sources)) {
-            if (!src.startsWith("ctr_")) {
-                rv = orTwo(rv, shiftLeft(values[src], shift));
-                shift += sizes.at(src);
-            }
-        }
-        for (const auto& src : boost::adaptors::reverse(sources)) {
-            if (src.startsWith("ctr_")) {
-                rv = orTwo(rv, shiftLeft(values[src], shift));
-                shift += sizes.at(src);
-            }
+            rv = orTwo(rv, shiftLeft(values[src], shift));
+            shift += sizes.at(src);
         }
 
         rv = setDontCare(rv);
