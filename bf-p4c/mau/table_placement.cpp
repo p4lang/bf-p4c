@@ -215,7 +215,7 @@ struct DecidePlacement::GroupPlace {
             if (depth <= p->depth)
                 depth = p->depth+1;
             ancestors |= p->ancestors; }
-        LOG4("    new seq " << seq->id << " depth=" << depth << " anc=" << ancestors);
+        LOG4("    new seq " << seq->clone_id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
         if (Device::numLongBranchTags() == 0 || self.self.options.disable_long_branch) {
             // Table run only with next_table, so can't continue placing ancestors until
@@ -223,7 +223,7 @@ struct DecidePlacement::GroupPlace {
             if (LOGGING(5)) {
                 for (auto a : ancestors)
                     if (work.count(a))
-                        LOG5("      removing ancestor " << a->seq->id << " from work list"); }
+                        LOG5("      removing ancestor " << a->seq->clone_id << " from work list"); }
             work -= ancestors; } }
 
     /// finish a table group -- remove it from the work queue and append its parents
@@ -231,7 +231,7 @@ struct DecidePlacement::GroupPlace {
     /// @returns an iterator to the newly added groups, if any.
     ordered_set<const GroupPlace *>::iterator finish(ordered_set<const GroupPlace *> &work) const {
         auto rv = work.end();
-        LOG5("      removing " << seq->id << " from work list (a)");
+        LOG5("      removing " << seq->clone_id << " from work list (a)");
         work.erase(this);
         for (auto p : parents) {
             if (work.count(p)) continue;
@@ -241,7 +241,7 @@ struct DecidePlacement::GroupPlace {
                     skip = true;
                     break; } }
             if (skip) continue;
-            LOG5("      appending " << p->seq->id << " to work queue");
+            LOG5("      appending " << p->seq->clone_id << " to work queue");
             auto t = work.insert(p);
             if (rv == work.end()) rv = t.first; }
         return rv; }
@@ -255,7 +255,7 @@ struct DecidePlacement::GroupPlace {
         out << "[";
         const char *sep = " ";
         for (auto grp : set) {
-            out << sep << grp->seq->id;
+            out << sep << grp->seq->clone_id;
             sep = ", "; }
         out << (sep+1) << "]";
         return out; }
@@ -503,12 +503,12 @@ void DecidePlacement::GroupPlace::finish_if_placed(
     ordered_set<const GroupPlace*> &work, const TablePlacement::Placed *pl
 ) const {
     if (pl->is_fully_placed(seq)) {
-        LOG4("    Finished a sequence (" << seq->id << ")");
+        LOG4("    Finished a sequence (" << seq->clone_id << ")");
         finish(work);
         for (auto p : parents)
             p->finish_if_placed(work, pl);
     } else {
-        LOG4("    seq " << seq->id << " not finished"); }
+        LOG4("    seq " << seq->clone_id << " not finished"); }
 }
 
 static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
@@ -2136,10 +2136,10 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             // appending groups.  So care is required to not invalidate the iterator
             // and not miss newly added groups.
             auto grp = *it;
-            LOG4("  group " << grp->seq->id << " depth=" << grp->depth);
+            LOG4("  group " << grp->seq->clone_id << " depth=" << grp->depth);
             if (placed && placed->placed.contains(grp->info.tables)) {
-                LOG4("    group " << grp->seq->id << " is now complete");
-                LOG5("      removing " << (*it)->seq->id << " from work list (b)");
+                LOG4("    group " << grp->seq->clone_id << " is now complete");
+                LOG5("      removing " << (*it)->seq->clone_id << " from work list (b)");
                 it = work.erase(it);
                 auto add = grp->finish(work);
                 if (it == work.end()) it = add;
@@ -2151,8 +2151,8 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 if (LOGGING(5)) {
                     for (auto *s : grp->ancestors)
                         if (work.count(s))
-                            LOG5("    removing " << s->seq->id << " from work as it is an " <<
-                                 "ancestor of " << grp->seq->id); }
+                            LOG5("    removing " << s->seq->clone_id << " from work as it is an " <<
+                                 "ancestor of " << grp->seq->clone_id); }
                 work -= grp->ancestors; }
             int idx = -1;
             bool done = true;
@@ -2266,7 +2266,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             }
             if (done) {
                 BUG_CHECK(!placed->is_fully_placed(grp->seq), "Can't find a table to place");
-                LOG5("      removing " << (*it)->seq->id << " from work list (c)");
+                LOG5("      removing " << (*it)->seq->clone_id << " from work list (c)");
                 it = work.erase(it);
             } else {
                 it++; } }

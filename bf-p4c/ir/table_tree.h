@@ -22,7 +22,7 @@ class TableTree {
         for (auto n : tag) {
             out << sep << n;
             sep = ", "; }
-        out << ": [" << s->id << "]";
+        out << ": [" << s->clone_id << "]";
         if (done.count(s)) {
             out << "..." << std::endl;
         } else {
