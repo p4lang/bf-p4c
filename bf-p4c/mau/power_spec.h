@@ -97,6 +97,7 @@ class TofinoMauPowerSpec : public MauPowerSpec {
     */
   double get_voltage_scaling_factor() const override { return 1.0; }
 
+  // Power nos are for 1.27 GHz PPS (Clock freq of MAU)
   double get_ram_read_power() const override {
     return 0.012771 * get_ram_scaling_factor(); }
   double get_ram_write_power() const override {
@@ -162,6 +163,7 @@ class JBayMauPowerSpec : public MauPowerSpec {
     return (user_voltage / measured_voltage) * (user_voltage / measured_voltage);
   }
 
+  // Power nos are for 1.5 GHz PPS (Clock freq of MAU)
   double get_ram_read_power() const override {
     return 0.0166 * get_ram_scaling_factor(); }
   double get_ram_write_power() const override {

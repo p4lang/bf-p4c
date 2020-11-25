@@ -262,6 +262,19 @@ BFN_Options::BFN_Options() {
     registerOption("--quick-phv-alloc", nullptr,
         [this](const char *) { quick_phv_alloc = true; return true; },
          "Reduce PHV allocation search space for faster compilation");
+    registerOption("--traffic-limit", "arg",
+        [this](const char* arg) {
+            int temp = std::atoi(arg);
+            if ((!temp && (*arg != '0')) || (temp <= 0) || (temp > 100)) {
+                ::error("Invalid traffic limit % value %s. Valid arguments: {1..100}",
+                        arg);
+                return false;
+            }
+            traffic_limit = temp;
+            return true; },
+            "Input traffic limit as a %. Default: 100 % "
+            "The input load or traffic limit as a percentage. "
+            "A 100% traffic limit indicates 1 incoming packet every cycle");
 #if BAREFOOT_INTERNAL
     registerOption("--num-stages-override", "num",
         [this] (const char *arg) {

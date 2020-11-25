@@ -125,6 +125,11 @@ class WalkPowerGraph : public MauInspector {
   bool is_mpr_powered_on(gress_t g, int stage, const IR::MAU::Table* t) const;
 
   /**
+   * Scale power based on input traffic limit 
+   */
+  double traffic_limit_scaling(double pwr) const;
+
+  /**
     * JSON logging functions, for producing power.json.
     */
   void create_mau_power_json(const IR::Node *root);

@@ -1,4 +1,5 @@
 #include <boost/optional/optional_io.hpp>
+#include <algorithm>
 
 #include "lib/match.h"
 #include "lib/log.h"
@@ -115,6 +116,50 @@ struct ParserAsmSerializer : public ParserInspector {
 
         if (parser->parserError)
             out << indent << "parser_error: " << parser->parserError << std::endl;
+
+        // Rate Limiter Setup :
+        //
+        // The rate limiter is configured in the parser arbiter which controls
+        // the rate at which phv arrays are sent to MAU. Based on input pps load
+        // we determine the configuration for rate limiter.
+        //
+        // Tofino - Sets max, inc. dec values on rate limiter
+        //  - Decrement credits by dec after sending phv
+        //  - Send only if available credits > dec value
+        //  - If no phv sent increment credits by inc value
+        //  - Saturate credits at max value
+        //
+        // JBay - Sets max, inc, interval values on rate limiter
+        //  - Decrement credits by 1 after sending phv
+        //  - Send only if available credit > 0
+        //  - After every interval cycles increment credits by inc value
+        //  - Saturate credits at max value
+        //
+        auto pps_load = BackendOptions().traffic_limit;
+        if (pps_load > 0 && pps_load < 100) {
+            int bubble_load = 100 - pps_load;
+            int bubble_gcd = std::__gcd(100, bubble_load);
+            int bubble_dec = bubble_load / bubble_gcd;
+            int bubble_max = (100 / bubble_gcd) - bubble_dec;
+            int bubble_inc = bubble_max;
+            out << indent++ << "bubble: " << std::endl;
+            out << indent << "max: " << bubble_max << std::endl;
+            if (Device::currentDevice() == Device::TOFINO) {
+                out << indent << "dec: " << bubble_dec << std::endl;
+                LOG3("Bubble Rate Limiter ( load : " << pps_load << "%, bubble: "
+                        << bubble_load << "%, max: " << bubble_max
+                        << ", inc: " << bubble_inc <<", dec: " << bubble_dec << ")");
+            } else {
+                int bubble_intvl = 100 / bubble_gcd;
+                bubble_inc = pps_load / bubble_gcd;
+                out << indent << "interval: " << bubble_intvl << std::endl;
+                LOG3("Bubble Rate Limiter ( load : " << pps_load << "%, bubble: "
+                        << bubble_load << "%, max: " << bubble_max
+                        << ", inc: " << bubble_inc <<", intvl: " << bubble_intvl << ")");
+            }
+            out << indent << "inc: " << bubble_inc << std::endl;
+            indent--;
+        }
 
         out << indent << "states:" << std::endl;
 

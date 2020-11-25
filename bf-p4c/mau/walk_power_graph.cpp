@@ -429,6 +429,7 @@ double WalkPowerGraph::estimate_power_tofino() {
     }
     worst_power *= power_scale_factor;
     LOG4("Worst case power for " << toString(g) << ": " << float2str(worst_power) << "W.");
+    worst_power = traffic_limit_scaling(worst_power);
     gress_powers_.emplace(g, worst_power);
   }
 
@@ -438,6 +439,18 @@ double WalkPowerGraph::estimate_power_tofino() {
   }
   LOG4("Total estimated power: " << total_power << " W.");
   return total_power;
+}
+
+double WalkPowerGraph::traffic_limit_scaling(double pwr) const {
+    double pps_pwr = pwr;
+    int traffic_limit = options_.traffic_limit;
+    if (traffic_limit > 0 && traffic_limit < 100) {
+        double pps_scale_factor = static_cast<double>(traffic_limit) / 100.0;
+        pps_pwr *= pps_scale_factor;
+        LOG4("Worst case power with input pps load of "
+                << traffic_limit << "% : " << float2str(pps_pwr) << "W.");
+    }
+    return pps_pwr;
 }
 
 /**
@@ -548,6 +561,7 @@ double WalkPowerGraph::estimate_power_non_tofino() {
 
     // Note: No anticipated pipeline scaling factor, as of yet (e.g. from the deparser.)
     LOG4("Worst case power for " << toString(g) << ": " << float2str(worst_power) << "W.");
+    worst_power = traffic_limit_scaling(worst_power);
     gress_powers_.emplace(g, worst_power);
   }
   double total_power = 0.0;
@@ -625,6 +639,7 @@ void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
     myfile.close(); }
 }
 
+// TODO: P4C-3332 Add input pps load % value to json
 void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
   auto logDir = BFNContext::get().getOutputDirectory("logs", root->to<IR::BFN::Pipe>()->id);
   if (!logDir)
@@ -826,6 +841,7 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
   for (auto p : gress_powers_) {
     all_power += p.second; }
   out << "Total worst case power: " << float2str(all_power) << " W" << std::endl;
+  out << "Input packets per second load : " << options_.traffic_limit << "%" << std::endl;
 }
 
 void WalkPowerGraph::produce_json_tables() {
