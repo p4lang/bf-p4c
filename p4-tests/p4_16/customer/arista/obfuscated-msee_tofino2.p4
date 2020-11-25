@@ -23926,7 +23926,7 @@ control Devore(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
     @name(".Shorter") action Shorter() {
         China.count();
     }
-    @placement_priority(- 1) @disable_atomic_modify(1) @name(".Point") table Point {
+    @disable_atomic_modify(1) @name(".Point") @stage(9) table Point {
         actions = {
             Shorter();
         }
