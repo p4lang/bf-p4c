@@ -70,33 +70,27 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
         auto node1_name = gress_arg->value + "::" + node1_ir->value;
         auto node2_name = gress_arg->value + "::" + node2_ir->value;
         auto field1 = phv_i.field(node1_name);
-        if (!field1) {
-            PHV::Pragmas::reportNoMatchingPHV(pipe, node1_ir);
-        }
         auto field2 = phv_i.field(node2_name);
-        if (!field2) {
-            PHV::Pragmas::reportNoMatchingPHV(pipe, node2_ir);
-        }
         auto s_hdr1 = field1 ? nullptr : phv_i.simple_hdr(node1_name);
         auto s_hdr2 = field2 ? nullptr : phv_i.simple_hdr(node2_name);
         auto n1_flds = ordered_set<const PHV::Field*>();
         auto n2_flds = ordered_set<const PHV::Field*>();
 
-        if (field1) {
+        if (field1)
             n1_flds.insert(field1);
-        } else if (s_hdr1) {
+        if (s_hdr1)
             phv_i.get_hdr_fields(node1_name, n1_flds);
-
-        } else {
+        if (!field1 && !s_hdr1) {
+            PHV::Pragmas::reportNoMatchingPHV(pipe, node1_ir);
             continue;
         }
 
-        if (field2) {
+        if (field2)
             n2_flds.insert(field2);
-        } else if (s_hdr2) {
+        if (s_hdr2)
             phv_i.get_hdr_fields(node2_name, n2_flds);
-
-        } else {
+        if (!field2 && !s_hdr2) {
+            PHV::Pragmas::reportNoMatchingPHV(pipe, node2_ir);
             continue;
         }
 

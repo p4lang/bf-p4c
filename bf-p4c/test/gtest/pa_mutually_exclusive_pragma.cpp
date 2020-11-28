@@ -1,5 +1,8 @@
+#include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
+
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/optional.hpp>
+#include <regex>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -8,10 +11,12 @@
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/analysis/mutex_overlay.h"
-#include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
+
+auto CaptureStderr = ::testing::internal::CaptureStderr;
+auto Stderr = ::testing::internal::GetCapturedStderr;
 
 class PaMutuallyExclusivePragmaTest : public TofinoBackendTest {};
 
@@ -68,10 +73,65 @@ createPaMutuallyExclusivePragmaTestCase() {
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
-  boost::optional<TofinoPipeTestCase>
+boost::optional<TofinoPipeTestCase>
 createPaMutuallyExclusiveHeaderPragmaTestCase() {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         @pa_mutually_exclusive("ingress", "headers.h1", "h2")
+        header H1
+        {
+            bit<8> f1;
+            bit<32> f2;
+        }
+        header H2
+        {
+            bit<8> f1;
+            bit<32> f2;
+        }
+        struct Headers { H1 h1; H2 h2; }
+        struct Metadata {
+            bit<8> f1;
+            H2 f3;
+        }
+
+        parser parse(packet_in packet, out Headers headers, inout Metadata meta,
+                     inout standard_metadata_t sm) {
+            state start {
+            packet.extract(headers.h1);
+            packet.extract(headers.h2);
+            transition accept;
+            }
+        }
+
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
+
+        control mau(inout Headers headers, inout Metadata meta,
+                        inout standard_metadata_t sm) { apply { } }
+
+        control computeChecksum(inout Headers headers, inout Metadata meta) { apply { } }
+
+        control deparse(packet_out packet, in Headers headers) {
+            apply { }
+        }
+
+        V1Switch(parse(), verifyChecksum(), mau(), mau(),
+                 computeChecksum(), deparse()) main;
+    )");
+
+    auto& options = BackendOptions();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
+    return TofinoPipeTestCase::createWithThreadLocalInstances(source);
+}
+
+boost::optional<TofinoPipeTestCase>
+createPaMutuallyExclusivePragmaNoMatchingPhvFieldTestCase() {
+    auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+        @pa_mutually_exclusive("ingress", "headersAAA.h1", "headers.h2")
+        @pa_mutually_exclusive("ingress", "headers.h1", "headersBBB.h2")
+        @pa_mutually_exclusive("ingress", "headers.h1CCC", "headers.h2")
+        @pa_mutually_exclusive("ingress", "headers.h1", "headers.h2DDD")
         header H1
         {
             bit<8> f1;
@@ -134,15 +194,26 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
     return pipe->apply(quick_backend);
 }
 
+bool checkNoMatchingPhvField(const std::string &str, const std::string &field) {
+    return std::regex_search(str,
+        std::regex("warning:\\s*\"" + field + "\":\\s*No matching PHV field"));
+}
+
 }  // namespace
 
 TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
+    std::string stderr;
+
     auto test = createPaMutuallyExclusivePragmaTestCase();
     ASSERT_TRUE(test);
 
     PhvInfo phv;
 
+    CaptureStderr();
     runMockPasses(test->pipe, phv);
+    stderr = Stderr();
+    EXPECT_FALSE(checkNoMatchingPhvField(stderr, "h1.f1"));
+    EXPECT_FALSE(checkNoMatchingPhvField(stderr, "h2.f1"));
 
     EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f2")->id,
                                 phv.field("ingress::h2.f1")->id), false);
@@ -155,13 +226,34 @@ TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
 
     PhvInfo phv2;
 
+    CaptureStderr();
     runMockPasses(test2->pipe, phv2);
+    stderr = Stderr();
+    EXPECT_FALSE(checkNoMatchingPhvField(stderr, "headers.h1"));
+    EXPECT_FALSE(checkNoMatchingPhvField(stderr, "h2"));
 
     EXPECT_EQ(phv2.field_mutex()(phv2.field("ingress::h1.f2")->id,
                                  phv2.field("ingress::h2.f2")->id), true);
 
     EXPECT_EQ(phv2.field_mutex()(phv2.field("ingress::h1.f1")->id,
                                  phv2.field("ingress::h2.f1")->id), true);
+}
+
+TEST_F(PaMutuallyExclusivePragmaTest, P4_16_NoMatchingPhvField) {
+    std::string stderr;
+
+    auto test = createPaMutuallyExclusivePragmaNoMatchingPhvFieldTestCase();
+    ASSERT_TRUE(test);
+
+    PhvInfo phv;
+
+    CaptureStderr();
+    runMockPasses(test->pipe, phv);
+    stderr = Stderr();
+    EXPECT_TRUE(checkNoMatchingPhvField(stderr, "headersAAA.h1"));
+    EXPECT_TRUE(checkNoMatchingPhvField(stderr, "headersBBB.h2"));
+    EXPECT_TRUE(checkNoMatchingPhvField(stderr, "headers.h1CCC"));
+    EXPECT_TRUE(checkNoMatchingPhvField(stderr, "headers.h2DDD"));
 }
 
 }  // namespace Test
