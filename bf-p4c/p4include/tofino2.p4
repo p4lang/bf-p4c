@@ -1,6 +1,16 @@
 #ifndef TOFINO2_P4_
 #define TOFINO2_P4_
 
+/**
+ Version Notes:
+
+ 0.6.0:
+ - Initial release
+ 0.6.1:
+ - Rename PARSER_ERROR_NO_TCAM to PARSER_ERROR_NO_MATCH
+
+*/
+
 #include<core.p4>
 
 //XXX Open issues:
@@ -28,7 +38,7 @@ typedef error ParserError_t;
 const bit<32> PORT_METADATA_SIZE = 32w192;
 
 const bit<16> PARSER_ERROR_OK            = 16w0x0000;
-const bit<16> PARSER_ERROR_NO_TCAM       = 16w0x0001;
+const bit<16> PARSER_ERROR_NO_MATCH      = 16w0x0001;
 const bit<16> PARSER_ERROR_PARTIAL_HDR   = 16w0x0002;
 const bit<16> PARSER_ERROR_CTR_RANGE     = 16w0x0004;
 const bit<16> PARSER_ERROR_TIMEOUT_USER  = 16w0x0008;
