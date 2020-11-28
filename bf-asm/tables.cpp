@@ -2767,26 +2767,9 @@ bool Table::add_json_node_to_table(json::map &tbl, const char *name) const {
     return false;
 }
 
-void Table::common_tbl_cfg(json::map &tbl) const {
-    tbl["default_action_handle"] = get_default_action_handle();
-    tbl["action_profile"] = action_profile();
-    // FIXME -- setting next_table_mask unconditionally only works because we process the
-    // stage table in stage order (so we'll end up with the value from the last stage table,
-    // which is what we want.)  Should we check in case the ordering ever changes?
-    // By DRV-2239 this should move into the stage table anyways?
-    tbl["default_next_table_mask"] = next_table_adr_mask;
-    // FIXME -- the driver currently always assumes this is 0, so we arrange for it to be
-    // when choosing the action encoding.  But we should be able to choose something else
-    tbl["default_next_table_default"] = 0;
-    // FIXME-JSON: PD related, check glass examples for false (ALPM)
-    tbl["is_resource_controllable"] = true;
-    tbl["uses_range"] = false;
-    if (p4_table && p4_table->disable_atomic_modify)
-        tbl["disable_atomic_modify"] = true;
+void Table::add_match_key_cfg(json::map& tbl) const {
     json::vector &params = tbl["match_key_fields"];
-    if ((!p4_params_list.empty()) &&
-            (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
-        params.clear();
+    if ((!p4_params_list.empty()) && this->to<MatchTable>()) {
         for (auto &p : p4_params_list) {
             json::map param;
             std::string name = p.name;
@@ -2828,6 +2811,25 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             params.push_back(std::move(param));
             if (p.type == "range")
                 tbl["uses_range"] = true; } }
+}
+
+void Table::common_tbl_cfg(json::map &tbl) const {
+    tbl["default_action_handle"] = get_default_action_handle();
+    tbl["action_profile"] = action_profile();
+    // FIXME -- setting next_table_mask unconditionally only works because we process the
+    // stage table in stage order (so we'll end up with the value from the last stage table,
+    // which is what we want.)  Should we check in case the ordering ever changes?
+    // By DRV-2239 this should move into the stage table anyways?
+    tbl["default_next_table_mask"] = next_table_adr_mask;
+    // FIXME -- the driver currently always assumes this is 0, so we arrange for it to be
+    // when choosing the action encoding.  But we should be able to choose something else
+    tbl["default_next_table_default"] = 0;
+    // FIXME-JSON: PD related, check glass examples for false (ALPM)
+    tbl["is_resource_controllable"] = true;
+    tbl["uses_range"] = false;
+    if (p4_table && p4_table->disable_atomic_modify)
+        tbl["disable_atomic_modify"] = true;
+    add_match_key_cfg(tbl);
     tbl["ap_bind_indirect_res_to_match"] = json::vector();
     tbl["static_entries"] = json::vector();
     if (context_json) {

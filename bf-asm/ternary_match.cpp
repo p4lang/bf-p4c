@@ -700,6 +700,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         json::map &alpm_pre_classifier = match_attributes["pre_classifier"];
         base_alpm_pre_classifier_tbl_cfg(alpm_pre_classifier, "match_entry", number_entries);
         tbl_ptr = &alpm_pre_classifier;
+        // top level alpm table has the same key as alpm preclassifier
+        add_match_key_cfg(alpm);
     } else {
         tbl_ptr = base_tbl_cfg(out, "match_entry", number_entries); }
     json::map &tbl = *tbl_ptr;

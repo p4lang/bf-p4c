@@ -565,6 +565,7 @@ class Table {
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type,
             const std::vector<Layout> &layout, bool skip_spare_bank = false) const;
     virtual void common_tbl_cfg(json::map &tbl) const;
+    void add_match_key_cfg(json::map& tbl) const;
     bool add_json_node_to_table(json::map &tbl, const char *name) const;
     enum table_type_t { OTHER = 0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM,
@@ -1144,6 +1145,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
         return name;
     }
     unsigned entry_ram_depth() const override { return std::min(number_partitions, 1024); }
+    void gen_alpm_cfg(json::map&) const;
 )
 
 DECLARE_TABLE_TYPE(ProxyHashMatchTable, SRamMatchTable, "proxy_hash",
