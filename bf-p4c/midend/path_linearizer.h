@@ -62,6 +62,7 @@ struct PathLinearizer : public Inspector {
     void postorder(const IR::PathExpression* path) override;
     void postorder(const IR::ConcreteHeaderRef* href) override;
     void postorder(const IR::Member* member) override;
+    void postorder(const IR::Slice* slice) override;
     void postorder(const IR::ArrayIndex* array) override;
     bool preorder(const IR::HeaderOrMetadata* href) override;
     bool preorder(const IR::Constant*) override;

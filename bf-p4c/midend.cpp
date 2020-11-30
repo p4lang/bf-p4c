@@ -40,6 +40,7 @@
 #include "midend/tableHit.h"
 #include "midend/validateProperties.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/midend/annotate_with_in_hash.h"
 #include "bf-p4c/midend/blockmap.h"
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/check_unsupported.h"
@@ -389,6 +390,7 @@ MidEnd::MidEnd(BFN_Options& options) {
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap),
+        new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
         new MidEndLast,
     });
 }

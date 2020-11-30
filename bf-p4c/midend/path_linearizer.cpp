@@ -48,6 +48,10 @@ void PathLinearizer::postorder(const IR::Member* member) {
     if (linearPath) linearPath->components.push_back(member);
 }
 
+void PathLinearizer::postorder(const IR::Slice* slice) {
+    if (linearPath) linearPath->components.push_back(slice);
+}
+
 // When applied to P4-14 ConcreteHeaderRef, convert it to P4-16 PathExpression.
 void PathLinearizer::postorder(const IR::ConcreteHeaderRef* href) {
     auto expr = new IR::PathExpression(href->srcInfo, href->type, new IR::Path(href->ref->name));

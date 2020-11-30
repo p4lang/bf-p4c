@@ -122,6 +122,7 @@ set (BF_P4C_IR_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
 
 set (BF_P4C_MIDEND_SRCS
+  midend/annotate_with_in_hash.cpp
   midend/check_design_pattern.cpp
   midend/check_header_alignment.cpp
   midend/check_unsupported.cpp
@@ -146,6 +147,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
 build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MIDEND_HDRS
+  midend/annotate_with_in_hash.h
   midend/blockmap.h
   midend/check_design_pattern.h
   midend/check_header_alignment.h
@@ -1211,6 +1213,7 @@ if (ENABLE_TESTING)
     #      projet in Jira P4C-2940 and target_link_test_libs.cmake for implementation.
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/test_bf_gtest_helpers.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/annotate_with_in_hash.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_format_helper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp

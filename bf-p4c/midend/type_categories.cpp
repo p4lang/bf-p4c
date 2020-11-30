@@ -46,7 +46,18 @@ bool isPrimitiveType(const IR::Type* type) {
 }
 
 bool isMetadataReference(const LinearPath& path, P4::TypeMap* typeMap) {
+    // If the last component has metadata type, this is trivially a metadata
+    // reference.
     auto* lastComponent = path.components.back();
+    auto *lastComponentType = typeMap->getType(lastComponent);
+    BUG_CHECK(lastComponentType, "No type for path component: %1%",
+              lastComponent);
+    if (isMetadataType(lastComponentType)) return true;
+
+    // If the last component does not have a metadata type, there has to be
+    // at least two components so that one of them could have a metadata type.
+    if (path.components.size() < 2) return false;
+
     return std::all_of(path.components.begin(), path.components.end(),
                        [&](const IR::Expression* component) {
         auto* type = typeMap->getType(component);
