@@ -50,13 +50,7 @@ bool WalkPowerGraph::preorder(const IR::MAU::Table* t) {
 void WalkPowerGraph::end_apply(const IR::Node *root) {
   bool updated_deps = true;
   auto& spec = Device::mauPowerSpec();
-  double max_power = (options_.max_power > 0.0) ? options_.max_power : spec.get_max_power();
-  // P4C-3312 Limit power max to never exceed spec value
-  if (max_power > spec.get_absolute_max_power()) {
-      max_power = spec.get_absolute_max_power();
-  }
-  LOG2("Max Power allowed : " << max_power);
-  double rounding = max_power / 104729.0;
+  double rounding = spec.get_max_power() / 104729.0;
   double total_power = 0.0;
 
   mau_features_->update_deps_for_device();
@@ -76,7 +70,7 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
         continue; } }
 
     total_power = estimate_power();
-    if (total_power > (max_power + rounding)) {
+    if (total_power > (spec.get_max_power() + rounding)) {
       LOG5(" Updating deps to reduce power");
       updated_deps = mau_features_->try_convert_to_match_dep();
     } else {
@@ -91,23 +85,37 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
 
   // log results (power.json, mau.power.log)
   // latency, features, power
-  if (total_power > (max_power + rounding)) {
-    double excess = total_power - max_power;
+  if (total_power > (spec.get_max_power() + rounding)) {
+    double excess = total_power - spec.get_max_power();
     std::string s = float2str(excess);
-    std::string mps = float2str(max_power);
+    std::string mps = float2str(spec.get_max_power());
     std::string error_msg = "Power worst case estimated budget (" + mps + "W) ";
     error_msg += "exceeded by " + s + "W.\n";
     error_msg += "Too many memories are accessed in the worst case table control flow.\n";
     error_msg += "Adding control flow conditions to separate large table execution ";
     error_msg += "and/or splitting large tables may help.\n";
+    double set_max_power_threshold = options_.max_power > spec.get_max_power() ?
+                                    options_.max_power - spec.get_max_power() : 0.0;
+    // P4C-3312 : set max power should never exceed absolute max power threshold
+    if (set_max_power_threshold > spec.get_absolute_max_power_threshold())
+        set_max_power_threshold = spec.get_absolute_max_power_threshold();
+    bool disable_power_check = (options_.disable_power_check &&
+                     excess < (spec.get_excess_power_threshold() + rounding));
+    bool set_max_power_check = (options_.max_power > 0.0 &&
+                     excess < (set_max_power_threshold + rounding));
+    if (options_.disable_power_check)
+        LOG2("Disable Power Check option used - Total power : " << total_power
+            << ", excess : " << excess << ", max allowed excess : "
+            << spec.get_excess_power_threshold() + rounding);
+    if (options_.max_power > 0.0)
+        LOG2("Set Max Power Check option used - Total power : " << total_power
+            << ", excess : " << excess << ", max allowed excess : "
+            << set_max_power_threshold + rounding);
 #if BAREFOOT_INTERNAL
-    bool suppress = exceeds_stages_ || options_.no_power_check ||
-                    (options_.disable_power_check &&
-                     excess < (spec.get_excess_power_threshold() + rounding));
+    bool suppress = exceeds_stages_ || options_.no_power_check
+                        || disable_power_check || set_max_power_check;
 #else
-    bool suppress = exceeds_stages_ ||
-                    (options_.disable_power_check &&
-                     excess < (spec.get_excess_power_threshold() + rounding));
+    bool suppress = exceeds_stages_ || disable_power_check || set_max_power_check;
 #endif
     if (suppress) {
       std::string warn_msg = "Power check explicitly disabled.\n";
