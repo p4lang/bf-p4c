@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -624,7 +624,7 @@ struct Edgemoor {
     bit<1>  Manilla;
     bit<1>  Lakehills;
     bit<1>  Eldred;
-    bit<3>  Hammond;
+    bit<2>  Hammond;
     bit<32> Hematite;
     bit<32> Orrick;
     bit<8>  Ipava;
@@ -782,11 +782,6 @@ struct McAllen {
     bit<16> Candle;
     bit<1>  Ackley;
     bit<1>  Knoke;
-}
-
-struct Ackerman {
-    bit<16> Candle;
-    bit<1>  Ackley;
 }
 
 struct Dairyland {
@@ -2152,9 +2147,6 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
     @name(".Casnovia") action Casnovia() {
         ;
     }
-    @name(".Sheyenne") action Sheyenne() {
-        Wildorado.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Fishers") action Fishers() {
         Balmorhea.Buckhorn.Wartburg = (bit<1>)1w0;
         Balmorhea.Lawai.Conner = (bit<1>)1w0;
@@ -2176,7 +2168,6 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Daisytown.Shingler.Lathrop = Balmorhea.Buckhorn.Lathrop;
         Fishers();
         Philip();
-        Sheyenne();
     }
     @name(".Indios") action Indios() {
         Balmorhea.Millston.Tilton = (bit<3>)3w6;
@@ -2185,7 +2176,6 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Balmorhea.Buckhorn.Grabill = Daisytown.Kamrar.Grabill;
         Balmorhea.Buckhorn.Moorcroft = Daisytown.Kamrar.Moorcroft;
         Balmorhea.Buckhorn.Bradner = (bit<3>)3w0x0;
-        Sheyenne();
     }
     @name(".Larwill") action Larwill() {
         Balmorhea.Millston.Tilton = (bit<3>)3w0;
@@ -2216,7 +2206,6 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Balmorhea.Paulding.Riner = Daisytown.Hillsview.Riner;
         Balmorhea.Buckhorn.Cisco = Daisytown.Hillsview.Burrel;
         Chatanika();
-        Sheyenne();
     }
     @name(".Ackerly") action Ackerly() {
         Larwill();
@@ -2225,7 +2214,6 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Balmorhea.Rainelle.Riner = Daisytown.Gastonia.Riner;
         Balmorhea.Buckhorn.Cisco = Daisytown.Gastonia.Cisco;
         Chatanika();
-        Sheyenne();
     }
     @name(".Noyack") action Noyack(bit<20> Hettinger) {
         Balmorhea.Buckhorn.Toklat = Balmorhea.Doddridge.Lugert;
@@ -2357,7 +2345,7 @@ control Hester(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
     @name(".BigPoint") action BigPoint() {
         Balmorhea.HillTop.Townville = Goodlett.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Daisytown.Wesson.Helton, Daisytown.Wesson.Grannis, Daisytown.Wesson.Grabill, Daisytown.Wesson.Moorcroft, Daisytown.Wesson.Lathrop });
     }
-    @disable_atomic_modify(1) @name(".Tenstrike") table Tenstrike {
+    @disable_atomic_modify(1) @placement_priority(- 1) @stage(1) @name(".Tenstrike") table Tenstrike {
         actions = {
             BigPoint();
         }
@@ -3693,6 +3681,8 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         Daisytown.Astor.Moorcroft = Scotland;
         Daisytown.Hohenwald.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Gardena") action Gardena() {
+    }
     @name(".Hawthorne") action Hawthorne() {
         Estero(Balmorhea.Millston.Spearman);
     }
@@ -3762,6 +3752,7 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
             Inkom();
             Gowanda();
             BurrOak();
+            Gardena();
             Hawthorne();
             Brule();
             Durant();
@@ -3814,22 +3805,20 @@ control Chambers(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intr
         Ardenvoir.count();
         Wildorado.copy_to_cpu = Wildorado.copy_to_cpu | 1w0;
     }
-    @name(".Snook") action Snook(bit<8> Spearman) {
+    @name(".Snook") action Snook() {
         Ardenvoir.count();
         Wildorado.copy_to_cpu = (bit<1>)1w1;
-        Balmorhea.Millston.Spearman = Spearman;
     }
     @name(".OjoFeliz") action OjoFeliz() {
         Ardenvoir.count();
-        Udall.drop_ctl = (bit<3>)3w1;
+        Udall.drop_ctl = (bit<3>)3w3;
     }
     @name(".Havertown") action Havertown() {
         Wildorado.copy_to_cpu = Wildorado.copy_to_cpu | 1w0;
         OjoFeliz();
     }
-    @name(".Napanoch") action Napanoch(bit<8> Spearman) {
+    @name(".Napanoch") action Napanoch() {
         Wildorado.copy_to_cpu = (bit<1>)1w1;
-        Balmorhea.Millston.Spearman = Spearman;
         OjoFeliz();
     }
     @disable_atomic_modify(1) @name(".Pearcy") table Pearcy {
@@ -4551,7 +4540,7 @@ control Tillicum(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intr
     @name(".Trail") action Trail(bit<8> Eastwood) {
         Balmorhea.Barnhill.Eastwood = Eastwood;
     }
-    @disable_atomic_modify(1) @name(".Magazine") table Magazine {
+    @disable_atomic_modify(1) @stage(2) @name(".Magazine") table Magazine {
         actions = {
             Nerstrand();
             @defaultonly NoAction();
@@ -5118,6 +5107,7 @@ control Renfroe(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
             Talkeetna();
         }
         key = {
+            Daisytown.Bernice.isValid() : exact @name("Bernice") ;
             Balmorhea.Doddridge.Staunton: ternary @name("Doddridge.Staunton") ;
             Balmorhea.Buckhorn.Toklat   : ternary @name("Buckhorn.Toklat") ;
             Balmorhea.McBrides.Sublett  : ternary @name("McBrides.Sublett") ;
@@ -5399,21 +5389,17 @@ control Renfroe(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
             Rendon.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
             Nordheim.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
             Daguao.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
-            if (Daisytown.Bernice.isValid() == false) {
-                switch (Mulhall.apply().action_run) {
-                    Skiatook: {
-                        if (Balmorhea.McBrides.Wisdom == 1w1) {
-                            Okarche.apply();
-                        }
-                    }
-                    Talkeetna: {
-                        Finlayson.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
+            switch (Mulhall.apply().action_run) {
+                Skiatook: {
+                    if (Balmorhea.McBrides.Wisdom == 1w1) {
+                        Okarche.apply();
                     }
                 }
-
-            } else {
-                Finlayson.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
+                Talkeetna: {
+                    Finlayson.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
+                }
             }
+
         }
         Calverton.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
         if (!Daisytown.Readsboro.isValid()) {
@@ -5432,7 +5418,7 @@ control Renfroe(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
                 Skiatook: {
                 }
                 default: {
-                    if (Balmorhea.Millston.Atoka == 1w0 && Balmorhea.Millston.Tilton != 3w2 && Balmorhea.Buckhorn.Hulbert == 1w0 && Balmorhea.Thaxton.Oilmont == 1w0 && Balmorhea.Thaxton.Tornillo == 1w0 && Balmorhea.Millston.Rockham == 1w0) {
+                    if (Balmorhea.Millston.Atoka == 1w0 && Balmorhea.Millston.Tilton != 3w2 && Balmorhea.Buckhorn.Hulbert == 1w0 && Balmorhea.Thaxton.Oilmont == 1w0 && Balmorhea.Thaxton.Tornillo == 1w0) {
                         if (Balmorhea.Millston.Madera == 20w511) {
                             Hodges.apply(Daisytown, Balmorhea, NantyGlo, Earling, Udall, Wildorado);
                         }

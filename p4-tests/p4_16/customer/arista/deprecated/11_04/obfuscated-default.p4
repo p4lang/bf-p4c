@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -740,7 +740,7 @@ struct Weatherby {
     bit<1>  Bufalo;
     bit<1>  Randall;
     bit<1>  Dugger;
-    bit<3>  Rockham;
+    bit<2>  Rockham;
     bit<32> Hiland;
     bit<32> Manilla;
     bit<8>  Hammond;
@@ -769,6 +769,7 @@ struct Colson {
 struct FordCity {
     bit<1>  Husum;
     bit<1>  Almond;
+    bit<3>  Chatom;
     bit<32> Kaplan;
     bit<32> McKenna;
     bit<8>  Netarts;
@@ -912,11 +913,6 @@ struct Ackley {
     bit<16> Kalkaska;
     bit<1>  Newfolden;
     bit<1>  Candle;
-}
-
-struct Grovetown {
-    bit<16> Kalkaska;
-    bit<1>  Newfolden;
 }
 
 struct Knoke {
@@ -1983,11 +1979,6 @@ control Sedan(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsic
         Hookdale.count();
         Aniak.Cassa.Chaffee = (bit<1>)1w1;
     }
-    @name(".Suwanee") action Suwanee(bit<8> Netarts) {
-        Hookdale.count();
-        Aniak.Cassa.Chaffee = (bit<1>)1w1;
-        Aniak.Padonia.Netarts = Netarts;
-    }
     @name(".Lemont") action Mayflower() {
         Hookdale.count();
         ;
@@ -2011,7 +2002,6 @@ control Sedan(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsic
     @disable_atomic_modify(1) @name(".Sespe") table Sespe {
         actions = {
             Funston();
-            Suwanee();
             Mayflower();
         }
         key = {
@@ -2631,9 +2621,6 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
     @name(".Lemont") action Lemont() {
         ;
     }
-    @name(".BigRun") action BigRun() {
-        NantyGlo.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Castle") action Castle() {
         Aniak.Cassa.Mayday = (bit<1>)1w0;
         Aniak.Sopris.Allison = (bit<1>)1w0;
@@ -2654,7 +2641,6 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Aniak.Cassa.Grabill = Crannell.Newhalem.Grabill;
         Aniak.Cassa.Moorcroft = Crannell.Newhalem.Moorcroft;
         Aguila();
-        BigRun();
     }
     @name(".Mattapex") action Mattapex() {
         Aniak.Rainelle.Madera = (bit<3>)3w0;
@@ -2686,7 +2672,6 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Aniak.Buckhorn.Helton = Crannell.Mather.Helton;
         Aniak.Cassa.Steger = Crannell.Mather.Turkey;
         Kapowsin();
-        BigRun();
     }
     @name(".Vanoss") action Vanoss() {
         Mattapex();
@@ -2695,7 +2680,6 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Aniak.Pawtucket.Helton = Crannell.Makawao.Helton;
         Aniak.Cassa.Steger = Crannell.Makawao.Steger;
         Kapowsin();
-        BigRun();
     }
     @name(".Potosi") action Potosi(bit<20> Mulvane) {
         Aniak.Cassa.Toklat = Aniak.HillTop.Ericsburg;
@@ -3111,6 +3095,7 @@ control Laclede(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         Aniak.Rainelle.Edgemoor = Sublett;
         Aniak.Rainelle.Panaca = (bit<10>)10w0;
         Aniak.Cassa.Colona = Aniak.Cassa.Colona | Aniak.Cassa.Wilmore;
+        NantyGlo.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".Ruston") action Ruston(bit<20> Kaluaaha) {
         RedLake(Aniak.Cassa.Horton, Aniak.Cassa.Lacona, Aniak.Cassa.Toklat, Kaluaaha);
@@ -3819,7 +3804,6 @@ control Lovelady(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
         Crannell.Sumner.Hampton = Aniak.Millston.Pinole | 16w0xc000;
         Crannell.Reidville.Chispa = ElMirage.execute(32w1);
         Crannell.Reidville.Bridgton = Minneota;
-        Crannell.Reidville.Cassadaga[1:0] = Wildorado.egress_port[8:7];
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Melder") table Melder {
         actions = {
@@ -4385,6 +4369,8 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Readsboro.Moorcroft = Brunson;
         Crannell.Astor.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Saxis") action Saxis() {
+    }
     @name(".Langford") action Langford(bit<8> Garibaldi) {
         Crannell.Makawao.Garibaldi = Crannell.Makawao.Garibaldi + Garibaldi;
     }
@@ -4463,11 +4449,13 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Sully(Crannell.Makawao.StarLake, 16w30, Talbert, Brunson, Talbert, Brunson, Dunkerton);
         Lackey(Crannell.Makawao.StarLake, 16w50, Hagewood);
         Crannell.Makawao.Garibaldi = Crannell.Makawao.Garibaldi - 8w1;
+        Crannell.Makawao.Grannis = Aniak.Sopris.Grannis;
     }
     @name(".Maury") action Maury(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
         Sully(Crannell.Mather.Killen, 16w70, Talbert, Brunson, Talbert, Brunson, Dunkerton);
         Lackey(Crannell.Mather.Killen, 16w90, Hagewood);
         Crannell.Mather.Riner = Crannell.Mather.Riner - 8w1;
+        Crannell.Mather.Grannis = Aniak.Sopris.Grannis;
     }
     @name(".Ashburn") action Ashburn(bit<16> Bonney, bit<16> Estrella, bit<24> Grabill, bit<24> Moorcroft, bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton) {
         Crannell.Readsboro.setValid();
@@ -4485,6 +4473,13 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
     @name(".Gwynn") action Gwynn(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
         Crannell.Hohenwald.setValid();
         Luverne(Aniak.Wildorado.Uintah, 16w12, 16w32, Crannell.Gastonia.Grabill, Crannell.Gastonia.Moorcroft, Talbert, Brunson, Dunkerton, Hagewood);
+    }
+    @name(".Rolla") action Rolla(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
+        Langford(8w0);
+        Gwynn(Talbert, Brunson, Dunkerton, Hagewood);
+    }
+    @name(".Brookwood") action Brookwood(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
+        Gwynn(Talbert, Brunson, Dunkerton, Hagewood);
     }
     @name(".Granville") action Granville(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
         Langford(8w255);
@@ -4552,12 +4547,15 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
             CassCity();
             Sanborn();
             Kerby();
+            Saxis();
             Kevil();
             Ivanpah();
             Waumandee();
             Nowlin();
             Gunder();
             Maury();
+            Rolla();
+            Brookwood();
             Granville();
             Council();
             Gwynn();
@@ -4615,15 +4613,14 @@ control Bagwell(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         Milltown.count();
         NantyGlo.copy_to_cpu = NantyGlo.copy_to_cpu | 1w0;
     }
-    @name(".Comunas") action Comunas(bit<8> Bushland) {
+    @name(".Comunas") action Comunas() {
         Milltown.count();
         NantyGlo.copy_to_cpu = (bit<1>)1w1;
-        Aniak.Rainelle.Bushland = Bushland;
     }
     @name(".Murdock") action Murdock(bit<8> Netarts, bit<10> Pachuta) {
         Milltown.count();
-        Lindsborg.drop_ctl = (bit<3>)3w1;
-        Aniak.Padonia.Netarts = Aniak.Padonia.Netarts | Netarts;
+        Lindsborg.drop_ctl = (bit<3>)3w3;
+        Aniak.Padonia.Netarts = Netarts;
         Lindsborg.mirror_type = (bit<3>)3w5;
         Aniak.Mickleton.Pachuta = (bit<10>)Pachuta;
     }
@@ -4637,15 +4634,14 @@ control Bagwell(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
     }
     @name(".Alcoma") action Alcoma() {
         Milltown.count();
-        Lindsborg.drop_ctl = (bit<3>)3w1;
+        Lindsborg.drop_ctl = (bit<3>)3w3;
     }
     @name(".Kilbourne") action Kilbourne() {
         NantyGlo.copy_to_cpu = NantyGlo.copy_to_cpu | 1w0;
         Alcoma();
     }
-    @name(".Bluff") action Bluff(bit<8> Bushland) {
+    @name(".Bluff") action Bluff() {
         NantyGlo.copy_to_cpu = (bit<1>)1w1;
-        Aniak.Rainelle.Bushland = Bushland;
         Alcoma();
     }
     @disable_atomic_modify(1) @name(".Bedrock") table Bedrock {
@@ -4672,7 +4668,7 @@ control Bagwell(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         }
         key = {
             Aniak.Barnhill.Corinth & 9w0x7f : ternary @name("Barnhill.Corinth") ;
-            Aniak.Thaxton.Norma & 32w0x38000: ternary @name("Thaxton.Norma") ;
+            Aniak.Thaxton.Norma & 32w0x18000: ternary @name("Thaxton.Norma") ;
             Aniak.Cassa.Chaffee             : ternary @name("Cassa.Chaffee") ;
             Aniak.Cassa.Bradner             : ternary @name("Cassa.Bradner") ;
             Aniak.Cassa.Ravena              : ternary @name("Cassa.Ravena") ;
@@ -5628,9 +5624,9 @@ control Almeria(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
 
 control Holyoke(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic_metadata_t Wildorado, in egress_intrinsic_metadata_from_parser_t Maxwelton, inout egress_intrinsic_metadata_for_deparser_t Ihlen, inout egress_intrinsic_metadata_for_output_port_t Faulkton) {
     @name(".Skiatook") DirectCounter<bit<64>>(CounterType_t.PACKETS) Skiatook;
-    @name(".Shawville") action Shawville(bit<8> Netarts, bit<10> Pachuta) {
+    @name(".Shawville") action Shawville(bit<8> Netarts, bit<10> Pachuta, bit<3> Kinsley) {
         Skiatook.count();
-        Ihlen.drop_ctl = (bit<3>)3w1;
+        Ihlen.drop_ctl = Kinsley;
         Aniak.Gosnell.Netarts = Netarts;
         Ihlen.mirror_type = (bit<3>)3w6;
         Aniak.Mentone.Pachuta = (bit<10>)Pachuta;
@@ -5849,9 +5845,10 @@ control Valier(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
             }
         }
     };
-    @name(".Hartford") action Hartford(bit<32> Halstead) {
+    @name(".Hartford") action Hartford(bit<32> Halstead, bit<3> Chatom) {
         Aniak.Gosnell.Almond = Pettigrew.execute(32w1);
         Aniak.Gosnell.Schroeder = Aniak.Gosnell.Schroeder & Halstead;
+        Aniak.Gosnell.Chatom = Chatom;
     }
     @name(".Draketown") Register<bit<32>, bit<32>>(32w576) Draketown;
     @name(".FlatLick") RegisterAction<bit<32>, bit<32>, bit<1>>(Draketown) FlatLick = {
@@ -6024,6 +6021,7 @@ control Conejo(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         Aniak.Rainelle.Edgemoor = Sublett;
         Aniak.Rainelle.Panaca = (bit<10>)10w0;
         Aniak.Cassa.Colona = Aniak.Cassa.Colona | Aniak.Cassa.Wilmore;
+        NantyGlo.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".LaPlant") DirectMeter(MeterType_t.BYTES) LaPlant;
     @name(".Blunt") action Blunt(bit<20> Edgemoor, bit<32> Ludowici) {
@@ -6383,12 +6381,12 @@ control WestLine(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
     @name(".Fredonia") action Fredonia() {
         Aniak.Sopris.Fredonia = (bit<1>)1w1;
     }
-    @name(".Fairborn") action Fairborn(bit<2> Grannis, bit<2> Robins) {
-        Aniak.Sopris.Grannis = Robins;
+    @name(".Fairborn") action Fairborn(bit<2> Grannis) {
+        Aniak.Sopris.Grannis = Grannis;
         Crannell.Makawao.Grannis = Grannis;
     }
-    @name(".China") action China(bit<2> Grannis, bit<2> Robins) {
-        Aniak.Sopris.Grannis = Robins;
+    @name(".China") action China(bit<2> Grannis) {
+        Aniak.Sopris.Grannis = Grannis;
         Crannell.Mather.Grannis = Grannis;
     }
     @disable_atomic_modify(1) @name(".Shorter") table Shorter {
@@ -6707,7 +6705,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Stanwood = (bit<1>)1w0;
         Crannell.Reidville.Weslaco = (bit<1>)1w1;
         Crannell.Reidville.Dunstable = (bit<15>)15w0;
-        Crannell.Reidville.Cassadaga = (bit<6>)6w0;
+        Crannell.Reidville.Cassadaga = (bit<6>)6w1;
         Crannell.Reidville.Asherton = Gomez.Kaplan;
         transition accept;
     }
@@ -6731,7 +6729,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Stanwood = (bit<1>)1w1;
         Crannell.Reidville.Weslaco = (bit<1>)1w0;
         Crannell.Reidville.Dunstable = (bit<15>)15w0;
-        Crannell.Reidville.Cassadaga = (bit<6>)6w0;
+        Crannell.Reidville.Cassadaga = (bit<6>)6w1;
         Crannell.Reidville.Asherton = Oketo.Kaplan;
         transition accept;
     }
@@ -6747,7 +6745,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Stanwood = (bit<1>)1w0;
         Crannell.Reidville.Weslaco = (bit<1>)1w0;
         Crannell.Reidville.Dunstable = (bit<15>)15w0;
-        Crannell.Reidville.Cassadaga = (bit<6>)6w0;
+        Crannell.Reidville.Cassadaga = (bit<6>)6w1;
         Crannell.Reidville.Asherton = Simla.Kaplan;
         Crannell.Reidville.Torrance = (bit<7>)7w0;
         Crannell.Reidville.Corinth = Simla.Waipahu;
@@ -6771,7 +6769,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Stanwood = (bit<1>)1w0;
         Crannell.Reidville.Weslaco = (bit<1>)1w0;
         Crannell.Reidville.Dunstable = (bit<15>)15w0;
-        Crannell.Reidville.Cassadaga = (bit<6>)6w0;
+        Crannell.Reidville.Cassadaga = (bit<6>)6w1;
         Crannell.Reidville.Asherton = Maryville.Kaplan;
         Crannell.Reidville.Bridgton = (bit<32>)32w0;
         Crannell.Reidville.Torrance = (bit<7>)7w0;
@@ -6812,7 +6810,7 @@ control Margie(packet_out Talco, inout Toluca Crannell, in Provencal Aniak, in e
                 Casnovia.Sheyenne = Aniak.Wildorado.Matheson;
                 Casnovia.Kaplan = Aniak.Gosnell.Kaplan;
                 Casnovia.McKenna = Aniak.Gosnell.McKenna;
-                Casnovia.Chatom = Aniak.Wildorado.Cataract;
+                Casnovia.Chatom = (bit<5>)Aniak.Gosnell.Chatom;
                 Casnovia.Powhatan = Aniak.Wildorado.Alvwood;
                 Saugatuck.emit<Ackerman>((MirrorId_t)Aniak.Mentone.Pachuta, Casnovia);
             } else if (Ihlen.mirror_type == 3w4) {
@@ -6822,7 +6820,7 @@ control Margie(packet_out Talco, inout Toluca Crannell, in Provencal Aniak, in e
                 Casnovia.Sheyenne = Aniak.Wildorado.Matheson;
                 Casnovia.Kaplan = Aniak.Gosnell.Kaplan;
                 Casnovia.McKenna = Aniak.Gosnell.McKenna;
-                Casnovia.Chatom = Aniak.Wildorado.Cataract;
+                Casnovia.Chatom = (bit<5>)Aniak.Gosnell.Chatom;
                 Casnovia.Powhatan = Aniak.Wildorado.Alvwood;
                 Saugatuck.emit<Ackerman>((MirrorId_t)Aniak.Mentone.Pachuta, Casnovia);
             } else if (Ihlen.mirror_type == 3w6) {
@@ -6831,7 +6829,7 @@ control Margie(packet_out Talco, inout Toluca Crannell, in Provencal Aniak, in e
                 Casnovia.Waipahu = Aniak.Rainelle.Waipahu;
                 Casnovia.Sheyenne = Aniak.Wildorado.Matheson;
                 Casnovia.Kaplan = Aniak.Gosnell.Kaplan;
-                Casnovia.Chatom = Aniak.Wildorado.Cataract;
+                Casnovia.Chatom = (bit<5>)Aniak.Gosnell.Chatom;
                 Casnovia.Netarts = Aniak.Gosnell.Netarts;
                 Casnovia.Hartwick = Aniak.Gosnell.Hartwick;
                 Saugatuck.emit<Crossnore>((MirrorId_t)Aniak.Mentone.Pachuta, Casnovia);

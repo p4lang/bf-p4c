@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MPLS_BAREMETAL=1 -Ibf_arista_switch_mpls_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_mpls_baremetal --bf-rt-schema bf_arista_switch_mpls_baremetal/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -615,7 +615,7 @@ struct Quinhagak {
     bit<1>  Hammond;
     bit<1>  Soledad;
     bit<1>  LaPalma;
-    bit<3>  Hematite;
+    bit<2>  Hematite;
     bit<32> Orrick;
     bit<32> Ipava;
     bit<8>  McCammon;
@@ -773,11 +773,6 @@ struct Daleville {
     bit<16> Knoke;
     bit<1>  McAllen;
     bit<1>  Dairyland;
-}
-
-struct Penalosa {
-    bit<16> Knoke;
-    bit<1>  McAllen;
 }
 
 struct Basalt {
@@ -2476,9 +2471,6 @@ control Vanoss(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
     @name(".Hookdale") action Hookdale() {
         ;
     }
-    @name(".Schofield") action Schofield() {
-        Ocracoke.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Potosi") action Potosi() {
         Aniak.Paulding.Sheldahl = (bit<1>)1w0;
         Aniak.LaMoille.Mendocino = (bit<1>)1w0;
@@ -2502,7 +2494,6 @@ control Vanoss(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
         Aniak.Paulding.Moorcroft = Crannell.Gastonia.Moorcroft;
         Potosi();
         Mulvane();
-        Schofield();
     }
     @name(".Flippen") action Flippen() {
         Aniak.Dateland.LakeLure = (bit<3>)3w0;
@@ -2534,7 +2525,6 @@ control Vanoss(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
         Aniak.HillTop.Rains = Crannell.Mather.Rains;
         Aniak.Paulding.Dowell = Crannell.Mather.Comfrey;
         Boring();
-        Schofield();
     }
     @name(".Tillson") action Tillson() {
         Flippen();
@@ -2543,7 +2533,6 @@ control Vanoss(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
         Aniak.Millston.Rains = Crannell.Makawao.Rains;
         Aniak.Paulding.Dowell = Crannell.Makawao.Dowell;
         Boring();
-        Schofield();
     }
     @name(".Micro") action Micro(bit<20> Lattimore) {
         Aniak.Paulding.Toklat = Aniak.Sopris.LaConner;
@@ -2920,6 +2909,7 @@ control LaPlant(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrins
         Aniak.Dateland.Dolores = Lamona;
         Aniak.Dateland.Cardenas = (bit<10>)10w0;
         Aniak.Paulding.Piperton = Aniak.Paulding.Piperton | Aniak.Paulding.Fairmount;
+        Ocracoke.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".Horatio") action Horatio(bit<20> Maryhill) {
         DeepGap(Aniak.Paulding.Algodones, Aniak.Paulding.Buckeye, Aniak.Paulding.Toklat, Maryhill);
@@ -4069,6 +4059,8 @@ control Napanoch(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
         Crannell.Astor.Moorcroft = Langhorne;
         Crannell.Hohenwald.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Caspian") action Caspian() {
+    }
     @name(".Snowflake") action Snowflake(bit<8> Dugger) {
         Brunson(Dugger);
     }
@@ -4221,6 +4213,7 @@ control Napanoch(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
             Catlin();
             Antoine();
             Romeo();
+            Caspian();
             Snowflake();
             CassCity();
             Sanborn();
@@ -4280,22 +4273,20 @@ control Amsterdam(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intri
         Brookwood.count();
         Ocracoke.copy_to_cpu = Ocracoke.copy_to_cpu | 1w0;
     }
-    @name(".Council") action Council(bit<8> Dugger) {
+    @name(".Council") action Council() {
         Brookwood.count();
         Ocracoke.copy_to_cpu = (bit<1>)1w1;
-        Aniak.Dateland.Dugger = Dugger;
     }
     @name(".Capitola") action Capitola() {
         Brookwood.count();
-        Lindsborg.drop_ctl = (bit<3>)3w1;
+        Lindsborg.drop_ctl = (bit<3>)3w3;
     }
     @name(".Liberal") action Liberal() {
         Ocracoke.copy_to_cpu = Ocracoke.copy_to_cpu | 1w0;
         Capitola();
     }
-    @name(".Doyline") action Doyline(bit<8> Dugger) {
+    @name(".Doyline") action Doyline() {
         Ocracoke.copy_to_cpu = (bit<1>)1w1;
-        Aniak.Dateland.Dugger = Dugger;
         Capitola();
     }
     @disable_atomic_modify(1) @name(".Belcourt") table Belcourt {
@@ -4319,7 +4310,7 @@ control Amsterdam(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intri
         }
         key = {
             Aniak.Dozier.Corinth & 9w0x7f : ternary @name("Dozier.Corinth") ;
-            Aniak.Guion.Aldan & 32w0x38000: ternary @name("Guion.Aldan") ;
+            Aniak.Guion.Aldan & 32w0x18000: ternary @name("Guion.Aldan") ;
             Aniak.Paulding.TroutRun       : ternary @name("Paulding.TroutRun") ;
             Aniak.Paulding.Yaurel         : ternary @name("Paulding.Yaurel") ;
             Aniak.Paulding.Bucktown       : ternary @name("Paulding.Bucktown") ;
@@ -5764,12 +5755,12 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
     @name(".Belview") action Belview() {
         Aniak.LaMoille.Belview = (bit<1>)1w1;
     }
-    @name(".Gracewood") action Gracewood(bit<2> SoapLake, bit<2> Woodville) {
-        Aniak.LaMoille.SoapLake = Woodville;
+    @name(".Gracewood") action Gracewood(bit<2> SoapLake) {
+        Aniak.LaMoille.SoapLake = SoapLake;
         Crannell.Makawao.SoapLake = SoapLake;
     }
-    @name(".Beaman") action Beaman(bit<2> SoapLake, bit<2> Woodville) {
-        Aniak.LaMoille.SoapLake = Woodville;
+    @name(".Beaman") action Beaman(bit<2> SoapLake) {
+        Aniak.LaMoille.SoapLake = SoapLake;
         Crannell.Mather.SoapLake = SoapLake;
     }
     @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Neuse") table Neuse {

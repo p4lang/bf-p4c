@@ -1,12 +1,10 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
-@pa_container_size("ingress" , "Twain.Newhalem.Rains" , 16)
-@pa_container_size("ingress" , "Twain.Newhalem.$parsed" , 8)
 @pa_atomic("ingress" , "Boonsboro.McCracken.Chaffee")
 @gfm_parity_enable
 @pa_alias("ingress" , "Twain.Hillsview.Oriskany" , "Boonsboro.ElkNeck.Dugger")
@@ -588,7 +586,7 @@ struct RioPecos {
     bit<1>  Lecompte;
     bit<1>  Soledad;
     bit<1>  LaPalma;
-    bit<3>  Lenexa;
+    bit<2>  Lenexa;
     bit<32> Rudolph;
     bit<32> Bufalo;
     bit<8>  Rockham;
@@ -746,11 +744,6 @@ struct Kalkaska {
     bit<16> Belview;
     bit<1>  Broussard;
     bit<1>  Arvada;
-}
-
-struct WestLine {
-    bit<16> Belview;
-    bit<1>  Broussard;
 }
 
 struct Newfolden {
@@ -1512,7 +1505,7 @@ parser Covert(packet_in Ekwok, out Gastonia Twain, out Thaxton Boonsboro, out in
         Ekwok.extract<Loris>(Twain.Ekron);
         Ekwok.extract<McBride>(Twain.Sequim);
         Picabo.subtract<tuple<bit<16>>>({ Twain.Sequim.Vinemont });
-        Picabo.subtract_all_and_deposit<bit<16>>(Boonsboro.Sumner.Buckhorn);
+        Boonsboro.Sumner.Buckhorn = Picabo.get();
         transition select(Twain.Baudette.Kendrick ++ Greenwood.ingress_port[1:0]) {
             default: accept;
         }
@@ -1527,7 +1520,7 @@ parser Covert(packet_in Ekwok, out Gastonia Twain, out Thaxton Boonsboro, out in
         Ekwok.extract<Solomon>(Twain.Swisshome);
         Ekwok.extract<McBride>(Twain.Sequim);
         Picabo.subtract<tuple<bit<16>>>({ Twain.Sequim.Vinemont });
-        Picabo.subtract_all_and_deposit<bit<16>>(Boonsboro.Sumner.Buckhorn);
+        Boonsboro.Sumner.Buckhorn = Picabo.get();
         transition accept;
     }
     state Harriet {
@@ -2068,9 +2061,6 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
     @name(".Sedan") action Sedan() {
         ;
     }
-    @name(".Lenox") action Lenox() {
-        Readsboro.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Philip") action Philip() {
         Boonsboro.ElkNeck.Panaca = (bit<3>)3w0;
         Boonsboro.Bridger.Mendocino = Twain.Yerington[0].Mendocino;
@@ -2100,7 +2090,6 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Boonsboro.Guion.Rains = Twain.Newhalem.Rains;
         Boonsboro.McCracken.Dowell = Twain.Newhalem.Comfrey;
         Indios();
-        Lenox();
     }
     @name(".Rhinebeck") action Rhinebeck() {
         Philip();
@@ -2109,7 +2098,6 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Boonsboro.LaMoille.Rains = Twain.Millhaven.Rains;
         Boonsboro.McCracken.Dowell = Twain.Millhaven.Dowell;
         Indios();
-        Lenox();
     }
     @name(".Chatanika") action Chatanika(bit<20> Boyle) {
         Boonsboro.McCracken.Toklat = Boonsboro.Mentone.Subiaco;
@@ -2452,6 +2440,7 @@ control Natalia(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Boonsboro.ElkNeck.Ivyland = Aldan;
         Boonsboro.ElkNeck.Atoka = (bit<10>)10w0;
         Boonsboro.McCracken.Piperton = Boonsboro.McCracken.Piperton | Boonsboro.McCracken.Fairmount;
+        Readsboro.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".FairOaks") action FairOaks(bit<20> Maryhill) {
         Sunman(Boonsboro.McCracken.Algodones, Boonsboro.McCracken.Buckeye, Boonsboro.McCracken.Toklat, Maryhill);
@@ -3533,6 +3522,8 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
         Twain.Mather.Moorcroft = BirchRun;
         Twain.Martelle.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Scotland") action Scotland() {
+    }
     @name(".Addicks") action Addicks() {
         Rives.drop_ctl = (bit<3>)3w7;
     }
@@ -3591,6 +3582,7 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
             Astatula();
             Brinson();
             Westend();
+            Scotland();
             Portales();
         }
         key = {
@@ -3640,22 +3632,20 @@ control Estero(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrins
         Inkom.count();
         Readsboro.copy_to_cpu = Readsboro.copy_to_cpu | 1w0;
     }
-    @name(".BurrOak") action BurrOak(bit<8> Dugger) {
+    @name(".BurrOak") action BurrOak() {
         Inkom.count();
         Readsboro.copy_to_cpu = (bit<1>)1w1;
-        Boonsboro.ElkNeck.Dugger = Dugger;
     }
     @name(".Gardena") action Gardena() {
         Inkom.count();
-        Terral.drop_ctl = (bit<3>)3w1;
+        Terral.drop_ctl = (bit<3>)3w3;
     }
     @name(".Verdery") action Verdery() {
         Readsboro.copy_to_cpu = Readsboro.copy_to_cpu | 1w0;
         Gardena();
     }
-    @name(".Onamia") action Onamia(bit<8> Dugger) {
+    @name(".Onamia") action Onamia() {
         Readsboro.copy_to_cpu = (bit<1>)1w1;
-        Boonsboro.ElkNeck.Dugger = Dugger;
         Gardena();
     }
     @disable_atomic_modify(1) @name(".Brule") table Brule {
@@ -4380,7 +4370,7 @@ control Devola(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrins
             Twain.Baudette.Kendrick & 16w0xffc0: exact @name("Baudette.Kendrick") ;
             Boonsboro.Sumner.Grays & 5w0x1f    : exact @name("Sumner.Grays") ;
         }
-        size = 32769;
+        size = 33796;
         default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Angeles") table Angeles {
@@ -4449,9 +4439,9 @@ control Ferndale(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intri
             Nerstrand();
         }
         key = {
-            Boonsboro.Sumner.Grays                                  : exact @name("Sumner.Grays") ;
-            Boonsboro.Guion.Littleton & 128w0xffffff000000000000ffff: ternary @name("Guion.Littleton") ;
-            Twain.Baudette.Antlers & 16w0xffc0                      : ternary @name("Baudette.Antlers") ;
+            Boonsboro.Sumner.Grays                                : exact @name("Sumner.Grays") ;
+            Boonsboro.Guion.Littleton & 128w0xffff000000000000ffff: ternary @name("Guion.Littleton") ;
+            Twain.Baudette.Antlers & 16w0xffc0                    : ternary @name("Baudette.Antlers") ;
         }
         default_action = Nerstrand();
         size = 2048;
@@ -4477,8 +4467,8 @@ control Tillicum(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intri
             Magazine();
         }
         key = {
-            Boonsboro.Sumner.Grays                                  : exact @name("Sumner.Grays") ;
-            Boonsboro.Guion.Littleton & 128w0xffffff0000000000ff0000: ternary @name("Guion.Littleton") ;
+            Boonsboro.Sumner.Grays                                : exact @name("Sumner.Grays") ;
+            Boonsboro.Guion.Littleton & 128w0xffff0000000000ff0000: ternary @name("Guion.Littleton") ;
         }
         default_action = Magazine();
         size = 512;
@@ -5105,7 +5095,7 @@ control Burmester(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intr
             }
         }
         {
-            if (Boonsboro.ElkNeck.Quinhagak == 1w0 && Boonsboro.ElkNeck.Panaca != 3w2 && Boonsboro.McCracken.TroutRun == 1w0 && Boonsboro.Corvallis.Staunton == 1w0 && Boonsboro.Corvallis.Lugert == 1w0 && Boonsboro.ElkNeck.Tilton == 1w0) {
+            if (Boonsboro.ElkNeck.Quinhagak == 1w0 && Boonsboro.ElkNeck.Panaca != 3w2 && Boonsboro.McCracken.TroutRun == 1w0 && Boonsboro.Corvallis.Staunton == 1w0 && Boonsboro.Corvallis.Lugert == 1w0) {
                 if (Boonsboro.ElkNeck.Ivyland == 20w511) {
                     DuPont.apply(Twain, Boonsboro, Greenwood, Talco, Terral, Readsboro);
                 }

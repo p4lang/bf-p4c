@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -597,7 +597,7 @@ struct Sardinia {
     bit<1>  Pajaros;
     bit<1>  Grassflat;
     bit<1>  Rains;
-    bit<3>  Wauconda;
+    bit<2>  Wauconda;
     bit<32> Richvale;
     bit<32> SomesBar;
     bit<8>  Vergennes;
@@ -749,11 +749,6 @@ struct Brookneal {
     bit<16> Grays;
     bit<1>  Gotham;
     bit<1>  Osyka;
-}
-
-struct Ancho {
-    bit<16> Grays;
-    bit<1>  Gotham;
 }
 
 struct Hoven {
@@ -1866,9 +1861,6 @@ control Goodlett(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic
 }
 
 control Nixon(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_metadata_t HighRock, in ingress_intrinsic_metadata_from_parser_t Lemont, inout ingress_intrinsic_metadata_for_deparser_t Hookdale, inout ingress_intrinsic_metadata_for_tm_t WebbCity) {
-    @name(".Pearce") action Pearce() {
-        WebbCity.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Mattapex") action Mattapex() {
         Almota.Belmore.Lugert = (bit<3>)3w0;
         Almota.Swisshome.Turkey = Sedan.Moultrie[0].Turkey;
@@ -1898,7 +1890,6 @@ control Nixon(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
         Almota.Yerington.Norcatur = Sedan.Milano.Norcatur;
         Almota.Masontown.Irvine = Sedan.Milano.Commack;
         Kapowsin();
-        Pearce();
     }
     @name(".Vanoss") action Vanoss() {
         Mattapex();
@@ -1907,7 +1898,6 @@ control Nixon(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
         Almota.Wesson.Norcatur = Sedan.Garrison.Norcatur;
         Almota.Masontown.Irvine = Sedan.Garrison.Irvine;
         Kapowsin();
-        Pearce();
     }
     @name(".Potosi") action Potosi(bit<20> Osterdock) {
         Almota.Masontown.Cisco = Almota.Westville.Broussard;
@@ -2193,6 +2183,7 @@ control Brodnax(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_
         Almota.Belmore.Tombstone = Doddridge;
         Almota.Belmore.Staunton = (bit<10>)10w0;
         Almota.Masontown.Edgemoor = Almota.Masontown.Edgemoor | Almota.Masontown.Lovewell;
+        WebbCity.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".Skene") action Skene(bit<20> Eldred) {
         Bowers(Almota.Masontown.Quogue, Almota.Masontown.Findlay, Almota.Masontown.Cisco, Eldred);
@@ -3326,6 +3317,8 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Sedan.Harriet.Connell = Blanding;
         Sedan.Dushore.Keyes = (bit<16>)16w0x800;
     }
+    @name(".Ghent") action Ghent() {
+    }
     @name(".Protivin") action Protivin() {
         Weissert.drop_ctl = (bit<3>)3w7;
     }
@@ -3384,6 +3377,7 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
             Havertown();
             Napanoch();
             Pearcy();
+            Ghent();
             Ocilla();
         }
         key = {
@@ -3433,22 +3427,20 @@ control Issaquah(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic
         Herring.count();
         WebbCity.copy_to_cpu = WebbCity.copy_to_cpu | 1w0;
     }
-    @name(".DeBeque") action DeBeque(bit<8> Helton) {
+    @name(".DeBeque") action DeBeque() {
         Herring.count();
         WebbCity.copy_to_cpu = (bit<1>)1w1;
-        Almota.Belmore.Helton = Helton;
     }
     @name(".Truro") action Truro() {
         Herring.count();
-        Hookdale.drop_ctl = (bit<3>)3w1;
+        Hookdale.drop_ctl = (bit<3>)3w3;
     }
     @name(".Plush") action Plush() {
         WebbCity.copy_to_cpu = WebbCity.copy_to_cpu | 1w0;
         Truro();
     }
-    @name(".Bethune") action Bethune(bit<8> Helton) {
+    @name(".Bethune") action Bethune() {
         WebbCity.copy_to_cpu = (bit<1>)1w1;
-        Almota.Belmore.Helton = Helton;
         Truro();
     }
     @disable_atomic_modify(1) @name(".PawCreek") table PawCreek {

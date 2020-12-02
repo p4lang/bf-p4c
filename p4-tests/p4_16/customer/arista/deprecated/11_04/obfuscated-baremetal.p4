@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -658,7 +658,7 @@ struct Panaca {
     bit<1>  Lapoint;
     bit<1>  Sheldahl;
     bit<1>  Dugger;
-    bit<3>  Wamego;
+    bit<2>  Wamego;
     bit<32> Brainard;
     bit<32> Fristoe;
     bit<8>  Traverse;
@@ -816,11 +816,6 @@ struct Juneau {
     bit<16> Darien;
     bit<1>  Norma;
     bit<1>  SourLake;
-}
-
-struct Quamba {
-    bit<16> Darien;
-    bit<1>  Norma;
 }
 
 struct Sunflower {
@@ -3119,9 +3114,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
     @name(".Recluse") action Recluse() {
         ;
     }
-    @name(".Pettigrew") action Pettigrew() {
-        Goodwin.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Notus") action Notus() {
         Talco.Emida.Randall = (bit<1>)1w0;
         Talco.Mentone.Allison = (bit<1>)1w0;
@@ -3142,7 +3134,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Emida.Grabill = Boonsboro.Hallwood.Grabill;
         Talco.Emida.Moorcroft = Boonsboro.Hallwood.Moorcroft;
         Dahlgren();
-        Pettigrew();
     }
     @name(".McDonough") action McDonough() {
         Talco.Lawai.Rudolph = (bit<3>)3w5;
@@ -3153,7 +3144,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Boonsboro.Yerington.Lathrop = Talco.Emida.Lathrop;
         Notus();
         Dahlgren();
-        Pettigrew();
     }
     @name(".Ozona") action Ozona() {
         Talco.Lawai.Rudolph = (bit<3>)3w6;
@@ -3162,7 +3152,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Emida.Grabill = Boonsboro.Masontown.Grabill;
         Talco.Emida.Moorcroft = Boonsboro.Masontown.Moorcroft;
         Talco.Emida.Belfair = (bit<3>)3w0x0;
-        Pettigrew();
     }
     @name(".Leland") action Leland() {
         Talco.Lawai.Rudolph = (bit<3>)3w0;
@@ -3194,7 +3183,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Thaxton.Helton = Boonsboro.Millhaven.Helton;
         Talco.Emida.Steger = Boonsboro.Millhaven.Turkey;
         McIntyre();
-        Pettigrew();
     }
     @name(".Meyers") action Meyers() {
         Leland();
@@ -3203,7 +3191,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Sopris.Helton = Boonsboro.Belmore.Helton;
         Talco.Emida.Steger = Boonsboro.Belmore.Steger;
         McIntyre();
-        Pettigrew();
     }
     @name(".Earlham") action Earlham(bit<20> Lewellen) {
         Talco.Emida.Toklat = Talco.Guion.RedElm;
@@ -3644,6 +3631,7 @@ control Kalaloch(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Lawai.Whitewood = Mausdale;
         Talco.Lawai.Lenexa = (bit<10>)10w0;
         Talco.Emida.Wilmore = Talco.Emida.Wilmore | Talco.Emida.Piperton;
+        Goodwin.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".Yatesboro") action Yatesboro(bit<20> Kaluaaha) {
         Papeton(Talco.Emida.Horton, Talco.Emida.Lacona, Talco.Emida.Toklat, Kaluaaha);
@@ -4916,6 +4904,8 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
         Boonsboro.Greenland.Moorcroft = Hatchel;
         Boonsboro.Shingler.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Crystola") action Crystola() {
+    }
     @name(".LasLomas") action LasLomas(bit<8> Garibaldi) {
         Boonsboro.Belmore.Garibaldi = Boonsboro.Belmore.Garibaldi + Garibaldi;
     }
@@ -5028,6 +5018,13 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
         Boonsboro.Gastonia.setValid();
         McDougal(Talco.Livonia.Uintah, 16w12, 16w32, Boonsboro.Masontown.Grabill, Boonsboro.Masontown.Moorcroft, Cornish, Hatchel, Nerstrand, Tekonsha);
     }
+    @name(".RedBay") action RedBay(bit<24> Cornish, bit<24> Hatchel, bit<16> Nerstrand, bit<32> Tekonsha) {
+        LasLomas(8w0);
+        Dundee(Cornish, Hatchel, Nerstrand, Tekonsha);
+    }
+    @name(".Tunis") action Tunis(bit<24> Cornish, bit<24> Hatchel, bit<16> Nerstrand, bit<32> Tekonsha) {
+        Dundee(Cornish, Hatchel, Nerstrand, Tekonsha);
+    }
     @name(".Pound") action Pound(bit<24> Cornish, bit<24> Hatchel, bit<16> Nerstrand, bit<32> Tekonsha) {
         LasLomas(8w255);
         McDougal(Boonsboro.Belmore.StarLake, 16w30, 16w50, Cornish, Hatchel, Cornish, Hatchel, Nerstrand, Tekonsha);
@@ -5059,23 +5056,28 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
     @name(".Olivet") action Olivet(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
         Ickesburg(Talco.Livonia.Uintah, 16w12, 16w12, Boonsboro.Masontown.Grabill, Boonsboro.Masontown.Moorcroft, Cornish, Hatchel, Comfrey, Kalida, Wallula, Dennison, Nerstrand);
     }
+    @name(".Nordland") action Nordland(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
+        LasLomas(8w0);
+        Ickesburg(Boonsboro.Belmore.StarLake, 16w30, 16w30, Boonsboro.Masontown.Grabill, Boonsboro.Masontown.Moorcroft, Cornish, Hatchel, Comfrey, Kalida, Wallula, Dennison, Nerstrand);
+    }
     @name(".Upalco") action Upalco(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
         LasLomas(8w255);
         Ickesburg(Boonsboro.Belmore.StarLake, 16w30, 16w30, Cornish, Hatchel, Cornish, Hatchel, Comfrey, Kalida, Wallula, Dennison, Nerstrand);
     }
-    @name(".Hartford") action Hartford(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
-        Buras(8w255);
-        Ickesburg(Boonsboro.Millhaven.Killen, 16w70, 16w70, Cornish, Hatchel, Cornish, Hatchel, Comfrey, Kalida, Wallula, Dennison, Nerstrand);
+    @name(".Alnwick") action Alnwick(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
+        Ferndale(Boonsboro.Belmore.StarLake, 16w30, Cornish, Hatchel, Cornish, Hatchel, Nerstrand);
+        Ontonagon(Boonsboro.Belmore.StarLake, 16s30, Comfrey, Kalida, Wallula, Dennison);
+        Boonsboro.Belmore.Garibaldi = Boonsboro.Belmore.Garibaldi - 8w1;
     }
     @name(".Osakis") action Osakis(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
         Ferndale(Boonsboro.Belmore.StarLake, 16w30, Cornish, Hatchel, Cornish, Hatchel, Nerstrand);
         Ontonagon(Boonsboro.Belmore.StarLake, 16s30, Comfrey, Kalida, Wallula, Dennison);
         Boonsboro.Belmore.Garibaldi = Boonsboro.Belmore.Garibaldi - 8w1;
     }
-    @name(".Halstead") action Halstead(bit<24> Cornish, bit<24> Hatchel, bit<32> Comfrey, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<16> Nerstrand) {
-        Ferndale(Boonsboro.Millhaven.Killen, 16w70, Cornish, Hatchel, Cornish, Hatchel, Nerstrand);
-        Ontonagon(Boonsboro.Millhaven.Killen, 16s70, Comfrey, Kalida, Wallula, Dennison);
-        Buras(8w255);
+    @name(".Ranier") action Ranier(bit<24> Cornish, bit<24> Hatchel, bit<16> Nerstrand, bit<32> Tekonsha) {
+        Ferndale(Boonsboro.Belmore.StarLake, 16w30, Cornish, Hatchel, Cornish, Hatchel, Nerstrand);
+        Devola(Boonsboro.Belmore.StarLake, 16w50, Tekonsha);
+        Boonsboro.Belmore.Garibaldi = Boonsboro.Belmore.Garibaldi - 8w1;
     }
     @name(".Hartwell") action Hartwell() {
         Centre.drop_ctl = (bit<3>)3w7;
@@ -5135,6 +5137,7 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
             Baskin();
             Wakenda();
             Mynard();
+            Crystola();
             Hilltop();
             Melrose();
             Angeles();
@@ -5144,14 +5147,17 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
             Twichell();
             Konnarock();
             Tillicum();
+            RedBay();
+            Tunis();
             Pound();
             Oakley();
             Dundee();
             Olivet();
+            Nordland();
             Upalco();
+            Alnwick();
             Osakis();
-            Hartford();
-            Halstead();
+            Ranier();
             Dougherty();
         }
         key = {
@@ -5206,22 +5212,20 @@ control Nashwauk(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         GlenDean.count();
         Goodwin.copy_to_cpu = Goodwin.copy_to_cpu | 1w0;
     }
-    @name(".Calimesa") action Calimesa(bit<8> Bushland) {
+    @name(".Calimesa") action Calimesa() {
         GlenDean.count();
         Goodwin.copy_to_cpu = (bit<1>)1w1;
-        Talco.Lawai.Bushland = Bushland;
     }
     @name(".Keller") action Keller() {
         GlenDean.count();
-        HighRock.drop_ctl = (bit<3>)3w1;
+        HighRock.drop_ctl = (bit<3>)3w3;
     }
     @name(".Elysburg") action Elysburg() {
         Goodwin.copy_to_cpu = Goodwin.copy_to_cpu | 1w0;
         Keller();
     }
-    @name(".Charters") action Charters(bit<8> Bushland) {
+    @name(".Charters") action Charters() {
         Goodwin.copy_to_cpu = (bit<1>)1w1;
-        Talco.Lawai.Bushland = Bushland;
         Keller();
     }
     @disable_atomic_modify(1) @name(".LaMarque") table LaMarque {
@@ -5245,7 +5249,7 @@ control Nashwauk(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         }
         key = {
             Talco.Toluca.Corinth & 9w0x7f     : ternary @name("Toluca.Corinth") ;
-            Talco.Elvaston.Cutten & 32w0x38000: ternary @name("Elvaston.Cutten") ;
+            Talco.Elvaston.Cutten & 32w0x18000: ternary @name("Elvaston.Cutten") ;
             Talco.Emida.Chaffee               : ternary @name("Emida.Chaffee") ;
             Talco.Emida.Bradner               : ternary @name("Emida.Bradner") ;
             Talco.Emida.Ravena                : ternary @name("Emida.Ravena") ;
@@ -5265,7 +5269,7 @@ control Nashwauk(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
             Talco.Mickleton.SomesBar          : ternary @name("Mickleton.SomesBar") ;
             Talco.Mickleton.Richvale          : ternary @name("Mickleton.Richvale") ;
             Talco.Emida.Rocklin               : ternary @name("Emida.Rocklin") ;
-            Talco.Emida.Latham & 3w0x6        : ternary @name("Emida.Latham") ;
+            Talco.Emida.Latham & 3w0x2        : ternary @name("Emida.Latham") ;
             Goodwin.copy_to_cpu               : ternary @name("Goodwin.copy_to_cpu") ;
             Talco.Emida.Wakita                : ternary @name("Emida.Wakita") ;
             Talco.Emida.Buckfield             : ternary @name("Emida.Buckfield") ;
@@ -6847,9 +6851,9 @@ control Elbing(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsi
                 Monteview.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
             }
             Lansdale.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
-            Gurdon.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
             Mocane.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
             Hawthorne.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
+            Gurdon.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
             Glenpool.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);
         }
         Sheyenne.apply(Boonsboro, Talco, Toluca, Terral, HighRock, Goodwin);

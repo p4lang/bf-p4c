@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2SUBINTF=1 -Ibf_arista_switch_l2subintf/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_l2subintf --bf-rt-schema bf_arista_switch_l2subintf/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -603,7 +603,7 @@ struct Weatherby {
     bit<1>  Bufalo;
     bit<1>  Randall;
     bit<1>  Dugger;
-    bit<3>  Rockham;
+    bit<2>  Rockham;
     bit<32> Hiland;
     bit<32> Manilla;
     bit<8>  Hammond;
@@ -761,11 +761,6 @@ struct Ackley {
     bit<16> Kalkaska;
     bit<1>  Newfolden;
     bit<1>  Candle;
-}
-
-struct Navarro {
-    bit<16> Kalkaska;
-    bit<1>  Newfolden;
 }
 
 struct Knoke {
@@ -2492,9 +2487,6 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
     @name(".Wanamassa") action Wanamassa() {
         ;
     }
-    @name(".Edgemont") action Edgemont() {
-        Barnhill.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Tenstrike") action Tenstrike() {
         Balmorhea.Cassa.Mayday = (bit<1>)1w0;
         Balmorhea.Sopris.Allison = (bit<1>)1w0;
@@ -2515,7 +2507,6 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         Balmorhea.Cassa.Grabill = Daisytown.Wesson.Grabill;
         Balmorhea.Cassa.Moorcroft = Daisytown.Wesson.Moorcroft;
         Castle();
-        Edgemont();
     }
     @name(".Nixon") action Nixon() {
         Balmorhea.Rainelle.Madera = (bit<3>)3w0;
@@ -2547,7 +2538,6 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         Balmorhea.Buckhorn.Helton = Daisytown.Hillsview.Helton;
         Balmorhea.Cassa.Steger = Daisytown.Hillsview.Turkey;
         Midas();
-        Edgemont();
     }
     @name(".Crown") action Crown() {
         Nixon();
@@ -2556,7 +2546,6 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         Balmorhea.Pawtucket.Helton = Daisytown.Gastonia.Helton;
         Balmorhea.Cassa.Steger = Daisytown.Gastonia.Steger;
         Midas();
-        Edgemont();
     }
     @name(".Vanoss") action Vanoss(bit<20> Potosi) {
         Balmorhea.Cassa.Toklat = Balmorhea.HillTop.Ericsburg;
@@ -2972,6 +2961,7 @@ control Coupland(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         Balmorhea.Rainelle.Edgemoor = Sublett;
         Balmorhea.Rainelle.Panaca = (bit<10>)10w0;
         Balmorhea.Cassa.Colona = Balmorhea.Cassa.Colona | Balmorhea.Cassa.Wilmore;
+        Barnhill.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".RedLake") action RedLake(bit<20> Kaluaaha) {
         Laclede(Balmorhea.Cassa.Horton, Balmorhea.Cassa.Lacona, Balmorhea.Cassa.Toklat, Kaluaaha);
@@ -4186,6 +4176,8 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         Daisytown.Livonia.Moorcroft = Talbert;
         Daisytown.Bernice.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Kerby") action Kerby() {
+    }
     @name(".Saxis") action Saxis(bit<8> Garibaldi) {
         Daisytown.Gastonia.Garibaldi = Daisytown.Gastonia.Garibaldi + Garibaldi;
     }
@@ -4287,6 +4279,13 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         Daisytown.Greenwood.setValid();
         Estrella(Balmorhea.NantyGlo.Uintah, 16w12, 16w32, Daisytown.Kamrar.Grabill, Daisytown.Kamrar.Moorcroft, Clarkdale, Talbert, Ragley, Ozark);
     }
+    @name(".Gwynn") action Gwynn(bit<24> Clarkdale, bit<24> Talbert, bit<16> Ragley, bit<32> Ozark) {
+        Saxis(8w0);
+        Amsterdam(Clarkdale, Talbert, Ragley, Ozark);
+    }
+    @name(".Rolla") action Rolla(bit<24> Clarkdale, bit<24> Talbert, bit<16> Ragley, bit<32> Ozark) {
+        Amsterdam(Clarkdale, Talbert, Ragley, Ozark);
+    }
     @name(".Brookwood") action Brookwood(bit<24> Clarkdale, bit<24> Talbert, bit<16> Ragley, bit<32> Ozark) {
         Saxis(8w255);
         Estrella(Daisytown.Gastonia.StarLake, 16w30, 16w50, Clarkdale, Talbert, Clarkdale, Talbert, Ragley, Ozark);
@@ -4353,12 +4352,15 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
             Wauregan();
             CassCity();
             Sanborn();
+            Kerby();
             Ivanpah();
             Carlson();
             Newland();
             Waumandee();
             Dunkerton();
             Gunder();
+            Gwynn();
+            Rolla();
             Brookwood();
             Granville();
             Amsterdam();
@@ -4416,22 +4418,20 @@ control Parmelee(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         Stone.count();
         Barnhill.copy_to_cpu = Barnhill.copy_to_cpu | 1w0;
     }
-    @name(".TinCity") action TinCity(bit<8> Bushland) {
+    @name(".TinCity") action TinCity() {
         Stone.count();
         Barnhill.copy_to_cpu = (bit<1>)1w1;
-        Balmorhea.Rainelle.Bushland = Bushland;
     }
     @name(".Comunas") action Comunas() {
         Stone.count();
-        Udall.drop_ctl = (bit<3>)3w1;
+        Udall.drop_ctl = (bit<3>)3w3;
     }
     @name(".Alcoma") action Alcoma() {
         Barnhill.copy_to_cpu = Barnhill.copy_to_cpu | 1w0;
         Comunas();
     }
-    @name(".Kilbourne") action Kilbourne(bit<8> Bushland) {
+    @name(".Kilbourne") action Kilbourne() {
         Barnhill.copy_to_cpu = (bit<1>)1w1;
-        Balmorhea.Rainelle.Bushland = Bushland;
         Comunas();
     }
     @disable_atomic_modify(1) @name(".Bluff") table Bluff {
@@ -4455,7 +4455,7 @@ control Parmelee(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         }
         key = {
             Balmorhea.Hapeville.Corinth & 9w0x7f: ternary @name("Hapeville.Corinth") ;
-            Balmorhea.Thaxton.Norma & 32w0x38000: ternary @name("Thaxton.Norma") ;
+            Balmorhea.Thaxton.Norma & 32w0x18000: ternary @name("Thaxton.Norma") ;
             Balmorhea.Cassa.Chaffee             : ternary @name("Cassa.Chaffee") ;
             Balmorhea.Cassa.Bradner             : ternary @name("Cassa.Bradner") ;
             Balmorhea.Cassa.Ravena              : ternary @name("Cassa.Ravena") ;

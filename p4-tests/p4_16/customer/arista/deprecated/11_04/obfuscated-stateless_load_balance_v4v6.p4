@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -691,7 +691,7 @@ struct Lecompte {
     bit<1>  Standish;
     bit<1>  Onycha;
     bit<1>  Laurelton;
-    bit<3>  Blairsden;
+    bit<2>  Blairsden;
     bit<32> Clover;
     bit<32> Barrow;
     bit<8>  Foster;
@@ -849,11 +849,6 @@ struct Cutten {
     bit<16> Maddock;
     bit<1>  Sublett;
     bit<1>  Wisdom;
-}
-
-struct Noonan {
-    bit<16> Maddock;
-    bit<1>  Sublett;
 }
 
 struct Lewiston {
@@ -2839,9 +2834,6 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
     @name(".Starkey") action Starkey() {
         ;
     }
-    @name(".Tanner") action Tanner() {
-        Hohenwald.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Plano") action Plano() {
         Millstone.Guion.Placedo = (bit<1>)1w0;
         Millstone.Baytown.Spearman = (bit<1>)1w0;
@@ -2863,7 +2855,6 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         Millstone.Guion.Grabill = Jayton.Baudette.Grabill;
         Millstone.Guion.Moorcroft = Jayton.Baudette.Moorcroft;
         Leoma();
-        Tanner();
     }
     @name(".Anawalt") action Anawalt() {
         Millstone.Mickleton.Ipava = (bit<3>)3w0;
@@ -2894,7 +2885,6 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         Millstone.Nuyaka.Grannis = Jayton.Hallwood.Grannis;
         Millstone.Guion.Quogue = Jayton.Hallwood.Riner;
         Weissert();
-        Tanner();
     }
     @name(".NorthRim") action NorthRim() {
         Anawalt();
@@ -2903,7 +2893,6 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         Millstone.ElkNeck.Grannis = Jayton.Sequim.Grannis;
         Millstone.Guion.Quogue = Jayton.Sequim.Quogue;
         Weissert();
-        Tanner();
     }
     @name(".Wardville") action Wardville(bit<20> Oregon) {
         Millstone.Guion.Toklat = Millstone.Elkville.FortHunt;
@@ -3221,6 +3210,7 @@ control Ugashik(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         Millstone.Mickleton.Hiland = Moose;
         Millstone.Mickleton.Orrick = (bit<10>)10w0;
         Millstone.Guion.Dyess = Millstone.Guion.Dyess | Millstone.Guion.Westhoff;
+        Hohenwald.mcast_grp_a = (bit<16>)16w0;
     }
     @name(".Heizer") action Heizer(bit<20> Calcasieu) {
         Rhodell(Millstone.Guion.Lacona, Millstone.Guion.Albemarle, Millstone.Guion.Toklat, Calcasieu);
@@ -4404,6 +4394,8 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Jayton.Gambrills.Moorcroft = LasLomas;
         Jayton.Masontown.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".Wells") action Wells() {
+    }
     @name(".Edinburgh") action Edinburgh(bit<8> Weinert) {
         Jayton.Sequim.Weinert = Jayton.Sequim.Weinert + Weinert;
     }
@@ -4504,6 +4496,13 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Jayton.Wesson.setValid();
         Ickesburg(Millstone.Sumner.Uintah, 16w12, 16w32, Jayton.Baudette.Grabill, Jayton.Baudette.Moorcroft, Crystola, LasLomas, RedBay, Herring);
     }
+    @name(".Nordland") action Nordland(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
+        Edinburgh(8w0);
+        Olivet(Crystola, LasLomas, RedBay, Herring);
+    }
+    @name(".Upalco") action Upalco(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
+        Olivet(Crystola, LasLomas, RedBay, Herring);
+    }
     @name(".Alnwick") action Alnwick(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
         Edinburgh(8w255);
         Ickesburg(Jayton.Sequim.Rains, 16w30, 16w50, Crystola, LasLomas, Crystola, LasLomas, RedBay, Herring);
@@ -4535,9 +4534,8 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Nerstrand(8w255);
         Thistle(Jayton.Hallwood.Turkey, 16w70, 16w70, Crystola, LasLomas, Crystola, LasLomas, Kalida, Wallula, Dennison, Fairhaven, RedBay);
     }
-    @name(".Spindale") action Spindale(bit<24> Crystola, bit<24> LasLomas, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven, bit<16> RedBay) {
-        Batchelor(Jayton.Hallwood.Turkey, 16w70, Crystola, LasLomas, Crystola, LasLomas, RedBay);
-        Millett(Jayton.Hallwood.Turkey, 16s70, Kalida, Wallula, Dennison, Fairhaven);
+    @name(".Bothwell") action Bothwell(bit<24> Crystola, bit<24> LasLomas, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven, bit<16> RedBay) {
+        Thistle(Jayton.Hallwood.Turkey, 16w70, 16w70, Crystola, LasLomas, Crystola, LasLomas, Kalida, Wallula, Dennison, Fairhaven, RedBay);
     }
     @name(".Ranier") action Ranier() {
         Nucla.drop_ctl = (bit<3>)3w7;
@@ -4597,17 +4595,20 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
             Melrose();
             Angeles();
             Ammon();
+            Wells();
             Tillicum();
             Konnarock();
             Magazine();
             McDougal();
             Tunis();
             Pound();
+            Nordland();
+            Upalco();
             Alnwick();
             Osakis();
             Olivet();
             Karluk();
-            Spindale();
+            Bothwell();
             Deeth();
         }
         key = {
@@ -4657,22 +4658,20 @@ control TenSleep(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         Nashwauk.count();
         Hohenwald.copy_to_cpu = Hohenwald.copy_to_cpu | 1w0;
     }
-    @name(".Cidra") action Cidra(bit<8> Loring) {
+    @name(".Cidra") action Cidra() {
         Nashwauk.count();
         Hohenwald.copy_to_cpu = (bit<1>)1w1;
-        Millstone.Mickleton.Loring = Loring;
     }
     @name(".GlenDean") action GlenDean() {
         Nashwauk.count();
-        Alstown.drop_ctl = (bit<3>)3w1;
+        Alstown.drop_ctl = (bit<3>)3w3;
     }
     @name(".MoonRun") action MoonRun() {
         Hohenwald.copy_to_cpu = Hohenwald.copy_to_cpu | 1w0;
         GlenDean();
     }
-    @name(".Calimesa") action Calimesa(bit<8> Loring) {
+    @name(".Calimesa") action Calimesa() {
         Hohenwald.copy_to_cpu = (bit<1>)1w1;
-        Millstone.Mickleton.Loring = Loring;
         GlenDean();
     }
     @name(".Keller") DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) Keller;
@@ -4719,7 +4718,7 @@ control TenSleep(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Belmont.Pinole        : ternary @name("Belmont.Pinole") ;
             Millstone.Belmont.Monahans      : ternary @name("Belmont.Monahans") ;
             Millstone.Guion.Wartburg        : ternary @name("Guion.Wartburg") ;
-            Millstone.Guion.Sledge & 3w0x6  : ternary @name("Guion.Sledge") ;
+            Millstone.Guion.Sledge & 3w0x2  : ternary @name("Guion.Sledge") ;
             Hohenwald.copy_to_cpu           : ternary @name("Hohenwald.copy_to_cpu") ;
             Millstone.Guion.Lakehills       : ternary @name("Guion.Lakehills") ;
             Millstone.Guion.Morstein        : ternary @name("Guion.Morstein") ;
@@ -6215,7 +6214,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
         Berrydale = Jayton.Earling.Solomon;
         Jayton.Earling.Solomon = Jayton.Earling.Kendrick;
         Jayton.Earling.Kendrick = Berrydale;
-        Jayton.Hallwood.Palmhurst = (bit<8>)8w65;
+        Jayton.Sequim.Weinert = (bit<8>)8w65;
         Jayton.Earling.Beasley = Jayton.Earling.Beasley | 8w0x4;
         Jayton.Martelle.setValid();
         Millstone.Guion.Stratford = (bit<16>)16w0x4;

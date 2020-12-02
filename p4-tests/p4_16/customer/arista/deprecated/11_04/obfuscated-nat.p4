@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.3.1-pr.1 (SHA: 42e9cdd)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -683,7 +683,7 @@ struct McCammon {
     bit<1>  Pathfork;
     bit<1>  Gasport;
     bit<1>  Laurelton;
-    bit<3>  Tombstone;
+    bit<2>  Tombstone;
     bit<32> Subiaco;
     bit<32> Marcus;
     bit<8>  Pittsboro;
@@ -841,11 +841,6 @@ struct Moose {
     bit<16> Quinault;
     bit<1>  Komatke;
     bit<1>  Salix;
-}
-
-struct LongPine {
-    bit<16> Quinault;
-    bit<1>  Komatke;
 }
 
 struct Minturn {
@@ -3062,9 +3057,6 @@ control Arial(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
     @name(".Lauada") action Lauada() {
         ;
     }
-    @name(".Masardis") action Masardis() {
-        Wesson.mcast_grp_a = (bit<16>)16w0;
-    }
     @name(".Amalga") action Amalga() {
         Yorkshire.NantyGlo.Soledad = (bit<1>)1w0;
         Yorkshire.Bernice.Spearman = (bit<1>)1w0;
@@ -3087,7 +3079,6 @@ control Arial(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         Longwood.Crannell.Lathrop = Yorkshire.NantyGlo.Lathrop;
         Amalga();
         Burmah();
-        Masardis();
     }
     @name(".WestPark") action WestPark() {
         Yorkshire.Ocracoke.Blairsden = (bit<3>)3w0;
@@ -3121,7 +3112,6 @@ control Arial(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         Yorkshire.Dozier.Grannis = Longwood.Nevis.Grannis;
         Yorkshire.NantyGlo.Quogue = Longwood.Nevis.Riner;
         Jenifer();
-        Masardis();
     }
     @name(".Endicott") action Endicott() {
         WestPark();
@@ -3130,7 +3120,6 @@ control Arial(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         Yorkshire.Wildorado.Grannis = Longwood.Aniak.Grannis;
         Yorkshire.NantyGlo.Quogue = Longwood.Aniak.Quogue;
         Jenifer();
-        Masardis();
     }
     @name(".BigRock") action BigRock(bit<20> Timnath) {
         Yorkshire.NantyGlo.Toklat = Yorkshire.BealCity.Wellton;
@@ -4569,6 +4558,8 @@ control Moorman(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
         Longwood.Hallwood.Moorcroft = Dougherty;
         Longwood.Empire.Lathrop = (bit<16>)16w0x800;
     }
+    @name(".LasLomas") action LasLomas() {
+    }
     @name(".Keenes") action Keenes() {
         Baskin(Yorkshire.Ocracoke.Loring);
     }
@@ -4638,6 +4629,7 @@ control Moorman(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
             Wakenda();
             Mynard();
             Crystola();
+            LasLomas();
             Keenes();
             Shevlin();
             Eudora();
@@ -4695,22 +4687,20 @@ control Wells(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         Twichell.count();
         Wesson.copy_to_cpu = Wesson.copy_to_cpu | 1w0;
     }
-    @name(".Broadford") action Broadford(bit<8> Loring) {
+    @name(".Broadford") action Broadford() {
         Twichell.count();
         Wesson.copy_to_cpu = (bit<1>)1w1;
-        Yorkshire.Ocracoke.Loring = Loring;
     }
     @name(".Nerstrand") action Nerstrand() {
         Twichell.count();
-        Humeston.drop_ctl = (bit<3>)3w1;
+        Humeston.drop_ctl = (bit<3>)3w3;
     }
     @name(".Konnarock") action Konnarock() {
         Wesson.copy_to_cpu = Wesson.copy_to_cpu | 1w0;
         Nerstrand();
     }
-    @name(".Tillicum") action Tillicum(bit<8> Loring) {
+    @name(".Tillicum") action Tillicum() {
         Wesson.copy_to_cpu = (bit<1>)1w1;
-        Yorkshire.Ocracoke.Loring = Loring;
         Nerstrand();
     }
     @disable_atomic_modify(1) @name(".Trail") table Trail {
@@ -4734,7 +4724,7 @@ control Wells(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         }
         key = {
             Yorkshire.Masontown.Corinth & 9w0x7f   : ternary @name("Masontown.Corinth") ;
-            Yorkshire.Greenwood.Amenia & 32w0x38000: ternary @name("Greenwood.Amenia") ;
+            Yorkshire.Greenwood.Amenia & 32w0x18000: ternary @name("Greenwood.Amenia") ;
             Yorkshire.NantyGlo.Bradner             : ternary @name("NantyGlo.Bradner") ;
             Yorkshire.NantyGlo.Bucktown            : ternary @name("NantyGlo.Bucktown") ;
             Yorkshire.NantyGlo.Hulbert             : ternary @name("NantyGlo.Hulbert") ;
@@ -5708,7 +5698,7 @@ control Nordheim(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intr
 control Canton(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrinsic_metadata_t Yerington, in egress_intrinsic_metadata_from_parser_t Rumson, inout egress_intrinsic_metadata_for_deparser_t McKee, inout egress_intrinsic_metadata_for_output_port_t Bigfork) {
     @name(".Hodges") action Hodges(bit<8> Freeny) {
         Yorkshire.Hillsview.Freeny = Freeny;
-        Yorkshire.Ocracoke.Tombstone = (bit<3>)3w0;
+        Yorkshire.Ocracoke.Tombstone = (bit<2>)2w0;
     }
     @disable_atomic_modify(1) @ways(2) @pack(4) @name(".Rendon") table Rendon {
         actions = {
@@ -5730,7 +5720,7 @@ control Canton(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
 
 control Northboro(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrinsic_metadata_t Yerington, in egress_intrinsic_metadata_from_parser_t Rumson, inout egress_intrinsic_metadata_for_deparser_t McKee, inout egress_intrinsic_metadata_for_output_port_t Bigfork) {
     @name(".Waterford") DirectCounter<bit<64>>(CounterType_t.PACKETS) Waterford;
-    @name(".RushCity") action RushCity(bit<3> Coalwood) {
+    @name(".RushCity") action RushCity(bit<2> Coalwood) {
         Waterford.count();
         Yorkshire.Ocracoke.Tombstone = Coalwood;
     }
@@ -5760,7 +5750,7 @@ control Northboro(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_int
 
 control Browning(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrinsic_metadata_t Yerington, in egress_intrinsic_metadata_from_parser_t Rumson, inout egress_intrinsic_metadata_for_deparser_t McKee, inout egress_intrinsic_metadata_for_output_port_t Bigfork) {
     @name(".Clarinda") DirectCounter<bit<64>>(CounterType_t.PACKETS) Clarinda;
-    @name(".RushCity") action RushCity(bit<3> Coalwood) {
+    @name(".RushCity") action RushCity(bit<2> Coalwood) {
         Clarinda.count();
         Yorkshire.Ocracoke.Tombstone = Coalwood;
     }
@@ -6197,7 +6187,7 @@ control Waretown(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         }
         {
             Carrizozo.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
-            if (Yorkshire.Ocracoke.Brainard == 1w0 && Yorkshire.Ocracoke.Blairsden != 3w2 && Yorkshire.NantyGlo.Bradner == 1w0 && Yorkshire.Livonia.Pettry == 1w0 && Yorkshire.Livonia.Montague == 1w0 && Yorkshire.Ocracoke.Gause == 1w0) {
+            if (Yorkshire.Ocracoke.Brainard == 1w0 && Yorkshire.Ocracoke.Blairsden != 3w2 && Yorkshire.NantyGlo.Bradner == 1w0 && Yorkshire.Livonia.Pettry == 1w0 && Yorkshire.Livonia.Montague == 1w0) {
                 if (Yorkshire.Ocracoke.Traverse == 20w511) {
                     Hookstown.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
                 }
@@ -6222,9 +6212,9 @@ control Waretown(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
                 Nashua.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             }
             Ahmeek.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
-            ElJebel.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Neuse.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Poynette.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
+            ElJebel.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Lenox.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
         }
         Almont.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
