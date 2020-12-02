@@ -11052,7 +11052,12 @@ control IngressHdrStackCounters(
 
             hdr.outer.arp.isValid(): exact;
             hdr.outer.ipv4.isValid(): exact;
+#if REMOVE_PHV_ALLOC_XFAIL
+            hdr.outer.ipv6.isValid(): exact;
+#else
+#warning REMOVE_PHV_ALLOC_XFAIL not enabled
             hdr_outer_ipv6_isValid: exact;
+#endif
 
             hdr.outer.icmp.isValid(): exact;
             hdr.outer.igmp.isValid(): exact;
@@ -11364,6 +11369,23 @@ control IngressHdrStackCounters(
 
     table inner_stack_hdr_cntr_tbl {
         key = {
+#if REMOVE_PHV_ALLOC_XFAIL
+            hdr.inner.ethernet.isValid(): exact;
+            hdr.inner.vlan_tag[0].isValid(): exact;
+            hdr.inner.arp.isValid(): exact;
+            hdr.inner.ipv4.isValid(): exact;
+            hdr.inner.ipv6.isValid(): exact;
+            hdr.inner.icmp.isValid(): exact;
+            hdr.inner.igmp.isValid(): exact;
+            hdr.inner.udp.isValid(): exact;
+            hdr.inner.tcp.isValid(): exact;
+            hdr.inner.sctp.isValid(): exact;
+            hdr.inner.gre.isValid(): exact;
+            hdr.inner.esp.isValid(): exact;
+            hdr.inner.gtp_v1_base.isValid(): exact;
+            hdr.inner.gtp_v2_base.isValid(): exact;
+#else
+#warning REMOVE_PHV_ALLOC_XFAIL not enabled
             hdr.inner.ethernet.isValid(): exact;
             hdr.inner.vlan_tag[0].isValid(): exact;
             hdr_inner_arp_isValid: exact;
@@ -11378,6 +11400,7 @@ control IngressHdrStackCounters(
             hdr_inner_esp_isValid: exact;
             hdr_inner_gtp_v1_base_isValid: exact;
             hdr_inner_gtp_v2_base_isValid: exact;
+#endif
         }
 
         actions = {

@@ -340,39 +340,33 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
 
 static UpdateConditionInfo*
 getUpdateCondition(const IR::Expression* condition) {
-    bool leftOk = false, rightOk = false, updateConditionNegated = false;
-    Pattern::Match<IR::Member> field;
-    Pattern::Match<IR::Constant> constant;
+    bool conditionNegated = false;
     if (auto neq = condition->to<IR::LNot>()) {
            condition = neq->expr;
-           updateConditionNegated = true;
+           conditionNegated = true;
     }
     if (auto* condMember = condition->to<IR::Member>()) {
-        if (condMember->type->is<IR::Type_Boolean>()) {
-            return new UpdateConditionInfo(condMember, updateConditionNegated);
-        }
+        if (condMember->type->is<IR::Type_Boolean>())
+            return new UpdateConditionInfo(condMember, conditionNegated);
     }
-    if (auto* eq = condition->to<IR::Equ>()) {
-        if ((field == constant).match(eq)) {
-           if (constant->type->width_bits() == 1) {
-               rightOk = true;
-               if (constant->value != 0) {
-                   updateConditionNegated |= false;
-               } else {
-                   updateConditionNegated |= true;
-               }
-           }
-           if (field->type->width_bits() == 1) {
-               leftOk = true;
-           }
-        }
-        if (leftOk && rightOk) {
-           return new UpdateConditionInfo(eq->left->to<IR::Member>(),
-                                               updateConditionNegated);
-        }
+    Pattern::Match<IR::Member> field;
+    Pattern::Match<IR::Constant> constant;
+    if ((field == constant).match(condition) &&
+        field->type->width_bits() == 1 &&
+        constant->type->width_bits() == 1) {
+        if (constant->value == 0)
+            conditionNegated = !conditionNegated;
+        return new UpdateConditionInfo(field->to<IR::Member>(), conditionNegated);
+    }
+    if ((field != constant).match(condition) &&
+        field->type->width_bits() == 1 &&
+        constant->type->width_bits() == 1) {
+        if (constant->value == 1)
+            conditionNegated = !conditionNegated;
+        return new UpdateConditionInfo(field->to<IR::Member>(), conditionNegated);
     }
     ::error("Tofino only supports 1-bit checksum update condition in the deparser, "
-            " in the form of \"cond == 1\" or \"cond == 0\". "
+            " in the form of \"cond == 1\", \"cond == 0\", \"cond != 1\", \"cond != 0\". "
             "Please move the update condition into the control flow: %1%", condition);
     return nullptr;
 }

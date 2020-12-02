@@ -5,12 +5,12 @@
  *  See test-bf_getst_helper.cpp for example usage.
  */
 
+#include <boost/operators.hpp>
 #include <string>
 #include <vector>
 #include <iosfwd>
 #include <initializer_list>
 #include <regex>
-#include "boost/operators.hpp"
 
 #include "lib/compile_context.h"
 

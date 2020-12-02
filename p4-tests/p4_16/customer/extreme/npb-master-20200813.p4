@@ -16398,8 +16398,12 @@ control IngressHdrStackCounters(
             hdr.outer.vlan_tag[1].isValid(): exact;
 
             hdr.outer.ipv4.isValid(): exact;
+#if REMOVE_PHV_ALLOC_XFAIL
+            hdr.outer.ipv6.isValid(): exact;
+#else
+#warning REMOVE_PHV_ALLOC_XFAIL not enabled
             hdr_outer_ipv6_isValid: exact;
-
+#endif
             hdr.outer.udp.isValid(): exact;
             hdr.outer.tcp.isValid(): exact;
             hdr.outer.sctp.isValid(): exact;

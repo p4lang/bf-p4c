@@ -1,13 +1,13 @@
 
 #include "bf_gtest_helpers.h"
 
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
 #include <climits>
 #include <regex>
 #include <exception>
 #include <sstream>
 #include <utility>
-#include "boost/algorithm/string/replace.hpp"
-#include "boost/algorithm/string/trim_all.hpp"
 
 #include "ir/ir.h"
 #include "p4headers.h"

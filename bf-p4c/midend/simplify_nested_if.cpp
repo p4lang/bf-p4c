@@ -189,10 +189,18 @@ const IR::Node* DoSimplifyComplexCondition::preorder(IR::LAnd* expr) {
         visit(expr->right);
         stack_.pop(); }
 
+    auto lowered_isValid = [] (const IR::Equ* eq) {
+                // See DoCopyHeaders::postorder(IR::MethodCallExpression* mc)
+                auto mem = eq->left->to<IR::Member>();
+                return mem && mem->member == "$valid";
+            };
+
     if (auto e = expr->left->to<IR::Equ>())
-        do_equ(constants, e);
+        if (!lowered_isValid(e))
+            do_equ(constants, e);
     if (auto e = expr->right->to<IR::Equ>())
-        do_equ(constants, e);
+        if (!lowered_isValid(e))
+            do_equ(constants, e);
     if (auto e = expr->left->to<IR::Neq>())
         do_neq(constants, e);
     if (auto e = expr->right->to<IR::Neq>())

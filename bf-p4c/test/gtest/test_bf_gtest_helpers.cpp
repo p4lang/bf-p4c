@@ -1,8 +1,9 @@
+
+#include <boost/algorithm/string/replace.hpp>
+
 #include "bf_gtest_helpers.h"
 
 #include "gtest/gtest.h"
-
-#include "boost/algorithm/string/replace.hpp"
 #include "frontends/p4/toP4/toP4.h"
 #include "lib/sourceCodeBuilder.h"
 #include "bf-p4c/midend/elim_cast.h"
