@@ -502,3 +502,86 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
     rv->args.clear();
     return rv;
 }
+
+const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Action *act,
+        const IR::MAU::Table *tbl, FormatType_t format_type, PhvInfo *phv) {
+    if (format_type.normal()) {
+        return act;
+    } else if (format_type.pre_split()) {
+        return create_pre_split_action(act, tbl, phv);
+    } else if (format_type.post_split()) {
+        bool reduction_or = false;
+        for (int i = 0; i < format_type.num_attached(); ++i) {
+            if (format_type.get_attached(i) & FormatType_t::EARLIER_STAGE) {
+                reduction_or = true;
+                break; } }
+        return create_post_split_action(act, tbl, reduction_or);
+    } else {
+        BUG("Unsupported %s in create_split_action", format_type);
+    }
+}
+
+ActionData::FormatType_t ActionData::FormatType_t::default_for_table(const IR::MAU::Table *tbl) {
+    ActionData::FormatType_t rv;
+    int idx = 0;
+    rv.set_match(THIS_STAGE);
+    for (auto *ba : tbl->attached) {
+        if (ba->attached->direct) continue;
+        rv.set_attached(idx++, THIS_STAGE); }
+    return rv;
+}
+
+void ActionData::FormatType_t::check_valid() const {
+    BUG_CHECK((value & MASK), "invalid(0%o) FormatType", value);
+    BUG_CHECK((value & MASK) != (EARLIER_STAGE|LATER_STAGE),
+              "invalid(0%o) FormatType: discontinuous match", value);
+    int idx = 0;
+    for (uint32_t attached = value >> 3; attached; attached >>= 3, idx++) {
+        BUG_CHECK((attached & MASK), "invalid(0%o) FormatType: no entries for attached #%d",
+                  value, idx);
+        BUG_CHECK((attached & MASK) != (EARLIER_STAGE|LATER_STAGE),
+                  "invalid(0%o) FormatType: discontinuous attached #%d", value, idx);
+        BUG_CHECK(!(value & LATER_STAGE) || !(attached & (THIS_STAGE | EARLIER_STAGE)),
+                  "invalid(0%o) FormatType: attached #%d after match", value, idx);
+        BUG_CHECK(!(value & THIS_STAGE) || !(attached & EARLIER_STAGE),
+                  "invalid(0%o) FormatType: attached #%d after match", value, idx); }
+}
+
+// a 'normal' table is one that doesn't need any rewriting as it is all in one stage, or
+// has no attached tables.
+bool ActionData::FormatType_t::normal() const {
+    if (value == 0) return false;               // invalid
+    if (!(value & THIS_STAGE)) return false;    // no match in this stage
+    if (value <= MASK) return true;             // no attached tables
+    for (auto t = value >> 3; t; t >>= 3)
+        if ((t & MASK) != THIS_STAGE) return false;
+    return true;
+}
+
+// a 'pre_split' table is one that has just match entries in this stage -- all attached
+// entries are in later stages (except fro duplicated tables)
+bool ActionData::FormatType_t::pre_split() const {
+    if (normal()) return false;
+    if (!(value & THIS_STAGE)) return false;
+    for (auto att = value >> 3; att; att >>= 3) {
+        BUG_CHECK((att & MASK) == LATER_STAGE || (att & MASK) == THIS_STAGE,
+                  "partly split FormatType(0%o)", value); }
+    return true;
+}
+
+// a 'post_split' table is one that has just attached entries in this stage -- all match
+// entries are in earlier stages.
+bool ActionData::FormatType_t::post_split() const {
+    if (normal()) return false;
+    return (value & MASK) == EARLIER_STAGE;
+}
+
+std::ostream &ActionData::operator<<(std::ostream &out, ActionData::FormatType_t ft) {
+    return out << "FormatType(0" << std::oct << ft.value << std::dec << ")";
+}
+
+std::string ActionData::FormatType_t::toString() const {
+    std::stringstream tmp;
+    tmp << *this;
+    return tmp.str();
+}

@@ -2799,36 +2799,25 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
 }
 
 bool Format::analyze_actions(FormatType_t format_type) {
-    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format");
-    if (format_type != NORMAL) {
+    BUG_CHECK(format_type.valid(), "invalid format in Format::analyze_actions");
+    if (!format_type.normal()) {
         auto at = att_info.attached_from_table(tbl);
         if (at == nullptr)
             return false;
     }
 
     ActionAnalysis::ContainerActionsMap container_actions_map;
-    for (auto orig_action : Values(tbl->actions)) {
+    for (auto action : Values(tbl->actions)) {
         container_actions_map.clear();
-        ActionAnalysis aa(phv, true, false, tbl, format_type != NORMAL);
+        ActionAnalysis aa(phv, true, false, tbl, /* allow_unalloc = */ !format_type.normal());
         aa.set_container_actions_map(&container_actions_map);
-        const IR::MAU::Action *act_to_analyze = orig_action;
         // If the split parameters exist within the PHV allocation, then add the objects
         // to the IR action in order to correctly understand the split action
-        switch (format_type) {
-        case NORMAL:
-            break;
-        case PRE_SPLIT_ATTACHED:
-            act_to_analyze = att_info.create_pre_split_action(orig_action, tbl, &phv);
-            break;
-        case POST_SPLIT_ATTACHED:
-            act_to_analyze = att_info.create_post_split_action(orig_action, tbl);
-            break;
-        default:
-            BUG("Unhandled LayoutChoice %d in analyze_actions", format_type); }
+        auto *act_to_analyze = att_info.create_split_action(action, tbl, format_type, &phv);
         act_to_analyze->apply(aa);
-        create_alu_ops_for_action(container_actions_map, orig_action->name);
-        if (format_type == PRE_SPLIT_ATTACHED)
-            create_split_param(orig_action);
+        create_alu_ops_for_action(container_actions_map, action->name);
+        if (format_type.pre_split())
+            create_split_param(action);
     }
 
     for (auto &entry : init_ram_sections) {
@@ -2856,7 +2845,7 @@ bool Format::analyze_actions(FormatType_t format_type) {
     }
 
     if (locked_in_all_actions_bits > Format::IMMEDIATE_BITS) {
-        if (format_type == ActionData::NORMAL)
+        if (format_type.normal())
             error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %1%, the number of bits "
                   "required to go through the immediate pathway %2% (e.g. data coming from Hash, "
                   "RNG, Meter Color) is greater than the available bits %3%, and can not be "
@@ -3594,7 +3583,7 @@ void Format::build_potential_format(bool immediate_forced) {
  */
 void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
                              FormatType_t format_type) {
-    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format");
+    BUG_CHECK(format_type.valid(), "invalid format in Format::allocate_format");
     LOG1("Determining Formats for table " << tbl->name << " with immediate ctrl " << imm_ctrl);
     bool possible = analyze_actions(format_type);
     if (!possible)

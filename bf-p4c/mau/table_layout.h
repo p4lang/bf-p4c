@@ -81,8 +81,9 @@ class LayoutChoices {
         auto key = std::make_pair(t->name, type);
         if (!cache_layout_options.count(key))
             compute_layout_options(t, type);
-        return cache_layout_options.at(key);
-    }
+        return cache_layout_options.at(key); }
+    const safe_vector<LayoutOption> &get_layout_options(const IR::MAU::Table *t) {
+        return get_layout_options(t, ActionData::FormatType_t::default_for_table(t)); }
 
     const safe_vector<ActionData::Format::Use> &
     get_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type) {
@@ -90,8 +91,9 @@ class LayoutChoices {
         auto key = std::make_pair(t->name, type);
         if (!cache_action_formats.count(key))
             compute_action_formats(t, type);
-        return cache_action_formats.at(key);
-    }
+        return cache_action_formats.at(key); }
+    const safe_vector<ActionData::Format::Use> &get_action_formats(const IR::MAU::Table *t) {
+        return get_action_formats(t, ActionData::FormatType_t::default_for_table(t)); }
 
     // meter output formats are stored here, but they are essentially completely independent
     // of the layout choices.
@@ -113,8 +115,6 @@ class LayoutChoices {
         : phv(p), att_info(a), fpc(phv) {}
     void add_payload_gw_layout(const IR::MAU::Table *tbl, const LayoutOption &base_option);
 };
-
-extern std::ostream &operator<<(std::ostream &, ActionData::FormatType_t);
 
 /** Checks to see if the action(s) have hash distribution or rng access somewhere */
 class GetActionRequirements : public MauInspector {

@@ -916,34 +916,35 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         bool gateway_attached, bool table_placement) {
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();
-    format_type = ActionData::NORMAL;
+    format_type.invalidate();
+    if (entries > 0 || !tbl->match_table)
+        format_type.set_match(ActionData::FormatType_t::THIS_STAGE);
+    if (prev_placed)
+        format_type.set_match(ActionData::FormatType_t::EARLIER_STAGE);
+    // FIXME -- when to set_match(LATER_STAGE)?  Do we ever care?
     int initial_entries = entries;
     if (!tbl->created_during_tp) {
+        int idx = 0;
         for (auto *ba : tbl->attached) {
             if (ba->attached->direct)
                 continue;
-            else if (entries == 0)
-                format_type = ActionData::POST_SPLIT_ATTACHED;
-            else if (attached_entries.at(ba->attached).entries == 0)
-                format_type = ActionData::PRE_SPLIT_ATTACHED;
-            else if (TablePlacement::can_duplicate(ba->attached))
-                continue;
-            else if (prev_placed && attached_entries.at(ba->attached).entries < ba->attached->size)
-                P4C_UNIMPLEMENTED("Split attached table with some match and some attached "
-                                  "in the same stage, but not all in one stage");
-            else
-                continue;
-            break; }
+            if (!attached_entries.at(ba->attached).first_stage)
+                format_type.set_attached(idx, ActionData::FormatType_t::EARLIER_STAGE);
+            if (attached_entries.at(ba->attached).entries > 0)
+                format_type.set_attached(idx, ActionData::FormatType_t::THIS_STAGE);
+            if (attached_entries.at(ba->attached).need_more)
+                format_type.set_attached(idx, ActionData::FormatType_t::LATER_STAGE);
+            ++idx; }
         layout_options = lc->get_layout_options(tbl, format_type);
         if (layout_options.empty()) {
             // no layouts available?  Fall back to NORMAL for now.  TablePlacement will flag
             // an error if it needs to split this table.
-            format_type = ActionData::NORMAL;
+            format_type = ActionData::FormatType_t::default_for_table(tbl);
             layout_options = lc->get_layout_options(tbl, format_type); }
         BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(),
                   "No %s layout options for %s", format_type, tbl);
         action_formats = lc->get_action_formats(tbl, format_type);
-        if (format_type != ActionData::PRE_SPLIT_ATTACHED)
+        if (!format_type.pre_split())
             meter_format = lc->get_attached_formats(tbl);
     }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;

@@ -342,7 +342,7 @@ struct TablePlacement::Placed {
                               attached_entries.at(ba->attached).entries == it->second.entries,
                               "inconsistent size for %s", ba->attached);
                     attached_entries.at(ba->attached) = it->second;
-                    use.format_type = ActionData::INVALID; }
+                    use.format_type.invalidate(); }
                 if (attached_entries.at(ba->attached).need_more)
                     need_more = true; }
             if (!need_more) {
@@ -653,12 +653,11 @@ bool TablePlacement::pick_layout_option(Placed *next) {
 
     int initial_entries = next->entries;
 
-    if (next->use.format_type == ActionData::INVALID)
+    if (!next->use.format_type.valid())
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
                                      next->stage_split > 0, next->gw != nullptr);
 
-    if (next->use.format_type == ActionData::POST_SPLIT_ATTACHED &&
-        count_sful_actions(next->table) > 1) {
+    if (next->use.format_type.post_split() && count_sful_actions(next->table) > 1) {
         // FIXME -- currently can't split a stateful table that require meter_type to select
         // which action to run
         error_message = next->name + " requires a meter_type, so can't split the attached "
@@ -670,7 +669,7 @@ bool TablePlacement::pick_layout_option(Placed *next) {
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
             return false; }
-        if (next->use.format_type == ActionData::POST_SPLIT_ATTACHED) {
+        if (next->use.format_type.post_split()) {
             // if post-split, there's no match in this stage (just a gateway running the
             // attached table(s), so no need for match formatting
             return true; }
@@ -698,7 +697,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     for (auto *ba : next->table->attached) {
         auto *att = ba->attached;
         if (att->direct || next->attached_entries.at(att).entries == 0) continue;
-        if (!can_split(att)) {
+        if (!can_split(next->table, att)) {
             if (!can_duplicate(att)) return false;
             continue; }
         if (attached_to.at(att).size() > 1 &&
@@ -712,7 +711,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             LOG3("  - splitting " << att->name << " to later stage(s)");
             next->attached_entries.at(att).entries = 0;
             next->attached_entries.at(att).need_more = true;
-            next->use.format_type = ActionData::INVALID;
+            next->use.format_type.invalidate();
             done_shrink = true;
         } else {
             // FIXME -- need a better way of reducing the size to what will fit in the stage
@@ -724,7 +723,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             if (delta < next->attached_entries.at(att).entries) {
                 next->attached_entries.at(att).entries -= delta;
                 if (!next->attached_entries.at(att).need_more) {
-                    next->use.format_type = ActionData::INVALID;
+                    next->use.format_type.invalidate();
                     next->attached_entries.at(att).need_more = true; }
                 LOG3("  - reducing size of " << att->name << " by " << delta << " to " <<
                      next->attached_entries.at(att).entries);
@@ -875,7 +874,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
         table_to_add = p->table;
-        if (p->use.format_type == ActionData::POST_SPLIT_ATTACHED)
+        if (p->use.format_type.post_split())
             table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, p));
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
         // Always Run Tables cannot be counted in the logical table check
@@ -884,7 +883,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                               p->entries, p->stage_split, p->attached_entries);
         p->resources.memuse.clear(); }
     table_to_add = next->table;
-    if (next->use.format_type == ActionData::POST_SPLIT_ATTACHED)
+    if (next->use.format_type.post_split())
         table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, next));
     current_mem.add_table(table_to_add, next->gw, &next->resources, next->use.preferred(),
                           next->use.preferred_action_format(), next->use.format_type,
@@ -1087,7 +1086,7 @@ bool TablePlacement::can_duplicate(const IR::MAU::AttachedMemory *att) {
 }
 
 /// Check if an indirect attached table can be split acorss stages
-bool TablePlacement::can_split(const IR::MAU::AttachedMemory *att) {
+bool TablePlacement::can_split(const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *att) {
     BUG_CHECK(!att->direct, "Not an indirect attached table");
     if (Device::currentDevice() == Device::TOFINO) {
         // Tofino not supported yet -- need vpn check in gateway
@@ -1096,8 +1095,16 @@ bool TablePlacement::can_split(const IR::MAU::AttachedMemory *att) {
         return false;
     if (att->is<IR::MAU::Selector>())
         return false;
-    if (auto *salu = att->to<IR::MAU::StatefulAlu>())
-        return !salu->synthetic_for_selector;
+    if (auto *salu = att->to<IR::MAU::StatefulAlu>()) {
+        // FIXME is this synthetic_for_selector test still needed, or is it subsumed by the
+        // selector test below.  If it is not still needed, could the flag go away completely?
+        if (salu->synthetic_for_selector) return false;
+        if (salu->selector) {
+            // can't split the SALU if it is attached to a selector attached to the same table
+            for (auto *ba : tbl->attached)
+                if (ba->attached == salu->selector)
+                    return false; }
+        return true; }
     // non-stateful need vpn checks in gateway (as on Tofino1), as the JBay vpn offset/range
     // check only works on stateful tables.
     // FIXME -- there are stats_vpn_range regs that could work for counters on Jbay (but
@@ -1108,7 +1115,7 @@ bool TablePlacement::can_split(const IR::MAU::AttachedMemory *att) {
 }
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) {
-    rv->use.format_type = ActionData::INVALID;  // will need to be recomputed
+    rv->use.format_type.invalidate();  // will need to be recomputed
     auto *t = rv->table;
     if (t->match_table) {
         rv->entries = 512;  // default number of entries -- FIXME does this really make sense?
@@ -1145,10 +1152,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
      * have a dependency that prevents placement in the current stage, we want to defer */
     ordered_set<const IR::MAU::Table *> tables_with_shared;
     for (auto *ba : rv->table->attached) {
-        if (ba->attached->direct) continue;
         if (!rv->attached_entries.emplace(ba->attached, ba->attached->size).second)
             BUG("%s attached more than once", ba->attached);
-        if (can_duplicate(ba->attached)) continue;
+        if (ba->attached->direct || can_duplicate(ba->attached)) continue;
         bool stateful_selector = ba->attached->is<IR::MAU::StatefulAlu>() &&
                                  ba->use == IR::MAU::StatefulUse::NO_USE;
         for (auto *att_to : attached_to.at(ba->attached)) {
@@ -1186,6 +1192,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 return false; }
             rv->entries -= p->entries;
             for (auto &ate : p->attached_entries) {
+                if (ate.second.entries > 0 || !ate.second.first_stage)
+                    init_attached.at(ate.first).first_stage = false;
                 if (ate.first->direct) continue;
                 if (can_duplicate(ate.first) &&
                     init_attached.at(ate.first).entries <= ate.second.entries)
@@ -1279,9 +1287,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
         rv->stage_split = prev_stage_tables;
     }
     for (auto *ba : rv->table->attached) {
-        if (ba->attached->direct &&
-            !rv->attached_entries.emplace(ba->attached, rv->entries).second)
-            BUG("%s attached more than once", ba->attached); }
+        if (ba->attached->direct)
+            rv->attached_entries.at(ba->attached).entries = rv->entries; }
 
     return true;
 }
@@ -1369,7 +1376,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     } else {
         for (auto &att : min_placed->attached_entries) {
             if (att.first->direct) continue;
-            if (can_split(att.first)) {
+            if (can_split(min_placed->table, att.first)) {
                 att.second.entries = 0;
                 att.second.need_more = true; } } }
 
@@ -2937,7 +2944,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
 
         if (pl->entries) {
             if (deferred_attached) {
-                if (pl->use.format_type != ActionData::PRE_SPLIT_ATTACHED)
+                if (!pl->use.format_type.pre_split())
                     error("Couldn't find a usable split format for %1% and couldn't place it "
                           "without splitting", tbl);
                 for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
@@ -2956,7 +2963,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                 table_set_resources(table_part, rsrcs, pl->entries);
             }
         } else {
-            if (pl->use.format_type != ActionData::POST_SPLIT_ATTACHED)
+            if (!pl->use.format_type.post_split())
                 error("Couldn't find a usable split format for %1% and couldn't place it "
                       "without splitting", tbl);
             else

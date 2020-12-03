@@ -18,7 +18,8 @@ class AttachedMemory;  // forward declaration
 
 struct attached_entries_element_t {
     int         entries;
-    bool        need_more = false;
+    bool        need_more = false;      // need more entries in a later stage
+    bool        first_stage = true;     // no entries are in any earlier stage
     attached_entries_element_t() = delete;
     explicit attached_entries_element_t(int e) : entries(e) {}
 };

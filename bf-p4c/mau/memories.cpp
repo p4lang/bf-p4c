@@ -411,7 +411,7 @@ class SetupAttachedTables : public MauInspector {
         bool tind_check = ta->layout_option->layout.ternary &&
                           !ta->layout_option->layout.no_match_miss_path() &&
                           !ta->layout_option->layout.gateway_match &&
-                          ta->format_type != ActionData::POST_SPLIT_ATTACHED;
+                          !ta->format_type.post_split();
         if (tind_check) {
             if (ta->table_format->has_overhead()) {
                 for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
@@ -3692,7 +3692,7 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
         // match table, which is not the case when we're just using a payload to
         // supply an invalid match address to avoid running a direct table (P4C-2938)
         // this needs cleaning up
-    } else if (ta->format_type == ActionData::POST_SPLIT_ATTACHED) {
+    } else if (ta->format_type.post_split()) {
         // FIXME -- running a split attached table -- the address comes from hash_dist
         // if part of the action needs immed data (from match or tind), that would have to
         // come from payload -- not yet implemented

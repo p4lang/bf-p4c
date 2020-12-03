@@ -934,7 +934,8 @@ void JbayNextTable::TagReduce::alloc_dt_mems() {
         for (auto* t : stage.second) {
             TableResourceAlloc* tra = new TableResourceAlloc;
             tras[t] = tra;
-            mem.add_table(t, nullptr, tra, nullptr, nullptr, ActionData::NORMAL, 0, 0, {});
+            mem.add_table(t, nullptr, tra, nullptr, nullptr,
+                          ActionData::FormatType_t::default_for_table(t), 0, 0, {});
             self.num_dts++;
         }
         bool success = mem.allocate_all_dummies();

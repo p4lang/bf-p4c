@@ -155,7 +155,7 @@ void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices 
     if (!collect || !collect.compute_offsets())
         return;
 
-    auto action_formats = lc.get_action_formats(tbl, ActionData::NORMAL);
+    auto action_formats = lc.get_action_formats(tbl);
     auto last_af = action_formats.back();
     // Currently we don't allow Action Data in a table, though in theory this could
     // be allowed in the future.  We'd have to program a RAM line, which is much more difficult
@@ -163,7 +163,7 @@ void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices 
     if (last_af.bytes_per_loc.at(ActionData::ACTION_DATA_TABLE) > 0)
         return;
 
-    auto table_layouts = lc.get_layout_options(tbl, ActionData::NORMAL);
+    auto table_layouts = lc.get_layout_options(tbl);
     const LayoutOption *single_lo = nullptr;
     for (auto &lo : table_layouts) {
         if (lo.action_format_index != static_cast<int>(action_formats.size()) - 1)

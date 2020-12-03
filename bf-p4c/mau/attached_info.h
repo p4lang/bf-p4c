@@ -5,6 +5,65 @@
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 
+namespace ActionData {
+class FormatType_t {
+    // An "enum" that tracks the splitting of entries across stages for both the match table
+    // and all indirect attached tables.  For each table (match and indirect attached), we
+    // need to know if there are entries in this stage, earlier stages, and later stages.
+    // That's 3 bits per table, but not all combinations make sense.  We store these packed
+    // into a single uint32, with the bottom 3 bits for the match table and additional bits
+    // for up to 9 attached tables (in practice there are never more than 2 or 3).
+    //
+    // We need this to be an easily comparable "enum" as we use it as a key for caches of
+    // table layout formats, action data formats, and actions.
+    //
+    // A given table will end up with a different FormatType_t for each stage that it is
+    // split across, which summarizes the view of the table from that stage -- which parts
+    // of the table are allocated in the current stage and which other stages have parts that
+    // the parts in this stage need to communicate with.  So for example, table with match(M),
+    // stateful(S) and counter(C) split across three stages as
+    //                        stage1 | stage2 | stage3
+    //  FormatType_t            M    |  M+S+C |   S
+    //  match    (bits 0..2):  -T-      ET-      E--
+    //  stateful (bits 3..5):  --L      -TL      ET-
+    //  counter  (bits 6..8):  --L      -T-      E--
+    //
+    // Many combinations do not make sense, so should not occur.  Attached table entries
+    // can never be in a stage before match table entries, so if there are match entries in
+    // later stages, all attached entries must also be in later stages.
+    // Currently we never set_match(LATER_STAGE) as nothing depends on it -- FormatTypes
+    // that differ only in this bit will end up with the exact same possible table and
+    // action formats.
+
+ public:
+    enum stage_t { EARLIER_STAGE = 1, THIS_STAGE = 2, LATER_STAGE = 4, MASK = 7 };
+    bool operator<(FormatType_t a) const { return value < a.value; }
+    bool valid() const { return value != 0; }
+    void check_valid() const;  // sanity check for insane combinations
+    void invalidate() { value = 0; }
+    bool normal() const;
+    bool pre_split() const;
+    bool post_split() const;
+    void set_match(stage_t st) { value |= st; check_valid(); }
+    stage_t get_match() const { return static_cast<stage_t>(value & MASK); }
+    int num_attached() const { return floor_log2(value)/3; }
+    void set_attached(int idx, stage_t st) {
+        BUG_CHECK(idx >= 0 && idx < 9, "too many attached tables");
+        value |= st << ((idx+1) * 3);
+        check_valid(); }
+    stage_t get_attached(int idx) const {
+        return static_cast<stage_t>((value >> (3*(idx+1))) & MASK); }
+
+    FormatType_t() : value(0) {}
+    static FormatType_t default_for_table(const IR::MAU::Table *);
+    friend std::ostream &operator<<(std::ostream &, FormatType_t);
+    std::string toString() const;
+
+ private:
+    uint32_t value;
+};
+}  // end namespace ActionData
+
 class ValidateAttachedOfSingleTable : public MauInspector {
  public:
     enum addr_type_t { STATS, METER, ACTIONDATA, TYPES };
@@ -113,6 +172,8 @@ class HasAttachedMemory : public MauInspector {
  * PHV if this stateful ALU portion is split from the match portion
  */
 class SplitAttachedInfo : public PassManager {
+    typedef ActionData::FormatType_t  FormatType_t;
+
     // Can't use IR::Node * as keys in a map, as they change in transforms.  Names
     // are unique and stable, so use them instead.
     ordered_map<cstring, ordered_set<const IR::MAU::Table *>> attached_to_table_map;
@@ -228,6 +289,8 @@ class SplitAttachedInfo : public PassManager {
  public:
     const IR::Expression *split_enable(const IR::MAU::AttachedMemory *);
     const IR::Expression *split_index(const IR::MAU::AttachedMemory *);
+    const IR::MAU::Action *create_split_action(const IR::MAU::Action *act,
+        const IR::MAU::Table *tbl, FormatType_t format_type, PhvInfo *phv);
     const IR::MAU::Action *create_pre_split_action(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Action *create_post_split_action(const IR::MAU::Action *act,

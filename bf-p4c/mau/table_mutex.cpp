@@ -166,7 +166,7 @@ SharedIndirectAttachedAnalysis::get_indirect_actions(const IR::MAU::Table *a,
         if (auto res = a->resources) {
             action_format_vec.push_back(res->action_format);
         } else {
-            action_format_vec = lc.get_action_formats(a, ActionData::NORMAL);
+            action_format_vec = lc.get_action_formats(a);
         }
         for (auto action_format : action_format_vec) {
             for (auto act : Values(a->actions)) {

@@ -7,17 +7,11 @@
 bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *act) {
     const IR::MAU::Table *tbl = findContext<IR::MAU::Table>();
     current_vliw.clear();
-    const IR::MAU::Action *act_to_visit = act;
     // Need to capture the instructions that will be created during the splitting of the tables
-    if (format_type == ActionData::PRE_SPLIT_ATTACHED)
-        act_to_visit = split_attached.create_pre_split_action(act, tbl, &phv);
-    else if (format_type == ActionData::POST_SPLIT_ATTACHED)
-        act_to_visit = split_attached.create_post_split_action(act, tbl);
-
+    auto *act_to_visit = split_attached.create_split_action(act, tbl, format_type, &phv);
     if (act_to_visit == nullptr)
         return false;
     BUG_CHECK(act_to_visit, "Somehow have a nullptr action for %1%", format_type);
-
 
     for (auto instr : act_to_visit->action)
         visit(instr);
@@ -201,7 +195,7 @@ bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &a
 
 bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
         bool gw_linked, ActionData::FormatType_t format_type, SplitAttachedInfo &sai) {
-    BUG_CHECK(format_type < ActionData::FORMAT_TYPES, "invalid format type");
+    BUG_CHECK(format_type.valid(), "invalid format type in InstructionMemory::allocate_imem");
     // Action Profiles always have the same instructions for every table
     LOG1("Allocating instruction memory for " << tbl->name << " " << format_type);
 
@@ -209,7 +203,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
     if (shared_instr(tbl, alloc, gw_linked)) {
         return true;
     }
-    gw_linked |= format_type == ActionData::POST_SPLIT_ATTACHED;
+    gw_linked |= format_type.post_split();
 
     GenerateVLIWInstructions gen_vliw(phv, format_type, sai);
     tbl->apply(gen_vliw);
@@ -233,8 +227,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
     for (auto action : Values(tbl->actions)) {
         LOG2("Allocating action " << action->name);
 
-        if (format_type == ActionData::POST_SPLIT_ATTACHED &&
-            sai.create_post_split_action(action, tbl) == nullptr) {
+        if (sai.create_split_action(action, tbl, format_type, &phv) == nullptr) {
             LOG2("    Not generating instruction for " << action->name << " as it is not necessary "
                  "post attached split");
             continue;

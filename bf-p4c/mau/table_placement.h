@@ -56,7 +56,7 @@ class TablePlacement : public PassManager {
 
     static int placement_round;
     static bool can_duplicate(const IR::MAU::AttachedMemory *);
-    static bool can_split(const IR::MAU::AttachedMemory *);
+    static bool can_split(const IR::MAU::Table *, const IR::MAU::AttachedMemory *);
 
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     std::map<cstring, struct TableInfo *> tblByName;
