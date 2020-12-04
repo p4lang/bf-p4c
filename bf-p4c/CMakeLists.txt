@@ -1242,6 +1242,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_type.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/payload_gateway.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_constant_extract.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp

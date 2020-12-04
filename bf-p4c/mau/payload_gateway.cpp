@@ -1,8 +1,12 @@
-#include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/payload_gateway.h"
+
+#include <boost/range/combine.hpp>
+
+#include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/phv/phv_fields.h"
+
 
 /**
  * A gateway in Tofino2 and future generations can be used to implement a small match table.
@@ -189,14 +193,31 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
     if (candidates.count(tbl->name) == 0)
         return nullptr;
     IR::MAU::Table *gw_tbl = new IR::MAU::Table(*tbl);
+
+    // We iterate over the list of entries.
     int entry_index = 0;
     for (auto &entry : tbl->entries_list->entries) {
-        IR::Expression *gw_expr = nullptr;
-        int index = 0;
-        for (auto key : tbl->match_key) {
-            auto equiv_expr = entry->getKeys()->components.at(index++);
-            if (equiv_expr->is<IR::DefaultExpression>()) continue;
-            IR::Equ *equ = new IR::Equ(key->expr, equiv_expr);
+        // for each entry line we create a single gw_expr, combining the key values.
+        IR::Expression* gw_expr = nullptr;
+
+        // Iterate over tbl->match_key & entry->keys->components together.
+        BUG_CHECK(entry->keys->size() == tbl->match_key.size(),
+                     "entry keys size != match_key size");
+        for (auto tup : boost::combine(tbl->match_key, entry->keys->components)) {
+            const IR::MAU::TableKey* tbl_key;
+            const IR::Expression* value;
+            boost::tie(tbl_key, value) = tup;  // Oh for C++17 structured binding.
+            auto key = tbl_key->expr;
+
+            if (value->is<IR::DefaultExpression>())
+                continue;  // Always true.
+            if (auto mask = value->to<IR::Mask>()) {
+                // Move the masking onto the key itself.
+                key = new IR::BAnd(key, mask->right);
+                value = mask->left;
+            }
+            // Combine into a single `key1==value1 && key2==value2` expression.
+            auto equ = new IR::Equ(key, value);
             if (gw_expr == nullptr)
                 gw_expr = equ;
             else
