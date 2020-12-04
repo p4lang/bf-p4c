@@ -33,7 +33,7 @@ auto defs = R"(
     EXPECT_TRUE(blk.apply_pass(pass)); \
     auto res = blk.match(expected); \
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n    '" << blk.get_block() << "'\n"; \
+                             << "\n    '" << blk.extract_code() << "'\n"; \
     } while (0)
 
 Visitor *setup_passes() {

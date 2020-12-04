@@ -197,7 +197,7 @@ TEST(testBfGtestHelper, TestCodeTestCodeGood) {
     TestCode(TestCode::Hdr::Tofino3arch, "");
     auto blk2018 = TestCode(TestCode::Hdr::V1model_2018, "");
     auto blk2020 = TestCode(TestCode::Hdr::V1model_2020, "");
-    EXPECT_NE(blk2018.get_block().compare(blk2020.get_block()), 0);
+    EXPECT_NE(blk2018.extract_code().compare(blk2020.extract_code()), 0);
 
     // The 'Code' string requires two insertions.
     TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy});
@@ -250,19 +250,19 @@ TEST(testBfGtestHelper, TestCodeGetBlock) {
     auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
                         {EmptyDefs, "\napply\n\n{\n\n}\n"}, Marker);
     // The default setting is  blk.flags(TrimWhiteSpace);
-    EXPECT_EQ(blk.get_block().compare("apply { }"), 0);
-    EXPECT_EQ(blk.get_block(6).compare("{ }"), 0);
+    EXPECT_EQ(blk.extract_code().compare("apply { }"), 0);
+    EXPECT_EQ(blk.extract_code(6).compare("{ }"), 0);
 
     blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
                    {EmptyDefs, "\n\napply\n\n{\n\n}\n\n"}, Marker);
     blk.flags(Raw);
     // This 'Raw' test is dependant upon the parser, hence is brittle.
-    // EXPECT_EQ(blk.get_block().compare("   apply {\n    }"), 0);
+    // EXPECT_EQ(blk.extract_code().compare("   apply {\n    }"), 0);
 
     blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
                    {EmptyDefs, "action a(){} apply{a();}"}, Marker);
     blk.flags(TrimWhiteSpace | TrimAnnotations);
-    EXPECT_EQ(blk.get_block().compare("action a() { } apply { a(); }"), 0);
+    EXPECT_EQ(blk.extract_code().compare("action a() { } apply { a(); }"), 0);
 
     std::string pkg = Code;
     boost::replace_all(pkg, R"(%1%)", R"(action a(){} %2% apply {%tmp% %tmp%})");
@@ -271,7 +271,7 @@ TEST(testBfGtestHelper, TestCodeGetBlock) {
     // N.B. control block starts at %2%, also the order of defines is not important.
     blk = TestCode(TestCode::Hdr::Tofino1arch, pkg, {R"(a();)", EmptyDefs, ""}, Marker);
     blk.flags(TrimWhiteSpace | TrimAnnotations);
-    EXPECT_EQ(blk.get_block().compare("action a() { } apply { a(); a(); }"), 0) << blk;
+    EXPECT_EQ(blk.extract_code().compare("action a() { } apply { a(); a(); }"), 0) << blk;
 }
 
 TEST(testBfGtestHelper, TestCodeApplyPassConst) {
@@ -311,7 +311,7 @@ TEST(testBfGtestHelper, TestCodeApplyPassMutating) {
     EXPECT_TRUE(blk.apply_pass(new BFN::RewriteConcatToSlices()));
     auto res = blk.match(expected);
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
-                             << "\n    '" << blk.get_block(res.pos) << "'\n";
+                             << "\n    '" << blk.extract_code(res.pos) << "'\n";
 }
 #endif
 
@@ -323,11 +323,11 @@ TEST(testBfGtestHelper, TestCodeApplyPreconstructedPasses) {
     EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
 }
 
-TEST(testBfGtestHelper, TestCodeMatch) {
+TEST(testBfGtestHelper, TestP4CodeMatch) {
     auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
     auto res = blk.match(CheckList{"apply", "{", "}"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
-                             << "\n    '" << blk.get_block() << "'\n";;
+                             << "\n    '" << blk.extract_code() << "'\n";;
     // EXPECT_EQ(res.pos, 9U);   // Dependant upon parser.
     EXPECT_EQ(res.count, 3U);
 
@@ -335,9 +335,50 @@ TEST(testBfGtestHelper, TestCodeMatch) {
     blk.flags(Raw);
     res = blk.match(CheckList{"`\\s*`apply`\\s*`{`\\s*`}`\\s*`"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
-                             << "\n    '" << blk.get_block() << "'\n";
+                             << "\n    '" << blk.extract_code() << "'\n";
     // EXPECT_EQ(res.pos, 16U);   // Dependant upon parser.
     EXPECT_EQ(res.count, 1U);
 }
+
+TEST(testBfGtestHelper, TestAsmCodeMatch) {
+    std::string EmptyDefs = "struct local_metadata_t{}; struct headers_t{};";
+    auto blk = TestCode(TestCode::Hdr::TofinoMin, TestCode::tofino_shell(),
+            {EmptyDefs, TestCode::empty_state(), TestCode::empty_appy(), TestCode::empty_appy()},
+            TestCode::tofino_shell_control_marker());
+    blk.flags(TrimWhiteSpace | TrimAnnotations);
+    EXPECT_TRUE(blk.CreateBackend());
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
+
+    EXPECT_EQ(blk.extract_code(), blk.extract_code(TestCode::CodeBlock::P4Code));
+
+    auto res = blk.match(TestCode::CodeBlock::P4Code, CheckList{"apply", "{", "}"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::P4Code) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::PhvAsm, CheckList{"phv ingress:", "`.*`", "phv egress:"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::PhvAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::MauAsm, CheckList{"stage 0 ingress:"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::MauAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::ParserIAsm, CheckList{"parser ingress: start"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserIAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::DeparserIAsm, CheckList{"deparser ingress:"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::DeparserIAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::ParserEAsm, CheckList{"parser egress: start"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::DeparserEAsm, CheckList{"deparser egress:"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::DeparserEAsm) << "'\n";
+}
+
 
 }  // namespace Test

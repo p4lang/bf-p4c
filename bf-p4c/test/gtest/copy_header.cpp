@@ -54,7 +54,7 @@ auto depaser = "apply{packet.emit(hdr);}";
     EXPECT_TRUE(blk.apply_pass(new BFN::CopyHeaders(&refMap, &typeMap, typeChecking))); \
     auto res = blk.match(output); \
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n    '" << blk.get_block() << "'\n"; \
+                             << "\n    '" << blk.extract_code() << "'\n"; \
     } while (0)
 
 }  // namespace
@@ -197,7 +197,7 @@ TEST(CopyHeaders, Lower$valid) {
     EXPECT_TRUE(blk.apply_pass(new BFN::CopyHeaders(&refMap, &typeMap, typeChecking)));
     auto res = blk.match(expected);
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
-                             << "\n    '" << blk.get_block(res.pos) << "'\n";
+                             << "\n    '" << blk.extract_code(res.pos) << "'\n";
 }
 
 

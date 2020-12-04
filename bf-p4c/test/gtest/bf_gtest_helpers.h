@@ -17,13 +17,10 @@
 // Forward declarations.
 class Visitor;
 struct Visitor_Context;
-namespace IR {
-class P4Program;
-namespace BFN {
-class Pipe;
-}  // namespace BFN
-}  // namespace IR
-
+namespace IR {class P4Program;}
+namespace IR {namespace BFN {class Pipe;}}
+namespace BFN {class Backend;}
+class MauAsmOutput;
 
 namespace Test {
 
@@ -127,10 +124,12 @@ std::string get_ends(char opening);
 class TestCode {
     // AutoCompileContext adds to the stack a new compilation context for the test to run in.
     AutoCompileContext context;
-    const IR::P4Program* program = nullptr;  // Used by frontend and midend passes
-    const IR::BFN::Pipe* pipe = nullptr;     // Used by backend passes
+    const IR::P4Program* program = nullptr;  // Used by frontend and midend passes.
+    const IR::BFN::Pipe* pipe = nullptr;  // Used by backend passes.
+    BFN::Backend* backend = nullptr;  // Used by extract_asm()
+    mutable MauAsmOutput* mauasm = nullptr;  // lazy initialised & used by extract_asm().
 
-    Match::Flag flag = Match::TrimWhiteSpace;   // N.B. common to match() & get_block().
+    Match::Flag flag = Match::TrimWhiteSpace;   // N.B. common to match() & extract_code().
     std::regex marker;      // Optional search string for the block we are interested in.
     std::string ends;       // How our optional block starts and ends.
 
@@ -231,9 +230,8 @@ class TestCode {
     enum class Pass {FullFrontend,                  ///< Remove the pipe and run over the program.
                      FullMidend,                    ///< Remove the pipe and run over the program.
                      ConverterToBackend,            ///< Run over the program and create the pipe.
-                     FullBackend,                   ///< Run over the pipe.
                      ThreadLocalInstances,          ///< Run over the pipe.
-                     MinimumFrontend, MinimumBackend};  // Experimental.
+                     FullBackend};                  ///< Run over the pipe, creates asm CodeBlocks.
     bool apply_pass(Pass pass);
 
     /// Runs all the necessary passes to create a backend ready for testing.
@@ -246,15 +244,36 @@ class TestCode {
         return CreateBackend() && apply_pass(Pass::ThreadLocalInstances);
     }
 
-    /// Calls Match::match() on the code identified by 'blockMarker'.
-    Match::Result match(const Match::CheckList& exprs) const;
+    /// CodeBlock flag for passing into `match()` and `extract_code()`.
+    /// P4Code is always available, xxxAsm code is only availble post `Pass::FullBackend`.
+    enum class CodeBlock {P4Code,                     // P4Code combines with `blockMarker`.
+                          PhvAsm, MauAsm,             // Ingress & Egress.
+                          ParserIAsm, DeparserIAsm,   // Ingress.
+                          ParserEAsm, DeparserEAsm};  // Egress.
 
-    /// Read the curret code identified by 'blockMarker'.
-    std::string get_block(size_t pos = 0) const;
-
-    friend std::ostream &operator<<(std::ostream &out, const TestCode &cb) {
-        return out << cb.get_block();
+    /// Calls Match::match() on the code block specified by `CodeBlock`.
+    Match::Result match(CodeBlock blk_type, const Match::CheckList& exprs) const;
+    /// Calls Match::match() on the P4 code block specified by `blockMarker`.
+    Match::Result match(const Match::CheckList& exprs) const {
+        return match(CodeBlock::P4Code, exprs);
     }
+
+    /// Extract the code block specified by `CodeBlock`
+    /// stripping of the initial `pos` characters e.g. `Match::Result.pos`.
+    std::string extract_code(CodeBlock blk_type, size_t pos = 0) const;
+    /// Extract the P4 code block specified by `blockMarker`.
+    /// stripping of the initial `pos` characters e.g. `Match::Result.pos`.
+    std::string extract_code(size_t pos = 0) const {
+        return extract_code(CodeBlock::P4Code, pos);
+    }
+
+    friend std::ostream &operator<<(std::ostream &out, const TestCode &tc) {
+        return out << tc.extract_code(CodeBlock::P4Code, 0);
+    }
+
+ private:
+    std::string extract_p4() const;
+    std::string extract_asm(CodeBlock blk_type) const;
 };
 
 }  // namespace Test

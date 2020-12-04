@@ -21,44 +21,9 @@
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/toP4/toP4.h"
 #include "frontends/p4/frontend.h"    // Used by run_p4c_frontend_passes
-
-// Frontend Passes
-#include "frontends/p4/actionsInlining.h"
-#include "frontends/p4/createBuiltins.h"
-#include "frontends/p4/defaultArguments.h"
-#include "frontends/p4/deprecated.h"
-#include "frontends/p4/directCalls.h"
-#include "frontends/p4/dontcareArgs.h"
-#include "frontends/p4/evaluator/evaluator.h"
-#include "frontends/common/constantFolding.h"
-#include "frontends/p4/functionsInlining.h"
-#include "frontends/p4/hierarchicalNames.h"
-#include "frontends/p4/inlining.h"
-#include "frontends/p4/localizeActions.h"
-#include "frontends/p4/moveConstructors.h"
-#include "frontends/p4/moveDeclarations.h"
-#include "frontends/p4/parserControlFlow.h"
-#include "frontends/p4/removeReturns.h"
-#include "frontends/p4/resetHeaders.h"
-#include "frontends/p4/setHeaders.h"
-#include "frontends/p4/sideEffects.h"
-#include "frontends/p4/simplify.h"
-#include "frontends/p4/simplifyDefUse.h"
-#include "frontends/p4/simplifyParsers.h"
-#include "frontends/p4/specialize.h"
-#include "frontends/p4/specializeGenericFunctions.h"
-#include "frontends/p4/strengthReduction.h"
-#include "frontends/p4/structInitializers.h"
-#include "frontends/p4/switchAddDefault.h"
-#include "frontends/p4/tableKeyNames.h"
-#include "frontends/p4/typeChecking/bindVariables.h"
-#include "frontends/p4/uniqueNames.h"
-#include "frontends/p4/unusedDeclarations.h"
-#include "frontends/p4/uselessCasts.h"
-
 #include "bf-p4c/midend.h"
-
 #include "bf-p4c/backend.h"
+#include "bf-p4c/asm.h"
 
 namespace Test {
 
@@ -169,7 +134,7 @@ Result match(const CheckList& exprs,
         ++res.count;
         res.pos = pos + sm[0].length();
     }
-    BUG_CHECK(0, "Unreachable code");
+    BUG("Unreachable code");
 }
 
 size_t find_next_end(const std::string& blk, size_t pos, const std::string& ends) {
@@ -526,117 +491,6 @@ std::string TestCode::tofino_shell() {return R"(
              egress_deparser()) pipeline;
     Switch(pipeline) main;)";}
 
-namespace {
-Visitor* minimum_frontend_passes(bool skip_side_effect_ordering) {
-    // TODO Can the number of passes be reduced further  - to reduce the processing time?
-    auto refMap = new P4::ReferenceMap();
-    auto typeMap = new P4::TypeMap();
-    auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    return new PassManager({
-        // Synthesize some built-in constructs
-        new P4::CreateBuiltins(),
-        new P4::ResolveReferences(refMap, true),  // check shadowing
-        // First pass of constant folding, before types are known --
-        // may be needed to compute types.
-        new P4::ConstantFolding(refMap, nullptr),
-        // Desugars direct parser and control applications
-        // into instantiations followed by application
-        new P4::InstantiateDirectCalls(refMap),
-        new P4::ResolveReferences(refMap),  // check shadowing
-        // Type checking and type inference.  Also inserts
-        // explicit casts where implicit casts exist.
-        new P4::TypeInference(refMap, typeMap, false),  // insert casts
-        new P4::BindTypeVariables(refMap, typeMap),
-        new P4::DefaultArguments(refMap, typeMap),  // add default argument values to parameters
-        new P4::ResolveReferences(refMap),
-        new P4::TypeInference(refMap, typeMap, false),  // more casts may be needed
-        new P4::RemoveParserControlFlow(refMap, typeMap),
-        new P4::StructInitializers(refMap, typeMap),
-        new P4::SpecializeGenericFunctions(refMap, typeMap),
-        new P4::TableKeyNames(refMap, typeMap),
-        new PassRepeated({
-            new P4::ConstantFolding(refMap, typeMap),
-            new P4::StrengthReduction(refMap, typeMap),
-            new P4::UselessCasts(refMap, typeMap)
-        }),
-        new P4::SimplifyControlFlow(refMap, typeMap),
-        new P4::SwitchAddDefault,
-        new P4::RemoveAllUnusedDeclarations(refMap, true),
-        new P4::SimplifyParsers(refMap),
-        new P4::ResetHeaders(refMap, typeMap),
-        new P4::UniqueNames(refMap),  // Give each local declaration a unique internal name
-        new P4::MoveDeclarations(),  // Move all local declarations to the beginning
-        new P4::MoveInitializers(refMap),
-        new P4::SideEffectOrdering(refMap, typeMap, skip_side_effect_ordering),
-        new P4::SimplifyControlFlow(refMap, typeMap),
-        new P4::MoveDeclarations(),  // Move all local declarations to the beginning
-        new P4::SimplifyDefUse(refMap, typeMap),
-        new P4::UniqueParameters(refMap, typeMap),
-        new P4::SimplifyControlFlow(refMap, typeMap),
-        new P4::SpecializeAll(refMap, typeMap),
-        new P4::RemoveParserControlFlow(refMap, typeMap),
-        new P4::RemoveReturns(refMap),
-        new P4::RemoveDontcareArgs(refMap, typeMap),
-        new P4::MoveConstructors(refMap),
-        new P4::RemoveAllUnusedDeclarations(refMap),
-        new P4::ClearTypeMap(typeMap),
-        evaluator,
-        new P4::Inline(refMap, typeMap, evaluator),
-        new P4::InlineActions(refMap, typeMap),
-        new P4::InlineFunctions(refMap, typeMap),
-        new P4::SetHeaders(refMap, typeMap),
-        // Check for constants only after inlining
-        new P4::SimplifyControlFlow(refMap, typeMap),
-        new P4::RemoveParserControlFlow(refMap, typeMap),
-        new P4::UniqueNames(refMap),
-        new P4::LocalizeAllActions(refMap),
-        new P4::UniqueNames(refMap),  // needed again after inlining
-        new P4::UniqueParameters(refMap, typeMap),
-        new P4::SimplifyControlFlow(refMap, typeMap),
-        new P4::HierarchicalNames(),
-    });
-}
-
-Visitor* minimum_backend_passes(const CompilerOptions& options) {
-    (void) options;
-    return new PassManager({
-#if 0
-    // TODO This is taken from bf-p4c/test/gtest/phv_core_alloc.cpp
-        new CollectHeaderStackInfo,
-        new CollectPhvInfo(phv),
-        new InstructionSelection(options, phv),
-        &uses,
-        &pragmas,
-        new MutexOverlay(phv, pragmas),
-        &field_to_parser_states,
-        &parser_critical_path,
-        new FindDependencyGraph(phv, deps, &options, "", "Before PHV allocation"),
-        new MemoizeMinStage(phv, deps),
-        &defuse,
-        &table_mutex,
-        &action_mutex,
-        &pack_conflicts,
-        &action_constraints,
-        new TablePhvConstraints(phv, action_constraints, pack_conflicts),
-        new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
-        &critical_path_clusters,
-        &dom_tree,
-        &table_actions_map,
-        &meta_live_range,
-        (Device::phvSpec().hasContainerKind(PHV::Kind::dark) &&
-         !options.disable_dark_allocation)
-            ? &dark_live_range : nullptr,
-        &live_range_shrinking,
-        &clustering,
-        &table_ids,
-        &strided_headers,
-        &parser_info
-#endif
-    });
-}
-
-}  // namespace
-
 bool TestCode::apply_pass(Visitor& pass, const Visitor_Context* context) {
     auto before = ::errorCount();
     if (pipe) {
@@ -658,6 +512,8 @@ bool TestCode::apply_pass(Pass pass) {
     switch (pass) {
         case Pass::FullFrontend: {
             pipe = nullptr;
+            backend = nullptr;
+            mauasm = nullptr;
             auto before = ::errorCount();
             // The 'frontendPasses' are encapsulated in a run method, so we have to call that.
             program = P4::FrontEnd().run(options, program, skip_side_effect_ordering);
@@ -666,12 +522,16 @@ bool TestCode::apply_pass(Pass pass) {
 
         case Pass::FullMidend: {
             pipe = nullptr;
+            backend = nullptr;
+            mauasm = nullptr;
             BFN::MidEnd midend{options};
             return apply_pass(midend);
         }
 
         case Pass::ConverterToBackend: {
             pipe = nullptr;
+            backend = nullptr;
+            mauasm = nullptr;
             ordered_map<cstring, const IR::Type_StructLike*> empty{};
             BFN::SubstitutePackedHeaders extractPipes{options, empty};
             if (!apply_pass(extractPipes) || !extractPipes.pipe.size())
@@ -680,35 +540,30 @@ bool TestCode::apply_pass(Pass pass) {
             return pipe != nullptr;
         }
 
-        case Pass::FullBackend: {
-            if (!pipe) throw std::invalid_argument("ConverterToBackend must be run first");
-            static int pipe_id = INT_MAX;  // TableSummary requires a unique pipe ID.
-            BFN::Backend backend{options, pipe_id--};
-            return apply_pass(backend);
-        }
-
         case Pass::ThreadLocalInstances: {
             if (!pipe) throw std::invalid_argument("ConverterToBackend must be run first");
+            backend = nullptr;
+            mauasm = nullptr;
             CreateThreadLocalInstances ctli;
             return apply_pass(ctli);
         }
 
-        case Pass::MinimumFrontend:
-            if (pipe) pipe = nullptr;
-            return apply_pass(minimum_frontend_passes(skip_side_effect_ordering));
-
-        case Pass::MinimumBackend:
+        case Pass::FullBackend: {
             if (!pipe) throw std::invalid_argument("ConverterToBackend must be run first");
-            return apply_pass(minimum_backend_passes(options));
+            mauasm = nullptr;
+            static int pipe_id = INT_MAX;  // TableSummary requires a unique pipe ID.
+            backend = new BFN::Backend{options, pipe_id--};
+            return apply_pass(backend);
+        }
     }
     return false;
 }
 
-Match::Result TestCode::match(const Match::CheckList& exprs) const {
-    return Match::match(exprs, get_block(), 0, std::string::npos, flag);
+Match::Result TestCode::match(CodeBlock blk_type, const Match::CheckList& exprs) const {
+    return Match::match(exprs, extract_code(blk_type), 0, std::string::npos, flag);
 }
 
-std::string TestCode::get_block(size_t pos) const {
+std::string TestCode::extract_p4() const {
     // Fetch the entire program.
     Util::SourceCodeBuilder builder;
     auto before = ::errorCount();
@@ -727,13 +582,60 @@ std::string TestCode::get_block(size_t pos) const {
             --end;
         blk = blk.substr(start, end-start);
     }
+    return blk;
+}
+
+std::string TestCode::extract_asm(CodeBlock blk_type) const {
+    BUG_CHECK(blk_type != CodeBlock::P4Code, "Handled by extract_p4() not here!");
+    if (!backend) throw std::invalid_argument("FullBackend must be run first");
+
+    // We lazy apply the MauAsmOutput pass, hence we make the variable mutable.
+    // TODO do we need to apply this pass before we can extract a non-Mau CodeBlock?
+    if (!mauasm) {
+        auto before = ::errorCount();
+        mauasm = new MauAsmOutput {backend->get_phv(), pipe, backend->get_nxt_tbl(),
+                                   backend->get_power_and_mpr(), BackendOptions()};
+        pipe->apply(*mauasm);
+        if (::errorCount() != before)
+            return "Invalid MauAsmOutput";
+    }
+
+    std::ostringstream oss;
+    switch (blk_type) {
+        case CodeBlock::P4Code:
+            BUG("Unreachable code");
+        case CodeBlock::PhvAsm:
+            oss << PhvAsmOutput(backend->get_phv(), backend->get_defuse(),
+                                backend->get_tbl_summary(), backend->get_live_range_report(),
+                                pipe->ghost_thread);
+            break;
+        case CodeBlock::MauAsm:
+            oss << *mauasm << "\n";
+            break;
+        case CodeBlock::ParserIAsm:
+            oss << ParserAsmOutput(pipe, INGRESS);
+            break;
+        case CodeBlock::DeparserIAsm:
+            oss << DeparserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), INGRESS);
+            break;
+        case CodeBlock::ParserEAsm:
+            oss << ParserAsmOutput(pipe, EGRESS);
+            break;
+        case CodeBlock::DeparserEAsm:
+            oss << DeparserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), EGRESS);
+            break;
+    }
+    return oss.str();
+}
+
+std::string TestCode::extract_code(CodeBlock blk_type, size_t pos) const {
+    auto blk = (blk_type == CodeBlock::P4Code)? extract_p4() : extract_asm(blk_type);
 
     // Apply any requested options.
     if (flag & Match::TrimAnnotations)
         blk = Match::trimAnnotations(blk);
     if (flag & Match::TrimWhiteSpace)
         blk = Match::trimWhiteSpace(blk);
-
     return blk.substr(pos);
 }
 
