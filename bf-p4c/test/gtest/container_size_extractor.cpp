@@ -144,9 +144,9 @@ TEST_F(ContainerSizeExtractorTest, CanBindConstraintToSlices) {
     auto sl2 = *(++slices.begin());
 
     EXPECT_EQ(sl1.getRange(), le_bitrange(0, 7));
-    EXPECT_EQ(sl1.getContainerSize().getContainerSize(), 8);
+    EXPECT_EQ(sl1.getContainerSize().getContainerSize(), 8U);
     EXPECT_EQ(sl2.getRange(), le_bitrange(8, 23));
-    EXPECT_EQ(sl2.getContainerSize().getContainerSize(), 16);
+    EXPECT_EQ(sl2.getContainerSize().getContainerSize(), 16U);
 }
 
 }  // namespace Test

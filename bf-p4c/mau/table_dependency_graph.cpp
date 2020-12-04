@@ -2100,7 +2100,7 @@ std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps
 
     bool first = true;
     uint64_t bits = static_cast<uint64_t>(deps);
-    for (int i = 0; i < sizeof(bit_names)/sizeof(bit_names[0]); ++i) {
+    for (unsigned i = 0; i < sizeof(bit_names)/sizeof(bit_names[0]); ++i) {
         if (bits & (1U << i)) {
             out << (first ? "" : "|") << bit_names[i];
             first = false; } }

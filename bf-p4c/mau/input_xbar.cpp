@@ -3846,7 +3846,7 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
  * and writes them into the seed output.
  */
 bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
-        const PhvInfo &phv, std::map<int, le_bitrange> &bit_starts,
+        const PhvInfo& /*unused*/, std::map<int, le_bitrange> &bit_starts,
         safe_vector<const IR::Expression *> field_list, int total_input_bits) {
     safe_vector<hash_matrix_output_t> hash_outputs;
     for (auto &entry : bit_starts) {

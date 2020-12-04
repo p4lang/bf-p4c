@@ -1599,7 +1599,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     IR::BFN::LoweredDeparser* igLoweredDeparser;
     IR::BFN::LoweredDeparser* egLoweredDeparser;
     // Contains checksum unit number for each checksum destination in each gress
-    std::map<gress_t, std::map<const IR::BFN::EmitChecksum*, int>> checksumInfo;
+    std::map<gress_t, std::map<const IR::BFN::EmitChecksum*, unsigned>> checksumInfo;
 
  private:
     IR::Vector<IR::BFN::FieldLVal>
@@ -1620,7 +1620,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     std::pair<IR::BFN::PartialChecksumUnitConfig*, std::vector<IR::BFN::ChecksumClotInput*>>
     getPartialUnit(const IR::BFN::EmitChecksum* emitChecksum,
                    gress_t gress) {
-        int checksumUnit = -1;
+        unsigned checksumUnit;
         // Find if the checksum is already allocated a checksum units
         if (checksumInfo.count(gress) && checksumInfo[gress].count(emitChecksum)) {
             checksumUnit = checksumInfo[gress][emitChecksum];

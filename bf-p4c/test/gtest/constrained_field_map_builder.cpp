@@ -108,7 +108,7 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSliceConstraints) {
 
     auto slice = *(++slices.begin());
     EXPECT_TRUE(slice.getAlignment().hasConstraint());
-    EXPECT_EQ(slice.getAlignment().getAlignment(), 4);
+    EXPECT_EQ(slice.getAlignment().getAlignment(), 4U);
 }
 
 }  // namespace Test

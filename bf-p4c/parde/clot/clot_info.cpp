@@ -1092,7 +1092,8 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
 
     // Tracks the graph node corresponding to the field or constant that was previously emitted by
     // the deparser.
-    boost::optional<DeparseGraph::Node> prev_node = boost::none;
+    boost::optional<DeparseGraph::Node> prev_node =  // boost::none;  Compiler incorrectly warns.
+                        boost::make_optional(false, DeparseGraph::Node{});  // Compiler is happy!
 
     // The deparse graph for the current gress.
     auto& deparse_graph = clotInfo.deparse_graph_[deparser->gress];

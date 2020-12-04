@@ -1470,7 +1470,7 @@ class FormatHash::Output : public Inspector {
  */
 void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-        const safe_vector<const IR::Expression *> &field_list_order) const {
+        const safe_vector<const IR::Expression *> & /*field_list_order*/) const {
     if (hdh.hash_gen_expr) {
         int hash_gen_expr_width = hdh.hash_gen_expr->type->width_bits();
         BUG_CHECK(hash_gen_expr_width > 0, "zero width hash expression: %s ?", hdh.hash_gen_expr);

@@ -9,7 +9,7 @@ AdjustByteCountSetup::AdjustByteCountSetup() {
     });
 }
 
-int AdjustByteCountSetup::Update::get_bytecount(IR::MAU::AttachedMemory *am) {
+int AdjustByteCountSetup::Update::get_bytecount(IR::MAU::AttachedMemory* /*unused*/) {
     auto *orig_am = getOriginal()->to<IR::MAU::AttachedMemory>();
     if (!orig_am) return 0;
     if (self.adjust_byte_counts.count(orig_am) > 0) {
