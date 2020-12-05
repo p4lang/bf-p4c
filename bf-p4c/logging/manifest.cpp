@@ -189,13 +189,16 @@ void Manifest::serializePipes(Writer &writer) {
     writer.Key("pipes");
     writer.StartArray();  // for each pipe
     for (auto p : _pipeOutputs) {
-        writer.StartObject();
-        writer.Key("pipe_id");
-        writer.Int(p.first);
-        writer.Key("pipe_name");
-        writer.String(_pipes.at(p.first).c_str());
-        p.second->serialize(writer);
-        writer.EndObject();
+        // XXX(yumin): have too add this check for a ghost thread profile P4C-3327.
+        if (_pipes.count(p.first)) {
+            writer.StartObject();
+            writer.Key("pipe_id");
+            writer.Int(p.first);
+            writer.Key("pipe_name");
+            writer.String(_pipes.at(p.first).c_str());
+            p.second->serialize(writer);
+            writer.EndObject();
+        }
     }
     writer.EndArray();
 }

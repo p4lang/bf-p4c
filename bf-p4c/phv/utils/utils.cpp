@@ -529,11 +529,9 @@ PHV::Allocation::available_spots() const {
  * containers that the Device pins to a particular gress are
  * initialized to that gress.
  */
-PHV::ConcreteAllocation::ConcreteAllocation(
-        const PhvInfo& phv,
-        const PhvUse& uses,
-        bitvec containers)
-        : PHV::Allocation(phv, uses) {
+PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& uses,
+                                            bitvec containers)
+    : PHV::Allocation(phv, uses) {
     auto& phvSpec = Device::phvSpec();
     for (auto cid : containers) {
         PHV::Container c = phvSpec.idToContainer(cid);
@@ -550,10 +548,20 @@ PHV::ConcreteAllocation::ConcreteAllocation(
         } else if (phvSpec.egressOnly()[phvSpec.containerToId(c)]) {
             gress = EGRESS;
             parserGroupGress = EGRESS;
-            deparserGroupGress = EGRESS; }
-        container_status_i[c] =
-            { gress, parserGroupGress, deparserGroupGress, { },
-              PHV::Allocation::ContainerAllocStatus::EMPTY }; }
+            deparserGroupGress = EGRESS;
+        }
+        container_status_i[c] = {gress,
+                                 parserGroupGress,
+                                 deparserGroupGress,
+                                 {},
+                                 PHV::Allocation::ContainerAllocStatus::EMPTY};
+    }
+    // set phv state
+    for (const auto& f : phv) {
+        for (const auto& alloc : f.get_alloc()) {
+            allocate(alloc);
+        }
+    }
 }
 
 PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& uses)

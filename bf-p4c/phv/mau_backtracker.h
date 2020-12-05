@@ -20,9 +20,6 @@ class MauBacktracker : public Backtrack {
     /// Map of table names to stage from a previous round without container conflicts.
     ordered_map<cstring, ordered_set<int>> prevRoundTables;
 
-    /// Set of bridged fields that should be interpreted as no-pack, based on backtracking.
-    ordered_set<cstring>    noPackFields;
-
     /// Store the number of stages required by table allocation
     int maxStage = -1;
 
@@ -66,11 +63,6 @@ class MauBacktracker : public Backtrack {
 
     /// @returns firstRoundFit.
     bool didFirstRoundFit() const { return firstRoundFit; }
-
-    /// @returns true if the associated field with @name is in the noPackFields set.
-    bool isNoPackField(cstring name) const {
-        return noPackFields.count(name);
-    }
 
     bool happensBefore(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
 

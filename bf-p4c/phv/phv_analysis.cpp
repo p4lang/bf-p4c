@@ -1,4 +1,7 @@
 #include "phv_analysis.h"
+
+#include <initializer_list>
+
 #include "bf-p4c/phv/add_initialization.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -15,6 +18,7 @@
 #include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/phv/analysis/mutex_overlay.h"
 #include "bf-p4c/mau/action_mutex.h"
+#include "ir/visitor.h"
 
 class PhvInfo;
 
@@ -29,6 +33,12 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         MauBacktracker& alloc,
         CollectPhvLoggingInfo *phvLoggingInfo)
     : Logging::PassManager("phv_allocation_"),
+      phv_i(phv),
+      uses_i(uses),
+      clot_i(clot),
+      defuse_i(defuse),
+      deps_i(deps),
+      options_i(options),
       table_alloc(alloc),
       pragmas(phv),
       field_to_parser_states(phv),
@@ -127,4 +137,41 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     phvLoggingInfo->superclusters = &clustering.cluster_groups();
     phvLoggingInfo->pragmas = &pragmas;
     setName("PHV Analysis");
+}
+
+namespace {
+
+class IncrementalPHVAllocPass : public Logging::PassManager {
+ public:
+    IncrementalPHVAllocPass(const std::initializer_list<Visitor *>& visitors)
+        : Logging::PassManager("phv_incremental_allocation_") {
+        addPasses(visitors);
+    }
+};
+
+}  // namespace
+
+Visitor* PHV_AnalysisPass::make_incremental_alloc_pass(
+    const ordered_set<PHV::Field *> &temp_vars) {
+    return new IncrementalPHVAllocPass({
+         &tableActionsMap,
+         &uses_i,
+         // Refresh dependency graph for live range analysis
+         new FindDependencyGraph(phv_i, deps_i, &options_i, "",
+                                 "Just Before Incremental PHV allocation"),
+         // XXX(yumin): MemoizeMinStage will corrupt existing allocslice liverange, because
+         // deparser stage is marked as last stage + 1. DO NOT run it.
+         &defuse_i,
+         &table_mutex,
+         &action_mutex,
+         &pack_conflicts, &action_constraints,
+         new TablePhvConstraints(phv_i, action_constraints, pack_conflicts),
+         // &meta_live_range,
+         // LiveRangeShrinking pass has its own MapTablesToActions pass, have to rerun it.
+         &meta_init,
+         new IncrementalPHVAllocation(
+             temp_vars, clustering, uses_i, defuse_i, clot_i, pragmas, phv_i, action_constraints,
+             field_to_parser_states, parser_critical_path, critical_path_clusters, table_alloc,
+             meta_init, dark_live_range, table_ids, strided_headers, parser_info)
+        });
 }

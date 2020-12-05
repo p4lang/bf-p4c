@@ -12,6 +12,7 @@
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
@@ -31,6 +32,12 @@
   */
 class PHV_AnalysisPass : public Logging::PassManager {
  private:
+    PhvInfo &phv_i;
+    PhvUse &uses_i;
+    const ClotInfo& clot_i;
+    FieldDefUse &defuse_i;
+    DependencyGraph &deps_i;
+    const BFN_Options &options_i;
     /// Contains information about placement of tables by an earlier table allocation pass.
     MauBacktracker& table_alloc;
     /// PHV related pragma information.
@@ -83,6 +90,9 @@ class PHV_AnalysisPass : public Logging::PassManager {
             const DeparserCopyOpt &decaf,
             MauBacktracker& alloc,
             CollectPhvLoggingInfo *phvLoggingInfo);
+
+    Visitor* make_incremental_alloc_pass(
+        const ordered_set<PHV::Field *> &temp_vars);
 };
 
 #endif  /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

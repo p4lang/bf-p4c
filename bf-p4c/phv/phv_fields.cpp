@@ -269,7 +269,6 @@ cstring PhvInfo::full_hdr_name(const cstring& name_) const {
     return cstring("");
 }
 
-
 /// Get all the fields of header named @name_ and store them in set @flds
 /// ---
 void PhvInfo::get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const {
@@ -293,8 +292,6 @@ const PhvInfo::StructInfo *PhvInfo::simple_hdr(const cstring& name_) const {
 
     return nullptr;
 }
-
-
 
 void PhvInfo::addPadding(const IR::Padding *pad, gress_t gress) {
     BUG_CHECK(pad->type->is<IR::Type::Bits>(),
@@ -688,6 +685,34 @@ bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Tab
     return true;
 }
 
+PHV::Field* PhvInfo::create_dummy_padding(size_t sz, gress_t gress, bool overlayable) {
+    cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");
+    dummyPaddingNames.insert(name);
+    add(name, gress, sz, 0, false, false, false, /* isPad = */ true, overlayable);
+    return field(name);
+}
+
+std::vector<PHV::AllocSlice> PhvInfo::get_alloc(const IR::Expression* f,
+                                                const PHV::AllocContext* ctxt,
+                                                const PHV::FieldUse* use) const {
+    CHECK_NULL(f);
+    le_bitrange bits;
+    auto* phv_field = field(f, &bits);
+    BUG_CHECK(phv_field, "No PHV field for expression %1%", f);
+    return get_alloc(phv_field, &bits, ctxt, use);
+}
+
+std::vector<PHV::AllocSlice> PhvInfo::get_alloc(const PHV::Field* phv_field, le_bitrange* bits,
+                                                const PHV::AllocContext* ctxt,
+                                                const PHV::FieldUse* use) const {
+    std::vector<PHV::AllocSlice> slices;
+
+    phv_field->foreach_alloc(bits, ctxt, use,
+                             [&](const PHV::AllocSlice& alloc) { slices.push_back(alloc); });
+
+    return slices;
+}
+
 //
 //***********************************************************************************
 //
@@ -955,7 +980,9 @@ void PHV::Field::foreach_alloc(
     // Sort from hi to lo.
     for (auto it = alloc_slice_i.rbegin(); it != alloc_slice_i.rend(); ++it) {
         // ignore other stage alloc slices
-        if (!checkContext(*it, ctxt, use))  continue;
+        if (!checkContext(*it, ctxt, use))  {
+            continue;
+        }
 
         int lo = it->field_slice().lo;
         int hi = it->field_slice().hi;

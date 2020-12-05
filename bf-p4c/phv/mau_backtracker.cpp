@@ -31,10 +31,6 @@ bool MauBacktracker::backtrack(trigger &trig) {
         }
         LOG4("Inserted tables size: " << tables.size());
         return true;
-    } else if (trig.is<BridgedPackingTrigger::failure>()) {
-        auto t = dynamic_cast<BridgedPackingTrigger::failure *>(&trig);
-        noPackFields.insert(t->bridgedFieldNames.begin(), t->bridgedFieldNames.end());
-        return true;
     }
     return false;
 }

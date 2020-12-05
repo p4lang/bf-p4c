@@ -31,26 +31,7 @@ class FileLog {
     std::basic_streambuf<char>* clog_buff = nullptr;
     std::ofstream *log = nullptr;
 
-    static const cstring& name2type(cstring logName) {
-        static const cstring unknown("Unknown");
-        static const std::map<cstring, cstring> logNames2Type = {
-            {"clot_allocation",     "parser"},
-            {"decaf",               "parser"},
-            {"flexible_packing",    "parser"},
-            {"ixbar",               "mau"},
-            {"parser.characterize", "parser"},
-            {"parser",              "parser"},
-            {"phv_allocation",      "phv"},
-            {"table_",              "mau"},
-            {"pragmas",             "phv"}
-        };
-
-        for (auto &logType : logNames2Type)
-            if (logName.startsWith(logType.first))
-                return logType.second;
-        return unknown;
-    }
-
+    static const cstring& name2type(cstring logName);
     static std::set<cstring> filesWritten;
 
  public:

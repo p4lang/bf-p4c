@@ -489,12 +489,6 @@ p4c_add_xfail_reason("tofino2"
 #  extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
 #)
 
-# P4C-3087
-p4c_add_xfail_reason("tofino2"
-  "Call to getNonGatewayGroupDominator with tables of different gresses."
-  extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
-)
-
 # Fails only for tofino2a0
 p4c_add_xfail_reason("tofino2"
   "Expected packet was not received on device .*, port .*"

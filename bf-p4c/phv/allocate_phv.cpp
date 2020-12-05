@@ -278,7 +278,7 @@ bool tofino_only_alloc_score_is_better(const AllocScore& left, const AllocScore&
 /// @returns a new slice list where any adjacent slices of the same field with
 /// contiguous little Endian ranges are merged into one slice, eg f[0:3], f[4:7]
 /// become f[0:7].
-static const PHV::SuperCluster::SliceList*
+const PHV::SuperCluster::SliceList*
 mergeContiguousSlices(const PHV::SuperCluster::SliceList* list) {
     if (!list->size()) return list;
 
@@ -304,6 +304,11 @@ bool satisfies_container_type_constraints(const PHV::ContainerGroup& group,
         }
     }
     return false;
+}
+
+/// @returns a concrete allocation based on current phv info object.
+PHV::ConcreteAllocation make_concrete_allocation(const PhvInfo& phv, const PhvUse& uses) {
+    return PHV::ConcreteAllocation(phv, uses);
 }
 
 }  // namespace
@@ -2440,8 +2445,12 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     LOG1(pragmas_i.pa_container_sizes());
     LOG1(pragmas_i.pa_atomic());
-    auto alloc = make_concrete_allocation();
-    auto empty_alloc = make_concrete_allocation();
+
+    // clear allocation result to create an empty concrete allocation.
+    clearSlices(phv_i);
+    LOG1("clear allocation result");
+    PHV::ConcreteAllocation alloc = make_concrete_allocation(phv_i, uses_i);
+    PHV::ConcreteAllocation empty_alloc = alloc;
     auto container_groups = makeDeviceContainerGroups();
     std::list<PHV::SuperCluster*> cluster_groups = make_cluster_groups();
 
@@ -2568,7 +2577,6 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     bool allocationDone = (result.status == AllocResultCode::SUCCESS) ||
         onlyPrivatizedFieldsUnallocated(result.remaining_clusters);
     if (allocationDone) {
-        clearSlices(phv_i);
         bindSlices(alloc, phv_i);
         phv_i.set_done();
     } else {
@@ -4308,3 +4316,56 @@ int FieldPackingOpportunity::nOpportunitiesAfter(
     }
 }
 
+const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, const char *) {
+    PHV::ConcreteAllocation alloc = make_concrete_allocation(phv_i, uses_i);
+    auto container_groups = AllocatePHV::makeDeviceContainerGroups();
+    std::list<PHV::SuperCluster*> cluster_groups;
+    const int pipeId = root->id;
+    for (const auto& f : temp_vars_i) {
+        cluster_groups.push_back(new PHV::SuperCluster(
+            {new PHV::RotationalCluster({new PHV::AlignedCluster(
+                PHV::Kind::normal, std::vector<PHV::FieldSlice>{PHV::FieldSlice(f)})})},
+            {}));
+    }
+    BruteForceStrategyConfig config {
+        /*.name:*/                   "default_incremental_alloc",
+        /*.is_better:*/              default_alloc_score_is_better,
+        /*.max_failure_retry:*/      0,
+        /*.max_slicing:*/            1,
+        /*.max_sl_alignment_try:*/   1,
+        /*.tofino_only:*/            false,
+        /*.pre_slicing_validation:*/ false,
+        /*.enable_ara_in_overlays:*/ false,
+    };
+    AllocResult result(
+        AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
+
+    BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
+            alloc, config.name, core_alloc_i, parser_critical_path_i,
+            critical_path_clusters_i, clot_i, strided_headers_i, uses_i, clustering_i, config,
+            pipeId);
+    result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
+    alloc.commit(result.transaction);
+    if (result.status == AllocResultCode::FAIL) {
+        LOG1("cannot allocate all temp vars");
+    } else {
+        AllocatePHV::clearSlices(phv_i);
+        AllocatePHV::bindSlices(alloc, phv_i);
+    }
+
+    auto logfile = createFileLog(pipeId, "phv_allocation_incremental_summary_", 1);
+    if (result.status == AllocResultCode::SUCCESS) {
+        LOG1("PHV ALLOCATION SUCCESSFUL");
+        LOG2(alloc);
+    } else {
+        ::error("failed to allocate temp vars created by table placement");
+        for (const auto* sc : result.remaining_clusters) {
+            sc->forall_fieldslices([](const PHV::FieldSlice& fs) {
+                ::error("unallocated: %1%", cstring::to_cstring(fs));
+            });
+        }
+    }
+    Logging::FileLog::close(logfile);
+
+    return root;
+}

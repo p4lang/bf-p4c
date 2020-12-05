@@ -24,13 +24,6 @@
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
 
-struct BridgedPackingTrigger {
-    struct failure : public Backtrack::trigger {
-        ordered_set<cstring> bridgedFieldNames;
-        explicit failure(ordered_set<cstring> b) : trigger(OTHER), bridgedFieldNames(b) {}
-    };
-};
-
 /// For each field, calculate the possible packing opportunities, if they are allocated
 /// in the given order, with fields that are allocated later than it.
 /// This object must be created after sorting superclusters, because
@@ -185,7 +178,6 @@ struct AllocAlignment {
 class CoreAllocation {
     // Input.
     const SymBitMatrix& mutex_i;
-    // const Clustering& clustering_i;
     const PhvUse& uses_i;
     const FieldDefUse& defuse_i;
     const ClotInfo& clot_i;
@@ -234,7 +226,6 @@ class CoreAllocation {
 
  public:
     CoreAllocation(const SymBitMatrix& mutex,
-                   const Clustering&,
                    const PhvUse& uses,
                    const FieldDefUse& defuse,
                    const ClotInfo& clot,
@@ -394,6 +385,9 @@ class CoreAllocation {
     const MapFieldToParserStates& field_to_parser_states() const {
         return field_to_parser_states_i; }
     const CalcParserCriticalPath& parser_critical_path() const { return parser_critical_path_i; }
+    const ClotInfo& clot() const { return clot_i; }
+    // const CollectParserInfo& parser_info_i;
+    const CollectStridedHeaders& strided_headers() const { return strided_headers_i; }
 };
 
 enum class AllocResultCode {
@@ -647,26 +641,9 @@ class AllocatePHV : public Visitor {
      */
     const IR::Node *apply_visitor(const IR::Node* root, const char *name = 0) override;
 
-    /** Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
-     * attach it to the PHV::Field it slices.
-     */
-    static void bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv);
-
-    /// Clear alloc_slices allocated in @phv, if any.
-    static void clearSlices(PhvInfo& phv);
-
     /// @returns a SuperClusters from clustering_i.
     std::list<PHV::SuperCluster*> make_cluster_groups() const {
         return clustering_i.cluster_groups(); }
-
-    /// @returns a concrete allocation.
-    PHV::ConcreteAllocation make_concrete_allocation() const {
-        return PHV::ConcreteAllocation(phv_i, uses_i); }
-
-    /** @returns the container groups available on this Device.  All fields in
-     * a cluster must be allocated to the same container group.
-     */
-    static std::list<PHV::ContainerGroup *> makeDeviceContainerGroups();
 
     /// @returns true if the only unallocated fields are all TempVars (TPHV fields) introduced by
     /// privatization (field->privatized() == true).
@@ -717,7 +694,7 @@ class AllocatePHV : public Visitor {
                 const MapTablesToIDs& t,
                 const CollectStridedHeaders& hs,
                 const CollectParserInfo& parser_info)
-        : core_alloc_i(phv.field_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
+        : core_alloc_i(phv.field_mutex(), uses, defuse, clot, pragmas, phv, actions,
            meta_init, dark, field_to_parser_states, parser_critical_path, alloc, parser_info, hs),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
@@ -725,6 +702,64 @@ class AllocatePHV : public Visitor {
           parser_critical_path_i(parser_critical_path),
           critical_path_clusters_i(critical_cluster), table_ids_i(t),
           strided_headers_i(hs) { }
+
+    /** @returns the container groups available on this Device.  All fields in
+     * a cluster must be allocated to the same container group.
+     */
+    static std::list<PHV::ContainerGroup *> makeDeviceContainerGroups();
+
+    /// Clear alloc_slices allocated in @phv, if any.
+    static void clearSlices(PhvInfo& phv);
+
+    /** Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
+     * attach it to the PHV::Field it slices.
+     */
+    static void bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv);
+};
+
+/// IncrementalPHVAllocation incrementally allocates fields.
+/// Currently it only supports allocating temp vars created by table alloc.
+/// XXX(yumin): we need to check whether mutex and live range info for those fields
+/// are correct or not.
+class IncrementalPHVAllocation : public Visitor {
+    CoreAllocation core_alloc_i;
+    PhvInfo& phv_i;
+    const PhvUse& uses_i;
+    const ClotInfo& clot_i;
+    const Clustering& clustering_i;
+    const MauBacktracker& alloc_i;
+    const SymBitMatrix& mutex_i;
+    PHV::Pragmas& pragmas_i;
+    const IR::BFN::Pipe *root;
+    const CalcParserCriticalPath& parser_critical_path_i;
+    const CalcCriticalPathClusters& critical_path_clusters_i;
+    const MapTablesToIDs table_ids_i;
+    const CollectStridedHeaders& strided_headers_i;
+
+    // fields to be allocated.
+    const ordered_set<PHV::Field*>& temp_vars_i;
+
+    // This pass does not traverse IR.
+    const IR::Node *apply_visitor(const IR::Node* root, const char* name = 0) override;
+
+ public:
+    explicit IncrementalPHVAllocation(
+        const ordered_set<PHV::Field*>& temp_vars, const Clustering& clustering, const PhvUse& uses,
+        const FieldDefUse& defuse, const ClotInfo& clot, PHV::Pragmas& pragmas, PhvInfo& phv,
+        ActionPhvConstraints& actions, const MapFieldToParserStates& field_to_parser_states,
+        const CalcParserCriticalPath& parser_critical_path,
+        const CalcCriticalPathClusters& critical_cluster, const MauBacktracker& alloc,
+        LiveRangeShrinking& meta_init, DarkOverlay& dark, const MapTablesToIDs& t,
+        const CollectStridedHeaders& hs, const CollectParserInfo& parser_info)
+        : core_alloc_i(phv.field_mutex(), uses, defuse, clot, pragmas, phv, actions,
+           meta_init, dark, field_to_parser_states, parser_critical_path, alloc, parser_info, hs),
+          phv_i(phv), uses_i(uses), clot_i(clot),
+          clustering_i(clustering), alloc_i(alloc),
+          mutex_i(phv.field_mutex()), pragmas_i(pragmas),
+          parser_critical_path_i(parser_critical_path),
+          critical_path_clusters_i(critical_cluster), table_ids_i(t),
+          strided_headers_i(hs),
+          temp_vars_i(temp_vars) {}
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

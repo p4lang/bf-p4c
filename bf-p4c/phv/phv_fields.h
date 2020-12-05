@@ -1423,37 +1423,18 @@ class PhvInfo {
              bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false,
              boost::optional<Util::SourceInfo> srcInfo = boost::none);
 
-    PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true) {
-        cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");
-        dummyPaddingNames.insert(name);
-        add(name, gress, sz, 0, false, false, false, /* isPad = */ true, overlayable);
-        return field(name);
-    }
+    PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true);
 
     std::vector<PHV::AllocSlice> get_alloc(
             const IR::Expression* f,
             const PHV::AllocContext* ctxt = nullptr,
-            const PHV::FieldUse* use = nullptr) const {
-        CHECK_NULL(f);
-        le_bitrange bits;
-        auto* phv_field = field(f, &bits);
-        BUG_CHECK(phv_field, "No PHV field for expression %1%", f);
-        return get_alloc(phv_field, &bits, ctxt, use);
-    }
+            const PHV::FieldUse* use = nullptr) const;
 
     std::vector<PHV::AllocSlice> get_alloc(
             const PHV::Field* phv_field,
             le_bitrange* bits = nullptr,
             const PHV::AllocContext* ctxt = nullptr,
-            const PHV::FieldUse* use = nullptr) const {
-        std::vector<PHV::AllocSlice> slices;
-
-        phv_field->foreach_alloc(bits, ctxt, use, [&](const PHV::AllocSlice& alloc) {
-            slices.push_back(alloc);
-        });
-
-        return slices;
-    }
+            const PHV::FieldUse* use = nullptr) const;
 
     iterator<safe_vector<PHV::Field *>::iterator> begin() { return by_id.begin(); }
     iterator<safe_vector<PHV::Field *>::iterator> end() { return by_id.end(); }

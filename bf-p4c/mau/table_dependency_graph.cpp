@@ -1151,6 +1151,146 @@ bool DependencyGraph::is_ctrl_edge(DependencyGraph::dependencies_t dep) const {
      || (dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE));
 }
 
+bool DependencyGraph::is_edge_critical(typename Graph::edge_descriptor e) const {
+    auto source = get_vertex(boost::source(e, g));
+    auto target = get_vertex(boost::target(e, g));
+    if (min_stage_edges.count(target) == 0) return false;
+    for (auto s : min_stage_edges.at(target)) {
+        if ((s.first == source) && (s.second == g[e])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+boost::optional<ordered_map<
+    std::pair<const PHV::Field *, DependencyGraph::dependencies_t>,
+    std::pair<ordered_set<const IR::MAU::Action *>, ordered_set<const IR::MAU::Action *>>>>
+DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
+                                          const IR::MAU::Table *downstream) const {
+    if (!labelToVertex.count(upstream)) {
+        LOG4("Upstream vertex " << upstream->name << " not found in graph");
+        return boost::none;
+    }
+    if (!labelToVertex.count(downstream)) {
+        LOG4("Downstream vertex " << downstream->name << "not found in graph");
+        return boost::none;
+    }
+    auto upstream_v = labelToVertex.at(upstream);
+    typename Graph::out_edge_iterator out, end;
+    ordered_map<
+        std::pair<const PHV::Field *, DependencyGraph::dependencies_t>,
+        std::pair<ordered_set<const IR::MAU::Action *>, ordered_set<const IR::MAU::Action *>>>
+        gathered_data;
+    bool found_downstream = false;
+    for (boost::tie(out, end) = boost::out_edges(upstream_v, g); out != end; ++out) {
+        const IR::MAU::Table *test_v = get_vertex(boost::target(*out, g));
+        if (test_v == downstream && (!is_ctrl_edge(g[*out]))) {
+            found_downstream = true;
+            auto edge_type = g[*out];
+            auto local_data_opt = get_data_dependency_info(*out);
+            if (!local_data_opt) return boost::none;
+            auto local_data = local_data_opt.get();
+            for (const auto &kv : local_data) {
+                gathered_data[{kv.first, edge_type}].first |= local_data[kv.first].first;
+                gathered_data[{kv.first, edge_type}].second |= local_data[kv.first].second;
+            }
+        }
+    }
+    if (!found_downstream) {
+        LOG4("Edge not found between tables " << upstream->name << ", " << downstream->name);
+        return boost::none;
+    }
+    return gathered_data;
+}
+
+DependencyGraph::mau_dependencies_t DependencyGraph::find_mau_dependency(
+        const IR::MAU::Table *from, const IR::MAU::Table *to) {
+    check_finalized();
+    std::pair<const IR::MAU::Table *, const IR::MAU::Table *> p = std::make_pair(from, to);
+    if (table_dep_.find(p) != table_dep_.end()) return table_dep_.at(p);
+    if (from && to && from->gress == to->gress) {
+        if (containers_write_.find(to) != containers_write_.end()) {
+            // check if containers read at xbar = match dependency
+            if (containers_read_xbar_.find(from) != containers_read_xbar_.end()) {
+                for (auto c : containers_write_.at(to)) {
+                    for (auto c2 : containers_read_xbar_.at(from)) {
+                        if (c == c2) {
+                            table_dep_.emplace(p, MAU_DEP_MATCH);
+                            return MAU_DEP_MATCH;
+                        }
+                    }
+                }
+            }
+            // check if containers read at PHV ALUs = action dependency
+            if (containers_read_alu_.find(from) != containers_read_alu_.end()) {
+                for (auto c : containers_write_.at(to)) {
+                    for (auto c2 : containers_read_alu_.at(from)) {
+                        if (c == c2) {
+                            table_dep_.emplace(p, MAU_DEP_ACTION);
+                            return MAU_DEP_ACTION;
+                        }
+                    }
+                }
+            }
+            // check if containers written at PHV ALUs = action dependency
+            if (containers_write_.find(from) != containers_write_.end()) {
+                for (auto c : containers_write_.at(to)) {
+                    for (auto c2 : containers_write_.at(from)) {
+                        if (c == c2) {
+                            table_dep_.emplace(p, MAU_DEP_ACTION);
+                            return MAU_DEP_ACTION;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    table_dep_.emplace(p, MAU_DEP_CONCURRENT);
+    return MAU_DEP_CONCURRENT;
+}
+
+// static
+cstring DependencyGraph::dep_to_name(dependencies_t dep) {
+    if ((dep == DependencyGraph::CONTROL) || (dep == DependencyGraph::ANTI_NEXT_TABLE_CONTROL) ||
+        (dep == DependencyGraph::CONTROL_ACTION) || (dep == DependencyGraph::CONTROL_COND_TRUE) ||
+        (dep == DependencyGraph::CONTROL_COND_FALSE) ||
+        (dep == DependencyGraph::CONTROL_TABLE_HIT) ||
+        (dep == DependencyGraph::CONTROL_TABLE_MISS) ||
+        (dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE)) {
+        return "control";
+    } else if (dep == IXBAR_READ) {
+        return "ixbar_read";
+    } else if (dep == ACTION_READ) {
+        return "action_read";
+    } else if ((dep == DependencyGraph::ANTI_EXIT) || (dep == DependencyGraph::ANTI_TABLE_READ) ||
+               (dep == DependencyGraph::ANTI_ACTION_READ) ||
+               (dep == DependencyGraph::ANTI_NEXT_TABLE_DATA) ||
+               (dep == DependencyGraph::ANTI_NEXT_TABLE_METADATA)) {
+        return "anti";
+    } else if (dep == OUTPUT) {
+        return "output";
+    } else {
+        return "concurrent";
+    }
+}
+
+// static
+DependencyGraph::dependencies_t DependencyGraph::get_control_edge_type(cstring annot) {
+    if (annot == "$hit")
+        return DependencyGraph::CONTROL_TABLE_HIT;
+    else if (annot == "$miss" || annot == "$try_next_stage")
+        return DependencyGraph::CONTROL_TABLE_MISS;
+    else if (annot == "$default")
+        return DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE;
+    else if (annot == "$true")
+        return DependencyGraph::CONTROL_COND_TRUE;
+    else if (annot == "$false")
+        return DependencyGraph::CONTROL_COND_FALSE;
+    else
+        return DependencyGraph::CONTROL_ACTION;
+}
+
 /** Topological Sorting Algorithm, but
  *  return a vector of set of vertices, where,
  *  the index of the vector represent the min_stage of vertices in that set.

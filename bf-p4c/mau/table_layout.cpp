@@ -676,6 +676,7 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         layout_for_pack.action_data_bytes_in_table = action_data_bytes_in_table;
         layout_for_pack.immediate_bits = immediate_bits;
         layout_for_pack.overhead_bits += immediate_bits;
+        layout_for_pack.action_data_bytes = action_data_bytes_in_table + (immediate_bits + 7) / 8;
         way.match_groups = entry_count;
         way.width = width;
         LayoutOption lo(layout_for_pack, way, index);

@@ -238,10 +238,13 @@ p4c_add_xfail_reason("tofino"
 # timeout
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
+)
 
+p4c_add_xfail_reason("tofino"
+  ".*gateway sharing search .*, but wants a different match group"
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
 
 p4c_add_xfail_reason("tofino"

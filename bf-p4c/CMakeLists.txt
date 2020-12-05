@@ -466,6 +466,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")
 
 set (BF_P4C_BACKEND_PHV_SRCS
+  phv/check_unallocated.cpp
   phv/constraints/constraints.cpp
   phv/action_phv_constraints.cpp
   phv/add_initialization.cpp
