@@ -66,7 +66,7 @@ const PHV::AllocContext* PHV::AllocContext::DEPARSER =
 
 int PhvInfo::deparser_stage = -1;
 ordered_map<cstring, std::set<int>> PhvInfo::table_to_min_stage;
-bool PhvInfo::darkSpillARA = true;
+bool PhvInfo::darkSpillARA = PhvInfo::DARK_SPILL_ARA_DEFAULT;
 
 void PhvInfo::clear() {
     all_fields.clear();

@@ -1020,6 +1020,7 @@ class PhvInfo {
     static ordered_map<cstring, std::set<int>> table_to_min_stage;
     static int deparser_stage;
     static bool darkSpillARA;
+    static const bool DARK_SPILL_ARA_DEFAULT = true;
 
     /// Pretty-print all fields
     struct DumpPhvFields : public Visitor {
@@ -1251,6 +1252,8 @@ class PhvInfo {
     static bool hasMinStageEntry(const IR::MAU::Table *tbl);
 
     static cstring reportMinStages();
+
+    static void resetDarkSpillARA() { darkSpillARA = DARK_SPILL_ARA_DEFAULT; }
 
     // When a gateway and a table is merged together, we need to make sure that the slices used in
     // the gateway are alive at the table with which it is merged. @returns true if the liveness

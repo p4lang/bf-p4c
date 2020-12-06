@@ -51,6 +51,11 @@ class Backend : public PassManager {
     MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     LiveRangeReport *liveRangeReport;
 
+ protected:
+    profile_t init_apply(const IR::Node *root) override {
+        PhvInfo::resetDarkSpillARA();
+        return PassManager::init_apply(root); }
+
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
 

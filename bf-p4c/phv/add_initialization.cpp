@@ -693,7 +693,9 @@ void ComputeDependencies::addDepsForDarkInitialization() {
     static PHV::FieldUse READ(PHV::FieldUse::READ);
     static PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
     static std::pair<int, PHV::FieldUse> parserMin = std::make_pair(-1, READ);
-    static std::pair<int, PHV::FieldUse> deparserMax = std::make_pair(PhvInfo::getDeparserStage(),
+    // Don't make this static: the deparser stage can be different for each pipe
+    // (and maybe also for different passes?)
+    std::pair<int, PHV::FieldUse> deparserMax = std::make_pair(PhvInfo::getDeparserStage(),
             WRITE);
     // Summarize use defs for all fields.
     StageFieldUse fieldWrites;
