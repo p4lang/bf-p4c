@@ -419,14 +419,13 @@ const IR::Node* SplitAlpm::postorder(IR::IfStatement* c) {
         return c;
     if (alpm_info->alpm_table.count(hta.table->name) == 0)
         return c;
-    auto cond = new IR::Member(
-            new IR::MethodCallExpression(new IR::Member(
-                new IR::PathExpression(
-                    IR::ID(hta.table->name + "__alpm_preclassifier")), IR::ID("apply")), {}),
-            "hit");
-    auto r = new IR::IfStatement(c->srcInfo, cond, c, nullptr);
-    LOG1("r " << r);
-    return r;
+    auto stmts = new IR::BlockStatement();
+    stmts->push_back(new IR::MethodCallStatement(
+        new IR::MethodCallExpression(new IR::Member(
+            new IR::PathExpression(IR::ID(hta.table->name + "__alpm_preclassifier")),
+            IR::ID("apply")), {})));
+    stmts->push_back(c);
+    return stmts;
 }
 
 AlpmImplementation::AlpmImplementation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
