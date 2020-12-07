@@ -2598,13 +2598,13 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG1("PHV ALLOCATION SUCCESSFUL");
-        LOG2(alloc);
+        LOG1(alloc);
     } else if (onlyPrivatizedFieldsUnallocated(result.remaining_clusters)) {
         LOG1("PHV ALLOCATION SUCCESSFUL FOR NON-PRIVATIZED FIELDS");
         LOG1("SuperClusters with Privatized Fields unallocated: ");
         for (auto* sc : result.remaining_clusters)
             LOG1(sc);
-        LOG2(alloc);
+        LOG1(alloc);
     } else {
         bool failure_diagnosed = (result.remaining_clusters.size() == 0) ? false :
             diagnoseFailures(result.remaining_clusters);
