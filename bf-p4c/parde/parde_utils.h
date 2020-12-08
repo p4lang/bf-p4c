@@ -58,14 +58,40 @@ struct Shift : Transform {
 
 struct ShiftPacketRVal : Shift {
     bool negative_ok = false;
+    std::set<const IR::BFN::ParserChecksumPrimitive*> toggle_swap;
     explicit ShiftPacketRVal(int shft, bool neg_ok = false) :
         Shift(shft), negative_ok(neg_ok) { }
 
     IR::Node* preorder(IR::BFN::PacketRVal* rval) override {
-        rval->range = rval->range.shiftedByBits(-shift_amt);
+        auto csum = findContext<IR::BFN::ParserChecksumPrimitive>();
+        auto new_range = rval->range.shiftedByBits(-shift_amt);
+        // Check if the first byte retains its even - odd alignment. If not, the
+        // toggle the swap
+        if (csum && (csum->is<IR::BFN::ChecksumSubtract>() ||
+                     csum->is<IR::BFN::ChecksumAdd>())) {
+            if (rval->range.loByte() % 2 != new_range.loByte() % 2) {
+                toggle_swap.insert(csum);
+            }
+        }
         if (!negative_ok)
-            BUG_CHECK(rval->range.lo >= 0, "packet rval shifted to be negative?");
+            BUG_CHECK(new_range.lo >= 0, "packet rval shifted to be negative?");
+        rval->range = new_range;
         return rval;
+    }
+
+    IR::Node* postorder(IR::BFN::ParserChecksumPrimitive* csum) {
+        for (auto c : toggle_swap) {
+            if (c->equiv(*csum)) {
+                if (auto sub = csum->to<IR::BFN::ChecksumSubtract>()) {
+                    return new IR::BFN::ChecksumSubtract(csum->declName,
+                            sub->source, !sub->swap, sub->isPayloadChecksum);
+                } else if (auto add = csum->to<IR::BFN::ChecksumAdd>()) {
+                    return new IR::BFN::ChecksumAdd(csum->declName,
+                    add->source, !add->swap, add->isHeaderChecksum);
+                }
+            }
+        }
+        return csum;
     }
 };
 

@@ -1206,8 +1206,8 @@ struct AllocateParserState : public ParserTransform {
             state->statements = alloc.current_statements;
             split->statements = *(alloc.spilled_statements.apply(ShiftPacketRVal(max_shift)));
             split->selects = *(state->selects.apply(ShiftPacketRVal(max_shift, true)));
-
             state->selects = {};
+
             // Determine if the current state and spilled extracts any strided header stacks
             // Reset the header stack indices and mark the appropriate state as strided.
             if (state->stride) {
