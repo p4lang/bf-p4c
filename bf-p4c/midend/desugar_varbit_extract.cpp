@@ -1,6 +1,7 @@
 #include "desugar_varbit_extract.h"
 #include "frontends/common/constantFolding.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/common/utils.h"
 
 struct CollectVariables : public Inspector {
@@ -186,7 +187,6 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
 
     for (auto& v : reject_matches)
         LOG2(encode_var << " = " << v << " : reject");
-
     return true;
 }
 
@@ -248,7 +248,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
 
     varbit_field_to_extract_call_path[varbit_field] = path;
 
-    varbit_field_to_header_instance[varbit_field] = headerName;
+    state_to_header_instance[state] = headerName;
     header_type_to_varbit_field[hdr_type] = varbit_field;
 }
 
@@ -363,18 +363,24 @@ static cstring create_instance_name(cstring name) {
     str = str.substr(0, str.length() - 2);
     return str.c_str();
 }
+typedef ordered_map<cstring,
+             ordered_map<unsigned, IR::Type_Header*>> VarbitHeaderMap;
 
-static IR::Type_Header*
+static void
 create_varbit_header_type(const IR::Type_Header* orig_hdr, cstring orig_hdr_inst,
-                          const IR::StructField* varbit_field, unsigned length) {
-    cstring name = orig_hdr->name + "_" + orig_hdr_inst + "_" + varbit_field->name + "_"
-                   + cstring::to_cstring(length) + "b_t";
-
-    auto hdr = new IR::Type_Header(name);
-    auto field_type = IR::Type::Bits::get(length);
-    auto field = new IR::StructField("field", field_type);
-    hdr->fields.push_back(field);
-    return hdr;
+                          const IR::StructField* varbit_field, unsigned current_hdr_size,
+                          unsigned varbit_field_size,
+                          VarbitHeaderMap& varbit_hdr_instance_to_header_types) {
+    if (!varbit_hdr_instance_to_header_types.count(orig_hdr_inst) ||
+        !varbit_hdr_instance_to_header_types.at(orig_hdr_inst).count(varbit_field_size)) {
+        cstring name = orig_hdr->name + "_" + orig_hdr_inst + "_" + varbit_field->name + "_"
+                       + cstring::to_cstring(varbit_field_size) + "b_t";
+        auto hdr = new IR::Type_Header(name);
+        auto field_type = IR::Type::Bits::get(current_hdr_size);
+        auto field = new IR::StructField("field", field_type);
+        hdr->fields.push_back(field);
+        varbit_hdr_instance_to_header_types[orig_hdr_inst][varbit_field_size] = hdr;
+    }
 }
 
 Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
@@ -429,21 +435,27 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     }
 
     IR::IndexedVector<IR::StatOrDecl> statements;
-
-    auto header = varbit_field_to_header_types[varbit_field][length];
+    auto hdr_instance = cve.state_to_header_instance.at(state);
     auto path = cve.varbit_field_to_extract_call_path.at(varbit_field);
-
-    auto varbit_hdr_inst = create_instance_name(header->name);
-    auto extract = create_extract_statement(parser, path, header, varbit_hdr_inst);
-    statements.push_back(extract);
-
-    if (cve.state_to_csum_add.count(state)) {
-        for (auto call : cve.state_to_csum_add.at(state)) {
-            auto method = call->method->to<IR::Member>();
-            statements.push_back(create_add_statement(method, path, header));
+    // Extract all the headers in map varbit_hdr_instance_to_header_types until
+    // key is greater than length
+    for (auto &header_to_length : varbit_hdr_instance_to_header_types[hdr_instance]) {
+        auto header_length = header_to_length.first;
+        if (header_length > length)
+            break;
+        auto header = header_to_length.second;
+        auto varbit_hdr_inst = create_instance_name(header->name);
+        auto extract = create_extract_statement(parser, path, header, varbit_hdr_inst);
+        statements.push_back(extract);
+        LOG3("Added extract statement for header " << header->name << " in state "
+              << name);
+        if (cve.state_to_csum_add.count(state)) {
+            for (auto call : cve.state_to_csum_add.at(state)) {
+                auto method = call->method->to<IR::Member>();
+                statements.push_back(create_add_statement(method, path, header));
+            }
         }
     }
-
     auto branch_state = new IR::ParserState(name, statements, select);
 
     LOG3("create state " << name);
@@ -530,21 +542,23 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
 
     auto parser = cve.state_to_parser.at(state);
     auto orig_hdr = cve.state_to_varbit_header.at(state);
-    auto orig_hdr_inst = cve.varbit_field_to_header_instance.at(varbit_field);
+    auto orig_hdr_inst = cve.state_to_header_instance.at(state);
     auto encode_var = cve.state_to_encode_var.at(state);
 
-    auto& value_map = cve.state_to_match_to_length.at(state);
+    auto& value_map = cve.state_to_length_to_match.at(state);
 
     cstring no_option_state_name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_end";
     const IR::ParserState* no_option_state = nullptr;
-
+    unsigned prev_length = 0;
     for (auto& kv : value_map) {
-        // auto match = kv.first;
-        auto length = kv.second;
+        auto length = kv.first;
 
         if (length) {
-            auto header = create_varbit_header_type(orig_hdr, orig_hdr_inst, varbit_field, length);
-            varbit_field_to_header_types[varbit_field][length] = header;
+            create_varbit_header_type(orig_hdr, orig_hdr_inst,
+                                          varbit_field, length-prev_length,
+                                          length,
+                                          varbit_hdr_instance_to_header_types);
+            prev_length = length;
 
             const IR::Expression* select = nullptr;
 
@@ -728,8 +742,8 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
                         if (cve.header_type_to_varbit_field.count(type)) {
                             auto varbit_field = cve.header_type_to_varbit_field.at(type);
                             auto path = arg->expression->to<IR::Member>()->expr;
-
-                            for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
+                            auto instance =  arg->expression->to<IR::Member>()->member;
+                            for (auto& kv : varbit_hdr_instance_to_header_types.at(instance)) {
                                 auto emit = create_emit_statement(method, kv.second, path,
                                                    create_instance_name(kv.second->name));
                                 components.push_back(emit);
@@ -806,13 +820,11 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
                     ::error("More than one varbit expression in %1%", list);
 
                 auto type = member->expr->type->to<IR::Type_Header>();
-                auto varbit_field = cve.header_type_to_varbit_field.at(type);
-
                 if (deparser) {
                     has_varbit = true;
                     auto path = member->expr->to<IR::Member>();
 
-                    for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
+                    for (auto& kv : varbit_hdr_instance_to_header_types.at(path->member)) {
                         auto hdr = kv.second;
                         auto field = hdr->fields[0];
 
@@ -954,7 +966,7 @@ IR::Node* RewriteParserVerify::preorder(IR::MethodCallStatement* stmt) {
 }
 
 bool RewriteVarbitTypes::preorder(IR::P4Program* program) {
-    for (auto& kv : rvu.varbit_field_to_header_types) {
+    for (auto& kv : rvu.varbit_hdr_instance_to_header_types) {
         for (auto& lt : kv.second)
             program->objects.insert(program->objects.begin(), lt.second);
     }
@@ -980,7 +992,7 @@ bool RewriteVarbitTypes::contains_varbit_header(IR::Type_Struct* type_struct) {
 
 bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
     if (contains_varbit_header(type_struct)) {
-        for (auto& kv : rvu.varbit_field_to_header_types) {
+        for (auto& kv : rvu.varbit_hdr_instance_to_header_types) {
             for (auto& lt : kv.second) {
                 auto type = lt.second;
                 auto field = new IR::StructField(create_instance_name(type->name),

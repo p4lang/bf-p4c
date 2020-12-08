@@ -67,6 +67,20 @@
 //         }
 //     }
 //
+
+//
+// Each compiler-added varbit state extracts multiple small size headers. The total number of
+// header extracted in that state will be propotional to length calculated in
+// compile time for state.  The sizes of the small headers can differ with the pattern of
+// varbit lengths
+//...................................................................
+//  state parse_32b {
+//      extract<bit<32>>(); }
+//  state parse_48b {
+//      extract<bit<32>>();
+//      extract<bit<16>>(); }
+//
+//................................................
 struct CheckMauUse : public Inspector {
     // We limit the use of varbit field to parser and deparser, which is
     // sufficient for skipping through header options.
@@ -104,7 +118,7 @@ class CollectVarbitExtract : public Inspector {
     std::map<const IR::ParserState*,
              std::set<const IR::Expression*>> state_to_verify_exprs;
 
-    std::map<const IR::StructField*, cstring> varbit_field_to_header_instance;
+    std::map<const IR::ParserState*, cstring> state_to_header_instance;
 
     std::map<const IR::ParserState*,
              std::set<const IR::MethodCallExpression*>> state_to_csum_add;
@@ -119,7 +133,6 @@ class CollectVarbitExtract : public Inspector {
     std::map<const IR::ParserState*, std::set<unsigned>> state_to_reject_matches;
 
     std::map<const IR::Type_Header*, const IR::StructField*> header_type_to_varbit_field;
-
     std::map<const IR::StructField*,
              const IR::PathExpression*> varbit_field_to_extract_call_path;
 
@@ -167,8 +180,10 @@ class RewriteVarbitUses : public Modifier {
     std::map<const IR::ParserState*, const IR::ParserState*> state_to_end_state;
 
  public:
-    std::map<const IR::StructField*,
-             std::map<unsigned, IR::Type_Header*>> varbit_field_to_header_types;
+    // To get all the headers associated with length L, find all the header types with
+    // length <= L
+    ordered_map<cstring,
+             ordered_map<unsigned, IR::Type_Header*>> varbit_hdr_instance_to_header_types;
 
     std::map<const IR::StructField*, IR::Type_Header*> varbit_field_to_post_header_type;
 

@@ -1459,7 +1459,11 @@ p4c_add_xfail_reason("tofino"
   "error: Exceeded hardware limit for deparser field dictionary entries"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
   ../glass/testsuite/p4_tests/embedway/COMPILER-765/parser_tcp_ip_option_mul.p4
-  extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
+)
+
+p4c_add_xfail_reason("tofino"
+    "error: Ran out of tcam space in ingress parser"
+    extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
 )
 
 p4c_add_xfail_reason("tofino"
