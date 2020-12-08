@@ -1381,6 +1381,7 @@ class CollectPhvFields : public Inspector {
             f->set_solitary(PHV::SolitaryReason::ARCH);
             f->set_no_split(true);
         }
+
         // A field that ends with PHV::Field::TPHV_PRIVATIZE_SUFFIX is the TPHV copy of a header
         // field, produced during the Privatization pass. This field must be marked appropriately as
         // privatized.
@@ -2163,6 +2164,44 @@ bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state)
     return true;
 }
 
+/**
+ *  This Inspector fixes: https://jira.devtools.intel.com/browse/P4C-2637
+ *  If result of some arith ops goes into tempvar, then that tempvar can
+ *  get allocated into wider container which makes the instruction alu
+ *  work at different width than anticipated by the user. This poses
+ *  problem for instructions like saturation where width of the operation
+ *  affects the result.
+ *
+ *  Problem is fixed by constraining tempvar with solitary, exact and
+ *  no_split which forces PHV allocation to allocate it into precise container.
+ */
+class ConstrainSatAddResultTempVars : public Inspector {
+    PhvInfo& phv_i;
+
+    bool needsConstraining(const IR::MAU::Instruction *ins) const {
+        // If we allow slicing of int<X> and casting the result back to int
+        // then subs and ssubs must be tested and possibly included here.
+        return ins->name == "saddu" || ins->name == "sadds";
+    }
+
+ public:
+    bool preorder(const IR::MAU::Instruction *ins) override {
+        if (!needsConstraining(ins)) return false;
+
+        auto expr = ins->operands.begin();
+        if ((*expr)->is<IR::TempVar>()) {
+            PHV::Field *f = phv_i.field((*expr)->to<IR::TempVar>());
+            f->set_exact_containers(true);
+            f->set_solitary(PHV::SolitaryReason::ARCH);
+            f->set_no_split(true);
+        }
+
+        return false;
+    }
+
+    explicit ConstrainSatAddResultTempVars(PhvInfo& phv) : phv_i(phv) { }
+};
+
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
         new ClearPhvInfo(phv),
@@ -2176,6 +2215,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new MarkTimestampAndVersion(phv),
         new MarkPaddingAsDeparsed(phv),
         new CollectExtractedTogetherFields(phv),
+        new ConstrainSatAddResultTempVars(phv)
     });
 }
 //

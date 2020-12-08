@@ -144,6 +144,8 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
         bitvec src1_byte_mask;
     };
 
+    bool saturationArith = false;
+
     const PhvInfo &phv;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 

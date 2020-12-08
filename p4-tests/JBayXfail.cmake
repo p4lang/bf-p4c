@@ -190,6 +190,11 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 
+p4c_add_xfail_reason("tofino2"
+  "Destination of saturation add was allocated to bigger container than the field itself.*"
+  extensions/p4_tests/p4_16/compile_only/p4c-3172-xfail.p4
+)
+
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)
 

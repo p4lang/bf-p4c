@@ -690,6 +690,9 @@ const IR::Node *MergeInstructions::preorder(IR::Node *node) {
 const IR::MAU::Instruction *MergeInstructions::preorder(IR::MAU::Instruction *instr) {
     merged_location = merged_fields.end();
     write_found = false;
+    if (instr->name == "sadds" || instr->name == "saddu") {
+        saturationArith = true;
+    }
     return instr;
 }
 
@@ -713,6 +716,13 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
             auto container = alloc.container();
             merged_location = merged_fields.find(container);
             write_found = true;
+
+            if (saturationArith && container.size() != field->size) {
+                BUG("Destination of saturation add was allocated to bigger container than the "
+                    "field itself, which would cause saturation to produce wrong results. You can "
+                    "try constraining source operand with @pa_container_size to achieve correct "
+                    "container allocation on both source and destination.");
+            }
         });
     }
 }
@@ -776,6 +786,8 @@ const IR::MAU::HashDist *MergeInstructions::preorder(IR::MAU::HashDist *hd) {
 /** If marked for a merge, remove the original instruction to be added back later
  */
 const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *instr) {
+    saturationArith = false;
+
     if (!write_found)
         BUG("No write found within the instruction");
 

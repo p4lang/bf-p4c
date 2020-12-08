@@ -111,51 +111,22 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-
-    action actionKeyNoParam() {
-        meta.index1 = (bit<INDEX_WIDTH>)hdr.vlan.pcp + meta.index1;
-    }
-    table tableKeyNoParam {
-        key = { hdr.vlan.pcp : exact; }
-        actions = { actionKeyNoParam; }
-    }
-
-    action actionNoKeyDefaultActionNoParam() {
-        meta.index2 = (bit<INDEX_WIDTH>)hdr.vlan.pcp + meta.index2;
-    }
-    table tableNoKeyDefaultActionNoParam {
-        actions = { actionNoKeyDefaultActionNoParam; }
-        default_action = actionNoKeyDefaultActionNoParam;
-    }
-
-    action actionNoParamSub() {
-        meta.index3 = (bit<INDEX_WIDTH>)hdr.vlan.pcp - meta.index3;
-    }
     action actionNoParamAddSat() {
-        //meta.index3 = (bit<INDEX_WIDTH>)hdr.vlan.pcp |+| meta.index3;
-    }
-    action actionNoParamSubSat() {
-        meta.index3 = (bit<INDEX_WIDTH>)hdr.vlan.pcp |-| meta.index3;
+        meta.index3 = (bit<INDEX_WIDTH>)hdr.vlan.pcp |+| meta.index3;
     }
     table tableKeyNoParamBinary {
         key = { hdr.vlan.pcp : exact; }
         actions = {
-            actionNoParamSub;
             actionNoParamAddSat;
-            actionNoParamSubSat;
         }
     }
 
-    action actionNoParamAddCommutative() {
-        meta.index4 = meta.index4 + (bit<INDEX_WIDTH>)hdr.vlan.pcp;
-    }
     action actionNoParamAddSatCommutative() {
-        //meta.index4 = meta.index4 |+| (bit<INDEX_WIDTH>)hdr.vlan.pcp;
+        meta.index4 = meta.index4 |+| (bit<INDEX_WIDTH>)hdr.vlan.pcp;
     }
     table tableKeyNoParamBinaryCommutative {
         key = { hdr.vlan.pcp : exact; }
         actions = {
-            actionNoParamAddCommutative;
             actionNoParamAddSatCommutative;
         }
     }
@@ -176,8 +147,6 @@ control ingress(inout headers hdr, inout metadata meta,
     apply {
         meta.index5 = (bit<INDEX_WIDTH>)hdr.vlan.pcp + meta.index5;
         if (hdr.vlan.isValid()) {
-            tableKeyNoParam.apply();
-            tableNoKeyDefaultActionNoParam.apply();
             tableKeyNoParamBinary.apply();
             tableKeyNoParamBinaryCommutative.apply();
             metaIndexTable.apply();

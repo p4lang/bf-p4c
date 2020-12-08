@@ -325,6 +325,11 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/checksum_neg_test3.p4
 )
 
+p4c_add_xfail_reason("tofino3"
+  "Destination of saturation add was allocated to bigger container than the field itself.*"
+  extensions/p4_tests/p4_16/compile_only/p4c-3172-xfail.p4
+)
+
 ## new cloudbreak failures (different from JBay)
 
 #driver does not yet work
