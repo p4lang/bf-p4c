@@ -2770,7 +2770,12 @@ bool Table::add_json_node_to_table(json::map &tbl, const char *name) const {
 void Table::add_match_key_cfg(json::map& tbl) const {
     json::vector &params = tbl["match_key_fields"];
     if ((!p4_params_list.empty()) && this->to<MatchTable>()) {
-        for (auto &p : p4_params_list) {
+        // If a table is splitted to different stages in backend, the
+        // match_key_fields section will be populated every time the splitted
+        // tables are emitted. Therefore, we clear the vector before populating
+        // it again to avoid duplicated keys.
+        params.clear();
+        for (auto& p : p4_params_list) {
             json::map param;
             std::string name = p.name;
             std::string global_name = "";

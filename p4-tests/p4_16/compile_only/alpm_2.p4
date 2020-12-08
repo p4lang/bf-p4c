@@ -225,7 +225,7 @@ control SwitchIngressDeparser(packet_out pkt, inout header_t hdr, in metadata_t 
 }
 
 control SwitchIngress(inout header_t hdr, inout metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    Alpm(number_partitions = 1024, subtrees_per_partition = 2, atcam_subset_width=8, shift_granularity=1) algo_lpm;
+    Alpm(number_partitions = 13000, subtrees_per_partition = 1, atcam_subset_width=8, shift_granularity=1) algo_lpm;
     bit<10> vrf;
     action hit(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
@@ -259,7 +259,7 @@ control SwitchIngress(inout header_t hdr, inout metadata_t ig_md, in ingress_int
         actions = {
             route;
         }
-        size = 1024;
+        size = 520000;
         alpm = algo_lpm;
     }
     apply {
