@@ -2701,6 +2701,7 @@ static std::string printSliceConstraints(const PHV::FieldSlice& slice) {
     return printSlice(slice) + ": "
             + (f->is_solitary() ? "solitary " : "")
             + (f->no_split() ? "no_split " : "")
+            + (f->no_holes() ? "no_holes " : "")
             + (f->used_in_wide_arith() ? "wide_arith " : "")
             + (f->exact_containers() ? "exact_containers" : "");
 }

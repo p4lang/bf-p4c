@@ -1,12 +1,301 @@
-#include <boost/optional.hpp>
 #include "bf-p4c/mau/instruction_adjustment.h"
+
+#include <boost/optional.hpp>
+#include <boost/range/adaptor/reversed.hpp>
+#include <queue>
+
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/asm_output.h"
 
-/** SplitInstructions */
+/** Splitting shift left instruction when the fields span on multiple
+ *  containers. This function try to handle various corner cases relative to
+ *  shifting on multiple fields using a combination of "set", "shl" and
+ *  "funnel-shift" instructions. e.g.:
+ *
+ *  Splitting instruction:shl(ingress::hdr.mul32_64.res, ingress::tmp0_0, 20);
+ *      |-->  instruction:set(ingress::hdr.mul32_64.res[15:0], 0);
+ *      |-->  instruction:shl(ingress::hdr.mul32_64.res[31:16], ingress::tmp0_0[15:0], 4);
+ *      |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[47:32], ingress::tmp0_0[31:16],
+ *      |                              ingress::tmp0_0[15:0], 12);
+ *      |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[63:48], ingress::tmp0_0[47:32],
+ *                                     ingress::tmp0_0[31:16], 12);
+ *
+ *  Splitting "shl" instruction is required to support shifting of field larger
+ *  than 32-bit. It is also useful to relaxe the constraints for other field to
+ *  be split on smaller container size, e.g.:
+ *
+ *  bit<32> tmp0;
+ *  bit<32> tmp1;
+ *  tmp1 = tmp0 << 4;
+ *
+ *  In this example, it is possible to carry tmp0/1 on 32, 16 or 8-bit field.
+ */
+static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
+                                  std::vector<le_bitrange> &slices, const PHV::Field *field,
+                                  IR::MAU::Instruction *inst) {
+    std::queue<le_bitrange> slices_q;
+    int container_size = 0;
+    int shift_val;
 
+    // Instruction format is "instruction:shl(dest, src, shift);"
+    const IR::Constant *c = inst->operands[2]->to<IR::Constant>();
+    BUG_CHECK(c != nullptr, "No shift constant found");
+    shift_val = c->asInt();
+
+    const IR::Expression* dest_expr = inst->operands[0];
+    const IR::Expression* src_expr = inst->operands[1];
+
+    for (auto slice : slices) {
+        const PHV::AllocSlice &alloc_slice = field->for_bit(slice.lo);
+        if (!container_size)
+            container_size = alloc_slice.container().size();
+        else
+            BUG_CHECK(container_size == (int)alloc_slice.container().size(),
+                      "Trying to funnel shift on PHV with different size");
+
+        le_bitrange dst_range = alloc_slice.field_slice();
+        const IR::Expression* slice_expr = new IR::Slice(dest_expr, dst_range.hi, dst_range.lo);
+        slices_q.push(dst_range);
+
+        // Shifting with a value greater than the container slice high bit result in zero value
+        // for the entire container. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 << 40;
+        //
+        // Will be split as (if tmpx uses 32-bit container):
+        // Splitting instruction:shl(ingress::hdr.mul32_64.res, ingress::tmp0_0, 40);
+        // ****|-->  instruction:set(ingress::hdr.mul32_64.res[31:0], 0);
+        //     |-->  instruction:shl(ingress::hdr.mul32_64.res[63:32], ingress::tmp0_0[31:0], 8);
+        if (shift_val > slice.hi) {
+            const IR::Expression* zero = new IR::Constant(new IR::Type_Bits(alloc_slice.width(),
+                                                                            false), 0);
+            auto* prim = new IR::MAU::Instruction("set", { slice_expr, zero });
+            split->push_back(prim);
+        // Shifting with a value equal to a container boundary result in a set instruction with
+        // shifted slices. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 << 32;
+        //
+        // Will be split as (if tmpx uses 16-bit container):
+        // Splitting instruction:shl(ingress::hdr.mul32_64.res, ingress::tmp0_0, 32);
+        //     |-->  instruction:set(ingress::hdr.mul32_64.res[15:0], 0);
+        //     |-->  instruction:set(ingress::hdr.mul32_64.res[31:16], 0);
+        // ****|-->  instruction:set(ingress::hdr.mul32_64.res[47:32], ingress::tmp0_0[15:0]);
+        // ****|-->  instruction:set(ingress::hdr.mul32_64.res[63:48], ingress::tmp0_0[31:16]);
+        } else if (shift_val >= container_size && (shift_val % container_size) == 0) {
+            le_bitrange src_range = slices_q.front();
+            slices_q.pop();
+            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new IR::MAU::Instruction("set", { slice_expr, slice_src });
+            split->push_back(prim);
+        // First container to be shifted normally. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 << 10;
+        //
+        // Will be split as (if tmpx uses 16-bit container):
+        // Splitting instruction:shl(ingress::hdr.mul32_64.res, ingress::tmp0_0, 10);
+        // ****|-->  instruction:shl(ingress::hdr.mul32_64.res[15:0], ingress::tmp0_0[15:0], 10);
+        //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[31:16],
+        //     |                              ingress::tmp0_0[31:16], ingress::tmp0_0[15:0], 6);
+        //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[47:32],
+        //     |                              ingress::tmp0_0[47:32], ingress::tmp0_0[31:16], 6);
+        //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[63:48],
+        //                                    ingress::tmp0_0[63:48], ingress::tmp0_0[47:32], 6);
+        } else if (shift_val >= slice.lo) {
+            const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
+            le_bitrange src_range = slices_q.front();
+            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new IR::MAU::Instruction("shl", { slice_expr, slice_src, shift_adj });
+            split->push_back(prim);
+        // Following container to be shifted normally. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 << 10;
+        //
+        // Will be split as (if tmpx uses 16-bit container):
+        // Splitting instruction:shl(ingress::hdr.mul32_64.res, ingress::tmp0_0, 10);
+        //     |-->  instruction:shl(ingress::hdr.mul32_64.res[15:0], ingress::tmp0_0[15:0], 10);
+        // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[31:16],
+        //     |                              ingress::tmp0_0[31:16], ingress::tmp0_0[15:0], 6);
+        // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[47:32],
+        //     |                              ingress::tmp0_0[47:32], ingress::tmp0_0[31:16], 6);
+        // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[63:48],
+        //                                    ingress::tmp0_0[63:48], ingress::tmp0_0[47:32], 6);
+        } else {
+            const IR::Expression* shift_adj = new IR::Constant(container_size -
+                                                               (shift_val % container_size));
+            le_bitrange src_range_lo = slices_q.front();
+            slices_q.pop();
+            le_bitrange src_range_hi = slices_q.front();
+            const IR::Expression* slice_src2 = new IR::Slice(src_expr, src_range_hi.hi,
+                                                             src_range_hi.lo);
+            const IR::Expression* slice_src1 = new IR::Slice(src_expr, src_range_lo.hi,
+                                                             src_range_lo.lo);
+            auto* prim = new IR::MAU::Instruction("funnel-shift",
+                                                { slice_expr, slice_src2, slice_src1, shift_adj });
+            split->push_back(prim);
+        }
+    }
+}
+
+/** Splitting shift right instruction when the fields span on multiple
+ *  containers. This function try to handle various corner cases relative to
+ *  shifting on multiple fields using a combination of "set", "shru", "shrs" and
+ *  "funnel-shift" instructions. e.g.:
+ *
+ *  Splitting instruction:shru(ingress::hdr.mul32_64.res, ingress::tmp0_0, 20);
+ *      |-->  instruction:set(ingress::hdr.mul32_64.res[63:48], 0);
+ *      |-->  instruction:shru(ingress::hdr.mul32_64.res[47:32], ingress::tmp0_0[63:48], 4);
+ *      |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[31:16], ingress::tmp0_0[63:48],
+ *      |                              ingress::tmp0_0[47:32], 4);
+ *      |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[15:0], ingress::tmp0_0[47:32],
+ *                                     ingress::tmp0_0[31:16], 4);
+ *
+ *  Splitting "shux" instruction is required to support shifting of field larger
+ *  than 32-bit. It is also useful to relaxe the constraints for other field to
+ *  be split on smaller container size, e.g.:
+ *
+ *  bit<32> tmp0;
+ *  bit<32> tmp1;
+ *  tmp1 = tmp0 >> 4;
+ *
+ *  In this example, it is possible to carry tmp0/1 on 32, 16 or 8-bit field.
+ */
+static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
+                                  std::vector<le_bitrange> &slices, const PHV::Field *field,
+                                  IR::MAU::Instruction *inst, bool signed_opcode) {
+    std::queue<le_bitrange> slices_q;
+    int container_size = 0;
+    int shift_val;
+    int high_bit;
+
+    // Instruction format is "instruction:shrx(dest, src, shift);"
+    const IR::Constant *c = inst->operands[2]->to<IR::Constant>();
+    BUG_CHECK(c != nullptr, "No shift constant found");
+    shift_val = c->asInt();
+
+    const IR::Expression* dest_expr = inst->operands[0];
+    const IR::Expression* src_expr = inst->operands[1];
+
+    // Process the slices from the highest bit range to the lowest.
+    for (auto slice : boost::adaptors::reverse(slices)) {
+        const PHV::AllocSlice &alloc_slice = field->for_bit(slice.lo);
+        if (!container_size) {
+            container_size = alloc_slice.container().size();
+            high_bit = slice.hi;
+        } else {
+            BUG_CHECK(container_size == (int)alloc_slice.container().size(),
+                      "Trying to funnel shift on PHV with different size");
+        }
+
+        le_bitrange dst_range = alloc_slice.field_slice();
+        const IR::Expression* slice_expr = new IR::Slice(dest_expr, dst_range.hi, dst_range.lo);
+        slices_q.push(dst_range);
+
+        // Shifting with a value greater than the container slice high bit result in zero value
+        // for the entire container in case of unsigned shift right. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 >> 40;
+        //
+        // Will be split as (if tmpx uses 32-bit container):
+        // Splitting instruction:shru(ingress::hdr.mul32_64.res, ingress::tmp0_0, 40);
+        // ****|-->  instruction:set(ingress::hdr.mul32_64.res[63:32], 0);
+        //     |-->  instruction:shru(ingress::hdr.mul32_64.res[31:0], ingress::tmp0_0[63:32], 8);
+        //
+        // Signed use case is different because we have to carry the sign bit, e.g.:
+        // Splitting instruction:shrs(ingress::hdr.mul32_64.res, ingress::tmp0_0, 40);
+        // ****|-->  instruction:shrs(ingress::hdr.mul32_64.res[63:32], ingress::tmp0_0[63:32], 31);
+        //     |-->  instruction:shrs(ingress::hdr.mul32_64.res[31:0], ingress::tmp0_0[63:32], 8);
+        if (shift_val > high_bit - slice.lo) {
+            if (signed_opcode) {
+                const IR::Expression* shift_adj = new IR::Constant(container_size - 1);
+                le_bitrange src_range = slices_q.front();
+                const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi,
+                                                                src_range.lo);
+                auto* prim = new IR::MAU::Instruction("shrs", { slice_expr, slice_src, shift_adj });
+                split->push_back(prim);
+            } else {
+                const IR::Expression *zero = new IR::Constant(new IR::Type_Bits(alloc_slice.width(),
+                                                                                false), 0);
+                auto* prim = new IR::MAU::Instruction("set", { slice_expr, zero });
+                split->push_back(prim);
+            }
+        // Shifting with a value equal to a container boundary result in a set instruction with
+        // shifted slices. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 >> 32;
+        //
+        // Will be split as (if tmpx uses 16-bit container):
+        // Splitting instruction:shrs(ingress::hdr.mul32_64.res, ingress::tmp0_0, 32);
+        //     |-->  instruction:shrs(ingress::hdr.mul32_64.res[63:48], ingress::tmp0_0[63:48], 15);
+        //     |-->  instruction:shrs(ingress::hdr.mul32_64.res[47:32], ingress::tmp0_0[63:48], 15);
+        // ****|-->  instruction:set(ingress::hdr.mul32_64.res[31:16], ingress::tmp0_0[63:48]);
+        // ****|-->  instruction:set(ingress::hdr.mul32_64.res[15:0], ingress::tmp0_0[47:32]);
+        } else if (shift_val >= container_size && (shift_val % container_size) == 0) {
+            le_bitrange src_range = slices_q.front();
+            slices_q.pop();
+            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new IR::MAU::Instruction("set", { slice_expr, slice_src });
+            split->push_back(prim);
+        // First container to be shifted normally. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 >> 10;
+        //
+        // Will be split as (if tmpx uses 16-bit container):
+        // Splitting instruction:shru(ingress::hdr.mul32_64.res, ingress::tmp0_0, 10);
+        // ****|-->  instruction:shru(ingress::hdr.mul32_64.res[63:48], ingress::tmp0_0[63:48], 10);
+        //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[47:32],
+        //     |                              ingress::tmp0_0[63:48], ingress::tmp0_0[47:32], 10);
+        //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[31:16],
+        //     |                              ingress::tmp0_0[47:32], ingress::tmp0_0[31:16], 10);
+        //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[15:0],
+        //                                    ingress::tmp0_0[31:16], ingress::tmp0_0[15:0], 10);
+        } else if (shift_val >= high_bit - slice.hi) {
+            const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
+            le_bitrange src_range = slices_q.front();
+            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new IR::MAU::Instruction(signed_opcode ? "shrs" : "shru",
+                                                  { slice_expr, slice_src, shift_adj });
+            split->push_back(prim);
+        // Following container to be shifted normally. e.g.:
+        // bit<64> tmp0 = 0;
+        // bit<64> tmp1 = 0;
+        // tmp1 = tmp0 >> 10;
+        //
+        // Will be split as (if tmpx uses 16-bit container):
+        // Splitting instruction:shru(ingress::hdr.mul32_64.res, ingress::tmp0_0, 10);
+        //     |-->  instruction:shru(ingress::hdr.mul32_64.res[63:48], ingress::tmp0_0[63:48], 10);
+        // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[47:32],
+        //     |                              ingress::tmp0_0[63:48], ingress::tmp0_0[47:32], 10);
+        // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[31:16],
+        //     |                              ingress::tmp0_0[47:32], ingress::tmp0_0[31:16], 10);
+        // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[15:0],
+        //                                    ingress::tmp0_0[31:16], ingress::tmp0_0[15:0], 10);
+        } else {
+            const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
+            le_bitrange src_range_hi = slices_q.front();
+            slices_q.pop();
+            le_bitrange src_range_lo = slices_q.front();
+            const IR::Expression* slice_src2 = new IR::Slice(src_expr, src_range_hi.hi,
+                                                             src_range_hi.lo);
+            const IR::Expression* slice_src1 = new IR::Slice(src_expr, src_range_lo.hi,
+                                                             src_range_lo.lo);
+            auto* prim = new IR::MAU::Instruction("funnel-shift",
+                                                { slice_expr, slice_src2, slice_src1, shift_adj });
+            split->push_back(prim);
+        }
+    }
+}
+
+/** SplitInstructions */
 const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     le_bitrange bits;
     auto* field = phv.field(inst->operands.at(0), &bits);
@@ -21,6 +310,8 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %s", &use);
     if (slices.size() <= 1) return inst;  // nothing to split
 
+    LOG5("Splitting instruction:" << inst);
+
     // Check if this is an operator that cannot be split (see p4c-2694)
     cstring opcode = inst->name;
     BUG_CHECK(opcode != "saddu" && opcode != "sadds" &&
@@ -28,26 +319,37 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
             "Saturating arithmetic operations cannot be split");
 
     auto split = new IR::Vector<IR::MAU::Primitive>();
-    bool check_pairing = false;
-    for (auto slice : slices) {
-        auto *n = inst->clone();
-        n->name = opcode;
-        for (auto &operand : n->operands)
-            operand = MakeSlice(operand, slice.lo - bits.lo, slice.hi - bits.lo);
-        split->push_back(n);
-        // FIXME -- addc/subc only work if there are exactly 2 slices and they're in
-        // an even-odd pair of PHVs.  Check for failure to meet that constraint and
-        // give an error?
-        if (opcode == "add" || opcode == "sub") {
-            opcode += "c";
-            check_pairing = true; } }
-    if (check_pairing) {
-        BUG_CHECK(slices.size() == 2, "PHV pairing failure for wide %s", inst->name);
-        auto &s1 = field->for_bit(slices[0].lo);
-        auto &s2 = field->for_bit(slices[1].lo);
-        BUG_CHECK(s1.container().index() + 1 == s2.container().index() &&
-                  (s1.container().index() & 1) == 0,
-                  "PHV alloc failed to put wide %s into even/odd PHV pair", inst->name); }
+
+    if (opcode == "shl") {
+        split_shl_instruction(split, slices, field, inst);
+    } else if (opcode == "shrs" || opcode == "shru") {
+        split_shr_instruction(split, slices, field, inst, opcode == "shrs");
+    } else {
+        bool check_pairing = false;
+        for (auto slice : slices) {
+            auto *n = inst->clone();
+            n->name = opcode;
+            for (auto &operand : n->operands)
+                operand = MakeSlice(operand, slice.lo - bits.lo, slice.hi - bits.lo);
+            split->push_back(n);
+            // FIXME -- addc/subc only work if there are exactly 2 slices and they're in
+            // an even-odd pair of PHVs.  Check for failure to meet that constraint and
+            // give an error?
+            if (opcode == "add" || opcode == "sub") {
+                opcode += "c";
+                check_pairing = true; } }
+        if (check_pairing) {
+            BUG_CHECK(slices.size() == 2, "PHV pairing failure for wide %s", inst->name);
+            auto &s1 = field->for_bit(slices[0].lo);
+            auto &s2 = field->for_bit(slices[1].lo);
+            BUG_CHECK(s1.container().index() + 1 == s2.container().index() &&
+                      (s1.container().index() & 1) == 0,
+                      "PHV alloc failed to put wide %s into even/odd PHV pair", inst->name); }
+    }
+
+    for (auto &split_inst : *split)
+        LOG5("Splitted instruction:" << split_inst);
+
     return split;
 }
 

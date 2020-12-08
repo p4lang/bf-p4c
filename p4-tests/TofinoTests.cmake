@@ -65,9 +65,13 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "checksum_pragma\\.p4" "port_vlan_mapping\\.p4"
                             "checksum\\.p4"
                             "header-stack-ops-bmv2\\.p4"  # times out in PHV alloc
+                            "p4c-2250\\.p4"
                             )
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
+
+set (P4_14_CUSTOMER "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/*/*.p4")
+bfn_find_tests("${P4_14_CUSTOMER}" p4_14_customer EXCLUDE "${P4_14_EXCLUDE_FILES}")
 
 set (TOFINO_V1_TEST_SUITES
   ${p4_14_samples}
@@ -79,7 +83,7 @@ set (TOFINO_V1_TEST_SUITES
   # p4smith regression tests
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/p4smith_regression/*.p4
   # customer
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/*/*.p4
+  ${p4_14_customer}
   # stf
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/*.p4
   # ptf
@@ -95,6 +99,9 @@ set (TOFINO_V1_TEST_SUITES
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
+
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 1200")
+set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 1200)
 
 set (TOFINO_V1_TEST_SUITES_P416
   ${v1tests}

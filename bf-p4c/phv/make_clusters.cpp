@@ -532,7 +532,8 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
             // involved in wide arithmetic to ensure that the slices of those
             // fields can bbe placed adjacently.
             || kv.first->used_in_wide_arith() || is_exact_containers ||
-            kv.first->written_in_force_immediate_table() || actions_i.hasSpecialityReads(kv.first);
+            kv.first->written_in_force_immediate_table() || actions_i.hasSpecialityReads(kv.first)
+            || kv.first->same_container_group() || kv.first->no_holes();
 
         // XXX(cole): Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take
@@ -542,6 +543,26 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
             LOG5("Creating slice list for field " << kv.first);
             auto* list = new std::list<PHV::FieldSlice>();
             for (auto& slice : kv.second) list->push_back(slice);
+            if (kv.first->no_holes()) {
+                int sum_bits = PHV::SuperCluster::slice_list_total_bits(*list);
+                const auto& head = list->front();
+                sum_bits += head.alignment() ? (*head.alignment()).align : 0;
+
+                auto padding_size = ROUNDUP(sum_bits, 32) * 32 - sum_bits;
+                if (padding_size != 0) {
+                    auto* padding = phv_i.create_dummy_padding(padding_size,
+                                                               list->front().gress());
+                    padding->set_exact_containers(true);
+                    auto padding_fs = PHV::FieldSlice(padding);
+                    list->push_back(padding_fs);
+                    auto* aligned_cluster_padding = new PHV::AlignedCluster(
+                        PHV::Kind::normal, std::vector<PHV::FieldSlice>{padding_fs});
+                    auto* rot_cluster_padding = new PHV::RotationalCluster(
+                        {aligned_cluster_padding});
+                    self.aligned_clusters_i.push_back(aligned_cluster_padding);
+                    self.rotational_clusters_i.push_back(rot_cluster_padding);
+                }
+            }
             place_together_i[Reason::ConstrainedMeta].push_back(list);
         }
     }
@@ -1212,7 +1233,7 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
     }
 }
 
-void Clustering::ValidateClusters::validate_basics(const std::list<PHV::SuperCluster*> clusters) {
+void Clustering::ValidateClusters::validate_basics(const std::list<PHV::SuperCluster*>& clusters) {
     ordered_set<PHV::FieldSlice> showed;
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
@@ -1231,7 +1252,7 @@ void Clustering::ValidateClusters::validate_basics(const std::list<PHV::SuperClu
 }
 
 void Clustering::ValidateClusters::validate_deparsed_zero_clusters(
-    const std::list<PHV::SuperCluster*> clusters) {
+    const std::list<PHV::SuperCluster*>& clusters) {
     // Flag an error if the supercluster has a mix of deparsed zero fields and non deparsed zero
     // fields.
     for (auto* sc : clusters) {
@@ -1247,7 +1268,7 @@ void Clustering::ValidateClusters::validate_deparsed_zero_clusters(
 }
 
 void Clustering::ValidateClusters::validate_exact_container_lists(
-    const std::list<PHV::SuperCluster*> clusters, const PhvUse& uses) {
+    const std::list<PHV::SuperCluster*>& clusters, const PhvUse& uses) {
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
             bool has_padding = false;
@@ -1286,8 +1307,8 @@ void Clustering::ValidateClusters::validate_exact_container_lists(
     }
 }
 
-void Clustering::ValidateClusters::validate_alignments(const std::list<PHV::SuperCluster*> clusters,
-                                                       const PhvUse& uses) {
+void Clustering::ValidateClusters::validate_alignments(
+    const std::list<PHV::SuperCluster*>& clusters, const PhvUse& uses) {
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
             bool is_used = false;
@@ -1318,7 +1339,7 @@ void Clustering::ValidateClusters::validate_alignments(const std::list<PHV::Supe
 }
 
 void Clustering::ValidateClusters::validate_extract_from_flexible(
-    const std::list<PHV::SuperCluster*> clusters,
+    const std::list<PHV::SuperCluster*>& clusters,
     std::function<bool(const PHV::Field* a, const PHV::Field* b)> no_pack) {
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
@@ -1331,7 +1352,6 @@ void Clustering::ValidateClusters::validate_extract_from_flexible(
                 int next_offset = offset;
                 for (auto next = std::next(itr); next != sl->end();
                      next_offset += next->size(), next++) {
-                    LOG1("check " << *next << " vs " << *itr);
                     if (next_offset / 8 > offset / 8) {
                         break;
                     }
@@ -1341,6 +1361,30 @@ void Clustering::ValidateClusters::validate_extract_from_flexible(
                             "from @flexible headers): %1% and %2%",
                             itr->field()->name, next->field()->name);
                     }
+                }
+            }
+        }
+    }
+}
+
+// static
+void Clustering::ValidateClusters::validate_same_container_group_fields(
+    const std::list<PHV::SuperCluster*>& clusters,
+    const ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>>& field_to_slices) {
+    for (const auto& sc : clusters) {
+        ordered_set<const PHV::Field*> same_container_fields;
+        ordered_set<PHV::FieldSlice> same_container_fieldslices;
+        sc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
+            if (fs.field()->same_container_group()) {
+                same_container_fields.insert(fs.field());
+                same_container_fieldslices.insert(fs);
+            }
+        });
+        for (const auto* f : same_container_fields) {
+            for (const auto& fs : field_to_slices.at(f)) {
+                if (!same_container_fieldslices.count(fs)) {
+                    BUG("%1% has same_container_group constraint but %2% is missing in %3%",
+                        f->name, cstring::to_cstring(fs), cstring::to_cstring(sc));
                 }
             }
         }

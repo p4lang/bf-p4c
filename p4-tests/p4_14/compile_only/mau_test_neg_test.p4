@@ -117,6 +117,7 @@ parser get_move_reg_key {
 /*
  * Simple table to set packet destination.
  */
+@pragma pa_container_size ingress ethernet.etherType 16
 action set_dest() {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
     shift_right(md.etherType_hi, ethernet.etherType, 8);

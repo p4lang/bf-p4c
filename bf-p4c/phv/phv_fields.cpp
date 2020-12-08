@@ -2221,6 +2221,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     } else if (field.no_split_ranges().size() > 0) {
         for (const auto& range : field.no_split_ranges()) {
             out << " no_split_at" << range; } }
+    if (field.no_holes()) out << " no_holes";
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
@@ -2234,6 +2235,9 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         if (field.is_dark_candidate()) out << " dark";
     }
     if (field.is_checksummed()) out << " checksummed";
+    if (field.same_container_group()) {
+        out << " same_container_group";
+    }
     return out;
 }
 
@@ -2312,6 +2316,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
         out << " deparsed";
     if (field.is_solitary()) out << " solitary";
     if (field.no_split()) out << " no_split";
+    if (field.no_holes()) out << " no_holes";
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
@@ -2323,6 +2328,9 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     }
     if (Device::phvSpec().hasContainerKind(PHV::Kind::dark)) {
         if (field.is_dark_candidate()) out << " dark";
+    }
+    if (field.same_container_group()) {
+        out << " same_container_group";
     }
     out << " [" << fs.range().lo << ":" << fs.range().hi << "]";
     return out;

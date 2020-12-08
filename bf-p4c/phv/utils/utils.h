@@ -1023,6 +1023,9 @@ class SuperCluster : public ClusterStats {
         return new SuperCluster(new_clusters_i, new_slice_lists);
     }
 
+    /// return the merged supercluster.
+    SuperCluster* merge(const SuperCluster *sc1) const;
+
     /// Merge this SuperCluster with the input SuperCluster, and
     /// return a new SuperCluster.
     /// This function is only intended to be called when the two
@@ -1031,7 +1034,7 @@ class SuperCluster : public ClusterStats {
     /// that are paired by wide arithmetic requirements are adjacent in
     /// the list, and the slice list destined for an even container (the lo slice)
     /// appears before the slice list destined for an odd container (the hi slice).
-    SuperCluster* mergeAndSortBasedOnWideArith(const SuperCluster *sc1);
+    SuperCluster* mergeAndSortBasedOnWideArith(const SuperCluster *sc1) const;
 
     /// @returns true if two SuperClusters need to be merged, because
     /// they container hi/lo field slices that participate in a wide

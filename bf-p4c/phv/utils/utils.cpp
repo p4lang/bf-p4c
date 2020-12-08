@@ -1239,8 +1239,22 @@ bool PHV::SuperCluster::okIn(PHV::Kind kind) const {
     return kind_i <= kind;
 }
 
+PHV::SuperCluster* PHV::SuperCluster::merge(const SuperCluster* other) const {
+    ordered_set<const RotationalCluster*> new_clusters;
+    ordered_set<SliceList*> new_slice_lists;
+    for (auto* sc : {this, other}) {
+        for (auto* sl : sc->slice_lists()) {
+            new_slice_lists.insert(sl);
+        }
+        for (auto* rot : sc->clusters()) {
+            new_clusters.insert(rot);
+        }
+    }
+    return new SuperCluster(new_clusters, new_slice_lists);
+}
+
 PHV::SuperCluster* PHV::SuperCluster::mergeAndSortBasedOnWideArith(
-  const PHV::SuperCluster *sc) {
+  const PHV::SuperCluster *sc) const {
     std::list<SliceList*> non_wide_slice_lists;
     std::list<SliceList*> wide_lo_slice_lists;
     std::list<SliceList*> wide_hi_slice_lists;

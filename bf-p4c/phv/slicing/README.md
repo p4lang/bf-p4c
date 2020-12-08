@@ -352,6 +352,12 @@ not well-formed:
 This strategy is simple. If we find a super cluster whose slice lists are all in the
 result list, we check whether this cluster is well-formed.
 
+### Same container group constraint
+For slices of a field with `same_container_group` constraint, all those slices
+will end up in a same supercluster, so they share same aftersplit constraints
+just slices in a rotation cluster. AfterSplitConstraint of any fieldslice will be propagated
+to all other slices of the same field.
+
 ## Enhancement 3: Metadata list
 The above discussion assumes that the size of a slice list must be one of the 8, 16, or 32.
 In this enhancement, we introduce a new type of list, whose size is not subject to this constraint.

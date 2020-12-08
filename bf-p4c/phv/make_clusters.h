@@ -428,26 +428,32 @@ class Clustering : public PassManager {
         profile_t init_apply(const IR::Node* root) override;
 
         // basic checks: slicelist is not empty, no duplicated fieldslices.
-        static void validate_basics(const std::list<PHV::SuperCluster*> clusters);
+        static void validate_basics(const std::list<PHV::SuperCluster*>& clusters);
 
         /** For the deparser zero optimization, we need to make sure that every deparser zero
          * optimizable field is never in a supercluster that also contains non deparser zero fields.
          * This class performs that validation after superclusters are generated.
          */
-        static void validate_deparsed_zero_clusters(const std::list<PHV::SuperCluster*> clusters);
+        static void validate_deparsed_zero_clusters(const std::list<PHV::SuperCluster*>& clusters);
 
         // size % 8 = 0 if exact_containers
-        static void validate_exact_container_lists(const std::list<PHV::SuperCluster*> clusters,
+        static void validate_exact_container_lists(const std::list<PHV::SuperCluster*>& clusters,
                                                    const PhvUse& uses);
 
         // alignments of fieldslices in list must be all sat.
-        static void validate_alignments(const std::list<PHV::SuperCluster*> clusters,
+        static void validate_alignments(const std::list<PHV::SuperCluster*>& clusters,
                                         const PhvUse& uses);
 
         // inconsistent extractions cannot share fields in a same byte of a header.
         static void validate_extract_from_flexible(
-            const std::list<PHV::SuperCluster*> clusters,
+            const std::list<PHV::SuperCluster*>& clusters,
             std::function<bool(const PHV::Field* a, const PHV::Field* b)> no_pack);
+
+        // if field->same_container_group, then all the fieldslices of the field must
+        // be in the same super cluster.
+        static void validate_same_container_group_fields(
+            const std::list<PHV::SuperCluster*>& clusters,
+            const ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>>& field_to_slices);
 
      public:
         explicit ValidateClusters(Clustering& c) : self(c) { }

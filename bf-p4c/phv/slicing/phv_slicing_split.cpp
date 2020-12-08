@@ -1,7 +1,10 @@
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 
+#include <cstddef>
 #include <sstream>
 
+#include "bf-p4c/lib/union_find.hpp"
+#include "bf-p4c/phv/utils/utils.h"
 #include "lib/log.h"
 
 // XXX(yumin): These codes are ported from the old implementation without any changes.
@@ -80,9 +83,42 @@ static void update_slices(
     }
 }
 
-// Returns a new list of SuperClusters, where any SuperCluster that
-// participates in wide arithmetic has been merged and ordered
-// for allocation.
+static std::list<PHV::SuperCluster*> merge_same_container_group(
+    const std::list<PHV::SuperCluster*> clusters) {
+    ordered_map<const PHV::Field*, ordered_set<PHV::SuperCluster*>> same_container_groups;
+    UnionFind<PHV::SuperCluster*> cluster_uf;
+    for (auto& sc : clusters) {
+        bool has_same_container_group = false;
+        sc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
+            if (fs.field()->same_container_group()) {
+                same_container_groups[fs.field()].insert(sc);
+                has_same_container_group = true;
+            }
+        });
+        cluster_uf.insert(sc);
+    }
+
+    // union by same_container_groups.
+    for (const auto& kv : same_container_groups) {
+        const auto& clusters = kv.second;
+        for (auto itr = clusters.begin(); std::next(itr) != clusters.end(); itr++) {
+            cluster_uf.makeUnion(*itr, *std::next(itr));
+        }
+    }
+
+    std::list<PHV::SuperCluster*> rst;
+    for (auto& clusters : cluster_uf) {
+        PHV::SuperCluster* merged = clusters->front();
+        for (auto itr = std::next(clusters->begin()); itr != clusters->end(); itr++) {
+            merged = merged->merge(*itr);
+        }
+        rst.push_back(merged);
+    }
+    return rst;
+}
+
+// return a list of clusters that participates in wide arithmetic are
+// merged and ordered for allocation.
 static std::list<PHV::SuperCluster*> merge_wide_arith(const std::list<PHV::SuperCluster*> sc) {
     LOG6("Merge wide arith super clusters");
     std::list<PHV::SuperCluster*> wide;
@@ -120,6 +156,13 @@ static std::list<PHV::SuperCluster*> merge_wide_arith(const std::list<PHV::Super
         }
     }
     return rv;
+}
+
+// Returns a new list of SuperClusters, where any SuperCluster that
+// (1) participates in wide arithmetic has been merged and ordered for allocation.
+// (2) clusters of fieldslices of a same_container_group field will be merged.
+static std::list<PHV::SuperCluster*> merge_by_constraints(const std::list<PHV::SuperCluster*> sc) {
+    return merge_wide_arith(merge_same_container_group(sc));
 }
 
 /// Split a SuperCluster with slice lists according to @split_schema.
@@ -361,8 +404,8 @@ boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
         rv.push_back(new PHV::SuperCluster(clusters, slice_lists));
     }
 
-    // 4. merge wide_arith.
-    return merge_wide_arith(rv);
+    // 4. merge clusters by constraints.
+    return merge_by_constraints(rv);
 }
 
 /// Split the RotationalCluster in a SuperCluster without a slice list

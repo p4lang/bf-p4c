@@ -1320,7 +1320,7 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->reg.type != Phv::Register::NORMAL) {
         error(dest.lineno, "%s dest can't be dark or mocha phv", opc->name.c_str());
         return this; }
-    if (dest->lo || dest->hi != dest->reg.size-1) {
+    if (dest->lo) {
         error(lineno, "shift ops cannot operate on slices");
         return this; }
     slot = dest->reg.mau_id();

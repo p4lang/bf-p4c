@@ -569,7 +569,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
     }
     for (auto kv : unallocFieldToSlices) {
         LOG5("\t\t\t\tSource field: " << kv.first->name);
-        if (kv.first->no_split()) {
+        if (kv.first->no_split() || kv.first->no_holes()) {
             ++num_unallocated;
             continue;
         }

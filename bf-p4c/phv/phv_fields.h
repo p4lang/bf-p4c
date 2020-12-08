@@ -310,6 +310,17 @@ class Field : public LiftLess<Field> {
     // true if the field is part of Type_FixedSizeHeader, used to represent resubmit/phase0 data.
     bool            fixed_size_i = false;
 
+    bool            same_container_group_i = false;    /// true if all the slices relative to this
+                                                       /// field must be part of the same container
+                                                       /// group.
+
+    /// true if the field can either be located entirely on a single container or splitted across
+    /// multiple of them as long as all of the slices fit with no holes. This can be seen as a
+    /// way to relaxe the exact_containers constraints by also allowing a field to be split under
+    /// some specific conditions. This was originally added to handle the funnel-shift operation
+    /// which can combine multiple containers in the shifting operation as long as the bits are
+    /// continuous between the combined containers.
+    bool            no_holes_i = false;
 
     /// Maximum size of container bytes this field can occupy. -1 if there is no constraint on this
     /// field.
@@ -431,6 +442,12 @@ class Field : public LiftLess<Field> {
     bool no_split_at(int pos) const;
     bool has_no_split_at_pos() const;
     void set_no_split_at(le_bitrange range);  // The indicated slice cannot be split.
+
+    bool same_container_group() const                      { return same_container_group_i; }
+    void set_same_container_group(bool b)                  { same_container_group_i = b; }
+
+    bool no_holes() const                                  { return no_holes_i; }
+    void set_no_holes(bool b)                              { no_holes_i = b; }
 
     bool used_in_wide_arith() const { return wide_arith_start_bit_.size() > 0; }
 

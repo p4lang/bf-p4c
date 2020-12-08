@@ -189,6 +189,42 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (is_bitwise_op)
             continue;
 
+        // For shift operations, the sources must be assigned no-pack.
+        bool is_shift = SHIFT_OPS.count(inst->name) > 0;
+        if (is_shift) {
+            LOG3("Marking " << field->name << " as 'no pack' because it is a source of a shift "
+                 "operation " << inst);
+            field->set_solitary(PHV::SolitaryReason::ALU);
+            bool no_split = false;
+            // Do not allow a field to span on multiple container if the shift operation is only
+            // applied to a slice and not the entire field.
+            for (int op_idx = 0; op_idx < int(inst->operands.size()); ++op_idx) {
+                le_bitrange op_bits;
+                PHV::Field* op_field = phv.field(inst->operands[op_idx], &op_bits);
+                if (op_field && (op_bits.size() != op_field->size)) {
+                    no_split = true;
+                    break;
+                }
+            }
+            // Shift right signed operation must have the exact container constraint set to make
+            // sure the most significant bit is located at the most significant bit of a container
+            if (inst->name == "shrs") {
+                if ((field_bits.size() % 8) != 0)
+                    fatal_error("Operands of a signed shift right operations must have a size "
+                                "aligned to a byte boundary but field %1% is %2% bits wide in: %3%",
+                                field->name, field_bits.size(), inst);
+
+                field->set_exact_containers(true);
+                field->set_same_container_group(true);
+            } else if (no_split) {
+                field->set_no_split_at(field_bits);
+            } else {
+                field->set_no_holes(true);
+                field->set_exact_containers(true);
+                field->set_same_container_group(true);
+            }
+            continue; }
+
         // Apply solitary constraint on carry-based operation. If sliced, apply
         // on the slice only.  If f can't be split but is larger than 32 bits,
         // report an error.
@@ -315,12 +351,11 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
                  "non-MOVE operation to a larger field " << dst->name);
             field->set_solitary(PHV::SolitaryReason::ALU); }
 
-        // For shift and saturate operations, the sources must be assigned no-pack.
-        auto is_shift = SHIFT_OPS.count(inst->name);
+        // For saturate operations, the sources must be assigned no-pack.
         auto is_saturate = SATURATE_OPS.count(inst->name);
-        if ((is_shift || is_saturate) && field != dst) {
+        if (is_saturate && field != dst) {
             LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a " <<
-                 (is_shift ? "shift" : "saturate") << " operation " << inst);
+                 "saturate operation " << inst);
             field->set_solitary(PHV::SolitaryReason::ALU); } }
 
     if (!alignStatefulSource) return;

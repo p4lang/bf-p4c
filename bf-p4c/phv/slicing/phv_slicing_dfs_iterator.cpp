@@ -786,6 +786,14 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
         }
     }
 
+    // build mapping for same_container_group fields.
+    ordered_map<const Field*, ordered_set<FieldSlice>> same_container_group_slices;
+    sc->forall_fieldslices([&](const FieldSlice& fs) {
+        if (fs.field()->same_container_group()) {
+            same_container_group_slices[fs.field()].insert(fs);
+        }
+    });
+
     // collect constraints on all fieldslices.
     sc->forall_fieldslices([&](const FieldSlice& fs) {
         if (has_conflicting_decisions) {
@@ -809,7 +817,21 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
         if (constraint.t == AfterSplitConstraint::ConstraintType::NONE) {
             return;
         }
+
+        ordered_set<FieldSlice> others;
         for (const auto& other : sc->cluster(fs).slices()) {
+            others.insert(other);
+        }
+        // For slices of a field with same_container_group constraint, all those slices
+        // will end up in a same supercluster, so they share same aftersplit constraints
+        // just slices in a rotation cluster.
+        if (fs.field()->same_container_group()) {
+            for (const auto& other : same_container_group_slices.at(fs.field())) {
+                others.insert(other);
+            }
+        }
+        // propagate constraint.
+        for (const auto& other : others) {
             if (!decided_sz.count(other)) {
                 decided_sz[other] = constraint;
                 continue;
