@@ -576,9 +576,11 @@ bool ActionData::FormatType_t::post_split() const {
     return (value & MASK) == EARLIER_STAGE;
 }
 
-std::ostream &ActionData::operator<<(std::ostream &out, ActionData::FormatType_t ft) {
+namespace ActionData {
+std::ostream &operator<<(std::ostream &out, ActionData::FormatType_t ft) {
     return out << "FormatType(0" << std::oct << ft.value << std::dec << ")";
 }
+}  // namespace ActionData
 
 std::string ActionData::FormatType_t::toString() const {
     std::stringstream tmp;

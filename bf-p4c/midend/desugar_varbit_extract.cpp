@@ -818,8 +818,6 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
             if (member->type->is<IR::Type_Varbits>()) {
                 if (has_varbit)
                     ::error("More than one varbit expression in %1%", list);
-
-                auto type = member->expr->type->to<IR::Type_Header>();
                 if (deparser) {
                     has_varbit = true;
                     auto path = member->expr->to<IR::Member>();

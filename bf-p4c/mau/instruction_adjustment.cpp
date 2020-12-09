@@ -717,7 +717,7 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
             merged_location = merged_fields.find(container);
             write_found = true;
 
-            if (saturationArith && container.size() != field->size) {
+            if (saturationArith && container.size() != static_cast<size_t>(field->size)) {
                 BUG("Destination of saturation add was allocated to bigger container than the "
                     "field itself, which would cause saturation to produce wrong results. You can "
                     "try constraining source operand with @pa_container_size to achieve correct "
