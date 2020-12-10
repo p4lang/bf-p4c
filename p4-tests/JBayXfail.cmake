@@ -301,9 +301,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "PHV allocation creates an invalid container action within a Tofino ALU"
 
-  # P4C-2141
-  extensions/p4_tests/p4_14/stf/parser_error.p4
-
   # P4C-3060
   p4c_2527
 
@@ -456,6 +453,12 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason ("tofino2"
   "error: tofino2 supports up to 20 stages, using 22"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
+)
+
+# P4C-2141
+p4c_add_xfail_reason("tofino2"
+  "error: Can't access DW0 in parser"
+  extensions/p4_tests/p4_14/stf/parser_error.p4
 )
 
 # DRV-3528

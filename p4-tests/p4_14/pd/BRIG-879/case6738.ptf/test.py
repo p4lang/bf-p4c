@@ -78,7 +78,7 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
         # Always make sure the programming gets dow to the HW
         self.conn_mgr.complete_operations(self.sess_hdl)
         print
-        
+
     # Use tearDown() method to return the DUT to the initial state by cleaning
     # all the configuration and clearing up the connection
     def tearDown(self):
@@ -154,32 +154,32 @@ class Test1(TestGroup1):
                 egr_port=test_port, egr_port_v=True,
                 max_pkt_len=max_len))
         self.mirror_sessions =  [clone_sess]
-        
+
         #
         # Program the tables
         #
         self.client.set_output_set_default_action_set_output(
             self.sess_hdl, self.dev_tgt,
             case6738_set_output_action_spec_t(test_port))
-        
+
         self.client.clone_set_default_action_clone(
             self.sess_hdl, self.dev_tgt,
             case6738_clone_action_spec_t(clone_sess))
 
         self.conn_mgr.complete_operations(self.sess_hdl)
-        
+
         print "Sending Untagged %d-byte L2 packet into port %d" % (pkt_len, test_port)
         header  = Ether(dst="11:22:33:44:55:66", src="00:01:02:03:04:05")
         payload = "".join([chr(x % 256) for x in xrange(pkt_len - len(header))])
 
         send_pkt = header/payload
         send_pkt[Ether].type = 0xABCD
-        
+
         exp_pkt_1 = header/Dot1Q(vlan=pkt_len+4, type=send_pkt[Ether].type)/payload # Adjust for the CRC
-        exp_pkt_2 = header/Dot1Q(vlan=pkt_len+4)/Dot1Q(vlan=pkt_len+4, type=send_pkt[Ether].type)/payload 
+        exp_pkt_2 = header/Dot1Q(vlan=pkt_len+8)/Dot1Q(vlan=pkt_len+4, type=send_pkt[Ether].type)/payload
 
         send_packet(self, test_port, send_pkt)
-        
+
         print """Expecting the packet to be forwarded to port %d
                  with the length %d in VLAN tag""" % (test_port, pkt_len+4)
         verify_packet(self, exp_pkt_1, test_port)

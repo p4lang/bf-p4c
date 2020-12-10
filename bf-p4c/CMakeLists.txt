@@ -612,6 +612,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/tna.cpp
   arch/v1model.cpp
   arch/fromv1.0/add_metadata_parser_states.cpp
+  arch/fromv1.0/egress_packet_length.cpp
   arch/fromv1.0/checksum.cpp
   arch/fromv1.0/mirror.cpp
   arch/fromv1.0/parser_counter.cpp
@@ -647,6 +648,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/tna.h
   arch/v1model.h
   arch/fromv1.0/add_metadata_parser_states.h
+  arch/fromv1.0/egress_packet_length.h
   arch/fromv1.0/checksum.h
   arch/fromv1.0/mirror.h
   arch/fromv1.0/parser_counter.h

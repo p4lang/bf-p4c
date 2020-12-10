@@ -1026,13 +1026,6 @@ class ResolveParserConstants : public ParserTransform {
         for (auto cb : containerBytes)
             totalBytes += cb.second.size();
 
-        auto state = findContext<IR::BFN::ParserState>();
-        if (state && (state->name.startsWith("egress::$mirror_field_list_") ||
-            state->name.startsWith("egress::__parse_ingress_mirror_header_") ||
-            state->name.startsWith("egress::__parse_egress_mirror_header_"))) {
-            totalBytes += 4;  // offset 4 bytes of CRC added by HW for mirrored packet
-        }
-
         auto rv = new IR::BFN::ConstantRVal(totalBytes);
         return rv;
     }

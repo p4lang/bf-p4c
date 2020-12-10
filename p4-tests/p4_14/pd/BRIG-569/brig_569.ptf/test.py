@@ -200,18 +200,19 @@ class TestGroupMirror(TestGroup1):
         # We will set up the CPU mirror session to limit the packet length
         # to 256 bytes. However, there are some caveats:
         #    1) Up to 256 bytes will go from TM into the egress pipeline.
-        #       However, some of these bytes will contain the mirror field_list
-        #       (i.e. the data passed with clone_i2e() primitive). For the
-        #       current program that's 10 bytes.
-        #    2) Since we are going to put additional encapsulation (Ethernet
-        #       plus ToCPU header) on top, the egress packet size will be
-        #       different. Oh, and do not forget 4 bytes of CRC (FCS) added byt
+        #       However, some of these bytes will contain the mirror header.
+        #       For the current program that's 6 bytes.
+        #    2) Those 256 bytes don't include 4 bytes of FCS added by the MAC.
+        #    3) Since we are going to put additional encapsulation (Ethernet
+        #       plus ToCpu header) on top, the egress packet size will be
+        #       different. Oh, and do not forget 4 bytes of CRC (FCS) added by
         #       the MAC. It will be equal to:
-        #       256 - 10 + 12 + 2 + 6 + 4 = 270 bytes.
+        #       (<max_pkt_len> - <mirror header>) + (Ethernet + ToCpu) + FCS =
+        #       (256 - 6) + (12+2 + 6) + 4 = 274 bytes.
         # Not 256, but close!
         #
         self.max_pkt_len_cpu=256
-        self.max_pkt_len_cpu_out = self.max_pkt_len_cpu - 10
+        self.max_pkt_len_cpu_out = self.max_pkt_len_cpu - 6
         self.mirror_sessions=[]
 
         # Mirror destination 5 -- copy to CPU
@@ -387,11 +388,14 @@ class MirrorTestCpu1(TestGroupMirror):
         verify_packet(self, pkt, egress_port)
         print("Packet received on port %d" % egress_port)
 
+        #
+        # ToCpu.pkt_length includes 4 bytes of FCS, len(pkt) does not.
+        #
         cpu_pkt = (
             Ether(dst="FF:FF:FF:FF:FF:FF", src="AA:AA:AA:AA:AA:AA") /
             ToCpu(mirror_type="Ingress",
                   ingress_port=ingress_port,
-                  pkt_length=len(pkt)) /
+                  pkt_length=len(pkt)+4) /
             pkt)
 
         print("Expecting mirrored packet with 'to_cpu' header on port %d" % cpu_port)
@@ -425,18 +429,16 @@ class MirrorTestCpu2(TestGroupMirror):
         verify_packet(self, pkt, egress_port)
         print("Packet received on port %d" % egress_port)
 
+        cpu_pkt_len = min(len(pkt), self.max_pkt_len_cpu_out)
         #
-        # Why 246 and not 256 as programmed in the mirror session?
-        # That's because when the packet gets into the egress pipeline, 256
-        # bytes include the length of the field_list we are passing with it.
+        # ToCpu.pkt_length includes 4 bytes of FCS, cpu_pkt_len does not.
         #
-        cpu_pkt_len = min(len(pkt), self.max_pkt_len_cpu_out+4)
         cpu_pkt = (
             Ether(dst="FF:FF:FF:FF:FF:FF", src="AA:AA:AA:AA:AA:AA") /
             ToCpu(mirror_type="Ingress",
                   ingress_port=ingress_port,
-                  pkt_length=cpu_pkt_len) /
-                  str(pkt)[0:cpu_pkt_len]) 
+                  pkt_length=cpu_pkt_len+4) /
+                  str(pkt)[0:cpu_pkt_len])
 
         print("Expecting mirrored packet with 'to_cpu' header on port %d" % cpu_port)
         verify_packet(self, cpu_pkt, cpu_port)

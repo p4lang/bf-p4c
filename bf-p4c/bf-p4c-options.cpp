@@ -204,9 +204,6 @@ BFN_Options::BFN_Options() {
     registerOption("--verbose", nullptr,
         [this](const char *) { verbose = true; return true; },
         "Set compiler verbosity logging");
-    registerOption("--disable-egress-packet-length-adjust", nullptr,
-        [this](const char *) { adjust_egress_packet_length = false; return true; },
-        "Do not adjust egress packet length");
     registerOption("--infer-payload-offset", nullptr,
         [this](const char *) { infer_payload_offset = true; return true; },
         "Infer payload offset (Tofino2 only)");

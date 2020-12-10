@@ -25,7 +25,6 @@ class BFN_Options : public CompilerOptions {
     bool disable_power_check = false;
     bool disable_mpr_config = false;
     bool force_match_dependency = false;
-    bool adjust_egress_packet_length = true;
     bool infer_payload_offset = false;
     bool parser_timing_reports = false;
     bool parser_bandwidth_opt = false;

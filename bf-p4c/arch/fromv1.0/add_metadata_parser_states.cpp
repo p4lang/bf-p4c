@@ -2,6 +2,7 @@
 
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/arch/fromv1.0/egress_packet_length.h"
 #include "bf-p4c/arch/fromv1.0/phase0.h"
 #include "bf-p4c/arch/fromv1.0/mirror.h"
 #include "bf-p4c/arch/fromv1.0/resubmit.h"
@@ -79,6 +80,7 @@ AddMetadataParserStates::AddMetadataParserStates(P4::ReferenceMap* refMap, P4::T
         new AddTnaBridgeMetadata(refMap, typeMap, use_bridge_metadata),
         new FixupResubmitMetadata(refMap, typeMap),
         new FixupMirrorMetadata(refMap, typeMap, use_bridge_metadata),
+        new AdjustEgressPacketLength(refMap, typeMap),
         new ElimUnusedMetadataStates
     });
 }

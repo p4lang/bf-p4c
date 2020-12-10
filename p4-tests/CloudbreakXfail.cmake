@@ -483,7 +483,7 @@ p4c_add_xfail_reason ("tofino3"
 
 # P4C-2141
 p4c_add_xfail_reason("tofino3"
-  "PHV allocation creates an invalid container action within a Tofino ALU"
+  "error: Can't access DW0 in parser"
   extensions/p4_tests/p4_14/stf/parser_error.p4
 )
 

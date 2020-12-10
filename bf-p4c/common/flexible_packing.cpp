@@ -24,7 +24,6 @@
 #include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
-#include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
@@ -433,4 +432,3 @@ void PackFlexibleHeaders::end_apply() {
                 } }
         } }
 }
-
