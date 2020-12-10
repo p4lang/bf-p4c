@@ -108,12 +108,16 @@ class CollectVarbitExtract : public Inspector {
     std::map<const IR::ParserState*, const IR::BFN::TnaParser*> state_to_parser;
 
     std::map<const IR::ParserState*, const IR::Type_Header*> state_to_varbit_header;
-
-    std::map<const IR::ParserState*, const IR::StructField*> state_to_varbit_field;
+    // Map to store if the varbit extract length is dynamic
+    std::map<cstring, const IR::ParserState*> varbit_hdr_instance_to_variable_state;
 
     std::map<const IR::ParserState*, const IR::Expression*> state_to_encode_var;
 
     std::map<const IR::ParserState*, const IR::AssignmentStatement*> state_to_csum_verify;
+    // Map to store if the varbit extract length is constant
+    std::map<cstring,
+             std::map<unsigned, const IR::ParserState*>> varbit_hdr_instance_to_constant_state;
+    std::map<cstring, const IR::StructField*> varbit_hdr_instance_to_varbit_field;
 
     std::map<const IR::ParserState*,
              std::set<const IR::Expression*>> state_to_verify_exprs;
@@ -154,7 +158,8 @@ class CollectVarbitExtract : public Inspector {
         const IR::Expression*& encode_var,
         std::map<unsigned, unsigned>& match_to_length,
         std::map<unsigned, unsigned>& length_to_match,
-        std::set<unsigned>& reject_matches);
+        std::set<unsigned>& reject_matches,
+        cstring header_name);
 
     void enumerate_varbit_field_values(
         const IR::MethodCallExpression* call,
@@ -198,7 +203,8 @@ class RewriteVarbitUses : public Modifier {
                         const IR::Expression* select,
                         const IR::StructField* varbit_field, unsigned length, cstring name);
 
-    void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field);
+    void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field,
+                         unsigned prev_length);
 
     const IR::ParserState*
     create_end_state(const IR::BFN::TnaParser* parser,

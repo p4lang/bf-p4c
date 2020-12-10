@@ -126,7 +126,8 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
         const IR::Expression*& encode_var,
         std::map<unsigned, unsigned>& match_to_length,
         std::map<unsigned, unsigned>& length_to_match,
-        std::set<unsigned>& reject_matches) {
+        std::set<unsigned>& reject_matches,
+        cstring header_name) {
     CollectVariables find_encode_var;
     varsize_expr->apply(find_encode_var);
 
@@ -187,6 +188,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
 
     for (auto& v : reject_matches)
         LOG2(encode_var << " = " << v << " : reject");
+    varbit_hdr_instance_to_variable_state[header_name] = state;
     return true;
 }
 
@@ -212,7 +214,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     }
 
     if (!varbit_field) return;
-
+    varbit_hdr_instance_to_varbit_field[headerName] = varbit_field;
     const IR::Expression* encode_var = nullptr;
     std::map<unsigned, unsigned> match_to_length;
     std::map<unsigned, unsigned> length_to_match;
@@ -224,14 +226,15 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
         check_compile_time_constant(c, call, varbit_field_size);
         match_to_length[0] = c->asUnsigned();  // use 0 as key, but really don't care
         length_to_match[c->asUnsigned()] = 0;
+        varbit_hdr_instance_to_constant_state[headerName][c->asUnsigned()] = state;
     } else {
         bool ok = enumerate_varbit_field_values(call, state, varbit_field, varsize_expr,
-                            encode_var, match_to_length, length_to_match, reject_matches);
+                            encode_var, match_to_length, length_to_match, reject_matches,
+                            headerName);
         if (!ok) return;
     }
 
     state_to_varbit_header[state] = hdr_type;
-    state_to_varbit_field[state] = varbit_field;
     state_to_encode_var[state] = encode_var;
     state_to_match_to_length[state] = match_to_length;
     state_to_length_to_match[state] = length_to_match;
@@ -384,9 +387,20 @@ create_varbit_header_type(const IR::Type_Header* orig_hdr, cstring orig_hdr_inst
 }
 
 Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
-    for (auto& pv : cve.state_to_varbit_field)
-        create_branches(pv.first, pv.second);
-
+    for (auto & hdr_len_state : cve.varbit_hdr_instance_to_constant_state) {
+        // If the length is declared as a constant, the creation of branches
+        // for each state should happen in the ascending order of the lengths
+        unsigned prev_length = 0;
+        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_len_state.first);
+        for (auto len_state : hdr_len_state.second) {
+             create_branches(len_state.second, varbit_field, prev_length);
+             prev_length = len_state.first;
+        }
+    }
+    for (auto& hdr_state : cve.varbit_hdr_instance_to_variable_state) {
+        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_state.first);
+        create_branches(hdr_state.second, varbit_field, 0);
+    }
     return Modifier::init_apply(root);
 }
 
@@ -537,7 +551,8 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
 }
 
 void RewriteVarbitUses::create_branches(const IR::ParserState* state,
-                                        const IR::StructField* varbit_field) {
+                                        const IR::StructField* varbit_field,
+                                        unsigned prev_length) {
     ordered_map<unsigned, const IR::ParserState*> length_to_branch_state;
 
     auto parser = cve.state_to_parser.at(state);
@@ -549,15 +564,14 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
 
     cstring no_option_state_name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_end";
     const IR::ParserState* no_option_state = nullptr;
-    unsigned prev_length = 0;
     for (auto& kv : value_map) {
         auto length = kv.first;
 
         if (length) {
             create_varbit_header_type(orig_hdr, orig_hdr_inst,
-                                          varbit_field, length-prev_length,
-                                          length,
-                                          varbit_hdr_instance_to_header_types);
+                                      varbit_field, length-prev_length,
+                                      length,
+                                      varbit_hdr_instance_to_header_types);
             prev_length = length;
 
             const IR::Expression* select = nullptr;
