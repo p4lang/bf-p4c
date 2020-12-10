@@ -506,3 +506,15 @@ p4c_add_xfail_reason("tofino2"
    extensions/p4_tests/p4_14/stf/update_checksum_7.p4
    extensions/p4_tests/p4_14/stf/update_checksum_12.p4
 )
+
+# P4C-3379
+p4c_add_xfail_reason("tofino2"
+   "PHV allocation was not successful"
+   p4c-3379
+)
+
+# P4C-3388
+p4c_add_xfail_reason("tofino2"
+   "Expected packet was not received on device .*"
+   p4c-3388
+)
