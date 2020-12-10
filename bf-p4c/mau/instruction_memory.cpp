@@ -8,7 +8,7 @@ bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *act) {
     const IR::MAU::Table *tbl = findContext<IR::MAU::Table>();
     current_vliw.clear();
     // Need to capture the instructions that will be created during the splitting of the tables
-    auto *act_to_visit = split_attached.create_split_action(act, tbl, format_type, &phv);
+    auto *act_to_visit = split_attached.get_split_action(act, tbl, format_type);
     if (act_to_visit == nullptr)
         return false;
     BUG_CHECK(act_to_visit, "Somehow have a nullptr action for %1%", format_type);
@@ -227,7 +227,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
     for (auto action : Values(tbl->actions)) {
         LOG2("Allocating action " << action->name);
 
-        if (sai.create_split_action(action, tbl, format_type, &phv) == nullptr) {
+        if (sai.get_split_action(action, tbl, format_type) == nullptr) {
             LOG2("    Not generating instruction for " << action->name << " as it is not necessary "
                  "post attached split");
             continue;

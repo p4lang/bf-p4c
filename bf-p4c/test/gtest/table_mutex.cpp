@@ -625,7 +625,7 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     TablesMutuallyExclusive mutex;
     ActionMutuallyExclusive action_mutex;
     PhvInfo phv;
-    SplitAttachedInfo att_info;
+    SplitAttachedInfo att_info(phv);
     LayoutChoices lc(phv, att_info);
     SharedIndirectAttachedAnalysis sia(mutex, ignore, action_mutex, lc);
     auto options = new BFN_Options();

@@ -996,7 +996,6 @@ class Format {
     void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
         int &constant_alias_index);
 
-    void create_split_param(const IR::MAU::Action *act);
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);
     bool analyze_actions(FormatType_t format_type);

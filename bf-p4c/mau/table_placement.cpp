@@ -782,7 +782,7 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
         self.setup_detached_gateway(tbl, pl);
         // don't visit most of the children
         for (auto it = tbl->actions.begin(); it != tbl->actions.end();)  {
-            if ((it->second = self.att_info.create_post_split_action(it->second, tbl)))
+            if ((it->second = self.att_info.get_split_action(it->second, tbl, pl->use.format_type)))
                 ++it;
             else
                 it = tbl->actions.erase(it); }
@@ -1192,12 +1192,15 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 return false; }
             rv->entries -= p->entries;
             for (auto &ate : p->attached_entries) {
+                if (!ate.first->direct && can_duplicate(ate.first) &&
+                    init_attached.at(ate.first).entries <= ate.second.entries) {
+                    // if the attached table will be duplicated in every stage, we want to
+                    // treat every stage as if it is the first&last stage (so no need to get
+                    // an address from an earlier stage or send it to a later stage)
+                    continue; }
                 if (ate.second.entries > 0 || !ate.second.first_stage)
-                    init_attached.at(ate.first).first_stage = false;
+                    rv->attached_entries.at(ate.first).first_stage = false;
                 if (ate.first->direct) continue;
-                if (can_duplicate(ate.first) &&
-                    init_attached.at(ate.first).entries <= ate.second.entries)
-                    continue;
                 rv->attached_entries.at(ate.first).entries -= ate.second.entries;
                 // if the match table is split, can't currently put any of the indirect
                 // attached tables in the same stage as (part of) the match, so need to
@@ -1376,9 +1379,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     } else {
         for (auto &att : min_placed->attached_entries) {
             if (att.first->direct) continue;
+            if (att.second.entries == 0) continue;
             if (can_split(min_placed->table, att.first)) {
-                att.second.entries = 0;
-                att.second.need_more = true; } } }
+                if (needed_entries == 0) {
+                    if (att.second.entries > 1024) {
+                        att.second.entries = 1024;
+                        att.second.need_more = true; }
+                } else {
+                    att.second.entries = 0;
+                    att.second.need_more = true; } } } }
 
     if (!rv->table->created_during_tp) {
         BUG_CHECK(!rv->placed[tblInfo.at(rv->table).uid],
@@ -2594,7 +2603,7 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
     for (auto *ba : placed->table->attached) {
         if (ba->attached->direct || placed->attached_entries.at(ba->attached).entries == 0)
             continue;
-        if (auto *ena = att_info.split_enable(ba->attached)) {
+        if (auto *ena = att_info.split_enable(ba->attached, tbl)) {
             tbl->gateway_rows.emplace_back(
                 new IR::Equ(ena, new IR::Constant(1)), cstring());
             tbl->gateway_cond = ena->toString();
@@ -2902,7 +2911,6 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     }
     int stage_table = 0;
     int prev_entries = 0;
-    bool reduction_or = false;  // need reduction_or on post-split actions
     IR::Vector<IR::MAU::Table> *rv = new IR::Vector<IR::MAU::Table>;
     IR::MAU::Table *prev = 0;
     IR::MAU::Table *atcam_last = nullptr;
@@ -2948,8 +2956,8 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                     error("Couldn't find a usable split format for %1% and couldn't place it "
                           "without splitting", tbl);
                 for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
-                    if ((act->second = self.att_info.create_pre_split_action(act->second,
-                                                                        table_part, &self.phv)))
+                    if ((act->second = self.att_info.get_split_action(act->second, table_part,
+                                                                      pl->use.format_type)))
                         ++act;
                     else
                         act = table_part->actions.erase(act); }
@@ -2969,8 +2977,8 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             else
                 BUG_CHECK(deferred_attached, "Split match from attached with no attached?");
             for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
-                if ((act->second = self.att_info.create_post_split_action(act->second, table_part,
-                                                                          reduction_or)))
+                if ((act->second = self.att_info.get_split_action(act->second, table_part,
+                                                                  pl->use.format_type)))
                     ++act;
                 else
                     act = table_part->actions.erase(act); }
@@ -2999,8 +3007,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             }
 
             BUG_CHECK(!rv->empty(), "first stage has no match entries?");
-            rv->push_back(table_part);
-            reduction_or = true; }
+            rv->push_back(table_part); }
 
         if (rv->empty()) {
             rv->push_back(table_part);
@@ -3026,7 +3033,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                 } else {
                     for (auto &act : Values(table_part->actions)) {
                         if (act->stateful_call(att->name)) {
-                            if (auto *idx = self.att_info.split_index(att)) {
+                            if (auto *idx = self.att_info.split_index(att, tbl)) {
                                 auto *adj_idx = new IR::MAU::StatefulCounter(idx->type, att);
                                 auto *set = new IR::MAU::Instruction("set", idx, adj_idx);
                                 clone_update(act)->action.push_back(set); } } }

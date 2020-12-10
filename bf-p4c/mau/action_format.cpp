@@ -2390,52 +2390,6 @@ void Format::create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange c
 }
 
 /**
- * Create an argument to be saved somewhere within the action data RAM.  The enables/meter types
- * are constants, and assumed to be supported through src1 encoding.  Constant Arguments are also
- * assumed to be accessible through src1 encoding
- */
-void Format::create_split_param(const IR::MAU::Action *act) {
-    auto check_instr = att_info.pre_split_addr_instr(act, tbl, &phv);
-    if (check_instr)
-        return;
-    LOG2("  Creating extra split action data alu for " << act->name);
-
-    auto instr = att_info.pre_split_addr_instr(act, tbl, nullptr);
-    if (!instr)
-        return;
-    ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
-    // Invalid container, to note that this is not yet linked to a PHV container yet
-    PHV::Container container;
-    ALUOperation *alu = new ALUOperation(container, alu_cons);
-    alu->set_action_name(act->name);
-    auto expr = instr->operands[1];
-    le_bitrange range = { 0, expr->type->width_bits() - 1 };
-    if (auto *sl = expr->to<IR::Slice>()) {
-        range.lo = sl->getL();
-        range.hi = sl->getH();
-        expr = sl->e0; }
-    if (auto *ir_arg = expr->to<IR::MAU::ActionArg>()) {
-        Parameter *param = new Argument(ir_arg->name.name, range);
-        ALUParameter ap(param, range);
-        alu->add_param(ap);
-        auto &ram_sec_vec = init_ram_sections[act->name];
-        ram_sec_vec.push_back(alu->create_RamSection(true));
-    } else if (expr->is<IR::Constant>()) {
-        // do nothing
-    } else if (auto *hd = expr->to<IR::MAU::HashDist>()) {
-        BuildP4HashFunction builder(phv);
-        hd->apply(builder);
-        P4HashFunction *func = builder.func();
-        Hash *hash = new Hash(*func);
-        ALUParameter ap(hash, range);
-        alu->add_param(ap);
-        locked_in_all_actions_sects.push_back(alu->create_RamSection(true));
-    } else {
-        BUG("A split parameter must be an action data argument, a hash_dist or a constant");
-    }
-}
-
-/**
  * Looks through the ActionAnalysis maps, and builds Parameters and ALUOperation
  * structures.  This will then add a RamSection to potentially be condensed through the
  * algorithm.
@@ -2813,11 +2767,9 @@ bool Format::analyze_actions(FormatType_t format_type) {
         aa.set_container_actions_map(&container_actions_map);
         // If the split parameters exist within the PHV allocation, then add the objects
         // to the IR action in order to correctly understand the split action
-        auto *act_to_analyze = att_info.create_split_action(action, tbl, format_type, &phv);
+        auto *act_to_analyze = att_info.get_split_action(action, tbl, format_type);
         act_to_analyze->apply(aa);
         create_alu_ops_for_action(container_actions_map, action->name);
-        if (format_type.pre_split())
-            create_split_param(action);
     }
 
     for (auto &entry : init_ram_sections) {

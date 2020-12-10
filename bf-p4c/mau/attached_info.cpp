@@ -257,25 +257,18 @@ int SplitAttachedInfo::type_bits_to_phv_on_split(const IR::MAU::Table *tbl) cons
  * does or does not yet exist.
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv) {
+        const IR::MAU::Table *tbl) {
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return nullptr;
 
     int addr_bits = addr_bits_to_phv_on_split(tbl);
-    if (addr_bits == 0)
-        return nullptr;
-
-    auto &tv = index_tempvars[at->name];
-    if (!tv.index) {
-        cstring addr_name = at->name + "$index";
-        tv.index = new IR::TempVar(IR::Type::Bits::get(addr_bits), false, addr_name); }
-    if (phv)
-        phv->addTempVar(tv.index, tbl->gress);
+    // BUG_CHECK(addr_bits > 0, "invalid addr_bits in split_index");
+    if (addr_bits == 0) return nullptr;
 
     if (auto *sc = act->stateful_call(at->name)) {
         const IR::Expression *index = sc->index;
-        const IR::Expression *dest = tv.index;
+        const IR::Expression *dest = split_index(at, tbl);
         int index_width = index->type->width_bits();
         if (index_width > addr_bits)
             index = MakeSlice(index, 0, addr_bits - 1);
@@ -289,26 +282,19 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MA
  * @seealso comments above pre_split_addr_instr
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv) {
+        const IR::MAU::Table *tbl) {
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return nullptr;
     if (!enable_to_phv_on_split(tbl))
         return nullptr;
 
-    auto &tv = index_tempvars[at->name];
-    if (!tv.enable) {
-        cstring enable_name = at->name + "$ena";
-        tv.enable = new IR::TempVar(IR::Type::Bits::get(1), 0, enable_name); }
-    if (phv)
-        phv->addTempVar(tv.enable, tbl->gress);
-
     bool enabled = act->per_flow_enables.count(at->unique_id()) > 0;
     // FIXME -- It's not necessary to set the ena to 0 (metadata init will do that always?), but
     // doing so causes problems with imem allocation (it incorrectly tries to pack instructions
     // in the same imem word.)
     if (!enabled) return nullptr;
-    return new IR::MAU::Instruction(act->srcInfo, "set", tv.enable,
+    return new IR::MAU::Instruction(act->srcInfo, "set", split_enable(at, tbl),
                                     new IR::Constant(IR::Type::Bits::get(1), enabled ? 1 : 0));
 }
 
@@ -316,39 +302,62 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::
  * @seealso comments above pre_split_addr_instr
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_type_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv) {
+        const IR::MAU::Table *tbl) {
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return nullptr;
 
     int type_bits = type_bits_to_phv_on_split(tbl);
-    if (type_bits == 0)
-        return nullptr;
-
-    auto &tv = index_tempvars[at->name];
-    if (!tv.type) {
-        cstring type_name = at->name + "$type";
-        tv.type = new IR::TempVar(IR::Type::Bits::get(type_bits), false, type_name); }
-    if (phv)
-        phv->addTempVar(tv.type, tbl->gress);
+    // BUG_CHECK(type_bits > 0, "invalid type_bits in split_type");
+    if (type_bits == 0) return nullptr;
 
     bool enabled = act->per_flow_enables.count(at->unique_id()) > 0;
     if (enabled) {
         BUG_CHECK(act->meter_types.count(at->unique_id()) > 0, "An enable stateful op %1% "
             "in action %2% has no meter type?", at->name, act->name);
         int meter_type = static_cast<int>(act->meter_types.at(at->unique_id()));
-        return new IR::MAU::Instruction(act->srcInfo, "set", tv.type,
+        return new IR::MAU::Instruction(act->srcInfo, "set", split_type(at, tbl),
                 new IR::Constant(IR::Type::Bits::get(type_bits), meter_type));
     }
     return nullptr;
 }
 
-const IR::Expression *SplitAttachedInfo::split_enable(const IR::MAU::AttachedMemory *at) {
-    return index_tempvars[at->name].enable;
+const IR::Expression *SplitAttachedInfo::split_enable(const IR::MAU::AttachedMemory *at,
+                                                      const IR::MAU::Table *tbl) {
+    if (!enable_to_phv_on_split(tbl))
+        return nullptr;
+    auto &tv = index_tempvars[at->name];
+    if (!tv.enable) {
+        cstring enable_name = at->name + "$ena";
+        tv.enable = new IR::TempVar(IR::Type::Bits::get(1), 0, enable_name); }
+    phv.addTempVar(tv.enable, tbl->gress);
+    return tv.enable;
 }
 
-const IR::Expression *SplitAttachedInfo::split_index(const IR::MAU::AttachedMemory *at) {
-    return index_tempvars[at->name].index;
+const IR::Expression *SplitAttachedInfo::split_index(const IR::MAU::AttachedMemory *at,
+                                                     const IR::MAU::Table *tbl) {
+    int addr_bits = addr_bits_to_phv_on_split(tbl);
+    // BUG_CHECK(addr_bits > 0, "invalid addr_bits in split_index");
+    if (addr_bits == 0) return nullptr;
+    auto &tv = index_tempvars[at->name];
+    if (!tv.index) {
+        cstring addr_name = at->name + "$index";
+        tv.index = new IR::TempVar(IR::Type::Bits::get(addr_bits), false, addr_name); }
+    phv.addTempVar(tv.index, tbl->gress);
+    return tv.index;
+}
+
+const IR::Expression *SplitAttachedInfo::split_type(const IR::MAU::AttachedMemory *at,
+                                                    const IR::MAU::Table *tbl) {
+    int type_bits = type_bits_to_phv_on_split(tbl);
+    // BUG_CHECK(type_bits > 0, "invalid type_bits in split_type");
+    if (type_bits == 0) return nullptr;
+    auto &tv = index_tempvars[at->name];
+    if (!tv.type) {
+        cstring type_name = at->name + "$type";
+        tv.type = new IR::TempVar(IR::Type::Bits::get(type_bits), false, type_name); }
+    phv.addTempVar(tv.type, tbl->gress);
+    return tv.type;
 }
 
 /**
@@ -361,7 +370,7 @@ const IR::Expression *SplitAttachedInfo::split_index(const IR::MAU::AttachedMemo
  * will be generated if necessary
  */
 const IR::MAU::Action *SplitAttachedInfo::create_pre_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv) {
+        const IR::MAU::Table *tbl) {
     // FIXME -- should only do this once per table/action -- memoize?
     IR::MAU::Action *rv = act->clone();
     auto *at = attached_from_table(tbl);
@@ -404,15 +413,15 @@ const IR::MAU::Action *SplitAttachedInfo::create_pre_split_action(const IR::MAU:
     }
 
     // Add instructions if necessary
-    auto instr1 = pre_split_addr_instr(act, tbl, phv);
+    auto instr1 = pre_split_addr_instr(act, tbl);
     if (instr1 != nullptr)
         rv->action.push_back(instr1);
 
-    auto instr2 = pre_split_enable_instr(act, tbl, phv);
+    auto instr2 = pre_split_enable_instr(act, tbl);
     if (instr2 != nullptr)
         rv->action.push_back(instr2);
 
-    auto instr3 = pre_split_type_instr(act, tbl, phv);
+    auto instr3 = pre_split_type_instr(act, tbl);
     if (instr3 != nullptr)
         rv->action.push_back(instr3);
 
@@ -475,7 +484,7 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
         if (!has_attached.found()) {
             it = rv->stateful_calls.erase(it);
         } else {
-            if (auto *tv = index_tempvars[at->name].index) {
+            if (auto *tv = split_index(at, tbl)) {
                 // FIXME -- should only create this modified cloned call once?
                 auto *call = (*it)->clone();
                 call->index = new IR::MAU::HashDist(new IR::MAU::HashGenExpression(tv));
@@ -504,15 +513,15 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
 }
 
 const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, FormatType_t format_type, PhvInfo *phv) {
+        const IR::MAU::Table *tbl, FormatType_t format_type) {
     if (format_type.normal()) {
         return act;
     } else if (format_type.pre_split()) {
-        return create_pre_split_action(act, tbl, phv);
+        return create_pre_split_action(act, tbl);
     } else if (format_type.post_split()) {
         bool reduction_or = false;
         for (int i = 0; i < format_type.num_attached(); ++i) {
-            if (format_type.get_attached(i) & FormatType_t::EARLIER_STAGE) {
+            if (format_type.attachedEarlierStage(i)) {
                 reduction_or = true;
                 break; } }
         return create_post_split_action(act, tbl, reduction_or);
@@ -521,30 +530,91 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
     }
 }
 
-ActionData::FormatType_t ActionData::FormatType_t::default_for_table(const IR::MAU::Table *tbl) {
-    ActionData::FormatType_t rv;
-    int idx = 0;
-    rv.set_match(THIS_STAGE);
-    for (auto *ba : tbl->attached) {
-        if (ba->attached->direct) continue;
-        rv.set_attached(idx++, THIS_STAGE); }
+const IR::MAU::Action *SplitAttachedInfo::get_split_action(const IR::MAU::Action *act,
+        const IR::MAU::Table *tbl, FormatType_t format_type) {
+    auto key = std::make_tuple(tbl->name, act->name, format_type);
+    if (!cache.count(key))
+        cache[key] = create_split_action(act, tbl, format_type);
+    // FIXME -- need to refresh the PhvInfo in case it has been cleared and recomputed
+    // and has no references to the tempvars used in this action.  Should be a better
+    // way of doing this.
+    auto *at = attached_from_table(tbl);
+    if (at && index_tempvars.count(at->name)) {
+        auto &tv = index_tempvars.at(at->name);
+        if (tv.enable) phv.addTempVar(tv.enable, tbl->gress);
+        if (tv.index) phv.addTempVar(tv.index, tbl->gress);
+        if (tv.type) phv.addTempVar(tv.type, tbl->gress); }
+    return cache.at(key);
+}
+
+bool ActionData::FormatType_t::track(const IR::MAU::AttachedMemory *at) {
+    return !at->direct;
+}
+
+std::vector<const IR::MAU::AttachedMemory *>
+ActionData::FormatType_t::tracking(const IR::MAU::Table *tbl) {
+    std::vector<const IR::MAU::AttachedMemory *>        rv;
+    if (tbl)
+        for (auto *ba : tbl->attached)
+            if (track(ba->attached))
+                rv.push_back(ba->attached);
     return rv;
 }
 
-void ActionData::FormatType_t::check_valid() const {
+ActionData::FormatType_t ActionData::FormatType_t::default_for_table(const IR::MAU::Table *tbl) {
+    ActionData::FormatType_t rv;
+    int shift = 3;
+    rv.value = THIS_STAGE;
+    for (auto *ba : tbl->attached) {
+        if (!track(ba->attached)) continue;
+        rv.value |= THIS_STAGE << shift;
+        shift += 3; }
+    return rv;
+}
+
+void ActionData::FormatType_t::initialize(const IR::MAU::Table *tbl,
+        int entries, bool prev_stages, const attached_entries_t &attached) {
+    value = 0;
+    if (entries > 0 || !tbl->match_table)
+        value |= THIS_STAGE;
+    if (prev_stages)
+        value |= EARLIER_STAGE;
+    // FIXME -- when to set LATER_STAGE?  Do we ever care?
+    int shift = 3;
+    for (auto *ba : tbl->attached) {
+        auto *at = ba->attached;
+        if (!track(at))
+            continue;
+        BUG_CHECK(shift < 30, "too many attached tables for %s", tbl);
+        if (!attached.at(ba->attached).first_stage)
+            value |= EARLIER_STAGE << shift;
+        if (attached.at(ba->attached).entries > 0)
+            value |= THIS_STAGE << shift;
+        if (attached.at(ba->attached).need_more)
+            value |= LATER_STAGE << shift;
+        shift += 3; }
+    check_valid(tbl);
+}
+
+void ActionData::FormatType_t::check_valid(const IR::MAU::Table *tbl) const {
     BUG_CHECK((value & MASK), "invalid(0%o) FormatType", value);
     BUG_CHECK((value & MASK) != (EARLIER_STAGE|LATER_STAGE),
               "invalid(0%o) FormatType: discontinuous match", value);
-    int idx = 0;
+    unsigned idx = 0;
+    auto att = tracking(tbl);
     for (uint32_t attached = value >> 3; attached; attached >>= 3, idx++) {
+        BUG_CHECK(!tbl || idx < att.size(), "too many attached tables(%d) for %s", idx, tbl);
         BUG_CHECK((attached & MASK), "invalid(0%o) FormatType: no entries for attached #%d",
                   value, idx);
         BUG_CHECK((attached & MASK) != (EARLIER_STAGE|LATER_STAGE),
                   "invalid(0%o) FormatType: discontinuous attached #%d", value, idx);
+        if (!tbl || (TablePlacement::can_duplicate(att.at(idx)) && (attached & MASK) == THIS_STAGE))
+            continue;
         BUG_CHECK(!(value & LATER_STAGE) || !(attached & (THIS_STAGE | EARLIER_STAGE)),
                   "invalid(0%o) FormatType: attached #%d after match", value, idx);
         BUG_CHECK(!(value & THIS_STAGE) || !(attached & EARLIER_STAGE),
                   "invalid(0%o) FormatType: attached #%d after match", value, idx); }
+    BUG_CHECK(!tbl || idx == att.size(), "not enough attached tables(%d) for %s", idx, tbl);
 }
 
 // a 'normal' table is one that doesn't need any rewriting as it is all in one stage, or

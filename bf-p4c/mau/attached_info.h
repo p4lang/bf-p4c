@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
+#include "attached_entries.h"
 
 namespace ActionData {
 class FormatType_t {
@@ -31,36 +32,41 @@ class FormatType_t {
     // Many combinations do not make sense, so should not occur.  Attached table entries
     // can never be in a stage before match table entries, so if there are match entries in
     // later stages, all attached entries must also be in later stages.
-    // Currently we never set_match(LATER_STAGE) as nothing depends on it -- FormatTypes
+    // Currently we never set match LATER_STAGE as nothing depends on it -- FormatTypes
     // that differ only in this bit will end up with the exact same possible table and
     // action formats.
 
- public:
     enum stage_t { EARLIER_STAGE = 1, THIS_STAGE = 2, LATER_STAGE = 4, MASK = 7 };
+    uint32_t value;
+
+ public:
     bool operator<(FormatType_t a) const { return value < a.value; }
     bool valid() const { return value != 0; }
-    void check_valid() const;  // sanity check for insane combinations
     void invalidate() { value = 0; }
-    bool normal() const;
-    bool pre_split() const;
-    bool post_split() const;
-    void set_match(stage_t st) { value |= st; check_valid(); }
-    stage_t get_match() const { return static_cast<stage_t>(value & MASK); }
+    void check_valid(const IR::MAU::Table *tbl = nullptr) const;  // sanity check for
+                                                                  // insane combinations
+    bool normal() const;        // old-style interface -- these
+    bool pre_split() const;     // should go away eventually
+    bool post_split() const;    // (soon)
+
+    bool matchEarlierStage() const { return value & EARLIER_STAGE; }
+    bool matchThisStage() const { return value & THIS_STAGE; }
+    bool matchLaterStage() const { return value & LATER_STAGE; }
+
     int num_attached() const { return floor_log2(value)/3; }
-    void set_attached(int idx, stage_t st) {
-        BUG_CHECK(idx >= 0 && idx < 9, "too many attached tables");
-        value |= st << ((idx+1) * 3);
-        check_valid(); }
-    stage_t get_attached(int idx) const {
-        return static_cast<stage_t>((value >> (3*(idx+1))) & MASK); }
+    bool attachedEarlierStage(int idx) const { return (value >> 3*(idx+1)) & EARLIER_STAGE; }
+    bool attachedThisStage(int idx) const { return (value >> 3*(idx+1)) & THIS_STAGE; }
+    bool attachedLaterStage(int idx) const { return (value >> 3*(idx+1)) & LATER_STAGE; }
 
     FormatType_t() : value(0) {}
+    void initialize(const IR::MAU::Table *tbl, int entries, bool prev_stages,
+                    const attached_entries_t &attached);
+    // which attached tables are we tracking in the FormatType_t
+    static bool track(const IR::MAU::AttachedMemory *at);
+    static std::vector<const IR::MAU::AttachedMemory *> tracking(const IR::MAU::Table *);
     static FormatType_t default_for_table(const IR::MAU::Table *);
     friend std::ostream &operator<<(std::ostream &, FormatType_t);
     std::string toString() const;
-
- private:
-    uint32_t value;
 };
 }  // end namespace ActionData
 
@@ -173,6 +179,7 @@ class HasAttachedMemory : public MauInspector {
  */
 class SplitAttachedInfo : public PassManager {
     typedef ActionData::FormatType_t  FormatType_t;
+    PhvInfo     &phv;
 
     // Can't use IR::Node * as keys in a map, as they change in transforms.  Names
     // are unique and stable, so use them instead.
@@ -215,6 +222,7 @@ class SplitAttachedInfo : public PassManager {
         table_to_attached_map.clear();
         // types_per_attached.clear();
         address_info_per_table.clear();
+        cache.clear();          // actions might have changed without renaming
         return rv;
     }
 
@@ -252,7 +260,7 @@ class SplitAttachedInfo : public PassManager {
     };
 
  public:
-    SplitAttachedInfo() {
+    explicit SplitAttachedInfo(PhvInfo &phv) : phv(phv) {
         addPasses({
             new BuildSplitMaps(*this),
             new ValidateAttachedOfAllTables(*this),
@@ -275,26 +283,32 @@ class SplitAttachedInfo : public PassManager {
     bool enable_to_phv_on_split(const IR::MAU::Table *tbl) const;
     int type_bits_to_phv_on_split(const IR::MAU::Table *tbl) const;
 
- public:
-    // public so ActionData::Format can call it (why?)
     const IR::MAU::Instruction *pre_split_addr_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv);
+        const IR::MAU::Table *tbl);
+
+    const IR::MAU::Instruction *pre_split_enable_instr(const IR::MAU::Action *act,
+        const IR::MAU::Table *tbl);
+    const IR::MAU::Instruction *pre_split_type_instr(const IR::MAU::Action *act,
+        const IR::MAU::Table *tbl);
+
+    typedef std::tuple<cstring, cstring, FormatType_t> memo_key;
+    std::map<memo_key, const IR::MAU::Action *>  cache;
+
+ public:
+    const IR::Expression *split_enable(const IR::MAU::AttachedMemory *, const IR::MAU::Table *);
+    const IR::Expression *split_index(const IR::MAU::AttachedMemory *, const IR::MAU::Table *);
+    const IR::Expression *split_type(const IR::MAU::AttachedMemory *, const IR::MAU::Table *);
+
+    const IR::MAU::Action *get_split_action(const IR::MAU::Action *act,
+        const IR::MAU::Table *tbl, FormatType_t format_type);
 
  private:
-    const IR::MAU::Instruction *pre_split_enable_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv);
-    const IR::MAU::Instruction *pre_split_type_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv);
-
- public:
-    const IR::Expression *split_enable(const IR::MAU::AttachedMemory *);
-    const IR::Expression *split_index(const IR::MAU::AttachedMemory *);
     const IR::MAU::Action *create_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, FormatType_t format_type, PhvInfo *phv);
+        const IR::MAU::Table *tbl, FormatType_t format_type);
     const IR::MAU::Action *create_pre_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, PhvInfo *phv);
+        const IR::MAU::Table *tbl);
     const IR::MAU::Action *create_post_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, bool reduction_or = false);
+        const IR::MAU::Table *tbl, bool reduction_or);
 };
 
 #endif  /* BF_P4C_MAU_ATTACHED_INFO_H_ */

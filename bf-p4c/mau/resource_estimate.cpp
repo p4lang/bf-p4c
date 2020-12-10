@@ -916,25 +916,9 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         bool gateway_attached, bool table_placement) {
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();
-    format_type.invalidate();
-    if (entries > 0 || !tbl->match_table)
-        format_type.set_match(ActionData::FormatType_t::THIS_STAGE);
-    if (prev_placed)
-        format_type.set_match(ActionData::FormatType_t::EARLIER_STAGE);
-    // FIXME -- when to set_match(LATER_STAGE)?  Do we ever care?
     int initial_entries = entries;
+    format_type.initialize(tbl, entries, prev_placed, attached_entries);
     if (!tbl->created_during_tp) {
-        int idx = 0;
-        for (auto *ba : tbl->attached) {
-            if (ba->attached->direct)
-                continue;
-            if (!attached_entries.at(ba->attached).first_stage)
-                format_type.set_attached(idx, ActionData::FormatType_t::EARLIER_STAGE);
-            if (attached_entries.at(ba->attached).entries > 0)
-                format_type.set_attached(idx, ActionData::FormatType_t::THIS_STAGE);
-            if (attached_entries.at(ba->attached).need_more)
-                format_type.set_attached(idx, ActionData::FormatType_t::LATER_STAGE);
-            ++idx; }
         layout_options = lc->get_layout_options(tbl, format_type);
         if (layout_options.empty()) {
             // no layouts available?  Fall back to NORMAL for now.  TablePlacement will flag
