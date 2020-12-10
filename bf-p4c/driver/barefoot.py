@@ -759,8 +759,9 @@ class BarefootBackend(BackendDriver):
         resources_data = json.load(resources_json)
         resources_data["resources"]["pipes"][0]["deparser"] = deparser_data
 
-        # Dump the node to the output - don't forget to rewind the file
-        resources_json.seek(0)
+        # Dump the node to the output - don't forget to reset the file
+        resources_json.close()
+        resources_json = open(resources_file,"w")
         json.dump(resources_data,resources_json,indent=2)
         resources_json.close()
 
