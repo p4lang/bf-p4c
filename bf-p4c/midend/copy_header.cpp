@@ -20,7 +20,9 @@ class DoCopyHeaders : public Transform {
     std::vector<const IR::Member*> prev_assignments;
     const IR::Node* replaceValidMethod(const IR::Member* mem, int value,
                                        const Util::SourceInfo& srcInfo);
+#if ENABLE_P4C3251
     std::vector<bool> key_change;   // Keys in const entries` that need changing.
+#endif
 
  public:
     explicit DoCopyHeaders(P4::TypeMap* typeMap) : typeMap(typeMap) {
@@ -42,10 +44,12 @@ class DoCopyHeaders : public Transform {
 
     const IR::Node* postorder(IR::AssignmentStatement* statement) override;
     const IR::Node* postorder(IR::MethodCallStatement* mc) override;
+#if ENABLE_P4C3251
     const IR::Node* postorder(IR::MethodCallExpression* mc) override;
 
     const IR::Node* preorder(IR::P4Table* tbl) override;
     const IR::Node* preorder(IR::Entry* ent) override;
+#endif
 };
 
 const IR::Node* DoCopyHeaders::postorder(IR::AssignmentStatement* statement) {
@@ -155,6 +159,7 @@ const IR::Node* DoCopyHeaders::postorder(IR::MethodCallStatement *mc) {
     BUG("Unreachable code");
 }
 
+#if ENABLE_P4C3251
 /**
  * Convert `isValid()` method call to an expression on header's `$valid` POV bit field.
  */
@@ -230,6 +235,7 @@ const IR::Node* DoCopyHeaders::preorder(IR::Entry* entry) {
     clone->keys = new IR::ListExpression(entry->keys->srcInfo, entry_keys);
     return clone;
 }
+#endif   // ENABLE_P4C3251
 
 }  // namespace
 

@@ -24,6 +24,8 @@
 #include "lib/error.h"
 #include "lib/safe_vector.h"
 
+#include "bf-p4c/midend/copy_header.h"   // ENABLE_P4C3251
+
 namespace BFN {
 
 static bool getBool(const IR::Argument* arg) {
@@ -122,9 +124,21 @@ class ConvertMethodCalls : public MauTransform {
         if (auto bi = mi->to<P4::BuiltInMethod>()) {
             name = bi->name;
             recv = bi->appliedTo;
+#if ENABLE_P4C3251
+            // Implemention consolidate in bf-p4c/midend/copy_header.cpp
             BUG_CHECK(name != IR::Type_Header::setValid &&
                       name != IR::Type_Header::setInvalid &&
                       name != IR::Type_Header::isValid, "%s not removed by DoCopyHeaders", name);
+#else
+            /* FIXME(CTD) -- duplicates SimplifyHeaderValidMethods a bit, as this may (will?)
+             * run before that, and it can't deal with MAU::TypedPrimitives */
+            if (name == "isValid") {
+                return new IR::Member(mc->srcInfo, mc->type, recv, "$valid");
+            } else if (name == "setValid" || name == "setInvalid") {
+                recv = new IR::Member(mc->type, recv, "$valid");
+                extra_arg = new IR::Constant(mc->type, name == "setValid");
+                name = "modify_field"; }
+#endif
         } else if (auto em = mi->to<P4::ExternMethod>()) {
             name = em->actualExternType->name + "." + em->method->name;
             auto mem = mc->method->to<IR::Member>();

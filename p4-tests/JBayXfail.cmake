@@ -309,17 +309,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation creates an invalid container action within a Tofino ALU"
-  # See `#if REMOVE_PHV_ALLOC_XFAIL` within source file for the root of problem.
-  extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4
-)
-p4c_add_xfail_reason("tofino2"
-  "ALU ops cannot operate on slices"
-  # See `#if REMOVE_PHV_ALLOC_XFAIL` within source file for the root of problem.
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Field .* is not a member of structure header .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
 )
@@ -512,7 +501,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-3379
 p4c_add_xfail_reason("tofino2"
-   "PHV allocation was not successful"
+   "Expected packet was not received on device .*"
    p4c-3379
 )
 

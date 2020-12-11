@@ -6,6 +6,8 @@
 #include "bf-p4c/midend/param_binding.h"
 #include "bf-p4c/common/utils.h"
 
+#include "bf-p4c/midend/copy_header.h"   // ENABLE_P4C3251
+
 namespace {
 
 class ApplyParamBindings : public Transform {
@@ -150,6 +152,99 @@ class RemoveInstanceRef : public Transform {
     }
 };
 
+#if ENABLE_P4C3251
+// Implemention consolidate in bf-p4c/midend/copy_header.cpp
+#else
+/**
+ * Remove calls to the `isValid()`, `setValid()`, and `setInvalid()` methods on
+ * headers and replace them with references to the header's `$valid` POV bit
+ * field.
+ *
+ * XXX(seth): It would be nicer to deal with this in terms of the
+ * frontend/midend IR, because then we could rerun type checking and resolve
+ * references to make sure everything is still correct. Doing it here feels a
+ * bit hacky by comparison. This is considerably simpler, though, so it makes
+ * sense as a first step.
+ *
+ * FIXME(CTD) -- this functionality is duplicated in ConvertMethodCall in extract_maupipe.cpp
+ * because that runs before this pass for action bodies, and it converts them to backend
+ * form (IR::MAU::TypedPrimitives), which this code cannot handle (and ignores).
+ */
+struct SimplifyHeaderValidMethods : public Transform {
+    const IR::Expression* preorder(IR::MethodCallExpression* call) override {
+        auto* method = call->method->to<IR::Member>();
+        if (!method) return call;
+        if (method->member != "isValid") return call;
+        return replaceWithPOVRead(call, method);
+    }
+
+    const IR::Statement* preorder(IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+        if (!method) return statement;
+
+        if (method->member == "setValid")
+            return replaceWithPOVWrite(statement, method, 1);
+        else if (method->member == "setInvalid")
+            return replaceWithPOVWrite(statement, method, 0);
+        else if (method->member == "isValid")
+            // "bare" call to isValid (ignoring return value) is a noop
+            return nullptr;
+        return statement;
+    }
+
+    const IR::Expression*
+    replaceWithPOVRead(const IR::MethodCallExpression* call,
+                       const IR::Member* method) {
+        BUG_CHECK(call->arguments->size() == 0,
+                  "Wrong number of arguments for method call: %1%", call);
+        auto* target = method->expr;
+        BUG_CHECK(target != nullptr, "Method has no target: %1%", call);
+        BUG_CHECK(target->type->is<IR::Type_Header>(),
+                  "Invoking isValid() on unexpected type %1%", target->type);
+
+        // On Tofino, calling a header's `isValid()` method is implemented by
+        // reading the header's POV bit, which is a simple bit<1> value.
+        const cstring validField = "$valid";
+        auto* member = new IR::Member(call->srcInfo, target, validField);
+        member->type = IR::Type::Bits::get(1);
+
+        // If isValid() is being used as a table key element, it already behaves
+        // like a bit<1> value; just replace it with a reference to the valid bit.
+        if (getParent<IR::MAU::TableKey>() != nullptr) return member;
+
+        // In other contexts, rewrite isValid() into a comparison with a constant.
+        // This maintains a boolean type for the overall expression.
+        auto* constant = new IR::Constant(IR::Type::Bits::get(1), 1);
+        auto* result = new IR::Equ(call->srcInfo, member, constant);
+        result->type = IR::Type::Boolean::get();
+        return result;
+    }
+
+    const IR::Statement*
+    replaceWithPOVWrite(const IR::MethodCallStatement* statement,
+                        const IR::Member* method, unsigned value) {
+        BUG_CHECK(statement->methodCall->arguments->size() == 0,
+                  "Wrong number of arguments for method call: %1%", statement);
+        auto* target = method->expr;
+        BUG_CHECK(target != nullptr, "Method has no target: %1%", statement);
+        BUG_CHECK(target->type->is<IR::Type_Header>(),
+                  "Invoking isValid() on unexpected type %1%", target->type);
+
+        // On Barefoot architectures, calling a header's `setValid()` and
+        // `setInvalid()` methods is implemented by write the header's POV bit,
+        // which is a simple bit<1> value.
+        const cstring validField = "$valid";
+        auto* member = new IR::Member(statement->srcInfo, target, validField);
+        member->type = IR::Type::Bits::get(1);
+
+        // Rewrite the method call into an assignment with the same effect.
+        auto* constant = new IR::Constant(IR::Type::Bits::get(1), value);
+        return new IR::AssignmentStatement(statement->srcInfo, member, constant);
+    }
+};
+#endif
+
 class ConvertIndexToHeaderStackItemRef : public Transform {
     const IR::Expression *preorder(IR::ArrayIndex *idx) override {
         auto type = idx->type->to<IR::Type_Header>();
@@ -176,6 +271,9 @@ SimplifyReferences::SimplifyReferences(ParamBinding* bindings,
         new ApplyParamBindings(bindings, refMap),
         new SplitComplexInstanceRef(),
         new RemoveInstanceRef,
+#if !ENABLE_P4C3251
+        new SimplifyHeaderValidMethods,
+#endif
         new ConvertIndexToHeaderStackItemRef
     });
 }

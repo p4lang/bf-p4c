@@ -131,8 +131,8 @@ TEST(CopyHeaders, Lower$valid) {
             }
             const entries = {
                 (1, true, true): act();  // isValid setting will be changed to bit<1>.
-                (_, true, _):    act();  // isValid setting will remain 'default'.
                 (0, _, false):   act();  // other fields remain the same.
+                (_, true, _):    act();  // isValid setting will remain 'default'.
             }
         }
         apply {
@@ -155,26 +155,43 @@ TEST(CopyHeaders, Lower$valid) {
         "table tbl_0 {",
             "key = {",
                 "hdr.h[0].field : exact ;",
-                "hdr.h[1].boolean: exact ;",
+                "hdr.h[1].boolean", ": exact ;",  // ENABLE_P4C3251 changes the whitespace!
+#if ENABLE_P4C3251
                 "hdr.h[0].$valid : exact ;",
+#else
+                "hdr.h[0].isValid(): exact ;",
+#endif
             "}",
             "actions = {",
                 "act();",
                 "NoAction_0();",
             "}",
             "const entries = {",
+#if ENABLE_P4C3251
                 "(1w1, true, 1w1) : act();",
-                "(default, true, default) : act();",
                 "(1w0, default, 1w0) : act();",
+#else
+                "(1w1, true, true) : act();",
+                "(1w0, default, false) : act();",
+#endif
+                "(default, true, default) : act();",
             "}",
             "default_action = NoAction_0();",
         "}",
         "apply {",
+#if ENABLE_P4C3251
             "if (false == (hdr.h[0].$valid == 1w1)) {",
+#else
+            "if (false == hdr.h[0].isValid()) {",
+#endif
                 "hdr.h[0].$valid = 1w0;",
                 "tbl_0.apply();",
             "}",
+#if ENABLE_P4C3251
             "if (1w1 == (bit<1>)hdr.h[0].$valid) {",
+#else
+            "if (1w1 == (bit<1>)hdr.h[0].isValid()) {",
+#endif
                 "hdr.h[0].$valid = 1w0;",
                 "hdr.h[0].$valid = 1w1;",
                 "hdr.h[0].$valid = 1w0;",
@@ -199,6 +216,5 @@ TEST(CopyHeaders, Lower$valid) {
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
                              << "\n    '" << blk.extract_code(res.pos) << "'\n";
 }
-
 
 }  // namespace Test
