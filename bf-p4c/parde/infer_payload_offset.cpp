@@ -15,9 +15,23 @@ static bool is_mutable_field(const FieldDefUse& defuse, const PHV::Field* f) {
         if (unit->is<IR::MAU::Table>())
             return true;
     }
-
+    // Bridged metadata
+    if (f->parsed() && !f->deparsed() && !f->pov && !f->is_intrinsic())
+        return true;
     return false;
 }
+
+class GetAllChecksumDest : public Inspector {
+ public:
+    std::set<cstring> checksumDest;
+    bool is_checksum_dest(const PHV::Field* f) const {
+        return checksumDest.count(f->name);
+    }
+    bool preorder(const IR::BFN::EmitChecksum* ec) override {
+        checksumDest.insert(ec->dest->toString());
+        return false;
+    }
+};
 
 using StateSet = ordered_set<const IR::BFN::ParserState*>;
 
@@ -54,6 +68,7 @@ class FindParsingFrontier : public ParserInspector {
 
         StateSet
         get_dsts_for(const IR::BFN::ParserState* state) const {
+            if (!transitions.count(state)) return StateSet();
             return transitions.at(state);
         }
 
@@ -100,6 +115,7 @@ class FindParsingFrontier : public ParserInspector {
     const PhvInfo& phv;
     const FieldDefUse& defuse;
     const CollectParserInfo& parserInfo;
+    const GetAllChecksumDest& checksumDest;
 
     std::map<const IR::BFN::Parser*, StateSet> mutable_field_states;
 
@@ -112,10 +128,10 @@ class FindParsingFrontier : public ParserInspector {
         auto parser = findContext<IR::BFN::Parser>();
         auto state = findContext<IR::BFN::ParserState>();
         auto f = phv.field(extract->dest->field);
-
-        if (is_mutable_field(defuse, f))
+        if (!f) return false;
+        if (is_mutable_field(defuse, f) || checksumDest.is_checksum_dest(f)) {
             mutable_field_states[parser].insert(state);
-
+        }
         return false;
     }
 
@@ -309,8 +325,9 @@ class FindParsingFrontier : public ParserInspector {
 
     FindParsingFrontier(const PhvInfo& phv,
                        const FieldDefUse& defuse,
-                       const CollectParserInfo& parserInfo) :
-        phv(phv), defuse(defuse), parserInfo(parserInfo) { }
+                       const CollectParserInfo& parserInfo,
+                       const GetAllChecksumDest& checksumDest) :
+        phv(phv), defuse(defuse), parserInfo(parserInfo), checksumDest(checksumDest) { }
 };
 
 class InsertFrontierStates : public ParserTransform {
@@ -399,9 +416,9 @@ class RewriteParde : public PardeTransform {
                 auto f = phv.field(extract->dest->field);
 
                 if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
-                    if (!inserted && is_mutable_field(defuse, f)) {
+                    if (!inserted && (is_mutable_field(defuse, f) ||
+                        checksumDest.is_checksum_dest(f))) {
                         auto stopper = new IR::BFN::HdrLenIncStop(rval);
-
                         rv.insert(rv.begin(), stopper);
                         rv.insert(rv.begin(), extract);
                         inserted = true;
@@ -445,10 +462,14 @@ class RewriteParde : public PardeTransform {
             }
 
             auto extract = stmt->to<IR::BFN::Extract>();
+            if (!extract) {
+                rv.insert(rv.begin(), stmt);
+                continue;
+            }
             auto field = phv.field(extract->dest->field);
 
             if (!field->deparsed() ||
-                uses.is_used_mau(field)) {
+                uses.is_used_mau(field) || field->is_checksummed()) {
                 rv.insert(rv.begin(), stmt);
             } else {
                 LOG4("elim " << stmt << " in " << state->name);
@@ -582,33 +603,37 @@ class RewriteParde : public PardeTransform {
     const FieldDefUse& defuse;
     const CollectParserInfo& parserInfo;
     const InsertFrontierStates& frontier;
+    const GetAllChecksumDest& checksumDest;
 
  public:
     RewriteParde(const PhvInfo& phv, const PhvUse& uses,
                  const FieldDefUse& defuse,
                  const CollectParserInfo& parserInfo,
-                 const InsertFrontierStates& frontier) :
+                 const InsertFrontierStates& frontier,
+                 const GetAllChecksumDest& checksumDest) :
         phv(phv), uses(uses), defuse(defuse),
-        parserInfo(parserInfo), frontier(frontier) { }
+        parserInfo(parserInfo), frontier(frontier), checksumDest(checksumDest) { }
 };
 
 InferPayloadOffset::InferPayloadOffset(const PhvInfo& phv,
                                        const FieldDefUse& defuse) {
     auto uses = new PhvUse(phv);
+    auto checksumDest = new GetAllChecksumDest;
     auto parserInfo = new CollectParserInfo;
-    auto findFrontier = new FindParsingFrontier(phv, defuse, *parserInfo);
+    auto findFrontier = new FindParsingFrontier(phv, defuse, *parserInfo, *checksumDest);
     auto insertFrontier = new InsertFrontierStates(*findFrontier);
 
     addPasses({
         LOGGING(4) ? new DumpParser("before_infer_payload_offset") : nullptr,
         uses,
+        checksumDest,
         parserInfo,
         findFrontier,
         LOGGING(5) ? new DumpParser("after_find_parsing_frontier",
                                     findFrontier->color_groups) : nullptr,
         insertFrontier,
         parserInfo,
-        new RewriteParde(phv, *uses, defuse, *parserInfo, *insertFrontier),
+        new RewriteParde(phv, *uses, defuse, *parserInfo, *insertFrontier, *checksumDest),
         LOGGING(4) ? new DumpParser("after_infer_payload_offset") : nullptr,
     });
 }
