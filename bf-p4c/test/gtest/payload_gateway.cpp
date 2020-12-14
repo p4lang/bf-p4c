@@ -21,8 +21,10 @@ auto defs = R"(
     EXPECT_TRUE(blk.CreateBackend()); \
     EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend)); \
     auto res = blk.match(TestCode::CodeBlock::MauAsm, expected); \
-    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n'" << blk.extract_code(TestCode::CodeBlock::MauAsm) << "'\n"; \
+    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n" \
+                             << "    '" << expected[res.count] << "'\n" \
+                             << "    '" << blk.extract_code(TestCode::CodeBlock::MauAsm, res.pos) \
+                             << "'\n"; \
 } while (0)
 
 }  // namespace

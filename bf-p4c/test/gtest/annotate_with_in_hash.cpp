@@ -33,8 +33,9 @@ auto defs = R"(
     EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend)); \
     EXPECT_TRUE(blk.apply_pass(pass)); \
     auto res = blk.match(expected); \
-    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n    '" << blk.extract_code() << "'\n"; \
+    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n" \
+                             << "    '" << expected[res.count] << "'\n" \
+                             << "    '" << blk.extract_code(res.pos) << "'\n"; \
     } while (0)
 
 Visitor *setup_passes() {

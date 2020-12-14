@@ -53,8 +53,9 @@ auto depaser = "apply{packet.emit(hdr);}";
     EXPECT_TRUE(blk.apply_pass(new P4::SimplifyParsers(&refMap))); \
     EXPECT_TRUE(blk.apply_pass(new BFN::CopyHeaders(&refMap, &typeMap, typeChecking))); \
     auto res = blk.match(output); \
-    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n    '" << blk.extract_code() << "'\n"; \
+    EXPECT_TRUE(res.success) << "    @ output[" << res.count<< "], char pos=" << res.pos << "\n" \
+                             << "    '" << output[res.count] << "'\n" \
+                             << "    '" << blk.extract_code(res.pos) << "'\n"; \
     } while (0)
 
 }  // namespace
@@ -213,8 +214,9 @@ TEST(CopyHeaders, Lower$valid) {
     EXPECT_TRUE(blk.apply_pass(new P4::SimplifyParsers(&refMap)));
     EXPECT_TRUE(blk.apply_pass(new BFN::CopyHeaders(&refMap, &typeMap, typeChecking)));
     auto res = blk.match(expected);
-    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
-                             << "\n    '" << blk.extract_code(res.pos) << "'\n";
+    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n"
+                             << "    '" << expected[res.count] << "'\n"
+                             << "    '" << blk.extract_code(res.pos) << "'\n";
 }
 
 }  // namespace Test
