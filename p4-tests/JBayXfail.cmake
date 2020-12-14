@@ -306,6 +306,9 @@ p4c_add_xfail_reason("tofino2"
 
   # P4C-3158
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
+
+  # P4C-3379
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -439,6 +442,12 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
 
+# P4C-3379
+p4c_add_xfail_reason ("tofino2"
+  "error: tofino2 supports up to 20 stages, using 21"
+  p4c-3171
+)
+
 p4c_add_xfail_reason ("tofino2"
   "error: tofino2 supports up to 20 stages, using 22"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
@@ -501,8 +510,8 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-3379
 p4c_add_xfail_reason("tofino2"
-   "Expected packet was not received on device .*"
-   p4c-3379
+  "error: PHV allocation was not successful"
+  p4c-3379
 )
 
 # P4C-3388

@@ -480,7 +480,6 @@ p4c_add_xfail_reason("tofino"
 
   # p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices.p4
 
   # P4C-1778
   # fit if
@@ -912,7 +911,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
   ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
   )
 
 # P4C-1375
@@ -1920,4 +1918,38 @@ p4c_add_xfail_reason("tofino"
   "Flexible packing bug found"
   # P4C-3042
   extensions/p4_tests/p4_16/compile_only/p4c-3042.p4
+)
+
+# p4c dd7c0eb1
+p4c_add_xfail_reason("tofino"
+  ".*error: Field __bfp4c_fields of header __bfp4c_bridged_metadata_header cannot have type struct fields"
+  testdata/p4_16_samples/issue2345-multiple_dependencies.p4
+  testdata/p4_16_samples/issue2345-2.p4
+  testdata/p4_16_samples/issue2345-1.p4
+  testdata/p4_16_samples/issue2345-with_nested_if.p4
+)
+p4c_add_xfail_reason("tofino"
+  ".*error:.*Conditions in an action must be simple comparisons of an action data parameter.*"
+  testdata/p4_16_samples/hdr_stacks2345.p4
+  testdata/p4_16_samples/xor_test.p4
+  testdata/p4_16_samples/issue2345.p4
+)
+# p4c 84467391
+p4c_add_xfail_reason("tofino"
+  "1 expected packet on port 0 not seen"
+  testdata/p4_16_samples/issue2498-bmv2.p4
+)
+# p4c 1992468c
+p4c_add_xfail_reason("tofino"
+  "Skipping assembler, assembly file is empty"
+  testdata/p4_16_samples/psa-e2e-cloning-basic-bmv2.p4
+)
+# p4c 7fbc2a4
+p4c_add_xfail_reason("tofino"
+  ".*error: The table .* with no key cannot have the action .*"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Internal compiler error. Please submit a bug report with your code."
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
 )

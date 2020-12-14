@@ -180,9 +180,9 @@ TEST(CopyHeaders, Lower$valid) {
         "}",
         "apply {",
 #if ENABLE_P4C3251
-            "if (false == (hdr.h[0].$valid == 1w1)) {",
+            "if (!(hdr.h[0].$valid == 1w1)) {",
 #else
-            "if (false == hdr.h[0].isValid()) {",
+            "if (!hdr.h[0].isValid()) {",
 #endif
                 "hdr.h[0].$valid = 1w0;",
                 "tbl_0.apply();",
