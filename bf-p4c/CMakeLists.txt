@@ -973,11 +973,13 @@ if (ENABLE_JBAY)
     # Remove the P4-14 support for JBay
     add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
       COMMAND sed -e '/v1model/d' -e '/tofino2h/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg > ${JBAY_TARGET_CFG_FILE}
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg
       COMMENT "Removing P4-14, Tofino2h, and PSA support for Tofino2"
       )
   else()
     add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg ${JBAY_TARGET_CFG_FILE}
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg
       COMMENT "Copying Tofino2 config"
       )
   endif()
@@ -992,11 +994,13 @@ if (ENABLE_CLOUDBREAK)
     # Remove the P4-14 support for JBay
     add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
       COMMAND sed -e '/v1model/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg > ${CLOUDBREAK_TARGET_CFG_FILE}
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg
       COMMENT "Removing P4-14, and PSA support for Tofino3"
       )
   else()
     add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg ${CLOUDBREAK_TARGET_CFG_FILE}
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg
       COMMENT "Copying Tofino3 config"
       )
   endif()
