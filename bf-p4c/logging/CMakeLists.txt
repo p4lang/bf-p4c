@@ -5,6 +5,7 @@ pkg_check_modules(LIBRAPIDJSON REQUIRED RapidJSON=1.1.0)
 set (LOGGING_SCHEMA_FILES
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/phv_schema
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/power_schema
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/source_info_schema
   )
 
 set (LOGGING_SRCS)

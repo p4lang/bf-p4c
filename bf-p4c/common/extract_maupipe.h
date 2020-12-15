@@ -13,6 +13,7 @@
 #include "bf-p4c/arch/fromv1.0/resubmit.h"
 #include "bf-p4c/arch/fromv1.0/mirror.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/logging/source_info_logging.h"
 
 class BFN_Options;
 class CreateSaluInstruction;
@@ -138,13 +139,16 @@ class BackendConverter : public Inspector {
     StatefulSelectors stateful_selectors;
     IR::Vector<IR::BFN::Pipe>& pipe;
     ordered_map<int, const IR::BFN::Pipe*>& pipes;
+    CollectSourceInfoLogging& sourceInfoLogging;
 
  public:
     BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
             ParamBinding* bindings, IR::Vector<IR::BFN::Pipe>& pipe,
-            ordered_map<int, const IR::BFN::Pipe*>& pipes)
+            ordered_map<int, const IR::BFN::Pipe*>& pipes,
+            CollectSourceInfoLogging& sourceInfoLogging)
     : refMap(refMap), typeMap(typeMap), bindings(bindings),
-    pipe(pipe), pipes(pipes) { arch = new ParseTna(); }
+    pipe(pipe), pipes(pipes), sourceInfoLogging(sourceInfoLogging)
+    { arch = new ParseTna(); }
 
     ordered_map<int, const IR::BFN::Pipe*>& getPipes() { return pipes; }
     cstring getPipelineName(const IR::P4Program* program, int index);

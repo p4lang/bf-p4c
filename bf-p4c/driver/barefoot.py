@@ -688,7 +688,7 @@ class BarefootBackend(BackendDriver):
         filesToRemove.append('.prim.json')
         filesToRemove.append('resources_deparser.json')
 
-        self.add_command_option('cleaner', '-f'); 
+        self.add_command_option('cleaner', '-f');
         filesFound = 0
         for root, dirs, files in os.walk(self._output_directory):
             for f in files:
@@ -847,7 +847,9 @@ class BarefootBackend(BackendDriver):
                         'graph'     : 'd',
                         'resources' : 'r',
                         'phv_json'  : 'p',
-                        'power_json': 'w'
+                        'power_json': 'w',
+                        'source'    : 's'
+                        # add new option
                     }
                     # Clear verifier options
                     del self._commands['verifier'] [1:]

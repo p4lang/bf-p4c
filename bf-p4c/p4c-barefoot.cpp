@@ -16,6 +16,7 @@
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
+#include "bf-p4c/logging/source_info_logging.h"
 #include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/midend/type_checker.h"
@@ -319,14 +320,14 @@ int main(int ac, char **av) {
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
     auto map = new RepackedHeaderTypes;
-    BFN::BridgedPacking bridgePacking(options, *map);
+    BFN::BridgedPacking bridgePacking(options, *map, *midend.sourceInfoLogging);
     bridgePacking.addDebugHook(hook, true);
 
     program->apply(bridgePacking);
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
 
-    BFN::SubstitutePackedHeaders substitute(options, *map);
+    BFN::SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
     substitute.addDebugHook(hook, true);
 
     program = program->apply(substitute);
@@ -336,6 +337,10 @@ int main(int ac, char **av) {
 
     if (!substitute.getToplevelBlock())
         return PROGRAM_ERROR;
+
+    program->apply(SourceInfoLogging(std::string(BFNContext::get().getOutputDirectory() +
+                                         "/source.json").c_str(),
+                                     *midend.sourceInfoLogging));
 
 #if !BAREFOOT_INTERNAL
     // turn all errors into "fatal errors" by exiting on the first error encountered

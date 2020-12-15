@@ -229,12 +229,13 @@ void ExtractBridgeInfo::end_apply(const IR::Node*) {
 // SimplifyReference transforms IR::P4Program towards the
 // backend IR representation, as a result, the transformed
 // P4Program no longer type-check.
-BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map)
+BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
+                               CollectSourceInfoLogging& sourceInfoLogging)
     : map(map) {
     refMap.setIsV1(true);
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
-    conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes);
+    conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
     extractBridgeInfo = new ExtractBridgeInfo(options, &refMap, &typeMap, conv, bindings, map);
 
@@ -252,12 +253,13 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map)
     });
 }
 
-SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes &map)
+SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes &map,
+                                                 CollectSourceInfoLogging& sourceInfoLogging)
     : map(map) {
     refMap.setIsV1(true);
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
-    conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes);
+    conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
     addPasses({
         new ReplaceFlexibleType(map),

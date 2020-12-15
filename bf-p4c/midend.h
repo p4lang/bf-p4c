@@ -6,6 +6,8 @@
 #include "frontends/common/options.h"
 #include "frontends/p4/evaluator/evaluator.h"
 
+struct CollectSourceInfoLogging;
+
 namespace BFN {
 
 class MidEnd : public PassManager {
@@ -14,6 +16,7 @@ class MidEnd : public PassManager {
     P4::ReferenceMap    refMap;
     P4::TypeMap         typeMap;
     IR::ToplevelBlock   *toplevel = nullptr;  // Should this be const?
+    CollectSourceInfoLogging *sourceInfoLogging = nullptr;
 
     explicit MidEnd(BFN_Options& options);
 };

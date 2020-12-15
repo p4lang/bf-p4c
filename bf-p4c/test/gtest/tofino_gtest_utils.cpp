@@ -61,7 +61,7 @@ TofinoPipeTestCase::create(const std::string& source) {
     }
     // no-op
     ordered_map<cstring, const IR::Type_StructLike*> empty;
-    BFN::SubstitutePackedHeaders postmid(options, empty);
+    BFN::SubstitutePackedHeaders postmid(options, empty, *midend.sourceInfoLogging);
     midendProgram->apply(postmid);
     if (postmid.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;

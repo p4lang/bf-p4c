@@ -1,0 +1,1569 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 224,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "Ing.c1.action_profile",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 223,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 237,
+                    "column": 7
+                }
+            ],
+            "symbol_name": "Ing.c1.cntr",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 194,
+                "column": 47
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 260,
+                    "column": 22
+                }
+            ],
+            "symbol_name": "Ing.c1.mtr",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 197,
+                "column": 44
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 206,
+                    "column": 44
+                }
+            ],
+            "symbol_name": "Ing.c1.reg",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 202,
+                "column": 34
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 238,
+                    "column": 7
+                }
+            ],
+            "symbol_name": "Ing.c1.reg_action",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 206,
+                "column": 49
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 225,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "Ing.c1.sel_hash",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 222,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 264,
+                    "column": 22
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 312,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "Ing.c1.wred",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 200,
+                "column": 40
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 144,
+                    "column": 25
+                }
+            ],
+            "symbol_name": "IngDprsr.ipv4_checksum",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 141,
+                "column": 16
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 388,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 386,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 282,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 329,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.c1.ipda_modify",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 244,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 283,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 330,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.c1.ipds_modify",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 249,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 281,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.c1.ipsa_modify",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 235,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 284,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 298,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 331,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.c1.ipttl_modify",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 254,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 311,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "Ing.c1.mark_wred",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 263,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 297,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.c1.metric",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 259,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 275,
+                    "column": 9,
+                    "end_line": 286
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 280,
+                    "column": 20,
+                    "end_line": 284
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 291,
+                    "column": 9,
+                    "end_line": 303
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 296,
+                    "column": 20,
+                    "end_line": 298
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 308,
+                    "column": 9,
+                    "end_line": 313
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 311,
+                    "column": 20
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 318,
+                    "column": 9,
+                    "end_line": 340
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 328,
+                    "column": 20,
+                    "end_line": 331
+                }
+            ],
+            "symbol_name": "NoAction",
+            "aliases": [],
+            "declaration": {
+                "file": "/mnt/data/git/bf-p4c-compilers_p4c-2919/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 344,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Ing.c1.match_tbl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 274,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 345,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Ing.c1.meter_tbl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 290,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 347,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Ing.c1.selec_tbl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 317,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 346,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Ing.c1.wred_tbl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 307,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_bri_handle350",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 350,
+                "column": 32
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_bri_handle365",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 365,
+                "column": 34,
+                "end_line": 366
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 245,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "Ing.c1.ipda_modify.da",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 244,
+                "column": 32
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 246,
+                    "column": 36
+                }
+            ],
+            "symbol_name": "Ing.c1.ipda_modify.port",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 244,
+                "column": 45
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 250,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "Ing.c1.ipds_modify.diffserv",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 249,
+                "column": 31
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 251,
+                    "column": 36
+                }
+            ],
+            "symbol_name": "Ing.c1.ipds_modify.port",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 249,
+                "column": 50
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 241,
+                    "column": 36
+                }
+            ],
+            "symbol_name": "Ing.c1.ipsa_modify.port",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 235,
+                "column": 45
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 240,
+                    "column": 22
+                }
+            ],
+            "symbol_name": "Ing.c1.ipsa_modify.sa",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 235,
+                "column": 32
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 237,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "Ing.c1.ipsa_modify.stat_idx",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 235,
+                "column": 59
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 238,
+                    "column": 26
+                }
+            ],
+            "symbol_name": "Ing.c1.ipsa_modify.stful_idx",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 236,
+                "column": 32
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 256,
+                    "column": 36
+                }
+            ],
+            "symbol_name": "Ing.c1.ipttl_modify.port",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 254,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 255,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "Ing.c1.ipttl_modify.ttl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 254,
+                "column": 32
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 264,
+                    "column": 49
+                }
+            ],
+            "symbol_name": "Ing.c1.mark_wred.wred_idx",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 263,
+                "column": 30
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 260,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "Ing.c1.metric.meter_idx",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 259,
+                "column": 53
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 278,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 294,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 321,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 245,
+                    "column": 6
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 276,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 292,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 319,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 324,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.dst",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 325,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.identification",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 326,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.protocol",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 240,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 277,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 293,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 309,
+                    "column": 11
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 320,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 323,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.src",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 250,
+                    "column": 6
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 260,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 264,
+                    "column": 35
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.tos",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 255,
+                    "column": 6
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 264,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 14
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.ttl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 355,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 365,
+                    "column": 36
+                }
+            ],
+            "symbol_name": "Ing.intr_md.ingress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 357,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 350,
+                    "column": 9
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 366,
+                    "column": 5
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 60
+                }
+            ],
+            "symbol_name": "Ing.intr_tm_md.bypass_egress",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 360,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 241,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 246,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 251,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 256,
+                    "column": 7
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 365,
+                    "column": 5
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 367,
+                    "column": 60
+                }
+            ],
+            "symbol_name": "Ing.intr_tm_md.ucast_egress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 360,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 208,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.read_value",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 207,
+                "column": 50
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 209,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 209,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "Ing.value.first",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 207,
+                "column": 31
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 208,
+                    "column": 26
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 210,
+                    "column": 13
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 210,
+                    "column": 28
+                }
+            ],
+            "symbol_name": "Ing.value.second",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 207,
+                "column": 31
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 157,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.data",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 157,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 157,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 144,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.cksm",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 155,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.dst",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 150,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.flags",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 151,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.frag_offset",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 149,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.identification",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 146,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.ihl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 153,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.protocol",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 154,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.src",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 147,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.tos",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 148,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.total_len",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 152,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.ttl",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 145,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.version",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 157,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv6",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 137,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 157,
+                    "column": 10
+                }
+            ],
+            "symbol_name": "IngDprsr.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 136,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 124,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.data",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 125,
+                    "column": 23
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.data.f16",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 125,
+                    "column": 37
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.data.f8",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 111,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 112,
+                    "column": 23
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.ethernet.etype",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 119,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 123,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.ipv6",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 104,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 109,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "IngPrsr.intr_md",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 106,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 110,
+                    "column": 5
+                }
+            ],
+            "symbol_name": "IngPrsr.md.port_md",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 105,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 109,
+                    "column": 5
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 111,
+                    "column": 5
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 119,
+                    "column": 5
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 123,
+                    "column": 5
+                },
+                {
+                    "file": "bri_handle.p4",
+                    "line": 124,
+                    "column": 5
+                }
+            ],
+            "symbol_name": "IngPrsr.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 103,
+                "column": 19
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/bri_handle"
+}

@@ -67,6 +67,10 @@ else()
     COMPILE_DEFINITIONS CONTEXT_SCHEMA_VERSION=\"${CONTEXT_SCHEMA_VERSION}\")
 endif()
 
+get_schema_version(source_info_schema SOURCE_INFO_SCHEMA_VERSION)
+MESSAGE(STATUS "Found source info schema version ${SOURCE_INFO_SCHEMA_VERSION}")
+add_definitions("-DSOURCE_INFO_SCHEMA_VERSION=\"${SOURCE_INFO_SCHEMA_VERSION}\"")
+
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} ${Z3_INCLUDE_DIR} )
@@ -673,6 +677,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/pass_manager.h
   logging/phv_logging.h
   logging/resources.h
+  logging/source_info_logging.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_SRCS
@@ -684,6 +689,7 @@ set (BF_P4C_BACKEND_LOGGING_SRCS
   logging/pass_manager.cpp
   logging/phv_logging.cpp
   logging/resources.cpp
+  logging/source_info_logging.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_SRCS}")
 

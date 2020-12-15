@@ -61,6 +61,7 @@
 #include "bf-p4c/midend/simplify_key_policy.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/logging/source_info_logging.h"
 
 namespace BFN {
 
@@ -313,6 +314,15 @@ MidEnd::MidEnd(BFN_Options& options) {
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
     auto *enum_policy = new EnumOn32Bits;
 
+    auto simplifyKeyPolicy =
+        new P4::OrPolicy(
+            new P4::OrPolicy(
+                new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
+                new BFN::IsPhase0()),
+            new BFN::IsSlice());
+
+    sourceInfoLogging = new CollectSourceInfoLogging(refMap);
+
     addPasses({
         new P4::RemoveMiss(&refMap, &typeMap),
         new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
@@ -391,6 +401,10 @@ MidEnd::MidEnd(BFN_Options& options) {
         new DesugarVarbitExtract(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap),
         new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
+
+        // Collects source info for logging. Call this after all transformations are complete.
+        sourceInfoLogging,
+
         new MidEndLast,
     });
 }

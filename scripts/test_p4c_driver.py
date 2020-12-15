@@ -38,6 +38,7 @@ from packaging import version
 import shlex, shutil
 import subprocess
 import traceback
+import difflib
 
 class TestError(Exception):
     def __init__(self, info=""):
@@ -339,7 +340,46 @@ class Test:
                 raise TestError(
                     "ERROR: File {} does not exist".format(path))
 
-    def checkTest(self, options, file_list):
+    def checkSourceJson(self, args, ref_src_json):
+        """
+        Compare output source.json file with file specified as fourth item of test_matrix
+        """
+        if ref_src_json is None:
+            return
+
+        act_src_json = os.path.join(args.output_directory, "source.json")
+        with open(act_src_json, 'r') as act_file:
+            act_src = json.load(act_file)
+        with open(ref_src_json, 'r') as ref_file:
+            ref_src = json.load(ref_file)
+        # Remove absolute paths that may differ
+        act_src['source_root']=""
+        for symbol in act_src['symbols']:
+            if os.path.isabs(symbol['declaration']['file']):
+                symbol['declaration']['file']=""
+            for reference in symbol['references']:
+                if os.path.isabs(reference['file']):
+                    reference['file']=""
+        ref_src['source_root']=""
+        for symbol in ref_src['symbols']:
+            if os.path.isabs(symbol['declaration']['file']):
+                symbol['declaration']['file']=""
+            for reference in symbol['references']:
+                if os.path.isabs(reference['file']):
+                    reference['file']=""
+        # Compare the rest
+        if act_src != ref_src:
+            with open(ref_src_json, 'r') as ref_file:
+                with open(act_src_json, 'r') as act_file:
+                    diff = difflib.unified_diff(ref_file.readlines(), act_file.readlines(),
+                            fromfile='reference source.json', tofile='actual source.json')
+                    for line in diff:
+                        print(line, end='')
+            raise TestError("ERROR: Output source.json file differs from the reference one."
+                "\n       Different absolute paths may be ignored, they don't cause this error."
+                "\n       If the differences are expected, refer to the --gen-src-json knob.")
+
+    def checkTest(self, options, file_list, ref_src_json):
         """
         Check that the generated output is correct.
         file_list contains list of files to check for (non)existence
@@ -354,6 +394,7 @@ class Test:
             self.checkArchive(args)
             self.checkMAUStagesForTarget(args)
             self.checkOutputFiles(args, file_list)
+            self.checkSourceJson(args, ref_src_json)
         except TestError as e:
             print("********************", file=sys.stderr)
             print("Error when checking output", file=sys.stderr)
@@ -382,7 +423,7 @@ class Test:
         return 0
 
 
-    def runTest(self, options, xfail_msg = None, file_list = None):
+    def runTest(self, options, xfail_msg = None, file_list = None, ref_src_json = None):
         """Run an individual test using the options and if the run is
         successful check the outputs.
 
@@ -395,7 +436,7 @@ class Test:
             if rcCode == 0: return "XFAIL"
             else: return "XPASS"
 
-        ctCode = self.checkTest(options, file_list)
+        ctCode = self.checkTest(options, file_list, ref_src_json)
         if rcCode == 0 and ctCode == 0 and xfail_msg is None:
             return "PASS"
         elif ctCode != 0: return "VALIDATION_FAIL"
@@ -456,6 +497,8 @@ p.add_argument("--testfile", "-t", help="test specification file",
                action="store", default=None)
 p.add_argument("--verbose", "-v", help="increase verbosity",
                action="store_true", default=False)
+p.add_argument("--gen-src-json", "-s", help="generate reference source jsons",
+               action="store_true", default=False)
 args = p.parse_args()
 
 # ------------ load the tests that need to run
@@ -463,12 +506,31 @@ test_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../p4-tests
 tests_file = args.testfile or os.path.join(test_dir, "p4c_driver_tests.py")
 test_matrix = load_test_file(tests_file)
 
-def runOneTest(test_runner, test_name, args, xfail_msg, file_list):
+def generateReferenceSourceJson(test_runner, test_name, options, ref_src_json):
+    """Generate reference source json for source.json regression
+
+    """
+    if ref_src_json != None:
+        print('Generating reference source json for', test_name, '......')
+        rc = test_runner.runCompiler(options, None)
+        if rc != 0:
+            print('FAIL:', test_name)
+            return 1
+        args = test_runner._parser.parse_known_args(options)[0]
+        try:
+            os.replace(os.path.join(args.output_directory, 'source.json'), ref_src_json)
+        except:
+            print('FAIL:', test_name)
+            return 1
+        print('SUCC:', test_name)
+    return 0
+
+def runOneTest(test_runner, test_name, args, xfail_msg, file_list, ref_src_json):
     """Run a test and print the status
 
     """
     print('Starting', test_name, '......')
-    rc = test_runner.runTest(args, xfail_msg, file_list)
+    rc = test_runner.runTest(args, xfail_msg, file_list, ref_src_json)
     print(rc, ':', test_name)
     if rc == "PASS" or rc == "XFAIL": return 0
     else: return 1
@@ -492,7 +554,14 @@ failed = Queue()
 test_runner = Test(args)
 
 def worker(test_name):
-    rc = runOneTest(test_runner, test_name, test_matrix[test_name][0], test_matrix[test_name][1], test_matrix[test_name][2])
+    rc = 0
+    if args.gen_src_json:
+        rc = generateReferenceSourceJson(test_runner, test_name, test_matrix[test_name][0],
+                test_matrix[test_name][3] if len(test_matrix[test_name]) > 3 else None)
+    else:
+        rc = runOneTest(test_runner, test_name,
+                test_matrix[test_name][0], test_matrix[test_name][1], test_matrix[test_name][2],
+                test_matrix[test_name][3] if len(test_matrix[test_name]) > 3 else None)
     if rc != 0:
         failed.put(test_name)
     else:

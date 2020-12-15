@@ -1440,6 +1440,7 @@ class GetBackendTables : public MauInspector {
     std::set<cstring>                                unique_names;
     std::map<const IR::Node *, IR::MAU::Table *>     tables;
     std::map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
+    CollectSourceInfoLogging& sourceInfoLogging;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))
             seqs[n] = new IR::MAU::TableSeq(tables.at(n));
@@ -1448,8 +1449,9 @@ class GetBackendTables : public MauInspector {
  public:
     GetBackendTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                     gress_t gr, const IR::MAU::TableSeq *&rv, DeclarationConversions &con,
-                    StatefulSelectors &ss)
-    : refMap(refMap), typeMap(typeMap), gress(gr), rv(rv), converted(con), stateful_selectors(ss) {}
+                    StatefulSelectors &ss, CollectSourceInfoLogging& sourceInfoLogging)
+    : refMap(refMap), typeMap(typeMap), gress(gr), rv(rv), converted(con), stateful_selectors(ss),
+    sourceInfoLogging(sourceInfoLogging) {}
 
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
@@ -1646,7 +1648,11 @@ class GetBackendTables : public MauInspector {
             static int uid = 0;
             char buf[16];
             snprintf(buf, sizeof(buf), "cond-%d", ++uid);
-            tables[c] = new IR::MAU::Table(buf, gress, c->condition); }
+            tables[c] = new IR::MAU::Table(buf, gress, c->condition);
+
+            sourceInfoLogging.addSymbol(
+                CollectSourceInfoLogging::Symbol(buf, c->node_type_name(), c->getSourceInfo()));
+        }
         return true; }
     void postorder(const IR::IfStatement *c) override {
         bool lnot;
@@ -1846,7 +1852,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
                 mau->apply(GetBackendTables(refMap, typeMap, gress, rv->thread[gress].mau,
-                                            converted, stateful_selectors));
+                                            converted, stateful_selectors, sourceInfoLogging));
             }
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
@@ -1864,7 +1870,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
                 mau->apply(GetBackendTables(refMap, typeMap, GHOST, rv->ghost_thread,
-                                            converted, stateful_selectors));
+                                            converted, stateful_selectors, sourceInfoLogging));
             }
         }
 

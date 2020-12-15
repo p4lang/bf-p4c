@@ -1,0 +1,1037 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 254,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 252,
+                "column": 34
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 127,
+                    "column": 9,
+                    "end_line": 129
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 127,
+                    "column": 20,
+                    "end_line": 128
+                }
+            ],
+            "symbol_name": "NoAction",
+            "aliases": [],
+            "declaration": {
+                "file": "/mnt/data/git/bf-p4c-compilers_p4c-2919/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 128,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_output_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 122,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 136,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.output_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 126,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_timestamp133",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 133,
+                "column": 46,
+                "end_line": 134
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_timestamp211",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 211,
+                "column": 42,
+                "end_line": 213
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 213,
+                    "column": 50
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_intr_from_prsr.global_tstamp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 206,
+                "column": 52
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 212,
+                    "column": 50
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_intr_md.deq_timedelta",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 205,
+                "column": 40
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 211,
+                    "column": 44
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_intr_md.enq_tstamp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 205,
+                "column": 40
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 212,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_md.tna_timestamps_hdr.dequeue_delta",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 204,
+                "column": 26
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 213,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_md.tna_timestamps_hdr.egress_global",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 204,
+                "column": 26
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 211,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_md.tna_timestamps_hdr.enqueue",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 204,
+                "column": 26
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 242,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.eg_md.tna_timestamps_hdr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 233,
+                "column": 45
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 232,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 232,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.ipv6",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 232,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.tcp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 232,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.udp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 232,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.vlan_tag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 232,
+                "column": 46
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 241,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 242,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 231,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 50,
+                    "column": 21
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 167,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_intr_md",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 162,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 167,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_intr_md.$valid",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 162,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 193,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_md.tna_timestamps_hdr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 161,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 172,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 160,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 173,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.ethernet.ether_type",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 160,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 180,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 160,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 181,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.ipv4.protocol",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 160,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 188,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.udp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 160,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 50,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 167,
+                    "column": 29
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 172,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 180,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 188,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 193,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 159,
+                "column": 19
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 133,
+                    "column": 48
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_md.ingress_mac_tstamp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 117,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 134,
+                    "column": 51
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_prsr_md.global_tstamp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 118,
+                "column": 53
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 123,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 120,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 134,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.tna_timestamps_hdr.ingress_global",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 116,
+                "column": 26
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 133,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.tna_timestamps_hdr.ingress_mac",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 116,
+                "column": 26
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 123,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_output_port.port_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 122,
+                "column": 37
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 145,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 145,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 145,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 145,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 145,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 145,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 151,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.ig_md.tna_timestamps_hdr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 146,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 150,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 151,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 144,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 84,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 72,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 85,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 72,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 92,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 72,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 93,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4.protocol",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 72,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 100,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.udp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 72,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 21
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 79,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 74,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 79,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 74,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 29,
+                    "column": 27
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 79,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 74,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 105,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_md.tna_timestamps_hdr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 73,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 9
+                },
+                {
+                    "file": "common/util.p4",
+                    "line": 41,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 79,
+                    "column": 29
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 84,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 92,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 100,
+                    "column": 9
+                },
+                {
+                    "file": "tna_timestamp.p4",
+                    "line": 105,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_timestamp.p4",
+                "line": 71,
+                "column": 19
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_timestamp"
+}

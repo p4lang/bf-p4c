@@ -1,0 +1,554 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 123,
+                    "column": 26
+                }
+            ],
+            "symbol_name": "SwitchIngress.action_profile",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 88,
+                "column": 25
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 142,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 140,
+                "column": 33
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 102,
+                    "column": 13
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 105,
+                    "column": 32
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 117,
+                    "column": 13
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 120,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "NoAction",
+            "aliases": [],
+            "declaration": {
+                "file": "/mnt/data/git/bf-p4c-compilers_p4c-2919/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 101,
+                    "column": 13
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 116,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 89,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 127,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.dmac",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 93,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 128,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.dmac_indirect",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 110,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_idletimeout131",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 131,
+                "column": 32
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 95,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 81,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 96,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 81,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 97,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 81,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 112,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 81,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 90,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit.port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 89,
+                "column": 25
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 131,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 86,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 90,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 86,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 71,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 71,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 71,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 71,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 71,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 71,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 76,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 70,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 53,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 41,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 54,
+                    "column": 28
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 41,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 61,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 41,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 21
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 48,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 43,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 48,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 43,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 29,
+                    "column": 27
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 48,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 43,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 9
+                },
+                {
+                    "file": "common/util.p4",
+                    "line": 41,
+                    "column": 9
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 48,
+                    "column": 29
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 53,
+                    "column": 9
+                },
+                {
+                    "file": "tna_idletimeout.p4",
+                    "line": 61,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_idletimeout.p4",
+                "line": 40,
+                "column": 19
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_idletimeout"
+}

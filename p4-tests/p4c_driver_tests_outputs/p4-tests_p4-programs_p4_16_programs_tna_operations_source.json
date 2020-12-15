@@ -1,0 +1,618 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 93,
+                    "column": 9
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 121,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "SwitchIngress.direct_counter",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 90,
+                "column": 61
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 98,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.indirect_counter",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 88,
+                "column": 47
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 154,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 152,
+                "column": 33
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 115,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 92,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 130,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit_dst",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 97,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 116,
+                    "column": 26
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 119,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.miss",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 103,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 131,
+                    "column": 26
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 134,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.nop",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 106,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 139,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.forward",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 109,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 140,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.forward_dst",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 124,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_operations143",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 143,
+                "column": 37
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 126,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 80,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 111,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 80,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 94,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit.port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 92,
+                "column": 25
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 98,
+                    "column": 32
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 99,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit_dst.port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 97,
+                "column": 29
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 100,
+                    "column": 9
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 104,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_dprsr_md.drop_ctl",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 84,
+                "column": 57
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 143,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.bypass_egress",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 85,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 94,
+                    "column": 9
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 99,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 85,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 70,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 70,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 70,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 70,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 70,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 70,
+                "column": 24
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 75,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 69,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 51,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 39,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 52,
+                    "column": 28
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 39,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 59,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 39,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 21
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 46,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 41,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
+                    "line": 46,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 41,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 29,
+                    "column": 27
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 46,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 41,
+                "column": 42
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 9
+                },
+                {
+                    "file": "common/util.p4",
+                    "line": 41,
+                    "column": 9
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 46,
+                    "column": 29
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 51,
+                    "column": 9
+                },
+                {
+                    "file": "tna_operations.p4",
+                    "line": 59,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 38,
+                "column": 19
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_operations"
+}

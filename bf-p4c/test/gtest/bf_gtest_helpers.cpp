@@ -15,6 +15,7 @@
 #include "lib/sourceCodeBuilder.h"
 #include "bf-p4c/arch/bridge.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/logging/source_info_logging.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "frontends/parsers/parserDriver.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -532,8 +533,10 @@ bool TestCode::apply_pass(Pass pass) {
             pipe = nullptr;
             backend = nullptr;
             mauasm = nullptr;
-            ordered_map<cstring, const IR::Type_StructLike*> empty{};
-            BFN::SubstitutePackedHeaders extractPipes{options, empty};
+            ordered_map<cstring, const IR::Type_StructLike*> emptyRepackedMap;
+            P4::ReferenceMap emptyRefMap;
+            CollectSourceInfoLogging emptySrcInfoLog(emptyRefMap);
+            BFN::SubstitutePackedHeaders extractPipes(options, emptyRepackedMap, emptySrcInfoLog);
             if (!apply_pass(extractPipes) || !extractPipes.pipe.size())
                 return false;
             pipe = extractPipes.pipe[0];

@@ -17,6 +17,7 @@
 #include "bf-p4c/midend/type_checker.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/methodInstance.h"
+#include "bf-p4c/logging/source_info_logging.h"
 
 namespace BFN {
 
@@ -130,7 +131,8 @@ class BridgedPacking : public PassManager {
     P4::TypeMap typeMap;
 
  public:
-    BridgedPacking(BFN_Options& options, RepackedHeaderTypes& repackMap);
+    BridgedPacking(BFN_Options& options, RepackedHeaderTypes& repackMap,
+                   CollectSourceInfoLogging& sourceInfoLogging);
 
     IR::Vector<IR::BFN::Pipe> pipe;
     ordered_map<int, const IR::BFN::Pipe*> pipes;
@@ -152,7 +154,8 @@ class SubstitutePackedHeaders : public PassManager {
     ordered_map<int, const IR::BFN::Pipe*> pipes;
 
  public:
-    SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes& repackedMap);
+    SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes& repackedMap,
+                            CollectSourceInfoLogging& sourceInfoLogging);
     const ProgramThreads &getThreads() const { return conv->getThreads(); }
     const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
 };

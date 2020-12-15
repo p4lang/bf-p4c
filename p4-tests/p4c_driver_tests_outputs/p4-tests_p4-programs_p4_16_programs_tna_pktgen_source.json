@@ -1,0 +1,614 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 148,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 146,
+                "column": 33
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 105,
+                    "column": 26
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 107,
+                    "column": 32
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 120,
+                    "column": 26
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 122,
+                    "column": 32
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 132,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.drop",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 86,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 104,
+                    "column": 13
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 119,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.match",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 90,
+                "column": 12
+            },
+            "scope": [],
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 130,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.p",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 110,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 128,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.t",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 95,
+                "column": 11
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_drop",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 132,
+                "column": 13
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_pktgen136",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 136,
+                "column": 37
+            },
+            "scope": [],
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 129,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 113,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.app_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 115,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.packet_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 112,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.pipe_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 114,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.port_num",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 127,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 98,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.app_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 99,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.batch_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 100,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.packet_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 97,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.pipe_id",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 79,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 87,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_dprsr_md.drop_ctl",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 83,
+                "column": 57
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 101,
+                    "column": 13
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 116,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 81,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 136,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.bypass_egress",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 84,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 91,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 84,
+                "column": 51
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 91,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.match.port",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 90,
+                "column": 27
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 73,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.port_down",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 68,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 73,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.timer",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 68,
+                "column": 23
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 73,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 67,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 60,
+                    "column": 24
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.port_down",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 38,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 55,
+                    "column": 24
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.timer",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 38,
+                "column": 20
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 43,
+                    "column": 24
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 40,
+                "column": 41
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 43,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 44,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 46,
+                    "column": 51
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 55,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 60,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.packet",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 37,
+                "column": 18
+            },
+            "scope": [],
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-1",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 127,
+                "column": 9
+            },
+            "scope": [],
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-2",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 129,
+                "column": 16
+            },
+            "scope": [],
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-3",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 127,
+                "column": 9
+            },
+            "scope": [],
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-4",
+            "aliases": [],
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 129,
+                "column": 16
+            },
+            "scope": [],
+            "symbol_type": "IfStatement"
+        }
+    ],
+    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_pktgen"
+}
