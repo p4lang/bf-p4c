@@ -2757,6 +2757,9 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
     tbl->actions = match->actions;
     tbl->attached = match->attached;
     tbl->entries_list = match->entries_list;
+    tbl->created_during_tp = match->created_during_tp;
+    tbl->is_compiler_generated = match->is_compiler_generated;
+    tbl->has_dark_init = match->has_dark_init;
 
     // Generate the correct table layout from the options
     gw_layout = tbl->layout;
