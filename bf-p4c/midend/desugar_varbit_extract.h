@@ -206,6 +206,8 @@ class RewriteVarbitUses : public Modifier {
     void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field,
                          unsigned prev_length);
 
+    void find_and_replace_setinvalid(const IR::AssignmentStatement* assign,
+                                    IR::IndexedVector<IR::StatOrDecl>& comp);
     const IR::ParserState*
     create_end_state(const IR::BFN::TnaParser* parser,
                      const IR::ParserState* state, cstring name,

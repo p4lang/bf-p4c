@@ -652,6 +652,19 @@ create_select_case(unsigned bitwidth, unsigned value, unsigned mask, cstring nex
 
 bool RewriteVarbitUses::preorder(IR::ParserState* state) {
     auto orig = getOriginal<IR::ParserState>();
+    IR::IndexedVector<IR::StatOrDecl> components;
+    for (auto a : orig->components) {
+        // Remove verify call from original state
+        if (cve.state_to_csum_verify.count(orig) &&
+            cve.state_to_csum_verify.at(orig)->equiv(*a)) {
+            continue;
+        // Replace varbit header setInvalid
+        } else if (auto assign = a->to<IR::AssignmentStatement>()) {
+            find_and_replace_setinvalid(assign, components);
+        }
+        components.push_back(a);
+    }
+    state->components = components;
 
     if (!state_to_branch_states.count(orig))
         return true;
@@ -694,17 +707,6 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
         state->selectExpression = path;
     }
 
-    // Removing verify call from the original state
-    if (cve.state_to_csum_verify.count(orig)) {
-       IR::IndexedVector<IR::StatOrDecl> components;
-       for (auto a : orig->components) {
-           if (!cve.state_to_csum_verify.at(orig)->equiv(*a)) {
-               components.push_back(a);
-           }
-       }
-       state->components = components;
-    }
-
     return true;
 }
 
@@ -737,14 +739,47 @@ create_emit_statement(const IR::Member* method, const IR::Type *type,
     return emit;
 }
 
+IR::AssignmentStatement* create_valid_statement(const IR::Type_Header* hdr,
+                                                 const IR::Expression* path,
+                                                 bool value) {
+    auto hdr_expr = new IR::Member(hdr, path, create_instance_name(hdr->name));
+    auto left = new IR::Member(IR::Type::Bits::get(1), hdr_expr, "$valid");
+    auto right = new IR::Constant(IR::Type::Bits::get(1), value);
+    return new IR::AssignmentStatement(left, right);
+}
+
+void RewriteVarbitUses::find_and_replace_setinvalid(const IR::AssignmentStatement* assign,
+                                                    IR::IndexedVector<IR::StatOrDecl>& component) {
+    auto left = assign->left->to<IR::Member>();
+    if (!left || left->member != "$valid")
+        return;
+    auto right = assign->right->to<IR::Constant>();
+    if (!right)
+        return;
+    if (auto expr = left->expr->to<IR::Member>()) {
+        if (varbit_hdr_instance_to_header_types.count(expr->member)) {
+            if (right->asInt() == 1) {
+                ::error("Cannot set a header %1% with varbit field as valid", expr);
+            }
+            for (auto &hdr : varbit_hdr_instance_to_header_types.at(expr->member)) {
+                component.push_back(create_valid_statement(hdr.second, expr->expr, false));
+            }
+            auto varbit_field = cve.header_type_to_varbit_field.at(
+                                              expr->type->to<IR::Type_Header>());
+            if (varbit_field_to_post_header_type.count(varbit_field)) {
+                component.push_back(create_valid_statement(
+                       varbit_field_to_post_header_type.at(varbit_field), expr->expr, false));
+            }
+        }
+    }
+}
+
 bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
     auto deparser = findContext<IR::BFN::TnaDeparser>();
-    if (deparser) {
-        IR::IndexedVector<IR::StatOrDecl> components;
-
-        for (auto stmt : block->components) {
-            components.push_back(stmt);
-
+    IR::IndexedVector<IR::StatOrDecl> components;
+    for (auto stmt : block->components) {
+        components.push_back(stmt);
+        if (deparser) {
             if (auto mc = stmt->to<IR::MethodCallStatement>()) {
                 auto mce = mc->methodCall;
 
@@ -773,10 +808,15 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
                     }
                 }
             }
+        } else {
+            // Find setInvalid
+            if (auto assign = stmt->to<IR::AssignmentStatement>()) {
+                find_and_replace_setinvalid(assign, components);
+            }
         }
-
-        block->components = components;
     }
+    if (components.size())
+        block->components = components;
 
     return true;
 }
@@ -988,6 +1028,7 @@ bool RewriteVarbitTypes::preorder(IR::P4Program* program) {
 
     return true;
 }
+
 
 bool RewriteVarbitTypes::contains_varbit_header(IR::Type_Struct* type_struct) {
     for (auto field : type_struct->fields) {
