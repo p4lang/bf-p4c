@@ -12,8 +12,9 @@
 #include <string>
 
 #include "barefoot/p4info.pb.h"
-#include "control-plane/p4RuntimeSerializer.h"
 #include "bf-p4c/device.h"
+#include "dynamic_hash/bfn_hash_algorithm.h"
+#include "control-plane/p4RuntimeSerializer.h"
 #include "lib/exceptions.h"
 #include "lib/gmputil.h"
 #include "lib/json.h"
@@ -116,6 +117,11 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_PORT_METADATA_PORT,
         BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD,
 
+        BF_RT_DATA_HASH_ALGORITHM_SEED,
+        BF_RT_DATA_HASH_ALGORITHM_MSB,
+        BF_RT_DATA_HASH_ALGORITHM_EXTEND,
+        BF_RT_DATA_HASH_ALGORITHM_PRE_DEFINED,
+        BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED,
         BF_RT_DATA_HASH_RESULT,
 
         BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE,
@@ -199,6 +205,7 @@ class BfRtSchemaGenerator {
     void addPortMetadata(Util::JsonArray* tablesJson, const PortMetadata& portMetadata) const;
     void addDynHash(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
     void addDynHashConfig(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
+    void addDynHashAlgorithm(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
     void addDynHashCompute(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
     void addPortMetadataDefault(Util::JsonArray* tablesJson) const;
     void addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const;
@@ -923,6 +930,8 @@ struct BfRtSchemaGenerator::PortMetadata {
 };
 
 struct BfRtSchemaGenerator::DynHash {
+    const std::string getAlgorithmTableName() const {
+        return name + ".algorithm"; }
     const std::string getConfigTableName() const {
         return name + ".$CONFIGURE"; }
     const std::string getComputeTableName() const {
@@ -931,6 +940,7 @@ struct BfRtSchemaGenerator::DynHash {
     const cstring name;
     const P4Id cfgId;
     const P4Id cmpId;
+    const P4Id algId;
     const p4configv1::P4DataTypeSpec typeSpec;
     const std::vector<cstring> hashFieldNames;  // Field Names of a Hash Field List
     const int hashWidth;
@@ -950,9 +960,9 @@ struct BfRtSchemaGenerator::DynHash {
         }
         auto cfgId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_CONFIGURE);
         auto cmpId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_COMPUTE);
-        return DynHash{pre.name(), cfgId, cmpId, dynHash.type_spec(),
-                       field_names, dynHash.hash_width(),
-                       transformAnnotations(pre)};
+        auto algId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_ALGORITHM);
+        return DynHash{pre.name(), cfgId, cmpId, algId, dynHash.type_spec(),
+                       field_names, dynHash.hash_width(), transformAnnotations(pre)};
     }
 };
 
@@ -1596,6 +1606,7 @@ BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
 void
 BfRtSchemaGenerator::addDynHash(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
+    addDynHashAlgorithm(tablesJson, dynHash);
     addDynHashConfig(tablesJson, dynHash);
     // TODO: Disabling compute generation for now, will be enabled once driver
     // support is tested
@@ -1627,6 +1638,118 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
     auto* attributes = new Util::JsonArray();
     attributes->append("DynamicHashing");
     tableJson->emplace("attributes", attributes);
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
+                                     const DynHash& dynHash) const {
+    auto* tableJson = initTableJson(
+        dynHash.getAlgorithmTableName(), dynHash.algId, "DynHashAlgorithm",
+        1 /* size */, dynHash.annotations);
+
+    tableJson->emplace("key", new Util::JsonArray());  // empty key
+
+    auto* dataJson = new Util::JsonArray();
+    // Add seed key field
+    auto* seedJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_SEED, "seed",
+                makeTypeInt("uint32", 0 /* default */), false /* repeated */);
+    addSingleton(dataJson, seedJson, false /* mandatory */, false /* read-only */);
+
+    // Add msb key field
+    auto* msbJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_MSB, "msb",
+            makeTypeBool(false /* default */), false /* repeated */);
+    addSingleton(dataJson, msbJson, false /* mandatory */, false /* read-only */);
+
+    // Add extend key field
+    auto* extendJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_EXTEND, "extend",
+            makeTypeBool(false /* default */), false /* repeated */);
+    addSingleton(dataJson, extendJson, false /* mandatory */, false /* read-only */);
+
+    tableJson->emplace("data", dataJson);
+
+    auto* actionSpecsJson = new Util::JsonArray();
+
+    // Add pre-defined action spec
+    auto* preDefinedJson = new Util::JsonObject();
+    preDefinedJson->emplace("id", BF_RT_DATA_HASH_ALGORITHM_PRE_DEFINED);
+    preDefinedJson->emplace("name", "pre_defined");
+    preDefinedJson->emplace("action_scope", "TableAndDefault");
+    preDefinedJson->emplace("annotations", new Util::JsonArray());
+
+    P4Id dataId = 1;
+    auto* preDefinedDataJson = new Util::JsonArray();
+    // Add algorithm_name field
+    std::vector<cstring> algos;
+    // Create a list of all supported algos from bf-utils repo
+    for (int i = 0; i < static_cast<int>(INVALID_DYN); i++) {
+        char alg_name[BF_UTILS_ALGO_NAME_LEN];
+        bfn_hash_alg_type_t alg_t = static_cast<bfn_hash_alg_type_t>(i);
+        if (alg_t == CRC_DYN) continue;  // skip CRC as we include its sub types later
+        hash_alg_type_to_str(alg_t, alg_name);
+        algos.emplace_back(alg_name);
+    }
+    // Include all CRC Sub Types
+    for (int i = 0; i < static_cast<int>(CRC_INVALID); i++) {
+        char crc_name[BF_UTILS_ALGO_NAME_LEN];
+        bfn_crc_alg_t alg_t = static_cast<bfn_crc_alg_t>(i);
+        crc_alg_type_to_str(alg_t, crc_name);
+        algos.emplace_back(crc_name);
+    }
+    auto* algoType = makeTypeEnum(algos, cstring("RANDOM") /* default */);
+    addActionDataField(preDefinedDataJson, dataId, "algorithm_name",
+            false /* mandatory */, false /* read_only */,
+            algoType, nullptr /* annotations */);
+    preDefinedJson->emplace("data", preDefinedDataJson);
+
+    actionSpecsJson->append(preDefinedJson);
+
+    // Add user_defined action spec
+    auto* userDefinedJson = new Util::JsonObject();
+    userDefinedJson->emplace("id", BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED);
+    userDefinedJson->emplace("name", "user_defined");
+    userDefinedJson->emplace("action_scope", "TableAndDefault");
+    userDefinedJson->emplace("annotations", new Util::JsonArray());
+
+    auto* userDefinedDataJson = new Util::JsonArray();
+    dataId = 1;
+    // Add reverse data field
+    auto* revType = makeTypeBool(false /* default */);
+    addActionDataField(userDefinedDataJson, dataId++, "reverse",
+            false /* mandatory */, false /* read_only */,
+            revType, nullptr /* annotations */);
+
+    // Add polynomial data field
+    auto* polyType = makeTypeInt("uint64");
+    addActionDataField(userDefinedDataJson, dataId++, "polynomial",
+            true /* mandatory */, false /* read_only */,
+            polyType, nullptr /* annotations */);
+
+    // Add init data field
+    auto* initType = makeTypeInt("uint64", 0 /* default_value */);
+    addActionDataField(userDefinedDataJson, dataId++, "init",
+            false /* mandatory */, false /* read_only */,
+            initType, nullptr /* annotations */);
+
+    // Add final_xor data field
+    auto* finalXorType = makeTypeInt("uint64", 0 /* default_value */);
+    addActionDataField(userDefinedDataJson, dataId++, "final_xor",
+            false /* mandatory */, false /* read_only */,
+            finalXorType, nullptr /* annotations */);
+
+    // Add hash_bit_width data field
+    auto* hashBitWidthType = makeTypeInt("uint64");
+    addActionDataField(userDefinedDataJson, dataId++, "hash_bit_width",
+            false /* mandatory */, false /* read_only */,
+            hashBitWidthType, nullptr /* annotations */);
+    userDefinedJson->emplace("data", userDefinedDataJson);
+
+    actionSpecsJson->append(userDefinedJson);
+
+    tableJson->emplace("action_specs", actionSpecsJson);
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
 }
