@@ -2754,11 +2754,6 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
 
 bool Format::analyze_actions(FormatType_t format_type) {
     BUG_CHECK(format_type.valid(), "invalid format in Format::analyze_actions");
-    if (!format_type.normal()) {
-        auto at = att_info.attached_from_table(tbl);
-        if (at == nullptr)
-            return false;
-    }
 
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto action : Values(tbl->actions)) {

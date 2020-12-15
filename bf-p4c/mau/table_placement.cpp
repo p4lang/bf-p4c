@@ -657,7 +657,7 @@ bool TablePlacement::pick_layout_option(Placed *next) {
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
                                      next->stage_split > 0, next->gw != nullptr);
 
-    if (next->use.format_type.post_split() && count_sful_actions(next->table) > 1) {
+    if (next->use.format_type.anyAttachedLaterStage() && count_sful_actions(next->table) > 1) {
         // FIXME -- currently can't split a stateful table that require meter_type to select
         // which action to run
         error_message = next->name + " requires a meter_type, so can't split the attached "
@@ -669,7 +669,7 @@ bool TablePlacement::pick_layout_option(Placed *next) {
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
             return false; }
-        if (next->use.format_type.post_split()) {
+        if (!next->use.format_type.matchThisStage()) {
             // if post-split, there's no match in this stage (just a gateway running the
             // attached table(s), so no need for match formatting
             return true; }
@@ -874,7 +874,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
         table_to_add = p->table;
-        if (p->use.format_type.post_split())
+        if (!p->use.format_type.matchThisStage())
             table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, p));
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
         // Always Run Tables cannot be counted in the logical table check
@@ -883,7 +883,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                               p->entries, p->stage_split, p->attached_entries);
         p->resources.memuse.clear(); }
     table_to_add = next->table;
-    if (next->use.format_type.post_split())
+    if (!next->use.format_type.matchThisStage())
         table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, next));
     current_mem.add_table(table_to_add, next->gw, &next->resources, next->use.preferred(),
                           next->use.preferred_action_format(), next->use.format_type,
@@ -2955,7 +2955,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
 
         if (pl->entries) {
             if (deferred_attached) {
-                if (!pl->use.format_type.pre_split())
+                if (!pl->use.format_type.anyAttachedLaterStage())
                     error("Couldn't find a usable split format for %1% and couldn't place it "
                           "without splitting", tbl);
                 for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
@@ -2974,7 +2974,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                 table_set_resources(table_part, rsrcs, pl->entries);
             }
         } else {
-            if (!pl->use.format_type.post_split())
+            if (pl->use.format_type.matchThisStage())
                 error("Couldn't find a usable split format for %1% and couldn't place it "
                       "without splitting", tbl);
             else

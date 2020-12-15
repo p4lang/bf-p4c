@@ -928,8 +928,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(),
                   "No %s layout options for %s", format_type, tbl);
         action_formats = lc->get_action_formats(tbl, format_type);
-        if (!format_type.pre_split())
-            meter_format = lc->get_attached_formats(tbl);
+        meter_format = lc->get_attached_formats(tbl, format_type);
     }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     // A hash action table currently cannot be split across stages if it does an action lookup,

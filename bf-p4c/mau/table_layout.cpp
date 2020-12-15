@@ -90,6 +90,24 @@ void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
     cache_layout_options[std::make_pair(tbl->name, ft)].push_back(lo);
 }
 
+/** Check to see if a table needs a meter format for a stage with the given format_type
+ */
+bool LayoutChoices::need_meter(const IR::MAU::Table *tbl,
+                               ActionData::FormatType_t format_type) const {
+    unsigned idx = 0;
+    for (auto *ba : tbl->attached) {
+        bool uses_meter = ba->attached->is<IR::MAU::MeterBus2Port>();
+        if (ba->attached->direct) {
+            if (uses_meter && format_type.matchThisStage())
+                return true;
+        } else {
+            if (uses_meter && format_type.attachedThisStage(idx))
+                return true; }
+        if (format_type.track(ba->attached))
+            ++idx; }
+    return false;
+}
+
 bool DoTableLayout::backtrack(trigger &trig) {
     return trig.is<IXBar::failure>() && !alloc_done;
 }
@@ -693,7 +711,7 @@ void LayoutChoices::setup_layout_options(const IR::MAU::Table *tbl,
 
     bool hash_action_only = false;
     add_hash_action_option(tbl, layout_proto, format_type, hash_action_only);
-    if (!hash_action_only && !format_type.post_split()) {
+    if (!hash_action_only && format_type.matchThisStage()) {
         int index = 0;
         for (auto &use : get_action_formats(tbl, format_type)) {
                 setup_exact_match(tbl, layout_proto, format_type,
@@ -717,7 +735,7 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
     IR::MAU::Table::Layout layout = layout_proto;
     if (ghdr.is_hash_dist_needed() || ghdr.is_rng_needed()) {
         layout.hash_action = true;
-    } else if (format_type.post_split()) {
+    } else if (!format_type.matchThisStage()) {
         // post split gets index via hash_dist, so it needs to be hash_action
         layout.hash_action = true; }
 
@@ -753,8 +771,7 @@ void LayoutChoices::setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR
     tbl->attached.apply(validate_attached);
     layout.action_addr = type_to_addr_map[ValidateAttachedOfSingleTable::ACTIONDATA];
     layout.stats_addr = type_to_addr_map[ValidateAttachedOfSingleTable::STATS];
-    if (format_type.normal())
-        layout.meter_addr = type_to_addr_map[ValidateAttachedOfSingleTable::METER];
+    layout.meter_addr = type_to_addr_map[ValidateAttachedOfSingleTable::METER];
     layout.overhead_bits += layout.action_addr.total_bits() + layout.stats_addr.total_bits()
                             + layout.meter_addr.total_bits();
 }
@@ -853,7 +870,7 @@ void LayoutChoices::add_hash_action_option(const IR::MAU::Table *tbl,
                     "be due to %2%.", tbl, hash_action_reason);
     }
 
-    if (!possible && !format_type.post_split())
+    if (!possible && format_type.matchThisStage())
         return;
 
     if (possible) {
@@ -992,8 +1009,12 @@ void LayoutChoices::compute_layout_options(const IR::MAU::Table *tbl,
         setup_layout_options(tbl, layout, format_type);
     }
 
-    if (format_type.normal())
+    if (format_type.normal()) {
+        // FIXME -- should be able to convert to payload gateway even when splitting?  Is it
+        // useful to do so?  Should probably just avoid the splitting if a gateway payload is
+        // possible?
         fpc.add_option(tbl, *this);
+    }
 }
 
 

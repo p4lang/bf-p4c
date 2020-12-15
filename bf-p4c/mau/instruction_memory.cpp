@@ -203,7 +203,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
     if (shared_instr(tbl, alloc, gw_linked)) {
         return true;
     }
-    gw_linked |= format_type.post_split();
+    gw_linked |= !format_type.matchThisStage();
 
     GenerateVLIWInstructions gen_vliw(phv, format_type, sai);
     tbl->apply(gen_vliw);

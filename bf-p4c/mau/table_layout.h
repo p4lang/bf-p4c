@@ -73,6 +73,7 @@ class LayoutChoices {
             const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
     void setup_ternary_layout_options(const IR::MAU::Table *tbl,
             const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
+    bool need_meter(const IR::MAU::Table *t, ActionData::FormatType_t format_type) const;
 
  public:
     const safe_vector<LayoutOption> &
@@ -98,8 +99,9 @@ class LayoutChoices {
     // meter output formats are stored here, but they are essentially completely independent
     // of the layout choices.
     std::map<cstring /* table name */, MeterALU::Format::Use> total_meter_output_format;
-    MeterALU::Format::Use get_attached_formats(const IR::MAU::Table *t) const {
-        if (!t || !total_meter_output_format.count(t->name))
+    MeterALU::Format::Use get_attached_formats(const IR::MAU::Table *t,
+                                               ActionData::FormatType_t format_type) const {
+        if (!t || !total_meter_output_format.count(t->name) || !need_meter(t, format_type))
             return {};
         return total_meter_output_format.at(t->name);
     }
