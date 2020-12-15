@@ -49,3 +49,5 @@ This README serves for sample programs for P4I. It lists various edge cases usef
     - tofino2_switch_16_32q (ingress::hdr.ethernet.ether_type)
  * Equivalent Alignment
     - tofino2_switch_16_32q (egress::hdr.ipv4.total_len)
+ * No Holes
+    - wide_shift (ingress::hdr.shift_16_to_64.res)

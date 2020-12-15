@@ -332,6 +332,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     logNoOverlayConstraint(cfield, srcLoc);
     logExactContainerConstraint(cfield, srcLoc);
     logEquivalentAlignConstraint(cfield, srcLoc);
+    logNoHolesConstraint(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -559,6 +560,15 @@ void PhvLogging::logEquivalentAlignConstraint(ConstrainedField &field,
     }
 }
 
+void PhvLogging::logNoHolesConstraint(ConstrainedField &field,
+                                                        const SourceLocation *srcLoc) {
+    if (!field.hasNoHoles()) return;
+
+    auto nhc = new BoolConstraint(false, int(ConstraintReason::NoHoles),
+        "NoHoles", srcLoc);
+    field.getLogger()->append(nhc);
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -669,6 +679,12 @@ void PhvLogging::logConstraintReasons() {
             "Equivalent Alignment: Each field in this group must be placed starting at the same "
             "least-significant bit in their respective PHV containers. This constraint implies "
             "MAU Group."
+        }, {
+            ConstraintReason::NoHoles,
+            "No Holes: Field can either be located entirely on a single container or be splitted "
+            "across multiple containers as long as all of the slices fit with no holes "
+            "(concatenating the containers would reconstruct the field). This constraint relaxes "
+            "Exact Containers by allowing to split the field."
         }
     };
 

@@ -72,6 +72,10 @@ void ConstrainedField::setExactContainer(bool b) {
     exactContainer = b;
 }
 
+void ConstrainedField::setNoHoles(bool b) {
+    noHoles = b;
+}
+
 /* ConstrainedFieldMap */
 
 ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
@@ -97,6 +101,7 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
         result[f.name].setBottomBits(f.deparsed_bottom_bits());
         result[f.name].setNoSplit(f.no_split());
         result[f.name].setExactContainer(f.exact_containers());
+        result[f.name].setNoHoles(f.no_holes());
     }
 
     // Extract slices based on clustering

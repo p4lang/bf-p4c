@@ -146,7 +146,8 @@ class PhvLogging : public MauInspector {
         Alignment,
         NoOverlay,
         ExactContainer,
-        EquivalentAlignment
+        EquivalentAlignment,
+        NoHoles
     };
 
  private:
@@ -284,6 +285,8 @@ class PhvLogging : public MauInspector {
     void logExactContainerConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     void logEquivalentAlignConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logNoHolesConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.
