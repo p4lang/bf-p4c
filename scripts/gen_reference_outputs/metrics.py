@@ -13,7 +13,10 @@ def get_metric(metrics_info, metric):
         for sub_info in metrics_info:
             # Check if the metric has sub info and accumulate
             if metric in sub_info and isinstance(sub_info, dict):
-                cum_metric += sub_info[metric] 
+                if isinstance(sub_info[metric], int):
+                    cum_metric += sub_info[metric]
+                else:
+                    cum_metric += round(float(sub_info[metric]), 1)
                 if not is_cumulative:
                     is_cumulative = True
         # If the metric has sub-fields but not cumulative
@@ -44,7 +47,7 @@ class Metric:
                                           # Can be an XPath (or the json equivalent).
         self.value = value                # metric value
         self.limit = limit                # limit
-        self.delta_format = delta_format  # whether the delta is an absolute difference or percentage 
+        self.delta_format = delta_format  # whether the delta is an absolute difference or percentage
 
     def setValue(self, value):
         self.value = value
@@ -92,6 +95,7 @@ class CoreMetrics():
         self.metrics['mau_srams'] = Metric('MAU srams', ('mau', 'srams'), limit = 10.0)
         self.metrics['mau_tcams'] = Metric('MAU tcams', ('mau', 'tcams'), limit = 10.0)
         self.metrics['mau_logical_tables'] = Metric('MAU logical_tables', ('mau', 'logical_tables'), limit = 10.0)
+        self.metrics['mau_power'] = Metric('MAU power estimate', ('mau', 'power', 'estimate'), limit = 10.0)
         self.metrics['parser_ingress_tcam_rows'] = Metric('Parser ingress tcam rows', ('parser', 'ingress', 'tcam_rows'), limit = 10.0)
         self.metrics['parser_egress_tcam_rows'] = Metric('Parser egress tcam rows', ('parser', 'egress', 'tcam_rows'), limit = 10.0)
 
@@ -134,4 +138,3 @@ class Tofino2Metrics(CoreMetrics):
         self.metrics['clots_ingress_redundant_phv_bits'] = Metric('Clots ingress redundant_phv_bits', ('clots', 'ingress', 'redundant_phv_bits'), limit = 10.0)
         self.metrics['clots_egress_unallocated_bits'] = Metric('Clots egress unallocated_bits', ('clots', 'egress', 'unallocated_bits'), limit = 10.0)
         self.metrics['clots_egress_redundant_phv_bits'] = Metric('Clots egress redundant_phv_bits', ('clots', 'egress', 'redundant_phv_bits'), limit = 10.0)
-
