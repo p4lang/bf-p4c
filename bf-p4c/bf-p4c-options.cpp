@@ -272,7 +272,6 @@ BFN_Options::BFN_Options() {
             "Input traffic limit as a %. Default: 100 % "
             "The input load or traffic limit as a percentage. "
             "A 100% traffic limit indicates 1 incoming packet every cycle");
-#if BAREFOOT_INTERNAL
     registerOption("--num-stages-override", "num",
         [this] (const char *arg) {
             std::string argStr(arg);
@@ -288,7 +287,6 @@ BFN_Options::BFN_Options() {
             return true;
         }, "Reduce number of MAU stages available for compiler. Defaults to "
            "max number of stages available for given device. This may affect table placement");
-#endif
 }
 
 using Target = std::pair<cstring, cstring>;

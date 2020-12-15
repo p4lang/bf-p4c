@@ -205,10 +205,8 @@ int main(int ac, char **av) {
           options.stage_dependency_pattern = av[i];
         } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 && val >= 0 && val < 4) {
             unique_table_offset = val;
-#if BAREFOOT_INTERNAL
         } else if (sscanf(av[i], "--num-stages-override%d", &val) > 0 && val >= 0) {
             options.num_stages_override = val;
-#endif
         } else if (!strcmp(av[i], "--target")) {
             ++i;
             if (!av[i]) {
