@@ -85,14 +85,15 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
 
   // log results (power.json, mau.power.log)
   // latency, features, power
-  if (total_power > (spec.get_max_power() + rounding)) {
-    double excess = total_power - spec.get_max_power();
+  auto spec_max_power = spec.get_max_power() + rounding;
+  if (total_power > spec_max_power) {
+    double excess = total_power - spec_max_power;
     std::string s = float2str(excess);
     std::string mps = float2str(spec.get_max_power());
     std::string error_msg = "Power worst case estimated budget (" + mps + "W) ";
     error_msg += "exceeded by " + s + "W.\n";
-    error_msg += "Too many memories are accessed in the worst case table control flow.\n";
-    error_msg += "Adding control flow conditions to separate large table execution ";
+    error_msg += "  Too many memories are accessed in the worst case table control flow.\n";
+    error_msg += "  Adding control flow conditions to separate large table execution ";
     error_msg += "and/or splitting large tables may help.\n";
     double set_max_power_threshold = options_.max_power > spec.get_max_power() ?
                                     options_.max_power - spec.get_max_power() : 0.0;
@@ -117,16 +118,62 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
 #else
     bool suppress = exceeds_stages_ || disable_power_check || set_max_power_check;
 #endif
+    // Provide value to be passed to --traffic-limit to scale down power
+    // Real total power estimated
+    double total_power_real = 0.0;
+    for (auto p : gress_powers_real_) {
+      total_power_real += p.second;
+    }
+    // Power threshold
+    double max_power_threshold = spec_max_power;
+    if (options_.disable_power_check) {
+        max_power_threshold += spec.get_excess_power_threshold();
+    }
+    if (options_.max_power > 0.0) {
+        max_power_threshold += set_max_power_threshold;
+    }
+    int traffic_limit_suggested = static_cast<int>(max_power_threshold * 100 / total_power_real);
+    LOG2(" Max Power Threshold : " << max_power_threshold
+            << ", Total power real : " << total_power_real
+            << ", traffic limit suggested : " << traffic_limit_suggested);
+
+    std::string tls_str = std::to_string(traffic_limit_suggested);
+
+    std::string tls = "\n";
+    tls += "  You can reduce power consumption using the --traffic-limit flag to limit \n";
+    tls += "  the effective MAU pipeline utilization. For example: \n";
+    tls += "    --traffic-limit 75 \n";
+    tls += "  specifies 75% MAU pipeline utilization or 1 idle cycle every 4 cycles on average \n";
+    tls += "  average.  This will reduce the power estimation to 75% of the original value. \n";
+    tls += "  A hardware rate limiter enforces the specified limit. \n";
+    tls += "  \n";
+    tls += "  Based on power estimation analysis, the maximum recommended value for this flag \n";
+    tls += "  is '--traffic-limit " + tls_str + "' to remain within the allowed power budget. \n";
+    tls += "  \n";
+    tls += "  Before using this flag, please ensure this derating is acceptable based on the \n";
+    tls += "  average incoming packet size. The new minimum average packet size can be \n";
+    tls += "  calculated from the original minimum average packet size as follows: \n";
+    tls += "    MAPS_new = MAPS_orig / traffic_limit \n";
+    tls += "  where: \n";
+    tls += "    MAPS_new      = new minimum average packet size \n";
+    tls += "    MAPS_orig     = original minimum average packet size \n";
+    tls += "    traffic_limit = traffic limit percentage as a number between 0 and 1 \n";
+
+    // When --set-max-power or --disable-power-check flags are used the max
+    // power limit is increased. We only output above message if suggested
+    // traffic limit value is below 100
+    if (traffic_limit_suggested >= 100) tls = "";
+
     if (suppress) {
-      std::string warn_msg = "Power check explicitly disabled.\n";
+      std::string warn_msg = "\nPower check explicitly disabled.\n";
       warn_msg += "The generated binary can potentially cause the device to ";
       warn_msg += "exceed the published max power.\n";
       warn_msg += "Please make sure this profile is fully tested to confirm ";
       warn_msg += "system functionality under worst case conditions.\n";
       ::warning("%s", warn_msg);
-      ::warning("%s", error_msg);
+      ::warning("%s", error_msg + tls);
     } else {
-      ::error("%s", error_msg);
+      ::error("%s", error_msg + tls);
     }
   }
 }
@@ -337,6 +384,7 @@ bool WalkPowerGraph::check_mpr_conflict() {
   * This is called in a loop, so each call should clear things it fills in.
   */
 double WalkPowerGraph::estimate_power() {
+  gress_powers_real_.clear();
   gress_powers_.clear();
   on_critical_path_.clear();
   always_powered_on_.clear();
@@ -437,6 +485,7 @@ double WalkPowerGraph::estimate_power_tofino() {
     }
     worst_power *= power_scale_factor;
     LOG4("Worst case power for " << toString(g) << ": " << float2str(worst_power) << "W.");
+    gress_powers_real_.emplace(g, worst_power);
     worst_power = traffic_limit_scaling(worst_power);
     gress_powers_.emplace(g, worst_power);
   }
@@ -569,6 +618,7 @@ double WalkPowerGraph::estimate_power_non_tofino() {
 
     // Note: No anticipated pipeline scaling factor, as of yet (e.g. from the deparser.)
     LOG4("Worst case power for " << toString(g) << ": " << float2str(worst_power) << "W.");
+    gress_powers_real_.emplace(g, worst_power);
     worst_power = traffic_limit_scaling(worst_power);
     gress_powers_.emplace(g, worst_power);
   }

@@ -65,6 +65,11 @@ class WalkPowerGraph : public MauInspector {
   /**
     * Mapping from gress_t to the worst-case estimated power.
     */
+  std::map<gress_t, double> gress_powers_real_ = {};
+  /**
+    * Mapping from gress_t to the worst-case estimated power adjusted to traffic
+    * limit if present.
+    */
   std::map<gress_t, double> gress_powers_ = {};
   /**
     * Mapping from UniqueId to Boolean indicating if the logical table is
