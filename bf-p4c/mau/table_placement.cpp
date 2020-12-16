@@ -2832,6 +2832,41 @@ void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
     }
 }
 
+namespace {
+class SplitEntriesList {
+    const IR::EntriesList* list;
+    IR::Vector<IR::Entry>::const_iterator next;
+    size_t available = 0;
+
+ public:
+    explicit SplitEntriesList(const IR::EntriesList* list) : list(list) {
+        if (list) {
+            next = list->entries.begin();
+            available = list->size();
+        }
+    }
+    const IR::EntriesList* split_off(size_t num_entries) {
+        if (!available)
+            return nullptr;
+        if (num_entries >= available) {
+            if (next == list->entries.begin()) {
+                // All entires fit in this table.
+                available = 0;
+                return list;
+            }
+            num_entries = available;
+        }
+
+        auto first = next;
+        next = first + num_entries;
+        available -= num_entries;
+        IR::Vector<IR::Entry> static_entries;
+        static_entries.insert(static_entries.end(), first, next);
+        return new IR::EntriesList(static_entries);
+     }
+};
+}  // namespace
+
 IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     auto it = self.table_placed.find(tbl->name);
     if (it == self.table_placed.end()) {
@@ -2934,8 +2969,14 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     if (deferred_attached > 1)
         P4C_UNIMPLEMENTED("Splitting %s with multiple indirect attachements not supported",
                           tbl->match_table->name);
+
+    auto tbl_entries_list = SplitEntriesList{tbl->entries_list};
     for (const TablePlacement::Placed *pl : ValuesForKey(self.table_placed, tbl->name)) {
         auto *table_part = tbl->clone();
+
+        // Divide the entries amongst the table_parts.
+        table_part->entries_list = tbl_entries_list.split_off(pl->entries);
+
         // When a gateway is merged against a split table, only the first table created from the
         // split has the merged gateway
         if (!rv->empty())

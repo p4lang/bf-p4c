@@ -173,8 +173,8 @@ class ExtractKeyDetails {
 
     class KeyDetails {
         const KeyConfig& config;
-        OriginalIterator key;
-        OriginalIterator key_end;
+        OriginalIterator key;       // Will be a nullptr if match_table is null.
+        OriginalIterator key_end;   // Will be a nullptr if `key` is a nullptr.
         bool recombine_mask = false;
 
         friend class Iterator;  // Only the iterator will construct KeyDetails.
@@ -262,7 +262,9 @@ class ExtractKeyDetails {
         int full_size() const { return phv_field(key)->size; }
         big_int field_mask() const { return Util::mask(full_size()); }
         big_int expression_mask() const { return Util::mask((*key)->expr->type->width_bits()); }
-        const IR::MAU::TableKey* table_keys() const { return *key; }  // We return the first.
+        const IR::MAU::TableKey* table_keys() const {
+            return key == key_end? nullptr : *key;  // We return the next, if there are any!
+        }
     };
 
     class Iterator : public std::iterator<std::input_iterator_tag, IR::MAU::TableKey> {
@@ -283,8 +285,9 @@ class ExtractKeyDetails {
         }
         bool operator!=(const Iterator& other) const { return !operator==(other); }
 
-        const KeyDetails& operator*() { return *details; }
-        const KeyDetails* operator->() { return details.get(); }
+        // The user should have already checked they were not at `end()`.
+        const KeyDetails& operator*() { CHECK_NULL(details->table_keys()); return *details; }
+        const KeyDetails* operator->() { CHECK_NULL(details->table_keys()); return details.get(); }
     };
 
     friend class Iterator;
