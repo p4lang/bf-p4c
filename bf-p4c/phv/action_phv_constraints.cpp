@@ -83,6 +83,13 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
                 if (LOGGING(5) && read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
                     LOG5("      ...speciality action data read: " << fr);
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
+                if (field_action.is_funnel_shift()) {
+                    // Funnel shift have the format src1(PHV), src2(PHV), shift(Constant) and the
+                    // shift constant is part of the instruction parameter. This is why it should
+                    // not be seen as one of the source operand.
+                    LOG5("      ...skipping funnel shift constant");
+                    continue;
+                }
                 fr.constant = true;
                 if (read.expr->is<IR::Constant>()) {
                     const auto* constExpr = read.expr->to<IR::Constant>();

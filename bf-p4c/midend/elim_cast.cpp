@@ -12,11 +12,69 @@ const IR::Node* EliminateWidthCasts::preorder(IR::Cast* expression) {
             return expression;
 
         if (srcType->width_bits() > dstType->width_bits()) {
+            // This code block handle the funnel_shift_right() P4_14 operation.
+            // P4_14 code:                funnel_shift_right(dest, src_hi, src_lo, shift)
+            // is translated in P4_16 as: dest = (bit<dest>)Shr((src_hi ++ src_lo), shift)
+            //
+            // It is possible to slice the source and the destination instead of doing the
+            // shift operation. Sometime it is a good option but sometime it is impossible.
+            // The code below will use the funnel-shift if one of the source is also the
+            // destination operand in which case slicing is impossible. Other cases will
+            // be handled through slicing.
+            if (auto *shift = expression->expr->to<IR::Shr>()) {
+                if (auto *concat = shift->left->to<IR::Concat>()) {
+                    auto *assignment = findContext<IR::AssignmentStatement>();
+                    if (assignment != nullptr) {
+                        // If the destination is one of the source, don't slice it and let
+                        // the instruction selection backend pass convert it to a funnel-shift
+                        // operation.
+                        if (assignment->left->equiv(*concat->left) ||
+                            assignment->left->equiv(*concat->right))
+                            return expression;
+                    }
+                }
+            }
             return new IR::Slice(expression->srcInfo,
                     expression->destType, expression->expr,
                     new IR::Constant(dstType->width_bits() - 1), new IR::Constant(0));
         } else if (srcType->width_bits() < dstType->width_bits()) {
-            if (!srcType->to<IR::Type_Bits>()->isSigned) {
+            // Special Shift case when destination field is larger than a container size while
+            // the source is not. The instruction is broke in two parts up to a destination
+            // field size of 64 bits.
+            if ((expression->expr->is<IR::Shl>()) && (dstType->width_bits() > MAX_CONTAINER_SIZE) &&
+                (srcType->width_bits() <= MAX_CONTAINER_SIZE)) {
+                auto *shift = expression->expr->to<IR::Shl>();
+                auto *value = shift->right->to<IR::Constant>();
+                if (!value) {
+                    error("%s: shift count must be a constant in %s", expression->srcInfo,
+                          expression);
+                    return expression;
+                }
+                if (value->asInt() >= (2 * MAX_CONTAINER_SIZE)) {
+                    error("%s: shifting of more than 63 bits with casting is too complex to "
+                          "handle, consider simplifying the expression.", expression->srcInfo);
+                    return expression;
+                }
+                if (value->asInt() >= MAX_CONTAINER_SIZE) {
+                    // This is to cover for shifting over an entire container, for example:
+                    // hdr.shift_32_to_64.res = (bit<64>)(hdr.shift_32_to_64.b << 40);
+                    // as:
+                    // hdr.shift_32_to_64.res = (hdr.shift_32_to_64.b << 8) ++ 32w0;
+                    auto *shift_adj = new IR::Constant(value->asInt() - MAX_CONTAINER_SIZE);
+                    return new IR::Concat(new IR::Shl(expression->srcInfo, shift->left, shift_adj),
+                                          new IR::Constant(IR::Type_Bits::get(MAX_CONTAINER_SIZE),
+                                                           0));
+                } else {
+                    // This is to cover for splilling part of the shift to top slice, for example:
+                    // hdr.shift_32_to_64.res = (bit<64>)(hdr.shift_32_to_64.b << 4);
+                    // as:
+                    // hdr.shift_32_to_64.res = (hdr.shift_32_to_64.b >> 28) ++
+                    //                          (hdr.shift_32_to_64.b << 4);
+                    auto *shift_adj = new IR::Constant(MAX_CONTAINER_SIZE - value->asInt());
+                    return new IR::Concat(new IR::Shr(expression->srcInfo, shift->left, shift_adj),
+                                          shift);
+                }
+            } else if (!srcType->to<IR::Type_Bits>()->isSigned) {
                 auto ctype = IR::Type_Bits::get(dstType->width_bits() - srcType->width_bits());
                 return new IR::Concat(new IR::Constant(ctype, 0), expression->expr);
             } else {

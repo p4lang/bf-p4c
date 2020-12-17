@@ -1894,19 +1894,19 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
 
 /** Ensure that a read field is the only field within that container
  */
-bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv) {
+bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv, int num_source) {
     ordered_set<const PHV::Field*> fieldsRead;
+    int src_cnt = 0;
     for (auto& field_action : field_actions) {
         const PHV::Field* read_field = nullptr;
         for (auto& read : field_action.reads) {
-            if (read_field != nullptr && read.type == ActionParam::PHV) {
-                BUG("Multiple reads found in shift");
-            }
-            if (read.type == ActionParam::PHV)
+            if (read.type == ActionParam::PHV) {
+                src_cnt++;
                 read_field = phv.field(read.expr);
-            BUG_CHECK(read_field, "Read field not found for shift"); }
-        fieldsRead.insert(read_field); }
-    BUG_CHECK(fieldsRead.size() == 1, "More than one field action in shift");
+                fieldsRead.insert(read_field); } } }
+
+    BUG_CHECK(src_cnt == num_source, "Shift operation with improper number of sources, expected "
+              "%d but got %d", num_source, src_cnt);
 
     PHV::FieldUse use(PHV::FieldUse::READ);
     for (auto &tot_align_info : phv_alignment) {
@@ -2232,15 +2232,17 @@ bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
         return false;
     }
 
-    if (counts[ActionParam::PHV] > 1) {
+    int max_source = is_funnel_shift() ? 2 : 1;
+    if (counts[ActionParam::PHV] > max_source) {
         error_code |= TOO_MANY_PHV_SOURCES;
-        error_message += "a shift function can only have one PHV source";
+        error_message += "this shift operation can't have more than " +
+            cstring::to_cstring(max_source) + " PHV source(s)";
         return false;
     }
 
     LOG4("VERIFY SHIFT");
     bool total_overwrite_possible = verify_overwritten(container, phv);
-    total_overwrite_possible |= verify_only_read(phv);
+    total_overwrite_possible |= verify_only_read(phv, max_source);
     if (!total_overwrite_possible) {
         error_code |= ILLEGAL_OVERWRITE;
         error_message += "either a read or write in a shift operation is not the only field "

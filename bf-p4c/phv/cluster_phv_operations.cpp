@@ -23,7 +23,8 @@ const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
 const ordered_set<cstring> PHV_Field_Operations::SHIFT_OPS = {
     "shl",
     "shru",
-    "shrs"
+    "shrs",
+    "funnel-shift"
 };
 
 const ordered_set<cstring> PHV_Field_Operations::SATURATE_OPS = {
@@ -195,6 +196,11 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
             LOG3("Marking " << field->name << " as 'no pack' because it is a source of a shift "
                  "operation " << inst);
             field->set_solitary(PHV::SolitaryReason::ALU);
+            if (inst->name == "funnel-shift") {
+                field->set_exact_containers(true);
+                field->set_no_split(true);
+                continue;
+            }
             bool no_split = false;
             // Do not allow a field to span on multiple container if the shift operation is only
             // applied to a slice and not the entire field.

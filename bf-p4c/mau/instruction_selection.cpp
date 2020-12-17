@@ -25,6 +25,35 @@ bool UnimplementedRegisterMethodCalls::preorder(const IR::MAU::Primitive *prim) 
     return true;
 }
 
+const IR::Expression *ToFunnelShiftInstruction::preorder(IR::Cast *e) {
+    const IR::Type* srcType = e->expr->type;
+    const IR::Type* dstType = e->destType;
+
+    if (srcType->is<IR::Type_Bits>() && dstType->is<IR::Type_Bits>()) {
+        if (srcType->to<IR::Type_Bits>()->isSigned != dstType->to<IR::Type_Bits>()->isSigned)
+            return e;
+
+        if (srcType->width_bits() > dstType->width_bits()) {
+            // This code block handle the funnel_shift_right() P4_14 operation.
+            // P4_14 code:                funnel_shift_right(dest, src_hi, src_lo, shift)
+            // is translated in P4_16 as: dest = (bit<dest>)Shr((src_hi ++ src_lo), shift)
+            //
+            // The midend decide if the above operation must be handled through slicing or using
+            // funnel shifting. At this point, if we still have a format where the source
+            // concatenation is larger than the destination, it mean the decision was to use funnel
+            // shifting.
+            if (auto *shift = e->expr->to<IR::Shr>()) {
+                if (auto *concat = shift->left->to<IR::Concat>()) {
+                    return new IR::MAU::Instruction(e->srcInfo, "funnel-shift",
+                        { new IR::TempVar(shift->type), concat->left, concat->right,
+                          shift->right });
+                }
+            }
+        }
+    }
+    return e;
+}
+
 bool HashGenSetup::CreateHashGenExprs::preorder(const IR::BFN::SignExtend *se) {
     if (!findContext<IR::MAU::Action>())
         return false;
@@ -2700,6 +2729,7 @@ const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
 InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
     new CheckInvalidate(phv),           // Instructions in actions are sequential.
     new UnimplementedRegisterMethodCalls,
+    new ToFunnelShiftInstruction,
     new HashGenSetup(phv, options),
     new Synth2PortSetup(phv),
     new SimplifyConditionalActionArg(),

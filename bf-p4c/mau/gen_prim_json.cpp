@@ -206,7 +206,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
     std::vector<std::string> modifyPrimVec = { "set" };
     std::vector<std::string> modifyCondPrimVec { "conditionally-set" };
     std::vector<std::string> invalidatePrimVec = { "invalidate" };
-    std::vector<std::string> shiftPrimVec = { "shru", "shl", "shrs" };
+    std::vector<std::string> shiftPrimVec = { "shru", "shl", "shrs", "funnel-shift" };
     std::vector<std::string> directAluPrimVec = {
         "add", "addc", "saddu", "sadds",
         "and", "andca", "andcb", "nand",

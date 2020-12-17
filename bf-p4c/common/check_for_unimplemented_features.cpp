@@ -11,13 +11,6 @@ CheckOperations::getSrcBinop(const IR::MAU::Primitive* prim) const {
     return boost::none;
 }
 
-bool CheckOperations::isFunnelShift(const IR::MAU::Primitive* prim) const {
-    auto* binop = getSrcBinop(prim).get_value_or(nullptr);
-    if (!binop) return false;
-    bool isShift = binop->getStringOp() == "<<" || binop->getStringOp() == ">>";
-    return isShift && binop->left->is<IR::Concat>();
-}
-
 bool CheckOperations::isModBitMask(const IR::MAU::Primitive* prim) const {
     auto* binop = getSrcBinop(prim).get_value_or(nullptr);
     if (!binop || binop->getStringOp() != "|") return false;
@@ -28,7 +21,7 @@ bool CheckOperations::isModBitMask(const IR::MAU::Primitive* prim) const {
 }
 
 bool CheckOperations::preorder(const IR::MAU::Primitive* prim) {
-    if (isFunnelShift(prim) || isModBitMask(prim))
+    if (isModBitMask(prim))
         ::error("The following operation is not yet supported: %1%", prim->srcInfo);
     return true;
 }

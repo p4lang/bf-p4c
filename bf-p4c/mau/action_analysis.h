@@ -94,8 +94,16 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool requires_split = false;
         bool constant_to_ad = false;
 
-        bool is_shift() {
+        bool is_single_shift() const {
             return name == "shru" || name == "shrs" || name == "shl";
+        }
+
+        bool is_funnel_shift() const {
+            return name == "funnel-shift";
+        }
+
+        bool is_shift() const {
+            return is_single_shift() || is_funnel_shift();
         }
 
         enum error_code_t {
@@ -330,8 +338,16 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                    + counts[ActionParam::CONSTANT];
         }
 
-        bool is_shift() const {
+        bool is_single_shift() const {
             return name == "shru" || name == "shrs" || name == "shl";
+        }
+
+        bool is_funnel_shift() const {
+            return name == "funnel-shift";
+        }
+
+        bool is_shift() const {
+            return is_single_shift() || is_funnel_shift();
         }
 
         /**
@@ -346,8 +362,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         int operands() const {
-            if (name == "to-bitmasked-set" || is_shift())
+            if (name == "to-bitmasked-set" || is_single_shift())
                 return 1;
+            else if (is_funnel_shift())
+                return 2;
+
             if (field_actions.size() == 0)
                 BUG("Cannot call operands function on empty container process");
             return field_actions[0].reads.size();
@@ -420,7 +439,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);
         bool verify_source_to_bit(int operands, PHV::Container container);
         bool verify_overwritten(PHV::Container container, const PhvInfo &phv);
-        bool verify_only_read(const PhvInfo &phv);
+        bool verify_only_read(const PhvInfo &phv, int num_source);
         bool verify_possible(cstring &error_message, PHV::Container container,
                              cstring action_name, const PhvInfo &phv);
         bool is_byte_rotate_merge(PHV::Container container, TotalAlignment &ad_alignment);

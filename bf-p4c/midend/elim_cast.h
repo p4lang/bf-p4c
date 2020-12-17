@@ -45,6 +45,8 @@ class IgnoreKeyElementTransform : public Transform {
 
 class EliminateWidthCasts : public IgnoreKeyElementTransform {
  public:
+    static constexpr int MAX_CONTAINER_SIZE = 32;
+
     EliminateWidthCasts() { }
     const IR::Node* preorder(IR::Cast* cast) override;
 

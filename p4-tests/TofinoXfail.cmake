@@ -1212,7 +1212,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The following operation is not yet supported"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/get_hash/get_hash.p4
 )
 
 # checksum only support bit<16> output
@@ -1224,12 +1223,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-5.p4
   P4C-1021-1
-)
-
-# p4lang/p4c #1724
-p4c_add_xfail_reason("tofino"
-  "error: The following operation is not yet supported:"
-  testdata/p4_14_samples/issue-1559.p4
 )
 
 # varbit related starts

@@ -253,12 +253,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
 )
 
-# p4lang/p4c #1724
-p4c_add_xfail_reason("tofino2"
-  "error: The following operation is not yet supported:"
-  testdata/p4_14_samples/issue-1559.p4
-)
-
 p4c_add_xfail_reason("tofino2"
   "Varbit field size expression evaluates to non byte-aligned value"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4

@@ -19,6 +19,17 @@ class UnimplementedRegisterMethodCalls : public MauInspector {
 };
 
 /**
+ * This class convert shift expression using concatenation to a funnel-shift instruction. This
+ * pass work in tendem with the Midend EliminateWidthCasts one.
+ */
+class ToFunnelShiftInstruction : public MauTransform {
+    const IR::Expression *preorder(IR::Cast*) override;
+
+ public:
+    ToFunnelShiftInstruction() {}
+};
+
+/**
  * The purpose of this class is to convert expressions that require the Hash pathway in actions
  * to IR::MAU::Instructions where the instruction setting tempvars to HashDist objects.  These
  * can later be further converted to the correct instruction in DoInstructionSelection
