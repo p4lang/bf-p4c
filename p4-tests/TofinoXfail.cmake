@@ -187,6 +187,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-347/switch_bug.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-351/case2079.p4

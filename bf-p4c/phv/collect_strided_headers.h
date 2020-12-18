@@ -42,6 +42,12 @@ struct CollectStridedHeaders : public Inspector {
 
         return nullptr;
     }
+
+    profile_t init_apply(const IR::Node *root) override {
+        profile_t rv = Inspector::init_apply(root);
+        stride_groups.clear();
+        return rv;
+    }
 };
 
 #endif  /* BF_P4C_PHV_COLLECT_STRIDED_HEADERS_H_ */
