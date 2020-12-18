@@ -351,9 +351,10 @@ void Parser::process() {
         if (parser_error.lineno >= 0)
             if (parser_error.check() && parser_error.gress() == gress)
                 phv_use[gress][parser_error->reg.uid] = 1; }
-    if (ghost_parser && ghost_parser.check()) {
-        if (ghost_parser.size() != 32)
-            error(ghost_parser.lineno, "ghost thread input must be 32 bits"); }
+    // TEMP FIX - remvove after P4C-3176 is merged
+    // if (ghost_parser && ghost_parser.check()) {
+    //     if (ghost_parser.size() != 32)
+    //         error(ghost_parser.lineno, "ghost thread input must be 32 bits"); }
     if (error_count > 0) return;
     int all_index = 0;
     for (auto st : all) st->all_idx = all_index++;

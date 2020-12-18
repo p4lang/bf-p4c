@@ -80,6 +80,12 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
+  "In table table .*, the number of bits required to go through the immediate pathway 48 .* is greater than the available bits 32, and can not be allocated"
+  # P4C-3093
+  extensions/p4_tests/p4_16/jbay/ghost3.p4
+)
+
+p4c_add_xfail_reason("tofino2"
   "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_14_samples/axon.p4
 )
@@ -300,6 +306,7 @@ p4c_add_xfail_reason("tofino2"
 
   # P4C-3158
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2490.p4
 
   # P4C-3379
   extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4

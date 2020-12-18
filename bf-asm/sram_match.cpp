@@ -914,48 +914,50 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
         bool using_match = false;
         // Loop for determining the config to indicate which bytes from the search bus
         // are compared to the bytes on the RAM line
-        auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
-        for (unsigned i = 0; format && i < format->groups(); i++) {
-            if (Format::Field *match = format->field("match", i)) {
-                unsigned bit = 0;
-                for (auto &piece : match->bits) {
-                    if (piece.lo/128U != word) {
-                        bit += piece.size();
-                        continue; }
+        if (!row.cols.empty()) {
+            auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
+            for (unsigned i = 0; format && i < format->groups(); i++) {
+                if (Format::Field *match = format->field("match", i)) {
+                    unsigned bit = 0;
+                    for (auto &piece : match->bits) {
+                        if (piece.lo/128U != word) {
+                            bit += piece.size();
+                            continue; }
+                        using_match = true;
+                        for (unsigned fmt_bit = piece.lo; fmt_bit <= piece.hi;) {
+                            unsigned byte = (fmt_bit%128)/8;
+                            unsigned bits_in_byte = (byte+1)*8 - (fmt_bit%128);
+                            if (fmt_bit + bits_in_byte > piece.hi + 1)
+                                bits_in_byte = piece.hi + 1 - fmt_bit;
+                            auto it = --match_by_bit.upper_bound(bit);
+                            int lo = bit - it->first;
+                            int hi = lo + bits_in_byte - 1;
+                            int bus_loc = determine_pre_byteswizzle_loc(it->second, lo, hi, word);
+                            BUG_CHECK(bus_loc >= 0 && bus_loc < 16);
+                            for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
+                                byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
+                            bit += bits_in_byte; } }
+                    BUG_CHECK(bit == match->size); }
+                if (Format::Field *version = format->field("version", i)) {
+                    if (version->bit(0)/128U != word) continue;
+                    ///> P4C-1552: if no match, but a version/valid is, the vh_xbar needs to be
+                    ///> enabled.  This was preventing anything from running
                     using_match = true;
-                    for (unsigned fmt_bit = piece.lo; fmt_bit <= piece.hi;) {
-                        unsigned byte = (fmt_bit%128)/8;
-                        unsigned bits_in_byte = (byte+1)*8 - (fmt_bit%128);
-                        if (fmt_bit + bits_in_byte > piece.hi + 1)
-                            bits_in_byte = piece.hi + 1 - fmt_bit;
-                        auto it = --match_by_bit.upper_bound(bit);
-                        int lo = bit - it->first;
-                        int hi = lo + bits_in_byte - 1;
-                        int bus_loc = determine_pre_byteswizzle_loc(it->second, lo, hi, word);
-                        BUG_CHECK(bus_loc >= 0 && bus_loc < 16);
-                        for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
-                            byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
-                        bit += bits_in_byte; } }
-                BUG_CHECK(bit == match->size); }
-            if (Format::Field *version = format->field("version", i)) {
-                if (version->bit(0)/128U != word) continue;
-                ///> P4C-1552: if no match, but a version/valid is, the vh_xbar needs to be
-                ///> enabled.  This was preventing anything from running
-                using_match = true;
-                for (unsigned j = 0; j < version->size; ++j) {
-                    unsigned bit = version->bit(j);
-                    unsigned byte = (bit%128)/8;
-                    byteswizzle_ctl[byte][bit%8U] = 8; } } }
-        if (using_match) {
-            auto &vh_xbar_ctl = rams_row.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-            if (word_ixbar_group[word] >= 0) {
-                setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
-            } else {
-                // Need the bus for version/valid, but don't care what other data is on it.  So
-                // just set the enable without actually selecting an input -- if another table
-                // is sharing the bus, it will set it, otherwise we'll get ixbar group 0
-                vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1; }
-            vh_xbar_ctl.exactmatch_row_vh_xbar_thread = timing_thread(gress); }
+                    for (unsigned j = 0; j < version->size; ++j) {
+                        unsigned bit = version->bit(j);
+                        unsigned byte = (bit%128)/8;
+                        byteswizzle_ctl[byte][bit%8U] = 8; } } }
+            if (using_match) {
+                auto &vh_xbar_ctl = rams_row.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+                if (word_ixbar_group[word] >= 0) {
+                    setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
+                } else {
+                    // Need the bus for version/valid, but don't care what other data is on it.  So
+                    // just set the enable without actually selecting an input -- if another table
+                    // is sharing the bus, it will set it, otherwise we'll get ixbar group 0
+                    vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1; }
+                vh_xbar_ctl.exactmatch_row_vh_xbar_thread = timing_thread(gress); }
+        }
         /* setup match central config to extract results of the match */
         BUG_CHECK(row.result_bus_initialized());
         ssize_t r_bus = row.result_bus_used() ? row.row*2 + row.result_bus : -1;

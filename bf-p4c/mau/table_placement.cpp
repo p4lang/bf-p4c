@@ -720,7 +720,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             // Also need some way of telling ixbar allocation that more entries will be
             // needed in later stages, so it can chain_vpn properly.
             int delta = 1 << std::max(10, ceil_log2(next->attached_entries.at(att).entries) - 4);
-            if (delta < next->attached_entries.at(att).entries) {
+            if (delta <= next->attached_entries.at(att).entries) {
                 next->attached_entries.at(att).entries -= delta;
                 if (!next->attached_entries.at(att).need_more) {
                     next->use.format_type.invalidate();

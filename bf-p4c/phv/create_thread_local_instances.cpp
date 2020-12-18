@@ -22,10 +22,12 @@ class FindSharedStateful : public MauInspector {
         visitAgain();
         gress_t thread = VisitingThread(this);
         all_salus[salu].threads.insert(thread);
+        LOG2("FindSharedStateful Adding salu " << salu->name << " on thread : " << thread);
         if (auto *tbl = findContext<IR::MAU::Table>()) {
             if (auto *act = findContext<IR::MAU::Action>()) {
                 if (auto *sact = salu->calledAction(tbl, act)) {
                     all_salus.at(salu).action_thread[sact->name] = thread;
+                    LOG3("  Adding salu action " << sact->name << "on thread : " << thread);
                 }
             }
         }
@@ -33,8 +35,16 @@ class FindSharedStateful : public MauInspector {
     bool preorder(const IR::GlobalRef *) { visitAgain(); return true; }
 
  public:
-    gress_t salu_action_gress(const IR::MAU::StatefulAlu *salu, cstring action) {
-        return all_salus.at(salu).action_thread.at(action); }
+    std::pair<bool, gress_t>
+    salu_action_gress(const IR::MAU::StatefulAlu *salu, cstring action) {
+        if (all_salus.count(salu)) {
+            const auto salu_action_threads = all_salus.at(salu).action_thread;
+            if (salu_action_threads.count(action)) {
+                return std::make_pair(true, salu_action_threads.at(action));
+            }
+        }
+        return std::make_pair(false, gress_t());
+    }
 };
 
 /// Create thread-local versions of variables and parser states.
@@ -54,8 +64,19 @@ struct CreateLocalInstances : public Transform {
     profile_t init_apply(const IR::Node *root) override {
         ghost_intrinsic_metadata = nullptr;
         return Transform::init_apply(root); }
+
+    const gress_t get_thread() const {
+        if (auto *salu_action = findContext<IR::MAU::SaluAction>()) {
+            auto *salu = findOrigCtxt<IR::MAU::StatefulAlu>();
+            auto action_gress = salus->salu_action_gress(salu, salu_action->name);
+            if (action_gress.first) return action_gress.second;
+        }
+        return VisitingThread(this);
+    }
+
     /// Prepend "thread-name::" to the names of headers and metadata structs.
     const IR::HeaderOrMetadata *preorder(IR::HeaderOrMetadata* header) override {
+        LOG1("CreateLocalInstances preorder Header / Metadata: " << header);
         const auto *rv = header;
         auto *orig = getOriginal<IR::HeaderOrMetadata>();
         visitAgain();
@@ -68,11 +89,9 @@ struct CreateLocalInstances : public Transform {
                 rv = ghost_intrinsic_metadata;
             else
                 ghost_intrinsic_metadata = header;
-        } else if (auto *salu_action = findContext<IR::MAU::SaluAction>()) {
-            auto *salu = findOrigCtxt<IR::MAU::StatefulAlu>();
-            thread = salus->salu_action_gress(salu, salu_action->name);
         } else {
-            thread = VisitingThread(this); }
+            thread = get_thread();
+        }
         if (localMetadata[thread].count(orig)) {
             rv = localMetadata[thread][orig];
         } else {
@@ -84,9 +103,10 @@ struct CreateLocalInstances : public Transform {
     }
     /// Prepend "thread-name::" to TempVars, exactly once per thread
     const IR::TempVar *preorder(IR::TempVar *var) override {
+        LOG1("CreateLocalInstances preorder Tempvar : " << var);
         auto *orig = getOriginal<IR::TempVar>();
         visitAgain();
-        gress_t thread = VisitingThread(this);
+        gress_t thread = get_thread();
         if (localTempVars[thread].count(orig)) {
             return localTempVars[thread][orig]; }
         var->name = createThreadName(thread, var->name);
@@ -96,9 +116,10 @@ struct CreateLocalInstances : public Transform {
 
     /// Prepend "thread-name::" to Paddings, exactly once per thread
     const IR::Padding *preorder(IR::Padding *var) override {
+        LOG1("CreateLocalInstances preorder padding : " << var);
         auto *orig = getOriginal<IR::Padding>();
         visitAgain();
-        gress_t thread = VisitingThread(this);
+        gress_t thread = get_thread();
         if (localPaddings[thread].count(orig)) {
             return localPaddings[thread][orig]; }
         var->name = createThreadName(thread, var->name);
@@ -113,6 +134,7 @@ struct CreateLocalInstances : public Transform {
         visitAgain();
         return hr; }
     const IR::Expression *postorder(IR::Expression *hr) override {
+        LOG1("CreateLocalInstances postorder expression : " << hr);
         // but only if it is different from any previously created clone.
         auto *orig = getOriginal<IR::Expression>();
         for (auto *gen : memoizeExpr[orig])

@@ -94,6 +94,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     bool preorder(const IR::BFN::LoweredParser *p) override;
     bool preorder(const IR::MAU::Primitive* prim) override;
     bool preorder(const IR::MAU::Action *p) override;
+    bool preorder(const IR::MAU::StatefulAlu* prim) override;
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;

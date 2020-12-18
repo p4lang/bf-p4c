@@ -210,6 +210,7 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
     // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
     // not all of them.
     // Only multistage_fifo.p4 needs visit stateful call before the action code runs.
+    LOG1("FieldDefUse preorder: " << act);
     visit(act->stateful_calls, "stateful");
     if (act->parallel) {
         mode = VisitJustReads;
@@ -230,6 +231,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
     // TODO(yumin): The long-term fix for this is to change the order of visiting when
     // visiting IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
+    LOG1("FieldDefUse preorder: " << prim);
     if (prim->operands.size() > 0) {
         if (mode != VisitJustWrites) {
             for (size_t i = 1; i < prim->operands.size(); ++i) {
@@ -240,7 +242,37 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
     return false;
 }
 
+/* StatefulALU can be defined in a global scope and have StatefulALU Actions in
+ * different threads e.g. one in ingress and one in ghost. FieldDefUse must only
+ * visit the actions relevant to the current thread.
+ * - Make a list of all actions on the SALU
+ * - Find the Table invoking the SALU
+ * - Visit all actions on the table and create a list of the ones which map to
+ *   the SALU actions
+ * - Visit only the collected actions in the list
+ * This ensures only the actions relevant to the current thread are visited.
+ */
+bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
+    LOG1("FieldDefUse preorder Stateful : " << salu);
+    visitAgain();
+    std::set<cstring> salu_actions_to_visit;
+    if (auto tbl = findContext<IR::MAU::Table>()) {
+        for (auto act : tbl->actions) {
+            auto tblActIdx = tbl->name + "-" + act.first;
+            if (salu->action_map.count(tblActIdx)) {
+                salu_actions_to_visit.insert(salu->action_map.at(tblActIdx));
+            }
+        }
+        for (auto sv : salu_actions_to_visit) {
+            LOG3("  visiting salu action " << sv);
+            visit(salu->instruction.at(sv));
+        }
+    }
+    return false;
+}
+
 bool FieldDefUse::preorder(const IR::Expression *e) {
+    LOG1("FieldDefUse preorder : " << e);
     le_bitrange bits;
     auto *f = phv.field(e, &bits);
     auto *hr = e->to<IR::HeaderRef>();
@@ -270,9 +302,12 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
             bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
             write(f, unit, e, needsIXBar, partial);
             write(hr, unit, e, needsIXBar);
+            LOG3(" write at unit : " << unit);
         } else {
             read(f, unit, e, needsIXBar);
-            read(hr, unit, e, needsIXBar); }
+            read(hr, unit, e, needsIXBar);
+            LOG3(" read at unit : " << unit);
+        }
     } else {
         assert(0); }
     return false;

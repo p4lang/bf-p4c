@@ -14,7 +14,7 @@ set (P16_V1_FOR_CLOUDBREAK "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
 p4c_find_tests("${P16_V1_FOR_CLOUDBREAK}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
 set (P16_JNA_INCLUDE_PATTERNS "include.*(t[23]?na).p4" "main|common_tna_test")
-set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "TOFINO1_ONLY" "<built-in>")
+set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "TOFINO1_ONLY" "TOFINO2_ONLY" "<built-in>")
 set (P16_JNA_FOR_CLOUDBREAK "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_JNA_FOR_CLOUDBREAK}" p16_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 
@@ -48,10 +48,10 @@ set (CLOUDBREAK_V1_TEST_SUITES
 p4c_add_bf_backend_tests("tofino3" "cb" "v1model" "base" "${CLOUDBREAK_V1_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 set (CLOUDBREAK_JNA_TEST_SUITES
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
-  ${p16_jna_tests}
-  )
-p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${CLOUDBREAK_JNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4)
+p4c_find_tests("${CLOUDBREAK_JNA_TEST_SUITES}" cloudbreak_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
+set (cloudbreak_jna_tests ${cloudbreak_jna_tests} ${p16_jna_tests})
+p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${cloudbreak_jna_tests}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 #set (testExtraArgs "${testExtraArgs} -tofino3")
 #
@@ -222,8 +222,8 @@ p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${CLOUDBREAK_JNA_TEST_SUI
 #file(RELATIVE_PATH p4_16_internal_p4_16_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16)
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_hwlrn" ${p4_16_internal_p4_16_path}/hwlrn/hwlrn.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-set_property(TEST "tofino3/extensions/p4_tests/p4_16/jbay/hwlearn1.p4"
-  APPEND PROPERTY ENVIRONMENT "CTEST_P4C_ARGS=--no-bf-rt-schema")
+#set_property(TEST "tofino3/extensions/p4_tests/p4_16/jbay/hwlearn1.p4"
+#  APPEND PROPERTY ENVIRONMENT "CTEST_P4C_ARGS=--no-bf-rt-schema")
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_ipv4_checksum" ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE  

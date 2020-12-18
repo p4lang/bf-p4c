@@ -1,5 +1,4 @@
-#include <t2na.p4>  /* TOFINO2_ONLY */ 
-
+#include <t2na.p4>  /* TOFINO2_ONLY */
 
 //-----------------------------------------------------------------------------
 // Table sizes.
@@ -21,16 +20,16 @@ const bit<32> BD_TABLE_SIZE = 5120;
 const bit<32> MAC_TABLE_SIZE = 16384;
 
 // IP Hosts/Routes
-const bit<32> IPV4_HOST_TABLE_SIZE = 32768;
-const bit<32> IPV4_LOCAL_HOST_TABLE_SIZE = 8192;
-const bit<32> IPV4_LPM_TABLE_SIZE = 16384;
-const bit<32> IPV6_HOST_TABLE_SIZE = 96256;
-const bit<32> IPV6_LPM_TABLE_SIZE = 8192;
-const bit<32> IPV6_LPM64_TABLE_SIZE = 8192;
+const bit<32> IPV4_HOST_TABLE_SIZE = 65536;
+const bit<32> IPV4_LOCAL_HOST_TABLE_SIZE = 16384;
+const bit<32> IPV4_LPM_TABLE_SIZE = 32786;
+const bit<32> IPV6_HOST_TABLE_SIZE = 192512;
+const bit<32> IPV6_LPM_TABLE_SIZE = 16384;
+const bit<32> IPV6_LPM64_TABLE_SIZE = 16384;
 
 // ECMP/Nexthop
-const bit<32> ECMP_GROUP_TABLE_SIZE = 512;
-const bit<32> ECMP_SELECT_TABLE_SIZE = 32768;
+const bit<32> ECMP_GROUP_TABLE_SIZE = 256;
+const bit<32> ECMP_SELECT_TABLE_SIZE = 16384;
 
 const bit<32> NEXTHOP_TABLE_SIZE = 1 << 14;
 
@@ -51,18 +50,8 @@ const bit<32> SFC_QUEUE_IDX_SIZE = 512;
 const bit<32> SFC_BUFFER_IDX_SIZE = 4;
 const bit<32> SFC_PORT_CNT = 256;
 const bit<32> SFC_TC_CNT = 8;
-const bit<32> SFC_PAUSE_DURATION_SIZE = 1024;
 
-const bit<32> SFC_QUEUE_REG_STAGE_QD = 12;
-const bit<32> SFC_QUEUE_REG_STAGE_BP = 13;
-const bit<32> SFC_QUEUE_REG_STAGE_CNT = 13;
-
-
-const bit<32> sfc_suppression_filter_cnt = 2^10;
-
-const bit<32> SIGNALING_DETECT_TABLE_SIZE = 8;
-
-# 1 "/mnt/p4c-3087/p4src/shared/headers.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -115,7 +104,6 @@ header vlan_tag_h {
 
 header pfc_h {
     bit<16> opcode;
-    bit<8> reserved_zero;
     bit<8> class_enable_vec;
     bit<16> tstamp0;
     bit<16> tstamp1;
@@ -125,8 +113,6 @@ header pfc_h {
     bit<16> tstamp5;
     bit<16> tstamp6;
     bit<16> tstamp7;
-    @padding
-    bit<208> pad;
 }
 
 header mpls_h {
@@ -221,7 +207,7 @@ header arp_h {
 
 // RDMA over Converged Ethernet (RoCEv2)
 header rocev2_bth_h {
-    bit<8> opcode;
+    bit<8> opcodee;
     bit<1> se;
     bit<1> migration_req;
     bit<2> pad_count;
@@ -233,7 +219,7 @@ header rocev2_bth_h {
     bit<24> dst_qp;
     bit<1> ack_req;
     bit<7> reserved2;
-    bit<24> psn;
+    // ...
 }
 
 // Fiber Channel over Ethernet (FCoE)
@@ -518,18 +504,6 @@ header fabric_h {
     bit<8> reserved2;
 }
 
-// SFC header
-// TODO: add header here
-header sfc_pause_h {
-    bit<8> version;
-    bit<8> pause_tc;
-    bit<16> pause_duration;
-    // TODO: padding to 64-byte packet
-    // Ethernet + IP + UDP + required fields = 14 + 20 + 8 + 4 = 46
-    @padding
-    bit<112> pad_0;
-}
-
 // CPU header
 header cpu_h {
     bit<1> tx_bypass;
@@ -565,8 +539,8 @@ header cpu_h {
 header timestamp_h {
     bit<48> timestamp;
 }
-# 137 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/types.p4" 1
+# 124 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -595,11 +569,9 @@ header timestamp_h {
 // ----------------------------------------------------------------------------
 // Common protocols/types
 //-----------------------------------------------------------------------------
-# 38 "/mnt/p4c-3087/p4src/shared/types.p4"
+# 38 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4"
 //#define ETHERTYPE_QINQ 0x88A8 // Note: uncomment once ptf/scapy-vxlan are fixed
-# 58 "/mnt/p4c-3087/p4src/shared/types.p4"
-// proshare-mc-2	1674, Intel Proshare Multicast
-# 73 "/mnt/p4c-3087/p4src/shared/types.p4"
+# 68 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4"
 // ----------------------------------------------------------------------------
 // Common table sizes
 //-----------------------------------------------------------------------------
@@ -631,7 +603,7 @@ typedef PortId_t switch_port_t;
 
 
 
-const switch_port_t SWITCH_PORT_INVALID = 9w0x1ff;
+const switch_port_t SWITCH_PORT_INVALID = (PortId_t)(0x1ff);
 typedef bit<7> switch_port_padding_t;
 
 
@@ -656,7 +628,7 @@ const switch_bd_t SWITCH_BD_DEFAULT_VRF = 4097; // bd allocated for default vrf
 
 
 
-typedef bit<8> switch_vrf_t;
+typedef bit<14> switch_vrf_t;
 
 
 
@@ -675,7 +647,7 @@ typedef bit<10> switch_user_metadata_t;
 
 
 typedef bit<32> switch_hash_t;
-# 157 "/mnt/p4c-3087/p4src/shared/types.p4"
+# 152 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4"
 typedef bit<16> switch_xid_t;
 typedef bit<9> switch_yid_t;
 
@@ -698,29 +670,9 @@ typedef bit<12> switch_stats_index_t;
 typedef bit<16> switch_cpu_reason_t;
 const switch_cpu_reason_t SWITCH_CPU_REASON_PTP = 8;
 
-typedef bit<8> switch_fib_label_t;
-
 struct switch_cpu_port_value_set_t {
     bit<16> ether_type;
     switch_port_t port;
-}
-
-enum bit<4> PortSpeed {
-    Unset = 0x0,
-    GbE_10 = 0x1,
-    GbE_25 = 0x2,
-    GbE_40 = 0x3,
-    GbE_50 = 0x4,
-    GbE_100 = 0x5,
-    GbE_200 = 0x6,
-    GbE_400 = 0x7,
-    GbE_800 = 0x8
-}
-
-enum bit<2> LinkToType {
-    Unknown = 0,
-    Switch = 1,
-    Server = 2
 }
 
 
@@ -920,8 +872,6 @@ struct switch_qos_metadata_t {
     switch_qid_t qid;
     switch_ingress_cos_t icos; // Ingress only.
     bit<19> qdepth; // Egress only.
-    PortSpeed port_speed; // Egress only
-    LinkToType link_to_type; // Egress only
     switch_etrap_index_t etrap_index;
     switch_pkt_color_t etrap_color;
     switch_tc_t etrap_tc;
@@ -979,15 +929,10 @@ const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_CE = 0b11; // Congestion encou
 
 // Mirroring ------------------------------------------------------------------
 typedef MirrorId_t switch_mirror_session_t; // Defined in tna.p4
-enum bit<1> MirrorIoSelect_t {
-    BeforeMau = 0,
-    AfterMau = 1
-}
 const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU = 250;
 
 // Using same mirror type for both Ingress/Egress to simplify the parser.
 typedef bit<8> switch_mirror_type_t;
-
 
 
 
@@ -1001,13 +946,11 @@ typedef bit<8> switch_mirror_type_t;
 
 
 // Common metadata used for mirroring.
-@flexible()
 struct switch_mirror_metadata_t {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     switch_mirror_session_t session_id;
     switch_mirror_meter_id_t meter_index;
-    PortId_t egress_port;
 }
 
 header switch_port_mirror_metadata_h {
@@ -1210,95 +1153,43 @@ typedef bit<32> const_t;
 
 
 
-
 // The value 0 is interpreted as "not set" and must only be used
 // for that purpose.
 // This applies to: sfc_queue_idx_t, sfc_buffer_pool_idx_t
 typedef bit<10> sfc_queue_idx_t;
 typedef bit<6> sfc_queue_idx_pad_16bit_t;
-typedef bit<2> sfc_buffer_pool_idx_t;
-typedef bit<6> sfc_buffer_pool_idx_pad_8bit_t;
+typedef bit<10> sfc_buffer_pool_idx_t;
 
-typedef bit<10> sfc_suppression_filter_idx_t;
-
-typedef bit<32> buffer_memory_t;
-//typedef bit<0> buffer_memory_pad_24bit_t;
+typedef bit<19> buffer_memory_t;
 typedef bit<11> tm_hw_queue_id_t;
 typedef bit<2> pipe_id_t;
-typedef bit<16> sfc_pause_duration_us_t;
 
-enum bit<3> SfcPacketType {
-    Unset = 0,
-    None = 1, // No SFC packet
-    Data = 2, // Normal SFC data packet, SFC is enabled
-    Trigger = 3, // SFC pause packet after mirroring, SFC is enabled
-    Signal = 4, // SFC pause packet after SFC pause packet construction, SFC is enabled
-    TcSignalEnabled = 5 // No SFC packet, but a packet on a SignalingEnabledTC
-}
-typedef bit<5> SfcPacketType_pad_8bit_t;
-
-struct sfc_qd_threshold_register_t {
-    bit<32> queue_depth;
-    bit<32> threshold;
-}
-
-struct sfc_pause_epoch_register_t {
-    bit<32> current_epoch_start;
-    bit<32> bank_idx_changed;
-}
-
-// Metadata for SFC used in ghost thread
+@flexible
 struct ghost_metadata_t {
     ping_pong_t ping_pong;
     pipe_id_t pipe_id;
     tm_hw_queue_id_t qid;
     buffer_memory_t qlength;
     sfc_queue_idx_t queue_register_idx;
+    sfc_buffer_pool_idx_t buffer_pool_idx;
 }
 
-// Metadata for SFC used in ingress thread
-struct switch_sfc_ingress_metadata_t {
+@flexible
+struct switch_sfc_metadata_t {
     bit<1> enable;
     ping_pong_t ping_pong;
-    SfcPacketType type;
     sfc_queue_idx_t queue_register_idx;
+    sfc_buffer_pool_idx_t buffer_pool_idx;
     buffer_memory_t qlength;
+    buffer_memory_t buffer_pool_usage;
     bit<32> ghost_pkt_cnt_queue;
     bit<32> ghost_pkt_cnt_total;
-    bit<32> suppression_epoch_duration;
-    buffer_memory_t qlength_threshold;
-    MirrorId_t signaling_mirror_session_id;
-    PortId_t signaling_mirror_egress_port;
 }
 
 @flexible
 struct switch_bridged_metadata_sfc_extension_t {
-    SfcPacketType type;
-    SfcPacketType_pad_8bit_t _pad0;
     sfc_queue_idx_t queue_register_idx;
-    buffer_memory_t qlength_threshold;
-}
-
-// Metadata for SFC used in egress thread
-@flexible
-struct switch_sfc_egress_metadata_t {
-    SfcPacketType type;
-    sfc_queue_idx_t queue_register_idx;
-    buffer_memory_t qlength_threshold;
-    PortSpeed egress_port_speed;
-    buffer_memory_t q_drain_lengths;
-    switch_tc_t pause_tc;
-    sfc_pause_duration_us_t pause_duration_us;
-}
-
-header switch_sfc_pause_mirror_metadata_h {
-    switch_pkt_src_t src;
-    switch_mirror_type_t type;
-    bit<48> timestamp;
-    sfc_queue_idx_t queue_register_idx;
-    sfc_queue_idx_pad_16bit_t _pad1;
-    buffer_memory_t qlength_threshold;
-    switch_tc_t pause_tc;
+    sfc_buffer_pool_idx_t buffer_pool_idx;
 }
 
 //-----------------------------------------------------------------------------
@@ -1451,10 +1342,8 @@ struct switch_bridged_metadata_acl_extension_t {
 struct switch_bridged_metadata_tunnel_extension_t {
     switch_tunnel_index_t index;
     switch_outer_nexthop_t outer_nexthop;
-
-
-
-
+    bit<16> hash;
+    switch_vrf_t vrf;
     bool terminate;
 }
 
@@ -1490,7 +1379,13 @@ struct switch_bridged_metadata_tunnel_extension_t {
 @pa_no_overlay("egress", "hdr.dtel_report.queue_id")
 @pa_no_overlay("egress", "hdr.dtel_drop_report.drop_reason")
 @pa_no_overlay("egress", "hdr.dtel_drop_report.reserved")
-# 980 "/mnt/p4c-3087/p4src/shared/types.p4"
+@pa_no_overlay("egress", "hdr.dtel_metadata_1.ingress_port")
+@pa_no_overlay("egress", "hdr.dtel_metadata_1.egress_port")
+@pa_no_overlay("egress", "hdr.dtel_metadata_3.queue_id")
+/* CODE_HACK Workaround for P4C-3064 */
+@pa_no_overlay("egress", "hdr.dtel_metadata_4.ingress_timestamp")
+@pa_no_overlay("egress", "hdr.dtel_metadata_5.egress_timestamp")
+@pa_no_overlay("egress", "hdr.dtel_metadata_3.queue_occupancy")
 @pa_no_overlay("egress", "hdr.dtel_switch_local_report.queue_occupancy")
 
 
@@ -1532,7 +1427,6 @@ struct switch_port_metadata_t {
 @pa_alias("ingress", "ig_md.qos.qid", "ig_intr_md_for_tm.qid")
 @pa_alias("ingress", "ig_md.qos.icos", "ig_intr_md_for_tm.ingress_cos")
 @pa_alias("ingress", "ig_intr_md_for_dprsr.mirror_type", "ig_md.mirror.type")
-@pa_container_size("ingress", "ig_md.egress_port_lag_index", 16)
 // Ingress metadata
 struct switch_ingress_metadata_t {
     switch_port_t port; /* ingress port */
@@ -1549,7 +1443,6 @@ struct switch_ingress_metadata_t {
 
     bit<48> timestamp;
     switch_hash_t hash;
-    switch_hash_t lag_hash;
 
     switch_ingress_flags_t flags;
     switch_ingress_checks_t checks;
@@ -1577,7 +1470,7 @@ struct switch_ingress_metadata_t {
     switch_mirror_metadata_t mirror;
     switch_dtel_metadata_t dtel;
 
-    switch_sfc_ingress_metadata_t sfc;
+    switch_sfc_metadata_t sfc;
 
     mac_addr_t same_mac;
 
@@ -1586,9 +1479,6 @@ struct switch_ingress_metadata_t {
 
 
 
-    bit<10> partition_key;
-    bit<12> partition_index;
-    switch_fib_label_t fib_label;
 }
 
 // Egress metadata
@@ -1638,9 +1528,6 @@ struct switch_egress_metadata_t {
     switch_tunnel_metadata_t tunnel;
     switch_mirror_metadata_t mirror;
     switch_dtel_metadata_t dtel;
-
-    switch_sfc_egress_metadata_t sfc;
-
     switch_sflow_metadata_t sflow;
 
     switch_cpu_reason_t cpu_reason;
@@ -1649,7 +1536,6 @@ struct switch_egress_metadata_t {
 
 
 
-    bool inner_ipv4_checksum_update_en;
 }
 
 // Header format for mirrored metadata fields
@@ -1680,16 +1566,13 @@ struct switch_header_t {
     icmp_h icmp;
     igmp_h igmp;
     tcp_h tcp;
-# 1178 "/mnt/p4c-3087/p4src/shared/types.p4"
+# 1079 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4"
     dtel_report_v05_h dtel;
     dtel_report_base_h dtel_report;
     dtel_switch_local_report_h dtel_switch_local_report;
     dtel_drop_report_h dtel_drop_report;
 
     rocev2_bth_h rocev2_bth;
-
-    sfc_pause_h sfc_pause;
-
     vxlan_h vxlan;
     gre_h gre;
     nvgre_h nvgre;
@@ -1705,8 +1588,8 @@ struct switch_header_t {
     tcp_h inner_tcp;
     icmp_h inner_icmp;
 }
-# 138 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/util.p4" 1
+# 125 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/util.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1729,7 +1612,7 @@ struct switch_header_t {
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c-3087/p4src/shared/types.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1751,10 +1634,10 @@ struct switch_header_t {
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 24 "/mnt/p4c-3087/p4src/shared/util.p4" 2
+# 24 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/util.p4" 2
 
 // Flow hash calculation.
-# 77 "/mnt/p4c-3087/p4src/shared/util.p4"
+# 77 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/util.p4"
 control Ipv4Hash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
     Hash<bit<32>>(HashAlgorithm_t.CRC32) ipv4_hash;
     apply {
@@ -1775,33 +1658,10 @@ control Ipv6Hash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
                                     lkp.l4_src_port});
     }
 }
-control NonIpHash(in switch_ingress_metadata_t ig_md, out switch_hash_t hash) {
+control NonIpHash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
     Hash<bit<32>>(HashAlgorithm_t.CRC32) non_ip_hash;
     apply {
-        hash [31:0] = non_ip_hash.get({ig_md.port,
-                                       ig_md.lkp.mac_type,
-                                       ig_md.lkp.mac_src_addr,
-                                       ig_md.lkp.mac_dst_addr});
-    }
-}
-control Lagv4Hash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
-    Hash<bit<32>>(HashAlgorithm_t.CRC32) lag_hash;
-    apply {
-        hash[31:0] = lag_hash.get({lkp.ip_src_addr [31:0],
-                                   lkp.ip_dst_addr [31:0],
-                                   lkp.ip_proto,
-                                   lkp.l4_dst_port,
-                                   lkp.l4_src_port});
-    }
-}
-control Lagv6Hash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
-    Hash<bit<32>>(HashAlgorithm_t.CRC32) lag_hash;
-    apply {
-        hash[31:0] = lag_hash.get({lkp.ip_src_addr,
-                                   lkp.ip_dst_addr,
-                                   lkp.ip_proto,
-                                   lkp.l4_dst_port,
-                                   lkp.l4_src_port});
+        hash[31:0] = non_ip_hash.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
     }
 }
 
@@ -1841,18 +1701,16 @@ action add_bridged_md(
 
                       ig_md.l4_src_port_label,
                       ig_md.l4_dst_port_label};
-# 179 "/mnt/p4c-3087/p4src/shared/util.p4"
+# 154 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/util.p4"
     bridged_md.dtel = {ig_md.dtel.report_type,
                        ig_md.dtel.session_id,
-                       ig_md.lag_hash,
+                       ig_md.hash,
                        ig_md.egress_port};
 
 
 
-    bridged_md.sfc = {ig_md.sfc.type,
-                      (SfcPacketType_pad_8bit_t)0,
-                      ig_md.sfc.queue_register_idx,
-                      ig_md.sfc.qlength_threshold};
+    bridged_md.sfc = {ig_md.sfc.queue_register_idx,
+                      ig_md.sfc.buffer_pool_idx};
 
 }
 
@@ -1862,7 +1720,7 @@ action set_ig_intr_md(in switch_ingress_metadata_t ig_md,
     ig_intr_md_for_tm.mcast_grp_b = ig_md.multicast.id;
 // Set PRE hash values
 //  ig_intr_md_for_tm.level1_mcast_hash = ig_md.hash[12:0];
-    ig_intr_md_for_tm.level2_mcast_hash = ig_md.lag_hash[28:16];
+    ig_intr_md_for_tm.level2_mcast_hash = ig_md.hash[28:16];
 
 //    ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
 
@@ -1890,9 +1748,9 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
 
 
 }
-# 139 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 126 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
 
-# 1 "/mnt/p4c-3087/p4src/shared/l3.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l3.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1915,7 +1773,7 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c-3087/p4src/shared/acl.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1944,18 +1802,18 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
 //-----------------------------------------------------------------------------
 // Common Ingress ACL match keys and Actions
 //-----------------------------------------------------------------------------
-# 63 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 63 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
 //-----------------------------------------------------------------------------
 // Common Egress ACL match keys and Actions
 //-----------------------------------------------------------------------------
-# 136 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 136 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
 //-----------------------------------------------------------------------------
 // Common Ingress ACL actions.
 //-----------------------------------------------------------------------------
-# 208 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 208 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
 // Common Egress ACL actions.
 //-----------------------------------------------------------------------------
-# 239 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 240 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
 //-----------------------------------------------------------------------------
 // Ingress Shared IP ACL
 //-----------------------------------------------------------------------------
@@ -1975,9 +1833,6 @@ control IngressIpAcl(inout switch_ingress_metadata_t ig_md,
 
 
 
-
-
-
             ig_md.port_lag_label : ternary;
 
         }
@@ -1992,7 +1847,12 @@ control IngressIpAcl(inout switch_ingress_metadata_t ig_md,
 
 
             mirror;
-# 283 "/mnt/p4c-3087/p4src/shared/acl.p4"
+
+
+
+
+
+            set_dtel_report_type;
             no_action;
         }
 
@@ -2039,9 +1899,14 @@ control IngressIpv4Acl(inout switch_ingress_metadata_t ig_md,
         actions = {
             deny;
             permit;
-# 338 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 334 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
             mirror;
-# 347 "/mnt/p4c-3087/p4src/shared/acl.p4"
+
+
+
+
+
+            set_dtel_report_type;
             no_action;
         }
 
@@ -2095,7 +1960,12 @@ control IngressIpv6Acl(inout switch_ingress_metadata_t ig_md,
 
 
             mirror;
-# 408 "/mnt/p4c-3087/p4src/shared/acl.p4"
+
+
+
+
+
+            set_dtel_report_type;
             no_action;
         }
 
@@ -2137,7 +2007,12 @@ control IngressMacAcl(inout switch_ingress_metadata_t ig_md,
 
 
             mirror;
-# 457 "/mnt/p4c-3087/p4src/shared/acl.p4"
+
+
+
+
+
+            set_dtel_report_type;
             no_action;
         }
 
@@ -2211,6 +2086,20 @@ control IngressIpDtelSampleAcl(inout switch_ingress_metadata_t ig_md,
         }
 
         actions = {
+            deny;
+            permit;
+
+
+
+
+
+
+            mirror;
+
+
+
+
+
             set_dtel_report_type;
 
 
@@ -2364,7 +2253,7 @@ control IngressSystemAcl(
 
 
     }
-# 693 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 697 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
     action redirect_to_cpu(switch_cpu_reason_t reason_code,
                            switch_qid_t qid,
                            switch_copp_meter_id_t meter_id,
@@ -2372,7 +2261,7 @@ control IngressSystemAcl(
         ig_intr_md_for_dprsr.drop_ctl = 0b1;
         copy_to_cpu(reason_code, qid, meter_id, disable_learning);
     }
-# 711 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 715 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
     table system_acl {
         key = {
             ig_md.port_lag_label : ternary;
@@ -2414,14 +2303,18 @@ control IngressSystemAcl(
 
 
             ig_md.checks.same_if : ternary;
-# 760 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 764 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
             ig_md.flags.pfc_wd_drop : ternary;
 
             ig_md.ipv4.unicast_enable : ternary;
             ig_md.ipv6.unicast_enable : ternary;
-# 775 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 779 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
             ig_md.drop_reason : ternary;
-# 784 "/mnt/p4c-3087/p4src/shared/acl.p4"
+
+
+
+
+
         }
 
         actions = {
@@ -2505,7 +2398,7 @@ control EgressMacAcl(in switch_header_t hdr,
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
 
-    action no_action() { stats.count(); } action deny() { eg_md.flags.acl_deny = true; stats.count(); } action permit() { eg_md.flags.acl_deny = false; stats.count(); } action set_meter(switch_meter_index_t index) { eg_md.qos.acl_meter_index = index; stats.count(); } action mirror(switch_mirror_meter_id_t meter_index, switch_mirror_session_t session_id) { eg_md.mirror.type = 1; eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS; eg_md.mirror.session_id = session_id; eg_md.mirror.meter_index = meter_index; stats.count(); }
+    action no_action() { stats.count(); } action deny() { eg_md.flags.acl_deny = true; stats.count(); } action permit() { eg_md.flags.acl_deny = false; stats.count(); } action set_meter( switch_meter_index_t index) { eg_md.qos.acl_meter_index = index; stats.count(); } action mirror( switch_mirror_meter_id_t meter_index, switch_mirror_session_t session_id) { eg_md.mirror.type = 1; eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS; eg_md.mirror.session_id = session_id; eg_md.mirror.meter_index = meter_index; stats.count(); }
 
     table acl {
         key = {
@@ -2537,7 +2430,7 @@ control EgressIpv4Acl(in switch_header_t hdr,
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
 
-    action no_action() { stats.count(); } action deny() { eg_md.flags.acl_deny = true; stats.count(); } action permit() { eg_md.flags.acl_deny = false; stats.count(); } action set_meter(switch_meter_index_t index) { eg_md.qos.acl_meter_index = index; stats.count(); } action mirror(switch_mirror_meter_id_t meter_index, switch_mirror_session_t session_id) { eg_md.mirror.type = 1; eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS; eg_md.mirror.session_id = session_id; eg_md.mirror.meter_index = meter_index; stats.count(); }
+    action no_action() { stats.count(); } action deny() { eg_md.flags.acl_deny = true; stats.count(); } action permit() { eg_md.flags.acl_deny = false; stats.count(); } action set_meter( switch_meter_index_t index) { eg_md.qos.acl_meter_index = index; stats.count(); } action mirror( switch_mirror_meter_id_t meter_index, switch_mirror_session_t session_id) { eg_md.mirror.type = 1; eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS; eg_md.mirror.session_id = session_id; eg_md.mirror.meter_index = meter_index; stats.count(); }
 
     table acl {
         key = {
@@ -2572,7 +2465,7 @@ control EgressIpv6Acl(in switch_header_t hdr,
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
 
-    action no_action() { stats.count(); } action deny() { eg_md.flags.acl_deny = true; stats.count(); } action permit() { eg_md.flags.acl_deny = false; stats.count(); } action set_meter(switch_meter_index_t index) { eg_md.qos.acl_meter_index = index; stats.count(); } action mirror(switch_mirror_meter_id_t meter_index, switch_mirror_session_t session_id) { eg_md.mirror.type = 1; eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS; eg_md.mirror.session_id = session_id; eg_md.mirror.meter_index = meter_index; stats.count(); }
+    action no_action() { stats.count(); } action deny() { eg_md.flags.acl_deny = true; stats.count(); } action permit() { eg_md.flags.acl_deny = false; stats.count(); } action set_meter( switch_meter_index_t index) { eg_md.qos.acl_meter_index = index; stats.count(); } action mirror( switch_mirror_meter_id_t meter_index, switch_mirror_session_t session_id) { eg_md.mirror.type = 1; eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS; eg_md.mirror.session_id = session_id; eg_md.mirror.meter_index = meter_index; stats.count(); }
 
     table acl {
         key = {
@@ -2625,7 +2518,6 @@ control EgressSystemAcl(
         eg_md.mirror.type = 0;
     }
 
-
     action copy_to_cpu(switch_cpu_reason_t reason_code,
                        switch_copp_meter_id_t meter_id) {
         eg_md.cpu_reason = reason_code;
@@ -2642,7 +2534,6 @@ control EgressSystemAcl(
         copy_to_cpu(reason_code, meter_id);
         eg_intr_md_for_dprsr.drop_ctl = 0x1;
     }
-
 
     action insert_timestamp() {
 
@@ -2670,17 +2561,15 @@ control EgressSystemAcl(
 
 
             eg_md.flags.pfc_wd_drop : ternary;
-# 1042 "/mnt/p4c-3087/p4src/shared/acl.p4"
+# 1041 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4"
             //TODO add more
         }
 
         actions = {
             NoAction;
             drop;
-
             copy_to_cpu;
             redirect_to_cpu;
-
             insert_timestamp;
         }
 
@@ -2741,13 +2630,11 @@ control EgressSystemAcl(
                 default: {}
             }
         }
-
         drop_stats.apply();
-
     }
 }
-# 24 "/mnt/p4c-3087/p4src/shared/l3.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/l2.p4" 1
+# 24 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l3.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -2820,7 +2707,7 @@ control IngressSTP(in switch_ingress_metadata_t ig_md,
     }
 
     apply {
-# 86 "/mnt/p4c-3087/p4src/shared/l2.p4"
+# 86 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l2.p4"
     }
 }
 
@@ -2843,7 +2730,7 @@ control EgressSTP(in switch_egress_metadata_t eg_md, in switch_port_t port, out 
     };
 
     apply {
-# 117 "/mnt/p4c-3087/p4src/shared/l2.p4"
+# 117 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l2.p4"
     }
 }
 
@@ -2957,8 +2844,6 @@ control DMAC(
         ig_md.nexthop = nexthop_index;
     }
 
-    /* CODE_HACK: P4C-3103 */
-    @pack(2)
     table dmac {
         key = {
             ig_md.bd : exact;
@@ -3140,7 +3025,7 @@ control VlanXlate(inout switch_header_t hdr,
     }
 
     action set_double_tagged(vlan_id_t vid0, vlan_id_t vid1) {
-# 426 "/mnt/p4c-3087/p4src/shared/l2.p4"
+# 424 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l2.p4"
    }
 
     action set_vlan_tagged(vlan_id_t vid) {
@@ -3222,7 +3107,7 @@ control VlanXlate(inout switch_header_t hdr,
         }
     }
 }
-# 25 "/mnt/p4c-3087/p4src/shared/l3.p4" 2
+# 25 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l3.p4" 2
 
 //-----------------------------------------------------------------------------
 // FIB lookup
@@ -3234,35 +3119,35 @@ control VlanXlate(inout switch_header_t hdr,
 // @param host_table_size : Size of the host table.
 // @param lpm_table_size : Size of the IPv4 route table.
 //-----------------------------------------------------------------------------
-control Fib(inout switch_ingress_metadata_t ig_md)(
+control Fib(in ipv4_addr_t dst_addr,
+            in switch_vrf_t vrf,
+            out switch_ingress_flags_t flags,
+            out switch_nexthop_t nexthop)(
             switch_uint32_t host_table_size,
             switch_uint32_t lpm_table_size,
             bool local_host_enable=false,
             switch_uint32_t local_host_table_size=1024) {
-    action fib_hit(switch_nexthop_t nexthop_index, switch_fib_label_t fib_label) {
-        ig_md.nexthop = nexthop_index;
-
-
-
-        ig_md.flags.routed = true;
+    action fib_hit(switch_nexthop_t nexthop_index) {
+        nexthop = nexthop_index;
+        flags.routed = true;
     }
 
     action fib_miss() {
-        ig_md.flags.routed = false;
+        flags.routed = false;
     }
 
     action fib_myip_subnet() {
-        ig_md.flags.myip = SWITCH_MYIP_SUBNET;
+        flags.myip = SWITCH_MYIP_SUBNET;
     }
 
     action fib_myip() {
-        ig_md.flags.myip = SWITCH_MYIP;
+        flags.myip = SWITCH_MYIP;
     }
 
     table fib {
         key = {
-            ig_md.vrf : exact;
-            ig_md.lkp.ip_dst_addr[31:0] : exact;
+            vrf : exact;
+            dst_addr : exact;
         }
 
         actions = {
@@ -3277,8 +3162,8 @@ control Fib(inout switch_ingress_metadata_t ig_md)(
 
     table fib_local_host {
         key = {
-            ig_md.vrf : exact;
-            ig_md.lkp.ip_dst_addr[31:0] : exact;
+            vrf : exact;
+            dst_addr : exact;
         }
 
         actions = {
@@ -3291,11 +3176,13 @@ control Fib(inout switch_ingress_metadata_t ig_md)(
         size = local_host_table_size;
     }
 
-    Alpm(number_partitions = 2048, subtrees_per_partition = 2) algo_lpm;
+    @alpm(1)
+    @alpm_partitions(2048)
+    @alpm_subtrees_per_partition(2)
     table fib_lpm {
         key = {
-            ig_md.vrf : exact;
-            ig_md.lkp.ip_dst_addr[31:0] : lpm;
+            vrf : exact;
+            dst_addr : lpm;
         }
 
         actions = {
@@ -3307,7 +3194,6 @@ control Fib(inout switch_ingress_metadata_t ig_md)(
 
         const default_action = fib_miss;
         size = lpm_table_size;
-        alpm = algo_lpm;
     }
 
     apply {
@@ -3325,35 +3211,34 @@ control Fib(inout switch_ingress_metadata_t ig_md)(
     }
 }
 
-control Fibv6(inout switch_ingress_metadata_t ig_md)(
+control Fibv6(in ipv6_addr_t dst_addr,
+              in switch_vrf_t vrf,
+              out switch_ingress_flags_t flags,
+              out switch_nexthop_t nexthop)(
               switch_uint32_t host_table_size,
               switch_uint32_t lpm_table_size,
               switch_uint32_t lpm64_table_size=1024) {
-
-    action fib_hit(switch_nexthop_t nexthop_index, switch_fib_label_t fib_label) {
-        ig_md.nexthop = nexthop_index;
-
-
-
-        ig_md.flags.routed = true;
+    action fib_hit(switch_nexthop_t nexthop_index) {
+        nexthop = nexthop_index;
+        flags.routed = true;
     }
 
     action fib_miss() {
-        ig_md.flags.routed = false;
+        flags.routed = false;
     }
 
     action fib_myip_subnet() {
-        ig_md.flags.myip = SWITCH_MYIP_SUBNET;
+        flags.myip = SWITCH_MYIP_SUBNET;
     }
 
     action fib_myip() {
-        ig_md.flags.myip = SWITCH_MYIP;
+        flags.myip = SWITCH_MYIP;
     }
 
     table fib {
         key = {
-            ig_md.vrf : exact;
-            ig_md.lkp.ip_dst_addr : exact;
+            vrf : exact;
+            dst_addr : exact;
         }
 
         actions = {
@@ -3368,14 +3253,18 @@ control Fibv6(inout switch_ingress_metadata_t ig_md)(
 
 
 
-    Alpm(number_partitions = 1024, subtrees_per_partition = 1) algo_lpm1;
+    @alpm(1)
+    @alpm_partitions(1024)
+    @alpm_subtrees_per_partition(1)
+
+
 
 
 
     table fib_lpm {
         key = {
-            ig_md.vrf : exact;
-            ig_md.lkp.ip_dst_addr : lpm;
+            vrf : exact;
+            dst_addr : lpm;
         }
 
         actions = {
@@ -3387,14 +3276,15 @@ control Fibv6(inout switch_ingress_metadata_t ig_md)(
 
         const default_action = fib_miss;
         size = lpm_table_size;
-        alpm = algo_lpm1;
     }
-# 213 "/mnt/p4c-3087/p4src/shared/l3.p4"
-    Alpm(number_partitions = 2048, subtrees_per_partition = 2) algo_lpm2;
+# 216 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l3.p4"
+    @alpm(1)
+    @alpm_partitions(2048)
+    @alpm_subtrees_per_partition(2)
     table fib_lpm64 {
         key = {
-            ig_md.vrf : exact;
-            ig_md.lkp.ip_dst_addr[127:64] : lpm;
+            vrf : exact;
+            dst_addr[127:64] : lpm;
         }
 
         actions = {
@@ -3406,7 +3296,6 @@ control Fibv6(inout switch_ingress_metadata_t ig_md)(
 
         const default_action = fib_miss;
         size = lpm64_table_size;
-        alpm = algo_lpm2;
     }
 
 
@@ -3473,7 +3362,7 @@ control MTU(in switch_header_t hdr,
 // key: destination MAC address.
 // - Route the packet if the destination MAC address is owned by the switch.
 //-----------------------------------------------------------------------------
-# 322 "/mnt/p4c-3087/p4src/shared/l3.p4"
+# 326 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l3.p4"
 //-----------------------------------------------------------------------------
 // @param lkp : Lookup fields used to perform L2/L3 lookups.
 // @param ig_md : Ingress metadata fields.
@@ -3502,10 +3391,16 @@ control IngressUnicast(in switch_lookup_fields_t lkp,
             if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_L3 != 0)) {
                 if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6.unicast_enable) {
 
-                    ipv6_fib.apply(ig_md);
+                    ipv6_fib.apply(lkp.ip_dst_addr,
+                                   ig_md.vrf,
+                                   ig_md.flags,
+                                   ig_md.nexthop);
                 } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4.unicast_enable) {
 
-                    ipv4_fib.apply(ig_md);
+                    ipv4_fib.apply(lkp.ip_dst_addr[31:0],
+                                   ig_md.vrf,
+                                   ig_md.flags,
+                                   ig_md.nexthop);
                 } else {
                     // Non-ip packets with router MAC address will be dropped by system ACL.
                 }
@@ -3515,8 +3410,8 @@ control IngressUnicast(in switch_lookup_fields_t lkp,
         }
     }
 }
-# 141 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/nexthop.p4" 1
+# 128 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/nexthop.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3736,8 +3631,8 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
 
     }
 }
-# 142 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/parde.p4" 1
+# 129 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3758,7 +3653,7 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c-3087/p4src/shared/headers.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3784,8 +3679,8 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
 //-----------------------------------------------------------------------------
 // Protocol Header Definitions
 //-----------------------------------------------------------------------------
-# 22 "/mnt/p4c-3087/p4src/shared/parde.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/types.p4" 1
+# 22 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3807,7 +3702,7 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 23 "/mnt/p4c-3087/p4src/shared/parde.p4" 2
+# 23 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4" 2
 
 //-----------------------------------------------------------------------------
 // Segment routing extension header parser
@@ -3990,8 +3885,8 @@ parser SwitchIngressParser(
         transition select(hdr.gre.C, hdr.gre.R, hdr.gre.K, hdr.gre.S, hdr.gre.s,
                           hdr.gre.recurse, hdr.gre.flags, hdr.gre.version, hdr.gre.proto) {
             (0, 0, 1, 0, 0, 0, 0, 0, 0x6558) : parse_nvgre;
-            default : accept;
-        }
+         default : accept;
+     }
     }
 
     state parse_udp {
@@ -4004,8 +3899,8 @@ parser SwitchIngressParser(
         transition select(hdr.udp.dst_port) {
             udp_port_vxlan : parse_vxlan;
             4791 : parse_rocev2;
-            default : accept;
-        }
+         default : accept;
+     }
     }
 
     state parse_tcp {
@@ -4030,7 +3925,7 @@ parser SwitchIngressParser(
 
     state parse_rocev2 {
 
-        pkt.extract(hdr.rocev2_bth);
+
 
         transition accept;
     }
@@ -4101,13 +3996,9 @@ parser SwitchIngressParser(
     }
 
     state parse_inner_ipv6 {
-        pkt.extract(hdr.inner_ipv6);
-        transition select(hdr.inner_ipv6.next_hdr) {
-            58 : parse_inner_icmp;
-            6 : parse_inner_tcp;
-            17 : parse_inner_udp;
-            default : accept;
-        }
+# 325 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
+        transition accept;
+
     }
 
     state parse_inner_udp {
@@ -4160,7 +4051,6 @@ parser SwitchEgressParser(
             (_, _, 1) : parse_port_mirrored_metadata;
             (_, SWITCH_PKT_SRC_CLONED_EGRESS, 2) : parse_cpu_mirrored_metadata;
             (_, SWITCH_PKT_SRC_CLONED_INGRESS, 3) : parse_dtel_drop_metadata_from_ingress;
-            (_, SWITCH_PKT_SRC_CLONED_INGRESS, 6) : parse_sfc_pause_metadata_from_ingress;
             (_, _, 3) : parse_dtel_drop_metadata_from_egress;
             (_, _, 4) : parse_dtel_switch_local_metadata;
             (_, _, 5) : parse_simple_mirrored_metadata;
@@ -4198,16 +4088,10 @@ parser SwitchEgressParser(
         eg_md.lkp.l4_src_port = hdr.bridged_md.acl.l4_src_port;
         eg_md.lkp.l4_dst_port = hdr.bridged_md.acl.l4_dst_port;
         eg_md.lkp.tcp_flags = hdr.bridged_md.acl.tcp_flags;
-# 429 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 430 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
         eg_md.dtel.report_type = hdr.bridged_md.dtel.report_type;
         eg_md.dtel.hash = hdr.bridged_md.dtel.hash;
         eg_md.dtel.session_id = hdr.bridged_md.dtel.session_id;
-
-
-
-        eg_md.sfc.type = hdr.bridged_md.sfc.type;
-        eg_md.sfc.queue_register_idx = hdr.bridged_md.sfc.queue_register_idx;
-        eg_md.sfc.qlength_threshold = hdr.bridged_md.sfc.qlength_threshold;
 
 
         transition parse_ethernet;
@@ -4226,7 +4110,7 @@ parser SwitchEgressParser(
         eg_md.dtel.session_id = 0;
         eg_md.mirror.session_id = hdr.bridged_md.dtel.session_id;
         eg_md.qos.qid = hdr.bridged_md.base.qid;
-# 471 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 466 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
         eg_md.ingress_timestamp = hdr.bridged_md.base.timestamp;
         hdr.dtel_report = {
             0,
@@ -4291,7 +4175,7 @@ parser SwitchEgressParser(
         // Initialize eg_md.dtel.session_id to prevent it from being marked @pa_no_init.
         eg_md.dtel.session_id = 0;
         eg_md.mirror.session_id = dtel_md.session_id;
-# 550 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 545 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
         eg_md.ingress_timestamp = dtel_md.timestamp;
         hdr.dtel_report = {
             0,
@@ -4323,7 +4207,7 @@ parser SwitchEgressParser(
         // Initialize eg_md.dtel.session_id to prevent it from being marked @pa_no_init.
         eg_md.dtel.session_id = 0;
         eg_md.mirror.session_id = dtel_md.session_id;
-# 596 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 591 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
         eg_md.ingress_timestamp = dtel_md.timestamp;
         hdr.dtel_report = {
             0,
@@ -4342,25 +4226,6 @@ parser SwitchEgressParser(
 
     }
 
-    state parse_sfc_pause_metadata_from_ingress {
-
-        switch_sfc_pause_mirror_metadata_h sfc_md;
-        pkt.extract(sfc_md);
-
-        eg_md.sfc = {
-            SfcPacketType.Trigger,
-            sfc_md.queue_register_idx,
-            sfc_md.qlength_threshold,
-            PortSpeed.Unset,
-            (buffer_memory_t)0,
-            sfc_md.pause_tc,
-            (sfc_pause_duration_us_t)0};
-
-        // The rest of the packet should follow here
-        transition parse_ethernet;
-
-    }
-
     state parse_dtel_switch_local_metadata {
 
         switch_dtel_switch_local_mirror_metadata_h dtel_md;
@@ -4372,7 +4237,7 @@ parser SwitchEgressParser(
         // Initialize eg_md.dtel.session_id to prevent it from being marked @pa_no_init.
         eg_md.dtel.session_id = 0;
         eg_md.mirror.session_id = dtel_md.session_id;
-# 666 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 642 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
         eg_md.ingress_timestamp = dtel_md.timestamp;
         hdr.dtel_report = {
             0,
@@ -4439,9 +4304,6 @@ parser SwitchEgressParser(
 
 
             (_, 6, _) : parse_ipv4_options;
-
-            (17, 5, 0) : parse_udp;
-
             default : accept;
         }
     }
@@ -4479,7 +4341,7 @@ parser SwitchEgressParser(
 
         pkt.extract(hdr.ipv6);
         transition select(hdr.ipv6.next_hdr) {
-# 780 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 753 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
             default : accept;
         }
 
@@ -4490,20 +4352,10 @@ parser SwitchEgressParser(
     state parse_udp {
         pkt.extract(hdr.udp);
         transition select(hdr.udp.dst_port) {
-              udp_port_vxlan : parse_vxlan;
-            1674 : egress_parse_sfc_pause;
-            default : accept;
-        }
+          udp_port_vxlan : parse_vxlan;
+         default : accept;
+     }
     }
-
-    state egress_parse_sfc_pause {
-
-        eg_md.sfc.type = SfcPacketType.Signal;
-        pkt.extract(hdr.sfc_pause);
-
-        transition accept;
-    }
-
 
     state parse_tcp {
         pkt.extract(hdr.tcp);
@@ -4538,12 +4390,9 @@ parser SwitchEgressParser(
     }
 
     state parse_inner_ipv6 {
-        pkt.extract(hdr.inner_ipv6);
-        transition select(hdr.inner_ipv6.next_hdr) {
-            // IP_PROTOCOLS_TCP : parse_inner_tcp;
-            17 : parse_inner_udp;
-            default : accept;
-        }
+# 809 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
+        transition accept;
+
     }
 
     state parse_inner_udp {
@@ -4597,7 +4446,7 @@ control IngressMirror(
 
 
                 ig_md.dtel.session_id,
-                ig_md.lag_hash,
+                ig_md.hash,
                 ig_md.dtel.report_type,
                 0,
                 ig_md.port,
@@ -4606,19 +4455,6 @@ control IngressMirror(
                 0,
                 ig_md.qos.qid,
                 ig_md.drop_reason
-            });
-
-
-        } else if (ig_intr_md_for_dprsr.mirror_type == 6) {
-
-            mirror.emit<switch_sfc_pause_mirror_metadata_h>(ig_md.sfc.signaling_mirror_session_id, {
-                ig_md.mirror.src,
-                ig_md.mirror.type,
-                ig_md.timestamp,
-                ig_md.sfc.queue_register_idx,
-                0,
-                ig_md.sfc.qlength_threshold,
-                ig_md.qos.tc
             });
 
 
@@ -4720,7 +4556,7 @@ control IngressNatChecksum(
     Checksum() tcp_checksum;
     Checksum() udp_checksum;
     apply {
-# 1037 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 991 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
     }
 }
 
@@ -4792,20 +4628,15 @@ control SwitchEgressDeparser(
 
     apply {
         mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);
-# 1144 "/mnt/p4c-3087/p4src/shared/parde.p4"
+# 1096 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/parde.p4"
         pkt.emit(hdr.ethernet);
-        pkt.emit(hdr.pfc); //egress only
         pkt.emit(hdr.fabric); // Egress only.
         pkt.emit(hdr.cpu); // Egress only.
         pkt.emit(hdr.timestamp); // Egress only.
         pkt.emit(hdr.vlan_tag);
         pkt.emit(hdr.ipv4);
-        pkt.emit(hdr.ipv4_option);
         pkt.emit(hdr.ipv6);
         pkt.emit(hdr.udp);
-
-        pkt.emit(hdr.sfc_pause);
-
         pkt.emit(hdr.dtel); // Egress only.
 
 
@@ -4830,8 +4661,8 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.inner_udp);
     }
 }
-# 143 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/port.p4" 1
+# 130 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/port.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4854,7 +4685,7 @@ control SwitchEgressDeparser(
  *
  ******************************************************************************/
 
-# 1 "/mnt/p4c-3087/p4src/shared/rewrite.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/rewrite.p4" 1
 
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -4881,7 +4712,7 @@ control SwitchEgressDeparser(
 
 
 
-# 1 "/mnt/p4c-3087/p4src/shared/l2.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/l2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4903,7 +4734,7 @@ control SwitchEgressDeparser(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 28 "/mnt/p4c-3087/p4src/shared/rewrite.p4" 2
+# 28 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/rewrite.p4" 2
 
 //-----------------------------------------------------------------------------
 // @param hdr : Parsed headers. For mirrored packet only Ethernet header is parsed.
@@ -5180,7 +5011,7 @@ control MirrorRewrite(inout switch_header_t hdr,
         hdr.ipv4.flags = 2;
 
         add_ethernet_header(smac, dmac, 0x0800);
-# 315 "/mnt/p4c-3087/p4src/shared/rewrite.p4"
+# 315 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/rewrite.p4"
         eg_intr_md_for_dprsr.mtu_trunc_len = (bit<14>)max_pkt_len;
 
 
@@ -5254,10 +5085,8 @@ control MirrorRewrite(inout switch_header_t hdr,
 
 
 
-
             rewrite_dtel_report_with_entropy;
             rewrite_dtel_report_without_entropy;
-
 
 
 
@@ -5282,7 +5111,7 @@ control MirrorRewrite(inout switch_header_t hdr,
         const entries = {
             //-14
             2 : adjust_length(0xFFF2);
-# 451 "/mnt/p4c-3087/p4src/shared/rewrite.p4"
+# 449 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/rewrite.p4"
             //-13
             1 : adjust_length(0xFFF3);
 
@@ -5414,7 +5243,7 @@ control Rewrite(inout switch_header_t hdr,
     table nexthop_rewrite {
         key = { eg_md.nexthop : exact; }
         actions = {
-# 592 "/mnt/p4c-3087/p4src/shared/rewrite.p4"
+# 590 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/rewrite.p4"
             rewrite_l3;
 
         }
@@ -5518,7 +5347,7 @@ control Rewrite(inout switch_header_t hdr,
         }
     }
 }
-# 24 "/mnt/p4c-3087/p4src/shared/port.p4" 2
+# 24 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/port.p4" 2
 
 //-----------------------------------------------------------------------------
 // Ingress port mirroring
@@ -5651,11 +5480,7 @@ control IngressPortMapping(
             set_cpu_port_properties;
         }
 
-
-
-
-        size = port_table_size;
-
+        size = port_table_size * 2;
     }
 
     action port_vlan_miss() {
@@ -5850,7 +5675,7 @@ control IngressPortMapping(
 
             }
         }
-# 367 "/mnt/p4c-3087/p4src/shared/port.p4"
+# 363 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/port.p4"
         // Check vlan membership
         if (hdr.vlan_tag[0].isValid() && !hdr.vlan_tag[1].isValid() && (bit<1>) ig_md.flags.port_vlan_miss == 0) {
             bit<32> pv_hash_ = hash.get({ig_md.port[6:0], hdr.vlan_tag[0].vid});
@@ -5875,9 +5700,10 @@ control IngressPortMapping(
 // ----------------------------------------------------------------------------
 
 control LAG(inout switch_ingress_metadata_t ig_md,
-            in switch_hash_t hash,
+            in bit<16> hash,
             out switch_port_t egress_port) {
 
+    bit<16> lag_hash;
 
 
 
@@ -5909,7 +5735,11 @@ control LAG(inout switch_ingress_metadata_t ig_md,
 
             ig_md.egress_port_lag_index : exact @name("port_lag_index");
 
-            hash : selector;
+
+
+
+            lag_hash : selector;
+
         }
 
         actions = {
@@ -5926,6 +5756,14 @@ control LAG(inout switch_ingress_metadata_t ig_md,
     }
 
     apply {
+        lag_hash = selector_hash.get({ig_md.lkp.mac_src_addr,
+                                      ig_md.lkp.mac_dst_addr,
+                                      ig_md.lkp.mac_type,
+                                      ig_md.lkp.ip_src_addr,
+                                      ig_md.lkp.ip_dst_addr,
+                                      ig_md.lkp.ip_proto,
+                                      ig_md.lkp.l4_dst_port,
+                                      ig_md.lkp.l4_src_port});
         lag.apply();
     }
 }
@@ -5950,20 +5788,12 @@ control EgressPortMapping(
     action port_normal(switch_port_lag_index_t port_lag_index,
                        switch_eg_port_lag_label_t port_lag_label,
                        switch_qos_group_t qos_group,
-
-                       PortSpeed port_speed,
-                       LinkToType link_to_type,
-
                        switch_meter_index_t meter_index,
                        switch_sflow_id_t sflow_session_id,
                        bool mlag_member) {
         eg_md.port_lag_index = port_lag_index;
         eg_md.port_lag_label = port_lag_label;
         eg_md.qos.group = qos_group;
-
-        eg_md.qos.port_speed = port_speed;
-        eg_md.qos.link_to_type = link_to_type;
-
         eg_md.flags.mlag_member = mlag_member;
 
 
@@ -6022,8 +5852,8 @@ control EgressPortMapping(
 
     }
 }
-# 144 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/validation.p4" 1
+# 131 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/validation.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6300,7 +6130,6 @@ control PktValidation(
             (false, false, false, true, false) : set_igmp_type();
             (false, false, false, false, true) : set_arp_opcode();
         }
-        size = 32;
     }
 
     apply {
@@ -6462,8 +6291,8 @@ control InnerPktValidation(
         validate_ethernet.apply();
     }
 }
-# 145 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/rewrite.p4" 1
+# 132 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/rewrite.p4" 1
 
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -6486,8 +6315,8 @@ control InnerPktValidation(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 146 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/multicast.p4" 1
+# 133 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/multicast.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6879,7 +6708,7 @@ control IngressMulticast(
     }
 
     apply {
-# 436 "/mnt/p4c-3087/p4src/shared/multicast.p4"
+# 436 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/multicast.p4"
     }
 }
 
@@ -6936,11 +6765,11 @@ control MulticastReplication(in switch_rid_t replication_id,
     }
 
     apply {
-# 501 "/mnt/p4c-3087/p4src/shared/multicast.p4"
+# 501 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/multicast.p4"
     }
 }
-# 147 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/qos.p4" 1
+# 134 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/qos.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6966,7 +6795,7 @@ control MulticastReplication(in switch_rid_t replication_id,
 
 
 
-# 1 "/mnt/p4c-3087/p4src/shared/acl.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6988,7 +6817,7 @@ control MulticastReplication(in switch_rid_t replication_id,
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 27 "/mnt/p4c-3087/p4src/shared/qos.p4" 2
+# 27 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/qos.p4" 2
 
 //-------------------------------------------------------------------------------------------------
 // ECN Access control list
@@ -7144,8 +6973,8 @@ control PfcEgress(inout switch_header_t hdr,
 //-------------------------------------------------------------------------------------------------
 control IngressQoSMap(inout switch_header_t hdr,
                       inout switch_ingress_metadata_t ig_md)(
-        switch_uint32_t dscp_map_size=2048,
-        switch_uint32_t pcp_map_size=256) {
+        switch_uint32_t dscp_map_size=8192,
+        switch_uint32_t pcp_map_size=4096) {
 
     action set_ingress_tc(switch_tc_t tc) {
         ig_md.qos.tc = tc;
@@ -7518,8 +7347,8 @@ control ETrap(inout switch_ingress_metadata_t ig_md) {
         etrap_state.apply();
     }
 }
-# 148 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/meter.p4" 1
+# 135 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/meter.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -7545,7 +7374,7 @@ control ETrap(inout switch_ingress_metadata_t ig_md) {
 
 
 
-# 1 "/mnt/p4c-3087/p4src/shared/acl.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -7567,7 +7396,7 @@ control ETrap(inout switch_ingress_metadata_t ig_md) {
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 27 "/mnt/p4c-3087/p4src/shared/meter.p4" 2
+# 27 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/meter.p4" 2
 
 //-------------------------------------------------------------------------------------------------
 // Storm Control
@@ -7705,10 +7534,8 @@ control IngressMirrorMeter(inout switch_ingress_metadata_t ig_md)(
     }
 
     apply {
-
-
-
-
+            meter_index.apply();
+            meter_action.apply();
     }
 }
 
@@ -7766,13 +7593,11 @@ control EgressMirrorMeter(inout switch_egress_metadata_t eg_md)(
     }
 
     apply {
-
-
-
-
+            meter_index.apply();
+            meter_action.apply();
     }
 }
-# 357 "/mnt/p4c-3087/p4src/shared/meter.p4"
+# 353 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/meter.p4"
 //-------------------------------------------------------------------------------------------------
 // Ingress ACL Meter
 //-------------------------------------------------------------------------------------------------
@@ -7832,8 +7657,8 @@ control IngressAclMeter(inout switch_ingress_metadata_t ig_md)(
             meter_action.apply();
     }
 }
-# 149 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/wred.p4" 1
+# 136 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/wred.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8000,8 +7825,8 @@ control WRED(inout switch_header_t hdr,
 
     }
 }
-# 150 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/acl.p4" 1
+# 137 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8023,8 +7848,8 @@ control WRED(inout switch_header_t hdr,
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 151 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/dtel.p4" 1
+# 138 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8434,7 +8259,7 @@ control DtelConfig(inout switch_header_t hdr,
     Register<bit<32>, switch_mirror_session_t>(1024) seq_number;
     RegisterAction<bit<32>, switch_mirror_session_t, bit<32>>(seq_number) get_seq_number = {
         void apply(inout bit<32> reg, out bit<32> rv) {
-# 420 "/mnt/p4c-3087/p4src/shared/dtel.p4"
+# 420 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4"
             reg = reg + 1;
 
             rv = reg;
@@ -8507,7 +8332,7 @@ control DtelConfig(inout switch_header_t hdr,
         hdr.dtel.hw_id = hw_id;
         hdr.dtel.switch_id = switch_id;
         hdr.dtel.d_q_f = (bit<3>) report_type;
-# 502 "/mnt/p4c-3087/p4src/shared/dtel.p4"
+# 502 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4"
         hdr.dtel.version = 0;
         hdr.dtel.next_proto = next_proto;
         hdr.dtel.reserved = 0;
@@ -8546,7 +8371,7 @@ control DtelConfig(inout switch_header_t hdr,
         hdr.dtel.hw_id = hw_id;
         hdr.dtel.switch_id = switch_id;
         hdr.dtel.d_q_f = (bit<3>) report_type;
-# 551 "/mnt/p4c-3087/p4src/shared/dtel.p4"
+# 551 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4"
         hdr.dtel.version = 0;
         hdr.dtel.next_proto = next_proto;
         hdr.dtel.reserved[14:13] = etrap_status; // etrap indication
@@ -8712,7 +8537,7 @@ control DtelConfig(inout switch_header_t hdr,
             hdr.dtel_drop_report.isValid() : ternary;
 
             eg_md.lkp.tcp_flags[2:0] : ternary;
-# 728 "/mnt/p4c-3087/p4src/shared/dtel.p4"
+# 728 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4"
         }
 
         actions = {
@@ -8723,7 +8548,7 @@ control DtelConfig(inout switch_header_t hdr,
             mirror_drop;
             mirror_drop_and_set_q_bit;
             update;
-# 765 "/mnt/p4c-3087/p4src/shared/dtel.p4"
+# 765 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4"
         }
 
         const default_action = NoAction;
@@ -8852,11 +8677,11 @@ control EgressDtel(inout switch_header_t hdr,
 
 
         drop_report.apply(hdr, eg_md, hash, eg_md.dtel.drop_report_flag);
-# 913 "/mnt/p4c-3087/p4src/shared/dtel.p4"
+# 913 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/dtel.p4"
     }
 }
-# 152 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/sfc_ghost.p4" 1
+# 139 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/sfc_ghost.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -8883,6 +8708,10 @@ control EgressDtel(inout switch_header_t hdr,
 // Constants
 // ---------------------------------------------------------------------------
 
+const const_t SFC_QUEUE_REG_STAGE_QD = 4;
+const const_t SFC_QUEUE_REG_STAGE_BP = 5;
+const const_t SFC_QUEUE_REG_STAGE_CNT = 6;
+
 const bit<1> ghost_total_cnt_idx = 1;
 
 const ping_pong_t ping_pong_ingress_read = 0;
@@ -8898,6 +8727,12 @@ const ping_pong_t ping_pong_ghost_write = 1;
 Register<bit<32>, sfc_queue_idx_t>(SFC_QUEUE_IDX_SIZE) sfc_reg_qd_ping;
 @stage(SFC_QUEUE_REG_STAGE_QD)
 Register<bit<32>, sfc_queue_idx_t>(SFC_QUEUE_IDX_SIZE) sfc_reg_qd_pong;
+
+// Ghost thread: buffer pool memory utilization
+@stage(SFC_QUEUE_REG_STAGE_BP)
+Register<bit<32>, sfc_buffer_pool_idx_t>(SFC_BUFFER_IDX_SIZE) sfc_reg_bpmu_ping;
+@stage(SFC_QUEUE_REG_STAGE_BP)
+Register<bit<32>, sfc_buffer_pool_idx_t>(SFC_BUFFER_IDX_SIZE) sfc_reg_bpmu_pong;
 
 // Ghost thread: per-queue message counter
 @stage(SFC_QUEUE_REG_STAGE_CNT)
@@ -8931,14 +8766,16 @@ control GhostThreadSfcInit(in ghost_intrinsic_metadata_t g_intr_md,
             (tm_hw_queue_id_t)g_intr_md.qid,
             // Restore lsb that was cut off in TM before reporting
             (buffer_memory_t)(g_intr_md.qlength ++ 1w0),
-            (sfc_queue_idx_t)0
-            };
+            (sfc_queue_idx_t)0,
+            (sfc_buffer_pool_idx_t)0};
     }
 
     // An idx of 0 means 'disable' and should only be used for
     // that purpose.
-    action set_register_q_bp_idx(sfc_queue_idx_t q_idx) {
+    action set_register_q_bp_idx(sfc_queue_idx_t q_idx,
+                                 sfc_buffer_pool_idx_t bp_idx) {
         g_md.queue_register_idx = q_idx;
+        g_md.buffer_pool_idx = bp_idx;
     }
 
     table ghost_set_register_idx_tbl {
@@ -8971,24 +8808,95 @@ control GhostThreadGhostWriteQueueBpUtilization(in ghost_metadata_t g_md) {
 
     // Ghost thread: queue depth value
     RegisterAction<bit<32>, sfc_queue_idx_t, int<32>>(sfc_reg_qd_ping) qd_write_ping = {
-        void apply(inout bit<32> value) {
+        void apply(inout bit<32> value, out int<32> rv) {
+            rv = ((int<32>)(bit<32>)g_md.qlength) - (int<32>)value;
+            // Turns out that even in the SALU, the instruction order is relevant, to not reorder!
             value = (bit<32>)g_md.qlength;
         }
     };
     RegisterAction<bit<32>, sfc_queue_idx_t, int<32>>(sfc_reg_qd_pong) qd_write_pong = {
-        void apply(inout bit<32> value) {
+        void apply(inout bit<32> value, out int<32> rv) {
+            rv = ((int<32>)(bit<32>)g_md.qlength) - (int<32>)value;
+            // Turns out that even in the SALU, the instruction order is relevant, to not reorder!
             value = (bit<32>)g_md.qlength;
         }
     };
 
+    action do_qd_write_ping() {
+        qd_delta = qd_write_ping.execute(g_md.queue_register_idx);
+    }
+    action do_qd_write_pong() {
+        qd_delta = qd_write_pong.execute(g_md.queue_register_idx);
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_QD)
+    table tbl_qd_write_ping {
+        key = { }
+        actions = {
+            do_qd_write_ping;
+        }
+        const default_action = do_qd_write_ping;
+        size = 1;
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_QD)
+    table tbl_qd_write_pong {
+        key = { }
+        actions = {
+            do_qd_write_pong;
+        }
+        const default_action = do_qd_write_pong;
+        size = 1;
+    }
+
+
+    // Ghost thread: track available memory per buffer pool
+    RegisterAction<bit<32>, sfc_buffer_pool_idx_t, bit<32>>(sfc_reg_bpmu_ping) bpmu_write_ping = {
+        void apply(inout bit<32> value) {
+            value = (bit<32>)((int<32>)value |+| qd_delta);
+        }
+    };
+    RegisterAction<bit<32>, sfc_buffer_pool_idx_t, bit<32>>(sfc_reg_bpmu_pong) bpmu_write_pong = {
+        void apply(inout bit<32> value) {
+            value = (bit<32>)((int<32>)value |+| qd_delta);
+        }
+    };
+
+    action do_bpmu_write_ping() {
+        bpmu_write_ping.execute(g_md.buffer_pool_idx);
+    }
+    action do_bpmu_write_pong() {
+        bpmu_write_pong.execute(g_md.buffer_pool_idx);
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_BP)
+    table tbl_bpmu_write_ping {
+        key = { }
+        actions = {
+            do_bpmu_write_ping;
+        }
+        const default_action = do_bpmu_write_ping;
+        size = 1;
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_BP)
+    table tbl_bpmu_write_pong {
+        key = { }
+        actions = {
+            do_bpmu_write_pong;
+        }
+        const default_action = do_bpmu_write_pong;
+        size = 1;
+    }
+
+
     apply {
-        @stage(SFC_QUEUE_REG_STAGE_QD)
-        {
-            if (g_md.ping_pong == ping_pong_ghost_write) {
-                qd_write_ping.execute(g_md.queue_register_idx);
-            } else {
-                qd_write_pong.execute(g_md.queue_register_idx);
-            }
+        if (g_md.ping_pong == ping_pong_ghost_write) {
+            tbl_qd_write_ping.apply();
+            tbl_bpmu_write_ping.apply();
+        } else {
+            tbl_qd_write_pong.apply();
+            tbl_bpmu_write_pong.apply();
         }
     }
 }
@@ -9002,63 +8910,171 @@ control GhostThreadGhostWriteQueueBpUtilization(in ghost_metadata_t g_md) {
 // @param g_md : The ghost meta data
 //-----------------------------------------------------------------------------
 control GhostThreadWriteGhostMessageCounter(in ghost_metadata_t g_md) {
-    // Ghost thread: message counter
-    RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_ping_ghost_cnt_reg) ping_ghost_cnt_write = {
+   // Ghost thread: message counter
+   RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_ping_ghost_cnt_reg) ping_ghost_cnt_write = {
        void apply(inout bit<32> value) { value = value + 1; } };
-    RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_pong_ghost_cnt_reg) pong_ghost_cnt_write = {
-       void apply(inout bit<32> value) { value = value + 1; } };
-
-    // Ghost thread: total message counter
-    RegisterAction<bit<32>, bit<1>, bit<32>>(sfc_ping_ghost_total_cnt_reg) ping_ghost_total_cnt_write = {
-       void apply(inout bit<32> value) { value = value + 1; } };
-    RegisterAction<bit<32>, bit<1>, bit<32>>(sfc_pong_ghost_total_cnt_reg) pong_ghost_total_cnt_write = {
+   RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_pong_ghost_cnt_reg) pong_ghost_cnt_write = {
        void apply(inout bit<32> value) { value = value + 1; } };
 
-    apply {
-        @stage(SFC_QUEUE_REG_STAGE_CNT)
-        {
-            if (g_md.ping_pong == ping_pong_ghost_write) {
-               ping_ghost_cnt_write.execute(g_md.queue_register_idx);
-               ping_ghost_total_cnt_write.execute(0);
-            } else {
-               pong_ghost_cnt_write.execute(g_md.queue_register_idx);
-               pong_ghost_total_cnt_write.execute(0);
-            }
-        }
-    }
+   action do_ping_ghost_cnt_write() {
+       ping_ghost_cnt_write.execute(g_md.queue_register_idx);
+   }
+   action do_pong_ghost_cnt_write() {
+       pong_ghost_cnt_write.execute(g_md.queue_register_idx);
+   }
+
+   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   table tbl_ping_ghost_cnt_write {
+       key = { }
+       actions = {
+           do_ping_ghost_cnt_write;
+       }
+       const default_action = do_ping_ghost_cnt_write;
+       size = 1;
+   }
+
+   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   table tbl_pong_ghost_cnt_write {
+       key = { }
+       actions = {
+           do_pong_ghost_cnt_write;
+       }
+       const default_action = do_pong_ghost_cnt_write;
+       size = 1;
+   }
+
+   // Ghost thread: total message counter
+   RegisterAction<bit<32>, bit<1>, bit<32>>(sfc_ping_ghost_total_cnt_reg) ping_ghost_total_cnt_write = {
+       void apply(inout bit<32> value) { value = value + 1; } };
+   RegisterAction<bit<32>, bit<1>, bit<32>>(sfc_pong_ghost_total_cnt_reg) pong_ghost_total_cnt_write = {
+       void apply(inout bit<32> value) { value = value + 1; } };
+
+   action do_ping_ghost_total_cnt_write() {
+       ping_ghost_total_cnt_write.execute(0);
+   }
+   action do_pong_ghost_total_cnt_write() {
+       pong_ghost_total_cnt_write.execute(0);
+   }
+
+   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   table tbl_ping_ghost_total_cnt_write {
+       key = {
+//           g_intr_md.isValid() : exact;
+       }
+       actions = {
+           do_ping_ghost_total_cnt_write;
+       }
+       const default_action = do_ping_ghost_total_cnt_write;
+       size = 1;
+   }
+
+   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   table tbl_pong_ghost_total_cnt_write {
+       key = {
+//           g_intr_md.isValid() : exact;
+       }
+       actions = {
+           do_pong_ghost_total_cnt_write;
+       }
+       const default_action = do_pong_ghost_total_cnt_write;
+       size = 1;
+   }
+
+   apply {
+       if (g_md.ping_pong == ping_pong_ghost_write) {
+           tbl_ping_ghost_cnt_write.apply();
+           tbl_ping_ghost_total_cnt_write.apply();
+       } else {
+           tbl_pong_ghost_cnt_write.apply();
+           tbl_pong_ghost_total_cnt_write.apply();
+       }
+   }
 }
 
 
 //-----------------------------------------------------------------------------
 // Read the per-queue and per-buffer pool utilization to the shared ping-pong
-// registers from the Ingress thread. While doing so, compare with the queue
-// depth with the threshold provided in sfc and return the threshold-crossing.
+// registers from the Ingress thread.
 //
 // @param sfc : The sfc meta data
 //----------------------------------------------------------------------------
-control IngressThreadReadGhostQueueThreshold(inout switch_sfc_ingress_metadata_t sfc,
-                                               out bool send_sfc) {
+control IngressThreadReadGhostQueueBpUtilization(inout switch_sfc_metadata_t sfc) {
 
     // Ghost thread: queue depth value
-    RegisterAction<bit<32>, sfc_queue_idx_t, bool>(sfc_reg_qd_ping) ping_qd_read = {
-        void apply(inout bit<32> queue_depth, out bool rv) {
-            rv = queue_depth > sfc.qlength_threshold;
+    RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_ping_ghost_cnt_reg) qd_read_ping = {
+        void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
+    RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_pong_ghost_cnt_reg) qd_read_pong = {
+        void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
+
+    action do_qd_read_ping() {
+        sfc.qlength = (buffer_memory_t)qd_read_ping.execute(sfc.queue_register_idx);
+    }
+
+    action do_qd_read_pong() {
+        sfc.qlength = (buffer_memory_t)qd_read_pong.execute(sfc.queue_register_idx);
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_QD)
+    table tbl_qd_read_ping {
+        key = {}
+        actions = {
+            do_qd_read_ping;
         }
-    };
-    RegisterAction<bit<32>, sfc_queue_idx_t, bool>(sfc_reg_qd_pong) pong_qd_read = {
-        void apply(inout bit<32> queue_depth, out bool rv) {
-            rv = queue_depth > sfc.qlength_threshold;
+        const default_action = do_qd_read_ping;
+        size = 1;
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_QD)
+    table tbl_qd_read_pong {
+        key = {}
+        actions = {
+            do_qd_read_pong;
         }
-    };
+        const default_action = do_qd_read_pong;
+        size = 1;
+    }
+
+    // Ghost thread: buffer pool memory utilization
+    RegisterAction<bit<32>, sfc_buffer_pool_idx_t, bit<32>>(sfc_reg_bpmu_ping) bpmu_read_ping = {
+        void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
+    RegisterAction<bit<32>, sfc_buffer_pool_idx_t, bit<32>>(sfc_reg_bpmu_pong) bpmu_read_pong = {
+        void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
+
+    action do_bpmu_read_ping() {
+        sfc.buffer_pool_usage = (buffer_memory_t)bpmu_read_ping.execute(sfc.buffer_pool_idx);
+    }
+
+    action do_bpmu_read_pong() {
+        sfc.buffer_pool_usage = (buffer_memory_t)bpmu_read_pong.execute(sfc.buffer_pool_idx);
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_BP)
+    table tbl_bpmu_read_ping {
+        key = {}
+        actions = {
+            do_bpmu_read_ping;
+        }
+        const default_action = do_bpmu_read_ping;
+        size = 1;
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_BP)
+    table tbl_bpmu_read_pong {
+        key = {}
+        actions = {
+            do_bpmu_read_pong;
+        }
+        const default_action = do_bpmu_read_pong;
+        size = 1;
+    }
 
     apply {
-        @stage(SFC_QUEUE_REG_STAGE_QD)
-        {
-            if (sfc.ping_pong == ping_pong_ingress_read) {
-                send_sfc = ping_qd_read.execute(sfc.queue_register_idx);
-            } else {
-                send_sfc = pong_qd_read.execute(sfc.queue_register_idx);
-            }
+       if (sfc.ping_pong == ping_pong_ingress_read) {
+            tbl_qd_read_ping.apply();
+            tbl_bpmu_read_ping.apply();
+        } else {
+            tbl_qd_read_pong.apply();
+            tbl_bpmu_read_pong.apply();
         }
     }
 }
@@ -9071,12 +9087,40 @@ control IngressThreadReadGhostQueueThreshold(inout switch_sfc_ingress_metadata_t
 //
 // @param sfc : The sfc meta data
 //-----------------------------------------------------------------------------
-control IngressThreadReadGhostMessageCounter(inout switch_sfc_ingress_metadata_t sfc) {
+control IngressThreadReadGhostMessageCounter(inout switch_sfc_metadata_t sfc) {
 
     RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_ping_ghost_cnt_reg) ping_ghost_cnt_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
     RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_pong_ghost_cnt_reg) pong_ghost_cnt_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
+
+    action do_ping_ghost_cnt_read() {
+        sfc.ghost_pkt_cnt_queue = ping_ghost_cnt_read.execute(sfc.queue_register_idx);
+    }
+
+    action do_pong_ghost_cnt_read() {
+        sfc.ghost_pkt_cnt_queue = pong_ghost_cnt_read.execute(sfc.queue_register_idx);
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    table tbl_ping_ghost_cnt_read {
+        key = {}
+        actions = {
+            do_ping_ghost_cnt_read;
+        }
+        const default_action = do_ping_ghost_cnt_read;
+        size = 1;
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    table tbl_pong_ghost_cnt_read {
+        key = {}
+        actions = {
+            do_pong_ghost_cnt_read;
+        }
+        const default_action = do_pong_ghost_cnt_read;
+        size = 1;
+    }
 
     // Ghost thread: total message counter
     // We need to explicitely define the table inorder to make the @stage pragma
@@ -9086,76 +9130,57 @@ control IngressThreadReadGhostMessageCounter(inout switch_sfc_ingress_metadata_t
     RegisterAction<bit<32>, bit<1>, bit<32>>(sfc_pong_ghost_total_cnt_reg) pong_ghost_total_cnt_read = {
         void apply(inout bit<32> value, out bit<32> rv) { rv = (bit<32>) value; } };
 
-    apply {
-        @stage(SFC_QUEUE_REG_STAGE_CNT)
-        {
-            if (sfc.ping_pong == ping_pong_ingress_read) {
-                sfc.ghost_pkt_cnt_total = ping_ghost_total_cnt_read.execute(0);
-                sfc.ghost_pkt_cnt_queue = ping_ghost_cnt_read.execute(sfc.queue_register_idx);
-            } else {
-                sfc.ghost_pkt_cnt_total = pong_ghost_total_cnt_read.execute(0);
-                sfc.ghost_pkt_cnt_queue = pong_ghost_cnt_read.execute(sfc.queue_register_idx);
-            }
-        }
+    action do_ping_ghost_total_cnt_read() {
+        sfc.ghost_pkt_cnt_total = ping_ghost_total_cnt_read.execute(0);
     }
-}
-# 153 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/sfc_trigger.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
 
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- ******************************************************************************/
+    action do_pong_ghost_total_cnt_read() {
+        sfc.ghost_pkt_cnt_total = pong_ghost_total_cnt_read.execute(0);
+    }
 
-
-control IngressAlwaysTriggerSfc(
-        inout switch_header_t hdr,
-        inout switch_ingress_metadata_t ig_md,
-        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr){
-    action always_trigger_sfc_pkt_action(switch_mirror_session_t sid){
-            ig_md.sfc.signaling_mirror_session_id = sid;
-            ig_md.mirror.type = (bit<8>)6;
-            ig_md.mirror.src = (bit<8>)SWITCH_PKT_SRC_CLONED_INGRESS;
-            //ig_md.sfc.queue_register_idx = 1;
-            //ig_md.sfc.qlength_threshold = 100;
-            //ig_md.qos.tc = 3;	
-        }
-    table always_trigger_sfc_pkt_table {
+    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    table tbl_ping_ghost_total_cnt_read {
+        // Yes, the match key is useless. However, if it is removed, the compile will complain
+        // about an inintelligible issue, so I should stay for now.
         key = {
-             hdr.rocev2_bth.isValid(): exact @name("rocev2_hdr");
+//            hdr.instrumentation.isValid() : exact;
         }
         actions = {
-            always_trigger_sfc_pkt_action;
-            NoAction;
+            do_ping_ghost_total_cnt_read;
         }
-        default_action = NoAction;
+        const default_action = do_ping_ghost_total_cnt_read;
+        size = 1;
+    }
+
+    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    table tbl_pong_ghost_total_cnt_read {
+        // Yes, the match key is useless. However, if it is removed, the compiler will complain
+        // about an inintelligible issue, so I should stay for now.
+        key = {
+//            hdr.instrumentation.isValid() : exact;
+        }
+        actions = {
+            do_pong_ghost_total_cnt_read;
+        }
+        const default_action = do_pong_ghost_total_cnt_read;
+        size = 1;
     }
 
     apply {
-        always_trigger_sfc_pkt_table.apply();
+       if (sfc.ping_pong == ping_pong_ingress_read) {
+           tbl_ping_ghost_cnt_read.apply();
+           tbl_ping_ghost_total_cnt_read.apply();
+       } else {
+           tbl_pong_ghost_cnt_read.apply();
+           tbl_pong_ghost_total_cnt_read.apply();
+       }
     }
-
-
 }
+# 140 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/sfc_trigger.p4" 1
+
 control IngressThreadSfcInit(in ghost_intrinsic_metadata_t g_intr_md,
-                             in rocev2_bth_h rocev2_bth,
-                             out switch_sfc_ingress_metadata_t sfc) {
+                             out switch_sfc_metadata_t sfc_md) {
    /*
     * How do we know that TC and qid have been set properly?
     * ig_md.port
@@ -9166,351 +9191,84 @@ control IngressThreadSfcInit(in ghost_intrinsic_metadata_t g_intr_md,
     *     IngressPortMapping
     */
 
-    action init_sfc_md(QueueId_t mirror_queue_id,
-                       bit<3> mirror_icos) {
-       sfc = {
-           0,
-           g_intr_md.ping_pong,
-           SfcPacketType.Unset,
-           (sfc_queue_idx_t)0,
-           (buffer_memory_t)0,
-           32w0,
-           32w0,
-           32w0,
-           (buffer_memory_t)0,
-           (MirrorId_t)0,
-           (PortId_t)0};
-
-    }
-
-    table tbl_init_sfc_md {
-        key = {}
-        actions = {init_sfc_md;}
-        size = 1;
-    }
-
-    apply {
-        tbl_init_sfc_md.apply();
-    }
-}
-
-control EgressThreadSfcInit(in switch_qos_metadata_t qos,
-                            in sfc_pause_h sfc_pause_hdr,
-                            inout switch_sfc_egress_metadata_t sfc)
-                            (const_t signaling_detect_table_size) {
-   /*
-    * After these controls:
-    *     EgressPortMapping
-    */
-
-    action set_type_signaling() {
-        sfc = {
-            SfcPacketType.Signal,
-            (sfc_queue_idx_t)0,
-            (buffer_memory_t)0,
-            sfc.egress_port_speed,
-            (buffer_memory_t)0,
-            sfc_pause_hdr.pause_tc,
-            sfc_pause_hdr.pause_duration
-        };
-    }
-
-    action clear_sfc() {
-        sfc = {
-            SfcPacketType.None,
-            (sfc_queue_idx_t)0,
-            (buffer_memory_t)0,
-            PortSpeed.Unset,
-            (buffer_memory_t)0,
+    action init_sfc_md() {
+        sfc_md = {
             0,
-            0
-        };
-    }
-
-    table detect_signaling {
-        key = {
-            sfc_pause_hdr.isValid(): exact @name("sfc_pause_hdr");
-            qos.tc: ternary @name("tc");
-            sfc.type: ternary @name("sfc_packet_type");
-        }
-        actions = {
-            set_type_signaling;
-            clear_sfc;
-        }
-        size = signaling_detect_table_size;
+            g_intr_md.ping_pong,
+            (sfc_queue_idx_t)0,
+            (sfc_buffer_pool_idx_t)0,
+            (buffer_memory_t)0,
+            (buffer_memory_t)0,
+            32w0,
+            32w0};
     }
 
     apply {
-        detect_signaling.apply();
+        init_sfc_md();
     }
 }
 
-
-// ---------------------------------------------------------------------------
-// Handover to signaling component
-// ---------------------------------------------------------------------------
-control SfcTriggerSignaling(in switch_sfc_ingress_metadata_t sfc,
-                            inout switch_mirror_metadata_t mirror){
-    apply {
-        mirror.type = 6;
-        mirror.src = SWITCH_PKT_SRC_CLONED_INGRESS;
-        mirror.session_id = sfc.signaling_mirror_session_id;
-        mirror.egress_port = sfc.signaling_mirror_egress_port;
-    }
-}
-
-
-control SfcPauseSuppressSend(in bit<32> timestamp_us,
-                                in bit<128> dst_ip,
-                                in switch_tc_t nw_tc,
-                                in switch_sfc_ingress_metadata_t sfc,
-                                inout switch_mirror_metadata_t mirror) {
-
-    SfcTriggerSignaling() trigger_signaling;
-
-    bit<1> fr1 = 0;
-    bit<1> fr2 = 0;
-    bit<1> fr3 = 0;
-    bit<3> hr = 0;
-    bit<16> dst_hash1 = 0;
-    bit<16> dst_hash2 = 0;
-    bit<16> dst_hash3 = 0;
-
-    bool switched_filter_bank = false;
-    bit<1> filter_bank_idx = 0;
-
-    // The filter clearing could be moved to a more general part of the program.
-    // Thereby, also non-pfc-pause packet would trigger a filter reset.
-    // Not sure if that would significantly improve things though.
-    // epoch_end_timestamp = timestamp of current epoch
-    // epoch_duration = duration of new epoch, can be configured from the control plane (?)
-    Register<sfc_pause_epoch_register_t, bit<1>>(32w1, {32w0, 32w0}) reg_filter_epoch;
-
-    /**
-     * Determine if the epoch is run out and if the filter banks should be switched.
-     *
-     * @param tstamp: the current timestamp
-     * @param epoch_duration: the duration of a new epoch
-     * @return time_to_switch_filter_bank: returns 1 iff filter banks should be switched, 0 otherwise
-     **/
-    RegisterAction<sfc_pause_epoch_register_t, bit<1>, bit<2>>(reg_filter_epoch) get_epoch_bank_idx = {
-        void apply(inout sfc_pause_epoch_register_t value, out bit<2> rv_bank_idx){
-            if ((timestamp_us - value.current_epoch_start > 32w0xffff_ffff) // Set to appropriate value from control plane
-                 || (timestamp_us < value.current_epoch_start)) {
-                value.current_epoch_start = timestamp_us;
-                // Invert value.bank_idx_changed[0:0]
-                // Set value.bank_idx_changed[1:1] = 1
-                value.bank_idx_changed = ~(value.bank_idx_changed & 32w1);
-            } else {
-                // Keep value.bank_idx_changed[0:0]
-                // Set value.bank_idx_changed[1:1] = 0
-                value.bank_idx_changed = value.bank_idx_changed & 32w1;
-            }
-            rv_bank_idx = value.bank_idx_changed[1:0];
-        }
-    };
-
-    Register<bit<32>, bit<1>>(1, 0) reg_detect_bank_change;
-    // Switch bloom filter idx
-    RegisterAction<bit<32>, bit<1>, bool>(reg_detect_bank_change) detect_bank_change = {
-        void apply(inout bit<32> value, out bool rv_switched_filter_bank){
-            rv_switched_filter_bank = (bit<32>)filter_bank_idx != value;
-            value = (bit<32>)filter_bank_idx;
-        }
-    };
-
-
-    // Use pre-defined algorithms from there:
-    // http://crcmod.sourceforge.net/crcmod.predefined.html#predefined-crc-algorithms
-    // TODO: Selection is made for every hash to have a different polynomial, not sure if that
-    // is sufficient for our use case?
-    CRCPolynomial<bit<16>>(16w0x0589, // polynomial
-                           false, // reversed
-                           true, // use msb?
-                           false, // extended?
-                           16w0x0001, // initial shift register value
-                           16w0x0001 // result xor
-                           ) crc_16_dect;
-    CRCPolynomial<bit<16>>(16w0x3d65, // polynomial
-                           true, // reversed
-                           true, // use msb?
-                           false, // extended?
-                           16w0xffff, // initial shift register value
-                           16w0xffff // result xor
-                           ) crc_16_dnp;
-
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) hash1;
-    Hash<bit<16>>(HashAlgorithm_t.CUSTOM, crc_16_dect) hash2;
-    Hash<bit<16>>(HashAlgorithm_t.CUSTOM, crc_16_dnp) hash3;
-
-    Register<bit<1>, sfc_suppression_filter_idx_t>(sfc_suppression_filter_cnt, 0) pause_filter_bank0_reg1;
-    Register<bit<1>, sfc_suppression_filter_idx_t>(sfc_suppression_filter_cnt, 0) pause_filter_bank0_reg2;
-    Register<bit<1>, sfc_suppression_filter_idx_t>(sfc_suppression_filter_cnt, 0) pause_filter_bank0_reg3;
-
-    Register<bit<1>, sfc_suppression_filter_idx_t>(sfc_suppression_filter_cnt, 0) pause_filter_bank1_reg1;
-    Register<bit<1>, sfc_suppression_filter_idx_t>(sfc_suppression_filter_cnt, 0) pause_filter_bank1_reg2;
-    Register<bit<1>, sfc_suppression_filter_idx_t>(sfc_suppression_filter_cnt, 0) pause_filter_bank1_reg3;
-
-    RegisterAction<bit<1>, sfc_suppression_filter_idx_t, bit<1>>(pause_filter_bank0_reg1) bank0_filter1 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-            val = 0b1;
-        }
-    };
-
-    RegisterAction<bit<1>, sfc_suppression_filter_idx_t, bit<1>>(pause_filter_bank0_reg2) bank0_filter2 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-            val = 0b1;
-        }
-    };
-
-    RegisterAction<bit<1>, sfc_suppression_filter_idx_t, bit<1>>(pause_filter_bank0_reg3) bank0_filter3 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-            val = 0b1;
-        }
-    };
-
-    RegisterAction<bit<1>, sfc_suppression_filter_idx_t, bit<1>>(pause_filter_bank1_reg1) bank1_filter1 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-            val = 0b1;
-        }
-    };
-
-    RegisterAction<bit<1>, sfc_suppression_filter_idx_t, bit<1>>(pause_filter_bank1_reg2) bank1_filter2 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-            val = 0b1;
-        }
-    };
-
-    RegisterAction<bit<1>, sfc_suppression_filter_idx_t, bit<1>>(pause_filter_bank1_reg3) bank1_filter3 = {
-        void apply(inout bit<1> val, out bit<1> rv) {
-            rv = val;
-            val = 0b1;
-        }
-    };
-
-    action get_hash_1() {
-        dst_hash1 = hash1.get({dst_ip, nw_tc});
-    }
-    action get_hash_2() {
-        dst_hash2 = hash2.get({dst_ip, nw_tc});
-    }
-    action get_hash_3() {
-        dst_hash3 = hash3.get({dst_ip, nw_tc});
-    }
-
-    action decide_b0f1(bit<16> f1) {
-        fr1 = bank0_filter1.execute((sfc_suppression_filter_idx_t)dst_hash1);
-    }
-    action decide_b0f2(bit<16> f2) {
-        fr2 = bank0_filter2.execute((sfc_suppression_filter_idx_t)dst_hash2);
-    }
-    action decide_b0f3(bit<16> f3) {
-        fr3 = bank0_filter3.execute((sfc_suppression_filter_idx_t)dst_hash3);
-    }
-
-    action decide_b1f1(bit<16> f1) {
-        fr1 = bank1_filter1.execute((sfc_suppression_filter_idx_t)dst_hash1);
-    }
-    action decide_b1f2(bit<16> f2) {
-        fr2 = bank1_filter2.execute((sfc_suppression_filter_idx_t)dst_hash2);
-    }
-    action decide_b1f3(bit<16> f3) {
-        fr3 = bank1_filter3.execute((sfc_suppression_filter_idx_t)dst_hash3);
-    }
-
-    action do_get_epoch_bank_idx() {
-        filter_bank_idx = get_epoch_bank_idx.execute(1w0)[0:0];
-    }
-
-    action do_detect_bank_change() {
-        switched_filter_bank = detect_bank_change.execute(1w0);
-    }
-
-    apply {
-        do_get_epoch_bank_idx();
-        do_detect_bank_change();
-
-        get_hash_1();
-        get_hash_2();
-        get_hash_3();
-
-        if (filter_bank_idx == 0) {
-            decide_b0f1(dst_hash1);
-            decide_b0f2(dst_hash2);
-            decide_b0f3(dst_hash3);
-
-            if (switched_filter_bank) {
-                // We switched filters, clear the old one
-                pause_filter_bank1_reg1.clear(1w0,1w0);
-                pause_filter_bank1_reg2.clear(1w0,1w0);
-                pause_filter_bank1_reg3.clear(1w0,1w0);
-            }
-        } else if (filter_bank_idx == 1) {
-              decide_b1f1(dst_hash1);
-              decide_b1f2(dst_hash2);
-              decide_b1f3(dst_hash3);
-
-            if (switched_filter_bank) {
-                // We switched filters, clear the old one
-                pause_filter_bank0_reg1.clear(1w0,1w0);
-                pause_filter_bank0_reg2.clear(1w0,1w0);
-                pause_filter_bank0_reg3.clear(1w0,1w0);
-            }
-        }
-
-        if (fr1 ++ fr2 ++ fr3 != 3w0x3) {
-            trigger_signaling.apply(sfc, mirror);
-        }
-    }
-}
-
-/*
- *
- * Dependencies:
- *   after:
- *     - nexthop
- *     - qos_map
- *     - traffic_class
- */
 control IngressThreadSfcTrigger(inout switch_ingress_metadata_t ig_md)
                                (const_t queue_idx_size,
                                 const_t per_port_settings_table_size,
                                 const_t per_tc_settings_table_size) {
-
+    /*
+     * Run after these controls:
+     *     nexthop.apply(ig_md);
+     *     qos_map.apply(hdr, ig_md);
+     *     traffic_class.apply(ig_md);
+     */
     IngressThreadReadGhostMessageCounter() ghost_msg_cnt_read;
-    IngressThreadReadGhostQueueThreshold() ghost_q_threshold_read;
-    SfcPauseSuppressSend() pause_suppressed_send;
+    IngressThreadReadGhostQueueBpUtilization() ghost_q_bp_read;
 
-    bool send_sfc_pause = false;
+    action set_egress_port_settings(bit<1> sfc_enable) {
+        ig_md.sfc.enable = ig_md.sfc.enable & sfc_enable;
+    }
+
+    // Enable/disable SFC per port
+    table per_egress_port_settings {
+        key = {
+            ig_md.port : ternary @name("port");
+        }
+
+        actions = {
+            set_egress_port_settings;
+            NoAction;
+        }
+
+        size = per_port_settings_table_size;
+    }
+
+    // Enable/disable SFC per TC
+    action set_tc_settings(bit<1> sfc_enable) {
+        ig_md.sfc.enable = ig_md.sfc.enable & sfc_enable;
+    }
+
+    table per_tc_settings {
+        key = {
+            ig_md.qos.tc : ternary @name("tc");
+        }
+
+        actions = {
+            set_tc_settings;
+            NoAction;
+        }
+
+        size = per_tc_settings_table_size;
+    }
 
     // Set TM queue and buffer pool index for accessing the ghost-thread-shared tables
     // This values is also bridged to egress and used there to share queue depth
     // information between data packets and SFC pause packets.
-    // queue_register_idx 0 is reserved for use as 'not set'
-    // Important: traffic on RDMA control TCs has to be marked as ig_md.sfc.type=SfcPacketType.TcSignalEnabled
-    action set_register_q_bp_idx(SfcPacketType sfc_packet_type,
-                                 sfc_queue_idx_t q_idx,
-//                                 bit<32> suppression_epoch_duration,
-                                 buffer_memory_t qlength_threshold,
-                                 MirrorId_t mirror_session_id,
-                                 PortId_t mirror_egress_port) {
+    action set_register_q_bp_idx(sfc_queue_idx_t q_idx,
+                                 sfc_buffer_pool_idx_t bp_idx) {
         ig_md.sfc.queue_register_idx = q_idx;
-        // TODO: move the following parameter values to an action profile
-        ig_md.sfc.type = sfc_packet_type;
-//        ig_md.sfc.suppression_epoch_duration = suppression_epoch_duration;
-        ig_md.sfc.qlength_threshold = qlength_threshold;
-        ig_md.sfc.signaling_mirror_session_id = mirror_session_id;
-        ig_md.sfc.signaling_mirror_egress_port = mirror_egress_port;
+        ig_md.sfc.buffer_pool_idx = bp_idx;
     }
 
     table register_idx_tbl {
         key = {
-            ig_md.egress_port : ternary @name("egress_port");
+            ig_md.port : ternary @name("port");
             ig_md.qos.qid : ternary @name("qid");
         }
         actions = {
@@ -9522,215 +9280,18 @@ control IngressThreadSfcTrigger(inout switch_ingress_metadata_t ig_md)
     }
 
     apply {
+        per_egress_port_settings.apply();
+        per_tc_settings.apply();
+
         register_idx_tbl.apply();
-//        ghost_msg_cnt_read.apply(ig_md.sfc);
-        ghost_q_threshold_read.apply(ig_md.sfc, send_sfc_pause);
+        ghost_msg_cnt_read.apply(ig_md.sfc);
+        ghost_q_bp_read.apply(ig_md.sfc);
 
-        // Is SFC enabled and threshold crossed?
-        if (ig_md.sfc.enable == 1 && ig_md.sfc.type == SfcPacketType.Data && send_sfc_pause) {
-            pause_suppressed_send.apply(ig_md.timestamp[41:10],
-                                        ig_md.lkp.ip_dst_addr,
-                                        ig_md.qos.tc,
-                                        ig_md.sfc,
-                                        ig_md.mirror);
-        }
+//        ig_md.sfc.qlength = ig_md.sfc.qlength + (buffer_memory_t)sfc.packet_length_cells;
     }
 }
-
-/*
- *
- * Dependencies:
- *   after:
- *     - EgressPortMapping
- */
-control EgressThreadSfcTrigger(inout switch_header_t hdr,
-                                in egress_intrinsic_metadata_t eg_intr_md,
-                                inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-                                in switch_qos_metadata_t qos,
-                                inout switch_sfc_egress_metadata_t sfc)
-                                (const_t queue_idx_size,
-                                const_t pause_duration_table_size) {
-    // Egress thread: queue depth value
-    // TODO: Switch to quad-packing of registers
-    Register<bit<32>, sfc_queue_idx_t>(queue_idx_size) sfc_reg_qd_egress;
-
-    // SfcPacketType.Data packet: write queue depth
-    RegisterAction<bit<32>, sfc_queue_idx_t, int<32>>(sfc_reg_qd_egress) qd_write = {
-        void apply(inout bit<32> value) {
-            value = (bit<32>)qos.qdepth;
-        }
-    };
-    action data_qd_write() {
-        qd_write.execute(sfc.queue_register_idx);
-    }
-
-    // SfcPacketType.Trigger: read queue depth
-    RegisterAction<bit<32>, sfc_queue_idx_t, bit<32>>(sfc_reg_qd_egress) qd_read = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            rv = value - sfc.qlength_threshold;
-        }
-    };
-    action trigger_qd_read() {
-        sfc.q_drain_lengths = qd_read.execute(sfc.queue_register_idx);
-    }
-
-    action do_set_pause_duration(sfc_pause_duration_us_t pause_duration) {
-        sfc.pause_duration_us = pause_duration;
-    }
-
-    table tbl_set_pause_duration {
-        key = {
-            qos.port_speed : exact @name("port_speed");
-            sfc.q_drain_lengths : exact @name("q_drain_lengths");
-        }
-        actions = {
-            do_set_pause_duration;
-            NoAction;
-        }
-        size = pause_duration_table_size;
-    }
-
-    // Just use actions as tags, to the control flow inside the switch statement.
-    action data(){}
-    action trigger(){}
-    action signal(){}
-    table sfc_type_switch {
-        key = {
-            sfc.type : ternary;
-        }
-        actions = {
-            data;
-            trigger;
-            signal;
-            NoAction;
-        }
-        default_action = NoAction;
-        const entries = {
-            SfcPacketType.Data : data;
-            SfcPacketType.Trigger : trigger;
-            SfcPacketType.Signal : signal;
-        }
-    }
-
-    //time_conversion_factor = 1000/(512*linkspeed)
-    //if link speed is 100Gbps, time_conversion_factor = 195, time_conversion_factor_in_binary = 8
-    //if link speed is 25Gbps, time_conversion_factor = 48, time_conversion_factor_in_binary =6
-    action hundredG_conversion(){
-        sfc.pause_duration_us = sfc.pause_duration_us << 8;
-    }
-    action twentyG_conversion(){
-        sfc.pause_duration_us = sfc.pause_duration_us << 6;
-    }
-
-    table tbl_time_conversion_lookup{
-        key = {
-            eg_intr_md.egress_port : exact;
-        }
-        actions = {
-            NoAction;
-            twentyG_conversion;
-            hundredG_conversion;
-        }
-
-        const default_action = NoAction;
-        size = 64;
-
-    }
-    action convert_to_pfc_pause(){
-        hdr.ipv4.setInvalid();
-        hdr.udp.setInvalid();
-        hdr.sfc_pause.setInvalid();
-        //PFC pkts (802.1Qbb 66B) -- dstmac(6B),srcmac(6B),TYPE(2B8808),Opcode(2B0101),CEV(2B),Time0-7(8*2B),Pad(28B),CRC(4B)            
-        hdr.ethernet.src_addr = 0x000000000000;//ori_dst_mac;
-        hdr.ethernet.ether_type = 0x8808;
-
-        hdr.pfc.setValid();
-        //0x0008;//for priority 3; //0x0001;//for priority 0
-        //1250 unit  each unit is 512bit time
-        // TODO: need know the value format of pause_tc, it is better to have 8 bit value
-        hdr.pfc = {
-            16w0x0101,
-            8w0,
-            sfc.pause_tc,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            sfc.pause_duration_us,
-            208w0
-        };
-    }
-
-    action gen_sfc_star_pause(){
-        bit<48> ori_src_mac;
-        bit<48> ori_dst_mac;
-        ori_src_mac = hdr.ethernet.src_addr;
-        ori_dst_mac = hdr.ethernet.dst_addr;
-        hdr.ethernet.src_addr = ori_dst_mac;
-        hdr.ethernet.dst_addr = ori_src_mac;
-
-        //L3
-        bit<32> orig_src_ip;
-        bit<32> orig_dst_ip;
-        orig_src_ip = hdr.ipv4.src_addr;
-        orig_dst_ip = hdr.ipv4.dst_addr;
-        hdr.ipv4.src_addr = orig_dst_ip;
-        hdr.ipv4.dst_addr = orig_src_ip;
-        hdr.ipv4.total_len = 46;
-
-        //udp
-        hdr.udp.length = 26;
-        hdr.udp.dst_port = 1674;
-
-        //sfc star packet format
-        hdr.sfc_pause.setValid();
-        hdr.sfc_pause = {
-                8w0,
-                sfc.pause_tc,
-                sfc.pause_duration_us,
-                112w0};
-        eg_intr_md_for_dprsr.mtu_trunc_len = 64;
-    }
-
-
-    apply {
-        switch (sfc_type_switch.apply().action_run) {
-            data: {
-                // Data packet: only transfer queue depth to the shared table
-                data_qd_write();
-                return;
-            }
-            trigger: {//cloned packet 
-                // Create SFC pause packet from trigger, calculate pause time
-                // and recirculate.
-                trigger_qd_read();
-                tbl_set_pause_duration.apply();
-                // TODO: Create SFC pause packet
-                // What information is needed?
-                // What we have:
-                // Pause time
-                //   - IP addresses in the common metadata headers
-                //   - UDP ports
-                // TODO: Calculate overall packet length and set mtu_trunc_len
-                gen_sfc_star_pause();
-                return;
-            }
-            signal: { //incomming sfc pause packet
-                // Convert packet to PFC or transmit SFC packet
-                // TODO: Convert packet to PFC or transmit SFC packet
-                // TODO: Calculate overall packet length and set mtu_trunc_len
-                tbl_time_conversion_lookup.apply();
-                convert_to_pfc_pause();
-                return;
-            }
-        }
-    }
-}
-# 154 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
-# 1 "/mnt/p4c-3087/p4src/shared/ipv4_csum.p4" 1
+# 141 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/ipv4_csum.p4" 1
 /*
 * This control implements an incremental IPv4 header checksum update when the
 * TTL and DIFFSERV fields are updated.  The new values for TTL and DIFFSERV are
@@ -9907,7 +9468,7 @@ control IPv4_Checksum_Compute(inout switch_header_t hdr) {
         actions = { update_carry; }
         const default_action = update_carry(0);
         const entries = {
-# 1 "/mnt/p4c-3087/p4src/shared/carry_entries.p4" 1
+# 1 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/carry_entries.p4" 1
 0x1FFFE &&& 0xFFFFF : update_carry(1);
 0x1FFFF &&& 0xFFFFF : update_carry(2);
 0x10000 &&& 0xF0000 : update_carry(1);
@@ -9999,7 +9560,7 @@ control IPv4_Checksum_Compute(inout switch_header_t hdr) {
 0x9FFFE &&& 0xFFFFF : update_carry(10);
 0x9FFFF &&& 0xFFFFF : update_carry(10);
 0x90000 &&& 0xF0000 : update_carry(9);
-# 178 "/mnt/p4c-3087/p4src/shared/ipv4_csum.p4" 2
+# 178 "/mnt/bf-switch-P4C-3288_v1/p4src/shared/ipv4_csum.p4" 2
         }
     }
     /* Step 4: Invert the checksum before writing it back to the IPv4 header. */
@@ -10042,7 +9603,7 @@ control IPv4_Checksum_Compute(inout switch_header_t hdr) {
     }
 
 }
-# 155 "/mnt/p4c-3087/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
+# 142 "/mnt/bf-switch-P4C-3288_v1/p4src/switch-tofino2/switch_tofino2_y1.p4" 2
 
 // XXX(yumin): currently Brig may pack fields with SALU ops with
 // other fields which were set by action data. Until Brig fixes
@@ -10066,8 +9627,6 @@ control SwitchIngress(
     Ipv4Hash() ipv4_hash;
     Ipv6Hash() ipv6_hash;
     NonIpHash() non_ip_hash;
-    Lagv4Hash() lagv4_hash;
-    Lagv6Hash() lagv6_hash;
     LOU() lou;
     Fib(IPV4_HOST_TABLE_SIZE,
         IPV4_LPM_TABLE_SIZE,
@@ -10077,7 +9636,7 @@ control SwitchIngress(
     IngressIpv4Acl(INGRESS_IPV4_ACL_TABLE_SIZE) ingress_ipv4_acl;
     IngressIpv6Acl(INGRESS_IPV6_ACL_TABLE_SIZE) ingress_ipv6_acl;
     IngressIpAcl(INGRESS_IP_MIRROR_ACL_TABLE_SIZE) ingress_ip_mirror_acl;
-    IngressIpDtelSampleAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
+    IngressIpAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
     ECNAcl() ecn_acl;
     PFCWd(512) pfc_wd;
     IngressQoSMap() qos_map;
@@ -10089,7 +9648,6 @@ control SwitchIngress(
     MulticastFlooding(BD_FLOOD_TABLE_SIZE) flood;
     IngressSystemAcl() system_acl;
     IngressDtel() dtel;
-    IngressAlwaysTriggerSfc() always_trigger_sfc;
     IngressThreadSfcInit() sfc_init_nodeps;
     IngressThreadSfcTrigger(SFC_QUEUE_IDX_SIZE, SFC_PORT_CNT, SFC_TC_CNT) sfc_trigger;
     action rmac_hit() { ig_md.flags.rmac_hit = true; } action rmac_miss() { ig_md.flags.rmac_hit = false; } table rmac { key = { ig_md.rmac_group : exact; ig_md.lkp.mac_dst_addr : exact; } actions = { rmac_hit; @defaultonly rmac_miss; } const default_action = rmac_miss; size = 1024; } // <- This is a preprocessor variable, that's readability!
@@ -10097,16 +9655,16 @@ control SwitchIngress(
     apply {
         pkt_validation.apply(
             hdr, ig_md.flags, ig_md.lkp, ig_intr_md_for_tm, ig_md.drop_reason);
-        sfc_init_nodeps.apply(g_intr_md, hdr.rocev2_bth, ig_md.sfc);
+        sfc_init_nodeps.apply(g_intr_md, ig_md.sfc);
         ingress_port_mapping.apply(hdr, ig_md, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
         lou.apply(ig_md);
         smac.apply(ig_md.lkp.mac_src_addr, ig_md, ig_intr_md_for_dprsr.digest_type);
         bd_stats.apply(ig_md.bd, ig_md.lkp.pkt_type);
         if (rmac.apply().hit) {
             if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_L3 != 0) && ig_md.lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6.unicast_enable) {
-                ipv6_fib.apply(ig_md);
+                ipv6_fib.apply(ig_md.lkp.ip_dst_addr, ig_md.vrf, ig_md.flags, ig_md.nexthop);
             } else if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_L3 != 0) && ig_md.lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4.unicast_enable) {
-                ipv4_fib.apply(ig_md);
+                ipv4_fib.apply(ig_md.lkp.ip_dst_addr[31:0], ig_md.vrf, ig_md.flags, ig_md.nexthop);
             }
         } else {
             dmac.apply(ig_md.lkp.mac_dst_addr, ig_md);
@@ -10121,14 +9679,8 @@ control SwitchIngress(
         ingress_ip_mirror_acl.apply(ig_md, ig_md.unused_nexthop);
 
         if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_NONE) {
-            non_ip_hash.apply(ig_md, ig_md.lag_hash);
+            non_ip_hash.apply(ig_md.lkp, ig_md.hash[31:0]);
         } else if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
-            lagv4_hash.apply(ig_md.lkp, ig_md.lag_hash);
-        } else {
-            lagv6_hash.apply(ig_md.lkp, ig_md.lag_hash);
-        }
-
-        if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
             ipv4_hash.apply(ig_md.lkp, ig_md.hash[31:0]);
         } else {
             ipv6_hash.apply(ig_md.lkp, ig_md.hash[31:0]);
@@ -10143,18 +9695,10 @@ control SwitchIngress(
         if (ig_md.egress_port_lag_index == SWITCH_FLOOD) {
             flood.apply(ig_md);
         } else {
-            lag.apply(ig_md, ig_md.lag_hash, ig_intr_md_for_tm.ucast_egress_port);
+            lag.apply(ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
         }
 
-        // How does SFC mirroring interact with other mirroring?
-        // I.e. could there be interference?
-        // ecn_acl and pfc_wd should not interfere
-
         sfc_trigger.apply(ig_md);
-
-
-
-
         ecn_acl.apply(ig_md, ig_md.lkp, ig_intr_md_for_tm.packet_color);
         pfc_wd.apply(ig_md.port, ig_md.qos.qid, ig_md.flags.pfc_wd_drop);
 
@@ -10162,7 +9706,7 @@ control SwitchIngress(
         ppg_stats.apply(ig_md);
         ingress_ip_dtel_acl.apply(ig_md, ig_md.unused_nexthop);
         dtel.apply(
-            hdr, ig_md.lkp, ig_md, ig_md.lag_hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
+            hdr, ig_md.lkp, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
 
         // Only add bridged metadata if we are NOT bypassing egress pipeline.
         if (ig_intr_md_for_tm.bypass_egress == 1w0) {
@@ -10170,7 +9714,6 @@ control SwitchIngress(
         }
 
         set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-
     }
 }
 
@@ -10194,8 +9737,6 @@ control SwitchEgress(
     VlanDecap() vlan_decap;
     MTU() mtu;
     WRED() wred;
-    EgressThreadSfcInit(SIGNALING_DETECT_TABLE_SIZE) sfc_init;
-    EgressThreadSfcTrigger(SFC_QUEUE_IDX_SIZE, SFC_PAUSE_DURATION_SIZE) sfc;
     EgressDtel() dtel;
     DtelConfig() dtel_config;
     IPv4_Checksum_Compute() ipv4_csum_compute;
@@ -10203,14 +9744,11 @@ control SwitchEgress(
     apply {
         eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
         egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
-        sfc_init.apply(eg_md.qos, hdr.sfc_pause, eg_md.sfc);
         mirror_rewrite.apply(hdr, eg_md, eg_intr_md_for_dprsr);
         if (eg_md.flags.bypass_egress == false) {
             vlan_decap.apply(hdr, eg_md);
             qos.apply(hdr, eg_intr_md.egress_port, eg_md);
             wred.apply(hdr, eg_md, eg_intr_md, eg_md.flags.wred_drop);
-
-            sfc.apply(hdr, eg_intr_md, eg_intr_md_for_dprsr, eg_md.qos, eg_md.sfc);
 
             rewrite.apply(hdr, eg_md);
             ipv4_csum_compute.apply(hdr);
@@ -10241,7 +9779,7 @@ control SwitchGhost(in ghost_intrinsic_metadata_t g_intr_md) {
 
     apply {
         sfc_init.apply(g_intr_md, g_md);
-//        write_ghost_msg_counter.apply(g_md);
+        write_ghost_msg_counter.apply(g_md);
         write_queue_buffer_util.apply(g_md);
     }
 }
@@ -10253,9 +9791,7 @@ Pipeline(SwitchIngressParser(),
         SwitchEgress(),
         SwitchEgressDeparser()
 
-
         ,SwitchGhost()
-
 
         ) pipe;
 

@@ -363,8 +363,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-1719.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2490.p4
   extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
@@ -471,11 +469,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
 
-p4c_add_xfail_reason ("tofino3"
-  "error: tofino3 supports up to 20 stages, using 22"
-  extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
-)
-
 # P4C-2141
 p4c_add_xfail_reason("tofino3"
   "error: Can't access DW0 in parser"
@@ -486,4 +479,10 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "invalid SuperCluster was formed"
   testdata/p4_14_samples/source_routing.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "In table table .*, the number of bits required to go through the immediate pathway 48 .* is greater than the available bits 32, and can not be allocated"
+  # P4C-3093
+  extensions/p4_tests/p4_16/jbay/ghost3.p4
 )

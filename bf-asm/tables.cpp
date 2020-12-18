@@ -680,9 +680,14 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
 
 void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
     for (auto &row : layout) {
-        // FIXME -- if row.cols is empty, we don't really need a bus here (won't use it
+        // If row.cols is empty, we don't really need a bus here (won't use it
         // for anything).
-        if (row.bus < 0) {
+        // E.g. An exact match table with 4 or less static entries (JBay) or 1
+        // static entry (Tofino)
+        // In these examples compiler does gateway optimization where static
+        // entries are encoded in the gateway and no RAM's are used. We skip bus
+        // allocation in these cases.
+        if (row.bus < 0 && !row.cols.empty()) {
             if (bus_use[row.row][0] == this)
                 row.bus = 0;
             else if (bus_use[row.row][1] == this)

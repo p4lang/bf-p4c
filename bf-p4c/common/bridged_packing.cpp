@@ -273,6 +273,8 @@ cstring CollectConstraints::getOppositeGressFieldName(cstring name) {
         return ("egress::" + name.substr(9));
     } else if (name.startsWith("egress::")) {
         return ("ingress::" + name.substr(8));
+    } else if (name.startsWith("ghost::")) {
+        return ("ghost::" + name.substr(8));
     } else {
         BUG("Called getOppositeGressFieldName on unknown gress fieldname %1%", name);
         return cstring();
@@ -303,6 +305,8 @@ cstring CollectConstraints::getEgressFieldName(cstring name) {
 ordered_set<const PHV::Field*>
 CollectConstraints::findAllRelatedFields(const PHV::Field* field) {
     ordered_set<const PHV::Field*> relatedFields;
+    // Skip ghost fields as they are not relevant to bridge packing
+    if (field->isGhostField()) return relatedFields;
     std::queue<const PHV::Field*> fieldsNotVisited;
     LOG6("\tDetermining all related fields for " << field->name);
 

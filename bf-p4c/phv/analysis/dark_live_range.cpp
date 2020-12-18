@@ -316,6 +316,8 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
 
 boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
         const ordered_set<PHV::AllocSlice>& fields) const {
+    LOG1("Producing fields in order : " << fields);
+    LOG1(livemap.printDarkLiveRanges());
     OrderedFieldSummary rv;
     const PHV::AllocSlice* lastField = nullptr;
     for (int i = 0; i <= DEPARSER; i++) {
@@ -327,9 +329,11 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
                 lastField = fieldsLiveAtStage->first;
                 OrderedFieldInfo info(*lastField, std::make_pair(i, PHV::FieldUse(READ)),
                         readAccess);
+                LOG5("\t\t\t Read Info: " << info);
                 rv.push_back(info);
             } else {
                 rv[rv.size() - 1].addAccess(std::make_pair(i, PHV::FieldUse(READ)), readAccess);
+                LOG5("\t\t\t Adding Read Access: " << readAccess.first);
             }
         }
         if (fieldsLiveAtStage->second != nullptr) {
@@ -338,9 +342,11 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
                 lastField = fieldsLiveAtStage->second;
                 OrderedFieldInfo info(*lastField, std::make_pair(i, PHV::FieldUse(WRITE)),
                         writeAccess);
+                LOG5("\t\t\t Write Info: " << info);
                 rv.push_back(info);
             } else {
                 rv[rv.size() - 1].addAccess(std::make_pair(i, PHV::FieldUse(WRITE)), writeAccess);
+                LOG5("\t\t\t Adding Write Access: " << writeAccess.first);
             }
         }
     }
@@ -351,7 +357,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
              info.minStage.second << ", " << info.maxStage.first << info.maxStage.second <<
              "].  Units: ";
         for (const auto* u : info.units)
-            ss << DBPrint::Brief << u << " ";
+            ss << DBPrint::Brief << "(" << u->thread() << ")" << u << " ";
         LOG5(ss.str());
     }
     if (!validateLiveness(rv)) return boost::none;
@@ -505,9 +511,19 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             LOG2("\t\t\tNo. Trying to find an initialization node.");
         }
 
-        // Populate the list of dominators for the current live range slice of the field.
+        // Populate the list of dominators for the current live range slice of
+        // the field.
         ordered_set<const IR::BFN::Unit*> f_nodes;
-        f_nodes.insert(info.units.begin(), info.units.end());
+        boost::optional<gress_t> gress = boost::make_optional(false, gress_t());
+        for (auto iunit : info.units) {
+            // Since dominator analysis is gress specific we ideally should not
+            // be seeing fields from different gresses (e.g. ingress and ghost)
+            // being considered here. FieldDefUse & CreateLocalThreadInstances
+            // should identify and mark the threads accordingly.
+            BUG_CHECK(iunit->thread() == info.field.field()->gress,
+                    "All units for dominator analysis do not belong to same gress");
+            f_nodes.insert(iunit);
+        }
         unsigned idx_2 = 0;
         for (const auto& info_2 : *fieldsInOrder) {
             if (idx_2++ <= idx) continue;
@@ -516,7 +532,11 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                  info_2.maxStage.first << info_2.maxStage.second << ")");
             for (auto* u : info_2.units)
                 LOG2("\t\t\t  " << DBPrint::Brief << u);
-            f_nodes.insert(info_2.units.begin(), info_2.units.end());
+            for (auto iunit2 : info_2.units) {
+                // Skip units which are in a different gress
+                if (info.field.field()->gress != iunit2->thread()) continue;
+                f_nodes.insert(iunit2);
+            }
         }
         bool onlyDeparserUse = false;
         if (f_nodes.size() == 1) {
@@ -1160,6 +1180,7 @@ const IR::MAU::Table* DarkLiveRange::getGroupDominator(
         const PHV::Field* f,
         const ordered_set<const IR::BFN::Unit*>& f_units,
         gress_t gress) const {
+    LOG1("\t\tgetGroupDominator : " << f << " for gress: " << gress);
     ordered_map<const IR::MAU::Table*, const IR::BFN::Unit*> tablesToUnits;
     for (const auto* u : f_units) {
         if (u->is<IR::BFN::Deparser>()) {
@@ -1169,17 +1190,20 @@ const IR::MAU::Table* DarkLiveRange::getGroupDominator(
                 return nullptr;
             }
             tablesToUnits[*t] = (*t)->to<IR::BFN::Unit>();
+            LOG2("\t\t\tAdding Table - Unit : " << u);
             continue;
         }
         const auto* t = u->to<IR::MAU::Table>();
         BUG_CHECK(t, "Non-deparser non-table use found.");
         tablesToUnits[t] = u;
+        LOG2("\t\t\tAdding Table - Unit : " << u);
     }
     if (tablesToUnits.size() == 0) return nullptr;
     ordered_set<const IR::MAU::Table*> tables;
     if (tablesToUnits.size() == 1) {
         auto& kv = *(tablesToUnits.begin());
         tables.insert(kv.first);
+        LOG2("\t\t\tInsert Table : " << kv.first->name << " at gress " << kv.first->gress);
         if (defuse.hasUseAt(f, kv.second)) return domTree.getNonGatewayGroupDominator(tables);
         return kv.first;
     }

@@ -194,6 +194,7 @@ const std::vector<const IR::MAU::Table*>
 BuildDominatorTree::getAllDominators(const IR::MAU::Table* t, gress_t gress) const {
     std::vector<const IR::MAU::Table*> rv;
     const ImmediateDominatorMap* iDom = iDominator.at(gress);
+    BUG_CHECK(iDom->count(t) > 0, "Table '%s' not found in ImmediateDominatorMap", t->name);
     while (t != iDom->at(t)) {
         t = iDom->at(t);
         rv.push_back(t);
@@ -210,6 +211,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
             gress = t->gress;
             continue;
         }
+
         if (*gress != t->gress)
             BUG("Call to getNonGatewayGroupDominator with tables of different gresses.");
     }

@@ -951,7 +951,7 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
 /**
  * This function creates from a RamSection with it's isolated ALU information.  This is
  * the initial state from which the RamSections can be condensed and determined
- * where the are in RAM.
+ * where they are in RAM.
  */
 const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     if (has_param<MeterColor>())
@@ -2918,10 +2918,10 @@ bool Format::determine_bytes_per_loc(bool &initialized,
             single_action_inputs.emplace_back(ram_sect);
         }
         all_bus_inputs.emplace_back(entry.first, single_action_inputs);
+        auto adt_bits_reqd = all_bus_inputs.back().adt_bits_required();
         max_bytes = std::max(max_bytes,
-                             static_cast<int>(all_bus_inputs.back().adt_bits_required()) / 8);
+                             (static_cast<int>(adt_bits_reqd) + 7)/ 8);
     }
-
 
     locked_in_all_actions_inputs.clear();
     for (int i = 0; i < SLOT_TYPES; i++) {
@@ -3544,5 +3544,4 @@ void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
         build_potential_format(imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE);
     }
 }
-
 }  // namespace ActionData

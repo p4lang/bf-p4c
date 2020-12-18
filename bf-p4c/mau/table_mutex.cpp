@@ -215,7 +215,8 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
         if (check_if_can_share(tbl, am_tbl, am)) {
             table_sharing_attached[tbl].insert(am_tbl);
             continue;
-        } else {
+        // Stateful Register can be shared across actions
+        } else if (!am->to<IR::MAU::StatefulAlu>()) {
            ::error("%1% and %2% cannot share %3% because use of the %3% is not "
                     "mutually exclusive", tbl, am_tbl, am);
         }

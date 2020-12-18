@@ -100,6 +100,7 @@ class DarkLiveRange : public Inspector {
         }
     };
 
+ public:
     struct OrderedFieldInfo {
         const PHV::AllocSlice& field;
         StageAndAccess minStage;
@@ -357,6 +358,15 @@ class DarkLiveRange : public Inspector {
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),
           overlay(phv.dark_mutex()), tableMutex(t), tablesToActions(m) { }
 };
+
+static std::ostream& operator<<(std::ostream &out, const DarkLiveRange::OrderedFieldInfo& i) {
+    out << " Field : " << i.field << " [ " << i.minStage << ", " << i.maxStage << " ]";
+    out << " Units [ ";
+    for (auto u : i.units) {
+        out << u << ", ";
+    }
+    out << " ] " << std::endl;
+}
 
 /** This pass is the pass manager for dark containers based overlay and provides external interfaces
   * to PHV analysis for the same purpose.
