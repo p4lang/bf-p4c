@@ -113,6 +113,7 @@ class BuildParserOverlay : public BuildMutex {
     BuildParserOverlay(PhvInfo& phv,
                        const bitvec& neverOverlay)
         : BuildMutex(phv, neverOverlay, ignore_field) { }
+    BuildParserOverlay *clone() const override { return new BuildParserOverlay(*this); }
 };
 
 class ExcludeParserLoopReachableFields : public Visitor {
@@ -152,6 +153,7 @@ class BuildMetadataOverlay : public BuildMutex {
  public:
     BuildMetadataOverlay(PhvInfo& phv, const bitvec& neverOverlay)
         : BuildMutex(phv, neverOverlay, ignore_field) { }
+    BuildMetadataOverlay *clone() const override { return new BuildMetadataOverlay(*this); }
 };
 
 /** Mark aliased header fields as never overlaid. When header fields are aliased, they are always

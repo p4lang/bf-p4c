@@ -57,7 +57,8 @@ TEST(TofinoWriteContext, Read) {
           IR::IndexedVector<IR::Parameter>({
             new IR::Parameter(IR::ID("zero"), IR::Direction::In, new IR::Type_Bits(8, false)),
             new IR::Parameter(IR::ID("one"), IR::Direction::Out, new IR::Type_Bits(8, false)),
-            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, new IR::Type_Bits(8, false))})));
+            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, new IR::Type_Bits(8, false))})),
+        "foo");
     prim->apply(TestRead());
 
     auto *inst = new IR::MAU::Instruction("foo_inst");
@@ -95,7 +96,8 @@ TEST(TofinoWriteContext, Write) {
           IR::IndexedVector<IR::Parameter>({
             new IR::Parameter(IR::ID("zero"), IR::Direction::In, new IR::Type_Bits(8, false)),
             new IR::Parameter(IR::ID("one"), IR::Direction::Out, new IR::Type_Bits(8, false)),
-            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, new IR::Type_Bits(8, false))})));
+            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, new IR::Type_Bits(8, false))})),
+        "foo");
     prim->apply(TestWrite());
 
     auto *inst = new IR::MAU::Instruction("foo_inst");

@@ -13,12 +13,16 @@ TEST(BFNTypeCategories, Types) {
             new IR::Annotation(IR::ID("__compiler_generated"), { })
         });
 
-    auto* headerType = new IR::Type_Header("hdr", IR::Annotations::empty, { });
-    auto* headerImType = new IR::Type_Header("hdr", imAnnotation, { });
-    auto* headerCgType = new IR::Type_Header("hdr", cgAnnotation, { });
-    auto* structType = new IR::Type_Struct("meta", IR::Annotations::empty, { });
-    auto* structImType = new IR::Type_Struct("meta", imAnnotation, { });
-    auto* structCgType = new IR::Type_Struct("meta", cgAnnotation, { });
+    auto* headerType = new IR::Type_Header("hdr", IR::Annotations::empty,
+                                           new IR::TypeParameters(), { });
+    auto* headerImType = new IR::Type_Header("hdr", imAnnotation, new IR::TypeParameters(), { });
+    auto* headerCgType = new IR::Type_Header("hdr", cgAnnotation, new IR::TypeParameters(), { });
+    auto* structType = new IR::Type_Struct("meta", IR::Annotations::empty,
+                                           new IR::TypeParameters(), { });
+    auto* structImType = new IR::Type_Struct("meta", imAnnotation,
+                                           new IR::TypeParameters(), { });
+    auto* structCgType = new IR::Type_Struct("meta", cgAnnotation,
+                                           new IR::TypeParameters(), { });
     auto* bitType = IR::Type::Bits::get(1);
     auto* boolType = new IR::Type_Boolean;
     auto* infIntType = new IR::Type_InfInt;

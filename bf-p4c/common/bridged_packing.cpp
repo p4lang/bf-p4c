@@ -1722,6 +1722,6 @@ ReplaceFlexibleType::postorder(IR::StructExpression* expr) {
         if (decl) {
             auto c = decl->to<IR::NamedExpression>();
             comp->push_back(c); } }
-    return new IR::StructExpression(expr->typeName, *comp);
+    return new IR::StructExpression(expr->structType, *comp);
 }
 

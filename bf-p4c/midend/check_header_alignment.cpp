@@ -161,8 +161,8 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
 }
 
 const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
-    auto origType = typeMap->getType(st->typeName)->to<IR::Type_Type>();
-    BUG_CHECK(origType, "Expected %1% to be a type", st->typeName);
+    auto origType = typeMap->getType(st->structType)->to<IR::Type_Type>();
+    BUG_CHECK(origType, "Expected %1% to be a type", st->structType);
     if (!origType->type->is<IR::Type_Header>())
         return st;
 
@@ -214,7 +214,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
         index++;
     }
 
-    auto retval = new IR::StructExpression(st->srcInfo, st->typeName, components);
+    auto retval = new IR::StructExpression(st->srcInfo, st->structType, components);
     LOG6("rewrite field list to " << retval);
     return retval;
 }

@@ -309,7 +309,7 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
 
     if (!reg_info.reg_action) {
         auto apply = new IR::Function("apply",
-                                 new IR::Type_Method(IR::Type_Void::get(), apply_params), body);
+                new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"), body);
         auto *apply_block = new IR::BlockStatement({ apply });
         reg_info.reg_action = new IR::Declaration_Instance(IR::ID(apply_name),
                             annots, ratype, ctor_args, apply_block);

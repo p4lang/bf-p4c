@@ -3,7 +3,7 @@
 #include "ir/json_loader.h"
 #include "dynamic_hash/dynamic_hash.h"
 #include "lib/hex.h"
-#include "lib/bitops.h"
+#include "lib/gmputil.h"
 
 /**
  * The list of currently supported crc strings, and their corresponding conversion to the

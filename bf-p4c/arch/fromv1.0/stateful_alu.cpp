@@ -298,7 +298,7 @@ class CreateSaluApplyFunction : public Inspector {
                                             new IR::Constant(utype, 0)));
             apply_params->push_back(new IR::Parameter("rv", IR::Direction::Out, utype)); }
         apply = new IR::Function("apply",
-                                 new IR::Type_Method(IR::Type_Void::get(), apply_params), body);
+                new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"), body);
         if (output && defer_out)
             body->push_back(output); }
     static const IR::Function *create(IR::Annotations *annots, P4V1::ProgramStructure *structure,

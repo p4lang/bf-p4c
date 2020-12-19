@@ -4,6 +4,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot/clot.h"
 #include "bf-p4c/phv/phv.h"
+#include "bf-p4c/lib/error_macros.h"
 
 struct StageUse {
     static constexpr int MAX_STAGES = 12;

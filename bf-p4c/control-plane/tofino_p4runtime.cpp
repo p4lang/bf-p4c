@@ -24,7 +24,7 @@
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/typeMap.h"
 #include "lib/nullstream.h"
-#include "midend/elim_typedef.h"
+#include "midend/eliminateTypedefs.h"
 #include "p4/config/v1/p4info.pb.h"
 #include "p4runtime_force_std.h"
 

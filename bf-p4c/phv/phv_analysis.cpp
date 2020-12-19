@@ -143,7 +143,7 @@ namespace {
 
 class IncrementalPHVAllocPass : public Logging::PassManager {
  public:
-    IncrementalPHVAllocPass(const std::initializer_list<Visitor *>& visitors)
+    IncrementalPHVAllocPass(const std::initializer_list<VisitorRef>& visitors)
         : Logging::PassManager("phv_incremental_allocation_") {
         addPasses(visitors);
     }

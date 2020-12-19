@@ -435,7 +435,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "SelectExpression: Cannot unify type int with PortIdUint_t"
+  "Cannot unify type"
   extensions/p4_tests/p4_16/stf/onlab_packet_io.p4
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
 )
@@ -935,7 +935,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1165
 p4c_add_xfail_reason("tofino"
-  "Cannot unify bit<.*> to bit<.*>"
+  "Cannot unify type"
   ../glass/testsuite/p4_tests/nus/COMPILER-858/comp_858.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-350/ipv4_issue.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-394/comp394.p4
@@ -1217,7 +1217,7 @@ p4c_add_xfail_reason("tofino"
 
 # checksum only support bit<16> output
 p4c_add_xfail_reason("tofino"
-  "Cannot unify .* to .*"
+  "Cannot unify type"
   ../glass/testsuite/p4_tests/mau/galaxy_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/gradations_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
@@ -1333,7 +1333,7 @@ p4c_add_xfail_reason("tofino"
 
 # negative test.
 p4c_add_xfail_reason("tofino"
-  "Not a phv field in the lpf execute: 1"
+  "Not a phv field in the lpf execute"
   extensions/p4_tests/p4_16/compile_only/neg_test_1_lpf_constant_param.p4
 )
 
@@ -1464,7 +1464,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Cannot unify bit<8> to int<8>"
+  "Cannot unify type"
   extensions/p4_tests/p4_16/compile_only/brig-305.p4
 )
 
@@ -1798,7 +1798,7 @@ p4c_add_xfail_reason("tofino"
 # )
 
 p4c_add_xfail_reason("tofino"
-  "error: PHV allocation creates an invalid container action within a Tofino ALU"
+  "table.*is applied in multiple places"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
 )
 
@@ -1839,7 +1839,7 @@ p4c_add_xfail_reason("tofino"
 
 # PSA on tofino new failures
 p4c_add_xfail_reason("tofino"
-  "Cannot unify PortId_t to bit<32>"
+  "Cannot unify type"
   testdata/p4_16_samples/psa-multicast-basic-2-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
   testdata/p4_16_samples/psa-end-of-ingress-test-bmv2.p4
@@ -1872,7 +1872,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-3207
 p4c_add_xfail_reason("tofino"
-  "Cannot unify bit<16> to ether_type_t"
+  "Cannot unify type"
   ba102_simple_l3_acl
 )
 
@@ -1916,34 +1916,58 @@ p4c_add_xfail_reason("tofino"
 
 # p4c dd7c0eb1
 p4c_add_xfail_reason("tofino"
-  ".*error: Field __bfp4c_fields of header __bfp4c_bridged_metadata_header cannot have type struct fields"
+  ".*error: Field.*header.*cannot have type.*"
   testdata/p4_16_samples/issue2345-multiple_dependencies.p4
   testdata/p4_16_samples/issue2345-2.p4
+  testdata/p4_16_samples/predication_issue.p4
   testdata/p4_16_samples/issue2345-1.p4
   testdata/p4_16_samples/issue2345-with_nested_if.p4
 )
+
 p4c_add_xfail_reason("tofino"
   ".*error:.*Conditions in an action must be simple comparisons of an action data parameter.*"
   testdata/p4_16_samples/hdr_stacks2345.p4
   testdata/p4_16_samples/xor_test.p4
   testdata/p4_16_samples/issue2345.p4
 )
+
 # p4c 84467391
 p4c_add_xfail_reason("tofino"
   "1 expected packet on port 0 not seen"
   testdata/p4_16_samples/issue2498-bmv2.p4
+  testdata/p4_16_samples/issue2614-bmv2.p4
 )
+
 # p4c 1992468c
 p4c_add_xfail_reason("tofino"
-  "Skipping assembler, assembly file is empty"
-  testdata/p4_16_samples/psa-e2e-cloning-basic-bmv2.p4
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/hdr_stacks2345.p4
+  testdata/p4_16_samples/xor_test.p4
+  testdata/p4_16_samples/issue2345.p4
 )
+
 # p4c 7fbc2a4
 p4c_add_xfail_reason("tofino"
   ".*error: The table .* with no key cannot have the action .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices.p4
 )
+
 p4c_add_xfail_reason("tofino"
   "Internal compiler error. Please submit a bug report with your code."
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "No PhvInfo::header for header named"
+  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "condition too complex"
+  testdata/p4_16_samples/psa-e2e-cloning-basic-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PSA_IdleTimeout_t: declaration not found"
+  testdata/p4_16_samples/psa-idle-timeout.p4
 )

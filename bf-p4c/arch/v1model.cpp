@@ -269,14 +269,14 @@ class LoadTargetArchitecture : public Inspector {
                     new IR::Parameter("scale", IR::Direction::None,
                         IR::Type_Bits::get(6, true)),
                     new IR::Parameter("data", IR::Direction::None,
-                        new IR::Type_Name("U"))})), false),
+                        new IR::Type_Name("U"))}), "math_unit"), false),
             new IR::Method(
                 "execute",
                 new IR::Type_Method(
                 new IR::Type_Name("T"),
                 new IR::ParameterList({
                     new IR::Parameter("x",
-                        IR::Direction::In, new IR::Type_Name("T"))})), false),
+                        IR::Direction::In, new IR::Type_Name("T"))}), "execute"), false),
         });
         auto typeVars = new IR::IndexedVector<IR::Type_Var>({
             new IR::Type_Var("T"), new IR::Type_Var("U")

@@ -4,6 +4,7 @@ struct TableResourceAlloc;
 #include "bf-p4c/ir/ir_enums.h"
 #include "bf-p4c/ir/unique_id.h"
 #include "bf-p4c/mau/hash_function.h"
+#include "bf-p4c/lib/error_macros.h"
 #end
 #emit_impl
 #include "bf-p4c/mau/resource.h"
@@ -745,7 +746,7 @@ class Action : VLIWInstruction, IAnnotated {
     cstring disallowed_reason = "none";
     inline Vector<Argument> default_params = {};
     bool exitAction = false;  // should exit pipeline after action (next == EOP)
-    bool parallel = false;    // visit children parallelly? 
+    bool parallel = false;    // visit children parallelly?
 
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.

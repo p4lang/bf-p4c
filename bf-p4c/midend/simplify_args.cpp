@@ -259,7 +259,7 @@ FlattenHeader::doFlattenStructInitializer(const IR::StructExpression* e) {
     // removing nested StructInitailzierExpression
     auto no_nested_struct = new IR::IndexedVector<IR::NamedExpression>();
     flattenStructInitializer(e, no_nested_struct);
-    return new IR::StructExpression(e->srcInfo, e->typeName, *no_nested_struct);
+    return new IR::StructExpression(e->srcInfo, e->structType, *no_nested_struct);
 }
 
 IR::ListExpression* FlattenHeader::flatten_list(const IR::ListExpression* args) {

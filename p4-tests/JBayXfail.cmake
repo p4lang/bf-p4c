@@ -511,8 +511,8 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-3379
 p4c_add_xfail_reason("tofino2"
-  "error: PHV allocation was not successful"
-  p4c-3379
+   "error: PHV allocation was not successful"
+   p4c-3379
 )
 
 # P4C-3388
@@ -520,3 +520,4 @@ p4c_add_xfail_reason("tofino2"
    "Expected packet was not received on device .*"
    p4c-3388
 )
+

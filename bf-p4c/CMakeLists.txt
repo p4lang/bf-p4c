@@ -133,7 +133,6 @@ set (BF_P4C_MIDEND_SRCS
   midend/copy_block_pragmas.cpp
   midend/copy_header.cpp
   midend/elim_cast.cpp
-  midend/elim_typedef.cpp
   midend/desugar_varbit_extract.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
@@ -160,7 +159,6 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/copy_header.h
   midend/elim_cast.h
   midend/desugar_varbit_extract.h
-  midend/elim_typedef.h
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_graph.h
