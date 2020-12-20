@@ -178,6 +178,9 @@ const IR::P4Table* SplitAlpm::create_preclassifier_table(const IR::P4Table* tbl,
     // create key
     IR::Vector<IR::KeyElement> keys;
     for (auto f : tbl->getKey()->keyElements) {
+        if (f->matchType->path->name == "ternary")
+            ::error(ErrorType::ERR_UNSUPPORTED, "Ternary match key %1% not supported in table %2%",
+                    f->expression, tbl->name);
         if (f->matchType->path->name == "lpm") {
             auto k = new IR::KeyElement(f->annotations, f->expression,
                      new IR::PathExpression("lpm"));
