@@ -76,6 +76,10 @@ void ConstrainedField::setNoHoles(bool b) {
     noHoles = b;
 }
 
+void ConstrainedField::setSameContainerGroup(bool b) {
+    sameContainerGroup = b;
+}
+
 /* ConstrainedFieldMap */
 
 ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
@@ -102,6 +106,7 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
         result[f.name].setNoSplit(f.no_split());
         result[f.name].setExactContainer(f.exact_containers());
         result[f.name].setNoHoles(f.no_holes());
+        result[f.name].setSameContainerGroup(f.same_container_group());
     }
 
     // Extract slices based on clustering

@@ -78,6 +78,7 @@ class ConstrainedField : public LoggableEntity {
     bool noOverlay = false;
     bool exactContainer = false;
     bool noHoles = false;
+    bool sameContainerGroup = false;
 
  public:
     ConstrainedField() {}
@@ -116,6 +117,9 @@ class ConstrainedField : public LoggableEntity {
 
     void setNoHoles(bool b);
     bool hasNoHoles() const                                               { return noHoles; }
+
+    void setSameContainerGroup(bool b);
+    bool hasSameContainerGroup()                                     { return sameContainerGroup; }
 };
 
 typedef std::map<cstring, ConstrainedField> ConstrainedFieldMap;

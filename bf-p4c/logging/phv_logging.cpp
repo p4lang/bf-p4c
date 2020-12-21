@@ -333,6 +333,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     logExactContainerConstraint(cfield, srcLoc);
     logEquivalentAlignConstraint(cfield, srcLoc);
     logNoHolesConstraint(cfield, srcLoc);
+    logSameContainerGroup(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -569,6 +570,15 @@ void PhvLogging::logNoHolesConstraint(ConstrainedField &field,
     field.getLogger()->append(nhc);
 }
 
+void PhvLogging::logSameContainerGroup(ConstrainedField &field,
+                                                        const SourceLocation *srcLoc) {
+    if (!field.hasSameContainerGroup()) return;
+
+    auto scgc = new BoolConstraint(false, int(ConstraintReason::SameContainerGroup),
+        "SameContainerGroup", srcLoc);
+    field.getLogger()->append(scgc);
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -685,6 +695,10 @@ void PhvLogging::logConstraintReasons() {
             "across multiple containers as long as all of the slices fit with no holes "
             "(concatenating the containers would reconstruct the field). This constraint relaxes "
             "Exact Containers by allowing to split the field."
+        }, {
+            ConstraintReason::SameContainerGroup,
+            "Same Container Group: All slices of this field must be present in the same MAU group. "
+            "This constraint does not imply MAU group, but it makes it stricter if it is present."
         }
     };
 
