@@ -115,6 +115,8 @@ node ('compiler-travis') {
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|p4_14|glass' -LE 'METRICS'"
                     sh "echo 'Running some arista customer must passes that are excluded in Travis jobs'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
+                    sh "echo 'Running Extreme PTF tests'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/scripts/run_custom_tests -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} './run_extreme_tests.sh'"
                     sh "echo 'Running switch-14 and switch-16 tests for METRICS'"
                     withCredentials([usernamePassword(
                         credentialsId: "bfndocker",
@@ -217,7 +219,7 @@ node ('compiler-travis') {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running tofino2 tests'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2|cpplint|gtest|test_p4c_driver' -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2|cpplint|gtest|test_p4c_driver' -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|3174'"
                 }
             }
         },
