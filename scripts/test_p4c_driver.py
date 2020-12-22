@@ -379,6 +379,49 @@ class Test:
                 "\n       Different absolute paths may be ignored, they don't cause this error."
                 "\n       If the differences are expected, refer to the --gen-src-json knob.")
 
+    def checkRemovedFiles(self, args):
+        """Check that files are cleaned when the debug mode has been enabled.
+
+        Parameters:
+            - args -  passed arguments to parser
+        """
+        def __check_with_rfiles(rfiles, fins):
+            """
+            Check if fins ends with a given suffixes passed in the
+            rfiles list.
+
+            The method returns true if file is contained, false
+            otherwise.
+            """
+            for rf in rfiles:
+                if fins.endswith(rf):
+                    return True
+            return False
+        # Check if we need to remove debug files. The rule here needs to be aligned with
+        # conditions inside the barefoot.py driver! Files are NOT removed when: 
+        # * debug mode is NOT enabled
+        # * archive mode is not enabled
+        if args.archive is not None or args.debug_info:
+            return
+
+        # In this folder, we need to check if the folder doesn't contain files with given
+        # whole files, etc.
+        #
+        # Don't forget to edit the reference list in bf-p4c/driver/barefoot.py file!
+        filesToRemove = [
+            ".dynhash.json",
+            ".prim.json",
+            "resources_deparser.json"
+        ]
+        # Walk through the generated folder and check that these
+        # files are already removed
+        for _, _, files in os.walk(args.output_directory):
+            for f in files:
+                # Check if any file is in the list of files to remove and
+                # throw exception if so
+                if __check_with_rfiles(filesToRemove, f):
+                    raise TestError("ERROR: File {} exists but is should not!".format(f))
+
     def checkTest(self, options, file_list, ref_src_json):
         """
         Check that the generated output is correct.
@@ -395,6 +438,7 @@ class Test:
             self.checkMAUStagesForTarget(args)
             self.checkOutputFiles(args, file_list)
             self.checkSourceJson(args, ref_src_json)
+            self.checkRemovedFiles(args)
         except TestError as e:
             print("********************", file=sys.stderr)
             print("Error when checking output", file=sys.stderr)
@@ -402,7 +446,7 @@ class Test:
             print("********************", file=sys.stderr)
             return 1
         except Exception:
-            print("Some other error occured")
+            print("Some other error occurred")
             print(traceback.format_exc(), file=sys.stderr)
             return 1
 

@@ -216,7 +216,14 @@ class BarefootBackend(BackendDriver):
         if opts.debug_info:
             opts.create_graphs = True
 
-        if opts.verbose > 0:
+        # Enable the verbose mode if it is passed via the command line
+        # the self._verbose variable controls the verbosity mode inside
+        # the BackendDriver class. Verbose mode is enabled when debug mode
+        # is detected.
+        self.debug_info = opts.debug_info
+        self.verbose = opts.verbose
+        if opts.verbose == 3:
+            # Enable more verbose backend driver mode
             self._verbose = True
 
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
@@ -614,8 +621,9 @@ class BarefootBackend(BackendDriver):
         # reset all assembler options to what was passed on cmd line
         # Note that we need to make a copy of the list
         self._commands['assembler'] = list(self._saved_assembler_params)
-        # lookup the directory name. For P4-16, it is the output + pipe_name
-        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self._verbose:
+        # lookup the directory name. For P4-16, it is the output + pipe_name.
+        # This logging feature is enabled during the DEVELOPER mode 
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self.verbose == 3:
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(dirname))
         else:
@@ -680,9 +688,10 @@ class BarefootBackend(BackendDriver):
         return 1
 
     def runCleaner(self):
-        if self._verbose:
+        if self.debug_info:
             return 0
 
+        # Don't forget to edit the reference list in scripts/test_p4c_driver.py file!
         filesToRemove = []
         filesToRemove.append('.dynhash.json')
         filesToRemove.append('.prim.json')
