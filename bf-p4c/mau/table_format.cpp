@@ -2356,7 +2356,6 @@ bool TableFormat::build_match_group_map() {
                         entry_overhead.max().index() < idx * SINGLE_RAM_BITS + OVERHEAD_BITS),
                        "Illegal overhead entry");
              std::set<int> ram_sections;
-             ram_sections.insert(idx);
              // Mark which entries are in which RAM sectionm and which entries are wide
              for (int i = 0; i < layout_option.way.width; i++) {
                  if (use->match_groups[entry].overhead_in_RAM_word(i) ||
