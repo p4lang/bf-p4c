@@ -71,6 +71,12 @@ void SRamMatchTable::verify_format() {
     format->pass1(this);
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
+    if (word_info.size() > fmt_width) {
+        // FIXME -- temp workaround for P4C-3436/P4C-3407
+        warning(format->lineno, "Match group map wider than format, padding out format");
+        format->size = word_info.size() * 128;
+        fmt_width = word_info.size();
+        while ((1U << format->log2size) < format->size) ++format->log2size; }
     for (unsigned i = 0; i < format->groups(); i++) {
         auto &info = group_info[i];
         info.tofino_mask.resize(fmt_width);
@@ -888,7 +894,10 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             unitram_config.unitram_enable = 1;
 
             int vpn = *vpn_iter++;
-            int vpn_base = (vpn + *min_element(word_info[way.word])) & ~3;
+            int vpn_base = vpn & ~3;
+            // FIXME -- temp workaround for P4C-3436 allows unused words in the match
+            if (!word_info[way.word].empty())
+                vpn_base = (vpn + *min_element(word_info[way.word])) & ~3;
             ram.match_ram_vpn.match_ram_vpn0 = vpn_base >> 2;
             int vpn_use = 0;
             for (unsigned group = 0; group < word_info[way.word].size(); group++) {
