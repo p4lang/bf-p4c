@@ -111,7 +111,14 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
         try {
             hash_alg->final_xor = stoll(alg_name.substr(pos + 10), nullptr, 0);
         } catch (std::exception &e) {
-            ::error("%s: String after init_ cannot fit within a long long", srcInfo);
+            ::error("%s: String after final_xor_ cannot fit within a long long", srcInfo);
+            return false;
+        }
+    } else if ((pos = alg_name.find("xout_")) != std::string::npos) {
+        try {
+            hash_alg->final_xor = stoll(alg_name.substr(pos + 5), nullptr, 0);
+        } catch (std::exception &e) {
+            ::error("%s: String after xout_ cannot fit within a long long", srcInfo);
             return false;
         }
     } else {
