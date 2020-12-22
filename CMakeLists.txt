@@ -133,6 +133,14 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif ()
 
 add_subdirectory(bf-asm)
+
+# Override default settings in p4c.
+set (ENABLE_BMV2 OFF CACHE BOOL "")
+set (ENABLE_EBPF OFF CACHE BOOL "")
+set (ENABLE_UBPF OFF CACHE BOOL "")
+set (ENABLE_DPDK OFF CACHE BOOL "")
+set (ENABLE_P4TEST OFF CACHE BOOL "")
+set (ENABLE_P4C_GRAPHS OFF CACHE BOOL "")
 add_subdirectory(p4c)
 
 # Gtest needs additional includes, add them here.

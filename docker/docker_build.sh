@@ -283,11 +283,8 @@ if [[ "${BUILD_FOR}" == "tofino" ]] ; then
   /usr/local/bin/ccache --zero-stats
   ./bootstrap_bfn_compilers.sh \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DENABLE_STF2PTF=OFF \
     -DINSTALL_LIBDYNHASH=OFF \
-    -DENABLE_P4C_GRAPHS=OFF \
-    -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
-    -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
-    -DENABLE_UBPF=OFF -DENABLE_DPDK=OFF \
     ${disable_unified}
 
   cd build
@@ -301,10 +298,7 @@ elif [[ "${BUILD_FOR}" == "glass" ]] ; then
   ./bootstrap_bfn_compilers.sh \
     -DCMAKE_BUILD_TYPE=RELEASE \
     -DINSTALL_LIBDYNHASH=OFF \
-    -DENABLE_P4C_GRAPHS=OFF \
-    -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
-    -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
-    -DENABLE_UBPF=OFF -DENABLE_DPDK=OFF \
+    -DENABLE_STF2PTF=OFF \
     -DENABLE_STATIC_LIBS=ON \
     -DENABLE_BAREFOOT_INTERNAL=OFF \
     -DENABLE_GTESTS=OFF
