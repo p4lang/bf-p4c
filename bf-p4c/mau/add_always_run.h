@@ -77,7 +77,7 @@ class AddAlwaysRun : public PassManager {
     };
 
     /// Performs the actual insertion of tables into the IR.
-    class AddTables : public MauTransform {
+    class AddTables : public MauTransform, ControlFlowVisitor {
         AddAlwaysRun& self;
 
         /// The list of remaining always-run tables to be added to the IR for the current gress

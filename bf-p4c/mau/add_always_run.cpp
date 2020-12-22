@@ -1,5 +1,6 @@
 #include "add_always_run.h"
 #include "bf-p4c/common/empty_tableseq.h"
+#include "bf-p4c/ir/table_tree.h"
 
 int AddAlwaysRun::compare(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
     return compare(t1, t2 ? boost::optional<UniqueId>(t2->get_uid()) : boost::none);
@@ -173,7 +174,9 @@ const IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(IR::BFN::Pipe* pipe) {
         }
 
         // Visit the gress.
+        LOG6("AddAlwaysRun::AddTables before" << Log::endl << TableTree(toString(gress), mau));
         visit(mau);
+        LOG6("AddAlwaysRun::AddTables after" << Log::endl << TableTree(toString(gress), mau));
     }
 
     return pipe;

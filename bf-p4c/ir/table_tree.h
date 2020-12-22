@@ -13,6 +13,7 @@ class TableTree {
     mutable std::set<const IR::MAU::TableSeq *> done;
     safe_vector<cstring> name;
     const IR::MAU::TableSeq *seq;
+    const IR::BFN::Pipe *pipe;
 
     void print(std::ostream &out,
                const safe_vector<cstring> &tag,
@@ -74,11 +75,19 @@ class TableTree {
         --indent; }
 
  public:
-    TableTree(cstring name, const IR::MAU::TableSeq *seq) : name{name}, seq(seq) {}
+    TableTree(cstring name, const IR::MAU::TableSeq *seq) : name{name}, seq(seq), pipe(nullptr)  {}
+    explicit TableTree(const IR::BFN::Pipe *pipe) : name{}, seq(nullptr), pipe(pipe)  {}
     friend std::ostream &operator<<(std::ostream &out, const TableTree &tt) {
         tt.indent = indent_t();
         tt.done.clear();
-        if (tt.seq) tt.print(out, tt.name, tt.seq);
+        if (tt.pipe) {
+            if (tt.pipe->thread[INGRESS].mau)
+                tt.print(out, {"ingress"}, tt.pipe->thread[INGRESS].mau);
+            if (tt.pipe->thread[EGRESS].mau)
+                tt.print(out, {"egress"}, tt.pipe->thread[EGRESS].mau);
+            if (tt.pipe->ghost_thread) tt.print(out, {"ghost"}, tt.pipe->ghost_thread);
+        } else if (tt.seq) {
+            tt.print(out, tt.name, tt.seq); }
         return out; }
 };
 
