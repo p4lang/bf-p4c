@@ -521,3 +521,8 @@ p4c_add_xfail_reason("tofino2"
    p4c-3388
 )
 
+# P4C-3435
+p4c_add_xfail_reason("tofino2"
+   "1 expected packet on port 0 not seen"
+   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
+)

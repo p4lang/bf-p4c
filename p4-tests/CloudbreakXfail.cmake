@@ -490,3 +490,9 @@ p4c_add_xfail_reason("tofino3"
   # P4C-3093
   extensions/p4_tests/p4_16/jbay/ghost3.p4
 )
+
+# P4C-3435
+p4c_add_xfail_reason("tofino3"
+  "1 expected packet on port 0 not seen"
+  extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
+)

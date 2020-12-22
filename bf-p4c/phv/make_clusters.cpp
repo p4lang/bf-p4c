@@ -552,7 +552,8 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
                 if (padding_size != 0) {
                     auto* padding = phv_i.create_dummy_padding(padding_size,
                                                                list->front().gress());
-                    padding->set_exact_containers(true);
+                    padding->set_exact_containers(list->front().field()->exact_containers());
+                    padding->set_deparsed(list->front().field()->deparsed());
                     auto padding_fs = PHV::FieldSlice(padding);
                     list->push_back(padding_fs);
                     auto* aligned_cluster_padding = new PHV::AlignedCluster(

@@ -243,10 +243,15 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (field_bits.size() > 32) {
             if (field->exact_containers() && field->size % 32 != 0) {
                 fatal_error(
-                    "header fields cannot be used in wide arithmetic ops, "
+                    "Header fields cannot be used in wide arithmetic ops, "
                     "if field.size *mod* 32 != 0. "
-                    "But field %1% with %2% bits is involved in: %3%", field->name,
-                    field_bits.size(), inst);
+                    "But field %1% with %2% bits is involved in: %3%."
+                    "Please try to change fields to bit<64> or copy header fields to metadata, "
+                    "apply operations on metadata, and then copy back result to header fields",
+                    field->name, field_bits.size(), inst);
+            } else {
+                field->set_no_holes(true);
+                field->set_solitary(true);
             }
             bool success = field->add_wide_arith_start_bit(field_bits.lo);
             if (!success) {
@@ -271,8 +276,10 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
             LOG6("  field " << field->name << " cannot split slice " << lsb_slice);
             LOG6("  field " << field->name << " cannot split slice " << msb_slice);
         } else {
-            LOG3("Marking " << field->name << field_bits << " as 'no split' for its use in "
-                 "instruction " << inst->name << ".");
+            LOG3("Marking " << field->name << " " << field_bits
+                            << " as 'no split' for its use in "
+                               "instruction "
+                            << inst->name << ".");
             // TODO(cole): Unify no_split and no_split_at.
             if (field_bits.size() == field->size)
                 field->set_no_split(true);

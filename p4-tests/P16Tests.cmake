@@ -277,6 +277,8 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/parser_multi_write_10.p4
   extensions/p4_tests/p4_16/stf/misc_1.p4
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
+  extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/ptf/static_entries.p4
   extensions/p4_tests/p4_16/ptf/checksum_if_else_cond.p4
   extensions/p4_tests/p4_16/ptf/parse_recursive_ipv4.p4
