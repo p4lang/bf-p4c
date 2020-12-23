@@ -70,6 +70,7 @@ ignoreFilePatterns=(
   '^p4c/'  # Files from P4.org compiler should have their own copyright notice.
   '^scripts/gen_reference_outputs/inputs/.*\.p4$'
   '^scripts/pkg-src/src/.*\.patch$'
+  '^scripts/run_custom_tests/patches/scapy/.*\.py$'
 
   # The only file we ship from Glass seems to be primitives.json, which can't
   # have comments anyway.
