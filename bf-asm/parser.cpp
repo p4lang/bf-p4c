@@ -22,8 +22,9 @@
 class AsmParser : public Section {
     std::vector<Parser*> parser[2];     // INGRESS, EGRESS
     bitvec               phv_use[2];    // ingress/egress only
-    Phv::Ref             ghost_parser;  // the ghost "parser" extracts a single
-                                        // 32-bit value
+    std::vector<Phv::Ref> ghost_parser;  // the ghost "parser" extracts 32-bit value. This 32-bit
+                                         // can be from a single 32-bit container or multiple
+                                         // smaller one.
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
@@ -61,7 +62,11 @@ void AsmParser::start(int lineno, VECTOR(value_t) args) {
 
 void AsmParser::input(VECTOR(value_t) args, value_t data) {
     if (args.size > 0 && args[0] == "ghost") {
-        ghost_parser = Phv::Ref(GHOST, 0, data);
+        if (data.type == tVEC) {
+            for (int i = 0; i < data.vec.size; i++) {
+                ghost_parser.push_back(Phv::Ref(GHOST, 0, data[i])); }
+        } else {
+            ghost_parser.push_back(Phv::Ref(GHOST, 0, data)); }
         return; }
     gress_t gress = (args.size > 0 && args[0] == "egress") ? EGRESS : INGRESS;
     auto* p = new Parser(phv_use, gress, parser[gress].size());
@@ -351,10 +356,22 @@ void Parser::process() {
         if (parser_error.lineno >= 0)
             if (parser_error.check() && parser_error.gress() == gress)
                 phv_use[gress][parser_error->reg.uid] = 1; }
-    // TEMP FIX - remvove after P4C-3176 is merged
-    // if (ghost_parser && ghost_parser.check()) {
-    //     if (ghost_parser.size() != 32)
-    //         error(ghost_parser.lineno, "ghost thread input must be 32 bits"); }
+    if (ghost_parser.size()) {
+        int total_size = 0;
+        int curr_parser_id = -1;
+        std::sort(ghost_parser.begin(), ghost_parser.end());
+        for (Phv::Ref &r : ghost_parser) {
+            r.check();
+            total_size += r.size();
+            if (curr_parser_id >= 0) {
+                if ((curr_parser_id + 1) != r->reg.parser_id())
+                    error(ghost_parser[0].lineno, "ghost thread input must be 32 consecutive bits");
+            }
+            curr_parser_id = r->reg.parser_id();
+        }
+        if (total_size != 32)
+            error(ghost_parser[0].lineno, "ghost thread input must be 32 bits");
+    }
     if (error_count > 0) return;
     int all_index = 0;
     for (auto st : all) st->all_idx = all_index++;

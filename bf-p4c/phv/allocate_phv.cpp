@@ -3574,6 +3574,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::set<const PHV::SuperCluster*> has_pov;
     std::map<const PHV::SuperCluster*, int> n_extracted_uninitialized;
     std::map<const PHV::SuperCluster*, size_t> n_container_size_pragma;
+    std::map<const PHV::SuperCluster*, size_t> n_high_pri_cnt_size_pragma;
     std::set<const PHV::SuperCluster*> has_container_type_pragma;
 
     // calc whether the cluster has pov bits.
@@ -3600,11 +3601,16 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     const auto& container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     for (auto* cluster : cluster_groups) {
         ordered_set<const PHV::Field*> fields;
+        ordered_set<const PHV::Field*> hi_pri_fields;
         cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
-            if (container_sizes.is_specified(fs.field()))
+            if (container_sizes.is_specified(fs.field())) {
                 fields.insert(fs.field());
+                if (container_sizes.is_high_priority(fs.field()))
+                    hi_pri_fields.insert(fs.field());
+            }
         });
         n_container_size_pragma[cluster] = fields.size();
+        n_high_pri_cnt_size_pragma[cluster] = hi_pri_fields.size();
     }
 
     // calc num_pack_conflicts
@@ -3696,8 +3702,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         if (Device::currentDevice() != Device::TOFINO) {
             if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
                 return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
-            if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
-                return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
+            if (n_high_pri_cnt_size_pragma.at(l) != n_high_pri_cnt_size_pragma.at(r))
+                return n_high_pri_cnt_size_pragma.at(l) > n_high_pri_cnt_size_pragma.at(r);
         }
         if (Device::currentDevice() != Device::TOFINO)
             if (has_pov.count(l) != has_pov.count(r))

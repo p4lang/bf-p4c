@@ -109,7 +109,7 @@ bool Phv_Parde_Mau_Use::is_referenced(const PHV::Field *f) const {      // use i
 
 bool Phv_Parde_Mau_Use::is_deparsed(const PHV::Field *f) const {      // use in deparser
     BUG_CHECK(f, "Null field");
-    bool use_deparser = deparser_i[f->gress][f->id];
+    bool use_deparser = deparser_i[f->gress][f->id] || f->deparsed();
     return use_deparser;
 }
 

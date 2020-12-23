@@ -517,8 +517,8 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
         reg.table = e_start;
 
     regs.merge.lr1.g_start_table.table = Stage::first_table(GHOST) & 0x1ff;
-    if (ghost_parser) {
-        regs.merge.lr1.tm_status_phv.phv = ghost_parser->reg.parser_id();
+    if (ghost_parser.size()) {
+        regs.merge.lr1.tm_status_phv.phv = ghost_parser[0]->reg.parser_id();
         regs.merge.lr1.tm_status_phv.en = 1; }
 
     if (gress == INGRESS) {

@@ -463,7 +463,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "compiler only supports allocation of meter color destination field .* to an 8-bit container"
+  # Error returned is a bit less explicit than it used to be, this should be fixed by the
+  # pa_container_size pragma rewrite.
+  #"compiler only supports allocation of meter color destination field .* to an 8-bit container"
+  "Compiler Bug.*: The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 )

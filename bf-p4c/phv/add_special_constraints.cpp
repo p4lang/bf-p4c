@@ -73,4 +73,16 @@ void AddSpecialConstraints::end_apply() {
         meter_color_dest->set_no_split(true);
         pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 });
     }
+
+    // Force Ghost metadata field on 32-bit container for now until we have a way to define
+    // the required constraints (consecutive container for all the field of this header).
+    const std::map<cstring, PHV::Field> &fields = phv_i.get_all_fields();
+    for (auto& kv : fields) {
+        const PHV::Field &field = kv.second;
+        if (field.name.startsWith("ghost::gh_intr_md") && !field.pov) {
+            auto* ghost_field = phv_i.field(field.id);
+            pragmas_i.pa_container_sizes().add_constraint(ghost_field, { PHV::Size::b32 }, false);
+            ghost_field->set_no_split(true);
+        }
+    }
 }

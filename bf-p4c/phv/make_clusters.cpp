@@ -562,6 +562,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
                         {aligned_cluster_padding});
                     self.aligned_clusters_i.push_back(aligned_cluster_padding);
                     self.rotational_clusters_i.push_back(rot_cluster_padding);
+                    LOG4("Added " << padding_fs << " for " << list);
                 }
             }
             place_together_i[Reason::ConstrainedMeta].push_back(list);

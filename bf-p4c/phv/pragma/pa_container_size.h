@@ -22,6 +22,11 @@
 class PragmaContainerSize : public Inspector {
     PhvInfo& phv_i;
 
+    // By default all of the container size pragma defined externally will be processed as high
+    // priority when sorting supercluster. Other internally defined container size pragma can
+    // select to be prioritize over all the other supercluster or not through the add_constraint()
+    // high_pri argument.
+    ordered_set<const PHV::Field*> pa_container_sizes_high_pri_i;
     ordered_map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
     ordered_map<PHV::FieldSlice, PHV::Size> field_slice_req_i;
     // Set of all slices that become no-pack because of pa_container_size pragmas.
@@ -30,6 +35,7 @@ class PragmaContainerSize : public Inspector {
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         pa_container_sizes_i.clear();
+        pa_container_sizes_high_pri_i.clear();
         no_pack_slices_i.clear();
         field_slice_req_i.clear();
         return rv;
@@ -77,6 +83,9 @@ class PragmaContainerSize : public Inspector {
     bool is_specified(const PHV::Field* field) const {
         return pa_container_sizes_i.count(field); }
 
+    bool is_high_priority(const PHV::Field* field) const {
+        return pa_container_sizes_high_pri_i.count(field); }
+
     // Require @field is specified.
     bool is_single_parameter(const PHV::Field* field) const {
         return pa_container_sizes_i.at(field).size() == 1; }
@@ -99,8 +108,11 @@ class PragmaContainerSize : public Inspector {
 
     /**
      *  Add constraint regardless of whether constraint is already specified on the field.
+     *  @high_pri argument defines if this constraint should increase the supercluster priority to
+     *  one of the highest.
      */
-    void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
+    void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes,
+                        bool high_pri = true);
 
     /** Pretty print existing size requirements specified in vector @sizes.
       */

@@ -129,15 +129,21 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
                 break;
             } else {
                 pa_container_sizes_i[field].push_back(*container_size);
-                if (privatized_field)
+                pa_container_sizes_high_pri_i.push_back(field);
+                if (privatized_field) {
                     pa_container_sizes_i[privatized_field].push_back(*container_size);
+                    pa_container_sizes_high_pri_i.push_back(privatized_field);
+                }
             }
         }
 
         if (failed) {
             pa_container_sizes_i.erase(field);
-            if (privatized_field)
+            pa_container_sizes_high_pri_i.erase(field);
+            if (privatized_field) {
                 pa_container_sizes_i.erase(privatized_field);
+                pa_container_sizes_high_pri_i.erase(privatized_field);
+            }
             continue; }
 
         check_and_add_no_split(field, privatized_field);
@@ -264,15 +270,10 @@ PragmaContainerSize::unsatisfiable_fields(
             bool need_exact_container =
                 PHV::SuperCluster::slice_list_has_exact_containers(*slice_list);
 
-            // This check only applies to slice list that has exact_container requirement.
-            // Pragma enforced requirements on non-exact-container fields are checked later
-            // in the satisfies_constraints().
             // The logic is that, we generate a map that mapping a fieldslice to the required sizes.
             // This mapping, i.e. field_slice_req_i is used in the satisfies_constraints().
             // Here, we are trying our best to make this pragma possible by slicing the
             // in the desired way.
-            if (!need_exact_container) continue;
-
             int slice_list_size = PHV::SuperCluster::slice_list_total_bits(*slice_list);
             for (const auto& slice : *slice_list) {
                 LOG3("  Slice: " << slice);
@@ -313,8 +314,8 @@ PragmaContainerSize::unsatisfiable_fields(
                     sliceListCheckRequired = true;
                     LOG3("    " << slice << " requires slice list check");
                     continue; }
-                // not possible because of the form of slice list.
-                if (int(field_slice_req_i.at(slice)) != slice_list_size)
+                // This check only applies to slice list that has exact_container requirement.
+                if (need_exact_container && (int(field_slice_req_i.at(slice)) != slice_list_size))
                     rst.insert(slice.field());
             }
 
@@ -443,8 +444,11 @@ std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs) {
 }
 
 void PragmaContainerSize::add_constraint(
-        const PHV::Field* field, std::vector<PHV::Size> sizes) {
+        const PHV::Field* field, std::vector<PHV::Size> sizes, bool high_pri) {
     pa_container_sizes_i[field] = sizes;
+    if (high_pri)
+        pa_container_sizes_high_pri_i.push_back(field);
+
     update_field_slice_req(field, sizes);
     PHV::Field* nonConstField = phv_i.field(field->name);
     check_and_add_no_split(nonConstField);

@@ -168,6 +168,8 @@ class Phv : public Section {
             } else {
                 error(lineno, "No phv record %s", name_.c_str());
                 return Slice(); } }
+        bool operator<(const Ref &r) const {
+            return (**this).reg.parser_id() < (*r).reg.parser_id(); }
         Slice operator->() const { return **this; }
         bool operator==(const Ref &a) const {
             if (name_ == a.name_ && lo == a.lo && hi == a.hi)

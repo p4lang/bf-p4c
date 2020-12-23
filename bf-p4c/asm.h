@@ -39,11 +39,31 @@ class AsmOutput : public Inspector {
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
-    PHV::Container ghostPhvContainer() const {
-        // FIXME -- need a better way of finding the ghost metadata allocation
-        if (auto *field = phv.field("ghost::gh_intr_md.ping_pong"))
-            return field->for_bit(0).container();
-        BUG("No allocation for ghost metadata?"); }
+    std::string ghostPhvContainer() const {
+        const std::map<cstring, PHV::Field> &fields = phv.get_all_fields();
+        std::set<PHV::Container> ghost_containers;
+        std::string output;
+        for (auto& kv : fields) {
+            const PHV::Field &field = kv.second;
+            if (field.name.startsWith("ghost::gh_intr_md") && !field.pov)
+                ghost_containers.insert(field.for_bit(0).container());
+        }
+        if (ghost_containers.size()) {
+            if (ghost_containers.size() > 1)
+                output += "[ ";
+            bool first = true;
+            for (auto &cnt : ghost_containers) {
+                if (!first)
+                    output += ", ";
+                output += cnt.toString();
+                first = false;
+            }
+            if (ghost_containers.size() > 1)
+                output += " ]";
+        } else {
+            BUG("No allocation for ghost metadata?");
+        }
+        return output; }
 
  public:
     AsmOutput(const PhvInfo &phv,

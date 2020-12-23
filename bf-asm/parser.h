@@ -273,12 +273,12 @@ class Parser {
     int                                 pri_thresh[4] = { 0, 0, 0, 0 };
     int                                 tcam_row_use = 0;
     Phv::Ref                            parser_error;
-    // the ghost "parser" extracts a single 32-bit value
+    // the ghost "parser" extracts 32-bit value
     // this information is first extracted in AsmParser and passed to
     // individual Parser, because currently parse_merge register is programmed
     // in Parser class.
     // FIXME -- should move all merge reg handling into AsmParser.
-    Phv::Ref                            ghost_parser;
+    std::vector<Phv::Ref>               ghost_parser;
     bitvec                              (&phv_use)[2];
     bitvec                              phv_allow_bitwise_or, phv_allow_clear_on_write;
     bitvec                              phv_init_valid;
