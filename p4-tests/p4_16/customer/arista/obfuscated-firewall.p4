@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.4.0 (SHA: 21a686d)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -727,10 +727,12 @@ struct Rardin {
 struct Blackwood {
     bit<1>  Parmele;
     bit<1>  Hulbert;
+    bit<1>  Kaplan;
     bit<32> Easley;
     bit<16> Rawson;
     bit<12> Oakford;
     bit<12> TroutRun;
+    bit<12> McKenna;
 }
 
 struct FortHunt {

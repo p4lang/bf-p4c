@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.4.0 (SHA: 21a686d)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -44,8 +44,11 @@
 @pa_container_size("ingress" , "Alstown.Dozier.Dowell" , 16)
 @pa_container_size("ingress" , "Alstown.Dozier.Findlay" , 16)
 @pa_container_size("ingress" , "Alstown.Dozier.Basalt" , 8)
+@pa_container_size("egress" , "Alstown.Elkville.Tallassee" , 16)
 @pa_atomic("ingress" , "Alstown.Baytown.Pajaros")
 @pa_atomic("egress" , "Lookeba.Masontown.Alameda")
+@pa_solitary("ingress" , "Alstown.Mickleton.Piperton")
+@pa_solitary("ingress" , "Alstown.Astor.GlenAvon")
 @pa_mutually_exclusive("ingress" , "Alstown.Cavalier.Amboy" , "Alstown.Elvaston.Tombstone")
 @pa_atomic("ingress" , "Alstown.Mickleton.Devers")
 @gfm_parity_enable
@@ -696,6 +699,9 @@ struct Weatherby {
     bit<12> Rixford;
     bit<1>  Wamego;
     bit<1>  Brainard;
+    bit<1>  Grottoes;
+    bit<1>  Dresser;
+    bit<16> Tallassee;
     bit<6>  Kealia;
     bit<1>  Thistle;
 }
@@ -787,10 +793,12 @@ struct Wiota {
 struct Minneota {
     bit<1>  Whitetail;
     bit<1>  Chaffee;
+    bit<1>  Dalton;
     bit<32> Paoli;
     bit<16> Tatum;
     bit<12> Croft;
     bit<12> Lordstown;
+    bit<12> Hatteras;
 }
 
 struct Vergennes {
@@ -1805,6 +1813,7 @@ parser Armagh(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out i
     }
     state start {
         Basco.extract<ingress_intrinsic_metadata_t>(Greenland);
+        Alstown.Greenland.Willard = Greenland.ingress_mac_tstamp;
         transition Callao;
     }
     @override_phase0_table_name("Virgil") @override_phase0_action_name(".Florin") state Callao {
@@ -2145,19 +2154,24 @@ control Thalia(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
         Alstown.Elkville.Wamego = (bit<1>)1w1;
         Alstown.Mickleton.Lakehills = Alstown.Mickleton.Lakehills + CruzBay;
     }
-    @name(".Trammel") action Trammel(bit<24> Horton, bit<24> Lacona) {
+    @name(".Trammel") action Trammel(bit<24> Horton, bit<24> Lacona, bit<1> LaCueva) {
         Alstown.Elkville.Wamego = (bit<1>)1w1;
         Alstown.Elkville.Horton = Horton;
         Alstown.Elkville.Lacona = Lacona;
+        Alstown.Elkville.Grottoes = LaCueva;
     }
-    @name(".Caldwell") action Caldwell(bit<24> Horton, bit<24> Lacona, bit<32> Dowell, bit<32> Sahuarita) {
-        Trammel(Horton, Lacona);
-        Lookeba.Earling.Dowell = Dowell;
+    @name(".Caldwell") action Caldwell(bit<24> Horton, bit<24> Lacona, bit<1> LaCueva, bit<32> Bonner, bit<32> Sahuarita) {
+        Trammel(Horton, Lacona, LaCueva);
+        Lookeba.Earling.Dowell = Lookeba.Earling.Dowell & Bonner;
         Earlsboro(Sahuarita);
     }
-    @name(".Melrude") action Melrude(bit<24> Horton, bit<24> Lacona, bit<32> Dowell, bit<16> Kaluaaha, bit<32> Sahuarita) {
-        Caldwell(Horton, Lacona, Dowell, Sahuarita);
-        Lookeba.Aniak.Tallassee = Kaluaaha;
+    @name(".Melrude") action Melrude(bit<24> Horton, bit<24> Lacona, bit<1> LaCueva, bit<32> Bonner, bit<16> Belfast, bit<32> Sahuarita) {
+        Caldwell(Horton, Lacona, LaCueva, Bonner, Sahuarita);
+        Alstown.Elkville.Dresser = (bit<1>)1w1;
+        Alstown.Elkville.Tallassee = Lookeba.Aniak.Tallassee + Belfast;
+    }
+    @name(".Dresser") action Dresser() {
+        Lookeba.Aniak.Tallassee = Alstown.Elkville.Tallassee;
     }
     @disable_atomic_modify(1) @name(".Ikatan") table Ikatan {
         actions = {
@@ -2172,9 +2186,19 @@ control Thalia(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
         size = 40960;
         default_action = NoAction();
     }
+    @disable_atomic_modify(1) @name(".SwissAlp") table SwissAlp {
+        actions = {
+            Dresser();
+        }
+        default_action = Dresser();
+        size = 1;
+    }
     apply {
         if (Gastonia.egress_rid != 16w0) {
             Ikatan.apply();
+        }
+        if (Alstown.Elkville.Wamego == 1w1 && Alstown.Elkville.Dresser == 1w1) {
+            SwissAlp.apply();
         }
     }
 }
@@ -2184,23 +2208,19 @@ control Seagrove(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
         Alstown.Elkville.Wamego = (bit<1>)1w1;
         Alstown.Mickleton.Lakehills = Alstown.Mickleton.Lakehills + CruzBay;
     }
-    @name(".Dubuque") action Dubuque() {
-        Alstown.Elkville.Brainard = (bit<1>)1w1;
-    }
-    @name(".Senatobia") action Senatobia(bit<32> Findlay, bit<32> Sahuarita) {
+    @name(".Senatobia") action Senatobia(bit<32> Woodland, bit<32> Sahuarita) {
         Alstown.Elkville.Wamego = (bit<1>)1w1;
-        Lookeba.Earling.Findlay = Findlay;
+        Lookeba.Earling.Findlay = Lookeba.Earling.Findlay & Woodland;
         Earlsboro(Sahuarita);
     }
-    @name(".Danforth") action Danforth(bit<32> Findlay, bit<16> Kaluaaha, bit<32> Sahuarita) {
-        Senatobia(Findlay, Sahuarita);
-        Lookeba.Aniak.Hampton = Kaluaaha;
+    @name(".Danforth") action Danforth(bit<32> Woodland, bit<16> Belfast, bit<32> Sahuarita) {
+        Senatobia(Woodland, Sahuarita);
+        Lookeba.Aniak.Hampton = Lookeba.Aniak.Hampton + Belfast;
     }
     @disable_atomic_modify(1) @name(".Opelika") table Opelika {
         actions = {
             Senatobia();
             Danforth();
-            Dubuque();
             @defaultonly NoAction();
         }
         key = {
@@ -2212,6 +2232,37 @@ control Seagrove(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
     apply {
         if (Gastonia.egress_rid != 16w0) {
             Opelika.apply();
+        }
+    }
+}
+
+control Roxboro(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrinsic_metadata_t Gastonia, in egress_intrinsic_metadata_from_parser_t Tullytown, inout egress_intrinsic_metadata_for_deparser_t Heaton, inout egress_intrinsic_metadata_for_output_port_t Somis) {
+    @name(".Timken") action Timken(bit<32> Findlay) {
+        Lookeba.Earling.Findlay = Lookeba.Earling.Findlay | Findlay;
+    }
+    @name(".Lamboglia") action Lamboglia(bit<32> Dowell) {
+        Lookeba.Earling.Dowell = Lookeba.Earling.Dowell | Dowell;
+    }
+    @name(".CatCreek") action CatCreek(bit<32> Findlay, bit<32> Dowell) {
+        Timken(Findlay);
+        Lamboglia(Dowell);
+    }
+    @disable_atomic_modify(1) @name(".Aguilar") table Aguilar {
+        actions = {
+            Timken();
+            Lamboglia();
+            CatCreek();
+            @defaultonly NoAction();
+        }
+        key = {
+            Gastonia.egress_rid: exact @name("Gastonia.egress_rid") ;
+        }
+        size = 40960;
+        default_action = NoAction();
+    }
+    apply {
+        if (Gastonia.egress_rid != 16w0) {
+            Aguilar.apply();
         }
     }
 }
@@ -2322,6 +2373,16 @@ control Careywood(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intr
     @name(".Maybee") action Maybee() {
         Alstown.Elkville.Brainard = (bit<1>)1w1;
     }
+    @name(".Paicines") action Paicines() {
+        Lookeba.Millhaven.Lacona[22:0] = Lookeba.Earling.Dowell[22:0];
+    }
+    @disable_atomic_modify(1) @name(".Krupp") table Krupp {
+        actions = {
+            Paicines();
+        }
+        default_action = Paicines();
+        size = 1;
+    }
     @disable_atomic_modify(1) @name(".Tryon") table Tryon {
         actions = {
             Seabrook();
@@ -2360,6 +2421,9 @@ control Careywood(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intr
                 }
             }
 
+        }
+        if (Alstown.Elkville.Grottoes == 1w1) {
+            Krupp.apply();
         }
     }
 }
@@ -2511,7 +2575,7 @@ control Coryville(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_int
             Alstown.Elvaston.Dowell : exact @name("Elvaston.Dowell") ;
         }
         default_action = Lauada();
-        size = 32768;
+        size = 16384;
         idle_timeout = true;
     }
     @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Mishawaka") table Mishawaka {
@@ -4581,7 +4645,7 @@ control Ammon(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intrins
         Alstown.BealCity.Newfolden = Newfolden;
         Alstown.BealCity.Candle = Candle;
     }
-    @disable_atomic_modify(1) @name(".Edinburgh") table Edinburgh {
+    @disable_atomic_modify(1) @stage(9) @name(".Edinburgh") table Edinburgh {
         actions = {
             Wells();
             @defaultonly NoAction();
@@ -5545,7 +5609,7 @@ control Kulpmont(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intr
     @name(".Shanghai") action Shanghai(bit<16> Iroquois) {
         Lookeba.Frederic.setValid();
         Lookeba.Frederic.Lathrop = (bit<16>)16w0x2f;
-        Lookeba.Frederic.Reidville[47:0] = Greenland.ingress_mac_tstamp;
+        Lookeba.Frederic.Reidville[47:0] = Alstown.Greenland.Willard;
         Lookeba.Frederic.Reidville[63:48] = Iroquois;
     }
     @name(".Milnor") action Milnor(bit<16> Iroquois) {
@@ -5555,7 +5619,6 @@ control Kulpmont(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intr
     }
     @name(".Ogunquit") action Ogunquit() {
         Yorkshire.digest_type = (bit<3>)3w4;
-        Alstown.Greenland.Willard = Greenland.ingress_mac_tstamp;
     }
     @disable_atomic_modify(1) @name(".Wahoo") table Wahoo {
         actions = {
@@ -6167,6 +6230,7 @@ control Sheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
     @name(".Netarts") Astatula() Netarts;
     @name(".Hartwick") Lyman() Hartwick;
     @name(".Padroni") Thalia() Padroni;
+    @name(".Baltic") Roxboro() Baltic;
     @name(".Ashley") Seagrove() Ashley;
     @name(".Nicolaus") Alderson() Nicolaus;
     @name(".Caborn") Careywood() Caborn;
@@ -6222,6 +6286,7 @@ control Sheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
                 Gonzalez.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Kirkwood.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Blanchard.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
+                Baltic.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Goodrich.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
             } else {
                 Monteview.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);

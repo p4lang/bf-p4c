@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.4.0 (SHA: 21a686d)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -691,10 +691,12 @@ struct Holcut {
 struct FarrWest {
     bit<1>  Dante;
     bit<1>  TroutRun;
+    bit<1>  Laney;
     bit<32> Poynette;
     bit<16> Wyanet;
     bit<12> Chunchula;
     bit<12> Devers;
+    bit<12> McClusky;
 }
 
 struct Wauconda {

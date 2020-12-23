@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.4.0 (SHA: 21a686d)
 
 #include <core.p4>
 #include <t2na.p4>       /* TOFINO2_ONLY */
@@ -837,10 +837,12 @@ struct Overton {
 struct Karluk {
     bit<1>  Bothwell;
     bit<1>  Weatherby;
+    bit<1>  Horns;
     bit<32> Kealia;
     bit<16> BelAir;
     bit<12> Newberg;
     bit<12> Etter;
+    bit<12> VanWert;
 }
 
 struct Savery {
@@ -23773,9 +23775,10 @@ control Leetsdale(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
 }
 
 control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrinsic_metadata_t Covert, in ingress_intrinsic_metadata_from_parser_t Frederika, inout ingress_intrinsic_metadata_for_deparser_t Saugatuck, inout ingress_intrinsic_metadata_for_tm_t Ekwok) {
-    @name(".Hartford") action Hartford(bit<32> BelAir, bit<32> Kealia) {
+    @name(".Hartford") action Hartford(bit<32> BelAir, bit<32> Kealia, bit<12> VanWert) {
         Peoria.Whitetail.BelAir = (bit<16>)BelAir;
         Peoria.Whitetail.Kealia = Kealia;
+        Peoria.Whitetail.VanWert = VanWert;
     }
     @name(".Halstead") action Halstead(bit<32> BelAir, bit<32> Kealia, bit<16> Newberg) {
         Peoria.Whitetail.BelAir = (bit<16>)BelAir;
@@ -23847,6 +23850,10 @@ control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
     @name(".Kingsgate") action Kingsgate() {
         Peoria.Whitetail.Weatherby = (bit<1>)1w1;
     }
+    @name(".Thach") action Thach() {
+        Peoria.Whitetail.Horns = (bit<1>)1w1;
+        Kingsgate();
+    }
     @ways(1) @disable_atomic_modify(1) @name(".Hillister") table Hillister {
         actions = {
             Kingsgate();
@@ -23859,15 +23866,21 @@ control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
         size = 1;
         default_action = NoAction();
     }
-    @name(".Camden") action Camden() {
+    @name(".Camden") action Camden(bit<12> VanWert) {
         Peoria.Whitetail.Newberg = Peoria.Whitetail.Newberg - Peoria.Whitetail.Etter;
+        Peoria.Whitetail.VanWert = VanWert;
     }
     @name(".Careywood") action Careywood() {
         Peoria.Whitetail.Newberg = (bit<12>)12w0;
     }
+    @name(".Benwood") action Benwood(bit<12> VanWert) {
+        Peoria.Whitetail.VanWert = VanWert;
+        Careywood();
+    }
     @disable_atomic_modify(1) @name(".Earlsboro") table Earlsboro {
         actions = {
             @tableonly Camden();
+            @tableonly Benwood();
             @defaultonly Careywood();
         }
         key = {
@@ -23878,10 +23891,26 @@ control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
     }
     @hidden @disable_atomic_modify(1) @name(".Seabrook") table Seabrook {
         actions = {
-            Kingsgate();
+            Thach();
         }
-        const default_action = Kingsgate();
+        const default_action = Thach();
         size = 1;
+    }
+    @name(".Homeworth") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Homeworth;
+    @name(".Elwood") action Elwood() {
+        Homeworth.count();
+    }
+    @disable_atomic_modify(1) @name(".Garlin") table Garlin {
+        actions = {
+            Elwood();
+        }
+        key = {
+            Peoria.Whitetail.VanWert: exact @name("Whitetail.VanWert") ;
+            Peoria.Whitetail.Horns  : exact @name("Whitetail.Horns") ;
+        }
+        const default_action = Elwood();
+        counters = Homeworth;
+        size = 8192;
     }
     apply {
         if (Peoria.Masontown.Jenners == 3w0x1 && Peoria.Ekron.Ackley == 10w0) {
@@ -23900,6 +23929,9 @@ control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
                 Seabrook.apply();
             } else if (Peoria.Whitetail.Bothwell == 1w1) {
                 Hillister.apply();
+            }
+            if (Peoria.Whitetail.Weatherby == 1w1) {
+                Garlin.apply();
             }
         }
     }

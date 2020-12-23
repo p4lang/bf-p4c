@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.4.0-pr.1 (SHA: d7e189f)
+// p4c 9.4.0 (SHA: 21a686d)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -31,10 +31,10 @@
 @pa_no_init("ingress" , "Talco.Elkville.Sublett")
 @pa_no_init("ingress" , "Talco.Elkville.Findlay")
 @pa_no_init("ingress" , "Talco.Elkville.Dowell")
-@pa_mutually_exclusive("ingress" , "Talco.Dozier.Findlay" , "ingIpv6.sip")
-@pa_mutually_exclusive("ingress" , "Talco.Dozier.Dowell" , "ingIpv6.dip")
-@pa_mutually_exclusive("ingress" , "Talco.Dozier.Findlay" , "ingIpv6.dip")
-@pa_mutually_exclusive("ingress" , "Talco.Dozier.Dowell" , "ingIpv6.sip")
+@pa_mutually_exclusive("ingress" , "Talco.Dozier.Findlay" , "Talco.Thaxton.Findlay")
+@pa_mutually_exclusive("ingress" , "Talco.Dozier.Dowell" , "Talco.Thaxton.Dowell")
+@pa_mutually_exclusive("ingress" , "Talco.Dozier.Findlay" , "Talco.Thaxton.Dowell")
+@pa_mutually_exclusive("ingress" , "Talco.Dozier.Dowell" , "Talco.Thaxton.Findlay")
 @pa_no_init("ingress" , "Talco.Dozier.Findlay")
 @pa_no_init("ingress" , "Talco.Dozier.Dowell")
 @pa_atomic("ingress" , "Talco.Dozier.Findlay")
@@ -51,6 +51,8 @@
 @pa_container_size("ingress" , "ig_intr_md_for_tm.ingress_cos" , 8)
 @pa_container_size("ingress" , "ig_intr_md_for_tm.qid" , 8)
 @pa_container_size("ingress" , "Boonsboro.Earling.Mystic" , 16)
+@pa_container_size("ingress" , "Boonsboro.Empire.$valid" , 16)
+@pa_container_size("egress" , "Boonsboro.Millhaven.$valid" , 16)
 @pa_atomic("ingress" , "Talco.Emida.Lathrop")
 @pa_atomic("ingress" , "Talco.Sopris.Goulds")
 @pa_container_size("ingress" , "Talco.Nuyaka.Pittsboro" , 16)
@@ -761,10 +763,12 @@ struct Baidland {
 struct LoneJack {
     bit<1>  LaMonte;
     bit<1>  Chaffee;
+    bit<1>  Draketown;
     bit<32> Roxobel;
     bit<16> Ardara;
     bit<12> Herod;
     bit<12> Lordstown;
+    bit<12> FlatLick;
 }
 
 struct Corydon {
