@@ -924,6 +924,13 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino" "t2na_static_entry" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry/t2na_static_entry.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry")
 
+p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c_3343" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf/p4c_3343.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf")
+bfn_set_p4_build_flag("tofino" "p4c_3343" "-Xp4c=\"--disable-power-check\"")
+set_tests_properties("tofino/p4c_3343" PROPERTIES TIMEOUT 1200)
+
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
