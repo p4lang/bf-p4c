@@ -20,18 +20,6 @@ class CreateSaluInstruction;
 
 namespace BFN {
 
-/// @return an extern instance defined or referenced by the value of @table's
-/// @propertyName property, or boost::none if no extern was referenced.
-boost::optional<P4::ExternInstance>
-getExternInstanceFromProperty(const IR::P4Table* table,
-                              const cstring& propertyName,
-                              P4::ReferenceMap* refMap,
-                              P4::TypeMap* typeMap);
-
-boost::optional<const IR::ExpressionValue*>
-getExpressionFromProperty(const IR::P4Table* table,
-                          const cstring& propertyName);
-
 const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options);
 
 /** The purpose of this code is to translate in each pipeline to Backend structures.

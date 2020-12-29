@@ -11,6 +11,7 @@
 #include "barefoot/p4info.pb.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/tna.h"
+#include "bf-p4c/arch/helpers.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/rewrite_action_selector.h"
@@ -783,33 +784,34 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         CHECK_NULL(tableBlock);
         bool isConstructedInPlace = false;
 
-        using Helpers::getExternInstanceFromProperty;
+        using BFN::getExternInstanceFromPropertyByTypeName;
 
         {
-            auto table = tableBlock->container;
-            auto instance = getExternInstanceFromProperty(
-                table, "implementation", refMap, typeMap, &isConstructedInPlace);
             // Only collect the symbol if the action profile / selector is
             // constructed in place. Otherwise it will be collected by
             // collectExternInstance, which will avoid duplicates.
-            if (instance != boost::none) {
-                cstring tableName = *instance->name;
+            auto table = tableBlock->container;
+            auto action_profile = getExternInstanceFromPropertyByTypeName(
+                table, "implementation", "ActionProfile", refMap, typeMap, &isConstructedInPlace);
+            if (action_profile) {
+                cstring tableName = *action_profile->name;
                 if (blockNamePrefixMap.count(tableBlock) > 0)
                     tableName = prefix(blockNamePrefixMap[tableBlock], tableName);
-                if (instance->type->name != "ActionProfile" &&
-                    instance->type->name != "ActionSelector") {
-                    ::error("Expected an action profile or action selector: %1%",
-                            instance->expression);
-                } else if (instance->type->name == "ActionProfile" && isConstructedInPlace) {
+                if (isConstructedInPlace)
                     symbols->add(SymbolType::ACTION_PROFILE(), tableName);
-                } else if (instance->type->name == "ActionSelector" && isConstructedInPlace) {
-                    if (instance->substitution.lookupByName("size")) {
-                        std::string selectorName(tableName + "_sel");
-                        symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
-                        symbols->add(SymbolType::ACTION_PROFILE(), tableName);
-                    } else {
-                        symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
-                    }
+            }
+            auto action_selector = getExternInstanceFromPropertyByTypeName(
+                table, "implementation", "ActionSelector", refMap, typeMap, &isConstructedInPlace);
+            if (action_selector) {
+                cstring tableName = *action_selector->name;
+                if (blockNamePrefixMap.count(tableBlock) > 0)
+                    tableName = prefix(blockNamePrefixMap[tableBlock], tableName);
+                if (action_selector->substitution.lookupByName("size")) {
+                    std::string selectorName(tableName + "_sel");
+                    symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
+                    symbols->add(SymbolType::ACTION_PROFILE(), tableName);
+                } else {
+                    symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
                 }
             }
         }
@@ -1525,15 +1527,15 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// property, if it has one, or boost::none otherwise.
     static boost::optional<ActionProfile>
     getActionProfile(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
-        using Helpers::getExternInstanceFromProperty;
-        auto instance = getExternInstanceFromProperty(
-                table, "implementation", refMap, typeMap);
-        if (!instance) return boost::none;
-        if (instance->type->name != "ActionProfile") return boost::none;
-        auto size = instance->substitution.lookupByName("size")->expression;
+        using BFN::getExternInstanceFromPropertyByTypeName;
+        auto action_profile = getExternInstanceFromPropertyByTypeName(
+            table, "implementation", "ActionProfile", refMap, typeMap);
+        if (!action_profile) return boost::none;
+        auto size = action_profile->substitution.lookupByName("size")->expression;
         // size is a bit<32> compile-time value
-        BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-        return ActionProfile{*instance->name,
+        BUG_CHECK(size->is<IR::Constant>(), "ActionProfile %1% has non-constant size.",
+                *action_profile->name);
+        return ActionProfile{*action_profile->name,
                              size->to<IR::Constant>()->asInt(),
                              getTableImplementationAnnotations(table, refMap)};
     }
@@ -1555,30 +1557,31 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// property, if it has one, or boost::none otherwise.
     static boost::optional<ActionSelector>
     getActionSelector(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
-        using Helpers::getExternInstanceFromProperty;
-        auto instance =
-            getExternInstanceFromProperty(table, "implementation", refMap, typeMap);
-        if (!instance) return boost::none;
-        if (instance->type->name != "ActionSelector") return boost::none;
+        using BFN::getExternInstanceFromPropertyByTypeName;
+        auto action_selector = getExternInstanceFromPropertyByTypeName(
+            table, "implementation", "ActionSelector", refMap, typeMap);
+        if (!action_selector) return boost::none;
         // TODO(hanw): remove legacy code
         // used to support deprecated ActionSelector constructor.
-        if (instance->substitution.lookupByName("size")) {
-            auto size = instance->substitution.lookupByName("size")->expression;
+        if (action_selector->substitution.lookupByName("size")) {
+            auto size = action_selector->substitution.lookupByName("size")->expression;
             BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-            return ActionSelector{*instance->name,
+            return ActionSelector{*action_selector->name,
                                   boost::none,
                                   size->to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
                                   getTableImplementationAnnotations(table, refMap)};
         }
-        auto maxGroupSize = instance->substitution.lookupByName("max_group_size")->expression;
-        auto numGroups = instance->substitution.lookupByName("num_groups")->expression;
+        auto maxGroupSize =
+            action_selector->substitution.lookupByName("max_group_size")->expression;
+        auto numGroups =
+            action_selector->substitution.lookupByName("num_groups")->expression;
         // size is a bit<32> compile-time value
         BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
         BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
-        return ActionSelector{*instance->name,
-                              *instance->name,
+        return ActionSelector{*action_selector->name,
+                              *action_selector->name,
                               -1  /* size */,
                               maxGroupSize->to<IR::Constant>()->asInt(),
                               numGroups->to<IR::Constant>()->asInt(),

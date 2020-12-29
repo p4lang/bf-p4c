@@ -1,11 +1,13 @@
 #include <cmath>
 #include "ir/ir.h"
-#include "frontends/p4/methodInstance.h"
-#include "frontends/p4/coreLibrary.h"
+#include "alpm.h"
+#include "bf-p4c/arch/helpers.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
+#include "frontends/p4/coreLibrary.h"
+#include "frontends/p4/methodInstance.h"
+#include "lib/error_catalog.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
-#include "alpm.h"
 
 namespace BFN {
 
@@ -13,39 +15,6 @@ const std::set<unsigned> SplitAlpm::valid_partition_values = {1024, 2048, 4096, 
 const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = PragmaAlpmPartitions::name;
 const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION =
     PragmaAlpmSubtreePartitions::name;
-
-namespace {
-
-/**
- * Helper functions to extract extern instance from table properties.
- * Originally implemented in as part of the control-plane repo.
- */
-boost::optional<P4::ExternInstance> getExternInstanceFromProperty(
-        const IR::P4Table* table,
-        const cstring& propertyName,
-        P4::ReferenceMap* refMap,
-        P4::TypeMap* typeMap) {
-    auto property = table->properties->getProperty(propertyName);
-    if (property == nullptr) return boost::none;
-    if (!property->value->is<IR::ExpressionValue>()) {
-        ::error("Expected %1% property value for table %2% to be an expression: %3%",
-                propertyName, table->controlPlaneName(), property);
-        return boost::none;
-    }
-
-    auto expr = property->value->to<IR::ExpressionValue>()->expression;
-    auto name = property->controlPlaneName();
-    auto externInstance = P4::ExternInstance::resolve(expr, refMap, typeMap, name);
-    if (!externInstance) {
-        ::error("Expected %1% property value for table %2% to resolve to an "
-                "extern instance: %3%", propertyName, table->controlPlaneName(),
-                property);
-        return boost::none; }
-
-    return externInstance;
-}
-
-}  // namespace
 
 const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
         const IR::P4Table* tbl, unsigned number_actions,
@@ -287,50 +256,73 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
                                     int &number_subtrees_per_partition,
                                     int &atcam_subset_width,
                                     int &shift_granularity) {
-    auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
+    using BFN::getExternInstanceFromPropertyByTypeName;
 
+    bool found_in_implementation = false;
+
+    auto extract_alpm_config_from_property =
+        [&](boost::optional<P4::ExternInstance>& instance) {
+        bool argHasName = false;
+        for (auto arg : *instance->arguments) {
+            cstring argName = arg->name.name;
+            argHasName |= !argName.isNullOrEmpty();
+        }
+        // p4c requires all or none arguments to have names
+        if (argHasName) {
+            for (auto arg : *instance->arguments) {
+                cstring argName = arg->name.name;
+                if (argName == "number_partitions")
+                    number_partitions =
+                        arg->expression->to<IR::Constant>()->asInt();
+                else if (argName == "subtrees_per_partition")
+                    number_subtrees_per_partition =
+                        arg->expression->to<IR::Constant>()->asInt();
+                else if (argName == "atcam_subset_width")
+                    atcam_subset_width =
+                        arg->expression->to<IR::Constant>()->asInt();
+                else if (argName == "shift_granularity")
+                    shift_granularity =
+                        arg->expression->to<IR::Constant>()->asInt();
+            }
+        } else {
+            if (instance->arguments->size() > 0) {
+                number_partitions =
+                    instance->arguments->at(0)->expression->to<IR::Constant>()->asInt();
+            } else if (instance->arguments->size() > 1) {
+                number_subtrees_per_partition =
+                    instance->arguments->at(1)->expression->to<IR::Constant>()->asInt();
+            } else if (instance->arguments->size() > 2) {
+                atcam_subset_width =
+                    instance->arguments->at(2)->expression->to<IR::Constant>()->asInt();
+            } else if (instance->arguments->size() > 3) {
+                shift_granularity =
+                    instance->arguments->at(3)->expression->to<IR::Constant>()->asInt();
+            }
+        }
+    };
+
+    // get Alpm instance from table implementation property
+    auto instance =
+        getExternInstanceFromPropertyByTypeName(tbl, "implementation", "Alpm", refMap, typeMap);
+    if (instance) {
+        found_in_implementation = true;
+        extract_alpm_config_from_property(instance);
+        return true;
+    }
+
+    // for backward compatibility, also check the 'alpm' table property
+    auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
     if (alpm == boost::none)
         return false;
-    if (alpm->type->name != "Alpm")
-        return false;
-
-    bool argHasName = false;
-    for (auto arg : *alpm->arguments) {
-        cstring argName = arg->name.name;
-        argHasName |= !argName.isNullOrEmpty();
-    }
-    // p4c requires all or none arguments to have names
-    if (argHasName) {
-        for (auto arg : *alpm->arguments) {
-            cstring argName = arg->name.name;
-            if (argName == "number_partitions")
-                number_partitions =
-                    arg->expression->to<IR::Constant>()->asInt();
-            else if (argName == "subtrees_per_partition")
-                number_subtrees_per_partition =
-                    arg->expression->to<IR::Constant>()->asInt();
-            else if (argName == "atcam_subset_width")
-                atcam_subset_width =
-                    arg->expression->to<IR::Constant>()->asInt();
-            else if (argName == "shift_granularity")
-                shift_granularity =
-                    arg->expression->to<IR::Constant>()->asInt();
-        }
-    } else {
-        if (alpm->arguments->size() > 0) {
-            number_partitions =
-                alpm->arguments->at(0)->expression->to<IR::Constant>()->asInt();
-        } else if (alpm->arguments->size() > 1) {
-            number_subtrees_per_partition =
-                alpm->arguments->at(1)->expression->to<IR::Constant>()->asInt();
-        } else if (alpm->arguments->size() > 2) {
-            atcam_subset_width =
-                alpm->arguments->at(2)->expression->to<IR::Constant>()->asInt();
-        } else if (alpm->arguments->size() > 3) {
-            shift_granularity =
-                alpm->arguments->at(3)->expression->to<IR::Constant>()->asInt();
-        }
-    }
+    if (alpm->type->name != "Alpm") {
+        ::error("Unexpected extern %1% on 'alpm' property, only ALPM is allowed",
+                alpm->type->name);
+        return false; }
+    if (found_in_implementation) {
+        ::warning("Alpm already found on 'implementation' table property,"
+                " ignored the 'alpm' property");
+        return false; }
+    extract_alpm_config_from_property(alpm);
     return true;
 }
 
@@ -355,7 +347,6 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
     }
     ERROR_CHECK(lpm_cnt == 1, "To use algorithmic lpm, exactly one field in the match key "
             "must have a match type of lpm.  Table '%s' has %d.", tbl->name, lpm_cnt);
-
 
     if (!values_through_impl(tbl, number_partitions, number_subtrees_per_partition,
                 atcam_subset_width, shift_granularity) &&
@@ -441,12 +432,21 @@ AlpmImplementation::AlpmImplementation(P4::ReferenceMap* refMap, P4::TypeMap* ty
 
 void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
     // Alpm is identified with either extern or pragma
+    using BFN::getExternInstanceFromPropertyByTypeName;
+    using BFN::getExternInstanceFromProperty;
+
+    auto instance = getExternInstanceFromPropertyByTypeName(
+            tbl, "implementation", "Alpm", refMap, typeMap);
+    if (instance) alpm_table.insert(tbl->name);
+
+    // for backward compatibility, also check the 'alpm' property
     auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
     if (alpm != boost::none) {
-        LOG1("add alpm table " << tbl->name);
-        alpm_table.insert(tbl->name);
-    }
+        ::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm',"
+                " use 'implementation' instead.");
+        alpm_table.insert(tbl->name); }
 
+    // support @alpm(1) or @alpm(true)
     auto annot = tbl->getAnnotations();
     if (auto s = annot->getSingle(PragmaAlpm::name)) {
         ERROR_CHECK(s->expr.size() > 0, "%s: Please provide a valid alpm "

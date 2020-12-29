@@ -9,6 +9,7 @@
 #include "frontends/p4/externInstance.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/bridge.h"
+#include "bf-p4c/arch/helpers.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/flexible_packing.h"
@@ -853,50 +854,6 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
 
     LOG2("Failed to create attached table for " << tname);
     return nullptr;
-}
-
-/**
- * Helper functions to extract extern instance from table properties.
- * Originally implemented in as part of the control-plane repo.
- */
-boost::optional<P4::ExternInstance>
-getExternInstanceFromProperty(const IR::P4Table* table,
-                              const cstring& propertyName,
-                              P4::ReferenceMap* refMap,
-                              P4::TypeMap* typeMap) {
-    auto property = table->properties->getProperty(propertyName);
-    if (property == nullptr) return boost::none;
-    if (!property->value->is<IR::ExpressionValue>()) {
-        ::error("Expected %1% property value for table %2% to be an expression: %3%",
-                propertyName, table->controlPlaneName(), property);
-        return boost::none;
-    }
-
-    auto expr = property->value->to<IR::ExpressionValue>()->expression;
-    auto name = property->controlPlaneName();
-    auto externInstance = P4::ExternInstance::resolve(expr, refMap, typeMap, name);
-    if (!externInstance) {
-        ::error("Expected %1% property value for table %2% to resolve to an "
-                "extern instance: %3%", propertyName, table->controlPlaneName(),
-                property);
-        return boost::none; }
-
-    return externInstance;
-}
-
-boost::optional<const IR::ExpressionValue*>
-getExpressionFromProperty(const IR::P4Table* table,
-                          const cstring& propertyName) {
-    auto property = table->properties->getProperty(propertyName);
-    if (property == nullptr) return boost::none;
-    if (!property->value->is<IR::ExpressionValue>()) {
-        ::error("Expected %1% property value for table %2% to be an expression: %3%",
-                propertyName, table->controlPlaneName(), property);
-        return boost::none;
-    }
-
-    auto expr = property->value->to<IR::ExpressionValue>();
-    return expr;
 }
 
 class FixP4Table : public Inspector {

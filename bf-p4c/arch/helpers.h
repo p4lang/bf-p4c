@@ -4,13 +4,35 @@
 #include <boost/optional.hpp>
 
 #include "ir/ir.h"
+#include "frontends/p4/typeMap.h"
+#include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/externInstance.h"
 #include "frontends/p4/methodInstance.h"
 
 namespace BFN {
 
 boost::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod);
 
-}  // namespace BFN
+boost::optional<P4::ExternInstance>
+getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
+                                        cstring propertyName,
+                                        cstring typeName,
+                                        P4::ReferenceMap* refMap,
+                                        P4::TypeMap* typeMap,
+                                        bool *isConstructedInPlace = nullptr);
 
+/// @return an extern instance defined or referenced by the value of @table's
+/// @propertyName property, or boost::none if no extern was referenced.
+boost::optional<P4::ExternInstance>
+getExternInstanceFromProperty(const IR::P4Table* table,
+                              cstring propertyName,
+                              P4::ReferenceMap* refMap,
+                              P4::TypeMap* typeMap);
+
+boost::optional<const IR::ExpressionValue*>
+getExpressionFromProperty(const IR::P4Table* table,
+                          const cstring& propertyName);
+
+}  // namespace BFN
 
 #endif /* BF_P4C_ARCH_HELPERS_H_ */
