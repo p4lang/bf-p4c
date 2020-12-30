@@ -370,6 +370,8 @@ struct AllocateParserState : public ParserTransform {
 
                 std::map<size_t, unsigned> constants_by_size;
 
+                std::map<size_t, unsigned> csum_verify_by_size;
+
                 PHV::FieldUse use(PHV::FieldUse::WRITE);
 
                 // reserve extractor for checksum verification
@@ -391,6 +393,7 @@ struct AllocateParserState : public ParserTransform {
                                       "checksum verification cannot be 32-bit container");
 
                             extractors_by_size[container.size()]++;
+                            csum_verify_by_size[container.size()]++;
 
                             // reserve a dummy for checksum verification
                             // see MODEL-210 for discussion.
@@ -423,6 +426,23 @@ struct AllocateParserState : public ParserTransform {
                                     if (choice.second + constants_by_size[choice.first] > 2)
                                         continue;
                                 }
+                                // For narrow-to-wide extractions: verify
+                                // extractors with constants are correctly aligned.
+                                //
+                                // Only a problem when generating 1 checksum validation result
+                                // because this pushes extractor results back be 1 position.
+                                // E.g.,
+                                //   extractor 0's output -> result bus 1
+                                //   extractor 1's output -> result bus 2
+                                // The narrow-to-wide pair is not on an even+odd result bus pair.
+                                //
+                                // Only consider 16b extractors: limited to 2 constants.
+                                // Don't consider 32b extractors: no 64b containers.
+                                // Don't consider 8b extractors: all support constants.
+                                if (choice.first < container.size() &&
+                                        csum_verify_by_size[choice.first] == 1 &&
+                                        choice.first == 16)
+                                    continue;
 
                                 valid_choices.insert(choice);
                             }
