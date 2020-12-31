@@ -299,7 +299,7 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
     if device is not None and 'tofino3' in device:
         cmd.extend(['--chip-type=6']) # default CHIPTYPE=6 for Cloudbreak
     elif device is not None and 'tofino2' in device:
-        cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
+        cmd.extend(['--chip-type=5']) # default CHIPTYPE=5 for JbayB0
     else:
         cmd.extend(['--chip-type=2']) # default CHIPTYPE=2 for TofinoB0
 

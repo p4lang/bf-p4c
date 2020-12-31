@@ -209,7 +209,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
-  extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
 )
 
 # P4C-1228
@@ -495,19 +494,6 @@ p4c_add_xfail_reason("tofino2"
 #  "Compiler Bug.*: Inconsistent tables added on merging program paths"
 #  extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
 #)
-
-# Fails only for tofino2a0
-p4c_add_xfail_reason("tofino2"
-  "Expected packet was not received on device .*, port .*"
-  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
-)
-
-# Fails only for tofino2a0
-p4c_add_xfail_reason("tofino2"
-   "mismatch from expected.* at byte .*"
-   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
-   extensions/p4_tests/p4_14/stf/update_checksum_12.p4
-)
 
 # P4C-3379
 p4c_add_xfail_reason("tofino2"
