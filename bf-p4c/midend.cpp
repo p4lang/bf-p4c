@@ -51,6 +51,7 @@
 #include "bf-p4c/midend/elim_cast.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/normalize_params.h"
+#include "bf-p4c/midend/ping_pong_generation.h"
 #include "bf-p4c/midend/register_read_write.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
 #include "bf-p4c/midend/rewrite_flexible_header.h"
@@ -399,6 +400,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         (options.egress_intr_md_opt) ?
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
+        new PingPongGeneration(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap),
         new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
 
