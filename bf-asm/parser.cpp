@@ -1725,19 +1725,23 @@ void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
 
 template <class REGS>
 void Parser::State::Match::write_saves(REGS &regs, Match* def, void *output_map,
-        int& max_off, unsigned& used) {
+        int& max_off, unsigned& used, int csum_8b, int csum_16b) {
     if (offset_inc) for (auto s : save) s->flags |= OFFSET;
     for (auto s : save)
-        max_off = std::max(max_off, s->write_output_config(regs, output_map, used));
+        max_off = std::max(max_off,
+                           s->write_output_config(regs, output_map, used, csum_8b, csum_16b));
     if (def) for (auto &s : def->save)
-        max_off = std::max(max_off, s->write_output_config(regs, output_map, used));
+        max_off = std::max(max_off,
+                           s->write_output_config(regs, output_map, used, csum_8b, csum_16b));
 }
 
 template <class REGS>
-void Parser::State::Match::write_sets(REGS &regs, Match* def, void *output_map, unsigned& used) {
+void Parser::State::Match::write_sets(REGS &regs, Match* def, void *output_map, unsigned& used,
+        int csum_8b, int csum_16b) {
     if (offset_inc) for (auto s : set) s->flags |= ROTATE;
-    for (auto s : set) s->write_output_config(regs, output_map, used);
-    if (def) for (auto s : def->set) s->write_output_config(regs, output_map, used);
+    for (auto s : set) s->write_output_config(regs, output_map, used, csum_8b, csum_16b);
+    if (def)
+        for (auto s : def->set) s->write_output_config(regs, output_map, used, csum_8b, csum_16b);
 }
 
 template <class REGS>
@@ -1786,14 +1790,24 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
 
     void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
     unsigned used = 0;
-    for (auto &c : csum) c.write_output_config(regs, pa, output_map, used);
+    int csum_8b = 0;
+    int csum_16b = 0;
+    for (auto &c : csum) {
+        c.write_output_config(regs, pa, output_map, used);
+        if (c.type == 0 && c.dest) {
+            if (c.dest->reg.size == 8)
+                ++csum_8b;
+            else if (c.dest->reg.size == 16)
+                ++csum_16b;
+        }
+    }
 
     if (options.target == TOFINO) {
-        write_saves(regs, def, output_map, max_off, used);
-        write_sets(regs, def, output_map, used);
+        write_saves(regs, def, output_map, max_off, used, csum_8b, csum_16b);
+        write_sets(regs, def, output_map, used, csum_8b, csum_16b);
     } else {
-        write_sets(regs, def, output_map, used);
-        write_saves(regs, def, output_map, max_off, used);
+        write_sets(regs, def, output_map, used, 0, 0);
+        write_saves(regs, def, output_map, max_off, used, 0, 0);
     }
 
     int clot_unit = 0;

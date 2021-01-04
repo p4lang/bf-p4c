@@ -153,7 +153,7 @@ class Parser {
                 int         flags;
                 Save(gress_t, Match* m, int l, int h, value_t &data, int flgs = 0);
                 template<class REGS>
-                int write_output_config(REGS &, void *, unsigned &) const;
+                int write_output_config(REGS &, void *, unsigned &, int, int) const;
                 OutputUse output_use() const;
             };
             std::vector<Save*>               save;
@@ -165,7 +165,7 @@ class Parser {
                 int             flags;
                 Set(gress_t gress, Match* m, value_t &data, int v, int flgs = 0);
                 template<class REGS>
-                void write_output_config(REGS &, void *, unsigned &) const;
+                void write_output_config(REGS &, void *, unsigned &, int, int) const;
                 OutputUse output_use() const;
                 bool merge(gress_t, const Set &a);
                 bool operator==(const Set &a) const { return where == a.where && what == a.what
@@ -226,9 +226,9 @@ class Parser {
             template<class REGS> void write_config(REGS &, json::vector &);
 
             template <class REGS> void write_saves(REGS &regs, Match* def, void *output_map,
-                    int& max_off, unsigned& used);
+                    int& max_off, unsigned& used, int csum_8b, int csum_16b);
             template <class REGS> void write_sets(REGS &regs, Match* def,
-                    void *output_map, unsigned& used);
+                    void *output_map, unsigned& used, int csum_8b, int csum_16b);
 
             std::set<Match*> get_all_preds();
             std::set<Match*> get_all_preds_impl(std::set<Match*>& visited);

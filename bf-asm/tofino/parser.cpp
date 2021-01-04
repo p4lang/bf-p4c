@@ -204,6 +204,23 @@ static phv_use_slots* get_phv_use_slots(int size) {
     return usable_slots;
 }
 
+// Narrow-to-wide extraction alignment needs adjusting when
+// 8b/16b checksum validations are written in the same cycle
+bool adjust_phv_use_slot(phv_use_slots &slot, int size, int csum_8b, int csum_16b) {
+    if ((size == 32 && slot.idx >= phv_16b_0) || (size == 16 && slot.idx >= phv_8b_0)) {
+        if (slot.idx <= phv_16b_3) {
+            slot.idx -= csum_16b;
+            slot.usemask >>= csum_16b;
+            return slot.idx >= phv_16b_0;
+        } else {
+            slot.idx -= csum_8b;
+            slot.usemask >>= csum_8b;
+            return slot.idx >= phv_8b_0;
+        }
+    }
+    return true;
+}
+
 template <>
 void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa,
                                            void *_map, unsigned &used) const {
@@ -226,15 +243,17 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
 }
 
 template <>
-int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs, void *_map,
-                                                    unsigned &used) const {
+int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs,
+                                                    void *_map, unsigned &used,
+                                                    int csum_8b, int csum_16b) const {
     tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
 
     int slot_size = (hi-lo+1)*8;
     phv_use_slots *usable_slots = get_phv_use_slots(slot_size);
 
     for (int i = 0; usable_slots[i].usemask; i++) {
-        auto &slot = usable_slots[i];
+        auto slot = usable_slots[i];
+        if (!adjust_phv_use_slot(slot, where->reg.size, csum_8b, csum_16b)) continue;
         if (used & slot.usemask) continue;
         if ((flags & ROTATE) && !map[slot.idx].offset_rot)
             continue;
@@ -300,14 +319,16 @@ static int encode_constant_for_slot(int slot, unsigned val) {
 }
 
 template <>
-void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs &regs, void *_map,
-                                                    unsigned &used) const {
+void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs &regs,
+                                                    void *_map, unsigned &used,
+                                                    int csum_8b, int csum_16b) const {
     tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
 
     phv_use_slots *usable_slots = get_phv_use_slots(where->reg.size);
 
     for (int i = 0; usable_slots[i].usemask; i++) {
-        auto &slot = usable_slots[i];
+        auto slot = usable_slots[i];
+        if (!adjust_phv_use_slot(slot, where->reg.size, csum_8b, csum_16b)) continue;
         if (used & slot.usemask) continue;
         if (!map[slot.idx].src_type) continue;
         if ((flags & ROTATE) && (!map[slot.idx].offset_rot || slot.shift))

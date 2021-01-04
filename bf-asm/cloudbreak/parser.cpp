@@ -144,8 +144,9 @@ static void write_output_slot(int lineno, cloudbreak_row_output_state *row,
         row->extracts[bytemask].push_back({ dest, offset, src });
 }
 
-template <> int Parser::State::Match::Save::write_output_config(Target::Cloudbreak::parser_regs &regs,
-            void *_row, unsigned &used) const {
+template <>
+int Parser::State::Match::Save::write_output_config(Target::Cloudbreak::parser_regs &regs,
+                                                    void *_row, unsigned &used, int, int) const {
     cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
@@ -192,9 +193,9 @@ static void write_output_const_slot(
     write_output_slot(lineno, row, used, 62 - 2*cslot + (bytemask == 1), dest, bytemask, flags);
 }
 
-template <> void Parser::State::Match::Set::write_output_config(Target::Cloudbreak::parser_regs &regs,
-            void *_row, unsigned &used) const
-{
+template <>
+void Parser::State::Match::Set::write_output_config(Target::Cloudbreak::parser_regs &regs,
+                                                    void *_row, unsigned &used, int, int) const {
     cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
 
     int dest = where->reg.parser_id();

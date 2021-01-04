@@ -176,7 +176,7 @@ static void write_output_slot(int lineno, Target::JBay::parser_regs::_memory::_p
 }
 
 template <> int Parser::State::Match::Save::write_output_config(Target::JBay::parser_regs &regs,
-            void *_row, unsigned &used) const {
+            void *_row, unsigned &used, int, int) const {
     Target::JBay::parser_regs::_memory::_po_action_row *row =
         (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
     int dest = where->reg.parser_id();
@@ -326,7 +326,7 @@ static void setup_jbay_no_multi_write(bitvec phv_allow_bitwise_or,
 }
 
 template <> void Parser::State::Match::Set::write_output_config(Target::JBay::parser_regs &regs,
-            void *_row, unsigned &used) const {
+            void *_row, unsigned &used, int, int) const {
     Target::JBay::parser_regs::_memory::_po_action_row *row =
         (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
     int dest = where->reg.parser_id();
