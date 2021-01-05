@@ -83,11 +83,11 @@ void ExtractDeparser::process_concat(IR::Vector<IR::BFN::FieldLVal>& vec,
     std::vector<const IR::Expression *> slices;
     simpl_concat(slices, expr);
     for (auto *item : slices) {
-        if (item->is<IR::Constant>()) {
-            ::warning("Tofino does not support emitting constant %1% "
-                      "in digest, skipped", item);
-            continue; }
-        vec.push_back(new IR::BFN::FieldLVal(item)); }
+        if (item->is<IR::Constant>())
+            vec.push_back(new IR::BFN::FieldLVal(new IR::Padding(item->type)));
+        else
+            vec.push_back(new IR::BFN::FieldLVal(item));
+    }
 }
 
 bool ExtractDeparser::preorder(const IR::Declaration_Instance *decl) {

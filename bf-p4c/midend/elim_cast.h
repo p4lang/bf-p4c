@@ -143,8 +143,13 @@ class RewriteConcatToSlices : public IgnoreKeyElementTransform {
     // do not simplify '++' in apply functions.
     const IR::Node* preorder(IR::Function* func) override {
         prune();
-        return func;
-    }
+        return func; }
+
+    // do not simplify '++' in deparser block.
+    const IR::Node* preorder(IR::BFN::TnaDeparser* dprsr) override {
+        prune();
+        return dprsr; }
+
     const IR::BlockStatement *preorder(IR::BlockStatement *blk) override {
         if (blk->getAnnotation("in_hash")) prune();
         return blk;
