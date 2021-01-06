@@ -1132,8 +1132,23 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             t->apply(re);
             rv->entries = re.TCAM_lines();
         } else if (t->layout.alpm && t->layout.atcam) {
-            // According to Henry Wang, alpm requires one extra entry per partition
-            rv->entries += t->layout.partition_count;
+            // Alpm requires one extra entry per partition. This is a driver
+            // requirement. The extra entry per partition allows driver to
+            // support atomic modifies of the entry.  'disable_atomic_modify'
+            // annotation can be used to disable this if modifies will not
+            // happen or do not need to happen atomically.
+            //
+            // Atomic modifies require driver to move the entry from one
+            // location to another location if we are changing multiple RAMs
+            // such as the VLIW instruction stored in match overhead and the
+            // action data stored in a direct action table.
+            //
+            // Atomic modify is supported on Tofino2/3 through hardware and does
+            // not require additinal entries.
+            bool disable_atomic_modify;
+            t->getAnnotation("disable_atomic_modify", disable_atomic_modify);
+            if (!disable_atomic_modify && BackendOptions().target == "tofino")
+                rv->entries += t->layout.partition_count;
         }
         if (t->layout.exact) {
             if (t->layout.ixbar_width_bits < ceil_log2(rv->entries)) {
@@ -1743,7 +1758,7 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work,
                 *
                 * The algorithm wants to merge the condition with t1.  The tables that become
                 * available to place would be t2 and t3.  However, we do not want to add the
-                * t3 sequence yet to the algorithm, as it has to wait 
+                * t3 sequence yet to the algorithm, as it has to wait
                 */
                 for (auto tbl : self.seqInfo.at(n).refs) {
                     if (tbl == pl->table) {
@@ -2049,7 +2064,7 @@ bool DecidePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
  * in a much later stage.  The goal is to not start placing cond-0 until all of the logical
  * match dependences are not broken.  The tables that must be placed for match_table to be
  * placed ared dep_table_1, dep_table_2, cond-0 and cond-1.  The checks are if a table is
- * already placed (Check #1) or if a table is control dependent on cond-0 (Check #2). 
+ * already placed (Check #1) or if a table is control dependent on cond-0 (Check #2).
  *
  * However, I found that this wasn't enough. Examine the following example:
  *
@@ -2628,7 +2643,7 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
  *   |
  *   | $true
  *   |
- * [ t1, t2, t3 ] 
+ * [ t1, t2, t3 ]
  *
  * Now after the merge, the IR graph would look like:
  *
@@ -2687,15 +2702,15 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
  *   |
  * [ t1, t2, t3 ]
  *       |
- *       | a1 
+ *       | a1
  *       |
- *     [ t2_al ] 
+ *     [ t2_al ]
  *
  * Post merge:
  *              cond
  *              t2
  *              / \
- *    $default /   \ a1 
+ *    $default /   \ a1
  *            /     \
  * [ t1, t3 ]       [ t2_a1, t1, t3 ]
  *
@@ -2721,9 +2736,9 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
  *   |
  * [ t1, t2, t3 ]
  *       |
- *       | $miss 
+ *       | $miss
  *       |
- *     [ t2_miss ] 
+ *     [ t2_miss ]
  *
  * Now, a $default pathway cannot be added to a hit miss table, currently in the IR.  Thus instead
  * the IR will be transformed to:
@@ -2731,7 +2746,7 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
  *              cond
  *              t2
  *              / \
- *        $hit /   \ $miss 
+ *        $hit /   \ $miss
  *            /     \
  * [ t1, t3 ]       [ t2_miss, t1, t3 ]
  *
