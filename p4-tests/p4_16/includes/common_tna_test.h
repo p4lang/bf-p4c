@@ -6,7 +6,7 @@ control ingressDeparser(packet_out packet, inout headers hdr, in metadata meta,
     }
 }
 
-
+#ifndef egress
 parser egressParser(packet_in packet, out headers hdr, out metadata meta,
                     out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
@@ -31,6 +31,7 @@ control egressDeparser(packet_out packet, inout headers hdr, in metadata meta,
     apply {
     }
 }
+#endif
 
 Pipeline(ParserImpl(), ingress(), ingressDeparser(),
          egressParser(), egress(), egressDeparser()) pipe;

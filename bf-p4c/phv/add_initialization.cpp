@@ -49,7 +49,7 @@ MapFieldToExpr::generateInitInstruction(
     return prim;
 }
 
-Visitor::profile_t ComputeFieldsRequiringInit::init_apply(const IR::Node* root) {
+const IR::Node *ComputeFieldsRequiringInit::apply_visitor(const IR::Node* root, const char *name) {
     actionInits.clear();
     fieldsForInit.clear();
     for (auto& f : phv) {
@@ -64,7 +64,7 @@ Visitor::profile_t ComputeFieldsRequiringInit::init_apply(const IR::Node* root) 
             }
         }
     }
-    return Inspector::init_apply(root);
+    return root;
 }
 
 /** This pass determines all the fields to be initialized because of live range shrinking, and

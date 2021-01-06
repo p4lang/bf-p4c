@@ -27,7 +27,7 @@ Type::Type(Type::TypeEnum te) {
         default: BUG("Unknown PHV type"); }
 }
 
-Type::Type(const char* name) {
+Type::Type(const char* name, bool abort_if_invalid) {
     const char* n = name;
 
     switch (*n) {
@@ -40,9 +40,12 @@ Type::Type(const char* name) {
         case 'B': size_ = Size::b8;  break;
         case 'H': size_ = Size::b16; break;
         case 'W': size_ = Size::b32; break;
-        default: BUG("Invalid PHV type '%s'", name); }
+        default:
+            size_ = Size::null;
+            if (abort_if_invalid)
+                BUG("Invalid PHV type '%s'", name); }
 
-    if (*n)
+    if (*n && abort_if_invalid)
         BUG("Invalid PHV type '%s'", name);
 }
 
@@ -61,15 +64,17 @@ cstring Type::toString() const {
     return tmp.str();
 }
 
-Container::Container(const char *name) {
+Container::Container(const char *name, bool abort_if_invalid) {
     const char *n = name + strcspn(name, "0123456789");
-    type_ = Type(std::string(name, n - name).c_str());
+    type_ = Type(std::string(name, n - name).c_str(), abort_if_invalid);
 
     char *end = nullptr;
     auto v = strtol(n, &end, 10);
     index_ = v;
-    if (end == n || *end || index_ != static_cast<unsigned long>(v))
-        BUG("Invalid register '%s'", name);
+    if (end == n || *end || index_ != static_cast<unsigned long>(v)) {
+        type_ = Type();
+        if (abort_if_invalid)
+            BUG("Invalid register '%s'", name); }
 }
 
 cstring Container::toString() const {

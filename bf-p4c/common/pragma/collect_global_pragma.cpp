@@ -16,6 +16,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaNoInit::name,
     PragmaNoOverlay::name,
     PragmaSolitary::name,
+    PragmaPhvLimit::name,
     PHV::pragma::DISABLE_DEPARSE_ZERO
 };
 

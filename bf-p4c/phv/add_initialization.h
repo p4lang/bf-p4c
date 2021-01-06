@@ -48,7 +48,7 @@ class MapFieldToExpr : public Inspector {
             const PHV::AllocSlice& source) const;
 };
 
-class ComputeFieldsRequiringInit : public Inspector {
+class ComputeFieldsRequiringInit : public Visitor {
  private:
     const PhvInfo&                  phv;
 
@@ -58,7 +58,7 @@ class ComputeFieldsRequiringInit : public Inspector {
     // Map of all fields that must be initialized (across all actions).
     ordered_set<PHV::FieldSlice> fieldsForInit;
 
-    profile_t init_apply(const IR::Node* root) override;
+    const IR::Node *apply_visitor(const IR::Node* root, const char * = nullptr) override;
 
  public:
     explicit ComputeFieldsRequiringInit(const PhvInfo& p) : phv(p) { }

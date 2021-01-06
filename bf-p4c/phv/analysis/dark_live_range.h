@@ -359,13 +359,15 @@ class DarkLiveRange : public Inspector {
           overlay(phv.dark_mutex()), tableMutex(t), tablesToActions(m) { }
 };
 
-static std::ostream& operator<<(std::ostream &out, const DarkLiveRange::OrderedFieldInfo& i) {
+static inline
+std::ostream& operator<<(std::ostream &out, const DarkLiveRange::OrderedFieldInfo& i) {
     out << " Field : " << i.field << " [ " << i.minStage << ", " << i.maxStage << " ]";
     out << " Units [ ";
     for (auto u : i.units) {
         out << u << ", ";
     }
     out << " ] " << std::endl;
+    return out;
 }
 
 /** This pass is the pass manager for dark containers based overlay and provides external interfaces

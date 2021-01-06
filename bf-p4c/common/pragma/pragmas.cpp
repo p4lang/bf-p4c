@@ -672,6 +672,13 @@ const char *PragmaPhase0::help = "@pragma phase0 1\n"
     "\n"
     "Note: for P4-16 on Tofino, use the port_metadata_unpack extern.";
 
+const char *PragmaPhvLimit::name = "phv_limit";
+const char *PragmaPhvLimit::description = "limit phvs available for allocation";
+const char *PragmaPhvLimit::help = "@pragma phv_limit(...)\n"
+    "+ at the beginning of the P4 source file"
+    "\n"
+    "Specifies PHV containers to be used or not used";
+
 const char *PragmaOverridePhase0TableName::name = "override_phase0_table_name";
 const char *PragmaOverridePhase0TableName::description = "";
 const char *PragmaOverridePhase0TableName::help = "@pragma override_phase0_table_name(...)\n"

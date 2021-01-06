@@ -2434,6 +2434,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
     root = root_->to<IR::BFN::Pipe>();
     BUG_CHECK(root, "IR root is not a BFN::Pipe: %s", root_);
+    Device::phvSpec().applyGlobalPragmas(root->global_pragmas);
     log_device_stats();
 
     int pipeId = root->id;

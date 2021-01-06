@@ -128,7 +128,7 @@ class Type {
     Type(const Type& t) : kind_(t.kind_), size_(t.size_) {}
 
     Type(TypeEnum te);       // NOLINT(runtime/explicit)
-    Type(const char* name);  // NOLINT(runtime/explicit)
+    Type(const char* name, bool abort_if_invalid = true);  // NOLINT(runtime/explicit)
 
     unsigned log2sz() const;
     Kind kind() const { return kind_; }
@@ -176,7 +176,7 @@ class Container {
     Container() : type_(), index_(0) {}
 
     /// Construct a container from @name - e.g., "B0" for container B0.
-    Container(const char *name);       // NOLINT(runtime/explicit)
+    Container(const char *name, bool abort_if_invalid = true);       // NOLINT(runtime/explicit)
 
     /// Construct a container from @kind and @index - e.g., (Kind::B, 0) for
     /// container B0.

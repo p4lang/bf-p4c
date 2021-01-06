@@ -2,9 +2,11 @@
 
 #include <sstream>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "lib/bitvec.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
+#include "frontends/parsers/p4/p4parser.hpp"
 
 void
 PhvSpec::addType(PHV::Type t) {
@@ -71,6 +73,14 @@ bitvec PhvSpec::filterContainerSet(const bitvec& set, PHV::Kind kind) const {
         if (idToContainer(member).type().kind() == kind) result.setbit(member);
     }
 
+    return result;
+}
+
+bitvec PhvSpec::filterContainerSet(const bitvec& set, PHV::Type type) const {
+    bitvec result;
+    for (auto member : set) {
+        if (idToContainer(member).type() == type) result.setbit(member);
+    }
     return result;
 }
 
@@ -321,7 +331,7 @@ bitvec PhvSpec::deparserGroup(unsigned id) const {
         return bitvec();
 
     unsigned groupSize = deparserGroupSize.at(containerType);
-    return range(containerType, (index / groupSize) * groupSize, groupSize);
+    return range(containerType, (index / groupSize) * groupSize, groupSize) & physicalContainers();
 }
 
 unsigned PhvSpec::getContainersPerGroup(
@@ -640,7 +650,7 @@ bitvec JBayPhvSpec::parserGroup(unsigned id) const {
         const auto containerType = idToContainerType(id % numContainerTypes());
         const unsigned index =  id / numContainerTypes();
         bool isEven = index % 2 == 0;
-        return range(containerType, isEven ? index : index - 1, 2);
+        return range(containerType, isEven ? index : index - 1, 2) & physicalContainers();
     }
     return bitvec(id, 1);
 }
@@ -750,4 +760,82 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
               "No physical address for PHV container %1%", idToContainer(id));
 
     return physicalRange.start + block * physicalRange.incr + blockOffset;
+}
+
+void PhvSpec::applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const {
+    // clear all the cached values
+    physical_containers_i.clear();
+    mau_groups_i.clear();
+    ingress_only_containers_i.clear();
+    egress_only_containers_i.clear();
+    tagalong_collections_i.clear();
+    individually_assigned_containers_i.clear();
+    std::set<PHV::Type> typesSeen;
+    for (auto *annot : global_pragmas) {
+        if (annot->name != PragmaPhvLimit::name) continue;
+        physicalContainers();  // create the cache if needed
+        PHV::Container startRange, prev;
+        bool negate = false;
+        for (auto *tok : annot->body) {
+            PHV::Container c(tok->text, false);
+            if (startRange) {
+                if (tok->token_type == P4::P4Parser::token_type::TOK_INTEGER)
+                    c = PHV::Container(startRange.type(), atoi(tok->text));
+                if (!c || c.type() != startRange.type() || startRange.index() > c.index()) {
+                    error(ErrorType::ERR_INVALID, "invalid container range %2%-%3% in %1%",
+                          annot, startRange, tok->text);
+                } else if (!typeIdMap.count(c.type())) {
+                    // container type not present on this target -- ignore;
+                } else {
+                    bitvec r = range(c.type(), startRange.index(),
+                                     c.index() - startRange.index() + 1);
+                    if (negate)
+                        physical_containers_i -= r;
+                    else
+                        physical_containers_i |= r; }
+                startRange = PHV::Container();
+            } else if (tok->text == ",") {
+                negate = false;
+            } else if (tok->text == "-") {
+                if (!(startRange = prev))
+                    negate = true;
+            } else if (c) {
+                if (typeIdMap.count(c.type())) {
+                    if (!typesSeen.count(c.type())) {
+                        typesSeen.insert(c.type());
+                        if (!negate) {
+                            physical_containers_i -=
+                                    filterContainerSet(physical_containers_i, c.type()); }
+                    physical_containers_i[containerToId(c)] = !negate; } }
+            } else if (negate && tok->text == "D") {
+                physical_containers_i -=
+                        filterContainerSet(physical_containers_i, PHV::Kind::dark);
+            } else if (negate && tok->text == "M") {
+                physical_containers_i -=
+                        filterContainerSet(physical_containers_i, PHV::Kind::mocha);
+            } else if (negate && tok->text == "T") {
+                physical_containers_i -=
+                        filterContainerSet(physical_containers_i, PHV::Kind::tagalong);
+            } else {
+                error(ErrorType::ERR_INVALID, "invalid container %2% in %1%", annot, tok->text);
+            }
+            prev = c;
+        }
+    }
+    if (physical_containers_i) {
+        // propagate assignment restrictions to other sets;
+        mauGroups();
+        for (auto &v : Values(mau_groups_i))
+            for (auto &bv : v)
+                bv &= physical_containers_i;
+        ingressOnly();
+        ingress_only_containers_i &= physical_containers_i;
+        egressOnly();
+        egress_only_containers_i &= physical_containers_i;
+        tagalongCollections();
+        for (auto &bv : tagalong_collections_i)
+            bv &= physical_containers_i;
+        individuallyAssignedContainers();
+        individually_assigned_containers_i &= physical_containers_i;
+    }
 }

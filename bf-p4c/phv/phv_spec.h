@@ -9,6 +9,10 @@
 
 class cstring;
 
+namespace IR {
+class Annotation;
+}
+
 class PhvSpec {
  public:
     // We should reuse the definition from arch/arch.h, however, because of circular includes
@@ -143,8 +147,9 @@ class PhvSpec {
     /// not consistent between devices.
     unsigned containerToId(PHV::Container container) const;
 
-    /// Filters a set of containers for a single container kind.
+    /// Filters a set of containers for a single container kind or type.
     bitvec filterContainerSet(const bitvec& set, PHV::Kind kind) const;
+    bitvec filterContainerSet(const bitvec& set, PHV::Type type) const;
 
     /// @return a string representation of the provided @set of containers.
     cstring containerSetToString(const bitvec& set) const;
@@ -255,6 +260,9 @@ class PhvSpec {
 
     /// @return a json representation of the phv specification
     Util::JsonObject *toJson() const;
+
+    /// apply global pragmas to cached info about available PHV containers
+    void applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const;
 };
 
 

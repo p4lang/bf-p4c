@@ -96,6 +96,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaPreColor, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaProxyHashAlgorithm, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaProxyHashWidth, PARSE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaPhvLimit, PARSE_SKIP, intPragma);
         BFN_PARSE(PragmaRandomSeed, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaReductionOrGroup, PARSE, StringLiteral, intPragma);
         BFN_PARSE(PragmaReg, PARSE, StringLiteral, intPragma);
