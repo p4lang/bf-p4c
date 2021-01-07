@@ -1,5 +1,4 @@
 #include <assert.h>
-#include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/instruction_memory.h"
 #include "ir/ir.h"
@@ -630,24 +629,8 @@ bool IR::MAU::Table::getAnnotation(cstring name, int &val) const {
             return true;
         } else {
             error(ErrorType::ERR_INVALID, "Invalid annotation%1%: %2% pragma provided to "
-                "table %3% is not a constant", expr->srcInfo, name, externalName()); } }
+                  "table %3% is not a constant", expr->srcInfo, name, externalName()); } }
     return false;
-}
-
-bool IR::MAU::Table::getAnnotation(cstring name, bool &val) const {
-    int iVal;
-    val = false;
-    if (getAnnotation(name, iVal)) {
-        if (iVal == 1) {
-            val = true;
-        } else if (iVal != 0) {
-            ::warning(::BFN::ErrorType::WARN_PRAGMA_USE,
-                "Annotation %1% on table %2% ignored because parameter %3% is invalid. "
-                "Only the values 0 and 1 are valid.", name, externalName(), iVal);
-            return false;
-        }
-    }
-    return true;
 }
 
 bool IR::MAU::Table::getAnnotation(cstring name, ID &val) const {

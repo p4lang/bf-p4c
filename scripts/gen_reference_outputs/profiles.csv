@@ -8,7 +8,7 @@ switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x0.
 switch_16_x1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX1_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 51\" ,tofino,p4-16,tna,skip_Glass
 switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 50\",tofino,p4-16,tna,skip_Glass
 switch_16_x3,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x3.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX3_PROFILE -Xp4c=\"--auto-init-metadata\",tofino,p4-16,tna,skip_Glass
-switch_16_m1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_m1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DM1_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 51\",tofino,p4-16,tna,skip_Glass
+switch_16_m1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_m1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DM1_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 53\",tofino,p4-16,tna,skip_Glass
 switch_16_j1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_j1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DJ1_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 49\",tofino,p4-16,tna,skip_Glass
 switch_16_d2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_d2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DD2_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 45\",tofino,p4-16,tna,skip_Glass
 static_entries_const_prop,p4-tests/p4_16/compile_only/static_entries_const_prop.p4,,,tofino,p4-16,tna,skip_Glass

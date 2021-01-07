@@ -212,7 +212,6 @@ class Table : BFN::Unit, IAnnotated  {
     Annotation getAnnotation(cstring name) const;
     Expression getExprAnnotation(cstring name) const;
     bool getAnnotation(cstring name, int &val) const;
-    bool getAnnotation(cstring name, bool &val) const;
     bool getAnnotation(cstring name, ID &val) const;
     bool getAnnotation(cstring name, std::vector<ID> &val) const;
     cstring externalName() const;  // name to use in error messages
