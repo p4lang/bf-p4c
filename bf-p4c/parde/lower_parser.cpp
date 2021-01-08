@@ -454,7 +454,8 @@ struct ExtractSimplifier {
 /// sequence is the shortest one which maintains these properties.
 std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot> >
 lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
-            const IR::Vector<IR::BFN::FieldLVal>& fields) {
+            const IR::Vector<IR::BFN::FieldLVal>& fields,
+            bool is_checksum = false) {
     IR::Vector<IR::BFN::ContainerRef> containers;
     std::vector<Clot> clots;
 
@@ -464,15 +465,21 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
     // reference.
     for (auto* fieldRef : fields) {
         auto field = phv.field(fieldRef->field);
-
-        if (auto* slice_clots = clotInfo.allocated_slices(field)) {
-            for (auto entry : *slice_clots) {
+        std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>* slice_clots = nullptr;
+        if (clotInfo.is_readonly(field) && is_checksum) {
+            slice_clots =  clotInfo.slice_clots(field);
+        } else {
+            slice_clots = clotInfo.allocated_slices(field);
+        }
+        if (slice_clots) {
+           for (auto entry : *slice_clots) {
                 auto clot = entry.second;
                 if (clots.empty() || clots.back() != *clot)
                     clots.push_back(*clot);
             }
 
-            if (clotInfo.fully_allocated(field)) continue;
+            if (clotInfo.fully_allocated(field) ||
+                (clotInfo.is_readonly(field) && clotInfo.whole_field_clot(field))) continue;
         }
 
         // padding in digest list does not need phv allocation
@@ -1640,7 +1647,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 checksumFields.push_back(f->field);
             }
             checksumFields = removeDeparserZeroFields(checksumFields);
-            std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, checksumFields);
+            std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, checksumFields, true);
             for (auto* source : phvSources) {
                 auto* input = new IR::BFN::ChecksumPhvInput(source);
                 input->swap = containerToSwap[source->container];
@@ -1675,7 +1682,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 phvSources.clear();
                 clotSources.clear();
                 *group.first = removeDeparserZeroFields(*group.first);
-                std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, *group.first);
+                std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, *group.first, true);
                 auto povBit = lowerSingleBit(phv, group.second,
                                                   PHV::AllocContext::DEPARSER);
                 for (auto* source : phvSources) {

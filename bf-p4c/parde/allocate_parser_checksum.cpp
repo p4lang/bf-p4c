@@ -521,45 +521,25 @@ struct InsertParserClotChecksums : public PassManager {
         CollectClotChecksumFields(const PhvInfo& phv, const ClotInfo& clotInfo) :
             phv(phv), clotInfo(clotInfo) {}
 
-        // This function checks if a particular field slice is allocated in both clot and phv
-        // Returns slices that are only clot allocated
-        ordered_set<le_bitrange> get_only_clot_allocated_slices(const PHV::Field* field,
-                                                                le_bitrange clotRange) {
-            ordered_set<le_bitrange> clotRanges;
-            bitvec diffrange;
-            diffrange.setrange(clotRange.lo, clotRange.size());
-            for (auto slice : field->get_alloc()) {
-                // check if phv slice in range with clot slice
-                if (clotRange.lo > slice.field_slice().hi || clotRange.hi < slice.field_slice().lo)
-                    continue;
-                diffrange.clrrange(slice.field_slice().lo, slice.width());
-            }
-            for (auto br : bitranges(diffrange)) {
-                clotRanges.insert(le_bitrange(br.first, br.second));
-            }
-            return clotRanges;
-        }
-
         bool preorder(const IR::BFN::EmitChecksum* emitChecksum) override {
             // look for clot fields in deparser checksums
 
             for (auto source : emitChecksum->sources) {
                 le_bitrange field_range;
                 auto field = phv.field(source->field->field, &field_range);
-                auto clot_map = clotInfo.allocated_slices(field);
+                std::map<const PHV::FieldSlice*, Clot*,
+                                PHV::FieldSlice::Greater>* clot_map = nullptr;
+                if (clotInfo.is_readonly(field)) {
+                    clot_map = clotInfo.slice_clots(field);
+                } else {
+                    clot_map = clotInfo.allocated_slices(field);
+                }
                 if (!clot_map) continue;
                 for (auto slice_clot : *clot_map) {
-                    // Only include field slices that are allocated in clots only. Discard the
-                    // once that are allocated in clot and phv.
-                    for (auto clot_slice : get_only_clot_allocated_slices(field,
-                                                              slice_clot.first->range())) {
-                        auto clot = slice_clot.second;
-                        checksum_field_slice_to_clot[field][clot_slice] = clot;
-                        // checksum offset of field slice is offset of field + difference
-                        // between field.hi and slice.hi
-                        checksum_field_slice_to_offset[field][clot_slice] =
-                                   source->offset + field_range.hi - clot_slice.hi;
-                    }
+                    auto clot = slice_clot.second;
+                    checksum_field_slice_to_clot[field][slice_clot.first->range()] = clot;
+                    checksum_field_slice_to_offset[field][slice_clot.first->range()] =
+                               source->offset + field_range.hi - slice_clot.first->range().hi;
                 }
             }
 
