@@ -123,6 +123,7 @@ class FlexiblePacking : public PassManager {
     CollectIngressBridgedFields                         ingressBridgedFields;
     CollectEgressBridgedFields                          egressBridgedFields;
     MauBacktracker                                      table_alloc;
+    PragmaNoPack                                        pa_no_pack;
     PackConflicts                                       packConflicts;
     MapTablesToActions                                  tableActionsMap;
     ActionPhvConstraints                                actionConstraints;

@@ -11,6 +11,7 @@
 #include "bf-p4c/phv/pragma/pa_atomic.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "bf-p4c/phv/pragma/pa_solitary.h"
+#include "bf-p4c/phv/pragma/pa_no_pack.h"
 #include "bf-p4c/common/table_printer.h"
 
 // included by PackFlexibleHeaders
@@ -305,7 +306,8 @@ FlexiblePacking::FlexiblePacking(
           options(o),
           ingressBridgedFields(p),
           egressBridgedFields(p),
-          packConflicts(p, dg, tMutex, table_alloc, aMutex),
+          pa_no_pack(p),
+          packConflicts(p, dg, tMutex, table_alloc, aMutex, pa_no_pack),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
           packWithConstraintSolver(sol),
           repackedTypes(map) {
@@ -317,6 +319,7 @@ FlexiblePacking::FlexiblePacking(
                       new PragmaContainerSize(p),
                       new PragmaAtomic(p),
                       new PragmaSolitary(p),
+                      &pa_no_pack,
                       &tMutex,
                       &aMutex,
                       &packConflicts,

@@ -11,6 +11,7 @@
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include "bf-p4c/phv/pragma/pa_solitary.h"
+#include "bf-p4c/phv/pragma/pa_no_pack.h"
 
 namespace PHV {
 namespace pragma {
@@ -45,6 +46,7 @@ class Pragmas : public PassManager {
     PragmaContainerType         pa_container_type_i;
     PragmaNoInit                pa_no_init_i;
     PragmaDeparserZero          pa_deparser_zero_i;
+    PragmaNoPack                pa_no_pack_i;
 
  public:
     const PragmaContainerSize& pa_container_sizes() const { return pa_container_sizes_i; }
@@ -71,6 +73,9 @@ class Pragmas : public PassManager {
     const PragmaDeparserZero& pa_deparser_zero() const    { return pa_deparser_zero_i; }
     PragmaDeparserZero& pa_deparser_zero()                { return pa_deparser_zero_i; }
 
+    const PragmaNoPack& pa_no_pack() const    { return pa_no_pack_i; }
+    PragmaNoPack& pa_no_pack()                { return pa_no_pack_i; }
+
     explicit Pragmas(PhvInfo& phv)
         : pa_container_sizes_i(phv),
           pa_mutually_exclusive_i(phv),
@@ -79,7 +84,8 @@ class Pragmas : public PassManager {
           pa_no_overlay_i(phv),
           pa_container_type_i(phv),
           pa_no_init_i(phv),
-          pa_deparser_zero_i(phv) {
+          pa_deparser_zero_i(phv),
+          pa_no_pack_i(phv) {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,
@@ -88,7 +94,8 @@ class Pragmas : public PassManager {
             &pa_no_overlay_i,
             &pa_container_type_i,
             &pa_no_init_i,
-            &pa_deparser_zero_i
+            &pa_deparser_zero_i,
+            &pa_no_pack_i,
         });
     }
 };

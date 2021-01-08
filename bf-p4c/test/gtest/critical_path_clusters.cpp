@@ -111,8 +111,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    MapTablesToActions& tableActionsMap,
                                    ActionPhvConstraints& actions,
                                    CalcParserCriticalPath& parser_critical_path,
-                                   PragmaContainerSize& pragma) {
-    PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
+                                   PHV::Pragmas& pragmas) {
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
@@ -121,8 +120,8 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         new ElimUnused(phv, defuse),
         &table_alloc,
         &uses,
-        pragmas,
-        new MutexOverlay(phv, *pragmas, uses),
+        &pragmas,
+        new MutexOverlay(phv, pragmas, uses),
         &parser_critical_path,
         new FindDependencyGraph(phv, deps),
         &defuse,
@@ -130,7 +129,6 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         &tableActionsMap,
         &actions,
         new PHV_Field_Operations(phv),
-        &pragma,
         &clustering,
     };
     return pipe->apply(quick_backend);
@@ -194,20 +192,21 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     DependencyGraph deps;
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;
-    PackConflicts conflicts(phv, deps, table_mutex, table_alloc, action_mutex);
+    PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
+    PackConflicts conflicts(phv, deps, table_mutex, table_alloc, action_mutex,
+                            pragmas->pa_no_pack());
     MapTablesToActions tableActionsMap;
     ActionPhvConstraints actions(phv, uses, conflicts, tableActionsMap, deps);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
-    PragmaContainerSize pragma(phv);
-    Clustering clustering(phv, uses, conflicts, pragma, actions);
+    Clustering clustering(phv, uses, conflicts, pragmas->pa_container_sizes(), actions);
 
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
                                        defuse,
                                        clustering,
                                        table_alloc,
                                        deps, conflicts, tableActionsMap, actions,
-                                       parser_critical_path, pragma);
+                                       parser_critical_path, *pragmas);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);
     post_pm_pipe = post_pm_pipe->apply(*cluster_cp);

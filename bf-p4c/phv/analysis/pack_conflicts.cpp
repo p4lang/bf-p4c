@@ -20,6 +20,12 @@ Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
     }
     tableActions.clear();
     actionWrites.clear();
+
+    // add pa_no_pack
+    for (const auto& f : pa_no_pack.no_packs()) {
+        LOG3("add pa_no_pack: " << f.first->name << " and " << f.second->name);
+        phv.addFieldNoPack(f.first, f.second);
+    }
     return rv;
 }
 

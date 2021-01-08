@@ -8,6 +8,7 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/pa_no_pack.h"
 
 /** This class is meant to gather information about what fields cannot be packed together because of
   * the constraint that two or more tables in the same stage must not invoke an action that writes
@@ -21,6 +22,7 @@ class PackConflicts : public PassManager {
     const TablesMutuallyExclusive   &mutex;
     const MauBacktracker            &bt;
     const ActionMutuallyExclusive   &amutex;
+    const PragmaNoPack              &pa_no_pack;
 
     /// Count for total number of no pack constraints induced by table placement
     size_t                  totalNumSet = 0;
@@ -62,8 +64,9 @@ class PackConflicts : public PassManager {
 
  public:
     PackConflicts(PhvInfo &p, const DependencyGraph &d, const TablesMutuallyExclusive &m,
-            const MauBacktracker &b, const ActionMutuallyExclusive &a) :
-        phv(p), dg(d), mutex(m), bt(b), amutex(a) {
+                  const MauBacktracker &b, const ActionMutuallyExclusive &a,
+                  const PragmaNoPack &no_pack)
+        : phv(p), dg(d), mutex(m), bt(b), amutex(a), pa_no_pack(no_pack) {
         addPasses({
             new GatherWrites(*this),
             &ignore

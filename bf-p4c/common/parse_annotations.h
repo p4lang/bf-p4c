@@ -132,6 +132,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaMutuallyExclusive, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaNoInit, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaNoOverlay, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaNoPack, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaSolitary, PARSE_STRING_LITERAL_LIST, extPragma);
         // FIXME: is DisableDeparseZero internal?
         BFN_PARSE_EMPTY(PragmaDisableDeparseZero, PARSE_STRING_LITERAL_LIST, intPragma);
