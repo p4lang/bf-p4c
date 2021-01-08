@@ -339,6 +339,10 @@ class EliminateAllButLastWrite : public PassManager {
  public:
     using LastInstrMap = ordered_map<PHV::FieldSlice, const IR::MAU::Instruction *>;
     ordered_map<const IR::MAU::Action *, LastInstrMap> last_instr_per_action_map;
+    // Store field and all its phv bits in current action. Used for handling overlapping set
+    ordered_map<const PHV::Field *, safe_vector<le_bitrange>> fs_bits;
+    // Need to handle overlapping set if it's set to true.
+    ordered_map<const PHV::Field *, bool> has_overlap_set;
 
  private:
     class Scan : public MauInspector, TofinoWriteContext {
@@ -359,7 +363,7 @@ class EliminateAllButLastWrite : public PassManager {
         EliminateAllButLastWrite &self;
         const IR::MAU::Action *current_af = nullptr;
         const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-        const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+        const IR::Node *preorder(IR::MAU::Instruction *) override;
         const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *sc) override {
             prune(); return sc;
         }

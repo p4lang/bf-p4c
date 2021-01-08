@@ -627,11 +627,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: : Currently the field .* in action .* is assigned in a way too complex for the compiler to currently handle.  Please consider simplifying this action around this parameter"
-  testdata/p4_16_samples/slice-def-use1.p4
-)
-
-p4c_add_xfail_reason("tofino"
     "error: : Currently in p4c, the table sucker_0 cannot perform a range match on key ingress::suitably.litheness as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
 )

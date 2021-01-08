@@ -2079,8 +2079,8 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR:
             }
             replaced = true;
         // overlapping ranges for copy propagation are too difficult to handle for the
-        // first pass
-        } else if (!it->dest_bits.intersectWith(bits).empty()) {
+        // first pass. Just try to handle overlapping set instr now.
+        } else if ((!it->dest_bits.intersectWith(bits).empty()) && (instr->name != "set")) {
             ::error("%s: Currently the field %s[%d:%d] in action %s is assigned in a "
                     "way too complex for the compiler to currently handle.  Please consider "
                     "simplifying this action around this parameter", instr->srcInfo,
@@ -2088,7 +2088,9 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR:
             replaced = true;
             it++;
         } else {
-            it++;
+          // Treat overlapping "set" instruction as non-overlapping in BackendCopyPropagation pass
+          // and let the EliminateAllButLastWrite pass to handle it.
+          it++;
         }
     }
 
@@ -2300,12 +2302,15 @@ void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) 
         if (!is_parallel(instr->operands[i], instr->isOutput(i))) {
             le_bitrange bits = {0, 0};
             auto field = phv.field(instr->operands[i], &bits);
-            ::error(ErrorType::ERR_UNSUPPORTED,
-                    "%1%: action spanning multiple stages. "
-                    "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
-                    "stages for a single action. We currently support only single stage actions. "
-                    "Please consider rewriting the action to be a single stage action.",
-                    instr, act, (i+1), field->name, bits.lo, bits.hi);
+            // Overlapping set will be handled in the EliminateAllButLastWrite pass
+            if (instr->name != "set") {
+              ::error(ErrorType::ERR_UNSUPPORTED,
+                      "%1%: action spanning multiple stages. "
+                      "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
+                      "stages for a single action. We currently support only single stage actions. "
+                      "Please consider rewriting the action to be a single stage action.",
+                      instr, act, (i+1), field->name, bits.lo, bits.hi);
+            }
         }
     }
 }
@@ -2337,6 +2342,8 @@ bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Action *) {
  */
 bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Action *) {
     last_instr_map.clear();
+    self.has_overlap_set.clear();
+    self.fs_bits.clear();
     return true;
 }
 
@@ -2357,6 +2364,17 @@ bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr)
     PHV::FieldSlice fs(field, bits);
     // Ensures that the last instruction relating to this instruction is marked
     last_instr_map[fs] = instr;
+
+    // Handle overlapping set
+    if (instr->name == "set") {
+      for (auto ele_bits : self.fs_bits[field]) {
+        if (ele_bits == bits) return false;  // stop if fs_bits has this phv bitrange.
+        if (!ele_bits.intersectWith(bits).empty())
+          self.has_overlap_set[field] = true;
+      }
+      self.fs_bits[field].push_back(bits);   // add new phv bitrange in fs_bits
+    }
+
     return false;
 }
 
@@ -2369,8 +2387,7 @@ const IR::MAU::Action *EliminateAllButLastWrite::Update::preorder(IR::MAU::Actio
     return act;
 }
 
-const IR::MAU::Instruction *
-        EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction *instr) {
+const IR::Node *EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction *instr) {
     auto orig_instr = getOriginal()->to<IR::MAU::Instruction>();
     auto last_instr_map = self.last_instr_per_action_map[current_af];
     prune();
@@ -2393,6 +2410,42 @@ const IR::MAU::Instruction *
     if (last_instr_map.at(fs) != orig_instr) {
         return nullptr;
     }
+
+    // handle overlapping set instr if has_overlp_set is true in current action
+    if ((instr->name == "set") && (self.has_overlap_set[field] == true)) {
+      IR::Vector<IR::MAU::Primitive> *split_overlap_set = nullptr;
+      bitvec mask_bits(bits.lo, bits.size());
+      mask_bits.setrange(bits.lo, bits.size());
+
+      auto it = self.fs_bits[field].begin();
+      // clear the bits of all the follwoing last set instructions
+      while (it != self.fs_bits[field].end()) {
+        // remove the current last set instr as it won't overwrite its following set instrs.
+        if (*it == bits) {
+          it = self.fs_bits[field].erase(it);
+          continue;
+        }
+        mask_bits.clrrange((*it).lo, (*it).size());
+        it++;
+        // If all of the phv bits of the current set instr be overwritten by the following
+        // set instrs. remove it.
+        if (mask_bits.empty()) return nullptr;
+      }
+      // create new set instructions for current overlapped set instruction.
+      while (!mask_bits.empty()) {
+          int lo = mask_bits.ffs();
+          le_bitrange range(lo, mask_bits.ffz(lo)-1);
+
+          if (!split_overlap_set) split_overlap_set = new IR::Vector<IR::MAU::Primitive>;
+          split_overlap_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set",
+              MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
+              MakeSlice(instr->operands.at(1), range.shiftedByBits(-bits.lo))));
+          mask_bits.clrrange(range.lo, range.size());
+          LOG4("EliminateAllButLastWrite: created slice for overlaping set: " <<
+               split_overlap_set->back()); }
+      return split_overlap_set;
+    }
+
     return instr;
 }
 
