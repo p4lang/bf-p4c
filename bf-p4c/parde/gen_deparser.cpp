@@ -155,20 +155,25 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
             if (pred) error("Conditional emit %s not supported", mc);
             generateEmits(mc);
         } else if (em->actualExternType->getName() == "Mirror") {
-            if (mc->arguments->size() != 2) {
-               generateDigest(digests["mirror"], "mirror", nullptr, mc);
-               return false; }
-            auto expr = mc->arguments->at(1)->expression;
-            if (auto list = expr->to<IR::StructExpression>()) {
-                // field list is StructExpression if source is P4-16
-                // Convert session_id, { field_list } --> { session_id, field_list }
-                auto components = new IR::IndexedVector<IR::NamedExpression>();
-                fixup_mirror_digest(mc, components);
-                components->append(list->components);
-                auto list_type = typeMap->getTypeType(mc->typeArguments->at(0), true);
-                auto mirror_field_list =
-                    new IR::StructExpression(list_type, list->structType, *components);
-                generateDigest(digests["mirror"], "mirror", mirror_field_list, mc);
+            if (mc->arguments->size() == 1) {
+                auto session_id = mc->arguments->at(0)->expression;
+                generateDigest(digests["mirror"], "mirror", session_id, mc);
+            } else if (mc->arguments->size() == 2) {
+                auto expr = mc->arguments->at(1)->expression;
+                if (auto list = expr->to<IR::StructExpression>()) {
+                    // field list is StructExpression if source is P4-16
+                    // Convert session_id, { field_list } --> { session_id, field_list }
+                    auto components = new IR::IndexedVector<IR::NamedExpression>();
+                    fixup_mirror_digest(mc, components);
+                    components->append(list->components);
+                    auto list_type = typeMap->getTypeType(mc->typeArguments->at(0), true);
+                    auto mirror_field_list =
+                        new IR::StructExpression(list_type, list->structType, *components);
+                    generateDigest(digests["mirror"], "mirror", mirror_field_list, mc);
+                }
+            } else {
+                ::error(ErrorType::ERR_UNSUPPORTED,
+                        "emit call for mirror extern %1%", mc);
             }
         } else if (em->actualExternType->getName() == "Resubmit") {
             auto num_args = mc->arguments->size();
@@ -315,12 +320,16 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             } else {
                 sources.push_back(new IR::BFN::FieldLVal(item->expression)); }
         }
-        LOG3(" digest type " << expr->type);
         auto type = expr->type->to<IR::Type_StructLike>();
         if (type == nullptr)
             ::error("Digest field list %1% must be a struct/header type", expr);
         auto* fieldList =
             new IR::BFN::DigestFieldList(digest_index, sources, type, controlPlaneName);
+        digest->fieldLists.push_back(fieldList);
+    } else if (auto session_id = expr->to<IR::Member>()) {
+        sources.push_back(new IR::BFN::FieldLVal(session_id));
+        auto* fieldList =
+            new IR::BFN::DigestFieldList(digest_index, sources, nullptr, controlPlaneName);
         digest->fieldLists.push_back(fieldList);
     } else {
         BUG("Unexpected expression as digest field list ", expr);
