@@ -97,7 +97,7 @@ void P4HashFunction::dbprint(std::ostream &out) const {
  * and as long as algorithm is a CRC.
  *
  * Currently full string literals are required, perhaps at sometime this can be a function
- * within the tna/t2na files. 
+ * within the tna/t2na files.
  */
 VerifySymmetricHashPairs::VerifySymmetricHashPairs(const PhvInfo &phv,
        safe_vector<const IR::Expression *> &field_list, const IR::Annotations *annotations,
@@ -222,6 +222,10 @@ bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Mask *mask) {
 }
 
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Cast *) {
+    return true;
+}
+
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Concat *) {
     return true;
 }
 

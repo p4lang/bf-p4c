@@ -243,8 +243,9 @@ class BuildP4HashFunction : public PassManager {
         bool preorder(const IR::Mask *) override;
         bool preorder(const IR::MAU::HashGenExpression *) override;
         bool preorder(const IR::MAU::FieldListExpression *) override;
-        bool preorder(const IR::Cast *) override;
         void postorder(const IR::MAU::HashGenExpression *) override;
+        bool preorder(const IR::Cast *) override;
+        bool preorder(const IR::Concat*) override;
 
      public:
         explicit InsideHashGenExpr(BuildP4HashFunction &s) : self(s) {}
