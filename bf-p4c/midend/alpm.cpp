@@ -19,7 +19,8 @@ const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION =
 const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
         const IR::P4Table* tbl, unsigned number_actions,
         unsigned partition_index_bits,
-        unsigned atcam_subset_width) {
+        unsigned atcam_subset_width,
+        unsigned subtrees_per_partition) {
     auto tempvar = new IR::IndexedVector<IR::Declaration>();
 
     tempvar->push_back(new IR::Declaration_Variable(
@@ -29,7 +30,12 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
     if (number_actions > 1) {
         tempvar->push_back(new IR::Declaration_Variable(
                     IR::ID(tbl->name + "_partition_key"),
-                    IR::Type_Bits::get(atcam_subset_width))); }
+                    IR::Type_Bits::get(atcam_subset_width)));
+        if (subtrees_per_partition > 1) {
+            auto subtree_id_bits = ::ceil_log2(subtrees_per_partition);
+            tempvar->push_back(new IR::Declaration_Variable(
+                        IR::ID(tbl->name + "_subtree_id"),
+                        IR::Type_Bits::get(subtree_id_bits))); } }
 
     return tempvar;
 }
@@ -40,12 +46,18 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions
         unsigned partition_index_bits,
         unsigned atcam_subset_width,
         unsigned shift_granularity,
+        unsigned subtrees_per_partition,
         const IR::Expression* lpm_key) {
     auto actions = new IR::IndexedVector<IR::Declaration>();
 
     auto params = new IR::ParameterList();
     params->push_back(new IR::Parameter(IR::ID("index"), IR::Direction::None,
                 IR::Type_Bits::get(partition_index_bits)));
+    if (number_actions > 1 && subtrees_per_partition > 1) {
+        auto subtree_id_bits = ::ceil_log2(subtrees_per_partition);
+        params->push_back(new IR::Parameter(IR::ID("subtree_id"), IR::Direction::None,
+                IR::Type_Bits::get(subtree_id_bits)));
+    }
 
     for (unsigned n = 0; n < number_actions; n++) {
         auto body = new IR::BlockStatement;
@@ -62,6 +74,11 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions
                                 new IR::Constant(lpm_key->type->width_bits() -
                                     atcam_subset_width - n * shift_granularity)),
                             atcam_subset_width-1, 0))); }
+
+        if (number_actions > 1 && subtrees_per_partition > 1) {
+            body->push_back(new IR::AssignmentStatement(
+                        new IR::PathExpression(IR::ID(tbl->name + "_subtree_id")),
+                        new IR::PathExpression(IR::ID("subtree_id")))); }
 
         auto name = tbl->name + "_set_partition_index_" + cstring::to_cstring(n);
         actions->push_back(new IR::P4Action(IR::ID(name), params, body)); }
@@ -81,12 +98,18 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
         keys.push_back(new IR::KeyElement(
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
                     new IR::PathExpression(IR::ID("lpm"))));
+        if (subtrees_per_partition > 1) {
+            keys.push_back(new IR::KeyElement(
+                        new IR::PathExpression(IR::ID(tbl->name + "_subtree_id")),
+                        new IR::PathExpression(IR::ID("ternary")))); }
     } else {
         for (auto k : tbl->getKey()->keyElements) {
             keys.push_back(k); } }
     keys.push_back(new IR::KeyElement(
                 new IR::PathExpression(IR::ID(tbl->name + "_partition_index")),
                 new IR::PathExpression(IR::ID("atcam_partition_index"))));
+
+
     properties->push_back(new IR::Property("key",
                           new IR::Key(keys), false));
 
@@ -141,7 +164,8 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
 }
 
 const IR::P4Table* SplitAlpm::create_preclassifier_table(const IR::P4Table* tbl,
-        unsigned number_entries, unsigned number_actions, unsigned partition_index_bits) {
+        unsigned number_entries, unsigned number_actions, unsigned partition_index_bits,
+        unsigned subtrees_per_partition) {
     auto properties = new IR::IndexedVector<IR::Property>;
 
     // create key
@@ -179,6 +203,10 @@ const IR::P4Table* SplitAlpm::create_preclassifier_table(const IR::P4Table* tbl,
         auto args = new IR::Vector<IR::Argument>();
         args->push_back(new IR::Argument(
             new IR::Constant(IR::Type::Bits::get(partition_index_bits), 0)));
+        if (number_actions > 1 && subtrees_per_partition > 1) {
+            auto subtree_id_bits = ::ceil_log2(subtrees_per_partition);
+            args->push_back(new IR::Argument(
+                        new IR::Constant(IR::Type::Bits::get(subtree_id_bits), 0))); }
         auto methodCall = new IR::MethodCallExpression(act, args);
         auto prop = new IR::Property(
                 IR::ID(IR::TableProperties::defaultActionPropertyName),
@@ -368,15 +396,17 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
     auto number_actions = (lpm_key_width - atcam_subset_width) / shift_granularity + 1;
 
     auto decls = new IR::IndexedVector<IR::Declaration>();
-    decls->append(*create_temp_var(tbl, number_actions, partition_index_bits, atcam_subset_width));
+    decls->append(*create_temp_var(tbl, number_actions, partition_index_bits, atcam_subset_width,
+                number_subtrees_per_partition));
 
     auto classifier_actions = create_preclassifer_actions(tbl,
-            number_actions, partition_index_bits, atcam_subset_width, shift_granularity, lpm_key);
+            number_actions, partition_index_bits, atcam_subset_width, shift_granularity,
+            number_subtrees_per_partition, lpm_key);
     decls->append(*classifier_actions);
 
     // create tcam table
     auto classifier_table = create_preclassifier_table(tbl, number_entries, number_actions,
-            partition_index_bits);
+            partition_index_bits, number_subtrees_per_partition);
     decls->push_back(classifier_table);
 
     // create atcam
@@ -442,7 +472,7 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
     // for backward compatibility, also check the 'alpm' property
     auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
     if (alpm != boost::none) {
-        ::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm',"
+        ::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm' is deprecated,"
                 " use 'implementation' instead.");
         alpm_table.insert(tbl->name); }
 

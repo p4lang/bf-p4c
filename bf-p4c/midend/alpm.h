@@ -119,12 +119,12 @@ class SplitAlpm : public Transform {
     const IR::Node* postorder(IR::IfStatement*) override;
 
     const IR::IndexedVector<IR::Declaration>* create_temp_var(
-            const IR::P4Table*, unsigned, unsigned, unsigned);
+            const IR::P4Table*, unsigned, unsigned, unsigned, unsigned);
     const IR::IndexedVector<IR::Declaration>* create_preclassifer_actions(
             const IR::P4Table*, unsigned, unsigned, unsigned,
-            unsigned, const IR::Expression*);
+            unsigned, unsigned, const IR::Expression*);
     const IR::P4Table* create_preclassifier_table(const IR::P4Table*, unsigned,
-            unsigned, unsigned);
+            unsigned, unsigned, unsigned);
     const IR::P4Table* create_atcam_table(const IR::P4Table*, unsigned,
             unsigned, unsigned, int, int);
 
