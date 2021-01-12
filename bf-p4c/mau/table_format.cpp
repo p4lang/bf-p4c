@@ -1978,6 +1978,7 @@ bool TableFormat::allocate_match_with_algorithm() {
  *     - Each full byte of range match will need a 4b_lo and a 4b_hi
  */
 void TableFormat::initialize_dirtcam_value(bitvec &dirtcam, const IXBar::Use::Byte &byte) {
+    LOG5("    Initializing dirtcam value : " << std::hex << dirtcam);
     if (byte.is_spec(IXBar::RANGE_LO)) {
         dirtcam.setbit(byte.loc.byte * 2 + 1);  // 4b_lo encoding
     } else if (byte.is_spec(IXBar::RANGE_HI)) {
@@ -2060,6 +2061,7 @@ bool TableFormat::allocate_all_ternary_match() {
     std::map<int, int> range_indexes;
 
     for (auto &byte : match_ixbar.use) {
+        LOG5("  Checking match ixbar use byte : " << byte);
         if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
             // Reserves groups and the mid bytes
             used_midbytes.setbit(byte.loc.group / 2);

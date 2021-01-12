@@ -1384,6 +1384,10 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
                     const le_bitrange *bits = nullptr, int flags = 0,
                     IXBar::byte_type_t byte_type = IXBar::NO_BYTE_TYPE,
                     unsigned extra_align = 0, int range_index = 0) {
+    LOG5("Adding IXBar Use for field - " << field << "on table : " << ctxt->name
+            << ", flags : " << flags << ", byte_type: " << byte_type
+            << ", extra_align: " << extra_align << ", range_index: " << range_index);
+
     bool ok = false;
     int index = 0;
     PHV::FieldUse use(PHV::FieldUse::READ);
@@ -1527,6 +1531,7 @@ class IXBar::FieldManagement : public Inspector {
         return false; }
 
     bool preorder(const IR::Expression *e) override {
+        LOG3("IXBar::FieldManagement preorder expression : " << e);
         le_bitrange bits = { };
         auto *finfo = phv.field(e, &bits);
         if (!finfo) return true;
@@ -1564,6 +1569,7 @@ class IXBar::FieldManagement : public Inspector {
         } else {
             (*fields_needed)[finfo->name] = field_bits;
         }
+
         boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
         add_use(*map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, byte_type, 0,
                 ki.range_index);
@@ -1784,10 +1790,26 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
     std::map<cstring, bitvec> fields_needed;
     KeyInfo ki;
     ki.is_atcam = tbl->layout.atcam;
+
+    // For overlapping keys of different types where one type is "range", the
+    // range key takes precedence to correctly set up dirtcam bits
+    std::map<std::pair<cstring, le_bitrange>, const IR::MAU::TableKey*> validKeys;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
-        FieldManagement(&map_alloc, alloc.field_list_order, ixbar_read, &fields_needed,
+        le_bitrange bits = {};
+        auto *f = phv.field(ixbar_read->expr, &bits);
+        if (!f) continue;
+        auto idx = std::make_pair(f->name, bits);
+        if (validKeys.count(idx)) {
+            if (!(ixbar_read->for_range() && !validKeys[idx]->for_range()))
+                continue;
+        }
+        validKeys[idx] = ixbar_read;
+    }
+
+    for (auto vkey : validKeys) {
+        FieldManagement(&map_alloc, alloc.field_list_order, vkey.second, &fields_needed,
                         phv, ki, tbl);
     }
 
