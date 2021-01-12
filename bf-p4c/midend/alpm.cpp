@@ -373,6 +373,7 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
             lpm_key_width = f->expression->type->width_bits();
         }
     }
+    CHECK_NULL(lpm_key);
     ERROR_CHECK(lpm_cnt == 1, "To use algorithmic lpm, exactly one field in the match key "
             "must have a match type of lpm.  Table '%s' has %d.", tbl->name, lpm_cnt);
 

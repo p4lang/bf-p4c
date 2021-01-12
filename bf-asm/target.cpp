@@ -348,12 +348,13 @@ int Target::encodeConst(int src) {
     BUG(); return 0;
 }
 
-int Target::OVERRIDE_NUM_MAU_STAGES(int num) {
+void Target::OVERRIDE_NUM_MAU_STAGES(int num) {
     int allowed = NUM_MAU_STAGES_PRIVATE();
     BUG_CHECK(num > 0 && num <= allowed,
         "Invalid override for NUM_MAU_STAGES. Allowed range is <1, %d>, got %d.", allowed, num);
 
     numMauStagesOverride = num;
+    return;
 }
 
 // should these be inline in the header file?

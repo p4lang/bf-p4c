@@ -17,6 +17,8 @@ Visitor::profile_t CollectIngressBridgedFields::init_apply(const IR::Node* root)
 void CollectIngressBridgedFields::postorder(const IR::BFN::AliasMember* mem) {
     const auto* dest = phv.field(mem);
     const auto* src = phv.field(mem->source);
+    CHECK_NULL(dest);
+    CHECK_NULL(src);
     if (!dest->is_flexible())
         return;
     if (bridged_to_orig.count(dest->name))
@@ -55,6 +57,7 @@ bool CollectEgressBridgedFields::preorder(const IR::BFN::Extract* extract) {
         if (auto mem = rval->source->to<IR::Member>()) {
             if (mem->expr->is<IR::ConcreteHeaderRef>()) {
                 auto srcField = phv.field(mem);
+                CHECK_NULL(srcField);
                 // only aliasing meta = hdr.f where f is a field with flexible annotation
                 if (srcField->is_flexible()) {
                     LOG5("candidate field " << destField << " " << srcField);
@@ -693,11 +696,13 @@ void CollectConstraints::computeNoSplitConstraints(
         const ordered_set<const PHV::Field*>& fields, bool debug = false) {
     auto markAsNoSplit = [&](const PHV::Field* field) {
         PHV::Field* f = phv.field(field->name);
+        CHECK_NULL(f);
         f->set_no_split(true);
     };
 
     auto setNoSplitContainerSize = [&](const PHV::Field* field, int container_size) {
         PHV::Field* f = phv.field(field->name);
+        CHECK_NULL(f);
         f->set_no_split_container_size(container_size);
     };
 
@@ -1287,10 +1292,12 @@ ConstraintSolver::insert_padding(std::vector<std::pair<unsigned, std::string>>& 
         iter = std::adjacent_find(iter, placement.end(),
             [&](std::pair<unsigned, std::string> a, std::pair<unsigned, std::string> b) {
                 auto f = phv.field(a.second);
+                CHECK_NULL(f);
                 return a.first + f->size != b.first;
             });
         if (iter != placement.end()) {
             auto f = phv.field(iter->second);
+            CHECK_NULL(f);
             auto padding_size = (iter+1)->first - iter->first - f->size;
             auto padding = create_padding(padding_size);
             offset_and_fields.push_back(std::make_pair(iter->first + f->size, padding));

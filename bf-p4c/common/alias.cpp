@@ -64,6 +64,7 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     // replacementField is the alias destination field
     auto destInfo = aliasMap.at(f->name);
     const PHV::Field* replacementField = phv.field(destInfo.field);
+    CHECK_NULL(replacementField);
     BUG_CHECK(fieldExpressions.count(replacementField->name),
             "Expression not found %1%", replacementField->name);
 

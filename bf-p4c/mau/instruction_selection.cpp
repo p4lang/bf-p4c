@@ -1651,6 +1651,7 @@ void MeterSetup::Scan::find_pre_color(const IR::MAU::Primitive *prim) {
     }
 
     auto *other_field = self.phv.field(self.update_pre_colors.at(mtr));
+    CHECK_NULL(other_field);
     ERROR_CHECK(field == other_field, "%s: The meter execute with a pre-color in action %s has "
                 "a different pre-color %s than another meter execute on %s.  This other "
                 "pre-color is %s.", prim->srcInfo, act->name, field->name, mtr->name,
@@ -2302,6 +2303,7 @@ void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) 
         if (!is_parallel(instr->operands[i], instr->isOutput(i))) {
             le_bitrange bits = {0, 0};
             auto field = phv.field(instr->operands[i], &bits);
+            CHECK_NULL(field);
             // Overlapping set will be handled in the EliminateAllButLastWrite pass
             if (instr->name != "set") {
               ::error(ErrorType::ERR_UNSUPPORTED,

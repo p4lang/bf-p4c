@@ -90,7 +90,7 @@ class Target {
         return numMauStagesOverride ? 1 : OUTPUT_STAGE_EXTENSION_PRIVATE();
     }
 
-    static int OVERRIDE_NUM_MAU_STAGES(int num);
+    static void OVERRIDE_NUM_MAU_STAGES(int num);
 
  private:
     static int numMauStagesOverride;
