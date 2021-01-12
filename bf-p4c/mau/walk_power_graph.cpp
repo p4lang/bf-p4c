@@ -235,6 +235,7 @@ void WalkPowerGraph::compute_mpr() {
       if (mau_features_->get_dependency_for_gress_stage(g, stage) == DEP_MATCH)
         last_match_dep_stage = stage-1;
       mpr->set_mpr_stage(stage, last_match_dep_stage+1);
+      bool mpr_stage_required = false;  // we depend on the mpr_stage being set as it is
 
       int always_run = 0;
       if (last_match_dep_stage < 0) {
@@ -269,11 +270,6 @@ void WalkPowerGraph::compute_mpr() {
             auto &predecessors = graph->predecessors(t->unique_id());
             if (t->always_run == IR::MAU::AlwaysRun::TABLE || predecessors.empty()) {
               always_run |= (1 << *tbl->logical_id);
-              // this table needs to be mpr always run, so don't need to trigger
-              // it any other way
-              glob_exec = 0;
-              long_branch = 0;
-              next_tables = 0;
               break;
             } else {
               BUG_CHECK(t->stage() > last_match_dep_stage, "inconsistent stage");
@@ -285,6 +281,14 @@ void WalkPowerGraph::compute_mpr() {
                   // Annoying corner case -- tables that have too many potential next tables
                   // for the next table map cannot use global_exec/long_branch and must use
                   // the next table.  Should mark these special corner case tables in the IR.
+                  // In addition, if this table is in an action-dependent stage, we can't
+                  // use the mpr_next_table unless we can also set mpr_stage to this stage.
+                  // Otherwise we need to mark it always run.  See P4C-3469
+                  if (t->stage() != mpr->get_mpr_stage(stage) && mpr_stage_required) {
+                      always_run |= (1 << *tbl->logical_id);
+                      break; }
+                  mpr->set_mpr_stage(stage, t->stage());
+                  mpr_stage_required = true;
                   next_tables |= 1 << *t->logical_id;
                 } else if (t->stage() == p->stage() + 1) {
                   // trigger via global exec
@@ -301,6 +305,10 @@ void WalkPowerGraph::compute_mpr() {
               }
             }
           }
+          if (always_run & (1 << *tbl->logical_id)) {
+            // this table needs to be mpr always run, so don't need to trigger
+            // it any other way
+            continue; }
           int s = last_match_dep_stage;
           mpr->glob_exec_use[s] |= glob_exec;
           mpr->long_branch_use[s] |= long_branch;
