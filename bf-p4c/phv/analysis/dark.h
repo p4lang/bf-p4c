@@ -64,7 +64,7 @@ class MarkDarkCandidates : public Inspector {
 
  public:
     explicit MarkDarkCandidates(PhvInfo& p, const PhvUse& u, const CollectNonDarkUses& d)
-        : phv(p), uses(u), nonDarkUses(d) { }
+        : phv(p), uses(u), nonDarkUses(d), darkCount(0), darkSize(0) { }
 };
 
 /** This pass marks all the fields used in the program and determines the mocha field candidates

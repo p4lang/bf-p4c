@@ -43,7 +43,8 @@ class CollectMochaCandidates : public Inspector {
             const ActionAnalysis::FieldActionsMap &fieldMap);
 
  public:
-    explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
+    explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u) :
+      phv(p), uses(u), mochaCount(0), mochaSize(0) { }
 
     /// @returns true when @f is a field from a packet (not metadata, pov, or bridged field).
     static bool isPacketField(const PHV::Field* f) {

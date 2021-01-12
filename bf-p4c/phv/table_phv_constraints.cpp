@@ -52,6 +52,7 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
         LOG5("\t\t" << matchKey->expr);
         le_bitrange bits;
         PHV::Field* f = phv.field(matchKey->expr, &bits);
+        CHECK_NULL(f);
         size_t roundedUpSize = (f->size % BITS_IN_BYTE == 0) ? (f->size / BITS_IN_BYTE) :
             ((f->size / BITS_IN_BYTE) + 1);
         totalBitsUsed += bits.size();
@@ -94,6 +95,7 @@ bool CollectForceImmediateFields::preorder(const IR::MAU::Action* action) {
             fields.insert(f);
             if (!f->metadata) continue;
             PHV::Field* field = phv.field(f->id);
+            CHECK_NULL(field);
             field->set_written_in_force_immediate(true);
             LOG3("\t\tSetting written in force immediate property for " << f->name);
         }

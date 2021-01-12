@@ -446,7 +446,7 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
     if (pov_alloc_done) BUG("trying to reallocate POV");
     pov_alloc_done = true;
 
-    int size[2] = { 0, 0 };
+    int size[GRESS_T_COUNT] = { 0, 0, 0 };
     int stacks_num = 0;
     for (auto &stack : stacks) {
         StructInfo info = struct_info(stack.name);
@@ -2036,7 +2036,9 @@ bool AddAliasAllocation::preorder(const IR::BFN::AliasMember* alias) {
 
     // Then add this alias.
     PHV::Field* aliasSource = phv.field(alias->source);
+    CHECK_NULL(aliasSource);
     PHV::Field* aliasDest = phv.field(alias);
+    CHECK_NULL(aliasDest);
     addAllocation(aliasSource, aliasDest, StartLen(0, aliasSource->size));
     return true;
 }
@@ -2047,7 +2049,9 @@ bool AddAliasAllocation::preorder(const IR::BFN::AliasSlice* alias) {
 
     // Then add this alias.
     PHV::Field* aliasSource = phv.field(alias->source);
+    CHECK_NULL(aliasSource);
     PHV::Field* aliasDest = phv.field(alias);
+    CHECK_NULL(aliasDest);
     addAllocation(aliasSource, aliasDest, FromTo(alias->getL(), alias->getH()));
     return true;
 }
@@ -2138,6 +2142,7 @@ bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state)
             auto offset = rval->range.lo / 8;
             if (auto mem = extract->dest->to<IR::BFN::FieldLVal>()) {
                 auto destField = phv_i.field(mem->field);
+                CHECK_NULL(destField);
                 if (destField->metadata) {
                     ibuf_to_fields[destField->gress][offset].insert(destField);
                     LOG1("extracted " << destField << " from byte " << offset);

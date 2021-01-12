@@ -66,6 +66,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
     if (auto *hr = e->to<IR::HeaderRef>()) {
         for (auto id : phv.struct_info(hr).field_ids()) {
             auto* field = phv.field(id);
+            CHECK_NULL(field);
             use_i[field][in_mau].insert(StartLen(0, field->size));
             deparser_i[thread][id] = in_dep; } }
 

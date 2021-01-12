@@ -44,6 +44,7 @@ void CollectFieldsForPrivatization::populateMembers(
         const IR::MAU::Action* act,
         const ActionAnalysis::FieldActionsMap& fieldActionsMap) {
     const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     LOG5("\tAnalyzing action " << act->name << " in table " << tbl->name);
     for (auto& fieldAction : Values(fieldActionsMap)) {
         PHV::Field* write = phv.field(fieldAction.write.expr);

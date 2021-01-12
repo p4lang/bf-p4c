@@ -26,10 +26,10 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     FieldToRangeMap used_alu_i;
 
     /// Fields extracted in the parser.
-    bitvec      extracted_i[3];
+    bitvec      extracted_i[GRESS_T_COUNT];
 
     /// Fields extracted in the parser from a constant.
-    bitvec      extracted_from_const_i[3];
+    bitvec      extracted_from_const_i[GRESS_T_COUNT];
 
     /// Used to associate $stkvalid and $valid fields for header stacks.
     BFN::HeaderStackInfo* stacks = nullptr;
@@ -45,7 +45,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     ordered_map<const PHV::Field*, ordered_map<unsigned, ordered_set<le_bitrange>>> use_i;
 
     /// Fields used in the deparser.
-    bitvec      deparser_i[3];
+    bitvec      deparser_i[GRESS_T_COUNT];
     /*                |    ^- gress               */
     /*                 == use in deparser         */
 
