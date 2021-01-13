@@ -512,3 +512,9 @@ p4c_add_xfail_reason("tofino2"
    "1 expected packet on port 0 not seen"
    extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
 )
+
+# P4C-3482 - add program to MUST_PASS when addressed
+p4c_add_xfail_reason("tofino2"
+  "field slices remain unallocated"
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
+)

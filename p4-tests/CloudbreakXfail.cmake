@@ -368,6 +368,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20201217.p4
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1308-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
