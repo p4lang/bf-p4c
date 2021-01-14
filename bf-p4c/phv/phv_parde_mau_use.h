@@ -31,9 +31,6 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// Fields extracted in the parser from a constant.
     bitvec      extracted_from_const_i[GRESS_T_COUNT];
 
-    /// Used to associate $stkvalid and $valid fields for header stacks.
-    BFN::HeaderStackInfo* stacks = nullptr;
-
     /// Handy enum for indexing use_i below.
     enum { PARDE = 0, MAU = 1 };
 
@@ -91,12 +88,6 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bool preorder(const IR::BFN::Deparser *) override;
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::Expression *) override;
-
-    bool preorder(const IR::BFN::Pipe* pipe) override {
-        stacks = pipe->headerStackInfo;
-        BUG_CHECK(stacks, "No header stack info.  Running PhvUse before CollectHeaderStackInfo?");
-        return true;
-    }
 };
 
 /// Consider additional cases specific to Phv Allocation, e.g., treat
