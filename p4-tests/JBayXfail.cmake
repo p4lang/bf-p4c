@@ -459,12 +459,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/stf/parser_error.p4
 )
 
-# DRV-3528
-p4c_add_xfail_reason ("tofino2"
-  "TTransportException: TSocket read 0 bytes"
-  extensions/p4_tests/p4-programs/programs/ha/ha.p4
-)
-
 p4c_add_xfail_reason("tofino2"
   "error: Cannot find a slicing to satisfy @pa_container_size"
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
