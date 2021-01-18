@@ -141,8 +141,12 @@ class Parser {
             /// Data for narrow to wide extraction analysis, flag and
             /// vector of affected PHV locations
             bool has_narrow_to_wide_extract = false;
-            std::vector<const Phv::Ref*> narrow_to_wide_32b;
-            std::vector<const Phv::Ref*> narrow_to_wide_16b;
+                // 32b narrow to wide extractions using 2x16 extractions
+            std::vector<const Phv::Ref*> narrow_to_wide_32b_16;
+                // 32b narrow to wide extractions using 4x8 extractions
+            std::vector<const Phv::Ref*> narrow_to_wide_32b_8;
+                // 16b narrow to wide extractions using 2x8 extractions
+            std::vector<const Phv::Ref*> narrow_to_wide_16b_8;
 
             enum flags_t { OFFSET = 1, ROTATE = 2 };
 

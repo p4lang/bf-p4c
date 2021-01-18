@@ -262,10 +262,12 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
             (where->reg.size == 16 && slot.idx >= phv_8b_0)) {
             match->has_narrow_to_wide_extract = true;
 
-            if (where->reg.size == 32) {
-                match->narrow_to_wide_32b.push_back(&where);
+            if (where->reg.size == 32 && slot.idx == phv_8b_0) {
+                match->narrow_to_wide_32b_8.push_back(&where);
+            } else if (where->reg.size == 32 && slot.idx >= phv_16b_0) {
+                match->narrow_to_wide_32b_16.push_back(&where);
             } else {
-                match->narrow_to_wide_16b.push_back(&where);
+                match->narrow_to_wide_16b_8.push_back(&where);
             }
         }
 
@@ -349,10 +351,12 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
             (where->reg.size == 16 && slot.idx >= phv_8b_0)) {
             match->has_narrow_to_wide_extract = true;
 
-            if (where->reg.size == 32) {
-                match->narrow_to_wide_32b.push_back(&where);
+            if (where->reg.size == 32 && slot.idx == phv_8b_0) {
+                match->narrow_to_wide_32b_8.push_back(&where);
+            } else if (where->reg.size == 32 && slot.idx >= phv_16b_0) {
+                match->narrow_to_wide_32b_16.push_back(&where);
             } else {
-                match->narrow_to_wide_16b.push_back(&where);
+                match->narrow_to_wide_16b_8.push_back(&where);
             }
         }
 
@@ -501,28 +505,34 @@ int count_number_of_extractions(Parser* parser,
     return used;
 }
 
-/// Helping cache to remember the maximal number of extractions
-class ExtractionCountCache {
+/// Helping cache to remember values for a different parser objects
+/// based on the type of extraction size. The storage is done into two
+/// layers and user is free to specify the values of layer 1 and layer 2
+/// types.
+template <typename T1, typename T2>
+class CountCache {
  public:
-    void insert(const Parser::State* state, AnalysisType type, int val) {
-        m_cache[state][type] = val;
+    void insert(const T1 key1, T2 key2, int val) {
+        m_cache[key1][key2] = val;
     }
 
-    bool has(const Parser::State* state, AnalysisType type) {
-        if (m_cache.count(state) == 0) return false;
-        if (m_cache[state].count(type) == 0) return false;
+    bool has(const T1 key1, T2 key2) {
+        if (m_cache.count(key1) == 0) return false;
+        if (m_cache[key1].count(key2) == 0) return false;
 
         return true;
     }
 
-    int get(const Parser::State* state, AnalysisType type) {
-        return m_cache[state][type];
+    int get(const T1 key1, T2 key2) {
+        return m_cache[key1][key2];
     }
 
  private:
-    std::map<const Parser::State*,
-            std::map<AnalysisType, int>> m_cache;
+    std::map<const T1,
+            std::map<T2, int>> m_cache;
 };
+
+using ExtractionCountCache = CountCache<Parser::State::Match*, AnalysisType>;
 
 /// Pad collector object which provides mapping from a narrow-to-wide match
 /// to added padding
@@ -593,17 +603,25 @@ class PaddingInfoCollector {
 
             message << " is using the narrow-to-wide extraction: " << std::endl;
 
-            if (nrw_match->narrow_to_wide_32b.size() != 0) {
+            if (nrw_match->narrow_to_wide_32b_16.size() != 0) {
                 message << "\t* 32 bit extractors are replaced by 2 x 16 bit extractors: ";
-                for (auto ref : nrw_match->narrow_to_wide_32b) {
+                for (auto ref : nrw_match->narrow_to_wide_32b_16) {
                     message << ref->name() << " ";
                 }
                 message << std::endl;
             }
 
-            if (nrw_match->narrow_to_wide_16b.size() != 0) {
+            if (nrw_match->narrow_to_wide_32b_8.size() != 0) {
+                message << "\t* 32 bit extractors are replaced by 4 x 8 bit extractors: ";
+                for (auto ref : nrw_match->narrow_to_wide_32b_8) {
+                    message << ref->name() << " ";
+                }
+                message << std::endl;
+            }
+
+            if (nrw_match->narrow_to_wide_16b_8.size() != 0) {
                 message << "\t* 16 bit extractors are replaced by 2 x 8 bit extractors: ";
-                for (auto ref : nrw_match->narrow_to_wide_16b) {
+                for (auto ref : nrw_match->narrow_to_wide_16b_8) {
                     message << ref->name() << " ";
                 }
                 message << std::endl;
@@ -636,17 +654,42 @@ class PaddingInfoCollector {
     std::map<Parser::State::Match*, PadState*> m_nrw_matches;
 };
 
+/// Size of internal parser FIFO
+static const int parser_fifo_size = 16;
+
+/// Compute the \p val / \p div and ceil it to the nearest upper value. The result
+/// will be wrapped to the 16 (FIFO size in parser).
+int ceil_and_wrap_to_fifo_size(int val, int div) {
+    int fifo_items = val > parser_fifo_size ? parser_fifo_size : val;
+    return (fifo_items + div - 1) / div;
+}
+
 int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &regs,
             Parser::State::Match* match, AnalysisType type,
             std::set<Parser::State*> &visited, ExtractionCountCache& cache) {
-    // Check if we already visit the node
     if (visited.count(match->state)) {
-        return 0;
+        // We have found a node in a loop --> we will get via our predessors into the same state.
+        // This means that we can take this loop many times and that we need to distribute the
+        // maximal FIFO value to our parets (we are predecessors of our parents).
+        //
+        // IN SUCH CASE THE NUMBER OF EXTRACTIONS FOR ALL SUCCESSORS DOESN'T CATCH SHOW
+        // THE REALITY IT IS JUST FOR THE SIMULATION OF FULL PARSER FIFO BLOCKS.
+        // REALITY IS COVEDER WHEN THE GRAPH DOESN'T HAVE LOOPS
+        return parser_fifo_size;
+    }
+
+    if (LOGGING(3)) {
+        std::stringstream ss;
+        ss << "Processing match " << match->state->name << ", gress = " << match->state->gress;
+        if (match->match) {
+            ss << ", match " << match->match;
+        }
+        LOG3(ss.str());
     }
 
     // Check the cache if we know the result
-    if (cache.has(match->state, type)) {
-        return cache.get(match->state, type);
+    if (cache.has(match, type)) {
+        return cache.get(match, type);
     }
 
     // Mark node as visited and run the analysis
@@ -661,9 +704,12 @@ int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &re
     // Insert the result into the cache and unmark the node as visited
     visited.erase(match->state);
     int extraction_result = extractions + pred_extractions;
-    cache.insert(match->state, type, extraction_result);
+    cache.insert(match, type, extraction_result);
+
     return extraction_result;
 }
+
+
 
 /// Add the fake extractions to have 2n 16b extractions. The function returns
 /// the number of added extractions.
@@ -864,13 +910,6 @@ void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int n
 const auto pad_nodes_8b_extracts = pad_nodes_extracts<true>;
 const auto pad_nodes_16b_extracts = pad_nodes_extracts<false>;
 
-/// Compute the \p val / \p div and ceil it to the nearest upper value. The result
-/// will be wrapped to the 16 (FIFO size in parser).
-int ceil_and_wrap_to_fifo_size(int val, int div) {
-    int fifo_items = val > 16 ? 16 : val;
-    return (fifo_items + div - 1) / div;
-}
-
 void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_regs &regs) {
     // 1] Apply narrow-to-wide constraints to all predecessors
     std::set<Parser::State::Match*> narrow_to_wide_matches;
@@ -881,8 +920,13 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
             narrow_to_wide_matches.insert(kv.first);
     }
 
-    std::set<Parser::State::Match*> all_preds;
+    if (narrow_to_wide_matches.size() == 0) {
+        LOG2("No narrow to wide matches has been detected.");
+        return;
+    }
 
+    // Pad all predecessors
+    std::set<Parser::State::Match*> all_preds;
     for (auto m : narrow_to_wide_matches) {
         auto states = m->get_all_preds();
         states.insert(m);
@@ -904,12 +948,21 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
     ExtractionCountCache cache;
     for (auto m : narrow_to_wide_matches) {
         auto pstate = pad_collector.getPadState(m);
-        // Each method removes all inserted nodes to the set
         std::set<Parser::State*> visited_states;
         int extracts_16b = analyze_worst_extractor_path(parser, regs, m, AnalysisType::BIT16,
             visited_states, cache);
         int extracts_8b  = analyze_worst_extractor_path(parser, regs, m, AnalysisType::BIT8,
             visited_states, cache);
+
+        if (LOGGING(3)) {
+            std::stringstream ss;
+            ss << "INFO: Used extractors for " << m->state->gress << "," << m->state->name;
+            if (m->match) {
+                ss << "," << m->match;
+            }
+            ss << " - " << "8bit:" << extracts_8b <<", 16bit:" << extracts_16b;
+            LOG3(ss.str());
+        }
 
         // Count the number of nodes we need to take, the arbiter is taking 4x8bit chunks
         // and 2x16b chunks of data. The result will be ceiled to 16 because that is the
