@@ -315,13 +315,6 @@ MidEnd::MidEnd(BFN_Options& options) {
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
     auto *enum_policy = new EnumOn32Bits;
 
-    auto simplifyKeyPolicy =
-        new P4::OrPolicy(
-            new P4::OrPolicy(
-                new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
-                new BFN::IsPhase0()),
-            new BFN::IsSlice());
-
     sourceInfoLogging = new CollectSourceInfoLogging(refMap);
 
     addPasses({
