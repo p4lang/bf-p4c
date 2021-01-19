@@ -314,6 +314,11 @@ class FindParsingFrontier : public ParserInspector {
         color_groups.push_back(cg);
     }
 
+    profile_t init_apply(const IR::Node *node) override {
+        mutable_field_states.clear();
+        return Inspector::init_apply(node);
+    }
+
     void end_apply() override {
         for (auto& kv : mutable_field_states)
             find_frontier(kv.first, kv.second);
@@ -449,24 +454,30 @@ class RewriteParde : public PardeTransform {
         IR::Vector<IR::BFN::ParserPrimitive> rv;
 
         bool seen_hdr_len_inc_stop = false;
+        const PHV::Field* field = nullptr;
 
         // assumes primitives have been sorted by packet rval
         for (auto stmt : boost::adaptors::reverse(state->statements)) {
             auto stopper = stmt->to<IR::BFN::HdrLenIncStop>();
+            auto extract = stmt->to<IR::BFN::Extract>();
+            if (extract) {
+                field = phv.field(extract->dest->field);
+            }
             if (stopper)
                 seen_hdr_len_inc_stop = true;
 
             if (seen_hdr_len_inc_stop) {
                 rv.push_back(stmt);
+                if (field) {
+                   fields_above_frontier.insert(field);
+                }
                 continue;
             }
 
-            auto extract = stmt->to<IR::BFN::Extract>();
             if (!extract) {
                 rv.insert(rv.begin(), stmt);
                 continue;
             }
-            auto field = phv.field(extract->dest->field);
 
             if (!field->deparsed() ||
                 uses.is_used_mau(field) || field->is_checksummed()) {
@@ -474,8 +485,9 @@ class RewriteParde : public PardeTransform {
             } else {
                 LOG4("elim " << stmt << " in " << state->name);
             }
-
-            fields_below_frontier.insert(field);
+            if (!stopper && !fields_above_frontier.count(field)) {
+                fields_below_frontier.insert(field);
+            }
         }
 
         state->statements = rv;
@@ -516,6 +528,21 @@ class RewriteParde : public PardeTransform {
         IR::BFN::ParserState* rv = nullptr;
 
         if (is_above_frontier(orig_parser, orig_state)) {
+            // Some headers can be extracted is more than one states.
+            // At this stage, it is possile that a header is extracted
+            // above and below the frontier. For such fields, make sure that
+            // none of the fields above tje frontier is below the frontier.
+            for (auto stmt : state->statements) {
+                if (auto extract = stmt->to<IR::BFN::Extract>()) {
+                    if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                        auto f = phv.field(extract->dest->field);
+                        if (fields_below_frontier.count(f)) {
+                            fields_below_frontier.erase(f);
+                        }
+                        fields_above_frontier.insert(f);
+                    }
+                }
+            }
             rv = state;
         } else if (is_below_frontier(orig_parser, orig_state)) {
             rv = state->clone();
@@ -592,11 +619,12 @@ class RewriteParde : public PardeTransform {
 
     std::map<gress_t, StateSet> parser_to_frontier_states;
     std::map<cstring, const IR::BFN::ParserState*> name_to_state;
+    std::set<const PHV::Field*> fields_above_frontier;
+    std::set<const PHV::Field*> fields_below_frontier;
 
 
     const IR::BFN::Parser* orig_parser = nullptr;
 
-    std::set<const PHV::Field*> fields_below_frontier;
 
     const PhvInfo& phv;
     const PhvUse& uses;
