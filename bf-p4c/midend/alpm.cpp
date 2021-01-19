@@ -130,6 +130,10 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
         properties->push_back(prop);
     }
 
+    if (auto prop = tbl->properties->getProperty("implementation")) {
+        properties->push_back(prop);
+    }
+
     properties->push_back(new IR::Property("as_atcam",
                 new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                 new IR::ExpressionValue(new IR::BoolLiteral(true)), false));

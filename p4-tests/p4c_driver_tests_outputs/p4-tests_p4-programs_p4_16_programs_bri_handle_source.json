@@ -23,6 +23,24 @@
             "references": [
                 {
                     "file": "bri_handle.p4",
+                    "line": 334,
+                    "column": 26
+                }
+            ],
+            "symbol_name": "Ing.c1.action_selector",
+            "aliases": [],
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 229,
+                "column": 22
+            },
+            "scope": [],
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
                     "line": 237,
                     "column": 7
                 }
