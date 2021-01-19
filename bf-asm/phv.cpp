@@ -114,7 +114,9 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
             return -1; }
         if (stage == -1) {
             add_phv_field_sizes(gress, phv_name, reg[stage].slice->size());
-            bool is_pov = (phv_name.find(".$valid") != std::string::npos);
+            // POV bit can be ended with .$valid or .$deparse...
+            // Include both possibilities byt checking just for .$
+            bool is_pov = (phv_name.find(".$") != std::string::npos);
             if (is_pov) {
                 phv_pov_names[sl->reg.mau_id()][reg[stage].slice.lo] = phv_name;
             }

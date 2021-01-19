@@ -195,8 +195,8 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                                          povBit, chunk_byte, fd_entry_chunk_byte,
                                          11, gress);
             } else {
-                // TODO: what to do in this case for deparser resources?
-                write_csum_const_in_json(ent.what->encode(), chunk_byte, gress);
+                write_csum_const_in_json(ent.what->encode(), chunk_byte,
+                                         fd_entry_chunk_byte, gress);
             }
             chunk_bytes.push_back(std::move(chunk_byte.clone()));
             fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte.clone()));
@@ -482,7 +482,7 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
                             regs.input.ier.main_e.pov.phvs, pov_order[EGRESS], pov[EGRESS],
                             dictionary[EGRESS], fd_gress, fde_entries_e, EGRESS);
     field_dictionary_alloc["egress"] = std::move(fd_gress);
-    
+
     if (Log::verbosity() > 0) {
         auto json_dump = open_output("logs/field_dictionary.log");
         *json_dump  << &field_dictionary_alloc;

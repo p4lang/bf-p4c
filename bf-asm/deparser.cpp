@@ -500,7 +500,10 @@ void write_pov_resources_in_json(ordered_map<const Phv::Register *, unsigned> &p
 // Used for field dictionary logging. Using fd entry and pov, a json::map
 // is filled with appropriate checksum or constant
 void write_csum_const_in_json(int deparserPhvIdx,
-                              json::map& chunk_byte, gress_t gress) {
+                              json::map& chunk_byte,
+                              json::map& fd_entry_chunk_byte,
+                              gress_t gress) {
+    fd_entry_chunk_byte["phv_container"] = deparserPhvIdx;
     if (options.target == Target::Tofino::tag) {
         if (deparserPhvIdx >= 224 && deparserPhvIdx <= 235) {
             chunk_byte["Checksum"] = deparserPhvIdx - 224 - gress * 6;
@@ -585,9 +588,21 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
     write_pov_resources_in_json(pov[EGRESS], pov_resources);
     resources_deparser_egress["pov"] = std::move(pov_resources);
     // Fill out field dictionaries
-    resources_deparser_ingress["nFdeEntries"] = fde_entries_i.size();
+    unsigned n_fde_entries = 0;
+    if (options.target == Target::Tofino::tag) {
+        n_fde_entries = Target::Tofino::DEPARSER_MAX_FD_ENTRIES;
+#if HAVE_JBAY
+    } else if (options.target == Target::JBay::tag) {
+        n_fde_entries = Target::JBay::DEPARSER_TOTAL_CHUNKS;
+#endif
+#if HAVE_CLOUDBREAK
+    } else if (options.target == Target::Cloudbreak::tag) {
+        n_fde_entries = Target::Cloudbreak::DEPARSER_TOTAL_CHUNKS;
+#endif
+    }
+    resources_deparser_ingress["nFdeEntries"] = n_fde_entries;
     resources_deparser_ingress["fde_entries"] = std::move(fde_entries_i);
-    resources_deparser_egress["nFdeEntries"] = fde_entries_e.size();
+    resources_deparser_egress["nFdeEntries"] = n_fde_entries;
     resources_deparser_egress["fde_entries"] = std::move(fde_entries_e);
     // Fill deparser tables
     Digest *learning_table[2] = { nullptr, nullptr };
@@ -621,7 +636,7 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
     json::vector resources_deparser;
     resources_deparser.push_back(std::move(resources_deparser_ingress));
     resources_deparser.push_back(std::move(resources_deparser_egress));
-    // Dump resources to file 
+    // Dump resources to file
     auto deparser_json_dump = open_output("logs/resources_deparser.json");
     *deparser_json_dump << &resources_deparser;
 }

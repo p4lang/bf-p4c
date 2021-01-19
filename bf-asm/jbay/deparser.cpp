@@ -434,7 +434,8 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                 write_field_name_in_json(phv_reg, &ent_pov->reg, ent_pov->lo,
                                          chunk_byte, fd_entry_chunk_byte, 19, gress);
             } else {
-                write_csum_const_in_json(ent_what->encode(), chunk_byte, gress);
+                write_csum_const_in_json(ent_what->encode(), chunk_byte,
+                                         fd_entry_chunk_byte, gress);
             }
             chunk_bytes.push_back(std::move(chunk_byte));
             fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));
@@ -493,10 +494,11 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                     chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
                     chunk_byte["Byte"] = j;
                     fd_entry_chunk_byte["chunk_number"] = j;
-                    fd_entry_chunk_byte["is_phv"] = false;
+                    fd_entry_chunk_byte["is_phv"] = true;
                     auto phv_reg = &phv_repl->second->reg;
                     write_field_name_in_json(phv_reg, &pov_bit->reg,
-                                          pov_bit->lo, chunk_byte, fd_entry_chunk_byte, 19, gress);
+                                             pov_bit->lo, chunk_byte,
+                                             fd_entry_chunk_byte, 19, gress);
                     if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
                         ++phv_repl;
                 } else if (csum_repl != clot->csum_replace.end()
@@ -505,8 +507,9 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                     chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
                     chunk_byte["Byte"] = j;
                     fd_entry_chunk_byte["chunk_number"] = j;
-                    fd_entry_chunk_byte["is_phv"] = false;
-                    write_csum_const_in_json(csum_repl->second.encode(), chunk_byte, gress);
+                    fd_entry_chunk_byte["is_phv"] = true;
+                    write_csum_const_in_json(csum_repl->second.encode(), chunk_byte,
+                                             fd_entry_chunk_byte, gress);
                     if (int(csum_repl->first + 2) <= i + j + 1)
                         ++csum_repl;
                 } else {
