@@ -85,6 +85,17 @@ class AllocSlice {
         return true;
     }
 
+    bool extends_live_range(const AllocSlice& other) const {
+        if ((min_stage_i.first < other.getEarliestLiveness().first) ||
+            (max_stage_i.first > other.getLatestLiveness().first) ||
+            ((min_stage_i.first == other.getEarliestLiveness().first) &&
+             (min_stage_i.second < other.getEarliestLiveness().second)) ||
+            ((max_stage_i.first == other.getLatestLiveness().first) &&
+             (max_stage_i.second > other.getLatestLiveness().second)))
+            return true;
+        return false;
+    }
+
     void setLiveness(const StageAndAccess& min, const StageAndAccess& max) {
         min_stage_i = std::make_pair(min.first, min.second);
         max_stage_i = std::make_pair(max.first, max.second);

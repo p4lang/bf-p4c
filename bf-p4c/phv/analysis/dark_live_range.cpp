@@ -317,7 +317,7 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
 boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
         const ordered_set<PHV::AllocSlice>& fields) const {
     LOG1("Producing fields in order : " << fields);
-    LOG1(livemap.printDarkLiveRanges());
+    LOG7(livemap.printDarkLiveRanges());
     OrderedFieldSummary rv;
     const PHV::AllocSlice* lastField = nullptr;
     for (int i = 0; i <= DEPARSER; i++) {

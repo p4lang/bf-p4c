@@ -385,7 +385,8 @@ class DarkOverlay : public PassManager {
             const PHV::ContainerGroup& group,
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::AllocSlice& slice,
-            const PHV::Transaction& alloc) const {
+            const PHV::Transaction& alloc,
+            const PHV::Allocation::MutuallyLiveSlices& container_state) const {
         if (!suitableForDarkOverlay(slice)) return boost::none;
         ordered_set<PHV::AllocSlice> fields;
         PHV::Container c;

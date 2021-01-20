@@ -644,16 +644,39 @@ FindInitializationNode::findInitializationNodes(
                   f->name);
         ordered_set<const IR::BFN::Unit*> alreadyInitializedUnits;
         for (auto& slice : field_to_slices.at(f)) {
-            auto initPointsForTransaction = alloc.getInitPoints(slice);
-            if (!initPointsForTransaction) continue;
-            for (const auto* action : *initPointsForTransaction) {
-                auto initTable = tablesToActions.getTableForAction(action);
-                BUG_CHECK(initTable, "Action %1% does not have an associated table", action->name);
-                LOG3("\t\tSlice " << slice << " initialized in action " << action->name <<
-                     " in table " << (*initTable)->name);
-                alreadyInitializedUnits.insert((*initTable)->to<IR::BFN::Unit>());
+            auto metaInitPoints = alloc.getInitPoints(slice);
+            // ALEX: This is only accounting for the metadata init
+            // points. Lets account for dark initialization points also.
+            // *ALEX*: We are still missing the AlwaysRunAction inits.
+            PHV::Allocation::ActionSet darkInitPoints;
+            if (slice.hasInitPrimitive()) {
+                LOG5("\t\t Slice " << slice << " has darkInitPrim with " <<
+                     slice.getInitPrimitive()->getInitPoints().size() << " actions");
+
+                darkInitPoints.insert(slice.getInitPrimitive()->getInitPoints().begin(),
+                                      slice.getInitPrimitive()->getInitPoints().end());
+            }
+
+            if (!metaInitPoints && !darkInitPoints.size()) continue;
+            if (metaInitPoints) {
+                for (const auto* action : *metaInitPoints) {
+                    auto initTable = tablesToActions.getTableForAction(action);
+                    BUG_CHECK(initTable, "Action %1% does not have an associated table",
+                              action->name);
+                    LOG3("\t\tSlice " << slice << " initialized in action " << action->name <<
+                         " in table " << (*initTable)->name);
+                    alreadyInitializedUnits.insert((*initTable)->to<IR::BFN::Unit>()); }}
+            if (darkInitPoints.size()) {
+                for (const auto* action : darkInitPoints) {
+                    auto initTable = tablesToActions.getTableForAction(action);
+                    BUG_CHECK(initTable, "Action %1% does not have an associated table",
+                              action->name);
+                    LOG3("\t\tSlice " << slice << " initialized in action " << action->name <<
+                         " in table " << (*initTable)->name);
+                    alreadyInitializedUnits.insert((*initTable)->to<IR::BFN::Unit>()); }
             }
         }
+
         // Summarize the uses and defs of field f in the units map, and also populate f_dominators
         // with the dominator nodes for the uses and defs of f.
         LOG3("\t\tSummarizing defuse and dominator for field " << f->name);

@@ -365,12 +365,13 @@ class CoreAllocation {
         const ordered_map<PHV::FieldSlice, int>& start_positions,
         const AllocContext& score_ctx) const;
 
-    void generateNewAllocSlices(
+    bool generateNewAllocSlices(
         const PHV::AllocSlice& origSlice,
         const ordered_set<PHV::AllocSlice>& alloced_slices,
         PHV::DarkInitMap& slices,
         std::vector<PHV::AllocSlice>& new_candidate_slices,
-        PHV::Transaction& alloc_attempt) const;
+        PHV::Transaction& alloc_attempt,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     bool hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidate_slices,
                                ordered_set<PHV::AllocSlice> alloc_slices) const;
