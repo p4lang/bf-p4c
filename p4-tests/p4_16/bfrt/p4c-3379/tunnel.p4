@@ -420,6 +420,37 @@ control IngressTunnel(
     }
 #endif
 */
+	action p4c_3379_ip_corruption_check_drop() {
+		ig_intr_md_for_dprsr.drop_ctl = 0x1;
+	}
+
+	action p4c_3379_ip_corruption_check_noaction() {
+		// empty
+	}
+
+	table p4c_3379_ip_corruption_check {
+		key = {
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+			lkp_0.ip_src_addr[31:0] : ternary @name("src_addr");
+#else
+			hdr_0.ipv4.src_addr     : ternary @name("src_addr");
+#endif
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+			lkp_0.ip_dst_addr[31:0] : ternary @name("dst_addr");
+#else
+			hdr_0.ipv4.dst_addr     : ternary @name("dst_addr");
+#endif
+		}
+
+		actions = {
+			p4c_3379_ip_corruption_check_noaction;
+			p4c_3379_ip_corruption_check_drop;
+		}
+
+		default_action = p4c_3379_ip_corruption_check_noaction;
+		size = 32;
+	}
+
 	// -------------------------------------
 	// Apply
 	// -------------------------------------
@@ -431,6 +462,7 @@ control IngressTunnel(
 //			rmac_hit : {
   #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
 				if (hdr_0.ipv4.isValid()) {
+					p4c_3379_ip_corruption_check.apply();
 //				if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV4) {
       #ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 					hit = src_vtep.apply().hit;
@@ -1071,6 +1103,10 @@ control TunnelDecapOuter(
 	// Apply
 	// -------------------------------------
 
+        action P4C_3379_workaround() {
+            hdr_1.vlan_tag[1].setInvalid(); // extreme added
+        }
+
 	apply {
 
 #ifdef TUNNEL_ENABLE
@@ -1092,7 +1128,8 @@ control TunnelDecapOuter(
 #endif // VNTAG_ENABLE
 
 				hdr_1.vlan_tag[0].setInvalid(); // extreme added
-				hdr_1.vlan_tag[1].setInvalid(); // extreme added
+				// hdr_1.vlan_tag[1].setInvalid(); // extreme added
+                                P4C_3379_workaround();
 			}
 
 			// ----- l3 -----

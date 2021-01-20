@@ -128,7 +128,7 @@ typedef bit<switch_outer_nexthop_width> switch_outer_nexthop_t;
 #endif
 typedef bit<switch_hash_width> switch_hash_t;
 
-#ifndef egress_dtel_drop_report_width 
+#ifndef egress_dtel_drop_report_width
 #define egress_dtel_drop_report_width 17
 #endif
 
@@ -457,7 +457,7 @@ header switch_dtel_switch_local_mirror_metadata_h {
     bit<19> qdepth;
 #ifdef INT_V2
     bit<48> egress_timestamp;
-#else 
+#else
     bit<32> egress_timestamp;
 #endif
 }
@@ -700,6 +700,8 @@ struct switch_bridged_metadata_nsh_extension_t {
 
 // ----------------------------------------
 
+@pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
+@pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
 #ifdef DTEL_ENABLE
 @pa_atomic("ingress", "hdr.bridged_md.base_qid")
 @pa_container_size("ingress", "hdr.bridged_md.base_qid", 8)
@@ -927,7 +929,7 @@ struct switch_header_transport_t {
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
     gre_h gre;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
-    
+
 #if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
 	gre_extension_sequence_h gre_sequence;
     erspan_type2_h erspan_type2;
@@ -951,7 +953,7 @@ struct switch_header_outer_t {
     vlan_tag_h[VLAN_DEPTH] vlan_tag;
 #if defined(MPLS_ENABLE) || defined(MPLSoGRE_ENABLE)
     mpls_h[MPLS_DEPTH] mpls;
-    mpls_pw_cw_h mpls_pw_cw;    
+    mpls_pw_cw_h mpls_pw_cw;
 #endif
     ipv4_h ipv4;
 #ifdef IPV6_ENABLE
@@ -1013,7 +1015,7 @@ struct switch_header_inner_t {
     gtp_v1_base_h gtp_v1_base;
     gtp_v1_optional_h gtp_v1_optional;
 #endif
-    
+
 }
 
 // -----------------------------------------------------------------------------
@@ -1029,13 +1031,13 @@ struct switch_header_inner_inner_t {
 struct switch_header_t {
 
     // ===========================
-    // misc 
+    // misc
     // ===========================
 
     switch_bridged_metadata_h bridged_md;
 	// switch_mirror_metadata_h mirror;
     fabric_h fabric;
-    cpu_h cpu;    
+    cpu_h cpu;
 
     // ===========================
     // transport

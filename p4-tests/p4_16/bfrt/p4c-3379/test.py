@@ -136,6 +136,19 @@ class test(BfRuntimeTest):
 
 #		time.sleep(1)
 
+		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.p4c_3379_ip_corruption_check')
+		table.default_entry_set(
+			self.target,
+			table.make_data([], 'SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.p4c_3379_ip_corruption_check_drop'))
+		table.entry_add(
+			self.target,
+			[table.make_key(
+				[gc.KeyTuple('src_addr', 0x0a0a0a0a, 0xffffffff),
+				gc.KeyTuple('dst_addr', 0x14141414, 0xffffffff)],
+			)],
+			[table.make_data([], 'SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.p4c_3379_ip_corruption_check_noaction')]
+		)
+
 		# -----------------------------------------------------------
 		# Create / Send / Verfiy the packet
 		# -----------------------------------------------------------
@@ -167,7 +180,11 @@ class test(BfRuntimeTest):
 #		exp_pkt = exp_pkt / IP   ('\x45\x22\x00\x3c\x00\x01\x00\x00\x1f\x11\x21\x08\x09\x13\x5b\x5c\x0a\x0b\x0c\x0d') # ipv4
 #		exp_pkt = exp_pkt / TCP  ('\x08\x50\x0c\x38\x00\x28\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00') # tcp
 
-		exp_pkt = src_pkt
+		exp_pkt =           Ether('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00') # ethernet
+		exp_pkt = exp_pkt / IP   ('\x45\x00\x00\x5c\x00\x01\x00\x00\x40\x00\x64\x8c\x05\x05\x05\x05\x06\x06\x06\x06') # ipv4
+		exp_pkt = exp_pkt / TCP  ('\xd9\x84\x66\xaa\xbb\x00\x52\x54\x00\x1e\xf9\x53\x08\x00\x15\xf5\x00\x3a\x29\xa6\x14\x6e\x0f\x41\x86\x65\x05\x05\x05\x05\x06\x06\x06\x06\x47\x52\x45\x20\x74\x75\x6e\x6e\x65\x6c\x20\x70\x61\x79\x6c\x6f\x61\x64\x45\x00\x00\x14\x00\x01\x00\x00\x40\x00\x74\xdb\x01\x01\x01\x0a\x02\x02\x02\x02')
+
+#		exp_pkt = src_pkt
 
 		# -----------------------------------------------------------
 
