@@ -2921,7 +2921,7 @@ void ActionPhvConstraints::throw_too_many_sources_error(
                 allSlicesUnwritten = false;
         if (allSlicesUnwritten) continue;
         ss << std::endl << "\tSource " << (source_num++) << " contains the following fields:";
-        boost::optional<int> offset = boost::none;
+        boost::optional<int> offset = boost::make_optional(false, int());
         bool unaligned = false;
         ordered_set<PHV::FieldSlice> printedFields;
         for (auto& slice : *set) {
@@ -2931,7 +2931,7 @@ void ActionPhvConstraints::throw_too_many_sources_error(
             if (phvAlignedSlices.count(slice)) {
                 int start = phvAlignedSlices.at(slice).second;
                 int thisOffset = phvAlignedSlices.at(slice).first - start;
-                if (offset != boost::none && *offset == thisOffset)
+                if ((offset != boost::none) && (*offset != thisOffset))
                     unaligned = true;
                 // Start = -1 indicates that the source does not belong to a slice list and
                 // therefore, could potentially have multiple possible alignments within its
@@ -2940,23 +2940,26 @@ void ActionPhvConstraints::throw_too_many_sources_error(
                 // fields.
                 if (start == -1) continue;
                 ss << " @ bits " << start << "-" << (start + slice.size() - 1);
+                offset = thisOffset;
             }
         }
         // Also, output second order alignment violations (the programmer first needs to resolve the
         // too-many-sources error).
         // Also, indicate to the user that PHV sources are not aligned (if possible), which violates
         // alignment constraints when action data/constant is present.
-        if (adSource && offset && *offset != 0) {
-            ss << std::endl << "  and slices of source " << source_num << " are not allocated "
+        if (adSource && (offset != boost::none) && (*offset != 0)) {
+            ss << std::endl << "  Slices of source " << source_num-1 << " are not allocated "
                 << "at the same offsets within the container as the destination slices." <<
                 std::endl;
+            ss << "  " << Device::name() << " does not support action data/constant with "
+                << "rotated PHV source at the same time." << std::endl;
             continue;
         }
         // If each destination in the container has a different offset relative to its source slice
         // (and all those source slices are part of the same source container), that also violates
         // an action constraint.
         if (unaligned) {
-            ss << std::endl << "  and slices of source " << source_num << " do not have the "
+            ss << std::endl << "  Slices of source " << source_num-1 << " do not have the "
                 "same rotational alignment with respect to their destination slices." <<
                 std::endl;
             continue;
@@ -3067,6 +3070,19 @@ bool ActionPhvConstraints::diagnoseInvalidPacking(
     if (numPHVSources > 0 && !writtenBitvec.is_contiguous() && !notWrittenBitvec.is_contiguous()) {
         throw_non_contiguous_mask_error(notWrittenSlices, destToSource, fieldAlignments,
                 action_name, ss);
+        return false;
+    }
+
+    auto IsRotation = [](const std::pair<const PHV::FieldSlice, std::pair<int, int>> &alignment) {
+        if (alignment.second.second != -1 && alignment.second.first != alignment.second.second)
+            return true;
+        return false;
+    };
+
+    if (adSource && numPHVSources > 0 &&
+        std::any_of(phvAlignedSlices.begin(), phvAlignedSlices.end(), IsRotation)) {
+        throw_too_many_sources_error(actionDataWrittenSlices, notWrittenSlices, phvSources,
+                phvAlignedSlices, action, ss);
         return false;
     }
 

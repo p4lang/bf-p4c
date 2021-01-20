@@ -472,6 +472,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "Action .* must be rewritten, because it requires too many sources"
+  extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
   testdata/p4_14_samples/05-FullTPHV.p4
@@ -479,7 +484,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
 
   # Expected to fail, which means that action analysis is working correctly.
-  extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
 
   # p4smith mask issues - P4C-2093
@@ -858,8 +862,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "Tofino does not support action data/constant with rotated PHV source at the same time"
   testdata/p4_16_samples/strength3.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4
 )
 
@@ -904,8 +912,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful|./p4c TIMEOUT"
+  "Action .* must be rewritten.This program violates action constraints imposed by Tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
@@ -1968,4 +1980,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PSA_IdleTimeout_t: declaration not found"
   testdata/p4_16_samples/psa-idle-timeout.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time"
+  extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )

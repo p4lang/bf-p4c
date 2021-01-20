@@ -15,6 +15,21 @@ class ReferenceMap;
 namespace BFN {
 
 /**
+ * Check for padding field with explicit assignment and report a warning if found.
+ *
+ * Setting a padding field add some unnecessary constraints. If a field must be set
+ * to a specific value, it is probably because it is not a padding field and must
+ * not be classify as such.
+ */
+class CheckPadAssignment final : public Inspector {
+ private:
+    bool preorder(const IR::AssignmentStatement* statement) override;
+
+ public:
+    CheckPadAssignment() {}
+};
+
+/**
  * Check for non-byte-aligned header types and report an error if any are found.
  *
  * On Tofino, we can only parse and deparse byte-aligned headers, so
@@ -105,6 +120,7 @@ class PadFlexibleField : public PassManager {
             new P4::ClearTypeMap(typeMap),
             new BFN::TypeChecking(refMap, typeMap, true),
             new CheckHeaderAlignment(refMap, typeMap),
+            new CheckPadAssignment(),
             });
         setName("PadFlexibleField");
     }

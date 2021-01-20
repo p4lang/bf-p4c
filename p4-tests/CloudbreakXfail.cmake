@@ -362,6 +362,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1719.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2490.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
   extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4

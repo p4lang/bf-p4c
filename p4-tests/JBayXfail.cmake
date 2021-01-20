@@ -501,6 +501,11 @@ p4c_add_xfail_reason("tofino2"
    extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
 )
 
+p4c_add_xfail_reason("tofino2"
+  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time"
+  extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
+)
+
 # P4C-3482 - add program to MUST_PASS when addressed
 p4c_add_xfail_reason("tofino2"
   "field slices remain unallocated"

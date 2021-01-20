@@ -9,6 +9,24 @@
 
 namespace BFN {
 
+bool CheckPadAssignment::preorder(const IR::AssignmentStatement* statement) {
+    auto member = statement->left->to<IR::Member>();
+    if (!member)
+        return false;
+    auto header_type = dynamic_cast<const IR::Type_StructLike *>(member->expr->type);
+    if (!header_type)
+        return false;
+    auto field = header_type->getField(member->member.name);
+    if (field && field->getAnnotation("padding")) {
+        if (statement->srcInfo.isValid())
+            ::warning(ErrorType::WARN_UNUSED, "%1%: Padding fields do not need to be explicitly "
+                      "set. Also, setting these fields can introduce PHV constraints the compiler "
+                      "may not be able to resolve.", statement);
+    }
+
+    return false;
+}
+
 /**
  * We do not need user to byte-align headers used in Mirror/Resubmit/Digest
  */

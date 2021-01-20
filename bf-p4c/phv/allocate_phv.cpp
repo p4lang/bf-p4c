@@ -2654,8 +2654,10 @@ bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
             fieldAlignments[slice] = sliceListSize;
             sliceListSize += slice.size();
         }
-        if (sliceListExact && sliceListSize == 8) scCannotBeSplitFurther = true;
-        if (sliceListExact) sliceListsOfInterest.insert(list);
+        if (sliceListExact) {
+            scCannotBeSplitFurther = true;
+            sliceListsOfInterest.insert(list);
+        }
     }
     if (!scCannotBeSplitFurther) return false;
 
