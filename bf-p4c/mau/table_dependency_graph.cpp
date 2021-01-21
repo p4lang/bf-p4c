@@ -754,6 +754,17 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                     new_dep = DependencyGraph::ANTI_ACTION_READ;
             }
 
+            DependencyGraph::Graph::edge_descriptor backEdge;
+            bool backEdgePresent = false;
+            auto src_v = self.dg.labelToVertex.at(table);
+            auto dst_v = self.dg.labelToVertex.at(upstream_t);
+            boost::tie(backEdge, backEdgePresent) = boost::edge(src_v, dst_v, self.dg.g);
+            if (backEdgePresent) {
+                LOG7("\tCannot add edge between " << upstream_t->name
+                        << " and " << table->name << " as a backedge already exists");
+                continue;
+            }
+
             // Handle the case of incorrect ARA-->ARA dependencies
             // which are added due to depth-first traversal of the
             // control flow visitor
@@ -1317,6 +1328,8 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
 
     // Current in-degree of vertices
     ordered_map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
+    ordered_map<DependencyGraph::Graph::vertex_descriptor,
+        std::set<DependencyGraph::Graph::edge_descriptor>> n_depending_on_with_edges;
 
     // Build initial n_depending_on, and happens_after_work_map
     const auto& dep_graph = local_dg ? local_dg->g : dg.g;
@@ -1347,8 +1360,12 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
             && dep != DependencyGraph::CONT_CONFLICT
             && dep != DependencyGraph::REDUCTION_OR_OUTPUT
             && dep != DependencyGraph::REDUCTION_OR_READ) {
+            auto src = boost::source(*out, dep_graph);
             auto dst = boost::target(*out, dep_graph);
-            n_depending_on[dst]++; } }
+            n_depending_on[dst]++;
+            n_depending_on_with_edges[dst].insert(*out);
+        }
+    }
 
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>> rst;
     ordered_set<DependencyGraph::Graph::vertex_descriptor> processed;
@@ -1360,20 +1377,43 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
             processed.size() << "   graph vertices: " << num_vertices(dep_graph));
 
         for (auto& kv : n_depending_on) {
-            LOG5("\t processed: " << processed.count(kv.first) << " numDeps: " << kv.second);
-
-            if (!processed.count(kv.first) && kv.second == 0)
+            if (!processed.count(kv.first) && kv.second == 0) {
                 this_generation.insert(kv.first);
-            else if (!processed.count(kv.first) && kv.second)
                 LOG5("\t\t Non processed vertex: " << curr_dg.get_vertex(kv.first)->name <<
                      " with " << kv.second << " incoming deps");
+            } else if (!processed.count(kv.first) && kv.second) {
+                LOG5("\t\t Non processed vertex: " << curr_dg.get_vertex(kv.first)->name <<
+                     " with " << kv.second << " incoming deps");
+            } else {
+                LOG5("\t\t Processed vertex: " << curr_dg.get_vertex(kv.first)->name <<
+                     " with " << kv.second << " incoming deps");
+            }
         }
 
         // There are no remaining vertices, so it must be a loop.
         if (this_generation.size() == 0) {
-            LOG2(dg);
+            for (boost::tie(v, v_end) = boost::vertices(dep_graph);
+                 v != v_end;
+                 ++v) {
+                if (processed.count(*v) == 0) {
+                    LOG5("Unprocessed vertex " << curr_dg.get_vertex(*v)->name
+                            << " with " << n_depending_on[*v] << " incoming deps ");
+                    if (n_depending_on_with_edges.count(*v)) {
+                        auto back_edges = n_depending_on_with_edges[*v];
+                        for (auto be : back_edges) {
+                            auto be_src = boost::source(be, dep_graph);
+                            const auto* be_src_tbl = curr_dg.get_vertex(be_src);
+                            LOG5("  Possible back edge for vertex to "
+                                << be_src_tbl->name << " of type " << dep_graph[be]);
+                        }
+                    }
+                }
+            }
+            LOG5(dg);
             ::error("There is a loop in the table dependency graph.");
-            break; }
+            break;
+        }
+
         // Remove out-edge destination of these vertices.
         for (auto& v : this_generation) {
             auto out_edge_itr_pair = out_edges(v, dep_graph);
@@ -1395,6 +1435,10 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
                             happens_after_work_map[table].begin(),
                             happens_after_work_map[table].end());
                     n_depending_on[vertex_later]--;
+                    auto &vertex_later_edges = n_depending_on_with_edges[vertex_later];
+                    auto rm_edge = std::find(vertex_later_edges.begin(),
+                                                vertex_later_edges.end(), *out);
+                    vertex_later_edges.erase(rm_edge);
                 }
             }
          }
@@ -1434,10 +1478,12 @@ void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
 
     control_dom_set[tbl].insert(tbl);
 
+    LOG4(" NTP : For table : " << tbl->name);
     for (auto seq : Values(tbl->next)) {
         for (auto control_tbl : seq->tables) {
             next_table_leaves[tbl] |= next_table_leaves.at(control_tbl);
             control_dom_set[tbl] |= control_dom_set.at(control_tbl);
+            LOG4(" NTP :   Next Table : " << control_tbl->name);
         }
     }
 }

@@ -342,6 +342,7 @@ control SwitchIngress(
         ig_intr_dprsr_md.drop_ctl = 0x0;
     }
 
+    @disable_atomic_modify(1)
     table alpm_forward {
         key = {
             vrf : exact;
