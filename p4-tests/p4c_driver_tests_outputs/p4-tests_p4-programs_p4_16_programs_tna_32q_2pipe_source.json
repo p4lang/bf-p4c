@@ -10,13 +10,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.ipv4_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 140,
                 "column": 16
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Extern"
         },
         {
@@ -28,13 +26,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.ipv4_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 138,
                 "column": 16
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Extern"
         },
         {
@@ -51,13 +47,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.direct_counter",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 291,
                 "column": 61
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -69,13 +63,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.ipv4_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 110,
                 "column": 16
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Extern"
         },
         {
@@ -87,13 +79,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.digest",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 104,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -105,13 +95,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.ipv4_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 105,
                 "column": 16
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Extern"
         },
         {
@@ -123,13 +111,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.meter",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 176,
                 "column": 50
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -141,13 +127,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.storm_control_stats",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 178,
                 "column": 37
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -159,13 +143,11 @@
                 }
             ],
             "symbol_name": "pipeline_profile_a",
-            "aliases": [],
             "declaration": {
                 "file": "tna_32q_2pipe.p4",
                 "line": 44,
                 "column": 36
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -177,13 +159,11 @@
                 }
             ],
             "symbol_name": "pipeline_profile_b",
-            "aliases": [],
             "declaration": {
                 "file": "tna_32q_2pipe.p4",
                 "line": 51,
                 "column": 36
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -205,13 +185,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.qos_md.color",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 175,
                 "column": 5
             },
-            "scope": [],
             "symbol_type": "Declaration_Variable_Type_Struct"
         },
         {
@@ -271,13 +249,11 @@
                 }
             ],
             "symbol_name": "NoAction",
-            "aliases": [],
             "declaration": {
-                "file": "/mnt/data/git/bf-p4c-compilers_p4c-2919/build/p4c/p4include/core.p4",
+                "file": "/mnt/bf-p4c-compilers/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -289,13 +265,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.hit",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 293,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -312,13 +286,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.miss",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 299,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -330,13 +302,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.hit",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 256,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -353,13 +323,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.miss",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 261,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -371,13 +339,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.count",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 256,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -389,13 +355,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.encap_custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 203,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -407,13 +371,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.hit",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 180,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -430,13 +392,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.miss",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 184,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -448,13 +408,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.modify_eg_port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 220,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -466,13 +424,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.set_color",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 238,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -484,13 +440,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.dmac_hit",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 201,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -507,13 +461,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.dmac_miss",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 204,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -525,13 +477,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.hit",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 175,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -548,13 +498,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.miss",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 180,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -566,13 +514,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.modify_eg_port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 222,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -584,13 +530,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.forward",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 303,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -602,13 +546,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.forward",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 268,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -620,13 +562,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.encap_custom_metadata_hdr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 208,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -638,13 +578,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.forward",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 188,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -656,13 +594,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.pinning",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 224,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -674,13 +610,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.stats",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 260,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -692,13 +626,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.storm_control",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 242,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -710,13 +642,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.forward",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 184,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -728,13 +658,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.learning",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 208,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -746,25 +674,21 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.pinning",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 226,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
             "references": [],
             "symbol_name": "tbl_pipeline_profile_a274",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 274,
                 "column": 22
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -776,13 +700,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -794,13 +716,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -812,13 +732,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.diffserv",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -830,13 +748,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -848,13 +764,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.flags",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -866,13 +780,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.frag_offset",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -884,13 +796,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.hdr_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -902,13 +812,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.identification",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -920,13 +828,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.ihl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -938,13 +844,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.protocol",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -956,13 +860,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.src_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -974,13 +876,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.total_len",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -992,13 +892,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1010,13 +908,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.hdr.ipv4.version",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 137,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1033,13 +929,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_a.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 136,
                 "column": 43
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -1051,13 +945,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1069,13 +961,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1087,13 +977,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1105,13 +993,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.diffserv",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1123,13 +1009,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1141,13 +1025,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.flags",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1159,13 +1041,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.frag_offset",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1177,13 +1057,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.hdr_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1195,13 +1073,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.identification",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1213,13 +1089,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.ihl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1231,13 +1105,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.protocol",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1249,13 +1121,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.src_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1267,13 +1137,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.total_len",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1285,13 +1153,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1303,13 +1169,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.version",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 135,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1331,13 +1195,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 134,
                 "column": 43
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -1349,13 +1211,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_a.eg_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 80,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -1367,13 +1227,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_a.hdr.custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 78,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1385,13 +1243,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_a.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 78,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1403,13 +1259,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_a.hdr.ethernet.ether_type",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 78,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1421,13 +1275,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_a.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 78,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1454,13 +1306,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_a.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 77,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -1472,13 +1322,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_b.eg_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 74,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -1490,13 +1338,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_b.hdr.custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 72,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1508,13 +1354,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_b.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 72,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1526,13 +1370,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_b.hdr.ethernet.ether_type",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 72,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1544,13 +1386,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_b.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 72,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1577,13 +1417,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser_b.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 71,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -1595,13 +1433,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.eg_intr_md_for_dprs.drop_ctl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 288,
                 "column": 52
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1623,13 +1459,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.hdr.custom_metadata.custom_tag",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 284,
                 "column": 27
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1641,13 +1475,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 284,
                 "column": 27
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1669,13 +1501,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_a.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 284,
                 "column": 27
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1687,13 +1517,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.eg_intr_md_for_dprs.drop_ctl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 252,
                 "column": 52
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1715,13 +1543,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.hdr.custom_metadata.custom_tag",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 248,
                 "column": 27
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1733,13 +1559,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 248,
                 "column": 27
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1761,13 +1585,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress_b.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 248,
                 "column": 27
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1779,13 +1601,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1797,13 +1617,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1815,13 +1633,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1833,13 +1649,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.diffserv",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1851,13 +1665,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1869,13 +1681,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.flags",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1887,13 +1697,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.frag_offset",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1905,13 +1713,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.hdr_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1923,13 +1729,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.identification",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1941,13 +1745,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.ihl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1959,13 +1761,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.protocol",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1977,13 +1777,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.src_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1995,13 +1793,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.total_len",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2013,13 +1809,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2031,13 +1825,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.hdr.ipv4.version",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 107,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2059,13 +1851,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_a.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 106,
                 "column": 20
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -2077,13 +1867,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2095,13 +1883,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2113,13 +1899,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ethernet.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2131,13 +1915,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ethernet.src_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2149,13 +1931,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2167,13 +1947,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.diffserv",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2185,13 +1963,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2203,13 +1979,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.flags",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2221,13 +1995,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.frag_offset",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2239,13 +2011,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.hdr_checksum",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2257,13 +2027,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.identification",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2275,13 +2043,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.ihl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2293,13 +2059,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.protocol",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2311,13 +2075,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.src_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2329,13 +2091,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.total_len",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2347,13 +2107,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2365,13 +2123,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ipv4.version",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 101,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2383,13 +2139,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.ig_dprsr_md.digest_type",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 103,
                 "column": 54
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2411,13 +2165,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 100,
                 "column": 20
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -2429,13 +2181,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_a.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 53,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2447,13 +2197,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_a.hdr.ethernet.ether_type",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 53,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2465,13 +2213,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_a.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 53,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2483,13 +2229,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_a.ig_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 55,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -2501,13 +2245,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_a.ig_md.port_md",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 54,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2529,13 +2271,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_a.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 52,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -2547,13 +2287,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.hdr.custom_metadata",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 42,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2565,13 +2303,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 42,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2583,13 +2319,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.hdr.ethernet.ether_type",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 42,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2601,13 +2335,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 42,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2619,13 +2351,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.ig_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 44,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -2637,13 +2367,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.ig_md.port_md",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 43,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2670,13 +2398,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser_b.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 41,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -2688,13 +2414,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.encap_custom_metadata.tag",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 203,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -2706,13 +2430,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.hdr.custom_metadata.$valid",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 169,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2724,13 +2446,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.hdr.custom_metadata.custom_tag",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 169,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2742,13 +2462,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.hdr.ethernet.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 169,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2770,13 +2488,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 169,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2788,13 +2504,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.ig_dprsr_md.drop_ctl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 173,
                 "column": 57
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2821,13 +2535,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.ig_intr_md.ingress_port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 171,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -2839,13 +2551,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.ig_md.port_md.f1",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 170,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2857,13 +2567,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.ig_md.port_md.f2",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 170,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2875,13 +2583,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.ig_tm_md.ucast_egress_port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 174,
                 "column": 51
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2893,13 +2599,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.modify_eg_port.port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 220,
                 "column": 36
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -2911,13 +2615,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_a.set_color.index",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_a.p4",
                 "line": 238,
                 "column": 36
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -2939,13 +2641,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.hdr.custom_metadata.custom_tag",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 168,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2957,13 +2657,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.hdr.ethernet.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 168,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -2975,13 +2673,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.hdr.ipv4.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 168,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -3003,13 +2699,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.hdr.ipv4.ttl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 168,
                 "column": 31
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -3021,13 +2715,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.ig_dprsr_md.digest_type",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 172,
                 "column": 57
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -3039,13 +2731,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.ig_dprsr_md.drop_ctl",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 172,
                 "column": 57
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -3057,13 +2747,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.ig_intr_md.ingress_port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 170,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -3075,13 +2763,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.ig_md.port_md.f1",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 169,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -3093,13 +2779,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.ig_tm_md.ucast_egress_port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 173,
                 "column": 51
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -3111,15 +2795,13 @@
                 }
             ],
             "symbol_name": "SwitchIngress_b.modify_eg_port.port",
-            "aliases": [],
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 222,
                 "column": 36
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         }
     ],
-    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe"
+    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe"
 }

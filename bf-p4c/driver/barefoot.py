@@ -766,7 +766,7 @@ class BarefootBackend(BackendDriver):
         # Append the deparer node to the output 
         deparser_data = json.load(deparser_json)
         resources_data = json.load(resources_json)
-        resources_data["resources"]["pipes"][0]["deparser"] = deparser_data
+        resources_data["resources"]["deparser"] = deparser_data
 
         # Dump the node to the output - don't forget to reset the file
         resources_json.close()

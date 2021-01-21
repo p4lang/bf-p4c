@@ -356,7 +356,7 @@ void MauFeatures::log_json_stage_characteristics(gress_t g, PowerLogging* logger
                                    stage_has_feature(g, stage, HAS_STFUL),
                                    stage_has_feature(g, stage, HAS_STATS),
                                    stage_has_feature(g, stage, HAS_TCAM),
-                                   get_max_selector_words(g, stage));
+                                   new int(get_max_selector_words(g, stage)));
 
     bool ext = stage_has_chained_feature(g, stage, HAS_EXACT) &&
       !stage_has_feature(g, stage, HAS_EXACT);

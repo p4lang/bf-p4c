@@ -518,7 +518,7 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                     fd_entry_chunk_byte["chunk_number"] = j;
                     fd_entry_chunk_byte["is_phv"] = false;
                     chunk_byte["CLOT"] = clot_tag;
-                    fd_entry_chunk_byte["clot_offset"] = clot_tag;
+                    fd_entry_chunk_byte["clot_tag"] = clot_tag;
                 }
                 chunk_bytes.push_back(std::move(chunk_byte));
                 fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));

@@ -72,7 +72,6 @@ class GenerateOutputs : public PassManager {
     bool _success;
     std::string _outputDir;
 
-    BFN::Visualization _visualization;
     BFN::DynamicHashJson _dynhash;
     const Util::JsonObject &_primitives;
     const Util::JsonObject &_depgraph;
@@ -140,16 +139,7 @@ class GenerateOutputs : public PassManager {
             std::ofstream dynhash(dynHashFile);
             dynhash << _dynhash << std::endl << std::flush;
         }
-        if (_options.debugInfo) {  // generate resources info only if invoked with -g
-            // Output resources json file
-            auto logsDir = BFNContext::get().getOutputDirectory("logs", _pipeId);
-            cstring resourcesFile = logsDir + "/resources.json";
-            LOG2("Resources json generation for P4i: " << resourcesFile);
-            std::ofstream res(resourcesFile);
-            res << _visualization << std::endl << std::flush;
-            // relative path to the output directory
-            manifest.addResources(_pipeId, resourcesFile.substr(_options.outputDir.size()+1));
-
+        if (_options.debugInfo) {  // Generate graphs only if invoked with -g
             auto graphsDir = BFNContext::get().getOutputDirectory("graphs", _pipeId);
             // Output dependency graph json file
             if (_depgraph.size() > 0) {
@@ -183,13 +173,14 @@ class GenerateOutputs : public PassManager {
     explicit GenerateOutputs(const BFN::Backend &b, const BFN_Options& o, int pipeId,
                              const Util::JsonObject& p, const Util::JsonObject& d,
                              bool success = true) :
-        _options(o), _pipeId(pipeId), _success(success), _visualization(b.get_clot()),
+        _options(o), _pipeId(pipeId), _success(success),
         _dynhash(b.get_phv()), _primitives(p), _depgraph(d) {
         setStopOnError(false);
         _outputDir = BFNContext::get().getOutputDirectory("", pipeId);
         if (_outputDir == "") exit(1);
         auto logsDir = BFNContext::get().getOutputDirectory("logs", pipeId);
         std::string phvLogFile(logsDir + "/phv.json");
+        std::string resourcesLogFile(logsDir + "/resources.json");
         addPasses({ &_dynhash,  // Verifies that the hash is valid before the dump of
                                 // information in assembly
                     new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(),
@@ -200,7 +191,8 @@ class GenerateOutputs : public PassManager {
                                                  *b.get_phv_logging(), b.get_defuse(),
                                                  b.get_table_alloc())
                                                  : nullptr,
-                    &_visualization
+                    o.debugInfo ? new BFN::ResourcesLogging(b.get_clot(), resourcesLogFile,
+                                                o.outputDir.c_str()) : nullptr
                     });
 
         setName("Assembly output");

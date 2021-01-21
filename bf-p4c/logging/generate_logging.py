@@ -147,6 +147,32 @@ class IntegerDataMember(DataMember):
     def defaultValue(self):
         return str(0)
 
+# If IntField is marked as optional, it will be generated as null initialized int pointer
+# in the C++. This is because regular integer marked as optional would not be emitted if
+# it has value of 0 which can be valid value in some contexts.
+class OptionalIntegerDataMember(DataMember):
+    def cppType(self):
+        return "const int*"
+    def jsonType(self):
+        return "Int"
+    def isBasicType(self):
+        return True
+    def isArrayType(self):
+        return False
+    def isObjectType(self):
+        return False
+    def defaultValue(self):
+        return "nullptr"
+    def genSerializer(self, generator, writeKey = True, isPtr = False):
+        if self.isOptional:
+            generator.write('if (' + self.memberName() + ' != ' + self.defaultValue() + ') {\n')
+            generator.incrIndent()
+        if writeKey: generator.write('writer.Key("' + self.name + '");\n')
+        generator.write('writer.' + self.jsonType() + '(*' + self.serializeMember(isPtr = isPtr) + ');\n')
+        if self.isOptional:
+            generator.decrIndent()
+            generator.write('}\n')
+
 class NumberDataMember(DataMember):
     def cppType(self):
         return "double"
@@ -211,7 +237,7 @@ class EnumDataMember(DataMember):
     def isObjectType(self):
         return False
     def defaultValue(self):
-        return self.defaultVal
+        return str(self.defaultVal)
 
     def serializeMember(self, varName = None):
         return  'int (' + super(EnumDataMember, self).serializeMember(varName) + ')'
@@ -266,7 +292,7 @@ class EnumDataMember(DataMember):
             generator.write('}\n')
 
 class BasicEnumDataMember(DataMember):
-    """ The BasicEnumDataMember represents an enum with its basic type (string or int).
+    """ The BasicEnumDataMember represents an enum with its basic type (string).
         There is no checking done at the C++ logging level, any string goes. The checking
         will happen when the schema is validated.
     """
@@ -274,23 +300,20 @@ class BasicEnumDataMember(DataMember):
         super(BasicEnumDataMember, self).__init__(name, typeName, body, isOptional)
         self.enumMemberType = None
         self.enumMemberCount = 0
-        int_type = (int)
-        if sys.version_info.major == 2: int_type = (int, long)
         for e in self.body['enum']:
-            if not (isinstance(e, str) or isinstance(e, int_type)):
-                raise TypeError("Unknown enum type " + e)
             if isinstance(e, str):
                 self.enumMemberType = 'std::string'
                 self.defaultVal = '""'
             else:
-                self.enumMemberType = 'int'
-                self.defaultVal = 0
+                # NOTE: This used to handle ints as well but it had problems with optional ints
+                # So enum with type int is being exported as (Optional)IntegerDataMember
+                raise TypeError("Unknown enum type " + e)
             self.enumMemberCount += 1
 
     def cppType(self):
         return self.enumMemberType
     def jsonType(self):
-        return "Uint" if self.cppType() == 'int' else 'String'
+        return 'String'
     def isBasicType(self):
         return True
     def isArrayType(self):
@@ -298,13 +321,10 @@ class BasicEnumDataMember(DataMember):
     def isObjectType(self):
         return False
     def defaultValue(self):
-        return self.defaultVal
+        return str(self.defaultVal)
     def serializeMember(self, varName = None, isPtr = False):
-        if self.cppType() == 'int':
-            return super(BasicEnumDataMember, self).serializeMember(varName)
-        else:
-            ref = '->' if isPtr else '.'
-            return super(BasicEnumDataMember, self).serializeMember(varName) + ref + 'c_str()'
+        ref = '->' if isPtr else '.'
+        return super(BasicEnumDataMember, self).serializeMember(varName) + ref + 'c_str()'
     def genSerializer(self, generator, writeKey = True, isPtr = False):
         ref = ''
         if isPtr: ref = '*'
@@ -313,15 +333,10 @@ class BasicEnumDataMember(DataMember):
                             self.defaultValue() + ') {\n')
             generator.incrIndent()
         if writeKey: generator.write('writer.Key("' + self.name + '");\n')
-        if self.cppType() == 'int':
-            generator.write('writer.' + self.jsonType() + '(' + ref + self.serializeMember(isPtr = isPtr) + ');\n')
-        else:
-            generator.write('writer.' + self.jsonType() + '(' + self.serializeMember(isPtr = isPtr) + ');\n')
+        generator.write('writer.' + self.jsonType() + '(' + self.serializeMember(isPtr = isPtr) + ');\n')
         if self.isOptional:
             generator.decrIndent()
             generator.write('}\n')
-
-
 
 class UnionDataMember(DataMember):
     def __init__(self, name, typeName, body, isOptional):
@@ -447,11 +462,19 @@ class ArrayDataMember(DataMember):
                 generator.write('writer.' + this.elemType.jsonType() + '(' +
                             this.elemType.serializeMember(src) + ');\n', generator.indentIncr)
     def genSerializer(self, generator, writeKey = True, isPtr = False):
-        if writeKey: generator.write('writer.Key("' + self.name + '");\n')
+        if writeKey:
+            if self.isOptional:
+                generator.write('if (' + self.memberName() + '.size() > 0) {\n')
+                generator.incrIndent()
+            generator.write('writer.Key("' + self.name + '");\n')
         generator.write('writer.StartArray();\n')
         generator.write('for ( auto e : ' + self.memberName() + ')\n')
         self.genNestedArraySerializer(generator, self, 'e')
         generator.write('writer.EndArray();\n')
+
+        if writeKey and self.isOptional:
+            generator.decrIndent()
+            generator.write('}\n')
     def genSetter(self, generator, unique = True):
         methodName = 'append'
         if not unique: methodName += self.memberName()
@@ -488,12 +511,20 @@ class ObjectDataMember(DataMember):
 def getDataMember(name, body, typeName = None, isOptional = False):
     if debug > 3: print(name, '->', body)
     if body.get('enum', False):
+        if body.get('type', False) and body['type'] == 'integer':
+            # Integer enums are being serialized as integers, but by its own code
+            # That is fine for regular enums, but not for optional ones
+            # This will substitute enum with integer, properly exporting optional ints
+            altBody = { 'type': 'integer', 'description': body.get('description', '')}
+            return getDataMember(name, altBody, typeName, isOptional)
         return BasicEnumDataMember(name, typeName, body, isOptional)
     if body.get('type', False):
         if body['type'] == 'boolean':
             return BooleanDataMember(name, isOptional = isOptional)
-        if body['type'] == 'integer':
-            return IntegerDataMember(name, isOptional = isOptional)
+        if body['type'] == 'integer' and isOptional:
+            return OptionalIntegerDataMember(name, isOptional = True)
+        if body['type'] == 'integer' and not isOptional:
+            return IntegerDataMember(name, isOptional = False)
         if body['type'] == 'number':
             return NumberDataMember(name, isOptional = isOptional)
         if body['type'] == 'string':
@@ -504,7 +535,13 @@ def getDataMember(name, body, typeName = None, isOptional = False):
         if body['type'] == 'object':
             # TODO: Check why we need t here
             t = typeName if typeName is not None else name
-            return ObjectDataMember(name, typeName, jsonName = name, body = body, isOptional = isOptional)
+            # If typeName is None then this is a dictionary inside something else
+            # It means it will be a subclass of something and since name of the class
+            # is derived from attribute name (and many other classes might reuse that name)
+            # the ClassGenerator might wrongly assume this class was already generated.
+            # The "parent." prefix can be used to tell it to force generate this.
+            jn = name if typeName is not None else "parent." + name
+            return ObjectDataMember(name, typeName, jsonName = jn, body = body, isOptional = isOptional)
     if body.get('$ref', False):
         jsonName, cpp_type = ref2Type(body)
         t = typeName if typeName is not None else cpp_type
@@ -622,7 +659,11 @@ class ClassGenerator:
                               self.generator.classes)
                     if arrayElem.isObjectType() and \
                         arrayElem.jsonName() not in subClsNames:
-                        if arrayElem.jsonName() not in self.generator.classes or \
+                        # Add:
+                        #  - subclass with unique name over whole schema
+                        #  - subclass with not unique name, because attribute somewhere else is named the same
+                        #  - subclass of class with multiple
+                        if arrayElem.jsonName().startswith("parent.") or arrayElem.jsonName() not in self.generator.classes or \
                             len(self.superClasses) > 0: # Add subclasses for classes with inheritance
                             if debug > 1: print('appending', arrayElem.jsonName())
                             self.subClasses.insert(0, arrayElem)
@@ -824,6 +865,9 @@ class ClassGenerator:
             if d.isArrayType() and d.elemType.isObjectType():
                 self.write('for (auto e : ' + d.memberName() + ') ')
                 self.write('delete e;\n', None)
+                self.write(d.memberName() + '.clear();\n')
+            if d.isBasicType() and d.cppType() == "const int *":
+                self.write('delete ' + d.memberName() + ';\n')
         self.generator.decrIndent()
         self.write('}\n')
 

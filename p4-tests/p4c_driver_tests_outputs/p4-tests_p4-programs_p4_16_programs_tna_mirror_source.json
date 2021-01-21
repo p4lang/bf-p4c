@@ -10,13 +10,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.mirror",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 225,
                 "column": 14
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Extern"
         },
         {
@@ -28,13 +26,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.mirror",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 107,
                 "column": 14
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Extern"
         },
         {
@@ -46,13 +42,11 @@
                 }
             ],
             "symbol_name": "pipe",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 270,
                 "column": 34
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -64,13 +58,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.mirror_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 204,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "Declaration_Variable_Type_Header"
         },
         {
@@ -82,13 +74,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.mirror_md.$valid",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 204,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "Declaration_Variable_Type_Header"
         },
         {
@@ -107,13 +97,11 @@
                 }
             ],
             "symbol_name": "NoAction",
-            "aliases": [],
             "declaration": {
-                "file": "/mnt/data/git/bf-p4c-compilers_p4c-2919/build/p4c/p4include/core.p4",
+                "file": "/mnt/bf-p4c-compilers/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -125,13 +113,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress.set_mirror",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 248,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -143,13 +129,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 140,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -161,13 +145,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_mirror_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 130,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -179,13 +161,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_normal_pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 135,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -197,49 +177,41 @@
                 }
             ],
             "symbol_name": "SwitchIngress.mirror_fwd",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 148,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
             "references": [],
             "symbol_name": "tbl_set_mirror",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 260,
                 "column": 13
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
             "references": [],
             "symbol_name": "tbl_set_mirror_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 166,
                 "column": 13
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
             "references": [],
             "symbol_name": "tbl_set_normal_pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 169,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -251,13 +223,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress.eg_dprsr_md.mirror_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 245,
                 "column": 56
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -269,13 +239,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress.eg_md.egr_mir_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 242,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -287,13 +255,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress.eg_md.pkt_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 242,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -305,13 +271,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress.hdr.bridged_md.do_egr_mirroring",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 241,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -323,13 +287,11 @@
                 }
             ],
             "symbol_name": "SwitchEgress.hdr.bridged_md.egr_mir_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 241,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -341,13 +303,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.eg_dprsr_md.mirror_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 223,
                 "column": 53
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -359,13 +319,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.eg_md.egr_mir_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 222,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -377,13 +335,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.eg_md.pkt_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 222,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -395,13 +351,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 221,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -413,13 +367,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 220,
                 "column": 20
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -436,13 +388,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 180,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -454,13 +404,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_intr_md.$valid",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 180,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -472,13 +420,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.hdr.bridged_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 178,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -490,13 +436,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 178,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -533,13 +477,11 @@
                 }
             ],
             "symbol_name": "SwitchEgressParser.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 177,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -551,13 +493,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.bridged_md.$valid",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 123,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -569,13 +509,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.bridged_md.do_egr_mirroring",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 123,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -587,13 +525,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.bridged_md.egr_mir_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 123,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -605,13 +541,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.bridged_md.pkt_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 123,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -623,13 +557,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_dprsr_md.mirror_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 127,
                 "column": 57
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -641,13 +573,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 125,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -659,13 +589,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.resubmit_flag",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 125,
                 "column": 41
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -682,13 +610,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.do_ing_mirroring",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 124,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -700,13 +626,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ing_mir_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 124,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -718,13 +642,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.pkt_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 124,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -736,13 +658,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 128,
                 "column": 51
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -754,13 +674,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_md.dest_port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 140,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -772,13 +690,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_md.egr_mir",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 140,
                 "column": 82
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -790,13 +706,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_md.egr_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 140,
                 "column": 102
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -808,13 +722,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_md.ing_mir",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 140,
                 "column": 46
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -826,13 +738,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.set_md.ing_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 140,
                 "column": 66
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -844,13 +754,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.bridged_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -862,13 +770,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -880,13 +786,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -898,13 +802,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -916,13 +818,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -934,13 +834,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -952,13 +850,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 103,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -970,13 +866,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_dprsr_md.mirror_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 105,
                 "column": 54
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -988,13 +882,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.ing_mir_ses",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 104,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1006,13 +898,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.pkt_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 104,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1024,13 +914,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 102,
                 "column": 20
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -1042,13 +930,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 80,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -1065,13 +951,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 82,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -1083,13 +967,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 82,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -1106,13 +988,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 82,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -1139,87 +1019,73 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 79,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
             "references": [],
             "symbol_name": "cond-1",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 161,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "IfStatement"
         },
         {
             "references": [],
             "symbol_name": "cond-2",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 165,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "IfStatement"
         },
         {
             "references": [],
             "symbol_name": "cond-3",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 259,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "IfStatement"
         },
         {
             "references": [],
             "symbol_name": "cond-4",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 161,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "IfStatement"
         },
         {
             "references": [],
             "symbol_name": "cond-5",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 165,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "IfStatement"
         },
         {
             "references": [],
             "symbol_name": "cond-6",
-            "aliases": [],
             "declaration": {
                 "file": "tna_mirror.p4",
                 "line": 259,
                 "column": 9
             },
-            "scope": [],
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_mirror"
+    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_mirror"
 }

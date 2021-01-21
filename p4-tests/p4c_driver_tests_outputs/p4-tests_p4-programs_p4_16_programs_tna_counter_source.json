@@ -15,13 +15,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.direct_counter",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 92,
                 "column": 61
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -38,13 +36,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.direct_counter_2",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 93,
                 "column": 61
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -56,13 +52,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.indirect_counter",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 89,
                 "column": 47
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -74,13 +68,11 @@
                 }
             ],
             "symbol_name": "pipe",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 187,
                 "column": 33
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -92,13 +84,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hit",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 95,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -110,13 +100,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hit_dst",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 103,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -128,13 +116,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hit_forward_exact",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 133,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -171,13 +157,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.nop",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 114,
                 "column": 12
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -189,13 +173,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.forward",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 117,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -207,13 +189,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.forward_dst",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 157,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -225,25 +205,21 @@
                 }
             ],
             "symbol_name": "SwitchIngress.forward_exact",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 141,
                 "column": 11
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
             "references": [],
             "symbol_name": "tbl_tna_counter178",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 178,
                 "column": 37
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -255,13 +231,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 80,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -278,13 +252,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 80,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -296,13 +268,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hit.port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 95,
                 "column": 25
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -319,13 +289,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hit_dst.port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 103,
                 "column": 29
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -337,13 +305,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.hit_forward_exact.port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 133,
                 "column": 39
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -355,13 +321,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_dprsr_md.drop_ctl",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 84,
                 "column": 57
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -373,13 +337,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_tm_md.bypass_egress",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 85,
                 "column": 51
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -401,13 +363,11 @@
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 85,
                 "column": 51
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -419,13 +379,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 70,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -437,13 +395,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 70,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -455,13 +411,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 70,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -473,13 +427,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 70,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -491,13 +443,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 70,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -509,13 +459,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 70,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -527,13 +475,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 69,
                 "column": 20
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -545,13 +491,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 39,
                 "column": 22
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -563,13 +507,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 39,
                 "column": 22
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -581,13 +523,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 39,
                 "column": 22
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -604,13 +544,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 41,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -622,13 +560,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 41,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -645,13 +581,11 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 41,
                 "column": 42
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Header"
         },
         {
@@ -683,15 +617,13 @@
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
-            "aliases": [],
             "declaration": {
                 "file": "tna_counter.p4",
                 "line": 38,
                 "column": 19
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_counter"
+    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_counter"
 }

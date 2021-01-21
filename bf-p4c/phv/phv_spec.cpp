@@ -354,43 +354,6 @@ unsigned PhvSpec::physicalAddress(const PHV::Container &c, ArchBlockType_t inter
     return physicalAddress(containerToId(c), interface);
 }
 
-Util::JsonObject *PhvSpec::toJson() const {
-    // Create the "phv_containers" node.
-    auto *phv_containers = new Util::JsonObject();
-
-    // Map the type to the available container addresses.
-    std::map<PHV::Type, Util::JsonArray*> containersByType;
-    for (auto cid : physicalContainers()) {
-        auto c = idToContainer(cid);
-        if (!containersByType[c.type()])
-            containersByType[c.type()] = new Util::JsonArray();
-        auto addr = physicalAddress(cid, MAU);
-        containersByType[c.type()]->append(new Util::JsonValue(addr)); }
-
-    auto KindName = [](PHV::Kind k) {
-        switch (k) {
-            case PHV::Kind::normal:   return "normal";
-            case PHV::Kind::tagalong: return "tagalong";
-            case PHV::Kind::mocha:    return "mocha";
-            case PHV::Kind::dark:     return "dark";
-            default:    BUG("Unknown PHV container kind"); } };
-
-    // Build PhvContainerType JSON objects for each container type.
-    for (auto kind : containerKinds()) {
-        auto bySize = new Util::JsonArray();
-        for (auto size : containerSizes()) {
-            auto* addresses = containersByType[PHV::Type(kind, size)];
-            if (!addresses || !addresses->size()) continue;
-            auto* sizeObject = new Util::JsonObject();
-            sizeObject->emplace("width", new Util::JsonValue(int(size)));
-            sizeObject->emplace("units", new Util::JsonValue(addresses->size()));
-            sizeObject->emplace("addresses", addresses);
-            bySize->push_back(sizeObject); }
-        phv_containers->emplace(KindName(kind), bySize);
-    }
-    return phv_containers;
-}
-
 PhvSpec::AddressSpec TofinoPhvSpec::_physicalAddresses = {
     { PHV::Type::W,   { .start = 0,   .blocks = 1, .blockSize = 64 , .incr = 0 } },
     { PHV::Type::B,   { .start = 64,  .blocks = 1, .blockSize = 64,  .incr = 0 } },

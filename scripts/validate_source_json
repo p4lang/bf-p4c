@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 
-# Script to validate a resources.json against the json schema
+# Script to validate a source.json against the json schema
 #
-# The default behavior takes a resources.json file as a mandatory argument
+# The default behavior takes a source.json file as a mandatory argument
 # and it validates it agains the gen_schema file in the Glass repo.
 #
 # If used from the default location, the relative path to the Glass repo

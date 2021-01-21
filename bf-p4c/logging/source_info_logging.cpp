@@ -46,9 +46,8 @@ void CollectSourceInfoLogging::addSymbol(const CollectSourceInfoLogging::Symbol&
             new Source_Info_Schema_Logger::SourceLocation(
                 file,
                 line,
-                column + 1,  // SourceInfo column starts from 0
-                             // which is invalid for SourceLocation
-                (endLine != line) ? endLine : 0),
+                new int(column + 1),   // SourceInfo column starts from 0
+                (endLine != line) ? new int(endLine) : nullptr),
             symbol.type.c_str());
 
     for (const auto& ref : symbol.refs) {
@@ -78,9 +77,8 @@ void CollectSourceInfoLogging::addSymbol(const CollectSourceInfoLogging::Symbol&
                 new Source_Info_Schema_Logger::SourceLocation(
                     file,
                     line,
-                    column + 1,  // SourceInfo column starts from 0
-                                 // which is invalid for SourceLocation
-                    (endLine != line) ? endLine : 0));
+                    new int(column + 1),  // SourceInfo column starts from 0
+                    (endLine != line) ? new int(endLine) : nullptr));
     }
 
     if (symbol.inst.isValid()) {  // TODO: Remove condition when TODO(1) is done

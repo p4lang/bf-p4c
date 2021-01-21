@@ -10,13 +10,11 @@
                 }
             ],
             "symbol_name": "IngressP.hash_1",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 125,
                 "column": 43
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -28,13 +26,11 @@
                 }
             ],
             "symbol_name": "bloom_filter_1",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 106,
                 "column": 38
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -46,13 +42,11 @@
                 }
             ],
             "symbol_name": "bloom_filter_alu_1",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 116,
                 "column": 90
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -64,13 +58,11 @@
                 }
             ],
             "symbol_name": "pipe",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 189,
                 "column": 81
             },
-            "scope": [],
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
         {
@@ -87,14 +79,12 @@
                 }
             ],
             "symbol_name": "IngressP.temp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 128,
                 "column": 13,
                 "end_line": 132
             },
-            "scope": [],
             "symbol_type": "Declaration_Variable_Type_Bits"
         },
         {
@@ -111,13 +101,11 @@
                 }
             ],
             "symbol_name": "check_bloom_filter_1",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 126,
                 "column": 43
             },
-            "scope": [],
             "symbol_type": "P4Action"
         },
         {
@@ -129,13 +117,11 @@
                 }
             ],
             "symbol_name": "bloom_filter_1",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 136,
                 "column": 36
             },
-            "scope": [],
             "symbol_type": "P4Table"
         },
         {
@@ -147,13 +133,11 @@
                 }
             ],
             "symbol_name": "DeparserE.b",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 180,
                 "column": 30
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -165,13 +149,11 @@
                 }
             ],
             "symbol_name": "DeparserE.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 181,
                 "column": 33
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -193,13 +175,11 @@
                 }
             ],
             "symbol_name": "DeparserI.b",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 149,
                 "column": 20
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -211,13 +191,11 @@
                 }
             ],
             "symbol_name": "DeparserI.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 150,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -229,13 +207,11 @@
                 }
             ],
             "symbol_name": "DeparserI.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 150,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -247,13 +223,11 @@
                 }
             ],
             "symbol_name": "DeparserI.hdr.tcp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 150,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -265,13 +239,11 @@
                 }
             ],
             "symbol_name": "IngressP.hdr.ipv4.dip",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 109,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -283,13 +255,11 @@
                 }
             ],
             "symbol_name": "IngressP.hdr.ipv4.proto",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 109,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -301,13 +271,11 @@
                 }
             ],
             "symbol_name": "IngressP.hdr.ipv4.sip",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 109,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -319,13 +287,11 @@
                 }
             ],
             "symbol_name": "IngressP.hdr.tcp.dPort",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 109,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -337,13 +303,11 @@
                 }
             ],
             "symbol_name": "IngressP.hdr.tcp.sPort",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 109,
                 "column": 23
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -360,13 +324,11 @@
                 }
             ],
             "symbol_name": "IngressP.meta.md.bf_tmp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 110,
                 "column": 24
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -378,13 +340,11 @@
                 }
             ],
             "symbol_name": "IngressP.rv",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 117,
                 "column": 51
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -396,13 +356,11 @@
                 }
             ],
             "symbol_name": "IngressP.value",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 117,
                 "column": 33
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Bits"
         },
         {
@@ -414,13 +372,11 @@
                 }
             ],
             "symbol_name": "ParserE.b",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 160,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         },
         {
@@ -432,13 +388,11 @@
                 }
             ],
             "symbol_name": "ParserE.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 161,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -450,13 +404,11 @@
                 }
             ],
             "symbol_name": "ParserI.hdr.ethernet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 82,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -468,13 +420,11 @@
                 }
             ],
             "symbol_name": "ParserI.hdr.ethernet.ethertype",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 82,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -486,13 +436,11 @@
                 }
             ],
             "symbol_name": "ParserI.hdr.ipv4",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 82,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -504,13 +452,11 @@
                 }
             ],
             "symbol_name": "ParserI.hdr.ipv4.proto",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 82,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -522,13 +468,11 @@
                 }
             ],
             "symbol_name": "ParserI.hdr.tcp",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 82,
                 "column": 28
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Struct"
         },
         {
@@ -550,15 +494,13 @@
                 }
             ],
             "symbol_name": "ParserI.packet",
-            "aliases": [],
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
                 "line": 81,
                 "column": 26
             },
-            "scope": [],
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/mnt/data/git/bf-p4c-compilers_p4c-2919/p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing"
+    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing"
 }

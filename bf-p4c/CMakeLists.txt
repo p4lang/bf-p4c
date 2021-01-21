@@ -71,6 +71,10 @@ get_schema_version(source_info_schema SOURCE_INFO_SCHEMA_VERSION)
 MESSAGE(STATUS "Found source info schema version ${SOURCE_INFO_SCHEMA_VERSION}")
 add_definitions("-DSOURCE_INFO_SCHEMA_VERSION=\"${SOURCE_INFO_SCHEMA_VERSION}\"")
 
+get_schema_version(resources_schema RESOURCES_SCHEMA_VERSION)
+MESSAGE(STATUS "Found source info schema version ${RESOURCES_SCHEMA_VERSION}")
+add_definitions("-DRESOURCES_SCHEMA_VERSION=\"${RESOURCES_SCHEMA_VERSION}\"")
+
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} ${Z3_INCLUDE_DIR} )
@@ -424,7 +428,6 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/field_slice_extract_info.cpp
   parde/clot/header_removal_analysis.cpp
   parde/clot/pseudoheader.cpp
-  parde/p4i/gen_parser_json.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
 build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -681,6 +684,8 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/pass_manager.h
   logging/phv_logging.h
   logging/resources.h
+  logging/resources_parser.h
+  logging/resources_clot.h
   logging/source_info_logging.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
@@ -693,6 +698,8 @@ set (BF_P4C_BACKEND_LOGGING_SRCS
   logging/pass_manager.cpp
   logging/phv_logging.cpp
   logging/resources.cpp
+  logging/resources_parser.cpp
+  logging/resources_clot.cpp
   logging/source_info_logging.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_SRCS}")

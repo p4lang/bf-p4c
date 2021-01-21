@@ -258,9 +258,6 @@ class PhvSpec {
     /// @return the target-specific address specification for the specified interface
     virtual AddressSpec &physicalAddressSpec(ArchBlockType_t interface) const = 0;
 
-    /// @return a json representation of the phv specification
-    Util::JsonObject *toJson() const;
-
     /// apply global pragmas to cached info about available PHV containers
     void applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const;
 };
