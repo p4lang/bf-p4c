@@ -1952,7 +1952,7 @@ bool CoreAllocation::generateNewAllocSlices(
                 le_bitrange mlsBits = mls.container_slice();
                 PHV::Container mlsCntr = PHV::Container();
                 if (mls.getInitPrimitive() && mls.getInitPrimitive()->getSourceSlice())
-                    mlsCntr == mls.getInitPrimitive()->getSourceSlice()->container();
+                    mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
 
                 if (mls.getEarliestLiveness().second.isWrite() &&
                     newSlice.getEarliestLiveness().second.isWrite() &&
