@@ -680,12 +680,17 @@ stage <constant> <thread>:
             # gateway match address to use if the gateway is not disabled
         context_json: #anything
     selection <name> [<logical_id>]:
-        logical_row: <vector>
+        row: <vector>
+        logical_bus: <vector>
+            # must match the number of rows specified. Indicate the logical bus
+            # used for each rows. Value can be: 'A' => Action Bus, 'S' => Synth
+            # Bus, 'O' => Overflow Bus, 'X' => Undefined.
         column: <vector> | '[' <vector>, ... ']'
             # srams to use -- in logical (16x6) coords, not physical (8x12)
         maprams: <vector> | '[' <vector>, ... ']'
             # map rams to use
-        bus: <vector>
+        home_row: <vector>
+            # represent the row ultimately connected to the ALU
         input_xbar:
             # hash match groups on input xbar
         mode: resilient <int> | fair <int>
@@ -699,12 +704,18 @@ stage <constant> <thread>:
             # same as exact_match p4 info
         context_json: #anything
     counter <name> [<logical_id>]:
-        logical_row: <vector>
+        row: <vector>
+        logical_bus: <vector>
+            # must match the number of rows specified. Indicate the logical bus
+            # used for each rows. Value can be: 'A' => Action Bus, 'S' => Synth
+            # Bus, 'O' => Overflow Bus, 'X' => Undefined.
         column: <vector> | '[' <vector>, ... ']'
             # srams to use -- in logical (16x6) coords, not physical (8x12)
         maprams: <vector> | '[' <vector>, ... ']'
             # map rams to use
         vpns: <vector>
+        home_row: <vector>
+            # represent the row ultimately connected to the ALU
         format:
         count: bytes | packets | both | packets_and_bytes
         lrt: '{' <threshold>: <interval>, ... '}'
@@ -715,13 +726,18 @@ stage <constant> <thread>:
         bytecount_adjust: <int>
           # add value to counted bytes 
     meter <name> [<logical_id>]:
-        logical_row: <vector>
+        row: <vector>
+        logical_bus: <vector>
+            # must match the number of rows specified. Indicate the logical bus
+            # used for each rows. Value can be: 'A' => Action Bus, 'S' => Synth
+            # Bus, 'O' => Overflow Bus, 'X' => Undefined.
         column: <vector> | '[' <vector>, ... ']'
             # srams to use -- in logical (16x6) coords, not physical (8x12)
         maprams: <vector> | '[' <vector>, ... ']'
             # map rams to use
         vpns: <vector>
-        bus: <vector>
+        home_row: <vector>
+            # represent the row ultimately connected to the ALU
         input_xbar:
             # hash match groups on input xbar
         color_aware: true | false | per_flow
@@ -742,13 +758,18 @@ stage <constant> <thread>:
         per_flow_enable: true | false
         context_json: #anything
     stateful <name> [<logical_id>]:
-        logical_row: <vector>
+        row: <vector>
+        logical_bus: <vector>
+            # must match the number of rows specified. Indicate the logical bus
+            # used for each rows. Value can be: 'A' => Action Bus, 'S' => Synth
+            # Bus, 'O' => Overflow Bus, 'X' => Undefined.
         column: <vector> | '[' <vector>, ... ']'
             # srams to use -- in logical (16x6) coords, not physical (8x12)
         maprams: <vector> | '[' <vector>, ... ']'
             # map rams to use
         vpns: <vector>
-        bus: <vector>
+        home_row: <vector>
+            # represent the row ultimately connected to the ALU
         hash_dist: <hash_distribution>
             # see hash_action hash_dist
         initial_value: { lo : <int> , hi : <int> }
