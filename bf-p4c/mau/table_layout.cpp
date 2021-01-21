@@ -1113,12 +1113,12 @@ bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
     }
 
     IR::Vector<IR::Expression> components;
-    IR::ListExpression *field_list = new IR::ListExpression(components);
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection())
             continue;
-        field_list->push_back(ixbar_read->expr);
+        components.push_back(ixbar_read->expr);
     }
+    IR::ListExpression *field_list = new IR::ListExpression(components);
 
     auto hge = new IR::MAU::HashGenExpression(sel->srcInfo,
             IR::Type::Bits::get(SelectorHashModBits(sel)), field_list, sel->algorithm);
