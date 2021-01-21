@@ -1,4 +1,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
+
+#include <boost/algorithm/string.hpp>
+
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/static_entries_const_prop.h"
 #include "ir/pattern.h"
@@ -1795,63 +1798,97 @@ bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::Ba
     return false;
 }
 
-bool SetupAttachedAddressing::ScanActions::preorder(const IR::MAU::Action *act) {
-    auto tbl = findContext<IR::MAU::Table>();
-    if (act->miss_only())
-        return false;
-    const IR::MAU::AttachedMemory *stats_enabled = nullptr;
-    const IR::MAU::AttachedMemory *stats_disabled = nullptr;
-    const IR::MAU::AttachedMemory *meter_enabled = nullptr;
-    const IR::MAU::AttachedMemory *meter_disabled = nullptr;
+bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
+    std::list<std::string> stats_issues, meter_issues, state_issues;
+    auto create_issue_item = [](const cstring &action,
+            const cstring &used, const cstring &not_used) {
+        std::stringstream str;
+        str << "The action " << action << " uses " << used
+            << " but does not use " << not_used << ".";
+        return str.str();
+    };
 
-    auto &attached_info = self.all_attached_info[tbl];
-    for (auto &kv : attached_info) {
-        auto &uid = kv.first;
-        auto &aac = kv.second;
+    for (auto &action : tbl->actions) {
+        auto &act_name = action.first;
+        auto *act = action.second;
 
-        if (act->per_flow_enables.count(uid) == 0) {
-            aac.all_per_flow_enabled = false;
-            if (aac.am->usesStatsBus()) stats_disabled = aac.am;
-            if (aac.am->usesMeterBus()) meter_disabled = aac.am;
-        } else {
-            if (aac.am->usesStatsBus()) stats_enabled = aac.am;
-            if (aac.am->usesMeterBus()) meter_enabled = aac.am;
-        }
-        if (uid.has_meter_type()) {
-            if (act->meter_types.count(uid) == 0)
-                continue;
-            if (!aac.meter_type_set) {
-                aac.meter_type = act->meter_types.at(uid);
-                aac.meter_type_set = true;
-            } else if (aac.meter_type != act->meter_types.at(uid)) {
-                aac.all_same_meter_type = false;
+        if (act->miss_only())
+            continue;
+
+        const IR::MAU::AttachedMemory *stats_enabled = nullptr;
+        const IR::MAU::AttachedMemory *stats_disabled = nullptr;
+        const IR::MAU::AttachedMemory *meter_enabled = nullptr;
+        const IR::MAU::AttachedMemory *meter_disabled = nullptr;
+
+        auto &attached_info = self.all_attached_info[tbl];
+        for (auto &kv : attached_info) {
+            auto &uid = kv.first;
+            auto &aac = kv.second;
+
+            if (act->per_flow_enables.count(uid) == 0) {
+                aac.all_per_flow_enabled = false;
+                if (aac.am->usesStatsBus()) stats_disabled = aac.am;
+                if (aac.am->usesMeterBus()) meter_disabled = aac.am;
+            } else {
+                if (aac.am->usesStatsBus()) stats_enabled = aac.am;
+                if (aac.am->usesMeterBus()) meter_enabled = aac.am;
+            }
+            if (uid.has_meter_type()) {
+                if (act->meter_types.count(uid) == 0)
+                    continue;
+                if (!aac.meter_type_set) {
+                    aac.meter_type = act->meter_types.at(uid);
+                    aac.meter_type_set = true;
+                } else if (aac.meter_type != act->meter_types.at(uid)) {
+                    aac.all_same_meter_type = false;
+                }
             }
         }
+        if (stats_enabled && stats_disabled) {
+            stats_issues.push_back(create_issue_item(act_name,
+                stats_enabled->toString(), stats_disabled->toString()));
+        }
+        if (meter_enabled && meter_disabled) {
+            meter_issues.push_back(create_issue_item(act_name,
+                meter_enabled->toString(), meter_disabled->toString()));
+        }
+        const IR::MAU::StatefulCall *stats_call = nullptr, *meter_call = nullptr;
+        for (auto *sc : act->stateful_calls) {
+            const IR::MAU::StatefulCall **prev;
+            if (sc->attached_callee->usesStatsBus())
+                prev = &stats_call;
+            else if (sc->attached_callee->usesMeterBus())
+                prev = &meter_call;
+            else
+                continue;
+            if (*prev && (sc->index ? (*prev)->index ? !sc->index->equiv(*(*prev)->index)
+                                            : true : (*prev)->index != nullptr)) {
+                state_issues.push_back(create_issue_item(act_name,
+                    sc->attached_callee->toString(), (*prev)->attached_callee->toString()));
+            }
+            *prev = sc;
+        }
     }
-    if (stats_enabled && stats_disabled) {
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "%1% is enabled and %2% is disabled in %3%, though they share addressing "
-                "(including enable)", stats_enabled, stats_disabled, act); }
-    if (meter_enabled && meter_disabled) {
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "%1% is enabled and %2% is disabled in %3%, though they share addressing "
-                "(including enable)", meter_enabled, meter_disabled, act); }
-    const IR::MAU::StatefulCall *stats_call = nullptr, *meter_call = nullptr;
-    for (auto *sc : act->stateful_calls) {
-        const IR::MAU::StatefulCall **prev;
-        if (sc->attached_callee->usesStatsBus())
-            prev = &stats_call;
-        else if (sc->attached_callee->usesMeterBus())
-            prev = &meter_call;
-        else
-            continue;
-        if (*prev && (sc->index ? (*prev)->index ? !sc->index->equiv(*(*prev)->index)
-                                           : true : (*prev)->index != nullptr)) {
-            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                    "%1% and %2% must have identical addressing in %3% as they share "
-                    "an address bus", sc->attached_callee, (*prev)->attached_callee, act); }
-        *prev = sc; }
-    return false;
+
+    const char common_msg[] =
+        "%1%: There are issues with the following indirect externs:\n  %2%\n"
+        "The Tofino architecture requires all indirect externs to be addressed "
+        "with the same expression across all actions they are used in.\n"
+        "You can also try to distribute individual indirect externs into separate tables.";
+    if (stats_issues.size() > 0) {
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
+            boost::algorithm::join(stats_issues, "\n  "));
+    }
+    if (meter_issues.size() > 0) {
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
+            boost::algorithm::join(meter_issues, "\n  "));
+    }
+    if (state_issues.size() > 0) {
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
+            boost::algorithm::join(state_issues, "\n  "));
+    }
+
+    return true;
 }
 
 /** In the case of direct tables, or tables where there isn't any match overhead, but have

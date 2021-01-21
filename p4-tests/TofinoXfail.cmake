@@ -417,8 +417,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Counter .* and .* must have identical addressing in .* as they share an address bus"
+  "There are issues with the following indirect externs"
   testdata/p4_14_samples/counter.p4
+  extensions/p4_tests/p4_16/errors/counter1.p4
+  extensions/p4_tests/p4_16/errors/counter2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1901,16 +1903,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Wide operations not supported in stateful alu, will only operate on bottom 32 bits"
   extensions/p4_tests/p4_16/errors/p4c-2338.p4
-)
-
-p4c_add_xfail_reason("tofino"
-    "error: Counter .* and Counter .* must have identical addressing in increment as they share an address bus"
-  extensions/p4_tests/p4_16/errors/counter1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: Counter .* is enabled and Counter .* is disabled in .*, though they share addressing"
-  extensions/p4_tests/p4_16/errors/counter2.p4
 )
 
 p4c_add_xfail_reason("tofino"

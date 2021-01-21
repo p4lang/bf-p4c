@@ -109,7 +109,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "Counter .* and .* must have identical addressing in .* as they share an address bus"
+  "There are issues with the following indirect externs"
   testdata/p4_14_samples/counter.p4
 )
 

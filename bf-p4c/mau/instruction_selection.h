@@ -574,11 +574,11 @@ class SetupAttachedAddressing : public PassManager {
         explicit InitializeAttachedInfo(SetupAttachedAddressing &self) : self(self) { }
     };
 
-    class ScanActions : public MauInspector {
+    class ScanTables : public MauInspector {
         SetupAttachedAddressing &self;
-        bool preorder(const IR::MAU::Action *) override;
+        bool preorder(const IR::MAU::Table *) override;
      public:
-        explicit ScanActions(SetupAttachedAddressing &self) : self(self) { }
+        explicit ScanTables(SetupAttachedAddressing &self) : self(self) { }
     };
 
     class VerifyAttached : public MauInspector {
@@ -600,7 +600,7 @@ class SetupAttachedAddressing : public PassManager {
     SetupAttachedAddressing() {
         addPasses({
             new InitializeAttachedInfo(*this),
-            new ScanActions(*this),
+            new ScanTables(*this),
             new VerifyAttached(*this),
             new UpdateAttached(*this)
         });
