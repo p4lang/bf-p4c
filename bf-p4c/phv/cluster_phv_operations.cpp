@@ -229,7 +229,8 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
                 field->set_exact_containers(true);
                 field->set_same_container_group(true);
             }
-            continue; }
+            continue;
+        }
 
         // Apply solitary constraint on carry-based operation. If sliced, apply
         // on the slice only.  If f can't be split but is larger than 32 bits,

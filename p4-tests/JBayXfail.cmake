@@ -511,3 +511,9 @@ p4c_add_xfail_reason("tofino2"
   "field slices remain unallocated"
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
 )
+
+# P4C-3494
+p4c_add_xfail_reason("tofino2"
+   "could not fit within a single input crossbar in an MAU stage"
+   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
+)
