@@ -14,7 +14,6 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/gen_deparser.h"
 
 namespace BFN {
 

@@ -20,7 +20,7 @@
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/parde/deparser_checksum_update.h"
 #include "bf-p4c/parde/extract_parser.h"
-#include "bf-p4c/parde/gen_deparser.h"
+#include "bf-p4c/parde/extract_deparser.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 #include "lib/safe_vector.h"

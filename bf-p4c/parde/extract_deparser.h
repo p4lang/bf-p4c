@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PARDE_GEN_DEPARSER_H_
-#define BF_P4C_PARDE_GEN_DEPARSER_H_
+#ifndef BF_P4C_PARDE_EXTRACT_DEPARSER_H_
+#define BF_P4C_PARDE_EXTRACT_DEPARSER_H_
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
@@ -27,14 +27,14 @@ class P4Control;
 
 namespace BFN {
 
+// Assume the nested if statements are already canonicalized to a
+// single if statement enclosing any emit/pack method calls.
 class ExtractDeparser : public DeparserInspector {
     P4::TypeMap                                 *typeMap;
     P4::ReferenceMap                            *refMap;
     IR::BFN::Pipe                               *rv;
     IR::BFN::Deparser                           *dprsr = nullptr;
-    const IR::Expression                        *pred = nullptr;
     ordered_map<cstring, IR::BFN::Digest *>     digests;
-    ordered_map<cstring, cstring>               nameMap;
     const CollectGlobalPragma                   &collect_pragma;
 
     ordered_map<cstring, std::vector<const IR::BFN::EmitField*>> headerToEmits;
@@ -43,20 +43,24 @@ class ExtractDeparser : public DeparserInspector {
 
     void generateEmits(const IR::MethodCallExpression* mc);
     void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list,
-                        const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr,
-                        bool singleEntry = false);
-    void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr);
-    void process_concat(IR::Vector<IR::BFN::FieldLVal>& vec, const IR::Concat* expr);
-    void fixup_mirror_digest(const IR::MethodCallExpression*,
-            IR::IndexedVector<IR::NamedExpression>*);
+                        const IR::Expression* select, int digest_index,
+                        cstring controlPlaneName = nullptr);
+    void convertConcatToList(std::vector<const IR::Expression*>& slices, const IR::Concat* expr);
+    void processConcat(IR::Vector<IR::BFN::FieldLVal>& vec, const IR::Concat* expr);
 
+    std::tuple<int, const IR::Expression*>
+        getDigestIndex(const IR::IfStatement*, cstring name, bool singleEntry = false);
+    int getDigestIndex(const IR::Declaration_Instance*);
+    void processMirrorEmit(const IR::MethodCallExpression*, const IR::Expression*, int idx);
+    void processMirrorEmit(const IR::MethodCallExpression*, int idx);
+    void processResubmitEmit(const IR::MethodCallExpression*, const IR::Expression*, int idx);
+    void processResubmitEmit(const IR::MethodCallExpression*, int idx);
+    void processDigestPack(const IR::MethodCallExpression*, int, cstring);
     void enforceHeaderOrdering();
 
     bool preorder(const IR::Annotation* annot) override;
-    bool preorder(const IR::Declaration_Instance *decl) override;
-    bool preorder(const IR::IfStatement *ifstmt) override;
-    bool preorder(const IR::MethodCallExpression* mc) override;
     bool preorder(const IR::AssignmentStatement* stmt) override;
+    void postorder(const IR::MethodCallExpression* mc) override;
     void end_apply() override;
 
  public:
@@ -70,7 +74,6 @@ class ExtractDeparser : public DeparserInspector {
         gress_t thread = deparser->thread;
         dprsr = new IR::BFN::Deparser(thread);
         digests.clear();
-        nameMap.clear();
         return true;
     }
 
@@ -160,4 +163,4 @@ struct AssignmentStmtErrorCheck : public DeparserInspector {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_PARDE_GEN_DEPARSER_H_ */
+#endif /* BF_P4C_PARDE_EXTRACT_DEPARSER_H_ */

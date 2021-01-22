@@ -161,11 +161,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Unsupported condition && in mirror.emit"
-  extensions/p4_tests/p4_16/compile_only/p4c-1150-nested-ifs.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "HashAlgorithm_t.CSUM16: Invalid enum tag"
   testdata/p4_14_samples/issue894.p4
 )
@@ -815,7 +810,7 @@ p4c_add_xfail_reason("tofino"
 
 # Negative test
 p4c_add_xfail_reason("tofino"
-  "Unsupported unconditional mirror.emit"
+  "Unsupported unconditional .*.emit"
   extensions/p4_tests/p4_16/compile_only/brig-neg-1259.p4
 )
 
@@ -1350,7 +1345,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Unsupported unconditional mirror.emit"
+  "Unsupported unconditional .*.emit"
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1588-neg.p4
   )
 

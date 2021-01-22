@@ -286,11 +286,6 @@ p4c_add_xfail_reason("tofino3"
 #  p4_16_internal_p4_16_t2na_fifo
 #)
 
-p4c_add_xfail_reason("tofino3"
-  "Unsupported condition && in mirror.emit"
-  extensions/p4_tests/p4_16/compile_only/p4c-1150-nested-ifs.p4
-)
-
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino3"

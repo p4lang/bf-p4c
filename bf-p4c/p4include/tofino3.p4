@@ -18,6 +18,8 @@ typedef bit<16> MulticastGroupId_t;     // Multicast group id
 typedef bit<7>  QueueId_t;              // Queue id
 typedef bit<4>  MirrorType_t;           // Mirror type
 typedef bit<8>  MirrorId_t;             // Mirror id
+typedef bit<3>  ResubmitType_t;         // Resubmit type
+typedef bit<3>  DigestType_t;           // Digest type
 typedef bit<16> ReplicationId_t;        // Replication id
 
 // CloneId_t will be deprecated in 9.4. Adding a typedef for any old references.
@@ -195,9 +197,9 @@ struct ingress_intrinsic_metadata_for_deparser_t {
                                         //      multicast, and resubmit
                                         //    - bit 1 disables copy-to-cpu
                                         //    - bit 2 disables mirroring
-    bit<3> digest_type;
+    DigestType_t digest_type;
 
-    bit<3> resubmit_type;
+    ResubmitType_t resubmit_type;
 
     MirrorType_t mirror_type;           // The user-selected mirror field list
                                         // index.
@@ -1137,7 +1139,12 @@ extern SelectorAction {
 }
 
 extern Mirror {
+    /// Constructor
+    @deprecated("Mirror must be specified with the value of the mirror_type instrinsic metadata")
     Mirror();
+
+    /// Constructor
+    Mirror(MirrorType_t mirror_type);
 
     void emit(in MirrorId_t session_id);
 
@@ -1153,7 +1160,11 @@ extern Mirror {
 /// ingress buffer, where the packet is enqueued again.
 extern Resubmit {
     /// Constructor
+    @deprecated("Resubmit must be specified with the value of the resubmit_type instrinsic metadata")
     Resubmit();
+
+    /// Constructor
+    Resubmit(ResubmitType_t resubmit_type);
 
     /// Resubmit the packet.
     void emit();
@@ -1166,7 +1177,11 @@ extern Resubmit {
 
 extern Digest<T> {
     /// define a digest stream to the control plane
+    @deprecated("Digest must be specified with the value of the digest_type instrinsic metadata")
     Digest();
+
+    /// constructor.
+    Digest(DigestType_t digest_type);
 
     /// Emit data into the stream.  The p4 program can instantiate multiple
     /// Digest instances in the same deparser control block, and call the pack

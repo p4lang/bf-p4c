@@ -413,8 +413,8 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/deparser_checksum_update.cpp
   parde/deparser_output.cpp
   parde/extract_parser.cpp
+  parde/extract_deparser.cpp
   parde/field_packing.cpp
-  parde/gen_deparser.cpp
   parde/lower_parser.cpp
   parde/merge_parser_state.cpp
   parde/parser_output.cpp
@@ -447,8 +447,8 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/dump_parser.h
   parde/egress_packet_length.h
   parde/extract_parser.h
+  parde/extract_deparser.h
   parde/field_packing.h
-  parde/gen_deparser.h
   parde/lower_parser.h
   parde/marshal.h
   parde/match_register.h
