@@ -95,13 +95,14 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
     // create partition_index
     IR::Vector<IR::KeyElement> keys;
     if (number_actions > 1) {
-        keys.push_back(new IR::KeyElement(
-                    new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
-                    new IR::PathExpression(IR::ID("lpm"))));
+        // context.json requires subtree_id to be first key
         if (subtrees_per_partition > 1) {
             keys.push_back(new IR::KeyElement(
                         new IR::PathExpression(IR::ID(tbl->name + "_subtree_id")),
-                        new IR::PathExpression(IR::ID("ternary")))); }
+                        new IR::PathExpression(IR::ID("exact")))); }
+        keys.push_back(new IR::KeyElement(
+                    new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
+                    new IR::PathExpression(IR::ID("lpm"))));
     } else {
         for (auto k : tbl->getKey()->keyElements) {
             keys.push_back(k); } }

@@ -324,9 +324,10 @@ void TernaryMatchTable::pass2() {
         if (auto *acts = get_actions()) {
             for (auto act =acts->begin(); act != acts->end(); act++) {
                 set_partition_action_handle(act->handle);
-                if (act->p4_params_list.size() == 1)
+                if (act->p4_params_list.size() > 0) {
+                    // assume first parameter is partition_field_name
                     set_partition_field_name(act->p4_params_list[0].name);
-            } } }
+            } } } }
 }
 
 void TernaryMatchTable::pass3() {
