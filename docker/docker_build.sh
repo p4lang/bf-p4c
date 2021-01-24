@@ -242,7 +242,7 @@ unset CC CXX
 
 # Dependencies for testing.
 apt-get install -y net-tools
-pip install --upgrade pip
+pip install --upgrade pip==20.3.3
 pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging prettytable pysubnettree ctypesgen
 
 # Install ply 3.9 for compatibility with p4c-tofino
@@ -252,7 +252,7 @@ pip install ply==3.9
 pip install jsonschema==2.6
 
 # Install python3 packages
-pip3 install --upgrade pip
+pip3 install --upgrade pip==20.3.3
 pip3 install ${PYTHON3_DEPS}
 
 # Configure the linker to strip symbols.
