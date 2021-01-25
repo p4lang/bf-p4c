@@ -400,6 +400,10 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2918-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-3001.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-3030-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3454.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3455.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3455_2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3476.p4
   extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
   extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4

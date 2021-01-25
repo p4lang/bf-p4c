@@ -484,12 +484,6 @@ p4c_add_xfail_reason("tofino2"
 #  extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
 #)
 
-# P4C-3388
-p4c_add_xfail_reason("tofino2"
-   "Expected packet was not received on device .*"
-   p4c-3388
-)
-
 # P4C-3435
 p4c_add_xfail_reason("tofino2"
    "1 expected packet on port 0 not seen"
@@ -511,4 +505,22 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
    "could not fit within a single input crossbar in an MAU stage"
    extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
+)
+
+# P4C-3454
+p4c_add_xfail_reason("tofino2"
+   "PHV allocation was not successful"
+   extensions/p4_tests/p4_16/customer/extreme/p4c-3454.p4
+)
+
+# P4C-3476
+p4c_add_xfail_reason("tofino2"
+   "Cannot unify type 'bit<192>' with type 'bit<32>'"
+   extensions/p4_tests/p4_16/customer/extreme/p4c-3476.p4
+)
+
+# P4C-3484
+p4c_add_xfail_reason("tofino2"
+   "PHV allocation was not successful"
+   p4c-3484
 )
