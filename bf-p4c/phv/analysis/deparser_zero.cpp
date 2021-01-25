@@ -62,6 +62,18 @@ bool IdentifyDeparserZeroCandidates::preorder(const IR::MAU::Action* act) {
     return true;
 }
 
+bool IdentifyDeparserZeroCandidates::preorder(const IR::BFN::DigestFieldList* list) {
+    for (auto source : list->sources) {
+        if (auto temp = source->field->to<IR::TempVar>()) {
+            if (temp->deparsed_zero) {
+                auto field = phv.field(temp);
+                candidateFields.insert(field);
+            }
+        }
+    }
+    return false;
+}
+
 void IdentifyDeparserZeroCandidates::eliminateNonByteAlignedFields() {
     LOG1("\tEliminating non byte aligned fields");
     ordered_set<const PHV::Field*> fieldsToBeRemoved;

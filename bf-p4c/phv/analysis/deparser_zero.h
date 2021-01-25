@@ -43,6 +43,7 @@ class IdentifyDeparserZeroCandidates : public Inspector {
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Action* act) override;
+    bool preorder(const IR::BFN::DigestFieldList*) override;
     void end_apply() override;
 
  public:

@@ -243,15 +243,21 @@ abstract BFN::Reference : BFN::Value {
  * a PHV container. */
 class TempVar : BFN::Reference {
     bool        POV;
+    // if a byte-sized temporary variable is created in deparser, we can set
+    // this bit directly to use deparser_zero optimization.
+    bool        deparsed_zero;
     cstring     name;
     static int  uid;
 #noconstructor
     TempVar(Type t, bool p = false, cstring n = cstring()) : BFN::Reference(t), POV(p), name(n) {
+        deparsed_zero = false;
         if (!name) {
             std::string n("$tmp");
             n += std::to_string(++uid);
             name = n; } }
-    TempVar(Type t, cstring n) : TempVar(t, false, n) {}
+    TempVar(Type t, cstring n) : TempVar(t, false, n) {
+        deparsed_zero = false;
+    }
     toString { return name; }
     dbprint { out << name; }
 }
@@ -268,7 +274,7 @@ class Padding : BFN::Reference {
     Padding(Type t, cstring n = cstring()) :
         BFN::Reference(t), name(n) {
         if (!name) {
-            std::string n("__pad_");
+            std::string n("$pad");
             n += std::to_string(++uid);
             name = n; } }
     toString { return name; }

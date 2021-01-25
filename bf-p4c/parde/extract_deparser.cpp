@@ -386,13 +386,18 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             if (item->expression->is<IR::Concat>()) {
                 processConcat(sources, item->expression->to<IR::Concat>());
             } else if (auto cst = item->expression->to<IR::Constant>()) {
-                // We assume zero is the value for padding fields.
-                if (cst->asInt() == 0)
-                    sources.push_back(new IR::BFN::FieldLVal(new IR::Padding(cst->type)));
-                else
+                if (cst->asInt() == 0) {
+                    // assume non-byte aligned zeros are used for padding.
+                    if (cst->type->width_bits() % 8 != 0) {
+                        sources.push_back(new IR::BFN::FieldLVal(new IR::Padding(cst->type)));
+                    } else {
+                        auto t = new IR::TempVar(cst->type);
+                        t->deparsed_zero = true;
+                        sources.push_back(new IR::BFN::FieldLVal(t)); }
+                } else {
                     ::error(ErrorType::ERR_UNSUPPORTED,
                             "Non-zero constant value %1% in digest field list"
-                            " is not supported on tofino.", cst);
+                            " is not supported on tofino.", cst); }
             } else if ((e1 == 1).match(item->expression) && e1->type->width_bits() == 1) {
                 /* explicit comparison of a bit<1> to 1 -- just use the bit<1> directly */
                 sources.push_back(new IR::BFN::FieldLVal(e1));
