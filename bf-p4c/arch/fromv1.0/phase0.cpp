@@ -910,8 +910,10 @@ IR::MethodCallExpression* ConvertPhase0AssignToExtract::generate_phase0_extract_
                                               IR::ID("advance"));
                 unsigned p0Size = static_cast<unsigned>(Device::pardeSpec().bitPhase0Size()
                         + Device::pardeSpec().bitIngressPrePacketPaddingSize());
-                IR::Type_Bits* p0Bits = IR::Type::Bits::get(p0Size)->clone();
-                auto* a = new IR::Argument(new IR::Constant(p0Bits, p0Size));
+                // P4C-3480
+                // Advance extern defined as:
+                // void advance(in bit<32> sizeInBits);
+                auto* a = new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), p0Size));
                 args->push_back(a);
                 auto* callExpr = new IR::MethodCallExpression(method,
                         new IR::Vector<IR::Type>(), args);
