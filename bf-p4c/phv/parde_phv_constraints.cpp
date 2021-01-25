@@ -25,13 +25,14 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
         // fields for whom we need to set constraints to limit the size of their containers.
         ordered_set<PHV::Field*> nonExactDigestFields;
         for (auto flval : fieldList->sources) {
-            PHV::Field* f = phv.field(flval->field);
+            le_bitrange bits = {};
+            PHV::Field* f = phv.field(flval->field, &bits);
             BUG_CHECK(f, "Digest field not present in PhvInfo");
             // The digest fields and digestSize objects are only maintained for logging purposes.
             // The constraints are all added over fields that do not have the exact_containers()
             // requirement.
             digestFields.insert(f);
-            unsigned roundedUpSize = 8 * ROUNDUP(static_cast<unsigned>(f->size), 8);
+            unsigned roundedUpSize = 8 * ROUNDUP(static_cast<unsigned>(bits.size()), 8);
             digestSize += roundedUpSize;
             if (f->exact_containers()) continue;
             nonExactDigestFields.insert(f);

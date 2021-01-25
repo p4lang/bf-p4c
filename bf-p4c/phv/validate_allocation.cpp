@@ -743,9 +743,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
         size_t digestSizeInBits = selectorSize;
         std::stringstream ss;
         for (auto flval : fieldList->sources) {
-            const PHV::Field* f = phv.field(flval->field);
+            le_bitrange bits = {};
+            const PHV::Field* f = phv.field(flval->field, &bits);
             BUG_CHECK(f, "Digest field not present in PhvInfo");
             f->foreach_alloc(
+                bits,
                 PHV::AllocContext::DEPARSER, nullptr, [&](const PHV::AllocSlice& alloc) {
                     ss << "learning field " << alloc.field() << " to " << alloc.container() << "\n";
                     LOG5("learning field " << alloc.field() << " to " << alloc.container());
