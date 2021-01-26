@@ -36,11 +36,29 @@ class DetermineCandidateHeaders : public Inspector {
     }
 };
 
+struct MapDestToInstruction : public Inspector {
+    ordered_map<const PHV::Field*,
+                ordered_set<const IR::MAU::Instruction*>> dest_to_inst;
+
+    const PhvInfo& phv;
+
+    bool preorder(const IR::MAU::Instruction* inst) override {
+        if (inst->operands.empty()) return true;
+        auto dest = phv.field(inst->operands[0]);
+        if (!dest) return true;
+        dest_to_inst[dest].insert(inst);
+        return true;
+    }
+
+    explicit MapDestToInstruction(const PhvInfo& p) : phv(p) { }
+};
+
 class DetermineCandidateFields : public Inspector {
  private:
     const PhvInfo& phv;
     const DetermineCandidateHeaders& headers;
     PragmaAlias& pragma;
+    const MapDestToInstruction& d2i;
 
     ordered_set<const PHV::Field*> initialCandidateSet;
     ordered_map<const PHV::Field*,
@@ -48,6 +66,7 @@ class DetermineCandidateFields : public Inspector {
 
     inline void dropFromCandidateSet(const PHV::Field* field);
     bool multipleSourcesFound(const PHV::Field* dest, const PHV::Field* src) const;
+    bool incompatibleConstraints(const PHV::Field* dest, const PHV::Field* src) const;
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Instruction* inst) override;
@@ -57,19 +76,23 @@ class DetermineCandidateFields : public Inspector {
     explicit DetermineCandidateFields(
             const PhvInfo& p,
             const DetermineCandidateHeaders& h,
-            PragmaAlias& pa)
-        : phv(p), headers(h), pragma(pa) { }
+            PragmaAlias& pa,
+            const MapDestToInstruction& d)
+        : phv(p), headers(h), pragma(pa), d2i(d) { }
 };
 
 class AutoAlias : public PassManager {
  private:
+    MapDestToInstruction d2i;
+
     DetermineCandidateHeaders   headers;
     DetermineCandidateFields    fields;
 
  public:
     explicit AutoAlias(const PhvInfo& phv, PragmaAlias& pa)
-    : headers(phv), fields(phv, headers, pa) {
+    : d2i(phv), headers(phv), fields(phv, headers, pa, d2i) {
         addPasses({
+            &d2i,
             &headers,
             &fields
         });

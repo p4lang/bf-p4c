@@ -89,6 +89,30 @@ bool DetermineCandidateFields::multipleSourcesFound(
     return newSourceFound;
 }
 
+//
+// There are many cases we can't alias two fields, filtering them here ...
+//
+// (Music suggestion when modifying code here: Fixing a hole - The Beatles)
+// :)
+bool DetermineCandidateFields::incompatibleConstraints(
+        const PHV::Field* dest,
+        const PHV::Field* src) const {
+    // case1: non-byte aligned arithmetic dests require whole container
+
+    if (src->size % 8 != 0) {
+        if (d2i.dest_to_inst.count(src)) {
+            for (auto inst : d2i.dest_to_inst.at(src)) {
+                if (inst->name == "add" || inst->name == "sub")
+                    return true;
+            }
+        }
+    }
+
+    // more to come ...
+
+    return false;
+}
+
 bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
     const IR::MAU::Action* action = findContext<IR::MAU::Action>();
     if (inst->operands.empty()) return true;
@@ -113,6 +137,12 @@ bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
         dropFromCandidateSet(destField);
         LOG3("\tDrop " << destField->name << " because a second source " << srcField->name <<
              " found");
+        return true;
+    }
+    if (incompatibleConstraints(destField, srcField)) {
+        dropFromCandidateSet(destField);
+        LOG3("\tDrop " << destField->name << " because of incompatible constraints with "
+             << srcField->name);
         return true;
     }
     auto& validationActions = headers.getActionsForCandidateHeader(destField->header());
