@@ -515,7 +515,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-3476
 p4c_add_xfail_reason("tofino2"
-   "Cannot unify type 'bit<192>' with type 'bit<32>'"
+   "PHV allocation was not successful"
    extensions/p4_tests/p4_16/customer/extreme/p4c-3476.p4
 )
 
