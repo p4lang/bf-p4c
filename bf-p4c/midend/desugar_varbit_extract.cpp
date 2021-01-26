@@ -7,7 +7,7 @@
 struct CollectVariables : public Inspector {
     bool preorder(const IR::Expression* expr) override {
         if (expr->is<IR::Member>() || expr->is<IR::Slice>() ||
-            expr->is<IR::TempVar>()) {
+            expr->is<IR::TempVar>() || expr->is<IR::PathExpression>()) {
             rv.push_back(expr);
             return false;
         }
@@ -241,12 +241,13 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     state_to_reject_matches[state] = reject_matches;
 
     auto expr = (*call->arguments)[0]->expression;
-    const IR::PathExpression* path = nullptr;
-    if (expr->is<IR::Member>()) {
-        path = (*call->arguments)[0]->expression->to<IR::Member>()
-                                         ->expr->to<IR::PathExpression>();
+    const IR::Expression* path = nullptr;
+    if (auto member = expr->to<IR::Member>()) {
+        path = member->expr;
     } else if (expr->is<IR::PathExpression>()) {
-        path = expr->to<IR::PathExpression>();
+        path = expr;
+    } else {
+        BUG("Unknown extract call path %1%", expr);
     }
 
     varbit_field_to_extract_call_path[varbit_field] = path;
@@ -353,8 +354,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
             }
         } else if (auto path = call->method->to<IR::PathExpression>()) {
             if (path->path->name == "verify") {
-                auto verify_expr = (*call->arguments)[0]->expression;
-                state_to_verify_exprs[state].insert(verify_expr);
+                ::warning("Parser \"verify\" is currently unsupported %s", call->srcInfo);
             }
        }
     }
@@ -406,7 +406,7 @@ Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
 
 static IR::MethodCallStatement*
 create_extract_statement(const IR::BFN::TnaParser* parser,
-                         const IR::PathExpression* path,
+                         const IR::Expression* path,
                          const IR::Type *type,
                          cstring header) {
     auto packetInParam = parser->tnaParams.at("pkt");
@@ -420,7 +420,7 @@ create_extract_statement(const IR::BFN::TnaParser* parser,
 
 static IR::MethodCallStatement*
 create_add_statement(const IR::Member* method,
-                     const IR::PathExpression* path,
+                     const IR::Expression* path,
                      const IR::Type_Header* header) {
     auto listVec = IR::Vector<IR::Expression>();
     auto headerName = create_instance_name(header->name);
@@ -1030,7 +1030,7 @@ bool RewriteVarbitTypes::preorder(IR::P4Program* program) {
 }
 
 
-bool RewriteVarbitTypes::contains_varbit_header(IR::Type_Struct* type_struct) {
+bool RewriteVarbitTypes::contains_varbit_header(IR::Type_StructLike* type_struct) {
     for (auto field : type_struct->fields) {
         if (auto path = field->type->to<IR::Type_Name>()) {
             for (auto& kv : cve.header_type_to_varbit_field) {
@@ -1043,7 +1043,10 @@ bool RewriteVarbitTypes::contains_varbit_header(IR::Type_Struct* type_struct) {
     return false;
 }
 
-bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
+bool RewriteVarbitTypes::preorder(IR::Type_StructLike* type_struct) {
+    if (type_struct->is<IR::Type_HeaderUnion>()) {
+        P4C_UNIMPLEMENTED("Unsupported type %s", type_struct);
+    }
     if (contains_varbit_header(type_struct)) {
         for (auto& kv : rvu.varbit_hdr_instance_to_header_types) {
             for (auto& lt : kv.second) {
@@ -1051,6 +1054,7 @@ bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
                 auto field = new IR::StructField(create_instance_name(type->name),
                                      new IR::Type_Name(type->name));
                 type_struct->fields.push_back(field);
+                LOG3("Adding " << field << "in " << type_struct);
             }
         }
 
@@ -1059,6 +1063,7 @@ bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
             auto field = new IR::StructField(create_instance_name(type->name),
                                      new IR::Type_Name(type->name));
             type_struct->fields.push_back(field);
+            LOG3("Adding " << field << "in " << type_struct);
         }
     } else {
         for (auto& kv : rvu.tuple_types_to_rewrite) {
@@ -1070,6 +1075,7 @@ bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
                     cstring name = kv.first + "_field_" + cstring::to_cstring(i++);
                     auto field = new IR::StructField(name, type);
                     type_struct->fields.push_back(field);
+                    LOG3("Adding " << field << "in " << type_struct);
                 }
             }
         }

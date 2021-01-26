@@ -138,7 +138,7 @@ class CollectVarbitExtract : public Inspector {
 
     std::map<const IR::Type_Header*, const IR::StructField*> header_type_to_varbit_field;
     std::map<const IR::StructField*,
-             const IR::PathExpression*> varbit_field_to_extract_call_path;
+             const IR::Expression*> varbit_field_to_extract_call_path;
 
  private:
     bool is_legal_runtime_value(const IR::Expression* verify,
@@ -263,10 +263,10 @@ class RewriteVarbitTypes : public Modifier {
     const CollectVarbitExtract& cve;
     const RewriteVarbitUses& rvu;
 
-    bool contains_varbit_header(IR::Type_Struct*);
+    bool contains_varbit_header(IR::Type_StructLike*);
 
     bool preorder(IR::P4Program*) override;
-    bool preorder(IR::Type_Struct*) override;
+    bool preorder(IR::Type_StructLike*) override;
     bool preorder(IR::Type_Header*) override;
 
  public:

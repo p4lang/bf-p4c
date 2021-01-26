@@ -327,9 +327,14 @@ p4c_add_xfail_reason("tofino"
   "Unsupported type header_union"
   testdata/p4_16_samples/bvec_union-bmv2.p4
   testdata/p4_16_samples/issue1897-bmv2.p4
+  testdata/p4_16_samples/issue561-bmv2.p4
   testdata/p4_16_samples/issue561-1-bmv2.p4
   testdata/p4_16_samples/issue561-2-bmv2.p4
   testdata/p4_16_samples/issue561-3-bmv2.p4
+  testdata/p4_16_samples/issue561-4-bmv2.p4
+  testdata/p4_16_samples/issue561-5-bmv2.p4
+  testdata/p4_16_samples/issue561-6-bmv2.p4
+  testdata/p4_16_samples/issue561-7-bmv2.p4
   testdata/p4_16_samples/union-bmv2.p4
   testdata/p4_16_samples/union-valid-bmv2.p4
   testdata/p4_16_samples/union1-bmv2.p4
@@ -1233,12 +1238,6 @@ p4c_add_xfail_reason("tofino"
   P4C-1021-1
 )
 
-# varbit related starts
-p4c_add_xfail_reason("tofino"
-  "No varbit length encoding variable in"
-  testdata/p4_16_samples/issue561-bmv2.p4
-)
-
 # broken tests that don't set egress_spec
 p4c_add_xfail_reason("tofino"
   ".* expected packet.* on port .* not seen"
@@ -1348,14 +1347,6 @@ p4c_add_xfail_reason("tofino"
   "Unsupported unconditional .*.emit"
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1588-neg.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "Exiting with SIGSEGV"
-  testdata/p4_16_samples/issue561-4-bmv2.p4
-  testdata/p4_16_samples/issue561-5-bmv2.p4
-  testdata/p4_16_samples/issue561-6-bmv2.p4
-  testdata/p4_16_samples/issue561-7-bmv2.p4
-)
 
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"

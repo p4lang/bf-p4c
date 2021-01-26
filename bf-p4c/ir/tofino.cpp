@@ -18,6 +18,9 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
                 nested.add(name + "." + f->name,
                            new InstanceRef(name, f->name, f->type));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {
+        if (stk->elementType->is<IR::Type_HeaderUnion>()) {
+            P4C_UNIMPLEMENTED("Unsupported type %s %s", stk, n);
+        }
         obj = new IR::HeaderStack(name, stk->elementType->to<IR::Type_Header>(), stk->getSize());
     } else if (t->is<IR::Type::Bits>() || t->is<IR::Type::Boolean>() || t->is<IR::Type_Set>()) {
         obj = nullptr;
