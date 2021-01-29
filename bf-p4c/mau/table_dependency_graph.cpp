@@ -1360,7 +1360,6 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
             && dep != DependencyGraph::CONT_CONFLICT
             && dep != DependencyGraph::REDUCTION_OR_OUTPUT
             && dep != DependencyGraph::REDUCTION_OR_READ) {
-            auto src = boost::source(*out, dep_graph);
             auto dst = boost::target(*out, dep_graph);
             n_depending_on[dst]++;
             n_depending_on_with_edges[dst].insert(*out);

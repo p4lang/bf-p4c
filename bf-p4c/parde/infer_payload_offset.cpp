@@ -534,7 +534,7 @@ class RewriteParde : public PardeTransform {
             // none of the fields above tje frontier is below the frontier.
             for (auto stmt : state->statements) {
                 if (auto extract = stmt->to<IR::BFN::Extract>()) {
-                    if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                    if (extract->source->is<IR::BFN::PacketRVal>()) {
                         auto f = phv.field(extract->dest->field);
                         if (fields_below_frontier.count(f)) {
                             fields_below_frontier.erase(f);

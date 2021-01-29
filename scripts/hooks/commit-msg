@@ -50,9 +50,8 @@ class Decorator:
     """
     def parse_branch(self):
         # Get the ticket number from the branch name, if possible.
-        l = self.get_branch().split('/')
-        m = re.match("(%s)-(\d+)" % "|".join(self.supported_projects),
-                l[-1], re.IGNORECASE)
+        m = re.search("(%s)-(\d+)" % "|".join(self.supported_projects),
+                self.get_branch(), re.IGNORECASE)
         if m is not None:
           return m.group(1).upper(), m.group(2)
         return None, None

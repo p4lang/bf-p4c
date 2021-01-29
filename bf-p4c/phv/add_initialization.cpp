@@ -49,7 +49,7 @@ MapFieldToExpr::generateInitInstruction(
     return prim;
 }
 
-const IR::Node *ComputeFieldsRequiringInit::apply_visitor(const IR::Node* root, const char *name) {
+const IR::Node *ComputeFieldsRequiringInit::apply_visitor(const IR::Node* root, const char *) {
     actionInits.clear();
     fieldsForInit.clear();
     for (auto& f : phv) {

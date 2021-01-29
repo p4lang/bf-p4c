@@ -859,8 +859,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
 
     const ActionData::ALUPosition *alu_pos = nullptr;
     const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
-    if (alu_param == nullptr)
-        return false;
+    BUG_CHECK(alu_param, "Can't find %s in action format", read.expr);
     safe_vector<le_bitrange> slot_bits_brs = alu_param->slot_bits_brs(container);
 
     int bits_seen = 0;

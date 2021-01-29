@@ -35,7 +35,7 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
         type_name != "Mirror")
         return;
 
-    boost::optional<gress_t> thread = boost::none;
+    boost::optional<gress_t> thread = boost::make_optional(false, gress_t());
     auto parser = findContext<IR::BFN::TnaParser>();
     if (parser)
         thread = parser->thread;

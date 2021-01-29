@@ -2622,7 +2622,7 @@ IR::Expression* CollectDigestFields::flatten(const IR::ListExpression* args) {
 void CollectDigestFields::convertFieldList(const IR::Primitive* prim, size_t fieldListIndex,
         std::map<unsigned long, unsigned>& indexHashes, bool reserve_entry_zero = false) {
     const IR::Expression* list;
-    boost::optional<cstring> name;
+    boost::optional<cstring> name = boost::make_optional(false, cstring());
     BUG_CHECK(prim->operands.size() <= fieldListIndex,
             "Unexpected number of operands for %1%", prim);
     if (prim->operands.size() == fieldListIndex) {

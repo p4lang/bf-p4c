@@ -1226,3 +1226,15 @@ void CollectClotInfo::end_apply(const IR::Node* root) {
     Logging::FileLog::close(log);
     Inspector::end_apply(root);
 }
+
+#if BAREFOOT_INTERNAL
+void dump(std::ostream &out, const Clot &c) {
+    for (auto &fs : c.fields_to_slices())
+        out << fs.first->name << ": " << *fs.second << std::endl;
+}
+void dump(const Clot &c) { dump(std::cout, c); }
+void dump(const Clot *c) { dump(std::cout, *c); }
+
+void dump(const ClotInfo &ci) { std::cout << ci.print(); }
+void dump(const ClotInfo *ci) { std::cout << ci->print(); }
+#endif

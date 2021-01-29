@@ -514,7 +514,6 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         // Populate the list of dominators for the current live range slice of
         // the field.
         ordered_set<const IR::BFN::Unit*> f_nodes;
-        boost::optional<gress_t> gress = boost::make_optional(false, gress_t());
         for (auto iunit : info.units) {
             // Since dominator analysis is gress specific we ideally should not
             // be seeing fields from different gresses (e.g. ingress and ghost)

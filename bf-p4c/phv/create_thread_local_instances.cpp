@@ -65,7 +65,7 @@ struct CreateLocalInstances : public Transform {
         ghost_intrinsic_metadata = nullptr;
         return Transform::init_apply(root); }
 
-    const gress_t get_thread() const {
+    gress_t get_thread() const {
         if (auto *salu_action = findContext<IR::MAU::SaluAction>()) {
             auto *salu = findOrigCtxt<IR::MAU::StatefulAlu>();
             auto action_gress = salus->salu_action_gress(salu, salu_action->name);

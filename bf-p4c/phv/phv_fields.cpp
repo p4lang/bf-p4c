@@ -2283,6 +2283,17 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.same_container_group()) {
         out << " same_container_group";
     }
+    for (auto &as : field.alloc_slice_i) {
+        out << " ";
+        if (as.field_slice().lo != 0 || as.width() != field.size) {
+            out << as.field_slice().lo;
+            if (as.width() > 1) out << ".." << as.field_slice().hi;
+            out << ":"; }
+        out << as.container();
+        if (as.container_slice().lo != 0 || size_t(as.width()) != as.container().size()) {
+            out << "(" << as.container_slice().lo;
+            if (as.width() > 1) out << ".." << as.container_slice().hi;
+            out << ")"; } }
     return out;
 }
 

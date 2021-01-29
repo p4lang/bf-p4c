@@ -95,7 +95,7 @@ bool DetermineCandidateFields::multipleSourcesFound(
 // (Music suggestion when modifying code here: Fixing a hole - The Beatles)
 // :)
 bool DetermineCandidateFields::incompatibleConstraints(
-        const PHV::Field* dest,
+        const PHV::Field* /* dest */,
         const PHV::Field* src) const {
     // case1: non-byte aligned arithmetic dests require whole container
 
