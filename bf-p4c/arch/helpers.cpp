@@ -72,7 +72,7 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
 
     if (rv.size() > 1) {
         ::error(ErrorType::ERR_UNSUPPORTED,
-                "Table '%1%' has more than one extern with type '%2%' attached to"
+                "Table '%1%' has more than one extern with type '%2%' attached to "
                 "property '%3%', which is not supported by Tofino", table->controlPlaneName(),
                 externTypeName, propertyName);
     }

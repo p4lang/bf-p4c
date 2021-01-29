@@ -70,18 +70,37 @@ const IR::Node* ControlConverter::postorder(IR::StatOrDecl* node) {
 
 const IR::Node* ControlConverter::postorder(IR::Property* p) {
     boost::optional<cstring> newName = boost::none;
-    if (p->name.name == "psa_implementation")
+    auto value = p->value;
+    if (p->name.name == "psa_implementation") {
         newName = "implementation";
-    else if (p->name.name == "psa_direct_counter")
+    } else if (p->name.name == "psa_direct_counter") {
         newName = "counters";
-    else if (p->name.name == "psa_direct_meter")
+    } else if (p->name.name == "psa_direct_meter") {
         newName = "meters";
-    else if (p->name.name == "psa_idle_timeout")
+    } else if (p->name.name == "psa_idle_timeout") {
         newName = "idle_timeout";
-    else if (p->name.name == "psa_empty_group_action")
+        bool timeout = false;
+        if (auto exprValue = p->value->to<IR::ExpressionValue>()) {
+            if (auto expr = exprValue->expression) {
+                if (auto member = expr->to<IR::Member>()) {
+                    if (member->member == "NOTIFY_CONTROL") {
+                        timeout = true;
+                    } else if (member->member == "NO_TIMEOUT") {
+                        return nullptr;
+                    }
+                }
+            }
+        }
+        if (timeout) {
+            auto blit = new IR::BoolLiteral(true);
+            auto exprVal = new IR::ExpressionValue(blit);
+            value = exprVal;
+        }
+    } else if (p->name.name == "psa_empty_group_action") {
         LOG1("ERROR: psa_empty_group_action is not supported");
+    }
     if (newName != boost::none)
-        return new IR::Property(p->srcInfo, *newName, p->annotations, p->value, p->isConstant);
+        return new IR::Property(p->srcInfo, *newName, p->annotations, value, p->isConstant);
     return p;
 }
 
@@ -548,6 +567,7 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
 }
 
 const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* node) {
+    LOG3("TypeNameExpressionConverter postorder typenameexpr: " << node);
     auto typeName = node->typeName->to<IR::Type_Name>();
     auto path = typeName->path->to<IR::Path>();
     auto mapped = enumsToTranslate.find(path->name);
@@ -574,6 +594,7 @@ const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* n
 }
 
 const IR::Node* TypeNameExpressionConverter::postorder(IR::Member* member) {
+    LOG3("TypeNameExpressionConverter postorder member : " << member);
     if (!member->expr->type->is<IR::Type_SerEnum>())
         return member;
     auto type = member->expr->type->to<IR::Type_SerEnum>();

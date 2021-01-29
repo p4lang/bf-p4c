@@ -274,6 +274,7 @@ build_unified(BF_P4C_BACKEND_CONTROL_PLANE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SI
 
 set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
   control-plane/bfruntime.h
+  control-plane/bfruntime_arch_handler.h
   control-plane/p4runtime_force_std.h
   control-plane/tofino_p4runtime.h
   )
