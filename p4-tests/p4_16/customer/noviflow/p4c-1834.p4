@@ -3135,7 +3135,7 @@ control control_tunnel_exec(inout headers_t hdr,
 
 
 
-            hdr.pkt.udpv4_cksum.isValid() : ternary;
+            hdr.pkt.udpv6_cksum.isValid() : ternary;
         }
         actions = {
 

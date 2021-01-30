@@ -2189,6 +2189,7 @@ void
 BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
     for (const auto& table : p4info.tables()) {
         const auto& pre = table.preamble();
+        std::set<std::string> dupKey;
 
         auto* annotations = transformAnnotations(
             pre.annotations().begin(), pre.annotations().end());
@@ -2266,6 +2267,16 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             // is output in the context.json
             std::regex hdrStackRegex(R"(\[([0-9]+)\]\.)");
             keyName = std::regex_replace(keyName, hdrStackRegex, "$$$1.");
+
+            // Control plane requires there's no duplicate key in one table.
+            if (dupKey.count(keyName) != 0) {
+              ::error("Key \"%s\" is duplicate in Table \"%s\". It doesn't meet BFRT's "
+              "requirements.\n" "Please using @name annotation for the duplicate key names",
+              keyName, pre.name());
+              return;
+            } else {
+              dupKey.insert(keyName);
+            }
 
             // DRV-3112 - Make key fields not mandatory, this allows user to use a
             // driver initialized default value (0).
