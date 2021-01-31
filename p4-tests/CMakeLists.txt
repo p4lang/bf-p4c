@@ -25,6 +25,18 @@ set (HARLYN_PTF_DRIVER_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/ptf_runner_wrapper
 configure_file ("src/ptf_runner_wrapper.c.in"
   "${P4C_BINARY_DIR}/ptf_runner_wrapper.c" @ONLY)
 
+if(NOT P414_TEST_ARCH)
+    set(P414_TEST_ARCH "v1model")
+endif()
+if(NOT TOFINO_P414_TEST_ARCH)
+    set(TOFINO_P414_TEST_ARCH ${P414_TEST_ARCH})
+endif()
+if(NOT JBAY_P414_TEST_ARCH)
+    set(JBAY_P414_TEST_ARCH ${P414_TEST_ARCH})
+endif()
+if(NOT CLOUDBREAK_P414_TEST_ARCH)
+    set(CLOUDBREAK_P414_TEST_ARCH ${P414_TEST_ARCH})
+endif()
 
 # common test utils
 include(TestUtils.cmake)

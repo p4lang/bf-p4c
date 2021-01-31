@@ -20,22 +20,22 @@ set (GTS_ARISTA_PR
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_ARISTA_PR}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_ARISTA_PR}")
 
 # Add additional flags to some customer tests
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4"
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\" --disable-pragmas=pa_container_size")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4"
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4"
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4"
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "alibaba" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/alibaba/COMPILER-869/alpm_ali_cloud.p4"
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "alibaba" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/alibaba/COMPILER-869/alpm_ali_cloud.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
 
 set (GTS_ARISTA
@@ -155,7 +155,7 @@ set (GTS_ARISTA
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-897/clone_e2e_no_residual.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_ARISTA}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_ARISTA}")
 
 foreach(t IN LISTS GTS_ARISTA)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
@@ -186,7 +186,7 @@ set (GTS_RDP
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-599/case3230.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_RDP}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_RDP}")
 
 foreach(t IN LISTS GTS_RDP)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
@@ -220,7 +220,7 @@ set (GTS_NOVIFLOW
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_4.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_NOVIFLOW}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_NOVIFLOW}")
 
 foreach(t IN LISTS GTS_NOVIFLOW)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
@@ -237,7 +237,7 @@ set (GTS_ALIBABA
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/alibaba/COMPILER-980/comp_980_repaired.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_ALIBABA}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_ALIBABA}")
 
 foreach(t IN LISTS GTS_ALIBABA)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
@@ -253,7 +253,7 @@ set (GTS_KALOOM
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-839/leaf.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_KALOOM}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_KALOOM}")
 
 foreach(t IN LISTS GTS_KALOOM)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
@@ -266,7 +266,7 @@ set (GTS_KEYSIGHT
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/keysight/COMPILER-996/pktgen8.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_KEYSIGHT}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_KEYSIGHT}")
 
 foreach(t IN LISTS GTS_KEYSIGHT)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
@@ -344,7 +344,7 @@ set (GTS_OTHER
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/zte/COMPILER-594/comp594.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_OTHER}")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_OTHER}")
 
 foreach(t IN LISTS GTS_OTHER)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})

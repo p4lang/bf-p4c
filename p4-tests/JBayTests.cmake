@@ -44,19 +44,22 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
 
-set (JBAY_V1_TEST_SUITES
+set (JBAY_V1_TEST_SUITES_P414
   ${p4_14_samples}
 #  ${v1tests}
-  ${p16_v1tests}
   ${STF_P4_TESTS}
   ${PTF_P4_TESTS}
 # p4_14_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
+  )
+set (JBAY_V1_TEST_SUITES_P416
+  ${p16_v1tests}
 # p4_16_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
 
-p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_backend_tests("tofino2" "jbay" "${JBAY_P414_TEST_ARCH}" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES_P414}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 set (JBAY_JNA_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
@@ -238,7 +241,7 @@ set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/atomic_mo
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/smoke_large_tbls/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/stful/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-bfn_add_p4factory_tests("tofino2" "tofino2" "v1model" "smoketest_programs\;JENKINS_PART2" BFN_TESTS_LIST)
+bfn_add_p4factory_tests("tofino2" "tofino2" "${JBAY_P414_TEST_ARCH}" "smoketest_programs\;JENKINS_PART2" BFN_TESTS_LIST)
 
 bfn_set_ptf_test_spec("tofino2" "extensions/p4_tests/p4-programs/programs/meters/meters.p4"
         "^test.TestMeterOmnet
@@ -299,7 +302,7 @@ set (TOF2_V1MODEL_COMPILE_ONLY_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/in
                                      "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/perf_test/*.p4"
                                      "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/pgrs/*.p4")
 bfn_find_tests ("${TOF2_V1MODEL_COMPILE_ONLY_TESTS}" TOF2_V1MODEL_COMPILE_ONLY_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "smoketest_programs\;JENKINS_PART2" "${TOF2_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
+p4c_add_bf_backend_tests("tofino2" "jbay" "${JBAY_P414_TEST_ARCH}" "smoketest_programs\;JENKINS_PART2" "${TOF2_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE

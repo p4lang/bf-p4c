@@ -17,39 +17,49 @@ set  (isXFail TRUE)
 
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch v1model --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE")
+    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_dc_basic")
+p4c_add_test_label("tofino" "p414_nightly" "switch_dc_basic")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-arch v1model -DENT_FIN_POSTCARD_PROFILE")
+    "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_FIN_POSTCARD_PROFILE")
+p4c_add_test_label("tofino" "p414_nightly" "switch_ent_fin_postcard")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch v1model -DENT_DC_GENERAL_PROFILE -to 1200")
+    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -to 1200")
 p4c_add_test_label("tofino" "METRICS" "switch_ent_dc_general")
+p4c_add_test_label("tofino" "p414_nightly" "switch_ent_dc_general")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc" ${switchtest} "${testExtraArgs}" "-arch v1model --disable-pragmas=pa_solitary -DMSDC_PROFILE -DP4_WRED_DEBUG")
+    "switch_msdc" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_PROFILE -DP4_WRED_DEBUG")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc")
+p4c_add_test_label("tofino" "p414_nightly" "switch_msdc")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
-    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-arch v1model --disable-pragmas=pa_solitary -DMSDC_IPV4_PROFILE")
+    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_IPV4_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_ipv4")
+p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_ipv4")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_l3" ${switchtest} "${testExtraArgs}" "-arch v1model -DMSDC_L3_PROFILE")
+    "switch_msdc_l3" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_L3_PROFILE")
+p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_l3")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-arch v1model --disable-pragmas=pa_solitary -DMSDC_SPINE_DTEL_INT_PROFILE")
+    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_SPINE_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_spine_int")
+p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_spine_int")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs}" "-arch v1model -DMSDC_LEAF_DTEL_INT_PROFILE")
+    "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_LEAF_DTEL_INT_PROFILE")
+p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_leaf_int")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs}" "-arch v1model -DL3_HEAVY_INT_LEAF_PROFILE -Xp4c=\"--no-power-check\"")
+    "switch_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DL3_HEAVY_INT_LEAF_PROFILE -Xp4c=\"--no-power-check\"")
+p4c_add_test_label("tofino" "p414_nightly" "switch_l3_heavy_int_leaf")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_generic_int_leaf" ${switchtest} "${testExtraArgs}" "-arch v1model --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -Xp4c=\"--no-power-check\"")
+    "switch_generic_int_leaf" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -Xp4c=\"--no-power-check\"")
+p4c_add_test_label("tofino" "p414_nightly" "switch_generic_int_leaf")
 
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
 set_tests_properties("tofino/switch_ent_dc_general" PROPERTIES TIMEOUT 1200)
@@ -144,7 +154,8 @@ set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 73
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_msdc")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc"
         "l2 l3 acl ^aclfrag ^tunnel mirror ^urpf ^mpls ^mcast ^racl ^warminit ^stp ^dynhash32
         ^switch_tests.MalformedPacketsTest
@@ -152,17 +163,20 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc"
         ^switch_tests.L2LNStatsTest
         ^switch_tests.L2StaticMacMoveBulkTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_set_1" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_msdc_set_1")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_set_1"
         "switch_tests.L2DynamicMacMoveTest
         switch_tests.L2LNStatsTest
         switch_tests.L2StaticMacMoveBulkTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_mirror" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_msdc_mirror")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_mirror"
         "mirror_acl")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_wred" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_WRED}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_WRED}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_msdc_wred")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_wred"
         "wred_drop")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_MalformedPacketsTest" ${SWITCH_P4}
@@ -181,7 +195,8 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_msdc_set_1")
 
 # Switch master DC_BASIC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic"
         "all ^aclfrag ^queue-stats ^dynhash32
         ^switch_scale.L2VlanScaleTest
@@ -194,7 +209,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic"
         ^switch_tests.L2StaticMacMoveBulkTest
         ^switch_tests.L2VxlanToGeneveUnicastBasicTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_set_1" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_set_1")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_1"
         "switch_tests.L2DynamicMacMoveTest
         switch_tests.L2IPv4InIPv6VxlanUnicastBasicTest
@@ -202,7 +218,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_set_1"
         switch_tests.L2StaticMacMoveBulkTest
         switch_tests.L2VxlanToGeneveUnicastBasicTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_l2" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_l2")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_l2"
         "l2-ocp")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_l2"
@@ -210,7 +227,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_l2"
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_l2"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_l3" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_l3")
 # Excluding some sail3 tests which need more ports than the supported HW ports
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_l3"
         "l3-ocp
@@ -224,7 +242,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_l3"
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_l3"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_acl" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_acl")
 # Excluding some saiacl tests which need more ports than the supported HW ports
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_acl"
         "acl-ocp
@@ -234,7 +253,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_acl"
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_acl"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_ARPTest" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_ARPTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_ARPTest"
         "saihostif.ARPTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_ARPTest"
@@ -244,7 +264,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_ARPTest
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_ARPTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_DHCPTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_DHCPTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_DHCPTest"
         "saihostif.DHCPTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_DHCPTest"
@@ -254,7 +275,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_DHCPTes
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_DHCPTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_LLDPTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_LLDPTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_LLDPTest"
         "saihostif.LLDPTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_LLDPTest"
@@ -264,7 +286,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_LLDPTes
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_LLDPTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_LACPTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_LACPTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_LACPTest"
         "saihostif.LACPTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_LACPTest"
@@ -274,7 +297,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_LACPTes
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_LACPTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_SNMPTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_SNMPTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_SNMPTest"
         "saihostif.SNMPTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_SNMPTest"
@@ -284,7 +308,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_SNMPTes
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_SNMPTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_SSHTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_SSHTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_SSHTest"
         "saihostif.SSHTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_SSHTest"
@@ -294,7 +319,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_SSHTest
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_SSHTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_IP2METest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_IP2METest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_IP2METest"
         "saihostif.IP2METest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_IP2METest"
@@ -304,7 +330,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_IP2METe
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_IP2METest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_TTLErrorTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_TTLErrorTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_TTLErrorTest"
         "saihostif.TTLErrorTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_TTLErrorTest"
@@ -314,7 +341,8 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_TTLErro
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_TTLErrorTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_sai_hostif_BGPTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_sai_hostif_BGPTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_sai_hostif_BGPTest"
         "saihostif.BGPTest")
 bfn_set_ptf_test_port("tofino" "smoketest_switch_dc_basic_sai_hostif_BGPTest"
@@ -324,19 +352,23 @@ bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dc_basic_sai_hostif_BGPTest
 bfn_set_ptf_ports_json_file("tofino" "smoketest_switch_dc_basic_sai_hostif_BGPTest"
     "${SWITCH_PTF_BASE}/ports.json")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_MalformedPacketsTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest"
         "switch_tests.MalformedPacketsTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_ipv6" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_MalformedPacketsTest_ipv6")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_ipv6"
         "switch_tests.MalformedPacketsTest_ipv6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_tunnel" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_MalformedPacketsTest_tunnel")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_tunnel"
         "switch_tests.MalformedPacketsTest_tunnel")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2VlanScaleTest" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dc_basic_L2VlanScaleTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2VlanScaleTest"
         "switch_scale.L2VlanScaleTest")
 
@@ -377,7 +409,8 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_L2VlanScaleTes
 
 # Switch master ENT_DC_GENERAL_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ent_dc_general")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general"
         "ent ^aclfrag ^stp ^dynhash32
         ^switch_tests.L3IPv4MtuTest
@@ -390,7 +423,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general"
         ^switch_tests.L3EcmpLagTest
         ^switch_tests.L3VIIPv4HostMacMoveTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_set_1" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ent_dc_general_set_1")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_1"
         "switch_tests.L2LNStatsTest
         switch_tests.L2DynamicMacMoveTest
@@ -399,7 +433,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_1"
         switch_tests.L3EcmpLagTest
         switch_tests.L3VIIPv4HostMacMoveTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_egress_acl" ${SWITCH_P4}
-        "${testExtraArgs} -arch v1model -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_EGRESS_ACL}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_EGRESS_ACL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ent_dc_general_egress_acl")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_ent_dc_general" PROPERTIES TIMEOUT 3600)
@@ -411,7 +446,8 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_ent_dc_general_set_1")
 # Additional testing (excluded in PRs and CI)
 # Switch Master MSDC_IPV4_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ipv4" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_IPV4_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_IPV4_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ipv4"
         "l2 l3 acl mirror l3-vxlan ^hostif ^tunnel ^aclfrag ^dynhash ^dynhash32
         ^urpf ^mpls ^mcast ^racl ^warminit ^stp
@@ -419,7 +455,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ipv4"
         ^switch_tests.ExceptionPacketsTest
         ^switch_tests.ExceptionPacketsTest_IPV6")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ipv4_mirror" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_IPV4_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_IPV4_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ipv4_mirror")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ipv4_mirror"
         "mirror_acl")
 
@@ -429,15 +466,18 @@ set_tests_properties("tofino/smoketest_switch_ipv4_mirror" PROPERTIES TIMEOUT 36
 
 # Switch Master MSDC_SPINE_DTEL_INT_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine"
         "all ^tunnel ^mpls ^urpf ^racl ^ipv6 ^mcast ^warminit ^stp ^ptp ^aclfrag ^dynhash32")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_mirror" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_MIRROR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_mirror")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_mirror"
         "mirror_acl_slice_tests.MirrorAclSliceTest_i2e")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel"
         "switch_int_l45_common.intl45_route_dtel_reports
         switch_int_l45_transit_digest.intl45_transitTest_hop2_with_digest
@@ -447,7 +487,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel"
         switch_int_l45_transit.INTL45_TransitTest_Enable
         switch_int_l45_transit.intl45_transitTest_hop2_latency")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_part_2" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_part_2")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_part_2"
         "switch_int_l45_transit.intl45_transitTest_hop2_port_ids
         switch_int_l45_transit.intl45_transitTest_hop2_qdepth
@@ -457,13 +498,15 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_part_2"
         switch_int_l45_transit.intl45_transitTest_switchid
         switch_queue_report.QueueReport_Change_Test")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_INTL45")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45"
         "switch_int_l45_transit.INTL45_Transit_EgressMoDTest
          switch_int_l45_transit.INTL45_Transit_IngressMoDTest
          switch_int_l45_transit_stless.intl45_transitTest_hop2_stateless")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_QueueReport")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport"
         "switch_queue_report.QueueReport_Entropy_Test
          switch_queue_report.QueueReport_Quota_Test
@@ -471,7 +514,8 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport
          switch_queue_report_multimirror.QueueReport_MirrorTest
          switch_queue_report_multimirror.QueueReport_L2_MirrorTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDrop" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDrop")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDrop"
         "switch_mirror_on_drop.MirrorOnDropEgrNonDefaultRuleTest
          switch_mirror_on_drop.MirrorOnDropHostifReasonCodeTest
@@ -479,31 +523,37 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDro
          switch_mirror_on_drop.MirrorOnDropNonDefaultRuleTest
          switch_mirror_on_drop.MirrorOnDropEgressAclTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest"
     "switch_int_l45_transit.INTL45_Transit_DoDTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test"
     "switch_queue_report.QueueReport_DoD_Test")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest"
     "switch_mirror_on_drop.MirrorOnDropDoDTest")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_dtel_sai" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI_DTEL}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI_DTEL}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_dtel_sai")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_dtel_sai"
         "int_transit")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dtel_int_spine_dtel_sai"
     "${SWITCH_PTF_DIR_SAI}/port_map.ini")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_sai" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_sai")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_sai"
         "egress-acl mirror-acl")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dtel_int_spine_sai"
     "${SWITCH_PTF_DIR_SAI}/port_map.ini")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dtel_int_spine_sai_hostif" ${SWITCH_P4}
-    "${testExtraArgs} -arch v1model -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+    "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_SPINE_DTEL_INT_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_SAI}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_dtel_int_spine_sai_hostif")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dtel_int_spine_sai_hostif"
         "saihostif.CoppStatTest")
 bfn_set_ptf_port_map_file("tofino" "smoketest_switch_dtel_int_spine_sai_hostif"

@@ -293,4 +293,3 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
     endforeach()   # ts
   endif(HARLYN_STF_${toolsdevice})
 endmacro(p4c_add_bf_backend_tests)
-

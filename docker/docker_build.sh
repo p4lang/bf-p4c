@@ -36,8 +36,9 @@ IMAGE_TYPES=(
 
 # List of environment variables expected to contain either "true" or "false".
 BOOLEAN_VARS=(
-  "BUILD_GLASS"      # whether to build the glass compiler
-  "GEN_REF_OUTPUTS"  # whether to generate reference outputs for p4i
+  "BUILD_GLASS"                # whether to build the glass compiler
+  "GEN_REF_OUTPUTS"            # whether to generate reference outputs for p4i
+  "TOFINO_P414_TEST_ARCH_TNA"  # whether to test P4-14 programs for Tofino with TNA architecture
 )
 
 # === PACKAGE LISTS ===========================================================
@@ -279,12 +280,18 @@ if [[ "${BUILD_FOR}" == "tofino" ]] ; then
   else
     disable_unified=
   fi
+  if [[ "${TOFINO_P414_TEST_ARCH_TNA}" == "true" ]] ; then
+    DTOFINO_P414_TEST_ARCH="-DTOFINO_P414_TEST_ARCH=tna"
+  else
+    DTOFINO_P414_TEST_ARCH=
+  fi
 
   /usr/local/bin/ccache --zero-stats
   ./bootstrap_bfn_compilers.sh \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DENABLE_STF2PTF=OFF \
     -DINSTALL_LIBDYNHASH=OFF \
+    ${DTOFINO_P414_TEST_ARCH} \
     ${disable_unified}
 
   cd build
@@ -359,4 +366,3 @@ fi
 apt-get autoremove -y
 apt-get clean -y
 apt-get autoclean -y
-

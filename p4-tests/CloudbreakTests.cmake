@@ -33,19 +33,21 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
 
-set (CLOUDBREAK_V1_TEST_SUITES
+set (CLOUDBREAK_V1_TEST_SUITES_P414
   ${p4_14_samples}
 #  ${v1tests}
-  ${p16_v1tests}
   ${STF_P4_TESTS}
   ${PTF_P4_TESTS}
 # p4_14_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
+  )
+set (CLOUDBREAK_V1_TEST_SUITES_P416
+  ${p16_v1tests}
 # p4_16_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
-
-p4c_add_bf_backend_tests("tofino3" "cb" "v1model" "base" "${CLOUDBREAK_V1_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_backend_tests("tofino3" "cb" "${CLOUDBREAK_P414_TEST_ARCH}" "base" "${CLOUDBREAK_V1_TEST_SUITES_P414}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_backend_tests("tofino3" "cb" "v1model" "base" "${CLOUDBREAK_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 set (CLOUDBREAK_JNA_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4)
@@ -226,7 +228,7 @@ p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${cloudbreak_jna_tests}" 
 #  APPEND PROPERTY ENVIRONMENT "CTEST_P4C_ARGS=--no-bf-rt-schema")
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_ipv4_checksum" ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE  
+#p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_lrn" ${p4_16_internal_p4_16_path}/lrn/lrn.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_t2na_emulation" ${p4_16_internal_p4_16_path}/t2na_emulation/t2na_emulation.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
