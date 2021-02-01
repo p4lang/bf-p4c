@@ -191,6 +191,45 @@ TEST(SimplifyKeyElimCasts, KeyElementWideningCastSlice) {
     RUN_CHECK(setup_passes(), input, expected);
 }
 
+TEST(SimplifyKeyElimCasts, KeyElementWideningCastSliceNonzeroLsb) {
+    auto input = R"(
+        table dummy_table {
+            key = {
+                ((bit<256>)headers.h.field4)[62:15]: exact @name("key");
+            }
+            actions = {
+            }
+        }
+        apply {
+            dummy_table.apply();
+        })";
+    Match::CheckList expected = {
+        "action NoAction_`(\\d+)`() { }",
+        "bit<48> key_`(\\d+)`;",
+        "table dummy_table_`(\\d+)` {",
+            "key = {",
+                "key_`\\2`: exact ;",
+            "}",
+            "actions = {",
+                "NoAction_`\\1`();",
+            "}",
+            "default_action = NoAction_`\\1`();",
+        "}",
+        "apply {",
+            "{",
+                "bit<31> $concat_to_slice`(\\d+)`;",
+                "bit<17> $concat_to_slice`(\\d+)`;",
+                "$concat_to_slice`\\4` = 31w0;",
+                "$concat_to_slice`\\5` = headers.h.field4[31:15];",
+                "key_`\\2`[47:17] = $concat_to_slice`\\4`;",
+                "key_`\\2`[16:0] = $concat_to_slice`\\5`;",
+            "}",
+            "dummy_table_`\\3`.apply();",
+        "}"
+    };
+    RUN_CHECK(setup_passes(), input, expected);
+}
+
 TEST(SimplifyKeyElimCasts, KeyElementConcatConstantPathExpression) {
     auto input = R"(
         table dummy_table {
