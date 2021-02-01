@@ -1,0 +1,11 @@
+Package: cmake
+Pin: version 3.17.0-0kitware1
+Pin-Priority: 550
+
+Package: cmake-data
+Pin: version 3.17.0-0kitware1
+Pin-Priority: 550
+
+Package: cmake-curses-gui
+Pin: version 3.17.0-0kitware1
+Pin-Priority: 550

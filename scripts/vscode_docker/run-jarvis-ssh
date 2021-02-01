@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+docker run \
+	--privileged \
+	--rm --user root \
+	-p 2222:22 \
+	-v ~/reps:/mnt/reps \
+	-it jarvis-ssh \
+	/bin/bash

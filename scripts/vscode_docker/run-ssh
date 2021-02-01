@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -e 
+
+if [ -z `pgrep sshd` ]; then
+	echo "Exporting local variables of root to the global profile ..."
+	(POSIXLY_CORRECT=$POSIXLY_CORRECT; export -p) | grep -v "export HOME" | grep -v "export PWD" | grep -v "export OLDPWD" | grep -v "export TERM" > /etc/profile.d/99-jarvis-env.sh
+	
+	echo "Starting SSH server ..."
+	/usr/sbin/sshd
+	echo "Done ..."
+fi
+
