@@ -3322,12 +3322,16 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             if (!ap->direct)
                 out << ", action_profile: " << canon_name(ap->name);
     }
-    // Output 'disable_atomic_modify' pragma if present. This will to be plugged
+    // Output 'disable_atomic_modify' pragma if present. This will be plugged
     // into the context json for the driver. COMPILER-944
     if (tbl->match_table) {
         bool disable_atomic_modify;
         tbl->getAnnotation("disable_atomic_modify", disable_atomic_modify);
-        if (disable_atomic_modify && BackendOptions().target == "tofino")
+
+        // NOTE: Replace with commented code once driver support is in for
+        // Tofino2+ archs - Driver JIRA - DRV-4404
+        // if (disable_atomic_modify && BackendOptions().target == "tofino")
+        if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
             out << ", disable_atomic_modify : true";
     }
     out << " }" << std::endl;

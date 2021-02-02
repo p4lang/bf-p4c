@@ -1147,7 +1147,12 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             // not require additinal entries.
             bool disable_atomic_modify;
             t->getAnnotation("disable_atomic_modify", disable_atomic_modify);
-            if (!disable_atomic_modify && BackendOptions().target == "tofino")
+
+            // NOTE: Replace with commented code once driver support is in for
+            // Tofino2+ archs - Driver JIRA - DRV-4404
+            // if (!disable_atomic_modify && BackendOptions().target == "tofino")
+            //     rv->entries += t->layout.partition_count;
+            if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
                 rv->entries += t->layout.partition_count;
         }
         if (t->layout.exact) {
