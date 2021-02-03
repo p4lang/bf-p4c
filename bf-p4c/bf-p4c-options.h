@@ -80,14 +80,14 @@ class ToplevelBlock;  // NOLINT(build/forward_decl)
 }
 
 /// A CompileContext for bf-p4c.
-class BFNContext final : public P4CContext {
+class BFNContext : public virtual P4CContext {
  public:
     /// @return the current compilation context, which must be of type
     /// BFNContext.
     static BFNContext& get();
 
     /// @return the compiler options for this compilation context.
-    BFN_Options& options() final;
+    BFN_Options& options();
 
     /// Return a string that represents a path to an output directory:
     /// options.outputDir + pipename + suffix
