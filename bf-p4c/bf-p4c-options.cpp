@@ -37,7 +37,6 @@ BFN_Options::BFN_Options() {
 
     compilerVersion = BF_P4C_VERSION;
 
-    unRegisterOption("-o");
     registerOption("-o", "dir",
                    [this](const char* arg) { outputDir = arg; return true; },
                    "Write output to outdir.\n");
