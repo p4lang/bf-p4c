@@ -9,6 +9,8 @@ import os.path
 import hashlib
 import copy
 import string
+import re
+import sys
 
 from operator import mul
 
@@ -1003,7 +1005,33 @@ class csr_composite_object (csr_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def find_alias_arrays(self, args, classname):
+        self.alias_arrays = []
+        potential_alias_arrays = {}
+        array_match = re.compile('^(\w+)_(\d+)$')
+        for el in self.children():
+            m = array_match.match(el.name)
+            if m:
+                base = m.group(1)
+                idx = int(m.group(2))
+                typ = el.type_name(args, classname, "_" + el.name)
+                if base in potential_alias_arrays:
+                    pot = potential_alias_arrays[base]
+                    if typ != pot['type']:
+                        pot['ok'] = False
+                    if idx > pot['max']:
+                        pot['max'] = idx
+                    pot['mask'] |= 2**idx
+                else:
+                    potential_alias_arrays[m.group(1)] = {
+                        "ok": True, "max": idx, "mask": 2**idx, "type": typ }
+        for base, pot in potential_alias_arrays.items():
+            if pot['ok'] and pot['max'] > 0 and pot['mask'] == 2**(pot['max']+1) - 1:
+                self.alias_arrays.append( (base, pot['type'], pot['max'] + 1) )
+
     def need_ctor(self):
+        if self.alias_arrays:
+            return True
         for el in self.children():
             s = el.singleton_obj()
             if s.is_field() and s.default and s.default != 0:
@@ -1046,6 +1074,14 @@ class csr_composite_object (csr_object):
                     outfile.write("})")
                 else:
                     outfile.write('(%d)' % s.default)
+        if hasattr(self, 'alias_arrays'):
+            for alias in self.alias_arrays:
+                outfile.write(",\n%s  %s({" % (indent, alias[0]))
+                for idx in range(0, alias[2]):
+                    if idx > 0:
+                        outfile.write(",")
+                    outfile.write(" &this->%s_%d" % (alias[0], idx))
+                outfile.write(" })")
         outfile.write(' {}\n')
 
     def canon_name(self, name):
@@ -1080,12 +1116,31 @@ class csr_composite_object (csr_object):
                 raise CsrException("invalid character '%s' in name\n" % ch)
         return namestr, nameargs
 
+    def type_name(self, args, parent, name):
+        namestr, nameargs = self.canon_name(name)
+        # FIXME -- should be checking for global names in args.global?
+        classname = parent
+        if classname != '':
+            classname += '::'
+        classname += namestr
+        rv = 'struct ' + classname
+        if self.count != (1, ):
+            if args.checked_array:
+                for idx in self.count:
+                    rv = "checked_array<%d, %s>" % (idx, rv)
+            else:
+                for idx in self.count:
+                    rv = "%s[%d]" % (rv, idx)
+        return rv;
+
     def gen_type(self, outfile, args, schema, parent, name, indent):
         namestr, nameargs = self.canon_name(name)
         classname = parent
         if classname != '':
             classname += '::'
         classname += namestr
+        if args.alias_array and not hasattr(self, 'alias_arrays'):
+            self.find_alias_arrays(args, classname)
         if args.gen_decl != 'defn':
             indent += "  "
             outfile.write("struct %s {\n" % namestr)
@@ -1135,6 +1190,10 @@ class csr_composite_object (csr_object):
                         for idx in el.count:
                             outfile.write("[%d]" % idx)
                     outfile.write(";\n")
+        if args.gen_decl != 'defn' and hasattr(self, 'alias_arrays'):
+            for alias in self.alias_arrays:
+                outfile.write("%salias_array<%d, %s> %s;\n" % (indent,
+                    alias[2], alias[1], alias[0]))
         if args.delete_copy and args.gen_decl != 'defn':
             if not args.enable_disable and not self.need_ctor():
                 outfile.write("%s%s() = default;\n" % (indent, namestr))
@@ -1454,6 +1513,9 @@ class address_map_instance(csr_composite_object):
         return self.map.templatization_behavior == "top_level"
     def address_stride(self):
         return self.stride
+
+    def type_name(self, args, parent, name):
+        self.map.type_name(args, parent, name)
 
     def gen_type(self, outfile, args, schema, parent, name, indent):
         if self.map.templatization_behavior == "disabled":
@@ -1832,6 +1894,21 @@ class field(csr_object):
         return False
     def top_level(self):
         return False
+    def type_name(self, args, parent, name):
+        size = self.msb-self.lsb+1
+        if size > 64:
+            rv = "widereg<%d>" % size
+        else:
+            rv = "ubits<%d>" % size
+        if self.count != (1, ):
+            if args.checked_array:
+                for idx in self.count:
+                    rv = "checked_array<%d, %s>" % (idx, rv)
+            else:
+                for idx in self.count:
+                    rv = "%s[%d]" % (rv, idx)
+        return rv
+
     def gen_type(self, outfile, args, schema, parent, name, indent):
         size = self.msb-self.lsb+1
         if args.gen_decl != 'defn':

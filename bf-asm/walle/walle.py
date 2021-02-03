@@ -129,6 +129,7 @@ def parse_template_args(args, params):
     def set_defn(args, attr, val): args.gen_decl = 'defn'
 
     options = {
+        'alias_array': (True, bool_arg),
         'binary_offset': (False, bool_arg),
         'checked_array': (True, bool_arg),
         'decl': (None, set_decl),
@@ -253,6 +254,8 @@ def generate_cpp_file(outfile, top_level, args, schema):
         outfile.write('#include "indent.h"\n')
     if args.unpack_json:
         outfile.write('#include "json.h"\n')
+    if args.alias_array:
+        outfile.write('#include "alias_array.h"\n')
     if args.checked_array:
         outfile.write('#include "checked_array.h"\n')
     if args.emit_binary:
