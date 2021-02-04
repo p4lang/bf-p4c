@@ -1671,26 +1671,45 @@ CoreAllocation::tryAllocSliceList(
                     boost::make_optional<const PHV::SuperCluster::SliceList *>(false, 0);
                 for (auto& slice_and_pos : kv_source.second) {
                     const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
-
-                    // Disregard slices that aren't in slice lists.
-                    if (!slice_list && slice_lists.size() == 0) continue;
-                    if (slice_list && slice_lists.size() == 0) {
-                        LOG5("    ...but slice " << slice_and_pos.first << " is not in a "
-                             "slice list, while other slices in the same conditional constraint "
-                             "is in a slice list.");
-                        can_place = false;
-                        break;
-                    }
-
-                    // If a slice is in multiple slice lists, abort.
-                    // XXX(cole): This is overly constrained.
                     if (slice_lists.size() > 1) {
+                        // If a slice is in multiple slice lists, abort.
+                        // XXX(cole): This is overly constrained.
                         LOG5("    ...but a conditional placement is in multiple slice lists");
                         can_place = false;
                         break;
+                    } else if (slice_lists.size() == 0) {
+                        // XXX(yumin): this seems to be too conservative. We can craft a slice
+                        // list to satisfy the condition constraint, as long as the slicelist
+                        // is valid.
+                        if (slice_list) {
+                            LOG5("    ...but slice " << slice_and_pos.first << " is not in a "
+                                 "slice list, while other slices in the same conditional constraint"
+                                 " is in a slice list.");
+                            can_place = false;
+                            break;
+                        } else {
+                            // not in a slicelist ignored.
+                            continue;
+                        }
                     }
 
-                    slice_list = *slice_lists.begin(); }
+                    auto* candidate = slice_lists.front();
+                    if (slice_list) {
+                        auto& fs1 = slice_list.get()->front();
+                        auto& fs2 = candidate->front();
+                        if (fs1.field()->exact_containers() != fs2.field()->exact_containers()) {
+                            LOG5("    ...but two slice cannot be placed in one container because "
+                                 "different exact_containers: "<< fs1 << " " << fs2);
+                            can_place = false;
+                            break;
+                        }
+                        // XXX(yumin): Even with above fix, this conditional constraint
+                        // slicelist allocation is still wrong. It overwrites previous
+                        // slice_list found for one constraint, which does not make
+                        // sense here. We need a further fix for this behavior.
+                    }
+                    slice_list = candidate;
+                }
                 // Try the next container.
                 if (!can_place) break;
 
@@ -1746,7 +1765,9 @@ CoreAllocation::tryAllocSliceList(
                             can_place = false;
                             break;
                         } else {
-                            offset += slice.range().size(); } }
+                            offset += slice.range().size();
+                        }
+                    }
 
                     if (requiredContainer) {
                         for (auto& slice : **slice_list) {
@@ -1781,7 +1802,9 @@ CoreAllocation::tryAllocSliceList(
         if (conditionalConstraintsToErase.size() > 0) {
             for (auto i : conditionalConstraintsToErase) {
                 LOG5("\t\tErasing conditional constraint associated with source #" << i);
-                (*action_constraints).erase(i); } }
+                (*action_constraints).erase(i);
+            }
+        }
 
         // Create this alloc for calculating score.
         // auto this_alloc = alloc_attempt.makeTransaction();
