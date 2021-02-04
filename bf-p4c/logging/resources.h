@@ -155,7 +155,7 @@ class ResourcesLogging : public Inspector {
 
     void collectHashDistUsage(unsigned int stage, const IXBar::HashDistUse &hd_use);
 
-    void collectActionBusBytesUsage(unsigned int stage, const ActionDataBus::Use &alloc,
+    void collectActionBusBytesUsage(unsigned int stage, const TableResourceAlloc *res,
                                         cstring tableName);
 
     void collectVliwUsage(unsigned int stage, const InstructionMemory::Use &alloc,

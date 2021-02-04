@@ -227,7 +227,7 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
         collectHashDistUsage(stage, hash_dist);
     }
 
-    collectActionBusBytesUsage(stage, alloc->action_data_xbar, name);
+    collectActionBusBytesUsage(stage, alloc, name);
 
     // TODO action slots
 
@@ -350,9 +350,19 @@ void ResourcesLogging::collectHashDistUsage(unsigned int stage, const IXBar::Has
 }
 
 void ResourcesLogging::collectActionBusBytesUsage(unsigned int stage,
-                                                  const ActionDataBus::Use &alloc,
+                                                  const TableResourceAlloc *res,
                                                   cstring tableName) {
-    for (auto &rs : alloc.action_data_locs) {
+    auto &action_data_xbar = res->action_data_xbar;
+    auto &meter_xbar = res->meter_xbar;
+
+    for (auto &rs : action_data_xbar.action_data_locs) {
+        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
+        for (auto i = 0; i < byte_sz; i++) {
+            stageResources[stage].actionBusBytes[rs.location.byte+i].append(tableName.c_str());
+        }
+    }
+
+    for (auto &rs : meter_xbar.action_data_locs) {
         int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
         for (auto i = 0; i < byte_sz; i++) {
             stageResources[stage].actionBusBytes[rs.location.byte+i].append(tableName.c_str());
