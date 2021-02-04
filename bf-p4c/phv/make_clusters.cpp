@@ -301,8 +301,8 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table* tbl) {
             // instead of using const_cast, get a mutable pointer from phvInfo.
             auto* field_a = phv_i.field(field.field()->id);
             auto* field_b = phv_i.field(xor_with.field()->id);
-            auto slices_a = self.slices(field_a, StartLen(0, field_a->size));
-            auto slices_b = self.slices(field_b, StartLen(0, field_b->size));
+            auto slices_a = self.slices(field_a, field.range());
+            auto slices_b = self.slices(field_b, xor_with.range());
             auto a_it = slices_a.begin();
             auto b_it = slices_b.begin();
             while (a_it != slices_a.end() && b_it != slices_b.end()) {
@@ -310,6 +310,8 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table* tbl) {
                 ++a_it;
                 ++b_it;
             }
+            BUG_CHECK(a_it == slices_a.end() && b_it == slices_b.end(),
+                      "Unbalanced slicing detected");
         }
     }
     return true;
