@@ -585,6 +585,13 @@ bitvec PhvInfo::bits_allocated(
                 [&](const PHV::AllocSlice& slice) {
                     return field_mutex_i(slice.field()->id, alloc.field()->id);
             });
+            bool is_alias = std::any_of(
+                write_slices_in_container.begin(), write_slices_in_container.end(),
+                [&](const PHV::AllocSlice& slice) {
+                    auto* f1 = slice.field();
+                    auto* f2 = alloc.field();
+                    return getAliasDestination(f1) == f2 || getAliasDestination(f2) == f1;
+            });
             bool meta_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::AllocSlice& slice) {
@@ -595,7 +602,7 @@ bitvec PhvInfo::bits_allocated(
                 [&](const PHV::AllocSlice& slice) {
                     return dark_mutex_i(slice.field()->id, alloc.field()->id);
             });
-            bool noMutex = !mutually_exclusive && !meta_overlay;
+            bool noMutex = !is_alias && !mutually_exclusive && !meta_overlay;
 
             // In case of a dark container do not consider dark overlay feasibility
             if (Device::phvSpec().hasContainerKind(PHV::Kind::dark) && !c.is(PHV::Kind::dark))

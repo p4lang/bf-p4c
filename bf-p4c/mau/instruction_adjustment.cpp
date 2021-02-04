@@ -808,7 +808,7 @@ const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
     for (auto &container_action_info : container_actions_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-        if (merged_fields.find(container) == merged_fields.end()) continue;
+        if (!merged_fields.count(container)) continue;
         act->action.push_back(build_merge_instruction(container, cont_action));
     }
     return act;
