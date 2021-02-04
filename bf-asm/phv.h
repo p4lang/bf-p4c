@@ -113,13 +113,18 @@ class Phv : public Section {
     json::map field_context_json;
 
     void init_phv(target_t);
+    bool is_pov(std::string name) {
+        // There are 2 types of POV bits we are interested in
+        // Either ending with .$valid or .$deparse...
+        return (name.find(".$valid") != std::string::npos ||
+                name.find(".$deparse") != std::string::npos);
+    }
     void gen_phv_field_size_map();
     int addreg(gress_t gress, const char *name, const value_t &what,
                int stage = -1, int max_stage = INT_MAX);
     int get_position_offset(gress_t gress, std::string name);
     void add_phv_field_sizes(gress_t gress, std::string name, int size) {
-        bool is_pov = (name.find(".$valid") != std::string::npos);
-        auto &phv_field_map = is_pov ? phv_pov_field_sizes : phv_field_sizes;
+        auto &phv_field_map = is_pov(name) ? phv_pov_field_sizes : phv_field_sizes;
         phv_field_map[gress][name] += size; }
     int get_phv_field_size(gress_t gress, std::string name) {
         if (phv_field_sizes[gress].count(name) > 0)

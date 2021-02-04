@@ -490,10 +490,12 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                 json::map chunk_byte;
                 json::map fd_entry_chunk_byte;
                 if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
+                    // This is PHV replaced, PHV is used
                     chunk[ch].is_phv |= 1 << j;
                     chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
                     chunk_byte["Byte"] = j;
                     fd_entry_chunk_byte["chunk_number"] = j;
+                    // PHV replaced => actual PHV is outputted
                     fd_entry_chunk_byte["is_phv"] = true;
                     auto phv_reg = &phv_repl->second->reg;
                     write_field_name_in_json(phv_reg, &pov_bit->reg,

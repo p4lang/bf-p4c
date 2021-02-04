@@ -588,18 +588,7 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
     write_pov_resources_in_json(pov[EGRESS], pov_resources);
     resources_deparser_egress["pov"] = std::move(pov_resources);
     // Fill out field dictionaries
-    unsigned n_fde_entries = 0;
-    if (options.target == Target::Tofino::tag) {
-        n_fde_entries = Target::Tofino::DEPARSER_MAX_FD_ENTRIES;
-#if HAVE_JBAY
-    } else if (options.target == Target::JBay::tag) {
-        n_fde_entries = Target::JBay::DEPARSER_TOTAL_CHUNKS;
-#endif
-#if HAVE_CLOUDBREAK
-    } else if (options.target == Target::Cloudbreak::tag) {
-        n_fde_entries = Target::Cloudbreak::DEPARSER_TOTAL_CHUNKS;
-#endif
-    }
+    unsigned n_fde_entries = Target::DEPARSER_MAX_FD_ENTRIES();
     resources_deparser_ingress["nFdeEntries"] = n_fde_entries;
     resources_deparser_ingress["fde_entries"] = std::move(fde_entries_i);
     resources_deparser_egress["nFdeEntries"] = n_fde_entries;
