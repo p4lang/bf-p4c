@@ -499,6 +499,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "field slices remain unallocated"
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210202.p4
 )
 
 # P4C-3494
