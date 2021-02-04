@@ -42,7 +42,7 @@ bool DarkLiveRange::overlaps(
     }
     LOG4("\t\tField 1 use: " << f1Uses << ", Field 2 use: " << f2Uses);
     bitvec combo = f1Uses & f2Uses;
-    LOG4("\t\tcombo: " << combo << ", empty? " << (combo.popcount() != 0));
+    LOG4("\t\tcombo: " << combo << ", overlaps? " << (combo.popcount() != 0));
     return (combo.popcount() != 0);
 }
 
@@ -303,9 +303,10 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
                 LOG5("\t\t\t" << lastSlice->field.field()->name << " [" << lastSlice->minStage.first
                         << lastSlice->minStage.second << ", " << lastSlice->maxStage.first <<
                         lastSlice->maxStage.second << "]");
-                LOG5("\t\t\t" << info.field.field()->name << " [" << lastSlice->minStage.first <<
-                        lastSlice->minStage.second << ", " << lastSlice->maxStage.first <<
-                        lastSlice->maxStage.second << "]");
+                LOG5("\t\t\t" << info.field.field()->name << " [" << realMinStage << "W, "
+                              << info.maxStage.first << info.maxStage.second << "] (original: ["
+                              << info.minStage.first << info.minStage.second << ", "
+                              << info.maxStage.first << info.maxStage.second << "])");
                 return false;
             }
         }
