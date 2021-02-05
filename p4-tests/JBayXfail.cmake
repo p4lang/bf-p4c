@@ -73,8 +73,6 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
-  # P4C-2743
-  extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
   # P4C-3295
   extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
 )
@@ -493,13 +491,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
-)
-
-# P4C-3482 - add program to MUST_PASS when addressed
-p4c_add_xfail_reason("tofino2"
-  "field slices remain unallocated"
-  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
-  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210202.p4
 )
 
 # P4C-3494
