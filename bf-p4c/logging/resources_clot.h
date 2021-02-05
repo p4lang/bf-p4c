@@ -16,6 +16,7 @@ class ClotResourcesLogging : public ParserInspector {
  public:
     using ClotResourceUsage = Resources_Schema_Logger::ClotResourceUsage;
     using ClotUsage = Resources_Schema_Logger::ClotUsage;
+    using ClotField = Resources_Schema_Logger::ClotField;
 
  protected:
     const ClotInfo &clotInfo;
@@ -23,18 +24,27 @@ class ClotResourcesLogging : public ParserInspector {
     std::vector<ClotResourceUsage*> clotUsages = std::vector<ClotResourceUsage*>(2);
     bool collected = false;
     std::map<unsigned, unsigned> clotTagToChecksumUnit;
+    std::vector<std::map<unsigned, std::vector<ClotUsage*>>> usageData;
 
     bool usingClots() const;
 
-    bool preorder(const IR::BFN::LoweredParserState* state);
-    void end_apply() override { collected = true; }
+    std::vector<ClotUsage*> &getUsageData(gress_t gress, unsigned tag);
 
-    void logClotUsages(const IR::BFN::LoweredParserMatch* match,
+    bool preorder(const IR::BFN::LoweredParserState* state);
+    void end_apply() override;
+
+    void collectClotUsages(const IR::BFN::LoweredParserMatch* match,
                        const IR::BFN::LoweredParserState* state,
                        gress_t gress);
 
-    ClotUsage* logExtractClotInfo(const IR::BFN::LoweredExtractClot* extract,
-                                  const IR::BFN::LoweredParserState *state);
+    void collectExtractClotInfo(const IR::BFN::LoweredExtractClot* extract,
+                                const IR::BFN::LoweredParserState *state,
+                                gress_t gress);
+
+    void logClotUsages();
+
+    ClotUsage* logExtractClotInfo(bool hasChecksum, int length, int offset,
+                                  unsigned tag, const Clot *clot);
 
  public:
     std::vector<ClotResourceUsage*> getLoggers();
