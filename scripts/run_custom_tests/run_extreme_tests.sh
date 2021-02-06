@@ -22,4 +22,4 @@ cat $bfnhome/scripts/run_custom_tests/patches/ptf/packet-patch.py >> /usr/local/
 export CTEST_OUTPUT_ON_FAILURE='true'
 export PYTHONPATH=/usr/local/lib/python2.7/site-packages/ptf/
 echo "Running ptf test"
-cd $bfnhome/build/p4c && ctest -R "^tofino2/.*3174"
+cd $bfnhome/build/p4c && ctest -R "^tofino2/.*npb-master-ptf"
