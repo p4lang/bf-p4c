@@ -674,9 +674,102 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         : refMap(refMap), typeMap(typeMap), evaluatedProgram(evaluatedProgram) {
     }
 
-    virtual cstring getControlPlaneName(const IR::Block* , const IR::IDeclaration *decl) {
+    // Overridden function call from base ArchIFace class. Table blocks are
+    // added entirely in the frontend and this call ensures we have our own
+    // implementation of control plane name generation (with the pipe prefix).
+    // This is relevant in multi pipe scenarios where a table (its control) is
+    // shared across pipes and needs fully qualified unique names.
+    cstring getControlPlaneName(const IR::Block* block) override {
+        return getControlPlaneName(block, nullptr);
+    }
+
+    cstring getControlPlaneName(const IR::Block* block, const IR::IDeclaration *decl) {
         auto declName = decl ? decl->controlPlaneName() : "";
-        return declName;
+        return getFullyQualifiedName(block, declName);
+    }
+
+    // Given a block get its block prefix (usually pipe name) generate in the
+    // blockNamePrefixMap and prefix it to the control plane name. This name is
+    // unique to the resource. For multi pipe scenarios this becomes relevant
+    // since a resource can be shared across pipes but need to be addressed by
+    // the control plane as separate resources.
+    // Note, in some cases like multiparser blocks, the parser names are always
+    // arch names since the instantiations are always anonymous. In such cases
+    // we skip the control plane name  [ DRV-2939 ]
+    // E.g.
+    // P4:
+    // IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipe0;
+    //  MultiParserPipeline(ig_pipe0, SwitchIngress(), SwitchIngressDeparser(),
+    //                      eg_pipe0, SwitchEgress(), SwitchEgressDeparser()) pipe0;
+    // BF-RT JSON : pipe0.ig_pipe0.prsr0
+    // CTXT JSON : ig_pipe0.prsr0
+    cstring getFullyQualifiedName(const IR::Block *block, const cstring name,
+                                                bool skip_control_plane_name = false) {
+        cstring block_name = "";
+        cstring control_plane_name = "";
+        cstring full_name = getBlockNamePrefix(block);
+        if (!skip_control_plane_name) {
+            if (auto cont = block->getContainer()) {
+                block_name = cont->getName();
+                control_plane_name = cont->controlPlaneName();
+                full_name = prefix(full_name, control_plane_name);
+            }
+        }
+
+        if (!name.isNullOrEmpty())
+            full_name = prefix(full_name, name);
+        LOG5("Block : " << block
+                << ", block_name: " << block_name
+                << ", block_name_prefix: " << getBlockNamePrefix(block)
+                << ", control_plane_name : " << control_plane_name
+                << ", name: "       << name
+                << ", fqname: "     << full_name);
+        return full_name;
+    }
+
+    virtual cstring getBlockNamePrefix(const IR::Block *) {
+        return defaultPipeName;
+    }
+
+    void collectTableProperties(P4RuntimeSymbolTableIface* symbols,
+                                const IR::TableBlock* tableBlock) override {
+        CHECK_NULL(tableBlock);
+        bool isConstructedInPlace = false;
+
+        using BFN::getExternInstanceFromPropertyByTypeName;
+
+        {
+            // Only collect the symbol if the action profile / selector is
+            // constructed in place. Otherwise it will be collected by
+            // collectExternInstance, which will avoid duplicates.
+            auto table = tableBlock->container;
+            auto action_profile = getExternInstanceFromPropertyByTypeName(
+                table, implementationString, "ActionProfile",
+                refMap, typeMap, &isConstructedInPlace);
+            if (action_profile) {
+                cstring tableName = *action_profile->name;
+                tableName = prefix(getBlockNamePrefix(tableBlock), tableName);
+                if (isConstructedInPlace)
+                    symbols->add(SymbolType::ACTION_PROFILE(), tableName);
+            }
+            auto action_selector = getExternInstanceFromPropertyByTypeName(
+                table, implementationString, "ActionSelector",
+                refMap, typeMap, &isConstructedInPlace);
+            if (action_selector) {
+                cstring tableName = *action_selector->name;
+                tableName = prefix(getBlockNamePrefix(tableBlock), tableName);
+                if (action_selector->substitution.lookupByName("size")) {
+                    std::string selectorName(tableName + "_sel");
+                    symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
+                    symbols->add(SymbolType::ACTION_PROFILE(), tableName);
+                } else {
+                    symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
+                }
+            }
+        }
+        // In TNA direct counters / meters cannot be constructed in place in the
+        // table declaration because the count / execute method has to be
+        // called.
     }
 
     void collectExternInstanceCommon(P4RuntimeSymbolTableIface* symbols,
@@ -701,7 +794,13 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         } else if (externBlock->type->name == "ActionProfile") {
             symbols->add(SymbolType::ACTION_PROFILE(), symName);
         } else if (externBlock->type->name == "ActionSelector") {
-            // Implement in arch specific function
+            if (externBlock->findParameterValue("size")) {
+                std::string selectorName(symName + "_sel");
+                symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
+                symbols->add(SymbolType::ACTION_PROFILE(), symName);
+            } else {
+                symbols->add(SymbolType::ACTION_SELECTOR(), symName);
+            }
         } else if (externBlock->type->name == "Digest") {
             symbols->add(SymbolType::DIGEST(), symName);
         } else if (externBlock->type->name == "Register") {
@@ -773,18 +872,10 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         }
 
         if (actionSelector) {
-            if (actionSelector->actionProfileName) {
-                auto id = actionSelector->getId(symbols, blockPrefix);
-                table->set_implementation_id(id);
-                if (isExternPropertyConstructedInPlace(tableDeclaration, implementationString)) {
-                    addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
-                }
-            } else {
-                auto id = actionSelector->getId(symbols, blockPrefix);
-                table->set_implementation_id(id);
-                if (isExternPropertyConstructedInPlace(tableDeclaration, implementationString)) {
-                    addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
-                }
+            auto id = actionSelector->getId(symbols, blockPrefix);
+            table->set_implementation_id(id);
+            if (isExternPropertyConstructedInPlace(tableDeclaration, implementationString)) {
+                addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
             }
         }
 
@@ -1041,31 +1132,44 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
                              decl->to<IR::IAnnotated>()};
     }
 
-    static constexpr int64_t defaultMaxGroupSize = 120;
-
     /// @return the action profile referenced in @table's implementation
     /// property, if it has one, or boost::none otherwise.
-    virtual boost::optional<ActionSelector>
+    boost::optional<ActionSelector>
     getActionSelector(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
-        using Helpers::getExternInstanceFromProperty;
-        auto instance =
-            getExternInstanceFromProperty(table, implementationString, refMap, typeMap);
-        if (!instance) return boost::none;
-        if (instance->type->name != "ActionSelector") return boost::none;
-        if (instance->substitution.lookupByName("size")) {
-            auto size = instance->substitution.lookupByName("size")->expression;
+        using BFN::getExternInstanceFromPropertyByTypeName;
+        auto action_selector = getExternInstanceFromPropertyByTypeName(
+            table, implementationString, "ActionSelector", refMap, typeMap);
+        if (!action_selector) return boost::none;
+        // TODO(hanw): remove legacy code
+        // used to support deprecated ActionSelector constructor.
+        if (action_selector->substitution.lookupByName("size")) {
+            auto size = action_selector->substitution.lookupByName("size")->expression;
             BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-            return ActionSelector{*instance->name,
+            return ActionSelector{*action_selector->name,
                                   boost::none,
                                   size->to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
-                                  getTableImplementationAnnotations(table, refMap)};
+                                  getTableImplementationAnnotations(table, refMap),
+                                  true /* _sel suffix */ };
         }
-        return boost::none;
+        auto maxGroupSize =
+            action_selector->substitution.lookupByName("max_group_size")->expression;
+        auto numGroups =
+            action_selector->substitution.lookupByName("num_groups")->expression;
+        // size is a bit<32> compile-time value
+        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
+        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
+        return ActionSelector{*action_selector->name,
+                              *action_selector->name,
+                              -1  /* size */,
+                              maxGroupSize->to<IR::Constant>()->asInt(),
+                              numGroups->to<IR::Constant>()->asInt(),
+                              getTableImplementationAnnotations(table, refMap),
+                              false /* _sel suffix */ };
     }
 
-    virtual boost::optional<ActionSelector>
+    boost::optional<ActionSelector>
     getActionSelector(const IR::ExternBlock* instance) {
         auto actionSelDecl = instance->node->to<IR::IDeclaration>();
         // to be deleted, used to support deprecated ActionSelector constructor.
@@ -1079,7 +1183,19 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
                                   size->to<IR::Constant>()->asInt(),
                                   actionSelDecl->to<IR::IAnnotated>()};
         }
-        return boost::none;
+        auto maxGroupSize = instance->getParameterValue("max_group_size");
+        auto numGroups = instance->getParameterValue("num_groups");
+        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
+        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
+        auto action_profile = instance->getParameterValue("action_profile");
+        auto action_profile_decl =
+            action_profile->to<IR::ExternBlock>()->node->to<IR::IDeclaration>();
+        return ActionSelector{actionSelDecl->controlPlaneName(),
+            cstring::to_cstring(action_profile_decl->controlPlaneName()),
+            -1  /* size */,
+            maxGroupSize->to<IR::Constant>()->asInt(),
+            numGroups->to<IR::Constant>()->asInt(),
+            actionSelDecl->to<IR::IAnnotated>()};
     }
 
     static p4configv1::Extern* getP4InfoExtern(P4RuntimeSymbolType typeId,
@@ -1289,17 +1405,28 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
                     actionSelectorName, actionSelector.annotations,
                     selector, p4Info);
         } else {
+            ::barefoot::ActionProfile profile;
+            profile.set_size(actionSelector.size);
             auto tablesIt = actionProfilesRefs.find(actionSelector.name);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto& table : tablesIt->second) {
                     cstring tableName = prefix(blockPrefix, table);
-                    auto tableSymbolId = symbols.getId(P4RuntimeSymbolType::TABLE(), tableName);
-                    selector.add_table_ids(tableSymbolId);
+                    profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
+                    selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
                 }
             }
 
+            // We use the ActionSelector name for the action profile, and add a "_sel" suffix for
+            // the action selector.
+            cstring profileName = actionSelectorName;
+            addP4InfoExternInstance(symbols, SymbolType::ACTION_PROFILE(), "ActionProfile",
+                    profileName, actionSelector.annotations, profile,
+                    p4Info);
+            selector.set_action_profile_id(symbols.getId(
+                        SymbolType::ACTION_PROFILE(), profileName));
+            cstring selectorName = profileName + "_sel";
             addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
-                    actionSelectorName, actionSelector.annotations,
+                    selectorName, actionSelector.annotations,
                     selector, p4Info);
         }
     }
@@ -1368,6 +1495,9 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
     std::unordered_set<cstring> colorAwareMeters;
 
     cstring implementationString;
+    cstring defaultPipeName = "pipe";
+
+    static constexpr int64_t defaultMaxGroupSize = 120;
 };
 
 /// Implements @ref BFRuntimeArchHandlerIface for the Tofino architecture. The
@@ -1507,99 +1637,10 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         }
     }
 
-    cstring getControlPlaneName(const IR::Block* block, const IR::IDeclaration *decl) override {
-        auto declName = decl ? decl->controlPlaneName() : "";
-        return getFullyQualifiedName(block, declName);
-    }
-
-    // Overridden function call from base ArchIFace class. Table blocks are
-    // added entirely in the frontend and this call ensures we have our own
-    // implementation of control plane name generation (with the pipe prefix).
-    // This is relevant in multi pipe scenarios where a table (its control) is
-    // shared across pipes and needs fully qualified unique names.
-    cstring getControlPlaneName(const IR::Block* block) override {
-        return getControlPlaneName(block, nullptr);
-    }
-
-    // Given a block get its block prefix (usually pipe name) generate in the
-    // blockNamePrefixMap and prefix it to the control plane name. This name is
-    // unique to the resource. For multi pipe scenarios this becomes relevant
-    // since a resource can be shared across pipes but need to be addressed by
-    // the control plane as separate resources.
-    // Note, in some cases like multiparser blocks, the parser names are always
-    // arch names since the instantiations are always anonymous. In such cases
-    // we skip the control plane name  [ DRV-2939 ]
-    // E.g.
-    // P4:
-    // IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipe0;
-    //  MultiParserPipeline(ig_pipe0, SwitchIngress(), SwitchIngressDeparser(),
-    //                      eg_pipe0, SwitchEgress(), SwitchEgressDeparser()) pipe0;
-    // BF-RT JSON : pipe0.ig_pipe0.prsr0
-    // CTXT JSON : ig_pipe0.prsr0
-    cstring getFullyQualifiedName(const IR::Block *block, const cstring name,
-                                                bool skip_control_plane_name = false) {
-        cstring block_name = "";
-        cstring control_plane_name = "";
-        cstring full_name = blockNamePrefixMap[block];
-        if (!skip_control_plane_name) {
-            if (auto cont = block->getContainer()) {
-                block_name = cont->getName();
-                control_plane_name = cont->controlPlaneName();
-                full_name = prefix(full_name, control_plane_name);
-            }
-        }
-        if (!name.isNullOrEmpty())
-            full_name = prefix(full_name, name);
-        LOG5("Block : " << block
-                << ", block_name: " << block_name
-                << ", block_name_prefix: " << blockNamePrefixMap[block]
-                << ", control_plane_name : " << control_plane_name
-                << ", name: "       << name
-                << ", fqname: "     << full_name);
-        return full_name;
-    }
-
-    void collectTableProperties(P4RuntimeSymbolTableIface* symbols,
-                                const IR::TableBlock* tableBlock) override {
-        CHECK_NULL(tableBlock);
-        bool isConstructedInPlace = false;
-
-        using BFN::getExternInstanceFromPropertyByTypeName;
-
-        {
-            // Only collect the symbol if the action profile / selector is
-            // constructed in place. Otherwise it will be collected by
-            // collectExternInstance, which will avoid duplicates.
-            auto table = tableBlock->container;
-            auto action_profile = getExternInstanceFromPropertyByTypeName(
-                table, implementationString, "ActionProfile",
-                refMap, typeMap, &isConstructedInPlace);
-            if (action_profile) {
-                cstring tableName = *action_profile->name;
-                if (blockNamePrefixMap.count(tableBlock) > 0)
-                    tableName = prefix(blockNamePrefixMap[tableBlock], tableName);
-                if (isConstructedInPlace)
-                    symbols->add(SymbolType::ACTION_PROFILE(), tableName);
-            }
-            auto action_selector = getExternInstanceFromPropertyByTypeName(
-                table, implementationString, "ActionSelector",
-                refMap, typeMap, &isConstructedInPlace);
-            if (action_selector) {
-                cstring tableName = *action_selector->name;
-                if (blockNamePrefixMap.count(tableBlock) > 0)
-                    tableName = prefix(blockNamePrefixMap[tableBlock], tableName);
-                if (action_selector->substitution.lookupByName("size")) {
-                    std::string selectorName(tableName + "_sel");
-                    symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
-                    symbols->add(SymbolType::ACTION_PROFILE(), tableName);
-                } else {
-                    symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
-                }
-            }
-        }
-        // In TNA direct counters / meters cannot be constructed in place in the
-        // table declaration because the count / execute method has to be
-        // called.
+    cstring getBlockNamePrefix(const IR::Block* blk) override {
+        if (blockNamePrefixMap.count(blk) > 0)
+            return blockNamePrefixMap[blk];
+        return "";
     }
 
     void collectExternInstance(P4RuntimeSymbolTableIface* symbols,
@@ -1615,15 +1656,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         if (decl == nullptr) return;
 
         auto symName = getControlPlaneName(externBlock, decl);
-        if (externBlock->type->name == "ActionSelector") {
-            if (externBlock->findParameterValue("size")) {
-                std::string selectorName(symName + "_sel");
-                symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
-                symbols->add(SymbolType::ACTION_PROFILE(), symName);
-            } else {
-                symbols->add(SymbolType::ACTION_SELECTOR(), symName);
-            }
-        } else if (externBlock->type->name == "Lpf") {
+        if (externBlock->type->name == "Lpf") {
             symbols->add(SymbolType::LPF(), symName);
         } else if (externBlock->type->name == "DirectLpf") {
             symbols->add(SymbolType::DIRECT_LPF(), symName);
@@ -2083,71 +2116,6 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         return boost::none;
     }
 
-    /// @return the action profile referenced in @table's implementation
-    /// property, if it has one, or boost::none otherwise.
-    boost::optional<ActionSelector>
-    getActionSelector(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) override {
-        using BFN::getExternInstanceFromPropertyByTypeName;
-        auto action_selector = getExternInstanceFromPropertyByTypeName(
-            table, implementationString, "ActionSelector", refMap, typeMap);
-        if (!action_selector) return boost::none;
-        // TODO(hanw): remove legacy code
-        // used to support deprecated ActionSelector constructor.
-        if (action_selector->substitution.lookupByName("size")) {
-            auto size = action_selector->substitution.lookupByName("size")->expression;
-            BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-            return ActionSelector{*action_selector->name,
-                                  boost::none,
-                                  size->to<IR::Constant>()->asInt(),
-                                  defaultMaxGroupSize,
-                                  size->to<IR::Constant>()->asInt(),
-                                  getTableImplementationAnnotations(table, refMap),
-                                  true /* _sel suffix */ };
-        }
-        auto maxGroupSize =
-            action_selector->substitution.lookupByName("max_group_size")->expression;
-        auto numGroups =
-            action_selector->substitution.lookupByName("num_groups")->expression;
-        // size is a bit<32> compile-time value
-        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
-        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
-        return ActionSelector{*action_selector->name,
-                              *action_selector->name,
-                              -1  /* size */,
-                              maxGroupSize->to<IR::Constant>()->asInt(),
-                              numGroups->to<IR::Constant>()->asInt(),
-                              getTableImplementationAnnotations(table, refMap),
-                              false /* _sel suffix */ };
-    }
-
-    boost::optional<ActionSelector>
-    getActionSelector(const IR::ExternBlock* instance) override {
-        auto actionSelDecl = instance->node->to<IR::IDeclaration>();
-        // to be deleted, used to support deprecated ActionSelector constructor.
-        if (instance->findParameterValue("size")) {
-            auto size = instance->getParameterValue("size");
-            BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-            return ActionSelector{actionSelDecl->controlPlaneName(),
-                                  boost::none,
-                                  size->to<IR::Constant>()->asInt(),
-                                  defaultMaxGroupSize,
-                                  size->to<IR::Constant>()->asInt(),
-                                  actionSelDecl->to<IR::IAnnotated>()};
-        }
-        auto maxGroupSize = instance->getParameterValue("max_group_size");
-        auto numGroups = instance->getParameterValue("num_groups");
-        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
-        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
-        auto action_profile = instance->getParameterValue("action_profile");
-        auto action_profile_decl =
-            action_profile->to<IR::ExternBlock>()->node->to<IR::IDeclaration>();
-        return ActionSelector{actionSelDecl->controlPlaneName(),
-            cstring::to_cstring(action_profile_decl->controlPlaneName()),
-            -1  /* size */,
-            maxGroupSize->to<IR::Constant>()->asInt(),
-            numGroups->to<IR::Constant>()->asInt(),
-            actionSelDecl->to<IR::IAnnotated>()};
-    }
 
     void addPortMetadata(const P4RuntimeSymbolTableIface& symbols,
                          p4configv1::P4Info* p4Info,
@@ -2260,54 +2228,6 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         }
     }
 
-    void addActionSelector(const P4RuntimeSymbolTableIface& symbols,
-                          p4configv1::P4Info* p4Info,
-                          const ActionSelector& actionSelector,
-                          cstring blockPrefix = "") override {
-        ::barefoot::ActionSelector selector;
-        selector.set_max_group_size(actionSelector.maxGroupSize);
-        selector.set_num_groups(actionSelector.numGroups);
-        cstring actionSelectorName = prefix(blockPrefix, actionSelector.name);
-        if (actionSelector.actionProfileName) {
-            selector.set_action_profile_id(symbols.getId(
-                SymbolType::ACTION_PROFILE(),
-                prefix(blockPrefix, *actionSelector.actionProfileName)));
-            auto tablesIt = actionProfilesRefs.find(actionSelector.name);
-            if (tablesIt != actionProfilesRefs.end()) {
-                for (const auto& table : tablesIt->second) {
-                    cstring tableName = prefix(blockPrefix, table);
-                    selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
-                }
-            }
-            addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
-                    actionSelectorName, actionSelector.annotations,
-                    selector, p4Info);
-        } else {  // TODO(hanw): legacy support, remove when everything has moved to new API
-            ::barefoot::ActionProfile profile;
-            profile.set_size(actionSelector.size);
-            auto tablesIt = actionProfilesRefs.find(actionSelector.name);
-            if (tablesIt != actionProfilesRefs.end()) {
-                for (const auto& table : tablesIt->second) {
-                    cstring tableName = prefix(blockPrefix, table);
-                    profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
-                    selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
-                }
-            }
-            // We use the ActionSelector name for the action profile, and add a "_sel" suffix for
-            // the action selector.
-            cstring profileName = actionSelectorName;
-            addP4InfoExternInstance(symbols, SymbolType::ACTION_PROFILE(), "ActionProfile",
-                    profileName, actionSelector.annotations, profile,
-                    p4Info);
-            selector.set_action_profile_id(symbols.getId(
-                SymbolType::ACTION_PROFILE(), profileName));
-            cstring selectorName = profileName + "_sel";
-            addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
-                    selectorName, actionSelector.annotations,
-                    selector, p4Info);
-        }
-    }
-
  private:
     /// The set of snapshots in the program.
     std::unordered_set<cstring> snapshots;
@@ -2381,54 +2301,12 @@ class BFRuntimeArchHandlerPSA final : public BFRuntimeArchHandlerCommon<Arch::PS
                             p4configv1::Table* table,
                             const IR::TableBlock* tableBlock) {
         CHECK_NULL(tableBlock);
-        addTablePropertiesCommon(symbols, p4info, table, tableBlock, "");
-    }
-
-    void collectTableProperties(P4RuntimeSymbolTableIface* symbols,
-                                const IR::TableBlock* tableBlock) override {
-         CHECK_NULL(tableBlock);
-         bool isConstructedInPlace = false;
-
-         using Helpers::getExternInstanceFromProperty;
-         {
-            // Only collect the symbol if the action profile / selector is
-            // constructed in place. Otherwise it will be collected by
-            // collectExternInstance, which will avoid duplicates.
-            auto table = tableBlock->container;
-            auto action_profile = getExternInstanceFromPropertyByTypeName(
-                table, implementationString, "ActionProfile",
-                refMap, typeMap, &isConstructedInPlace);
-            if (action_profile) {
-                cstring tableName = *action_profile->name;
-                if (isConstructedInPlace)
-                    symbols->add(SymbolType::ACTION_PROFILE(), tableName);
-            }
-            auto action_selector = getExternInstanceFromPropertyByTypeName(
-                table, implementationString, "ActionSelector",
-                refMap, typeMap, &isConstructedInPlace);
-            if (action_selector) {
-                cstring tableName = *action_selector->name;
-                symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
-            }
-        }
+        addTablePropertiesCommon(symbols, p4info, table, tableBlock, defaultPipeName);
     }
 
     void collectExternInstance(P4RuntimeSymbolTableIface* symbols,
                                const IR::ExternBlock* externBlock) override {
         collectExternInstanceCommon(symbols, externBlock);
-
-        CHECK_NULL(externBlock);
-
-        auto decl = externBlock->node->to<IR::IDeclaration>();
-        // Skip externs instantiated inside table declarations (as properties);
-        // that should only apply to action profiles / selectors since direct
-        // resources cannot be constructed in place for TNA.
-        if (decl == nullptr) return;
-
-        auto symName = decl->controlPlaneName();
-        if (externBlock->type->name == "ActionSelector") {
-           symbols->add(SymbolType::ACTION_SELECTOR(), symName);
-        }
     }
 
     void collectExternFunction(P4RuntimeSymbolTableIface*,
@@ -2438,7 +2316,7 @@ class BFRuntimeArchHandlerPSA final : public BFRuntimeArchHandlerCommon<Arch::PS
     void addExternInstance(const P4RuntimeSymbolTableIface& symbols,
                            p4configv1::P4Info* p4info,
                            const IR::ExternBlock* externBlock) {
-        addExternInstanceCommon(symbols, p4info, externBlock);
+        addExternInstanceCommon(symbols, p4info, externBlock, defaultPipeName);
     }
 
     void addExternFunction(const P4RuntimeSymbolTableIface&,

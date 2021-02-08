@@ -11,6 +11,7 @@
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/arch/rewrite_action_selector.h"
 #include "rewrite_bridge_metadata.h"
 
 namespace BFN {
@@ -982,6 +983,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::RewritePacketPath(refMap, typeMap, structure),
         new PSA::RewriteParserVerify(structure),
         new AddPsaBridgeMetadata(refMap, typeMap, structure),
+        new BFN::RewriteActionSelector(refMap, typeMap),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
