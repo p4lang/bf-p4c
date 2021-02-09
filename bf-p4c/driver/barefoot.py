@@ -622,7 +622,7 @@ class BarefootBackend(BackendDriver):
         # Note that we need to make a copy of the list
         self._commands['assembler'] = list(self._saved_assembler_params)
         # lookup the directory name. For P4-16, it is the output + pipe_name.
-        # This logging feature is enabled during the DEVELOPER mode 
+        # This logging feature is enabled during the DEVELOPER mode
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self.verbose == 3:
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(dirname))
@@ -676,6 +676,8 @@ class BarefootBackend(BackendDriver):
             self.add_command_option('summary_logging', "--disable-phv-json")
             if pipe.get('power_json', False):
                 self.add_command_option('summary_logging', "-p {}".format(pipe['power_json']))
+            manifest_filename = "{}/manifest.json".format(self._output_directory)
+            self.add_command_option('summary_logging', "-m {}".format(manifest_filename))
             rc = self.checkAndRunCmd('summary_logging')
             # and now remove the arguments added so that the next pipe is correct
             del self._commands['summary_logging'][1:]
@@ -739,7 +741,7 @@ class BarefootBackend(BackendDriver):
 
     def aggregate_deparser_resources_json(self,pipe):
         """
-        This method joins together all files from the p4c-barefoot and 
+        This method joins together all files from the p4c-barefoot and
         assembler generator.
 
         Parameters:
@@ -756,14 +758,14 @@ class BarefootBackend(BackendDriver):
 
         if not(os.path.exists(resources_file)) or not(os.path.exists(deparser_file)):
             # Any of required files doesn't exist
-            return 
+            return
 
         # So far so good, open both files and add the bf-asm file to the resources
         # file under deparser node
         resources_json = open(resources_file,"r+")
         deparser_json = open(deparser_file,"r")
 
-        # Append the deparer node to the output 
+        # Append the deparer node to the output
         deparser_data = json.load(deparser_json)
         resources_data = json.load(resources_json)
         resources_data["resources"]["deparser"] = deparser_data
@@ -804,6 +806,8 @@ class BarefootBackend(BackendDriver):
                 for pipe in self._pipes:
                     if run_summary_logs and pipe.get('context', False):  # context.json is required
                         # ignore the return code -- we may have failed generating some logs.
+                        # update manifest to export compilation time before runSummaryLogging is executed
+                        self.updateManifest(os.path.join(self._output_directory, 'manifest.json'), False)
                         self.runSummaryLogging(pipe)
                 self.updateManifest(os.path.join(self._output_directory, 'manifest.json'), False)
                 if run_cleaner: self.runCleaner()
@@ -870,6 +874,8 @@ class BarefootBackend(BackendDriver):
 
                 if run_summary_logs and rc_ver == 0:
                     if pipe.get('context', False):  # context.json is required
+                        # update manifest to export compilation time before runSummaryLogging is executed
+                        self.updateManifest(os.path.join(self._output_directory, 'manifest.json'), False)
                         rc += self.runSummaryLogging(pipe)
 
                 rc += rc_ver

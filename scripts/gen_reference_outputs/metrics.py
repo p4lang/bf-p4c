@@ -5,6 +5,19 @@ import sys
 from collections import OrderedDict
 from prettytable import PrettyTable
 
+# Convert value to int or float number
+def convert_to_number(value):
+    if isinstance(value, int):
+        # integer
+        return value
+    else:
+        # assume string/float
+        try:
+            # float
+            return round(float(value), 1)
+        except:
+            # other string
+            return 0.0  # 0 represents no value, compare/delta result will be 0 (i.e. PASS)
 
 def get_metric(metrics_info, metric):
     cum_metric = 0
@@ -13,10 +26,7 @@ def get_metric(metrics_info, metric):
         for sub_info in metrics_info:
             # Check if the metric has sub info and accumulate
             if metric in sub_info and isinstance(sub_info, dict):
-                if isinstance(sub_info[metric], int):
-                    cum_metric += sub_info[metric]
-                else:
-                    cum_metric += round(float(sub_info[metric]), 1)
+                cum_metric += convert_to_number(sub_info[metric])
                 if not is_cumulative:
                     is_cumulative = True
         # If the metric has sub-fields but not cumulative
@@ -59,7 +69,7 @@ class Metric:
     # Need to find a better way to specialize this (for not it works)
     def process(self, dump):
         if len(self.path) < 2:
-            tmp = dump[self.path[0]]
+            tmp = convert_to_number(dump[self.path[0]])
         else:
             tmp = dump[self.path[0]][self.path[1]]
             if not isinstance(tmp, int) and len(tmp) > 0:
@@ -98,6 +108,7 @@ class CoreMetrics():
         self.metrics['mau_power'] = Metric('MAU power estimate', ('mau', 'power', 'estimate'), limit = 10.0)
         self.metrics['parser_ingress_tcam_rows'] = Metric('Parser ingress tcam rows', ('parser', 'ingress', 'tcam_rows'), limit = 10.0)
         self.metrics['parser_egress_tcam_rows'] = Metric('Parser egress tcam rows', ('parser', 'egress', 'tcam_rows'), limit = 10.0)
+        self.metrics['compilation_time'] = Metric('Compilation time', ('compilation_time', ), limit = 20.0)
 
     def display(self):
         dt = PrettyTable(['Metric', 'Value'])
