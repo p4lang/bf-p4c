@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -26,7 +26,6 @@
 @pa_mutually_exclusive("egress" , "Jayton.Makawao.Oriskany" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Loring" , "Millstone.Mickleton.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Loring" , "Jayton.Makawao.Oriskany")
-@pa_mutually_exclusive("ingress" , "lbMd.dip" , "lbMd.dip6")
 @pa_container_size("ingress" , "Millstone.Guion.Etter" , 32)
 @pa_container_size("ingress" , "Millstone.Mickleton.Hiland" , 32)
 @pa_container_size("ingress" , "Millstone.Mickleton.Orrick" , 32)
@@ -192,12 +191,12 @@ struct Blitchton {
 @flexible struct Glassboro {
     bit<24> Grabill;
     bit<24> Moorcroft;
-    bit<12> Toklat;
+    bit<16> Toklat;
     bit<20> Bledsoe;
 }
 
 @flexible struct Blencoe {
-    bit<12>  Toklat;
+    bit<16>  Toklat;
     bit<24>  Grabill;
     bit<24>  Moorcroft;
     bit<32>  AquaPark;
@@ -289,8 +288,8 @@ header Hackett {
     bit<10> Calcasieu;
     bit<4>  Levittown;
     bit<12> Maryhill;
-    bit<2>  Norwood;
     bit<2>  Dassel;
+    bit<2>  Norwood;
     bit<12> Bushland;
     bit<8>  Loring;
     bit<2>  Suwannee;
@@ -523,7 +522,7 @@ header Denning {
     bit<16> Snowflake;
 }
 
-@flexible struct Montross {
+struct Montross {
     bit<10>  Glenmora;
     bit<16>  DonaAna;
     bit<16>  Altus;
@@ -992,8 +991,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Suwannee")
@@ -1009,8 +1008,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Galloway" , "Jayton.Mather.Suwannee")
@@ -1026,8 +1025,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Ankeny" , "Jayton.Mather.Suwannee")
@@ -1043,8 +1042,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Denhoff" , "Jayton.Mather.Suwannee")
@@ -1060,8 +1059,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Provo" , "Jayton.Mather.Suwannee")
@@ -1077,8 +1076,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Whitten" , "Jayton.Mather.Suwannee")
@@ -1094,8 +1093,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Beasley" , "Jayton.Mather.Suwannee")
@@ -1111,8 +1110,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Joslin" , "Jayton.Mather.Suwannee")
@@ -1128,8 +1127,8 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Calcasieu")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Levittown")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Maryhill")
-@pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Dassel")
+@pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Norwood")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Bushland")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Loring")
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Weyauwega" , "Jayton.Mather.Suwannee")
@@ -1201,21 +1200,6 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Maryhill" , "Jayton.Wesson.Findlay")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Maryhill" , "Jayton.Wesson.Dowell")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Maryhill" , "Jayton.Wesson.Glendevey")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Noyes")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Helton")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Grannis")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.StarLake")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Rains")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.SoapLake")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Linden")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Conner")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Ledoux")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Steger")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Weinert")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Quogue")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Findlay")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Dowell")
-@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Glendevey")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Dassel" , "Jayton.Wesson.Noyes")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Dassel" , "Jayton.Wesson.Helton")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Dassel" , "Jayton.Wesson.Grannis")
@@ -1231,6 +1215,21 @@ struct McCracken {
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Dassel" , "Jayton.Wesson.Findlay")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Dassel" , "Jayton.Wesson.Dowell")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Dassel" , "Jayton.Wesson.Glendevey")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Noyes")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Helton")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Grannis")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.StarLake")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Rains")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.SoapLake")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Linden")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Conner")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Ledoux")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Steger")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Weinert")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Quogue")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Findlay")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Dowell")
+@pa_mutually_exclusive("egress" , "Jayton.Mather.Norwood" , "Jayton.Wesson.Glendevey")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Bushland" , "Jayton.Wesson.Noyes")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Bushland" , "Jayton.Wesson.Helton")
 @pa_mutually_exclusive("egress" , "Jayton.Mather.Bushland" , "Jayton.Wesson.Grannis")
@@ -1451,7 +1450,7 @@ control Circle(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
 
 struct Longwood {
     bit<14> Pierceton;
-    bit<12> FortHunt;
+    bit<16> FortHunt;
     bit<1>  Hueytown;
     bit<2>  Yorkshire;
 }
@@ -1884,7 +1883,7 @@ parser Knights(packet_in Humeston, out Westbury Jayton, out McCracken Millstone,
             Longwood Ambler = port_metadata_unpack<Longwood>(Humeston);
             Millstone.Elkville.Hueytown = Ambler.Hueytown;
             Millstone.Elkville.Pierceton = Ambler.Pierceton;
-            Millstone.Elkville.FortHunt = Ambler.FortHunt;
+            Millstone.Elkville.FortHunt = (bit<12>)Ambler.FortHunt;
             Millstone.Elkville.LaLuz = Ambler.Yorkshire;
             Millstone.Astor.Corinth = Astor.ingress_port;
         }
@@ -1893,8 +1892,8 @@ parser Knights(packet_in Humeston, out Westbury Jayton, out McCracken Millstone,
 }
 
 control Olmitz(packet_out Humeston, inout Westbury Jayton, in McCracken Millstone, in ingress_intrinsic_metadata_for_deparser_t Alstown) {
-    @name(".Baker") Mirror() Baker;
     @name(".Glenoma") Digest<Glassboro>() Glenoma;
+    @name(".Baker") Mirror() Baker;
     apply {
         {
             if (Alstown.mirror_type == 3w1) {
@@ -1906,7 +1905,7 @@ control Olmitz(packet_out Humeston, inout Westbury Jayton, in McCracken Millston
         }
         {
             if (Alstown.digest_type == 3w1) {
-                Glenoma.pack({ Millstone.Guion.Grabill, Millstone.Guion.Moorcroft, Millstone.Guion.Toklat, Millstone.Guion.Bledsoe });
+                Glenoma.pack({ Millstone.Guion.Grabill, Millstone.Guion.Moorcroft, (bit<16>)Millstone.Guion.Toklat, Millstone.Guion.Bledsoe });
             }
         }
         Humeston.emit<Adona>(Jayton.Makawao);
@@ -2917,7 +2916,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         Millstone.Elkville.Hueytown = (bit<1>)1w1;
     }
     @name(".Standard") action Standard(bit<20> Oregon) {
-        Millstone.Guion.Toklat = Jayton.Ekron[0].Chevak;
+        Millstone.Guion.Toklat = (bit<12>)Jayton.Ekron[0].Chevak;
         Millstone.Guion.Bledsoe = Oregon;
     }
     @name(".Wolverine") action Wolverine(bit<32> Wentworth, bit<5> Tornillo, bit<4> Satolah) {
@@ -2939,7 +2938,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         Wolverine(Wentworth, Tornillo, Satolah);
     }
     @name(".Monse") action Monse(bit<32> Wentworth, bit<5> Tornillo, bit<4> Satolah, bit<16> Kaaawa) {
-        Millstone.Guion.Dandridge = Jayton.Ekron[0].Chevak;
+        Millstone.Guion.Dandridge = (bit<12>)Jayton.Ekron[0].Chevak;
         ElkMills(Kaaawa);
         Wolverine(Wentworth, Tornillo, Satolah);
     }
@@ -3256,14 +3255,14 @@ control Wakefield(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
     }
     @name(".Wakeman") action Wakeman() {
         Millstone.Guion.Lakehills = (bit<1>)Froid.execute();
-        Hohenwald.mcast_grp_a = (bit<16>)Millstone.Mickleton.Rockham + 16w4096;
-        Millstone.Guion.Nenana = (bit<1>)1w1;
         Millstone.Mickleton.McCammon = Millstone.Guion.Billings;
+        Millstone.Guion.Nenana = (bit<1>)1w1;
+        Hohenwald.mcast_grp_a = (bit<16>)Millstone.Mickleton.Rockham + 16w4096;
     }
     @name(".Chilson") action Chilson() {
         Millstone.Guion.Lakehills = (bit<1>)Froid.execute();
-        Hohenwald.mcast_grp_a = (bit<16>)Millstone.Mickleton.Rockham;
         Millstone.Mickleton.McCammon = Millstone.Guion.Billings;
+        Hohenwald.mcast_grp_a = (bit<16>)Millstone.Mickleton.Rockham;
     }
     @name(".Reynolds") action Reynolds(bit<20> Moose) {
         Millstone.Mickleton.Hiland = Moose;
@@ -4132,11 +4131,11 @@ control Waumandee(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
     }
     @name(".Amsterdam") action Amsterdam(bit<9> Sully, QueueId_t Ragley) {
         Estrella(Sully, Ragley);
-        Millstone.Guion.Toklat = Jayton.Ekron[0].Chevak;
+        Millstone.Guion.Toklat = (bit<12>)Jayton.Ekron[0].Chevak;
     }
     @name(".Gwynn") action Gwynn(QueueId_t Maury) {
         Luverne(Maury);
-        Millstone.Guion.Toklat = Jayton.Ekron[0].Chevak;
+        Millstone.Guion.Toklat = (bit<12>)Jayton.Ekron[0].Chevak;
     }
     @disable_atomic_modify(1) @name(".Rolla") table Rolla {
         actions = {
@@ -4302,11 +4301,11 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Millstone.Sumner.Uintah = Millstone.Sumner.Uintah + Thatcher;
         Millstone.Elvaston.Cuprum = Millstone.Elvaston.Cuprum & Archer;
     }
-    @name(".Virginia") action Virginia(bit<32> Pachuta, bit<16> Irvine, bit<16> Thatcher, bit<16> Archer, bit<16> Cornish) {
+    @name(".Virginia") action Virginia(bit<32> Pachuta, bit<16> Irvine, bit<16> Thatcher, bit<16> Archer) {
         Millstone.Mickleton.Pachuta = Pachuta;
         Silvertip(Irvine, Thatcher, Archer);
     }
-    @name(".Hatchel") action Hatchel(bit<32> Pachuta, bit<16> Irvine, bit<16> Thatcher, bit<16> Archer, bit<16> Cornish) {
+    @name(".Hatchel") action Hatchel(bit<32> Pachuta, bit<16> Irvine, bit<16> Thatcher, bit<16> Archer) {
         Millstone.Mickleton.Clover = Millstone.Mickleton.Barrow;
         Millstone.Mickleton.Pachuta = Pachuta;
         Silvertip(Irvine, Thatcher, Archer);
@@ -4372,10 +4371,7 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Mynard(Crystola, LasLomas);
         Jayton.Hallwood.Palmhurst = Jayton.Hallwood.Palmhurst - 8w1;
     }
-    @name(".Eudora") action Eudora() {
-        Mynard(Jayton.Baudette.Grabill, Jayton.Baudette.Moorcroft);
-    }
-    @name(".Buras") action Buras() {
+    @name(".Quamba") action Quamba() {
         Mynard(Jayton.Baudette.Grabill, Jayton.Baudette.Moorcroft);
     }
     @name(".Mantee") action Mantee() {
@@ -4431,31 +4427,6 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
     @name(".Nerstrand") action Nerstrand(bit<8> Weinert) {
         Jayton.Hallwood.Palmhurst = Jayton.Hallwood.Palmhurst + Weinert;
     }
-    @name(".Konnarock") action Konnarock() {
-        Deeth();
-    }
-    @name(".Tillicum") action Tillicum(bit<8> Loring) {
-        Walland(Loring);
-    }
-    @name(".Trail") action Trail(bit<24> Crystola, bit<24> LasLomas) {
-        Jayton.Gambrills.Lacona = Millstone.Mickleton.Lacona;
-        Jayton.Gambrills.Albemarle = Millstone.Mickleton.Albemarle;
-        Jayton.Gambrills.Grabill = Crystola;
-        Jayton.Gambrills.Moorcroft = LasLomas;
-        Jayton.Masontown.Lathrop = Jayton.Swisshome.Lathrop;
-        Jayton.Gambrills.setValid();
-        Jayton.Masontown.setValid();
-        Jayton.Baudette.setInvalid();
-        Jayton.Swisshome.setInvalid();
-    }
-    @name(".Magazine") action Magazine(bit<24> Crystola, bit<24> LasLomas) {
-        Trail(Crystola, LasLomas);
-        Jayton.Sequim.Weinert = Jayton.Sequim.Weinert - 8w1;
-    }
-    @name(".McDougal") action McDougal(bit<24> Crystola, bit<24> LasLomas) {
-        Trail(Crystola, LasLomas);
-        Jayton.Hallwood.Palmhurst = Jayton.Hallwood.Palmhurst - 8w1;
-    }
     @name(".Batchelor") action Batchelor(bit<16> Pilar, bit<16> Dundee, bit<24> Grabill, bit<24> Moorcroft, bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay) {
         Jayton.Baudette.Lacona = Millstone.Mickleton.Lacona;
         Jayton.Baudette.Albemarle = Millstone.Mickleton.Albemarle;
@@ -4480,15 +4451,6 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Jayton.Belmore.setValid();
         Jayton.Millhaven.setValid();
     }
-    @name(".Tunis") action Tunis(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
-        Batchelor(Jayton.Sequim.Rains, 16w30, Crystola, LasLomas, Crystola, LasLomas, RedBay);
-        Twichell(Jayton.Sequim.Rains, 16w50, Herring);
-    }
-    @name(".Pound") action Pound(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
-        Batchelor(Jayton.Hallwood.Turkey, 16w70, Crystola, LasLomas, Crystola, LasLomas, RedBay);
-        Twichell(Jayton.Hallwood.Turkey, 16w90, Herring);
-        Jayton.Hallwood.Palmhurst = Jayton.Hallwood.Palmhurst - 8w1;
-    }
     @name(".Oakley") action Oakley(bit<16> Pilar, bit<16> Ontonagon, bit<24> Grabill, bit<24> Moorcroft, bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay) {
         Jayton.Gambrills.setValid();
         Jayton.Masontown.setValid();
@@ -4501,18 +4463,6 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
     @name(".Ickesburg") action Ickesburg(bit<16> Pilar, bit<16> Ontonagon, bit<16> Tulalip, bit<24> Grabill, bit<24> Moorcroft, bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
         Oakley(Pilar, Ontonagon, Grabill, Moorcroft, Crystola, LasLomas, RedBay);
         Twichell(Pilar, Tulalip, Herring);
-    }
-    @name(".Olivet") action Olivet(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
-        Jayton.Wesson.setValid();
-        Ickesburg(Millstone.Sumner.Uintah, 16w12, 16w32, Jayton.Baudette.Grabill, Jayton.Baudette.Moorcroft, Crystola, LasLomas, RedBay, Herring);
-    }
-    @name(".Alnwick") action Alnwick(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
-        Edinburgh(8w255);
-        Ickesburg(Jayton.Sequim.Rains, 16w30, 16w50, Crystola, LasLomas, Crystola, LasLomas, RedBay, Herring);
-    }
-    @name(".Osakis") action Osakis(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
-        Nerstrand(8w255);
-        Ickesburg(Jayton.Hallwood.Turkey, 16w70, 16w90, Crystola, LasLomas, Crystola, LasLomas, RedBay, Herring);
     }
     @name(".Millett") action Millett(bit<16> Ferndale, int<16> Broadford, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven) {
         Jayton.Edgemont.setValid();
@@ -4533,11 +4483,19 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Oakley(Pilar, Ontonagon, Grabill, Moorcroft, Crystola, LasLomas, RedBay);
         Millett(Pilar, (int<16>)Overton, Kalida, Wallula, Dennison, Fairhaven);
     }
-    @name(".Karluk") action Karluk(bit<24> Crystola, bit<24> LasLomas, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven, bit<16> RedBay) {
+    @name(".Pettigrew") action Pettigrew(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
+        Edinburgh(8w255);
+        Ickesburg(Jayton.Sequim.Rains, 16w30, 16w50, Crystola, LasLomas, Crystola, LasLomas, RedBay, Herring);
+    }
+    @name(".Hartford") action Hartford(bit<24> Crystola, bit<24> LasLomas, bit<16> RedBay, bit<32> Herring) {
+        Batchelor(Jayton.Sequim.Rains, 16w30, Crystola, LasLomas, Crystola, LasLomas, RedBay);
+        Twichell(Jayton.Sequim.Rains, 16w50, Herring);
+    }
+    @name(".Halstead") action Halstead(bit<24> Crystola, bit<24> LasLomas, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven, bit<16> RedBay) {
         Nerstrand(8w255);
         Thistle(Jayton.Hallwood.Turkey, 16w70, 16w70, Crystola, LasLomas, Crystola, LasLomas, Kalida, Wallula, Dennison, Fairhaven, RedBay);
     }
-    @name(".Spindale") action Spindale(bit<24> Crystola, bit<24> LasLomas, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven, bit<16> RedBay) {
+    @name(".Draketown") action Draketown(bit<24> Crystola, bit<24> LasLomas, bit<32> Kalida, bit<32> Wallula, bit<32> Dennison, bit<32> Fairhaven, bit<16> RedBay) {
         Batchelor(Jayton.Hallwood.Turkey, 16w70, Crystola, LasLomas, Crystola, LasLomas, RedBay);
         Millett(Jayton.Hallwood.Turkey, 16s70, Kalida, Wallula, Dennison, Fairhaven);
     }
@@ -4593,27 +4551,19 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         actions = {
             Devola();
             Shevlin();
-            Eudora();
-            Buras();
+            Quamba();
             Mantee();
             Melrose();
             Angeles();
             Ammon();
-            Tillicum();
-            Konnarock();
-            Magazine();
-            McDougal();
-            Tunis();
-            Pound();
-            Alnwick();
-            Osakis();
-            Olivet();
-            Karluk();
-            Spindale();
+            Pettigrew();
+            Hartford();
+            Halstead();
+            Draketown();
             Deeth();
         }
         key = {
-            Millstone.Mickleton.Ipava                : exact @name("Mickleton.Ipava") ;
+            Millstone.Mickleton.Ipava                : ternary @name("Mickleton.Ipava") ;
             Millstone.Mickleton.Rudolph              : exact @name("Mickleton.Rudolph") ;
             Millstone.Mickleton.Whitefish            : exact @name("Mickleton.Whitefish") ;
             Jayton.Sequim.isValid()                  : ternary @name("Sequim") ;
@@ -4666,16 +4616,17 @@ control TenSleep(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
     }
     @name(".GlenDean") action GlenDean() {
         Nashwauk.count();
-        Alstown.drop_ctl = (bit<3>)3w1;
+        Alstown.drop_ctl = (bit<3>)3w3;
     }
     @name(".MoonRun") action MoonRun() {
         Hohenwald.copy_to_cpu = Hohenwald.copy_to_cpu | 1w0;
         GlenDean();
     }
     @name(".Calimesa") action Calimesa(bit<8> Loring) {
+        Nashwauk.count();
+        Alstown.drop_ctl = (bit<3>)3w1;
         Hohenwald.copy_to_cpu = (bit<1>)1w1;
         Millstone.Mickleton.Loring = Loring;
-        GlenDean();
     }
     @name(".Keller") DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) Keller;
     @name(".Elysburg") action Elysburg() {
@@ -5111,7 +5062,7 @@ control Skiatook(inout Westbury Jayton, inout McCracken Millstone, in egress_int
         Millstone.Mickleton.Onycha = (bit<1>)1w1;
     }
     @name(".Telegraph") action Telegraph() {
-        Millstone.Mickleton.Chevak = Millstone.Mickleton.Rockham;
+        Millstone.Mickleton.Chevak = (bit<12>)Millstone.Mickleton.Rockham;
         Millstone.Mickleton.Onycha = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Veradale") table Veradale {
@@ -5146,7 +5097,7 @@ control Parole(inout Westbury Jayton, inout McCracken Millstone, in egress_intri
     @name(".Morgana.Requa") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Morgana;
     @name(".Aquilla") action Aquilla() {
         bit<19> Franktown;
-        Franktown = Morgana.get<tuple<bit<9>, bit<12>>>({ Sumner.egress_port, Millstone.Mickleton.Rockham });
+        Franktown = Morgana.get<tuple<bit<9>, bit<12>>>({ Sumner.egress_port, (bit<12>)Millstone.Mickleton.Rockham });
         Millstone.BealCity.Monahans = Reading.execute((bit<32>)Franktown);
     }
     @name(".Sanatoga") Register<bit<1>, bit<32>>(32w294912, 1w0) Sanatoga;
@@ -5161,7 +5112,7 @@ control Parole(inout Westbury Jayton, inout McCracken Millstone, in egress_intri
     };
     @name(".Mulhall") action Mulhall() {
         bit<19> Franktown;
-        Franktown = Morgana.get<tuple<bit<9>, bit<12>>>({ Sumner.egress_port, Millstone.Mickleton.Rockham });
+        Franktown = Morgana.get<tuple<bit<9>, bit<12>>>({ Sumner.egress_port, (bit<12>)Millstone.Mickleton.Rockham });
         Millstone.BealCity.Pinole = Tocito.execute((bit<32>)Franktown);
     }
     @disable_atomic_modify(1) @name(".Okarche") table Okarche {
@@ -5976,8 +5927,8 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Jayton.Lindsborg.isValid(): ternary @name("Lindsborg") ;
             Jayton.Aniak.isValid()    : ternary @name("Aniak") ;
             Jayton.Daisytown.isValid(): ternary @name("Daisytown") ;
-            Jayton.Sequim.isValid()   : ternary @name("Sequim") ;
             Jayton.Hallwood.isValid() : ternary @name("Hallwood") ;
+            Jayton.Sequim.isValid()   : ternary @name("Sequim") ;
             Jayton.Baudette.isValid() : ternary @name("Baudette") ;
         }
         default_action = Starkey();

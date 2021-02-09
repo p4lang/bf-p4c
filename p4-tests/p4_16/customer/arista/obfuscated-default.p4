@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -261,12 +261,12 @@ struct Blitchton {
 @flexible struct Glassboro {
     bit<24> Grabill;
     bit<24> Moorcroft;
-    bit<12> Toklat;
+    bit<16> Toklat;
     bit<20> Bledsoe;
 }
 
 @flexible struct Blencoe {
-    bit<12>  Toklat;
+    bit<16>  Toklat;
     bit<24>  Grabill;
     bit<24>  Moorcroft;
     bit<32>  AquaPark;
@@ -371,8 +371,8 @@ header Ocoee {
     bit<10> Kaluaaha;
     bit<4>  Calcasieu;
     bit<12> Levittown;
-    bit<2>  Maryhill;
     bit<2>  Norwood;
+    bit<2>  Maryhill;
     bit<12> Dassel;
     bit<8>  Bushland;
     bit<2>  Loring;
@@ -1091,8 +1091,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Naruna" , "Crannell.Livonia.Loring")
@@ -1108,8 +1108,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Suttle" , "Crannell.Livonia.Loring")
@@ -1125,8 +1125,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Galloway" , "Crannell.Livonia.Loring")
@@ -1142,8 +1142,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Livonia.Loring")
@@ -1159,8 +1159,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Denhoff" , "Crannell.Livonia.Loring")
@@ -1176,8 +1176,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Provo" , "Crannell.Livonia.Loring")
@@ -1193,8 +1193,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Coalwood" , "Crannell.Livonia.Loring")
@@ -1210,8 +1210,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Whitten" , "Crannell.Livonia.Loring")
@@ -1227,8 +1227,8 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Calcasieu")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Levittown")
-@pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Norwood")
+@pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Maryhill")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Dassel")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Bushland")
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Joslin" , "Crannell.Livonia.Loring")
@@ -1300,21 +1300,6 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Levittown" , "Crannell.Hohenwald.Quogue")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Levittown" , "Crannell.Hohenwald.Findlay")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Levittown" , "Crannell.Hohenwald.Dowell")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Cornell")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Noyes")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Helton")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Grannis")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.StarLake")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Rains")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.SoapLake")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Linden")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Conner")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Ledoux")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Garibaldi")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Steger")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Quogue")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Findlay")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Dowell")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Hohenwald.Cornell")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Hohenwald.Noyes")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Hohenwald.Helton")
@@ -1330,6 +1315,21 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Hohenwald.Quogue")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Hohenwald.Findlay")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Hohenwald.Dowell")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Cornell")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Noyes")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Helton")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Grannis")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.StarLake")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Rains")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.SoapLake")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Linden")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Conner")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Ledoux")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Garibaldi")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Steger")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Quogue")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Findlay")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Hohenwald.Dowell")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Dassel" , "Crannell.Hohenwald.Cornell")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Dassel" , "Crannell.Hohenwald.Noyes")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Dassel" , "Crannell.Hohenwald.Helton")
@@ -1511,14 +1511,14 @@ struct Provencal {
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Levittown" , "Crannell.Greenland.Dunstable")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Levittown" , "Crannell.Greenland.Lowes")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Levittown" , "Crannell.Greenland.Aguilita")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Coalwood")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Dunstable")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Lowes")
-@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Aguilita")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Greenland.Coalwood")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Greenland.Dunstable")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Greenland.Lowes")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Norwood" , "Crannell.Greenland.Aguilita")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Coalwood")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Dunstable")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Lowes")
+@pa_mutually_exclusive("egress" , "Crannell.Livonia.Maryhill" , "Crannell.Greenland.Aguilita")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Dassel" , "Crannell.Greenland.Coalwood")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Dassel" , "Crannell.Greenland.Dunstable")
 @pa_mutually_exclusive("egress" , "Crannell.Livonia.Dassel" , "Crannell.Greenland.Lowes")
@@ -1616,7 +1616,7 @@ control Udall(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsic
 
 struct Magasco {
     bit<14> Pittsboro;
-    bit<12> Ericsburg;
+    bit<16> Ericsburg;
     bit<1>  Staunton;
     bit<2>  Twain;
 }
@@ -1930,7 +1930,7 @@ parser Boonsboro(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
             Magasco Peoria = port_metadata_unpack<Magasco>(Talco);
             Aniak.HillTop.Staunton = Peoria.Staunton;
             Aniak.HillTop.Pittsboro = Peoria.Pittsboro;
-            Aniak.HillTop.Ericsburg = Peoria.Ericsburg;
+            Aniak.HillTop.Ericsburg = (bit<12>)Peoria.Ericsburg;
             Aniak.HillTop.Lugert = Peoria.Twain;
             Aniak.Barnhill.Corinth = Barnhill.ingress_port;
         }
@@ -1939,8 +1939,8 @@ parser Boonsboro(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
 }
 
 control Frederika(packet_out Talco, inout Toluca Crannell, in Provencal Aniak, in ingress_intrinsic_metadata_for_deparser_t Lindsborg) {
-    @name(".Saugatuck") Mirror() Saugatuck;
     @name(".Flaherty") Digest<Glassboro>() Flaherty;
+    @name(".Saugatuck") Mirror() Saugatuck;
     @name(".Sunbury") Digest<Blencoe>() Sunbury;
     apply {
         {
@@ -1962,9 +1962,9 @@ control Frederika(packet_out Talco, inout Toluca Crannell, in Provencal Aniak, i
         }
         {
             if (Lindsborg.digest_type == 3w1) {
-                Flaherty.pack({ Aniak.Cassa.Grabill, Aniak.Cassa.Moorcroft, Aniak.Cassa.Toklat, Aniak.Cassa.Bledsoe });
+                Flaherty.pack({ Aniak.Cassa.Grabill, Aniak.Cassa.Moorcroft, (bit<16>)Aniak.Cassa.Toklat, Aniak.Cassa.Bledsoe });
             } else if (Lindsborg.digest_type == 3w2) {
-                Sunbury.pack({ Aniak.Cassa.Toklat, Crannell.Newhalem.Grabill, Crannell.Newhalem.Moorcroft, Crannell.Makawao.Findlay, Crannell.Mather.Findlay, Crannell.Westbury.Lathrop, Aniak.Cassa.Clyde, Aniak.Cassa.Clarion, Crannell.Millhaven.Aguilita });
+                Sunbury.pack({ (bit<16>)Aniak.Cassa.Toklat, Crannell.Newhalem.Grabill, Crannell.Newhalem.Moorcroft, Crannell.Makawao.Findlay, Crannell.Mather.Findlay, Crannell.Westbury.Lathrop, Aniak.Cassa.Clyde, Aniak.Cassa.Clarion, Crannell.Millhaven.Aguilita });
             }
         }
         Talco.emit<Adona>(Crannell.Goodwin);
@@ -2726,7 +2726,7 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Aniak.HillTop.Staunton = (bit<1>)1w1;
     }
     @name(".Cadwell") action Cadwell(bit<20> Mulvane) {
-        Aniak.Cassa.Toklat = Crannell.Hillsview[0].Spearman;
+        Aniak.Cassa.Toklat = (bit<12>)Crannell.Hillsview[0].Spearman;
         Aniak.Cassa.Bledsoe = Mulvane;
     }
     @name(".Boring") action Boring(bit<20> Bledsoe) {
@@ -2770,7 +2770,7 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Lattimore(Cheyenne, Bonduel, Sardinia);
     }
     @name(".Campo") action Campo(bit<32> Cheyenne, bit<8> Bonduel, bit<4> Sardinia, bit<16> Lapoint) {
-        Aniak.Cassa.Lordstown = Crannell.Hillsview[0].Spearman;
+        Aniak.Cassa.Lordstown = (bit<12>)Crannell.Hillsview[0].Spearman;
         Mogadore(Lapoint);
         Lattimore(Cheyenne, Bonduel, Sardinia);
     }
@@ -3163,14 +3163,14 @@ control Horatio(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
     }
     @name(".Sedona") action Sedona() {
         Aniak.Cassa.Wakita = (bit<1>)LaPlant.execute();
-        NantyGlo.mcast_grp_a = (bit<16>)Aniak.Rainelle.Ivyland + 16w4096;
-        Aniak.Cassa.Fairmount = (bit<1>)1w1;
         Aniak.Rainelle.Cardenas = Aniak.Cassa.Dandridge;
+        Aniak.Cassa.Fairmount = (bit<1>)1w1;
+        NantyGlo.mcast_grp_a = (bit<16>)Aniak.Rainelle.Ivyland + 16w4096;
     }
     @name(".Kotzebue") action Kotzebue() {
         Aniak.Cassa.Wakita = (bit<1>)LaPlant.execute();
-        NantyGlo.mcast_grp_a = (bit<16>)Aniak.Rainelle.Ivyland;
         Aniak.Rainelle.Cardenas = Aniak.Cassa.Dandridge;
+        NantyGlo.mcast_grp_a = (bit<16>)Aniak.Rainelle.Ivyland;
     }
     @name(".Felton") action Felton(bit<20> Sublett) {
         Aniak.Rainelle.Edgemoor = Sublett;
@@ -3838,7 +3838,7 @@ control Lovelady(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
         Crannell.Kamrar.Bonney = Aniak.Wildorado.Uintah + 16w15;
         Crannell.Eolia.Loris = (bit<16>)16w0;
         Crannell.Sumner.Tallassee = Tallassee;
-        Crannell.Sumner.Hampton = Aniak.Millston.Pinole | 16w0xc000;
+        Crannell.Sumner.Hampton = Tallassee;
         Crannell.Reidville.Chispa = ElMirage.execute(32w1);
         Crannell.Reidville.Bridgton = Minneota;
         Crannell.Reidville.Cassadaga[1:0] = Wildorado.egress_port[8:7];
@@ -4140,11 +4140,11 @@ control Addicks(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
     }
     @name(".Gardena") action Gardena(bit<9> Vananda, QueueId_t Yorklyn) {
         Gowanda(Vananda, Yorklyn);
-        Aniak.Cassa.Toklat = Crannell.Hillsview[0].Spearman;
+        Aniak.Cassa.Toklat = (bit<12>)Crannell.Hillsview[0].Spearman;
     }
     @name(".Verdery") action Verdery(QueueId_t Estero) {
         BurrOak(Estero);
-        Aniak.Cassa.Toklat = Crannell.Hillsview[0].Spearman;
+        Aniak.Cassa.Toklat = (bit<12>)Crannell.Hillsview[0].Spearman;
     }
     @disable_atomic_modify(1) @name(".Onamia") table Onamia {
         actions = {
@@ -4302,11 +4302,11 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Aniak.Wildorado.Uintah = Aniak.Wildorado.Uintah + Issaquah;
         Aniak.Millston.Pinole = Aniak.Millston.Pinole & Herring;
     }
-    @name(".Wattsburg") action Wattsburg(bit<32> Lecompte, bit<16> Tallassee, bit<16> Issaquah, bit<16> Herring, bit<16> DeBeque) {
+    @name(".Wattsburg") action Wattsburg(bit<32> Lecompte, bit<16> Tallassee, bit<16> Issaquah, bit<16> Herring) {
         Aniak.Rainelle.Lecompte = Lecompte;
         Encinitas(Tallassee, Issaquah, Herring);
     }
-    @name(".Truro") action Truro(bit<32> Lecompte, bit<16> Tallassee, bit<16> Issaquah, bit<16> Herring, bit<16> DeBeque) {
+    @name(".Truro") action Truro(bit<32> Lecompte, bit<16> Tallassee, bit<16> Issaquah, bit<16> Herring) {
         Aniak.Rainelle.Hiland = Aniak.Rainelle.Manilla;
         Aniak.Rainelle.Lecompte = Lecompte;
         Encinitas(Tallassee, Issaquah, Herring);
@@ -4373,10 +4373,7 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Clarkdale(Talbert, Brunson);
         Crannell.Mather.Riner = Crannell.Mather.Riner - 8w1;
     }
-    @name(".Caspian") action Caspian() {
-        Clarkdale(Crannell.Gastonia.Grabill, Crannell.Gastonia.Moorcroft);
-    }
-    @name(".Norridge") action Norridge() {
+    @name(".Dilia") action Dilia() {
         Clarkdale(Crannell.Gastonia.Grabill, Crannell.Gastonia.Moorcroft);
     }
     @name(".Lowemont") action Lowemont() {
@@ -4407,9 +4404,6 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Readsboro.Moorcroft = Brunson;
         Crannell.Astor.Lathrop = (bit<16>)16w0x800;
     }
-    @name(".Langford") action Langford(bit<8> Garibaldi) {
-        Crannell.Makawao.Garibaldi = Crannell.Makawao.Garibaldi + Garibaldi;
-    }
     @name(".Cowley") Random<bit<16>>() Cowley;
     @name(".Lackey") action Lackey(bit<16> Trion, bit<16> Baldridge, bit<32> Hagewood) {
         Crannell.Hohenwald.setValid();
@@ -4429,33 +4423,8 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Hohenwald.Dowell = Aniak.Rainelle.Hiland;
         Crannell.Astor.Lathrop = (bit<16>)16w0x800;
     }
-    @name(".Carlson") action Carlson(bit<8> Garibaldi) {
-        Crannell.Mather.Riner = Crannell.Mather.Riner + Garibaldi;
-    }
-    @name(".Ivanpah") action Ivanpah() {
-        Catlin();
-    }
     @name(".Kevil") action Kevil(bit<8> Bushland) {
         Wauregan(Bushland);
-    }
-    @name(".Newland") action Newland(bit<24> Talbert, bit<24> Brunson) {
-        Crannell.Readsboro.Horton = Aniak.Rainelle.Horton;
-        Crannell.Readsboro.Lacona = Aniak.Rainelle.Lacona;
-        Crannell.Readsboro.Grabill = Talbert;
-        Crannell.Readsboro.Moorcroft = Brunson;
-        Crannell.Astor.Lathrop = Crannell.Westbury.Lathrop;
-        Crannell.Readsboro.setValid();
-        Crannell.Astor.setValid();
-        Crannell.Gastonia.setInvalid();
-        Crannell.Westbury.setInvalid();
-    }
-    @name(".Waumandee") action Waumandee(bit<24> Talbert, bit<24> Brunson) {
-        Newland(Talbert, Brunson);
-        Crannell.Makawao.Garibaldi = Crannell.Makawao.Garibaldi - 8w1;
-    }
-    @name(".Nowlin") action Nowlin(bit<24> Talbert, bit<24> Brunson) {
-        Newland(Talbert, Brunson);
-        Crannell.Mather.Riner = Crannell.Mather.Riner - 8w1;
     }
     @name(".Sully") action Sully(bit<16> Bonney, bit<16> Ragley, bit<24> Grabill, bit<24> Moorcroft, bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton) {
         Crannell.Gastonia.Horton = Aniak.Rainelle.Horton;
@@ -4481,12 +4450,12 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Eolia.setValid();
         Crannell.Kamrar.setValid();
     }
-    @name(".Gunder") action Gunder(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
+    @name(".NewCity") action NewCity(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
         Sully(Crannell.Makawao.StarLake, 16w30, Talbert, Brunson, Talbert, Brunson, Dunkerton);
         Lackey(Crannell.Makawao.StarLake, 16w50, Hagewood);
         Crannell.Makawao.Garibaldi = Crannell.Makawao.Garibaldi - 8w1;
     }
-    @name(".Maury") action Maury(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
+    @name(".Richlawn") action Richlawn(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
         Sully(Crannell.Mather.Killen, 16w70, Talbert, Brunson, Talbert, Brunson, Dunkerton);
         Lackey(Crannell.Mather.Killen, 16w90, Hagewood);
         Crannell.Mather.Riner = Crannell.Mather.Riner - 8w1;
@@ -4507,14 +4476,6 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
     @name(".Gwynn") action Gwynn(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
         Crannell.Hohenwald.setValid();
         Luverne(Aniak.Wildorado.Uintah, 16w12, 16w32, Crannell.Gastonia.Grabill, Crannell.Gastonia.Moorcroft, Talbert, Brunson, Dunkerton, Hagewood);
-    }
-    @name(".Granville") action Granville(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
-        Langford(8w255);
-        Luverne(Crannell.Makawao.StarLake, 16w30, 16w50, Talbert, Brunson, Talbert, Brunson, Dunkerton, Hagewood);
-    }
-    @name(".Council") action Council(bit<24> Talbert, bit<24> Brunson, bit<16> Dunkerton, bit<32> Hagewood) {
-        Carlson(8w255);
-        Luverne(Crannell.Mather.Killen, 16w70, 16w90, Talbert, Brunson, Talbert, Brunson, Dunkerton, Hagewood);
     }
     @name(".Capitola") action Capitola() {
         Ihlen.drop_ctl = (bit<3>)3w7;
@@ -4568,25 +4529,19 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         actions = {
             Antoine();
             Romeo();
-            Caspian();
-            Norridge();
+            Dilia();
             Lowemont();
             CassCity();
             Sanborn();
             Kerby();
             Kevil();
-            Ivanpah();
-            Waumandee();
-            Nowlin();
-            Gunder();
-            Maury();
-            Granville();
-            Council();
+            NewCity();
+            Richlawn();
             Gwynn();
             Catlin();
         }
         key = {
-            Aniak.Rainelle.Madera                : exact @name("Rainelle.Madera") ;
+            Aniak.Rainelle.Madera                : ternary @name("Rainelle.Madera") ;
             Aniak.Rainelle.Quinhagak             : exact @name("Rainelle.Quinhagak") ;
             Aniak.Rainelle.Lenexa                : exact @name("Rainelle.Lenexa") ;
             Crannell.Makawao.isValid()           : ternary @name("Makawao") ;
@@ -4644,7 +4599,7 @@ control Bagwell(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
     }
     @name(".Murdock") action Murdock(bit<8> Netarts, bit<10> Pachuta) {
         Milltown.count();
-        Lindsborg.drop_ctl = (bit<3>)3w1;
+        Lindsborg.drop_ctl = (bit<3>)3w3;
         Aniak.Padonia.Netarts = Aniak.Padonia.Netarts | Netarts;
         Lindsborg.mirror_type = (bit<3>)3w5;
         Aniak.Mickleton.Pachuta = (bit<10>)Pachuta;
@@ -4654,21 +4609,26 @@ control Bagwell(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         Murdock(Netarts, Pachuta);
     }
     @name(".Cavalier") action Cavalier(bit<8> Netarts, bit<10> Pachuta) {
+        Milltown.count();
+        Lindsborg.drop_ctl = (bit<3>)3w1;
         NantyGlo.copy_to_cpu = (bit<1>)1w1;
-        Murdock(Netarts, Pachuta);
+        Aniak.Padonia.Netarts = Aniak.Padonia.Netarts | Netarts;
+        Lindsborg.mirror_type = (bit<3>)3w5;
+        Aniak.Mickleton.Pachuta = (bit<10>)Pachuta;
     }
     @name(".Alcoma") action Alcoma() {
         Milltown.count();
-        Lindsborg.drop_ctl = (bit<3>)3w1;
+        Lindsborg.drop_ctl = (bit<3>)3w3;
     }
     @name(".Kilbourne") action Kilbourne() {
         NantyGlo.copy_to_cpu = NantyGlo.copy_to_cpu | 1w0;
         Alcoma();
     }
     @name(".Bluff") action Bluff(bit<8> Bushland) {
+        Milltown.count();
+        Lindsborg.drop_ctl = (bit<3>)3w1;
         NantyGlo.copy_to_cpu = (bit<1>)1w1;
         Aniak.Rainelle.Bushland = Bushland;
-        Alcoma();
     }
     @disable_atomic_modify(1) @name(".Bedrock") table Bedrock {
         actions = {
@@ -5574,7 +5534,7 @@ control Minetto(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
         Aniak.Rainelle.Randall = (bit<1>)1w1;
     }
     @name(".Chandalar") action Chandalar() {
-        Aniak.Rainelle.Spearman = Aniak.Rainelle.Ivyland;
+        Aniak.Rainelle.Spearman = (bit<12>)Aniak.Rainelle.Ivyland;
         Aniak.Rainelle.Randall = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Bosco") table Bosco {
@@ -5610,7 +5570,7 @@ control Almeria(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
     @name(".Stovall.Requa") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Stovall;
     @name(".Haworth") action Haworth() {
         bit<19> Lewellen;
-        Lewellen = Stovall.get<tuple<bit<9>, bit<12>>>({ Wildorado.egress_port, Aniak.Rainelle.Ivyland });
+        Lewellen = Stovall.get<tuple<bit<9>, bit<12>>>({ Wildorado.egress_port, (bit<12>)Aniak.Rainelle.Ivyland });
         Aniak.Elvaston.LaConner = Idylside.execute((bit<32>)Lewellen);
     }
     @name(".BigArm") Register<bit<1>, bit<32>>(32w294912, 1w0) BigArm;
@@ -5625,7 +5585,7 @@ control Almeria(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
     };
     @name(".Gorum") action Gorum() {
         bit<19> Lewellen;
-        Lewellen = Stovall.get<tuple<bit<9>, bit<12>>>({ Wildorado.egress_port, Aniak.Rainelle.Ivyland });
+        Lewellen = Stovall.get<tuple<bit<9>, bit<12>>>({ Wildorado.egress_port, (bit<12>)Aniak.Rainelle.Ivyland });
         Aniak.Elvaston.McGrady = Talkeetna.execute((bit<32>)Lewellen);
     }
     @disable_atomic_modify(1) @name(".Quivero") table Quivero {
@@ -6169,8 +6129,8 @@ control Conejo(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
             Crannell.Baudette.isValid() : ternary @name("Baudette") ;
             Crannell.Newhalem.isValid() : ternary @name("Newhalem") ;
             Crannell.Gambrills.isValid(): ternary @name("Gambrills") ;
-            Crannell.Makawao.isValid()  : ternary @name("Makawao") ;
             Crannell.Mather.isValid()   : ternary @name("Mather") ;
+            Crannell.Makawao.isValid()  : ternary @name("Makawao") ;
             Crannell.Gastonia.isValid() : ternary @name("Gastonia") ;
         }
         default_action = Lemont();

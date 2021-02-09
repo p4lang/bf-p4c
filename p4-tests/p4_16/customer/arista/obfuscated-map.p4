@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -20,6 +20,7 @@
 @pa_alias("ingress" , "Twain.Hillsview.Fayette" , "Boonsboro.ElkNeck.Lecompte")
 @pa_alias("ingress" , "Twain.Hillsview.Osterdock" , "Boonsboro.ElkNeck.Tilton")
 @pa_alias("ingress" , "Twain.Hillsview.PineCity" , "Boonsboro.ElkNeck.Cardenas")
+@pa_alias("ingress" , "Twain.Hillsview.Anniston" , "Boonsboro.Baytown.McAllen")
 @pa_alias("ingress" , "Twain.Hillsview.Alameda" , "Boonsboro.Mickleton.LaLuz")
 @pa_alias("ingress" , "Twain.Hillsview.Quinwood" , "Boonsboro.McCracken.Toklat")
 @pa_alias("ingress" , "Twain.Hillsview.Marfa" , "Boonsboro.McCracken.Devers")
@@ -46,6 +47,7 @@
 @pa_alias("egress" , "Twain.Hillsview.Fayette" , "Boonsboro.ElkNeck.Lecompte")
 @pa_alias("egress" , "Twain.Hillsview.Osterdock" , "Boonsboro.ElkNeck.Tilton")
 @pa_alias("egress" , "Twain.Hillsview.PineCity" , "Boonsboro.ElkNeck.Cardenas")
+@pa_alias("egress" , "Twain.Hillsview.Anniston" , "Boonsboro.Baytown.McAllen")
 @pa_alias("egress" , "Twain.Hillsview.Alameda" , "Boonsboro.Mickleton.LaLuz")
 @pa_alias("egress" , "Twain.Hillsview.Rexville" , "Boonsboro.Readsboro.Florien")
 @pa_alias("egress" , "Twain.Hillsview.Quinwood" , "Boonsboro.McCracken.Toklat")
@@ -145,12 +147,12 @@ struct Blitchton {
 @flexible struct Glassboro {
     bit<24> Grabill;
     bit<24> Moorcroft;
-    bit<12> Toklat;
+    bit<16> Toklat;
     bit<20> Bledsoe;
 }
 
 @flexible struct Blencoe {
-    bit<12>  Toklat;
+    bit<16>  Toklat;
     bit<24>  Grabill;
     bit<24>  Moorcroft;
     bit<32>  AquaPark;
@@ -216,6 +218,8 @@ header Adona {
     @flexible 
     bit<32> PineCity;
     @flexible 
+    bit<1>  Anniston;
+    @flexible 
     bit<16> Alameda;
     @flexible 
     bit<3>  Rexville;
@@ -242,8 +246,8 @@ header Calcasieu {
     bit<10> Maryhill;
     bit<4>  Norwood;
     bit<12> Dassel;
-    bit<2>  Bushland;
     bit<2>  Loring;
+    bit<2>  Bushland;
     bit<12> Suwannee;
     bit<8>  Dugger;
     bit<2>  Laurelton;
@@ -907,8 +911,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Ankeny" , "Twain.Westbury.Laurelton")
@@ -924,8 +928,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Denhoff" , "Twain.Westbury.Laurelton")
@@ -941,8 +945,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Provo" , "Twain.Westbury.Laurelton")
@@ -958,8 +962,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Whitten" , "Twain.Westbury.Laurelton")
@@ -975,8 +979,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Joslin" , "Twain.Westbury.Laurelton")
@@ -992,8 +996,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Weyauwega" , "Twain.Westbury.Laurelton")
@@ -1009,8 +1013,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Bonney" , "Twain.Westbury.Laurelton")
@@ -1026,8 +1030,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Powderly" , "Twain.Westbury.Laurelton")
@@ -1043,8 +1047,8 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Maryhill")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Norwood")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Dassel")
-@pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Loring")
+@pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Bushland")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Suwannee")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Dugger")
 @pa_mutually_exclusive("egress" , "Twain.Masontown.Welcome" , "Twain.Westbury.Laurelton")
@@ -1116,21 +1120,6 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Dassel" , "Twain.Gambrills.Glendevey")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Dassel" , "Twain.Gambrills.Littleton")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Dassel" , "Twain.Gambrills.Killen")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Grannis")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.StarLake")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Rains")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.SoapLake")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Linden")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Conner")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Ledoux")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Steger")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Quogue")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Findlay")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Noyes")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Dowell")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Glendevey")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Littleton")
-@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Killen")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Loring" , "Twain.Gambrills.Grannis")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Loring" , "Twain.Gambrills.StarLake")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Loring" , "Twain.Gambrills.Rains")
@@ -1146,6 +1135,21 @@ struct Thaxton {
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Loring" , "Twain.Gambrills.Glendevey")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Loring" , "Twain.Gambrills.Littleton")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Loring" , "Twain.Gambrills.Killen")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Grannis")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.StarLake")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Rains")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.SoapLake")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Linden")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Conner")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Ledoux")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Steger")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Quogue")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Findlay")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Noyes")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Dowell")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Glendevey")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Littleton")
+@pa_mutually_exclusive("egress" , "Twain.Westbury.Bushland" , "Twain.Gambrills.Killen")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Suwannee" , "Twain.Gambrills.Grannis")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Suwannee" , "Twain.Gambrills.StarLake")
 @pa_mutually_exclusive("egress" , "Twain.Westbury.Suwannee" , "Twain.Gambrills.Rains")
@@ -1351,7 +1355,7 @@ control Magasco(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
 
 struct HighRock {
     bit<14> Tombstone;
-    bit<12> Subiaco;
+    bit<16> Subiaco;
     bit<1>  Marcus;
     bit<2>  WebbCity;
 }
@@ -1642,7 +1646,7 @@ parser Covert(packet_in Ekwok, out Gastonia Twain, out Thaxton Boonsboro, out in
             HighRock Wanamassa = port_metadata_unpack<HighRock>(Ekwok);
             Boonsboro.Mentone.Marcus = Wanamassa.Marcus;
             Boonsboro.Mentone.Tombstone = Wanamassa.Tombstone;
-            Boonsboro.Mentone.Subiaco = Wanamassa.Subiaco;
+            Boonsboro.Mentone.Subiaco = (bit<12>)Wanamassa.Subiaco;
             Boonsboro.Mentone.Pittsboro = Wanamassa.WebbCity;
             Boonsboro.Greenwood.Corinth = Greenwood.ingress_port;
         }
@@ -1651,8 +1655,8 @@ parser Covert(packet_in Ekwok, out Gastonia Twain, out Thaxton Boonsboro, out in
 }
 
 control Peoria(packet_out Ekwok, inout Gastonia Twain, in Thaxton Boonsboro, in ingress_intrinsic_metadata_for_deparser_t Terral) {
-    @name(".Frederika") Mirror() Frederika;
     @name(".Saugatuck") Digest<Glassboro>() Saugatuck;
+    @name(".Frederika") Mirror() Frederika;
     @name(".Picabo") Checksum() Picabo;
     apply {
         Twain.Sequim.Vinemont = Picabo.update<tuple<bit<32>, bit<32>, bit<128>, bit<128>, bit<16>>>({ Twain.Millhaven.Littleton, Twain.Millhaven.Killen, Twain.Newhalem.Littleton, Twain.Newhalem.Killen, Boonsboro.Sumner.Buckhorn }, false);
@@ -1666,7 +1670,7 @@ control Peoria(packet_out Ekwok, inout Gastonia Twain, in Thaxton Boonsboro, in 
         }
         {
             if (Terral.digest_type == 3w1) {
-                Saugatuck.pack({ Boonsboro.McCracken.Grabill, Boonsboro.McCracken.Moorcroft, Boonsboro.McCracken.Toklat, Boonsboro.McCracken.Bledsoe });
+                Saugatuck.pack({ Boonsboro.McCracken.Grabill, Boonsboro.McCracken.Moorcroft, (bit<16>)Boonsboro.McCracken.Toklat, Boonsboro.McCracken.Bledsoe });
             }
         }
         Ekwok.emit<Adona>(Twain.Hillsview);
@@ -2123,7 +2127,7 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Boonsboro.Mentone.Marcus = (bit<1>)1w1;
     }
     @name(".Hettinger") action Hettinger(bit<20> Boyle) {
-        Boonsboro.McCracken.Toklat = Twain.Yerington[0].Eldred;
+        Boonsboro.McCracken.Toklat = (bit<12>)Twain.Yerington[0].Eldred;
         Boonsboro.McCracken.Bledsoe = Boyle;
     }
     @name(".Coryville") action Coryville(bit<32> Bellamy, bit<8> Foster, bit<4> Raiford) {
@@ -2145,7 +2149,7 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Coryville(Bellamy, Foster, Raiford);
     }
     @name(".Ossining") action Ossining(bit<32> Bellamy, bit<8> Foster, bit<4> Raiford, bit<16> Orrick) {
-        Boonsboro.McCracken.Devers = Twain.Yerington[0].Eldred;
+        Boonsboro.McCracken.Devers = (bit<12>)Twain.Yerington[0].Eldred;
         Tularosa(Orrick);
         Coryville(Bellamy, Foster, Raiford);
     }
@@ -2487,14 +2491,14 @@ control Cairo(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrinsi
     }
     @name(".Yulee") action Yulee() {
         Boonsboro.McCracken.Dandridge = (bit<1>)Baranof.execute();
-        Readsboro.mcast_grp_a = (bit<16>)Boonsboro.ElkNeck.Scarville + 16w4096;
-        Boonsboro.McCracken.Buckfield = (bit<1>)1w1;
         Boonsboro.ElkNeck.Madera = Boonsboro.McCracken.Wilmore;
+        Boonsboro.McCracken.Buckfield = (bit<1>)1w1;
+        Readsboro.mcast_grp_a = (bit<16>)Boonsboro.ElkNeck.Scarville + 16w4096;
     }
     @name(".Oconee") action Oconee() {
         Boonsboro.McCracken.Dandridge = (bit<1>)Baranof.execute();
-        Readsboro.mcast_grp_a = (bit<16>)Boonsboro.ElkNeck.Scarville;
         Boonsboro.ElkNeck.Madera = Boonsboro.McCracken.Wilmore;
+        Readsboro.mcast_grp_a = (bit<16>)Boonsboro.ElkNeck.Scarville;
     }
     @name(".Salitpa") action Salitpa(bit<20> Aldan) {
         Boonsboro.ElkNeck.Ivyland = Aldan;
@@ -3324,11 +3328,11 @@ control Mendoza(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
     }
     @name(".Beeler") action Beeler(bit<9> DeRidder, QueueId_t Bechyn) {
         Tulsa(DeRidder, Bechyn);
-        Boonsboro.McCracken.Toklat = Twain.Yerington[0].Eldred;
+        Boonsboro.McCracken.Toklat = (bit<12>)Twain.Yerington[0].Eldred;
     }
     @name(".Slinger") action Slinger(QueueId_t Pocopson) {
         Cropper(Pocopson);
-        Boonsboro.McCracken.Toklat = Twain.Yerington[0].Eldred;
+        Boonsboro.McCracken.Toklat = (bit<12>)Twain.Yerington[0].Eldred;
     }
     @disable_atomic_modify(1) @name(".Lovelady") table Lovelady {
         actions = {
@@ -3431,11 +3435,11 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
         Boonsboro.Astor.Uintah = Boonsboro.Astor.Uintah + Lynne;
         Boonsboro.Mickleton.LaLuz = Boonsboro.Mickleton.LaLuz & OldTown;
     }
-    @name(".Govan") action Govan(bit<32> Whitewood, bit<16> Kendrick, bit<16> Lynne, bit<16> OldTown, bit<16> Gladys) {
+    @name(".Govan") action Govan(bit<32> Whitewood, bit<16> Kendrick, bit<16> Lynne, bit<16> OldTown) {
         Boonsboro.ElkNeck.Whitewood = Whitewood;
         Mondovi(Kendrick, Lynne, OldTown);
     }
-    @name(".Rumson") action Rumson(bit<32> Whitewood, bit<16> Kendrick, bit<16> Lynne, bit<16> OldTown, bit<16> Gladys) {
+    @name(".Rumson") action Rumson(bit<32> Whitewood, bit<16> Kendrick, bit<16> Lynne, bit<16> OldTown) {
         Boonsboro.ElkNeck.Rudolph = Boonsboro.ElkNeck.Bufalo;
         Boonsboro.ElkNeck.Whitewood = Whitewood;
         Mondovi(Kendrick, Lynne, OldTown);
@@ -3501,10 +3505,7 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
         Kingman(Lyman, BirchRun);
         Twain.Newhalem.Kalida = Twain.Newhalem.Kalida - 8w1;
     }
-    @name(".Woolwine") action Woolwine() {
-        Kingman(Twain.Wesson.Grabill, Twain.Wesson.Moorcroft);
-    }
-    @name(".Agawam") action Agawam() {
+    @name(".Conklin") action Conklin() {
         Kingman(Twain.Wesson.Grabill, Twain.Wesson.Moorcroft);
     }
     @name(".Berlin") action Berlin() {
@@ -3587,8 +3588,7 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
         actions = {
             Owentown();
             Basye();
-            Woolwine();
-            Agawam();
+            Conklin();
             Berlin();
             Astatula();
             Brinson();
@@ -3596,7 +3596,7 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
             Portales();
         }
         key = {
-            Boonsboro.ElkNeck.Panaca                : exact @name("ElkNeck.Panaca") ;
+            Boonsboro.ElkNeck.Panaca                : ternary @name("ElkNeck.Panaca") ;
             Boonsboro.ElkNeck.DeGraff               : exact @name("ElkNeck.DeGraff") ;
             Boonsboro.ElkNeck.Tilton                : exact @name("ElkNeck.Tilton") ;
             Twain.Millhaven.isValid()               : ternary @name("Millhaven") ;
@@ -3649,16 +3649,17 @@ control Estero(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrins
     }
     @name(".Gardena") action Gardena() {
         Inkom.count();
-        Terral.drop_ctl = (bit<3>)3w1;
+        Terral.drop_ctl = (bit<3>)3w3;
     }
     @name(".Verdery") action Verdery() {
         Readsboro.copy_to_cpu = Readsboro.copy_to_cpu | 1w0;
         Gardena();
     }
     @name(".Onamia") action Onamia(bit<8> Dugger) {
+        Inkom.count();
+        Terral.drop_ctl = (bit<3>)3w1;
         Readsboro.copy_to_cpu = (bit<1>)1w1;
         Boonsboro.ElkNeck.Dugger = Dugger;
-        Gardena();
     }
     @disable_atomic_modify(1) @name(".Brule") table Brule {
         actions = {
@@ -4027,7 +4028,7 @@ control Langford(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrin
         Boonsboro.ElkNeck.Soledad = (bit<1>)1w1;
     }
     @name(".Trion") action Trion() {
-        Boonsboro.ElkNeck.Eldred = Boonsboro.ElkNeck.Scarville;
+        Boonsboro.ElkNeck.Eldred = (bit<12>)Boonsboro.ElkNeck.Scarville;
         Boonsboro.ElkNeck.Soledad = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Baldridge") table Baldridge {
@@ -4062,7 +4063,7 @@ control Carlson(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrins
     @name(".Newland.Requa") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Newland;
     @name(".Waumandee") action Waumandee() {
         bit<19> Micro;
-        Micro = Newland.get<tuple<bit<9>, bit<12>>>({ Astor.egress_port, Boonsboro.ElkNeck.Scarville });
+        Micro = Newland.get<tuple<bit<9>, bit<12>>>({ Astor.egress_port, (bit<12>)Boonsboro.ElkNeck.Scarville });
         Boonsboro.Lynch.Staunton = Kevil.execute((bit<32>)Micro);
     }
     @name(".Nowlin") Register<bit<1>, bit<32>>(32w294912, 1w0) Nowlin;
@@ -4077,7 +4078,7 @@ control Carlson(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrins
     };
     @name(".Ragley") action Ragley() {
         bit<19> Micro;
-        Micro = Newland.get<tuple<bit<9>, bit<12>>>({ Astor.egress_port, Boonsboro.ElkNeck.Scarville });
+        Micro = Newland.get<tuple<bit<9>, bit<12>>>({ Astor.egress_port, (bit<12>)Boonsboro.ElkNeck.Scarville });
         Boonsboro.Lynch.Lugert = Sully.execute((bit<32>)Micro);
     }
     @disable_atomic_modify(1) @name(".Dunkerton") table Dunkerton {
@@ -4119,6 +4120,7 @@ control Maury(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsic
             Astor.egress_port & 9w0x7f: exact @name("Astor.Matheson") ;
             Boonsboro.Lynch.Lugert    : ternary @name("Lynch.Lugert") ;
             Boonsboro.Lynch.Staunton  : ternary @name("Lynch.Staunton") ;
+            Boonsboro.ElkNeck.Lenexa  : ternary @name("ElkNeck.Lenexa") ;
             Twain.Millhaven.Noyes     : ternary @name("Millhaven.Noyes") ;
             Twain.Millhaven.isValid() : ternary @name("Millhaven") ;
             Boonsboro.ElkNeck.Tilton  : ternary @name("ElkNeck.Tilton") ;
@@ -4146,6 +4148,88 @@ control Rolla(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsic
 
 control Brookwood(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsic_metadata_t Astor, in egress_intrinsic_metadata_from_parser_t Horatio, inout egress_intrinsic_metadata_for_deparser_t Rives, inout egress_intrinsic_metadata_for_output_port_t Sedona) {
     apply {
+    }
+}
+
+control Mocane(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsic_metadata_t Astor, in egress_intrinsic_metadata_from_parser_t Horatio, inout egress_intrinsic_metadata_for_deparser_t Rives, inout egress_intrinsic_metadata_for_output_port_t Sedona) {
+    @name(".Humble") action Humble(bit<8> Darien) {
+        Boonsboro.Sanford.Darien = Darien;
+        Boonsboro.ElkNeck.Lenexa = (bit<3>)3w0;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Nashua") table Nashua {
+        actions = {
+            Humble();
+        }
+        key = {
+            Boonsboro.ElkNeck.Tilton   : exact @name("ElkNeck.Tilton") ;
+            Twain.Newhalem.isValid()   : exact @name("Newhalem") ;
+            Twain.Millhaven.isValid()  : exact @name("Millhaven") ;
+            Boonsboro.ElkNeck.Scarville: exact @name("ElkNeck.Scarville") ;
+        }
+        default_action = Humble(8w0);
+        size = 8192;
+    }
+    apply {
+        Nashua.apply();
+    }
+}
+
+control Skokomish(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsic_metadata_t Astor, in egress_intrinsic_metadata_from_parser_t Horatio, inout egress_intrinsic_metadata_for_deparser_t Rives, inout egress_intrinsic_metadata_for_output_port_t Sedona) {
+    @name(".Freetown") DirectCounter<bit<64>>(CounterType_t.PACKETS) Freetown;
+    @name(".Slick") action Slick(bit<3> Commack) {
+        Freetown.count();
+        Boonsboro.ElkNeck.Lenexa = Commack;
+    }
+    @ignore_table_dependency(".Parmele") @ignore_table_dependency(".Botna") @disable_atomic_modify(1) @name(".Lansdale") table Lansdale {
+        key = {
+            Boonsboro.Sanford.Darien : ternary @name("Sanford.Darien") ;
+            Twain.Millhaven.Littleton: ternary @name("Millhaven.Littleton") ;
+            Twain.Millhaven.Killen   : ternary @name("Millhaven.Killen") ;
+            Twain.Millhaven.Dowell   : ternary @name("Millhaven.Dowell") ;
+            Twain.Baudette.Antlers   : ternary @name("Baudette.Antlers") ;
+            Twain.Baudette.Kendrick  : ternary @name("Baudette.Kendrick") ;
+            Twain.Swisshome.Bonney   : ternary @name("Swisshome.Bonney") ;
+            Boonsboro.Baytown.McAllen: ternary @name("Baytown.McAllen") ;
+        }
+        actions = {
+            Slick();
+            @defaultonly NoAction();
+        }
+        counters = Freetown;
+        size = 2048;
+        default_action = NoAction();
+    }
+    apply {
+        Lansdale.apply();
+    }
+}
+
+control Rardin(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsic_metadata_t Astor, in egress_intrinsic_metadata_from_parser_t Horatio, inout egress_intrinsic_metadata_for_deparser_t Rives, inout egress_intrinsic_metadata_for_output_port_t Sedona) {
+    @name(".Blackwood") DirectCounter<bit<64>>(CounterType_t.PACKETS) Blackwood;
+    @name(".Slick") action Slick(bit<3> Commack) {
+        Blackwood.count();
+        Boonsboro.ElkNeck.Lenexa = Commack;
+    }
+    @ignore_table_dependency(".Lansdale") @ignore_table_dependency("Botna") @disable_atomic_modify(1) @name(".Parmele") table Parmele {
+        key = {
+            Boonsboro.Sanford.Darien: ternary @name("Sanford.Darien") ;
+            Twain.Newhalem.Littleton: ternary @name("Newhalem.Littleton") ;
+            Twain.Newhalem.Killen   : ternary @name("Newhalem.Killen") ;
+            Twain.Newhalem.Comfrey  : ternary @name("Newhalem.Comfrey") ;
+            Twain.Baudette.Antlers  : ternary @name("Baudette.Antlers") ;
+            Twain.Baudette.Kendrick : ternary @name("Baudette.Kendrick") ;
+            Twain.Swisshome.Bonney  : ternary @name("Swisshome.Bonney") ;
+        }
+        actions = {
+            Slick();
+            @defaultonly NoAction();
+        }
+        counters = Blackwood;
+        size = 2048;
+        default_action = NoAction();
+    }
+    apply {
+        Parmele.apply();
     }
 }
 
@@ -4950,8 +5034,8 @@ control Burmester(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intr
             Twain.Hallwood.isValid() : ternary @name("Hallwood") ;
             Twain.Empire.isValid()   : ternary @name("Empire") ;
             Twain.Baudette.isValid() : ternary @name("Baudette") ;
-            Twain.Millhaven.isValid(): ternary @name("Millhaven") ;
             Twain.Newhalem.isValid() : ternary @name("Newhalem") ;
+            Twain.Millhaven.isValid(): ternary @name("Millhaven") ;
             Twain.Wesson.isValid()   : ternary @name("Wesson") ;
         }
         default_action = Sedan();
@@ -5155,6 +5239,7 @@ control Marvin(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
     @name(".Conejo") Islen() Conejo;
     @name(".Nordheim") Maury() Nordheim;
     @name(".Canton") Brookwood() Canton;
+    @name(".Easley") Mocane() Easley;
     @name(".Hodges") Carlson() Hodges;
     @name(".Rendon") Langford() Rendon;
     @name(".Northboro") Granville() Northboro;
@@ -5178,6 +5263,8 @@ control Marvin(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
     @name(".Decorah") Lebanon() Decorah;
     @name(".Waretown") Siloam() Waretown;
     @name(".Moxley") Palco() Moxley;
+    @name(".Rawson") Skokomish() Rawson;
+    @name(".Oakford") Rardin() Oakford;
     apply {
         {
         }
@@ -5189,6 +5276,7 @@ control Marvin(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
                 Lovett.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
                 Northboro.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
                 Conejo.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
+                Easley.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
                 if (Astor.egress_rid == 16w0 && !Twain.Westbury.isValid()) {
                     Naguabo.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
                 }
@@ -5209,6 +5297,12 @@ control Marvin(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
             if (Twain.Hillsview.isValid() == true && !Twain.Westbury.isValid()) {
                 Canton.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
                 Cruso.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
+                if (Twain.Newhalem.isValid()) {
+                    Oakford.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
+                }
+                if (Twain.Millhaven.isValid()) {
+                    Rawson.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
+                }
                 if (Boonsboro.ElkNeck.Panaca != 3w2 && Boonsboro.ElkNeck.Soledad == 1w0) {
                     Hodges.apply(Twain, Boonsboro, Astor, Horatio, Rives, Sedona);
                 }

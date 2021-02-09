@@ -28,6 +28,7 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-default.p4"
   "obfuscated-firewall.p4"
   "obfuscated-l2subintf.p4"
+  "obfuscated-low_latency.p4"
   "obfuscated-map.p4"
   "obfuscated-media.p4"
   "obfuscated-mpls_baremetal.p4"

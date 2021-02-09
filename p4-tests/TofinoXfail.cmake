@@ -1959,3 +1959,9 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   p4c_3343
 )
+
+# P4C-3551
+p4c_add_xfail_reason("tofino"
+  "Parser state .* requires fields from an earlier state which have been lost in current state's input buffer"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-low_latency.p4
+)

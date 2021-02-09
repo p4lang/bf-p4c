@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -146,12 +146,12 @@ struct Aguilita {
 @flexible struct IttaBena {
     bit<24> Adona;
     bit<24> Connell;
-    bit<12> Cisco;
+    bit<16> Cisco;
     bit<20> Higginson;
 }
 
 @flexible struct Oriskany {
-    bit<12>  Cisco;
+    bit<16>  Cisco;
     bit<24>  Adona;
     bit<24>  Connell;
     bit<32>  Bowden;
@@ -241,8 +241,8 @@ header Chevak {
     bit<10> Eldred;
     bit<4>  Chloride;
     bit<12> Garibaldi;
-    bit<2>  Weinert;
     bit<2>  Cornell;
+    bit<2>  Weinert;
     bit<12> Noyes;
     bit<8>  Helton;
     bit<2>  Grannis;
@@ -903,8 +903,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Grannis")
@@ -920,8 +920,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Fairland" , "Sedan.Thawville.Grannis")
@@ -937,8 +937,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Juniata" , "Sedan.Thawville.Grannis")
@@ -954,8 +954,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Beaverdam" , "Sedan.Thawville.Grannis")
@@ -971,8 +971,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.ElVerano" , "Sedan.Thawville.Grannis")
@@ -988,8 +988,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Brinkman" , "Sedan.Thawville.Grannis")
@@ -1005,8 +1005,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Powderly" , "Sedan.Thawville.Grannis")
@@ -1022,8 +1022,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Boerne" , "Sedan.Thawville.Grannis")
@@ -1039,8 +1039,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Eldred")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Chloride")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Cornell")
+@pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Weinert")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Noyes")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Helton")
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Alamosa" , "Sedan.Thawville.Grannis")
@@ -1112,21 +1112,6 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Garibaldi" , "Sedan.Bratt.Antlers")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Garibaldi" , "Sedan.Bratt.Kendrick")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Garibaldi" , "Sedan.Bratt.Solomon")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Westboro")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Newfane")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Norcatur")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Burrel")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Petrey")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Armona")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Dunstable")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Madawaska")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Hampton")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Tallassee")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Woodfield")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Irvine")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Antlers")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Kendrick")
-@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Solomon")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Cornell" , "Sedan.Bratt.Westboro")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Cornell" , "Sedan.Bratt.Newfane")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Cornell" , "Sedan.Bratt.Norcatur")
@@ -1142,6 +1127,21 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Cornell" , "Sedan.Bratt.Antlers")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Cornell" , "Sedan.Bratt.Kendrick")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Cornell" , "Sedan.Bratt.Solomon")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Westboro")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Newfane")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Norcatur")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Burrel")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Petrey")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Armona")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Dunstable")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Madawaska")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Hampton")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Tallassee")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Woodfield")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Irvine")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Antlers")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Kendrick")
+@pa_mutually_exclusive("egress" , "Sedan.Thawville.Weinert" , "Sedan.Bratt.Solomon")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Noyes" , "Sedan.Bratt.Westboro")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Noyes" , "Sedan.Bratt.Newfane")
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Noyes" , "Sedan.Bratt.Norcatur")
@@ -1350,7 +1350,7 @@ control Casnovia(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic
 
 struct Funston {
     bit<14> Belview;
-    bit<12> Broussard;
+    bit<16> Broussard;
     bit<1>  Arvada;
     bit<2>  Mayflower;
 }
@@ -1663,7 +1663,7 @@ parser Halltown(packet_in Recluse, out Orting Sedan, out Martelle Almota, out in
             Funston Rhinebeck = port_metadata_unpack<Funston>(Recluse);
             Almota.Westville.Arvada = Rhinebeck.Arvada;
             Almota.Westville.Belview = Rhinebeck.Belview;
-            Almota.Westville.Broussard = Rhinebeck.Broussard;
+            Almota.Westville.Broussard = (bit<12>)Rhinebeck.Broussard;
             Almota.Westville.Kalkaska = Rhinebeck.Mayflower;
             Almota.HighRock.Bledsoe = HighRock.ingress_port;
         }
@@ -1672,8 +1672,8 @@ parser Halltown(packet_in Recluse, out Orting Sedan, out Martelle Almota, out in
 }
 
 control Chatanika(packet_out Recluse, inout Orting Sedan, in Martelle Almota, in ingress_intrinsic_metadata_for_deparser_t Hookdale) {
-    @name(".Boyle") Mirror() Boyle;
     @name(".Ackerly") Digest<IttaBena>() Ackerly;
+    @name(".Boyle") Mirror() Boyle;
     apply {
         {
             if (Hookdale.mirror_type == 3w1) {
@@ -1685,7 +1685,7 @@ control Chatanika(packet_out Recluse, inout Orting Sedan, in Martelle Almota, in
         }
         {
             if (Hookdale.digest_type == 3w1) {
-                Ackerly.pack({ Almota.Masontown.Adona, Almota.Masontown.Connell, Almota.Masontown.Cisco, Almota.Masontown.Higginson });
+                Ackerly.pack({ Almota.Masontown.Adona, Almota.Masontown.Connell, (bit<16>)Almota.Masontown.Cisco, Almota.Masontown.Higginson });
             }
         }
         Recluse.emit<Kaluaaha>(Sedan.SanRemo);
@@ -1921,7 +1921,7 @@ control Nixon(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
         Almota.Westville.Arvada = (bit<1>)1w1;
     }
     @name(".Flippen") action Flippen(bit<20> Osterdock) {
-        Almota.Masontown.Cisco = Sedan.Moultrie[0].Riner;
+        Almota.Masontown.Cisco = (bit<12>)Sedan.Moultrie[0].Riner;
         Almota.Masontown.Higginson = Osterdock;
     }
     @disable_atomic_modify(1) @name(".Cadwell") table Cadwell {
@@ -2228,14 +2228,14 @@ control Pioche(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_m
     }
     @name(".Newtonia") action Newtonia() {
         Almota.Masontown.Stratford = (bit<1>)Scottdale.execute();
-        WebbCity.mcast_grp_a = (bit<16>)Almota.Belmore.Pathfork + 16w4096;
-        Almota.Masontown.Dolores = (bit<1>)1w1;
         Almota.Belmore.LaConner = Almota.Masontown.Ivyland;
+        Almota.Masontown.Dolores = (bit<1>)1w1;
+        WebbCity.mcast_grp_a = (bit<16>)Almota.Belmore.Pathfork + 16w4096;
     }
     @name(".Waterman") action Waterman() {
         Almota.Masontown.Stratford = (bit<1>)Scottdale.execute();
-        WebbCity.mcast_grp_a = (bit<16>)Almota.Belmore.Pathfork;
         Almota.Belmore.LaConner = Almota.Masontown.Ivyland;
+        WebbCity.mcast_grp_a = (bit<16>)Almota.Belmore.Pathfork;
     }
     @name(".Flynn") action Flynn(bit<20> Doddridge) {
         Almota.Belmore.Tombstone = Doddridge;
@@ -3081,11 +3081,11 @@ control Gladys(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_m
     }
     @name(".Bernstein") action Bernstein(bit<9> McKee, QueueId_t Bigfork) {
         Kelliher(McKee, Bigfork);
-        Almota.Masontown.Cisco = Sedan.Moultrie[0].Riner;
+        Almota.Masontown.Cisco = (bit<12>)Sedan.Moultrie[0].Riner;
     }
     @name(".Kingman") action Kingman(QueueId_t Punaluu) {
         Hopeton(Punaluu);
-        Almota.Masontown.Cisco = Sedan.Moultrie[0].Riner;
+        Almota.Masontown.Cisco = (bit<12>)Sedan.Moultrie[0].Riner;
     }
     @disable_atomic_modify(1) @name(".Lyman") table Lyman {
         actions = {
@@ -3223,11 +3223,11 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Almota.Covert.Clarion = Almota.Covert.Clarion + Vananda;
         Almota.Newhalem.Komatke = Almota.Newhalem.Komatke & Yorklyn;
     }
-    @name(".Botna") action Botna(bit<32> Satolah, bit<16> Ankeny, bit<16> Vananda, bit<16> Yorklyn, bit<16> Chappell) {
+    @name(".Botna") action Botna(bit<32> Satolah, bit<16> Ankeny, bit<16> Vananda, bit<16> Yorklyn) {
         Almota.Belmore.Satolah = Satolah;
         Wyandanch(Ankeny, Vananda, Yorklyn);
     }
-    @name(".Estero") action Estero(bit<32> Satolah, bit<16> Ankeny, bit<16> Vananda, bit<16> Yorklyn, bit<16> Chappell) {
+    @name(".Estero") action Estero(bit<32> Satolah, bit<16> Ankeny, bit<16> Vananda, bit<16> Yorklyn) {
         Almota.Belmore.Richvale = Almota.Belmore.SomesBar;
         Almota.Belmore.Satolah = Satolah;
         Wyandanch(Ankeny, Vananda, Yorklyn);
@@ -3294,10 +3294,7 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Tekonsha(Clermont, Blanding);
         Sedan.Milano.Bonney = Sedan.Milano.Bonney - 8w1;
     }
-    @name(".Ardenvoir") action Ardenvoir() {
-        Tekonsha(Sedan.Hearne.Adona, Sedan.Hearne.Connell);
-    }
-    @name(".Clinchco") action Clinchco() {
+    @name(".Slayden") action Slayden() {
         Tekonsha(Sedan.Hearne.Adona, Sedan.Hearne.Connell);
     }
     @name(".Snook") action Snook() {
@@ -3380,8 +3377,7 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         actions = {
             Shelby();
             Chambers();
-            Ardenvoir();
-            Clinchco();
+            Slayden();
             Snook();
             Havertown();
             Napanoch();
@@ -3389,7 +3385,7 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
             Ocilla();
         }
         key = {
-            Almota.Belmore.Lugert               : exact @name("Belmore.Lugert") ;
+            Almota.Belmore.Lugert               : ternary @name("Belmore.Lugert") ;
             Almota.Belmore.Gause                : exact @name("Belmore.Gause") ;
             Almota.Belmore.RedElm               : exact @name("Belmore.RedElm") ;
             Sedan.Garrison.isValid()            : ternary @name("Garrison") ;
@@ -3442,16 +3438,17 @@ control Issaquah(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic
     }
     @name(".Truro") action Truro() {
         Herring.count();
-        Hookdale.drop_ctl = (bit<3>)3w1;
+        Hookdale.drop_ctl = (bit<3>)3w3;
     }
     @name(".Plush") action Plush() {
         WebbCity.copy_to_cpu = WebbCity.copy_to_cpu | 1w0;
         Truro();
     }
     @name(".Bethune") action Bethune(bit<8> Helton) {
+        Herring.count();
+        Hookdale.drop_ctl = (bit<3>)3w1;
         WebbCity.copy_to_cpu = (bit<1>)1w1;
         Almota.Belmore.Helton = Helton;
-        Truro();
     }
     @disable_atomic_modify(1) @name(".PawCreek") table PawCreek {
         actions = {
@@ -3709,7 +3706,7 @@ control Ragley(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_me
         Almota.Belmore.Grassflat = (bit<1>)1w1;
     }
     @name(".Maury") action Maury() {
-        Almota.Belmore.Riner = Almota.Belmore.Pathfork;
+        Almota.Belmore.Riner = (bit<12>)Almota.Belmore.Pathfork;
         Almota.Belmore.Grassflat = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Ashburn") table Ashburn {
@@ -3744,7 +3741,7 @@ control Estrella(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_
     @name(".Gwynn.Bayshore") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Gwynn;
     @name(".Rolla") action Rolla() {
         bit<19> Anita;
-        Anita = Gwynn.get<tuple<bit<9>, bit<12>>>({ Covert.egress_port, Almota.Belmore.Pathfork });
+        Anita = Gwynn.get<tuple<bit<9>, bit<12>>>({ Covert.egress_port, (bit<12>)Almota.Belmore.Pathfork });
         Almota.Nevis.Candle = Amsterdam.execute((bit<32>)Anita);
     }
     @name(".Brookwood") Register<bit<1>, bit<32>>(32w294912, 1w0) Brookwood;
@@ -3759,7 +3756,7 @@ control Estrella(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_
     };
     @name(".Council") action Council() {
         bit<19> Anita;
-        Anita = Gwynn.get<tuple<bit<9>, bit<12>>>({ Covert.egress_port, Almota.Belmore.Pathfork });
+        Anita = Gwynn.get<tuple<bit<9>, bit<12>>>({ Covert.egress_port, (bit<12>)Almota.Belmore.Pathfork });
         Almota.Nevis.Ackley = Granville.execute((bit<32>)Anita);
     }
     @disable_atomic_modify(1) @name(".Capitola") table Capitola {
@@ -4861,8 +4858,8 @@ control Kilbourne(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsi
             Sedan.Neponset.isValid(): ternary @name("Neponset") ;
             Sedan.PeaRidge.isValid(): ternary @name("PeaRidge") ;
             Sedan.Biggers.isValid() : ternary @name("Biggers") ;
-            Sedan.Garrison.isValid(): ternary @name("Garrison") ;
             Sedan.Milano.isValid()  : ternary @name("Milano") ;
+            Sedan.Garrison.isValid(): ternary @name("Garrison") ;
             Sedan.Hearne.isValid()  : ternary @name("Hearne") ;
         }
         default_action = Bellamy();

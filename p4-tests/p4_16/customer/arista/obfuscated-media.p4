@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -24,8 +24,8 @@
 @pa_atomic("ingress" , "Alstown.Mentone.Norland")
 @pa_atomic("ingress" , "Alstown.Dozier.Joslin")
 @pa_no_init("ingress" , "Alstown.Mickleton.Colona")
-@pa_no_init("ingress" , "qosMd.cosRewrite")
-@pa_no_init("ingress" , "qosMd.dscpRewrite")
+@pa_no_init("ingress" , "Alstown.Barnhill.Miranda")
+@pa_no_init("ingress" , "Alstown.Barnhill.Peebles")
 @pa_atomic("ingress" , "Alstown.Astor.Freeny")
 @pa_atomic("ingress" , "Alstown.Astor.Tiburon")
 @pa_atomic("ingress" , "Alstown.Astor.Sonoma")
@@ -188,12 +188,12 @@ struct Blitchton {
 @flexible struct Glassboro {
     bit<24> Grabill;
     bit<24> Moorcroft;
-    bit<12> Toklat;
+    bit<16> Toklat;
     bit<20> Bledsoe;
 }
 
 @flexible struct Blencoe {
-    bit<12>  Toklat;
+    bit<16>  Toklat;
     bit<24>  Grabill;
     bit<24>  Moorcroft;
     bit<32>  AquaPark;
@@ -281,8 +281,8 @@ header Ocoee {
     bit<10> Kaluaaha;
     bit<4>  Calcasieu;
     bit<12> Levittown;
-    bit<2>  Maryhill;
     bit<2>  Norwood;
+    bit<2>  Maryhill;
     bit<12> Dassel;
     bit<8>  Bushland;
     bit<2>  Loring;
@@ -1017,8 +1017,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("ingress" , "Lookeba.Belmore.Elderon" , "Lookeba.Wesson.Loring")
@@ -1034,8 +1034,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("ingress" , "Lookeba.Yerington.Chugwater" , "Lookeba.Wesson.Loring")
@@ -1069,8 +1069,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Naruna" , "Lookeba.Wesson.Loring")
@@ -1086,8 +1086,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Suttle" , "Lookeba.Wesson.Loring")
@@ -1103,8 +1103,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Galloway" , "Lookeba.Wesson.Loring")
@@ -1120,8 +1120,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Ankeny" , "Lookeba.Wesson.Loring")
@@ -1137,8 +1137,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Denhoff" , "Lookeba.Wesson.Loring")
@@ -1154,8 +1154,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Provo" , "Lookeba.Wesson.Loring")
@@ -1171,8 +1171,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Coalwood" , "Lookeba.Wesson.Loring")
@@ -1188,8 +1188,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Whitten" , "Lookeba.Wesson.Loring")
@@ -1205,8 +1205,8 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Kaluaaha")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Calcasieu")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Levittown")
-@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Norwood")
+@pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Maryhill")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Dassel")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Bushland")
 @pa_mutually_exclusive("egress" , "Lookeba.Hallwood.Joslin" , "Lookeba.Wesson.Loring")
@@ -1278,21 +1278,6 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Levittown" , "Lookeba.Westville.Quogue")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Levittown" , "Lookeba.Westville.Findlay")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Levittown" , "Lookeba.Westville.Dowell")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Cornell")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Noyes")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Helton")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Grannis")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.StarLake")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Rains")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.SoapLake")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Linden")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Conner")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Ledoux")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Garibaldi")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Steger")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Quogue")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Findlay")
-@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Dowell")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Norwood" , "Lookeba.Westville.Cornell")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Norwood" , "Lookeba.Westville.Noyes")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Norwood" , "Lookeba.Westville.Helton")
@@ -1308,6 +1293,21 @@ struct ElkNeck {
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Norwood" , "Lookeba.Westville.Quogue")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Norwood" , "Lookeba.Westville.Findlay")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Norwood" , "Lookeba.Westville.Dowell")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Cornell")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Noyes")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Helton")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Grannis")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.StarLake")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Rains")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.SoapLake")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Linden")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Conner")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Ledoux")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Garibaldi")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Steger")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Quogue")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Findlay")
+@pa_mutually_exclusive("egress" , "Lookeba.Wesson.Maryhill" , "Lookeba.Westville.Dowell")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Dassel" , "Lookeba.Westville.Cornell")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Dassel" , "Lookeba.Westville.Noyes")
 @pa_mutually_exclusive("egress" , "Lookeba.Wesson.Dassel" , "Lookeba.Westville.Helton")
@@ -1518,7 +1518,7 @@ control Millstone(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_int
 
 struct Knights {
     bit<14> Pittsboro;
-    bit<12> Ericsburg;
+    bit<16> Ericsburg;
     bit<1>  Staunton;
     bit<2>  Humeston;
 }
@@ -1821,7 +1821,7 @@ parser Armagh(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out i
             Knights Wagener = port_metadata_unpack<Knights>(Basco);
             Alstown.Belmont.Staunton = Wagener.Staunton;
             Alstown.Belmont.Pittsboro = Wagener.Pittsboro;
-            Alstown.Belmont.Ericsburg = Wagener.Ericsburg;
+            Alstown.Belmont.Ericsburg = (bit<12>)Wagener.Ericsburg;
             Alstown.Belmont.Lugert = Wagener.Humeston;
             Alstown.Greenland.Corinth = Greenland.ingress_port;
         }
@@ -1830,8 +1830,8 @@ parser Armagh(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out i
 }
 
 control Monrovia(packet_out Basco, inout Gambrills Lookeba, in ElkNeck Alstown, in ingress_intrinsic_metadata_for_deparser_t Yorkshire) {
-    @name(".Rienzi") Mirror() Rienzi;
     @name(".Ambler") Digest<Glassboro>() Ambler;
+    @name(".Rienzi") Mirror() Rienzi;
     @name(".Shivwits") Digest<Bridgton>() Shivwits;
     @name(".Elsinore") Checksum() Elsinore;
     apply {
@@ -1846,7 +1846,7 @@ control Monrovia(packet_out Basco, inout Gambrills Lookeba, in ElkNeck Alstown, 
         }
         {
             if (Yorkshire.digest_type == 3w1) {
-                Ambler.pack({ Alstown.Mickleton.Grabill, Alstown.Mickleton.Moorcroft, Alstown.Mickleton.Toklat, Alstown.Mickleton.Bledsoe });
+                Ambler.pack({ Alstown.Mickleton.Grabill, Alstown.Mickleton.Moorcroft, (bit<16>)Alstown.Mickleton.Toklat, Alstown.Mickleton.Bledsoe });
             } else if (Yorkshire.digest_type == 3w4) {
                 Shivwits.pack({ Alstown.Greenland.Willard, Alstown.Mickleton.Bledsoe });
             }
@@ -2958,7 +2958,7 @@ control Cheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intr
         Alstown.Belmont.Staunton = (bit<1>)1w1;
     }
     @name(".McKenney") action McKenney(bit<20> WildRose) {
-        Alstown.Mickleton.Toklat = Lookeba.Daisytown[0].Spearman;
+        Alstown.Mickleton.Toklat = (bit<12>)Lookeba.Daisytown[0].Spearman;
         Alstown.Mickleton.Bledsoe = WildRose;
     }
     @name(".Natalia") action Natalia(bit<32> Sunman, bit<8> Bonduel, bit<4> Sardinia) {
@@ -2981,7 +2981,7 @@ control Cheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intr
         Natalia(Sunman, Bonduel, Sardinia);
     }
     @name(".Yulee") action Yulee(bit<32> Sunman, bit<8> Bonduel, bit<4> Sardinia, bit<16> Lapoint) {
-        Alstown.Mickleton.Lordstown = Lookeba.Daisytown[0].Spearman;
+        Alstown.Mickleton.Lordstown = (bit<12>)Lookeba.Daisytown[0].Spearman;
         Anita(Lapoint);
         Natalia(Sunman, Bonduel, Sardinia);
     }
@@ -3323,14 +3323,14 @@ control Plano(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intrins
     }
     @name(".Aiken") action Aiken() {
         Alstown.Mickleton.Wakita = (bit<1>)Amherst.execute();
-        Shingler.mcast_grp_a = (bit<16>)Alstown.Elkville.Ivyland + 16w4096;
-        Alstown.Mickleton.Fairmount = (bit<1>)1w1;
         Alstown.Elkville.Cardenas = Alstown.Mickleton.Dandridge;
+        Alstown.Mickleton.Fairmount = (bit<1>)1w1;
+        Shingler.mcast_grp_a = (bit<16>)Alstown.Elkville.Ivyland + 16w4096;
     }
     @name(".Anawalt") action Anawalt() {
         Alstown.Mickleton.Wakita = (bit<1>)Amherst.execute();
-        Shingler.mcast_grp_a = (bit<16>)Alstown.Elkville.Ivyland;
         Alstown.Elkville.Cardenas = Alstown.Mickleton.Dandridge;
+        Shingler.mcast_grp_a = (bit<16>)Alstown.Elkville.Ivyland;
     }
     @name(".Asharoken") action Asharoken(bit<20> Sublett) {
         Alstown.Elkville.Edgemoor = Sublett;
@@ -4190,11 +4190,11 @@ control Ocilla(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intrin
     }
     @name(".Ghent") action Ghent(bit<9> Chambers, QueueId_t Ardenvoir) {
         Napanoch(Chambers, Ardenvoir);
-        Alstown.Mickleton.Toklat = Lookeba.Daisytown[0].Spearman;
+        Alstown.Mickleton.Toklat = (bit<12>)Lookeba.Daisytown[0].Spearman;
     }
     @name(".Protivin") action Protivin(QueueId_t OjoFeliz) {
         Pearcy(OjoFeliz);
-        Alstown.Mickleton.Toklat = Lookeba.Daisytown[0].Spearman;
+        Alstown.Mickleton.Toklat = (bit<12>)Lookeba.Daisytown[0].Spearman;
     }
     @disable_atomic_modify(1) @name(".Medart") table Medart {
         actions = {
@@ -4298,11 +4298,11 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
         Alstown.Gastonia.Uintah = Alstown.Gastonia.Uintah + Romeo;
         Alstown.Bridger.Pinole = Alstown.Bridger.Pinole & Caspian;
     }
-    @name(".Norridge") action Norridge(bit<32> Lecompte, bit<16> Tallassee, bit<16> Romeo, bit<16> Caspian, bit<16> Lowemont) {
+    @name(".Norridge") action Norridge(bit<32> Lecompte, bit<16> Tallassee, bit<16> Romeo, bit<16> Caspian) {
         Alstown.Elkville.Lecompte = Lecompte;
         Antoine(Tallassee, Romeo, Caspian);
     }
-    @name(".Wauregan") action Wauregan(bit<32> Lecompte, bit<16> Tallassee, bit<16> Romeo, bit<16> Caspian, bit<16> Lowemont) {
+    @name(".Wauregan") action Wauregan(bit<32> Lecompte, bit<16> Tallassee, bit<16> Romeo, bit<16> Caspian) {
         Alstown.Elkville.Hiland = Alstown.Elkville.Manilla;
         Alstown.Elkville.Lecompte = Lecompte;
         Antoine(Tallassee, Romeo, Caspian);
@@ -4369,10 +4369,7 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
         Carlson(Ivanpah, Kevil);
         Lookeba.Udall.Riner = Lookeba.Udall.Riner - 8w1;
     }
-    @name(".Sully") action Sully() {
-        Carlson(Lookeba.Empire.Grabill, Lookeba.Empire.Moorcroft);
-    }
-    @name(".Ragley") action Ragley() {
+    @name(".Geeville") action Geeville() {
         Carlson(Lookeba.Empire.Grabill, Lookeba.Empire.Moorcroft);
     }
     @name(".Dunkerton") action Dunkerton() {
@@ -4455,8 +4452,7 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
         actions = {
             Waumandee();
             Nowlin();
-            Sully();
-            Ragley();
+            Geeville();
             Dunkerton();
             Maury();
             Ashburn();
@@ -4464,7 +4460,7 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
             Newland();
         }
         key = {
-            Alstown.Elkville.Madera                : exact @name("Elkville.Madera") ;
+            Alstown.Elkville.Madera                : ternary @name("Elkville.Madera") ;
             Alstown.Elkville.Quinhagak             : exact @name("Elkville.Quinhagak") ;
             Alstown.Elkville.Lenexa                : exact @name("Elkville.Lenexa") ;
             Lookeba.Earling.isValid()              : ternary @name("Earling") ;
@@ -4517,16 +4513,17 @@ control Bigspring(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_int
     }
     @name(".Mynard") action Mynard() {
         Redfield.count();
-        Yorkshire.drop_ctl = (bit<3>)3w1;
+        Yorkshire.drop_ctl = (bit<3>)3w3;
     }
     @name(".Crystola") action Crystola() {
         Shingler.copy_to_cpu = Shingler.copy_to_cpu | 1w0;
         Mynard();
     }
     @name(".LasLomas") action LasLomas(bit<8> Bushland) {
+        Redfield.count();
+        Yorkshire.drop_ctl = (bit<3>)3w1;
         Shingler.copy_to_cpu = (bit<1>)1w1;
         Alstown.Elkville.Bushland = Bushland;
-        Mynard();
     }
     @disable_atomic_modify(1) @name(".Devola") table Devola {
         actions = {
@@ -4964,7 +4961,7 @@ control Telegraph(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intr
         Alstown.Elkville.Randall = (bit<1>)1w1;
     }
     @name(".Picacho") action Picacho() {
-        Alstown.Elkville.Spearman = Alstown.Elkville.Ivyland;
+        Alstown.Elkville.Spearman = (bit<12>)Alstown.Elkville.Ivyland;
         Alstown.Elkville.Randall = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Reading") table Reading {
@@ -5000,7 +4997,7 @@ control Morgana(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrin
     @name(".Tocito.Requa") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Tocito;
     @name(".Mulhall") action Mulhall() {
         bit<19> Coupland;
-        Coupland = Tocito.get<tuple<bit<9>, bit<12>>>({ Gastonia.egress_port, Alstown.Elkville.Ivyland });
+        Coupland = Tocito.get<tuple<bit<9>, bit<12>>>({ Gastonia.egress_port, (bit<12>)Alstown.Elkville.Ivyland });
         Alstown.Livonia.LaConner = Sanatoga.execute((bit<32>)Coupland);
     }
     @name(".Okarche") Register<bit<1>, bit<32>>(32w294912, 1w0) Okarche;
@@ -5015,7 +5012,7 @@ control Morgana(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrin
     };
     @name(".Robinette") action Robinette() {
         bit<19> Coupland;
-        Coupland = Tocito.get<tuple<bit<9>, bit<12>>>({ Gastonia.egress_port, Alstown.Elkville.Ivyland });
+        Coupland = Tocito.get<tuple<bit<9>, bit<12>>>({ Gastonia.egress_port, (bit<12>)Alstown.Elkville.Ivyland });
         Alstown.Livonia.McGrady = Covington.execute((bit<32>)Coupland);
     }
     @disable_atomic_modify(1) @name(".Akhiok") table Akhiok {
@@ -5969,8 +5966,8 @@ control Wibaux(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intrin
             Lookeba.Terral.isValid()  : ternary @name("Terral") ;
             Lookeba.HighRock.isValid(): ternary @name("HighRock") ;
             Lookeba.Aniak.isValid()   : ternary @name("Aniak") ;
-            Lookeba.Earling.isValid() : ternary @name("Earling") ;
             Lookeba.Udall.isValid()   : ternary @name("Udall") ;
+            Lookeba.Earling.isValid() : ternary @name("Earling") ;
             Lookeba.Empire.isValid()  : ternary @name("Empire") ;
         }
         default_action = Lauada();

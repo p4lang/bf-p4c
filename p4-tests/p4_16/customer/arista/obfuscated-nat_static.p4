@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -188,12 +188,12 @@ struct Blitchton {
 @flexible struct Glassboro {
     bit<24> Grabill;
     bit<24> Moorcroft;
-    bit<12> Toklat;
+    bit<16> Toklat;
     bit<20> Bledsoe;
 }
 
 @flexible struct Blencoe {
-    bit<12>  Toklat;
+    bit<16>  Toklat;
     bit<24>  Grabill;
     bit<24>  Moorcroft;
     bit<32>  AquaPark;
@@ -285,8 +285,8 @@ header Hackett {
     bit<10> Calcasieu;
     bit<4>  Levittown;
     bit<12> Maryhill;
-    bit<2>  Norwood;
     bit<2>  Dassel;
+    bit<2>  Norwood;
     bit<12> Bushland;
     bit<8>  Loring;
     bit<2>  Suwannee;
@@ -970,8 +970,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Suttle" , "Longwood.Sequim.Suwannee")
@@ -987,8 +987,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Galloway" , "Longwood.Sequim.Suwannee")
@@ -1004,8 +1004,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Ankeny" , "Longwood.Sequim.Suwannee")
@@ -1021,8 +1021,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Denhoff" , "Longwood.Sequim.Suwannee")
@@ -1038,8 +1038,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Provo" , "Longwood.Sequim.Suwannee")
@@ -1055,8 +1055,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Whitten" , "Longwood.Sequim.Suwannee")
@@ -1072,8 +1072,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Beasley" , "Longwood.Sequim.Suwannee")
@@ -1089,8 +1089,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Joslin" , "Longwood.Sequim.Suwannee")
@@ -1106,8 +1106,8 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Calcasieu")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Levittown")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Maryhill")
-@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Dassel")
+@pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Norwood")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Bushland")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Loring")
 @pa_mutually_exclusive("egress" , "Longwood.Balmorhea.Weyauwega" , "Longwood.Sequim.Suwannee")
@@ -1179,21 +1179,6 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Maryhill" , "Longwood.Daisytown.Findlay")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Maryhill" , "Longwood.Daisytown.Dowell")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Maryhill" , "Longwood.Daisytown.Glendevey")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Noyes")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Helton")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Grannis")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.StarLake")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Rains")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.SoapLake")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Linden")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Conner")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Ledoux")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Steger")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Weinert")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Quogue")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Findlay")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Dowell")
-@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Glendevey")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Dassel" , "Longwood.Daisytown.Noyes")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Dassel" , "Longwood.Daisytown.Helton")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Dassel" , "Longwood.Daisytown.Grannis")
@@ -1209,6 +1194,21 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Dassel" , "Longwood.Daisytown.Findlay")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Dassel" , "Longwood.Daisytown.Dowell")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Dassel" , "Longwood.Daisytown.Glendevey")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Noyes")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Helton")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Grannis")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.StarLake")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Rains")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.SoapLake")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Linden")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Conner")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Ledoux")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Steger")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Weinert")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Quogue")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Findlay")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Dowell")
+@pa_mutually_exclusive("egress" , "Longwood.Sequim.Norwood" , "Longwood.Daisytown.Glendevey")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Bushland" , "Longwood.Daisytown.Noyes")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Bushland" , "Longwood.Daisytown.Helton")
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Bushland" , "Longwood.Daisytown.Grannis")
@@ -1418,7 +1418,7 @@ control Alstown(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
 
 struct Armagh {
     bit<14> Peebles;
-    bit<12> Wellton;
+    bit<16> Wellton;
     bit<1>  Kenney;
     bit<2>  Basco;
 }
@@ -1767,7 +1767,7 @@ parser Gamaliel(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
             Armagh Wagener = port_metadata_unpack<Armagh>(Orting);
             Yorkshire.BealCity.Kenney = Wagener.Kenney;
             Yorkshire.BealCity.Peebles = Wagener.Peebles;
-            Yorkshire.BealCity.Wellton = Wagener.Wellton;
+            Yorkshire.BealCity.Wellton = (bit<12>)Wagener.Wellton;
             Yorkshire.BealCity.Crestone = Wagener.Basco;
             Yorkshire.Masontown.Corinth = Masontown.ingress_port;
         }
@@ -1776,8 +1776,8 @@ parser Gamaliel(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
 }
 
 control Monrovia(packet_out Orting, inout Ekron Longwood, in Hapeville Yorkshire, in ingress_intrinsic_metadata_for_deparser_t Humeston) {
-    @name(".Rienzi") Mirror() Rienzi;
     @name(".Ambler") Digest<Glassboro>() Ambler;
+    @name(".Rienzi") Mirror() Rienzi;
     @name(".Eureka") Digest<Weslaco>() Eureka;
     @name(".Olmitz") Checksum() Olmitz;
     @name(".Woodville") Checksum() Woodville;
@@ -1794,7 +1794,7 @@ control Monrovia(packet_out Orting, inout Ekron Longwood, in Hapeville Yorkshire
         }
         {
             if (Humeston.digest_type == 3w1) {
-                Ambler.pack({ Yorkshire.NantyGlo.Grabill, Yorkshire.NantyGlo.Moorcroft, Yorkshire.NantyGlo.Toklat, Yorkshire.NantyGlo.Bledsoe });
+                Ambler.pack({ Yorkshire.NantyGlo.Grabill, Yorkshire.NantyGlo.Moorcroft, (bit<16>)Yorkshire.NantyGlo.Toklat, Yorkshire.NantyGlo.Bledsoe });
             } else if (Humeston.digest_type == 3w4) {
                 Eureka.pack({ Yorkshire.Masontown.Willard, Yorkshire.NantyGlo.Bledsoe });
             }
@@ -3711,7 +3711,7 @@ control Danbury(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
         Yorkshire.BealCity.Kenney = (bit<1>)1w1;
     }
     @name(".Ihlen") action Ihlen(bit<20> Papeton) {
-        Yorkshire.NantyGlo.Toklat = Longwood.Udall[0].Chevak;
+        Yorkshire.NantyGlo.Toklat = (bit<12>)Longwood.Udall[0].Chevak;
         Yorkshire.NantyGlo.Bledsoe = Papeton;
     }
     @name(".Faulkton") action Faulkton(bit<32> Philmont, bit<8> LaLuz, bit<4> Townville) {
@@ -3734,7 +3734,7 @@ control Danbury(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
         Faulkton(Philmont, LaLuz, Townville);
     }
     @name(".Macon") action Macon(bit<32> Philmont, bit<8> LaLuz, bit<4> Townville, bit<16> LaConner) {
-        Yorkshire.NantyGlo.Belfair = Longwood.Udall[0].Chevak;
+        Yorkshire.NantyGlo.Belfair = (bit<12>)Longwood.Udall[0].Chevak;
         ElCentro(LaConner);
         Faulkton(Philmont, LaLuz, Townville);
     }
@@ -4088,14 +4088,14 @@ control Blakeman(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     }
     @name(".Melder") action Melder() {
         Yorkshire.NantyGlo.Colona = (bit<1>)Ozark.execute();
-        Wesson.mcast_grp_a = (bit<16>)Yorkshire.Ocracoke.Fristoe + 16w4096;
-        Yorkshire.NantyGlo.Moquah = (bit<1>)1w1;
         Yorkshire.Ocracoke.Clover = Yorkshire.NantyGlo.Piperton;
+        Yorkshire.NantyGlo.Moquah = (bit<1>)1w1;
+        Wesson.mcast_grp_a = (bit<16>)Yorkshire.Ocracoke.Fristoe + 16w4096;
     }
     @name(".FourTown") action FourTown() {
         Yorkshire.NantyGlo.Colona = (bit<1>)Ozark.execute();
-        Wesson.mcast_grp_a = (bit<16>)Yorkshire.Ocracoke.Fristoe;
         Yorkshire.Ocracoke.Clover = Yorkshire.NantyGlo.Piperton;
+        Wesson.mcast_grp_a = (bit<16>)Yorkshire.Ocracoke.Fristoe;
     }
     @name(".Hyrum") action Hyrum(bit<20> Calabash) {
         Yorkshire.Ocracoke.Traverse = Calabash;
@@ -4955,11 +4955,11 @@ control Bluff(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
     }
     @name(".Unionvale") action Unionvale(bit<9> Silvertip, QueueId_t Thatcher) {
         Dougherty(Silvertip, Thatcher);
-        Yorkshire.NantyGlo.Toklat = Longwood.Udall[0].Chevak;
+        Yorkshire.NantyGlo.Toklat = (bit<12>)Longwood.Udall[0].Chevak;
     }
     @name(".Bigspring") action Bigspring(QueueId_t Cornish) {
         Pelican(Cornish);
-        Yorkshire.NantyGlo.Toklat = Longwood.Udall[0].Chevak;
+        Yorkshire.NantyGlo.Toklat = (bit<12>)Longwood.Udall[0].Chevak;
     }
     @disable_atomic_modify(1) @name(".Advance") table Advance {
         actions = {
@@ -5062,11 +5062,11 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
         Yorkshire.Yerington.Uintah = Yorkshire.Yerington.Uintah + Mantee;
         Yorkshire.Sanford.Basalt = Yorkshire.Sanford.Basalt & Walland;
     }
-    @name(".Melrose") action Melrose(bit<32> Kaaawa, bit<16> Irvine, bit<16> Mantee, bit<16> Walland, bit<16> Angeles) {
+    @name(".Melrose") action Melrose(bit<32> Kaaawa, bit<16> Irvine, bit<16> Mantee, bit<16> Walland) {
         Yorkshire.Ocracoke.Kaaawa = Kaaawa;
         Buras(Irvine, Mantee, Walland);
     }
-    @name(".Ammon") action Ammon(bit<32> Kaaawa, bit<16> Irvine, bit<16> Mantee, bit<16> Walland, bit<16> Angeles) {
+    @name(".Ammon") action Ammon(bit<32> Kaaawa, bit<16> Irvine, bit<16> Mantee, bit<16> Walland) {
         Yorkshire.Ocracoke.Subiaco = Yorkshire.Ocracoke.Marcus;
         Yorkshire.Ocracoke.Kaaawa = Kaaawa;
         Buras(Irvine, Mantee, Walland);
@@ -5132,10 +5132,7 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
         Trail(Magazine, McDougal);
         Longwood.Nevis.Palmhurst = Longwood.Nevis.Palmhurst - 8w1;
     }
-    @name(".Tunis") action Tunis() {
-        Trail(Longwood.Earling.Grabill, Longwood.Earling.Moorcroft);
-    }
-    @name(".Pound") action Pound() {
+    @name(".Medulla") action Medulla() {
         Trail(Longwood.Earling.Grabill, Longwood.Earling.Moorcroft);
     }
     @name(".Oakley") action Oakley() {
@@ -5165,17 +5162,6 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
         Longwood.Hallwood.Grabill = Magazine;
         Longwood.Hallwood.Moorcroft = McDougal;
         Longwood.Empire.Lathrop = (bit<16>)16w0x800;
-    }
-    @name(".Petroleum") action Petroleum() {
-        Ontonagon(Yorkshire.Ocracoke.Loring);
-    }
-    @name(".Osakis") action Osakis(bit<24> Magazine, bit<24> McDougal) {
-        Trail(Magazine, McDougal);
-        Longwood.Aniak.Weinert = Longwood.Aniak.Weinert - 8w1;
-    }
-    @name(".Ranier") action Ranier(bit<24> Magazine, bit<24> McDougal) {
-        Trail(Magazine, McDougal);
-        Longwood.Nevis.Palmhurst = Longwood.Nevis.Palmhurst - 8w1;
     }
     @name(".Hartwell") action Hartwell() {
         Algonquin.drop_ctl = (bit<3>)3w7;
@@ -5229,19 +5215,15 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
         actions = {
             Dundee();
             RedBay();
-            Tunis();
-            Pound();
+            Medulla();
             Oakley();
             Ickesburg();
             Tulalip();
             Olivet();
-            Petroleum();
-            Osakis();
-            Ranier();
             Batchelor();
         }
         key = {
-            Yorkshire.Ocracoke.Blairsden          : exact @name("Ocracoke.Blairsden") ;
+            Yorkshire.Ocracoke.Blairsden          : ternary @name("Ocracoke.Blairsden") ;
             Yorkshire.Ocracoke.Wamego             : exact @name("Ocracoke.Wamego") ;
             Yorkshire.Ocracoke.Gause              : exact @name("Ocracoke.Gause") ;
             Longwood.Aniak.isValid()              : ternary @name("Aniak") ;
@@ -5299,16 +5281,17 @@ control Nashwauk(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     }
     @name(".Keller") action Keller() {
         GlenDean.count();
-        Humeston.drop_ctl = (bit<3>)3w1;
+        Humeston.drop_ctl = (bit<3>)3w3;
     }
     @name(".Elysburg") action Elysburg() {
         Wesson.copy_to_cpu = Wesson.copy_to_cpu | 1w0;
         Keller();
     }
     @name(".Charters") action Charters(bit<8> Loring) {
+        GlenDean.count();
+        Humeston.drop_ctl = (bit<3>)3w1;
         Wesson.copy_to_cpu = (bit<1>)1w1;
         Yorkshire.Ocracoke.Loring = Loring;
-        Keller();
     }
     @disable_atomic_modify(1) @use_hash_action(1) @name(".LaMarque") table LaMarque {
         actions = {
@@ -6191,7 +6174,7 @@ control Finlayson(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_int
         Yorkshire.Ocracoke.Gasport = (bit<1>)1w1;
     }
     @name(".Casselman") action Casselman() {
-        Yorkshire.Ocracoke.Chevak = Yorkshire.Ocracoke.Fristoe;
+        Yorkshire.Ocracoke.Chevak = (bit<12>)Yorkshire.Ocracoke.Fristoe;
         Yorkshire.Ocracoke.Gasport = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Lovett") table Lovett {
@@ -6227,7 +6210,7 @@ control Chamois(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
     @name(".Leetsdale.Requa") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Leetsdale;
     @name(".Valmont") action Valmont() {
         bit<19> Kosmos;
-        Kosmos = Leetsdale.get<tuple<bit<9>, bit<12>>>({ Yerington.egress_port, Yorkshire.Ocracoke.Fristoe });
+        Kosmos = Leetsdale.get<tuple<bit<9>, bit<12>>>({ Yerington.egress_port, (bit<12>)Yorkshire.Ocracoke.Fristoe });
         Yorkshire.Gastonia.Pettry = Rembrandt.execute((bit<32>)Kosmos);
     }
     @name(".Millican") Register<bit<1>, bit<32>>(32w294912, 1w0) Millican;
@@ -6242,7 +6225,7 @@ control Chamois(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
     };
     @name(".Waretown") action Waretown() {
         bit<19> Kosmos;
-        Kosmos = Leetsdale.get<tuple<bit<9>, bit<12>>>({ Yerington.egress_port, Yorkshire.Ocracoke.Fristoe });
+        Kosmos = Leetsdale.get<tuple<bit<9>, bit<12>>>({ Yerington.egress_port, (bit<12>)Yorkshire.Ocracoke.Fristoe });
         Yorkshire.Gastonia.Montague = Decorah.execute((bit<32>)Kosmos);
     }
     @disable_atomic_modify(1) @name(".Moxley") table Moxley {
@@ -6740,8 +6723,8 @@ control Elliston(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
             Longwood.Covert.isValid()  : ternary @name("Covert") ;
             Longwood.HighRock.isValid(): ternary @name("HighRock") ;
             Longwood.Magasco.isValid() : ternary @name("Magasco") ;
-            Longwood.Aniak.isValid()   : ternary @name("Aniak") ;
             Longwood.Nevis.isValid()   : ternary @name("Nevis") ;
+            Longwood.Aniak.isValid()   : ternary @name("Aniak") ;
             Longwood.Earling.isValid() : ternary @name("Earling") ;
         }
         default_action = Lauada();

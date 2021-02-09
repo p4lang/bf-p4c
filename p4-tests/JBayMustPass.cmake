@@ -52,7 +52,7 @@ set (JBAY_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/extreme/p4c-3455_2.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210202.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2_lkg.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
   p4c-3171
   extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
-// p4c 9.4.0 (SHA: 21a686d)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -148,12 +148,12 @@ struct Blitchton {
 @flexible struct Glassboro {
     bit<24> Grabill;
     bit<24> Moorcroft;
-    bit<12> Toklat;
+    bit<16> Toklat;
     bit<20> Bledsoe;
 }
 
 @flexible struct Blencoe {
-    bit<12>  Toklat;
+    bit<16>  Toklat;
     bit<24>  Grabill;
     bit<24>  Moorcroft;
     bit<32>  AquaPark;
@@ -274,8 +274,8 @@ header Cecilton {
     bit<10> Lacona;
     bit<4>  Albemarle;
     bit<12> Algodones;
-    bit<2>  Buckeye;
     bit<2>  Topanga;
+    bit<2>  Buckeye;
     bit<12> Allison;
     bit<8>  Spearman;
     bit<2>  Chevak;
@@ -924,8 +924,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Chevak")
@@ -941,8 +941,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Lowes" , "Daisytown.Bernice.Chevak")
@@ -958,8 +958,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Almedia" , "Daisytown.Bernice.Chevak")
@@ -975,8 +975,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Chugwater" , "Daisytown.Bernice.Chevak")
@@ -992,8 +992,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Charco" , "Daisytown.Bernice.Chevak")
@@ -1009,8 +1009,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Sutherlin" , "Daisytown.Bernice.Chevak")
@@ -1026,8 +1026,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Mystic" , "Daisytown.Bernice.Chevak")
@@ -1043,8 +1043,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Daphne" , "Daisytown.Bernice.Chevak")
@@ -1060,8 +1060,8 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Lacona")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Albemarle")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Algodones")
-@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Topanga")
+@pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Buckeye")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Allison")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Spearman")
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Level" , "Daisytown.Bernice.Chevak")
@@ -1133,21 +1133,6 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Algodones" , "Daisytown.Sumner.LasVegas")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Algodones" , "Daisytown.Sumner.Higginson")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Algodones" , "Daisytown.Sumner.Oriskany")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Killen")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Turkey")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Riner")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Palmhurst")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Comfrey")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Kalida")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Wallula")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Dennison")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Fairhaven")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Woodfield")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Glendevey")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Cisco")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.LasVegas")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Higginson")
-@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Oriskany")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Topanga" , "Daisytown.Sumner.Killen")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Topanga" , "Daisytown.Sumner.Turkey")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Topanga" , "Daisytown.Sumner.Riner")
@@ -1163,6 +1148,21 @@ struct Cassa {
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Topanga" , "Daisytown.Sumner.LasVegas")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Topanga" , "Daisytown.Sumner.Higginson")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Topanga" , "Daisytown.Sumner.Oriskany")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Killen")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Turkey")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Riner")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Palmhurst")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Comfrey")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Kalida")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Wallula")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Dennison")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Fairhaven")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Woodfield")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Glendevey")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Cisco")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.LasVegas")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Higginson")
+@pa_mutually_exclusive("egress" , "Daisytown.Bernice.Buckeye" , "Daisytown.Sumner.Oriskany")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Allison" , "Daisytown.Sumner.Killen")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Allison" , "Daisytown.Sumner.Turkey")
 @pa_mutually_exclusive("egress" , "Daisytown.Bernice.Allison" , "Daisytown.Sumner.Riner")
@@ -1371,7 +1371,7 @@ control Empire(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
 
 struct Crannell {
     bit<14> Staunton;
-    bit<12> Lugert;
+    bit<16> Lugert;
     bit<1>  Goulds;
     bit<2>  Aniak;
 }
@@ -1723,7 +1723,7 @@ parser Nevis(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea, ou
             Crannell Kinde = port_metadata_unpack<Crannell>(Lindsborg);
             Balmorhea.Doddridge.Goulds = Kinde.Goulds;
             Balmorhea.Doddridge.Staunton = Kinde.Staunton;
-            Balmorhea.Doddridge.Lugert = Kinde.Lugert;
+            Balmorhea.Doddridge.Lugert = (bit<12>)Kinde.Lugert;
             Balmorhea.Doddridge.LaConner = Kinde.Aniak;
             Balmorhea.NantyGlo.Corinth = NantyGlo.ingress_port;
         }
@@ -1732,8 +1732,8 @@ parser Nevis(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea, ou
 }
 
 control Hillside(packet_out Lindsborg, inout Goodwin Daisytown, in Cassa Balmorhea, in ingress_intrinsic_metadata_for_deparser_t Udall) {
-    @name(".Wanamassa") Mirror() Wanamassa;
     @name(".Peoria") Digest<Glassboro>() Peoria;
+    @name(".Wanamassa") Mirror() Wanamassa;
     @name(".Frederika") Digest<Harbor>() Frederika;
     apply {
         {
@@ -1746,7 +1746,7 @@ control Hillside(packet_out Lindsborg, inout Goodwin Daisytown, in Cassa Balmorh
         }
         {
             if (Udall.digest_type == 3w1) {
-                Peoria.pack({ Balmorhea.Buckhorn.Grabill, Balmorhea.Buckhorn.Moorcroft, Balmorhea.Buckhorn.Toklat, Balmorhea.Buckhorn.Bledsoe });
+                Peoria.pack({ Balmorhea.Buckhorn.Grabill, Balmorhea.Buckhorn.Moorcroft, (bit<16>)Balmorhea.Buckhorn.Toklat, Balmorhea.Buckhorn.Bledsoe });
             } else if (Udall.digest_type == 3w3) {
                 Frederika.pack({ Balmorhea.Hapeville.IttaBena, Balmorhea.Hapeville.Adona, Balmorhea.Sopris.Connell, Balmorhea.Buckhorn.Cisco, Balmorhea.Rainelle.Higginson, Balmorhea.Rainelle.Oriskany, Balmorhea.Buckhorn.Bowden, Balmorhea.Buckhorn.Cabot, Balmorhea.Buckhorn.Keyes, Balmorhea.NantyGlo.Corinth, Balmorhea.Hapeville.Basic, Balmorhea.Hapeville.Scarville, Balmorhea.Hapeville.Exton, Balmorhea.Hapeville.Floyd, Balmorhea.Ocracoke.Avondale });
             }
@@ -2239,7 +2239,7 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Balmorhea.Doddridge.Goulds = (bit<1>)1w1;
     }
     @name(".Tularosa") action Tularosa(bit<20> Hettinger) {
-        Balmorhea.Buckhorn.Toklat = Daisytown.Greenland[0].Ledoux;
+        Balmorhea.Buckhorn.Toklat = (bit<12>)Daisytown.Greenland[0].Ledoux;
         Balmorhea.Buckhorn.Bledsoe = Hettinger;
     }
     @name(".Uniopolis") action Uniopolis(bit<32> Moosic, bit<8> Connell, bit<4> Gause) {
@@ -2261,7 +2261,7 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Uniopolis(Moosic, Connell, Gause);
     }
     @name(".Kempton") action Kempton(bit<32> Moosic, bit<8> Connell, bit<4> Gause, bit<16> Fristoe) {
-        Balmorhea.Buckhorn.TroutRun = Daisytown.Greenland[0].Ledoux;
+        Balmorhea.Buckhorn.TroutRun = (bit<12>)Daisytown.Greenland[0].Ledoux;
         Ossining(Fristoe);
         Uniopolis(Moosic, Connell, Gause);
     }
@@ -2615,14 +2615,14 @@ control Notus(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrins
     }
     @name(".Andrade") action Andrade() {
         Balmorhea.Buckhorn.Buckfield = (bit<1>)Salitpa.execute();
-        Wildorado.mcast_grp_a = (bit<16>)Balmorhea.Millston.Panaca + 16w4096;
-        Balmorhea.Buckhorn.Soledad = (bit<1>)1w1;
         Balmorhea.Millston.Wetonka = Balmorhea.Buckhorn.Forkville;
+        Balmorhea.Buckhorn.Soledad = (bit<1>)1w1;
+        Wildorado.mcast_grp_a = (bit<16>)Balmorhea.Millston.Panaca + 16w4096;
     }
     @name(".McDonough") action McDonough() {
         Balmorhea.Buckhorn.Buckfield = (bit<1>)Salitpa.execute();
-        Wildorado.mcast_grp_a = (bit<16>)Balmorhea.Millston.Panaca;
         Balmorhea.Millston.Wetonka = Balmorhea.Buckhorn.Forkville;
+        Wildorado.mcast_grp_a = (bit<16>)Balmorhea.Millston.Panaca;
     }
     @name(".Ozona") action Ozona(bit<20> Cutten) {
         Balmorhea.Millston.Madera = Cutten;
@@ -3481,11 +3481,11 @@ control Slinger(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intri
     }
     @name(".FourTown") action FourTown(bit<9> PellCity, QueueId_t Lebanon) {
         Palco(PellCity, Lebanon);
-        Balmorhea.Buckhorn.Toklat = Daisytown.Greenland[0].Ledoux;
+        Balmorhea.Buckhorn.Toklat = (bit<12>)Daisytown.Greenland[0].Ledoux;
     }
     @name(".Hyrum") action Hyrum(QueueId_t Hagewood) {
         Melder(Hagewood);
-        Balmorhea.Buckhorn.Toklat = Daisytown.Greenland[0].Ledoux;
+        Balmorhea.Buckhorn.Toklat = (bit<12>)Daisytown.Greenland[0].Ledoux;
     }
     @disable_atomic_modify(1) @name(".Farner") table Farner {
         actions = {
@@ -3590,11 +3590,11 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         Balmorhea.Dozier.Uintah = Balmorhea.Dozier.Uintah + Kelliher;
         Balmorhea.Dateland.Corydon = Balmorhea.Dateland.Corydon & Hopeton;
     }
-    @name(".Bernstein") action Bernstein(bit<32> Bufalo, bit<16> Cabot, bit<16> Kelliher, bit<16> Hopeton, bit<16> Kingman) {
+    @name(".Bernstein") action Bernstein(bit<32> Bufalo, bit<16> Cabot, bit<16> Kelliher, bit<16> Hopeton) {
         Balmorhea.Millston.Bufalo = Bufalo;
         Linville(Cabot, Kelliher, Hopeton);
     }
-    @name(".Lyman") action Lyman(bit<32> Bufalo, bit<16> Cabot, bit<16> Kelliher, bit<16> Hopeton, bit<16> Kingman) {
+    @name(".Lyman") action Lyman(bit<32> Bufalo, bit<16> Cabot, bit<16> Kelliher, bit<16> Hopeton) {
         Balmorhea.Millston.Hematite = Balmorhea.Millston.Orrick;
         Balmorhea.Millston.Bufalo = Bufalo;
         Linville(Cabot, Kelliher, Hopeton);
@@ -3661,10 +3661,7 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         Brinson(Westend, Scotland);
         Daisytown.Hillsview.Petrey = Daisytown.Hillsview.Petrey - 8w1;
     }
-    @name(".Yorklyn") action Yorklyn() {
-        Brinson(Daisytown.Kamrar.Grabill, Daisytown.Kamrar.Moorcroft);
-    }
-    @name(".Botna") action Botna() {
+    @name(".Powhatan") action Powhatan() {
         Brinson(Daisytown.Kamrar.Grabill, Daisytown.Kamrar.Moorcroft);
     }
     @name(".Chappell") action Chappell() {
@@ -3694,17 +3691,6 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         Daisytown.Astor.Grabill = Westend;
         Daisytown.Astor.Moorcroft = Scotland;
         Daisytown.Hohenwald.Lathrop = (bit<16>)16w0x800;
-    }
-    @name(".Hawthorne") action Hawthorne() {
-        Estero(Balmorhea.Millston.Spearman);
-    }
-    @name(".Brule") action Brule(bit<24> Westend, bit<24> Scotland) {
-        Brinson(Westend, Scotland);
-        Daisytown.Gastonia.Glendevey = Daisytown.Gastonia.Glendevey - 8w1;
-    }
-    @name(".Durant") action Durant(bit<24> Westend, bit<24> Scotland) {
-        Brinson(Westend, Scotland);
-        Daisytown.Hillsview.Petrey = Daisytown.Hillsview.Petrey - 8w1;
     }
     @name(".Kingsdale") action Kingsdale() {
         Burmah.drop_ctl = (bit<3>)3w7;
@@ -3758,19 +3744,15 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         actions = {
             Wyandanch();
             Vananda();
-            Yorklyn();
-            Botna();
+            Powhatan();
             Chappell();
             Inkom();
             Gowanda();
             BurrOak();
-            Hawthorne();
-            Brule();
-            Durant();
             Addicks();
         }
         key = {
-            Balmorhea.Millston.Tilton                : exact @name("Millston.Tilton") ;
+            Balmorhea.Millston.Tilton                : ternary @name("Millston.Tilton") ;
             Balmorhea.Millston.Dolores               : exact @name("Millston.Dolores") ;
             Balmorhea.Millston.Rockham               : exact @name("Millston.Rockham") ;
             Daisytown.Gastonia.isValid()             : ternary @name("Gastonia") ;
@@ -3823,16 +3805,17 @@ control Chambers(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intr
     }
     @name(".OjoFeliz") action OjoFeliz() {
         Ardenvoir.count();
-        Udall.drop_ctl = (bit<3>)3w1;
+        Udall.drop_ctl = (bit<3>)3w3;
     }
     @name(".Havertown") action Havertown() {
         Wildorado.copy_to_cpu = Wildorado.copy_to_cpu | 1w0;
         OjoFeliz();
     }
     @name(".Napanoch") action Napanoch(bit<8> Spearman) {
+        Ardenvoir.count();
+        Udall.drop_ctl = (bit<3>)3w1;
         Wildorado.copy_to_cpu = (bit<1>)1w1;
         Balmorhea.Millston.Spearman = Spearman;
-        OjoFeliz();
     }
     @disable_atomic_modify(1) @name(".Pearcy") table Pearcy {
         actions = {
@@ -4239,7 +4222,7 @@ control Amsterdam(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intr
         Balmorhea.Millston.Lakehills = (bit<1>)1w1;
     }
     @name(".Brookwood") action Brookwood() {
-        Balmorhea.Millston.Ledoux = Balmorhea.Millston.Panaca;
+        Balmorhea.Millston.Ledoux = (bit<12>)Balmorhea.Millston.Panaca;
         Balmorhea.Millston.Lakehills = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Granville") table Granville {
@@ -4274,7 +4257,7 @@ control Council(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
     @name(".Doyline.Requa") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Doyline;
     @name(".Belcourt") action Belcourt() {
         bit<19> Westview;
-        Westview = Doyline.get<tuple<bit<9>, bit<12>>>({ Dozier.egress_port, Balmorhea.Millston.Panaca });
+        Westview = Doyline.get<tuple<bit<9>, bit<12>>>({ Dozier.egress_port, (bit<12>)Balmorhea.Millston.Panaca });
         Balmorhea.Corvallis.Oilmont = Liberal.execute((bit<32>)Westview);
     }
     @name(".Moorman") Register<bit<1>, bit<32>>(32w294912, 1w0) Moorman;
@@ -4289,7 +4272,7 @@ control Council(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
     };
     @name(".Bagwell") action Bagwell() {
         bit<19> Westview;
-        Westview = Doyline.get<tuple<bit<9>, bit<12>>>({ Dozier.egress_port, Balmorhea.Millston.Panaca });
+        Westview = Doyline.get<tuple<bit<9>, bit<12>>>({ Dozier.egress_port, (bit<12>)Balmorhea.Millston.Panaca });
         Balmorhea.Corvallis.Tornillo = Parmelee.execute((bit<32>)Westview);
     }
     @stage(7) @disable_atomic_modify(1) @name(".Wright") table Wright {
@@ -5247,8 +5230,8 @@ control Renfroe(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
             Daisytown.Belmore.isValid()  : ternary @name("Belmore") ;
             Daisytown.Wesson.isValid()   : ternary @name("Wesson") ;
             Daisytown.Makawao.isValid()  : ternary @name("Makawao") ;
-            Daisytown.Gastonia.isValid() : ternary @name("Gastonia") ;
             Daisytown.Hillsview.isValid(): ternary @name("Hillsview") ;
+            Daisytown.Gastonia.isValid() : ternary @name("Gastonia") ;
             Daisytown.Kamrar.isValid()   : ternary @name("Kamrar") ;
         }
         default_action = Casnovia();
