@@ -306,6 +306,10 @@ template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parse
         Parser *pa, State *state, int row, Match *def, json::map &ctxt_json) {
     write_common_row_config(regs, pa, state, row, def, ctxt_json);
     auto &action_row = regs.memory[state->gress].po_action_row[row];
+    auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
+    // FIXME -- should set this based on which banks are needed -- for now enable all
+    ea_row.action_ram_en = 3;
+
     // FIXME -- CB Parser uArch doc recommends only doing this in the last state for a
     // specific header, though its not clear why
     if (shift || (def && def->shift))

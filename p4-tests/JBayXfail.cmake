@@ -524,3 +524,15 @@ p4c_add_xfail_reason("tofino2"
    "tofino2 supports up to 20 stages, using 21"
    extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
 )
+
+# DRV-4430
+p4c_add_xfail_reason("tofino2"
+   "Expected packet was not received on device 0, port"
+   extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
+)
+
+# DRV-4433
+p4c_add_xfail_reason("tofino2"
+   "Unexpected port .*"
+   p4_16_programs_tna_multicast
+)
