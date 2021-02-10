@@ -26,6 +26,12 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
+        } else if (kv.key == "data_bytemask") {
+            if (CHECKTYPE(kv.value, tINT))
+                data_bytemask = kv.value.i;
+        } else if (kv.key == "hash_bytemask") {
+            if (CHECKTYPE(kv.value, tINT))
+                hash_bytemask = kv.value.i;
         } else if (kv.key == "hash_dist") {
             /* parsed in common_init_setup */
         } else if (kv.key == "actions") {
@@ -253,6 +259,18 @@ void StatefulTable::pass2() {
             layout_vpn_bounds(min, max, true);
             if (logvpn_min < min || logvpn_max > max)
                 error(logvpn_lineno, "log_vpn out of range (%d..%d)", min, max); } }
+
+    if (input_xbar && !data_bytemask && !hash_bytemask) {
+        hash_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse()) & phv_byte_mask;
+        // should we also mask off bits not set in the ixbar of this table?
+        // as long as the compiler explicitly zeroes everything in the hash
+        // that needs to be zero, it should be ok.
+        data_bytemask = phv_byte_mask & ~hash_bytemask;
+    }
+    if (!input_xbar && (data_bytemask || hash_bytemask)) {
+        error(lineno, "No input_xbar in %s, but %s is present", name(),
+              data_bytemask ? "data_bytemask" : "hash_bytemask");
+    }
 }
 
 void StatefulTable::pass3() {
@@ -359,17 +377,13 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
                 auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
                 if (input_xbar) {
-                    auto hashdata_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse());
-                    if (hashdata_bytemask != 0U) {
+                    if (hash_bytemask != 0U) {
                         vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
-                            hashdata_bytemask & phv_byte_mask;
+                            hash_bytemask;
                         setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
                                      input_xbar->hash_group()); }
-                    if (unsigned mask = phv_byte_mask & ~hashdata_bytemask) {
-                        // should we also mask off bits not set in the ixbar of this table?
-                        // as long as the compiler explicitly zeroes everything in the hash
-                        // that needs to be zero, it should be ok.
-                        data_ctl.stateful_meter_alu_data_bytemask = mask;
+                    if (data_bytemask != 0) {
+                        data_ctl.stateful_meter_alu_data_bytemask = data_bytemask;
                         data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
                     }
                 }

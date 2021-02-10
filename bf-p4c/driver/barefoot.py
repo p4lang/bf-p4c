@@ -623,7 +623,7 @@ class BarefootBackend(BackendDriver):
         self._commands['assembler'] = list(self._saved_assembler_params)
         # lookup the directory name. For P4-16, it is the output + pipe_name.
         # This logging feature is enabled during the DEVELOPER mode
-        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self.verbose == 3:
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self.verbose > 0:
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(dirname))
         else:

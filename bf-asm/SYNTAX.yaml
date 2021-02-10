@@ -772,6 +772,11 @@ stage <constant> <thread>:
             # represent the row ultimately connected to the ALU
         hash_dist: <hash_distribution>
             # see hash_action hash_dist
+        input_xbar:
+            # exact match group and hash to use for phv input
+        data_bytemask: <int>
+        hash_bytemask: <int>
+            # masks specifying which byte of the phv input come from data and hash
         initial_value: { lo : <int> , hi : <int> }
             # Specify initial value for register, assumed 0 otherwise
         const_table: <vector> | '{' <index>: <value> '}'

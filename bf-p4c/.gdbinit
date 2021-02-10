@@ -527,6 +527,10 @@ class IXBarUsePrinter(object):
                 rv += " group=" + str(hdh['group'])
                 rv += " gm_bits=" + str(hdh['galois_matrix_bits'])
                 rv += " algorithm=" + str(hdh['algorithm'])
+            if type_tag == 5:
+                sis = self.val['salu_input_source']
+                rv += "\n   data_bytemask=%x hash_bytemask=%x" % (
+                            sis['data_bytemask'], sis['hash_bytemask'])
             rv += "\n"
         except Exception as e:
             rv += "{crash: "+str(e)+"}\n"

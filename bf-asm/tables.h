@@ -1806,6 +1806,8 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     int watermark_pop_not_push = 0;
     unsigned initial_value_lo = 0;
     unsigned initial_value_hi = 0;
+    unsigned data_bytemask = 0;
+    unsigned hash_bytemask = 0;
     int logvpn_lineno = -1;
     int logvpn_min = -1, logvpn_max = -1;
     int pred_shift = 0, pred_comb_shift = 0;

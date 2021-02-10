@@ -3009,9 +3009,6 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
 bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
                                       const FindSaluSources &sources, unsigned &byte_mask) {
     int width = salu->source_width()/8U;
-    int ixbar_initial_position = 0;
-    if (Device::currentDevice() == Device::TOFINO)
-        ixbar_initial_position = TOFINO_METER_ALU_BYTE_OFFSET;
 
     bool phv_src_reserved[2] = { false, false };
     bool reversed = false;
@@ -3030,8 +3027,9 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
                 can_fit[i] = can_allocate_on_search_bus(alloc, field, range, i * width);
                 can_fit_anywhere |= can_fit[i];
             }
-            if (!can_fit_anywhere)
-                return false;
+            if (!can_fit_anywhere) {
+                LOG3("  - can't fit anywhere on search bus");
+                return false; }
             // If a source can only fit in one of the two input xbar positions, reserve
             // that position for that source
             if (can_fit[0] && !can_fit[1])
@@ -3075,19 +3073,23 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
         return a_fi.lo < b_fi.lo;
     });
 
+    byte_mask = 0;
+    int byte_offset = 0;
     // This handles the corner case of a single source that can only go into the phv_hi slot
     // of the stateful alu
     if (reversed && sources.phv_sources.size() == 1 &&
         sources.phv_sources.begin()->second.size() == 1) {
-        ixbar_initial_position += width;
+        byte_offset += width;
     }
 
-    byte_mask = 0;
+    const int ixbar_initial_position =
+        Device::currentDevice() == Device::TOFINO ? TOFINO_METER_ALU_BYTE_OFFSET : 0;
     for (auto source : sources.phv_sources) {
         for (auto &range : Keys(source.second)) {
             unsigned source_byte_mask = (1 << ((range.size() + 7) / 8)) - 1;
-            byte_mask |= source_byte_mask << ixbar_initial_position;
-            ixbar_initial_position += width;
+            alloc.salu_input_source.data_bytemask |= source_byte_mask << byte_offset;
+            byte_mask |= source_byte_mask << (byte_offset + ixbar_initial_position);
+            byte_offset += width;
         }
     }
     return true;
@@ -3119,6 +3121,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
         // as the valid bit is not contiguous with the digest in the sram field, so
         // trying to match it would waste more hash bits.
         alloc.hash_seed[hash_group] = bitvec(1);
+        alloc.salu_input_source.hash_bytemask = 0x7f;  // 7 bytes to cover all 52 bits
     } else {
         mah.algorithm = IR::MAU::HashFunction::identity();
         bitvec phv_src_inuse;
@@ -3222,6 +3225,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
             mah.bit_mask.setrange(start_bit, source->expr->type->width_bits());
         }
     }
+    alloc.salu_input_source.hash_bytemask = bitmask2bytemask(mah.bit_mask);
 
     // Because of a byte mask, must reserve the full byte on the hash bus
     int max_bit = max_bit_to_byte(mah.bit_mask);
@@ -3303,6 +3307,10 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     if (on_search_bus) {
         if (sources.dleft || !sources.hash_sources.empty() ||
             !setup_stateful_search_bus(salu, alloc, sources, byte_mask)) {
+            if (sources.dleft)
+                LOG4("  - has dleft source");
+            else if (!sources.hash_sources.empty())
+                LOG4("  - has hash source");
             alloc.clear();
             return false;
         }

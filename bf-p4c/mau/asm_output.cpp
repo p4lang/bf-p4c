@@ -4549,8 +4549,16 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         self.emit_memory(out, indent, *sel_info.second);
     } else {
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id)); }
-    self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, nullptr,
-                    tbl, false);
+
+    auto &ixbar = tbl->resources->salu_ixbar;
+    BUG_CHECK(ixbar.type == IXBar::Use::STATEFUL_ALU || ixbar.type == IXBar::Use::TYPES,
+              "incorrect type on %s salu_ixbar", tbl);
+    self.emit_ixbar(out, indent, &ixbar, nullptr, nullptr, nullptr, nullptr, tbl, false);
+    if (ixbar.salu_input_source.data_bytemask)
+        out << indent << "data_bytemask: " << ixbar.salu_input_source.data_bytemask << std::endl;
+    if (ixbar.salu_input_source.hash_bytemask)
+        out << indent << "hash_bytemask: " << ixbar.salu_input_source.hash_bytemask << std::endl;
+
     out << indent << "format: { lo: ";
     if (salu->dual)
         out << salu->width/2 << ", hi:" << salu->width/2;

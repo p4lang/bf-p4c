@@ -395,6 +395,7 @@ struct IXBar {
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         safe_vector<Way>     way_use;
 
+        /* tracks hash use for Stateful and Selectors (and meter?) */
         struct MeterAluHash {
             bool allocated = false;
             int group = -1;
@@ -409,9 +410,9 @@ struct IXBar {
                 // identity_positions.clear();
                 computed_expressions.clear();
             }
-        };
-        MeterAluHash meter_alu_hash;
+        } meter_alu_hash;
 
+        /* tracks hash dist use (and hashes */
         struct HashDistHash {
             bool allocated = false;
             int group = -1;
@@ -426,7 +427,7 @@ struct IXBar {
                 galois_matrix_bits.clear();
                 galois_start_bit_to_p4_hash.clear();
             }
-        };
+        } hash_dist_hash;
 
         struct ProxyHashKey {
             bool allocated = false;
@@ -439,15 +440,19 @@ struct IXBar {
                 group = -1;
                 hash_bits.clear();
             }
-        };
+        } proxy_hash_key_use;
 
-        ProxyHashKey proxy_hash_key_use;
+        struct SaluInputSource {
+            unsigned    data_bytemask = 0;
+            unsigned    hash_bytemask = 0;  // redundant with meter_alu_hash.bit_mask?
+
+            void clear() { data_bytemask = hash_bytemask = 0; }
+        } salu_input_source;
 
         // The order in the P4 program that the fields appear in the list
         safe_vector<const IR::Expression *> field_list_order;
         LTBitMatrix symmetric_keys;
 
-        HashDistHash hash_dist_hash;
 
         void clear() {
             use.clear();
@@ -459,6 +464,7 @@ struct IXBar {
                 hash_seed[i].clear();
             hash_dist_hash.clear();
             proxy_hash_key_use.clear();
+            salu_input_source.clear();
             field_list_order.clear();
         }
 

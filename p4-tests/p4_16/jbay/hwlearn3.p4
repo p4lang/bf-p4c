@@ -36,6 +36,10 @@ struct map_pair {
     bit<16>     cid;
     bit<16>     fid;
 }
+struct output_info {
+    bit<32>     ports;
+    bit<32>     other;
+}
 
 #include "ipv4_parser.h"
 
@@ -105,6 +109,7 @@ control learn_dleft(inout headers hdr, inout metadata meta)(bit<3> stage) {
     }
 
     @ways(1) // one way to make getting to later stages easier
+             // also STF does not correctly set up multiple ways currently
     @hidden  // p4runtime can't deal with enum keys
     table learn_match {
         key = {
@@ -178,6 +183,7 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.src_port : exact;
             meta.dst_port : exact;
         }
+        size = 2048;
     }
 
     learn_dleft(1) learn_1;
@@ -202,13 +208,18 @@ control ingress(inout headers hdr, inout metadata meta,
                // in the same stage as the Register.
     table do_insert_new_fid {
         actions = { insert_new_fid; }
+        size = 1;
         default_action = insert_new_fid(); }
 
     /* output fifo -- outputs cache ids of new flows */
-    Register<bit<16>, _>(32768) output_fifo;
-    RegisterAction<bit<16>, _, bit<16>>(output_fifo) report_cacheid = {
-        void apply(inout bit<16> val) { val = (bit<16>)meta.cache_id; } };
-    action do_report_cacheid() { report_cacheid.enqueue(); }
+    Register<output_info, _>(32768) output_fifo;
+    RegisterAction<output_info, _, bit<16>>(output_fifo) report_new_flow = {
+        void apply(inout output_info val) {
+            val.ports = meta.src_port ++ meta.dst_port;
+            val.other = (bit<32>)(meta.learn_stage ++ meta.cache_id[0:0]);
+        } };
+    action do_report_new_flow() {
+        report_new_flow.enqueue(); }
 
     map_dleft(3) map_3;
     map_dleft(2) map_2;
@@ -245,7 +256,7 @@ control ingress(inout headers hdr, inout metadata meta,
                     old_flow();
                 else if (meta.learn_result == learn_result_t.LEARN) {
                     @stage(6) { new_flow(); }
-                    do_report_cacheid();
+                    do_report_new_flow();
                 } else if (meta.learn_result == learn_result_t.NOT_LEARNED)
                     failed_overflow();
             } else {
