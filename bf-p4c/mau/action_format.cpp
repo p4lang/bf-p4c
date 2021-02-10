@@ -2117,15 +2117,20 @@ const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
     const ALUParameter *rv = nullptr;
     LOG3("  Finding ALU Param with container "
             << key.container << " for action " << key.action_name);
+    bool container_match = false;
     for (auto alu_position : action_alu_positions) {
         LOG3("    " << alu_position);
-        if (alu_position.alu_op->container() != key.container)
+        if (rv && alu_position.alu_op->container() != key.container)
+            continue;
+        if (alu_position.alu_op->container().size() != key.container.size())
             continue;
         auto *loc = alu_position.alu_op->find_param_alloc(key);
+        if (!loc) continue;
         BUG_CHECK(loc != nullptr, "A container operation cannot find the associated key");
-        BUG_CHECK(rv == nullptr, "A parameter has multiple allocations in container %s in "
-            "action %s", key.container, key.action_name);
+        BUG_CHECK(rv == nullptr || !container_match, "A parameter has multiple allocations "
+                  "in container %s in action %s", key.container, key.action_name);
         rv = loc;
+        container_match |= alu_position.alu_op->container() == key.container;
         if (alu_pos_p)
             *alu_pos_p = new ALUPosition(alu_position);
     }
@@ -3544,4 +3549,30 @@ void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
         build_potential_format(imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE);
     }
 }
+
 }  // namespace ActionData
+
+std::ostream &operator<<(std::ostream &out, ActionData::Location_t loc) {
+    switch (loc) {
+    case ActionData::ACTION_DATA_TABLE: out << "ad_table"; break;
+    case ActionData::IMMEDIATE: out << "immed"; break;
+    case ActionData::METER_ALU: out << "meter_alu"; break;
+    default:
+        out << "Location_t<" << static_cast<int>(loc) << ">"; }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use) {
+    using namespace IndentCtl;
+    bool first = true;
+    for (auto &alupos : use.alu_positions) {
+        if (!first) out << endl;
+        out << alupos.first << ":" << indent;
+        for (auto &pos : alupos.second)
+            out << endl << pos;
+        out << unindent;
+        first = false; }
+    return out;
+}
+
+void dump(const ActionData::Format::Use &u) { std::cout << u << std::endl; }

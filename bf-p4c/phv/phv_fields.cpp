@@ -80,6 +80,7 @@ void PhvInfo::clear() {
     dark_mutex_i.clear();
     bridged_extracted_together_i.clear();
     alloc_done_ = false;
+    trivial_alloc_ = false;
     pov_alloc_done = false;
     zeroContainers[0].clear();
     zeroContainers[1].clear();
@@ -776,7 +777,7 @@ bool PHV::Field::checkContext(
     case AllocContext::Type::TABLE: {
             auto tbl = ctxt->table;
             auto stages = PhvInfo::minStage(tbl);
-            bool inLiveRange = false;
+            bool inLiveRange = stages.empty();  // if no stage info, always true
             for (auto stage : stages) {
                 LOG3("\t\tStage: " << stage);
                 LOG3("\t\tTable: " << tbl->name << ", P4 Name: " <<

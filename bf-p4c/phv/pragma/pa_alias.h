@@ -74,7 +74,7 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     bool addAlias(const PHV::Field* f1, const PHV::Field* f2,
             bool suppressWarning = false, CreatedBy who = PRAGMA);
 
-    std::string pretty_print() override;
+    std::string pretty_print() const override;
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaAlias& pa_a);

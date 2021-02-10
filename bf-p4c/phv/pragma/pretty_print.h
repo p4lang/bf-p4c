@@ -10,7 +10,7 @@ namespace Pragma {
 // place to hold common pretty print routines if there is any.
 class PrettyPrint {
  public:
-    virtual std::string pretty_print() = 0;
+    virtual std::string pretty_print() const = 0;
 };
 
 }

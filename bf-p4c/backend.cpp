@@ -6,8 +6,8 @@
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
 #include "bf-p4c/common/check_header_refs.h"
-#include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
+#include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/multiple_apply.h"
@@ -26,32 +26,33 @@
 #include "bf-p4c/mau/ixbar_info.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/jbay_next_table.h"
+#include "bf-p4c/mau/mau_alloc.h"
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/mau/validate_actions.h"
-#include "bf-p4c/mau/mau_alloc.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
-#include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/check_parser_multi_write.h"
 #include "bf-p4c/parde/clot/allocate_clot.h"
+#include "bf-p4c/parde/collect_parser_usedef.h"
+#include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
-#include "bf-p4c/parde/resolve_negative_extract.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
-#include "bf-p4c/parde/infer_payload_offset.h"
+#include "bf-p4c/parde/resolve_negative_extract.h"
 #include "bf-p4c/parde/stack_push_shims.h"
+#include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/auto_init_metadata.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
+#include "bf-p4c/phv/dump_table_flow_graph.h"
+#include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/privatization.h"
-#include "bf-p4c/phv/finalize_stage_allocation.h"
+#include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/validate_allocation.h"
-#include "bf-p4c/phv/analysis/dark.h"
-#include "bf-p4c/phv/dump_table_flow_graph.h"
 
 namespace BFN {
 
@@ -114,6 +115,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new AllocateClot(clot, phv, uses) : nullptr;
 
     liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
+    auto *pragmaAlias = new PragmaAlias(phv);
     addPasses({
         flexibleLogging,
         new DumpPipe("Initial table graph"),
@@ -159,7 +161,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Aliasing replaces all uses of the alias source field with the alias destination field.
         // Therefore, run it first in the backend to ensure that all other passes use a union of the
         // constraints of the alias source and alias destination fields.
-        new Alias(phv),
+        pragmaAlias,
+        new AutoAlias(phv, *pragmaAlias),
+        new Alias(phv, *pragmaAlias),
         new CollectPhvInfo(phv),
         new DumpPipe("After Alias"),
         // This is the backtracking point from table placement to PHV allocation. Based on a
@@ -196,22 +200,30 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         new CheckForHeaders(),
         allocateClot,
+        // Can't (re)run CollectPhvInfo after this point as it will corrupt clot allocation
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 
-        // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
-        // will clear the allocation.
-        new DumpPipe("Before phv_analysis"),
-        new DumpTableFlowGraph(phv),
-        PHV_Analysis,
-        // Validate results of PHV allocation.
-        new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
+        options.alt_phv_alloc ? new PassManager({
+            new DumpPipe("Before trivial phv alloc"),
+            new PHV::TrivialAlloc(phv),
+            // FIXME -- should do ValidateActions (subset?) with TrivialAlloc?
+        }) : new PassManager({
+            // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
+            // will clear the allocation.
+            new DumpPipe("Before phv_analysis"),
+            new DumpTableFlowGraph(phv),
+            PHV_Analysis,
+            // Validate results of PHV allocation.
+            new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
+            allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
 
-        allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
-
-        options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
-                                // Undo results of privatization for the doNotPrivatize fields
-        new ValidateActions(phv, false, true, false),
+            // FIXME -- options.privatization defaults to false and can't be set to true?
+            // experimental work never enabled?
+            options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
+                                    // Undo results of privatization for the doNotPrivatize fields
+            new ValidateActions(phv, false, true, false),
+        }),
         new AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
@@ -222,13 +234,37 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new TableAllocPass(options, phv, deps, table_summary, &jsonGraph),
         new DumpPipe("After TableAlloc"),
         &table_summary,
+        options.alt_phv_alloc ? new PassIf([this]() { return phv.trivial_alloc(); }, {
+            // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
+            // will clear the allocation.
+            new Alias(phv, *pragmaAlias),
+            new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
+            new DumpPipe("Before phv_analysis"),
+            new DumpTableFlowGraph(phv),
+            PHV_Analysis,
+            // Validate results of PHV allocation.
+            new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
+            allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
+            options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
+                                    // Undo results of privatization for the doNotPrivatize fields
+            new ValidateActions(phv, false, true, false),
+            new AddAliasAllocation(phv),
+            new ReinstateAliasSources(phv),  // revert AliasMembers/Slices to their original
+            [this]() {
+                // FIXME -- PHV (re)allocation may have invalidated action bus allocation (at
+                // least), due to using difference sizes/slices of PHVs for fields.  We should
+                // probably be able to just redo adb alloc and fix things up, rather than redoing
+                // all of table placement, but for now we backtrack to redo table placement
+                throw TablePlacement::RedoTablePlacement(); }
+        }) : nullptr,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,
         liveRangeReport,
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
-        new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
+        options.alt_phv_alloc ? nullptr :
+            new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
         new InstructionAdjustment(phv),
         nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),

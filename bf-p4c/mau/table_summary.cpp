@@ -130,6 +130,10 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 
+    if (BFNContext::get().options().alt_phv_alloc) {
+        // with phv alloc after table placement, none of this backtracking is useful
+        return; }
+
     switch (state) {
     case INITIAL:
         // If there was a placement failure, then rerun table placements without container

@@ -38,6 +38,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_gfm_parity = true;
     int relax_phv_init = 0;
     bool quick_phv_alloc = false;
+    bool alt_phv_alloc = false;
     int traffic_limit = 100;
     int num_stages_override = 0;
 #if BAREFOOT_INTERNAL || 1

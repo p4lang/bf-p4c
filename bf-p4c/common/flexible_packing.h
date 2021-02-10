@@ -91,7 +91,7 @@ class LogRepackedHeaders : public Inspector {
     std::string getFieldName(std::string hdr, const IR::StructField* field) const;
 
     // Pretty prints a single header/metadata
-    std::string pretty_print(const IR::HeaderOrMetadata* h, std::string hdr);
+    std::string pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) const;
 
     // Strips the given prefix from the front of the cstring, returns as string
     std::string strip_prefix(cstring str, std::string pre);

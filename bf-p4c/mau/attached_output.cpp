@@ -176,6 +176,13 @@ bool Format::preorder(const IR::MAU::Table *tbl) {
  * coordinated to the adb slot itself. 
  */
 void Format::build_use(OperationsPerAction &ops_per_action, Use *use) {
+    if (phv.trivial_alloc()) {
+        // FIXME -- with a trivial alloc, the wrong kind of container may be allocated
+        // leading to this code not working (hitting a bug check due to allocation problems),
+        // so for now we skip it -- we'll backtrack and rerun table allocation with the
+        // real PHV alloc anyways.  Would be nice to make this work without depending on
+        // the PHV alloc
+        return; }
     for (auto &entry : ops_per_action) {
         auto &alu_positions = use->alu_positions[entry.first];
         for (auto *init_alu_op : entry.second) {

@@ -82,14 +82,12 @@ class AddValidityBitSets : public Transform {
 class Alias : public Logging::PassManager {
  private:
      ordered_map<cstring, const IR::Member*> fieldExpressions;
-     PragmaAlias pragmaAlias;
+     const PragmaAlias &pragmaAlias;
 
  public:
-    explicit Alias(PhvInfo& phv) :
-        Logging::PassManager("pragmas", Logging::Mode::AUTO), pragmaAlias(phv) {
+    explicit Alias(PhvInfo& phv, const PragmaAlias &pa) :
+        Logging::PassManager("pragmas", Logging::Mode::AUTO), pragmaAlias(pa) {
         addPasses({
-            &pragmaAlias,
-            new AutoAlias(phv, pragmaAlias),
             new FindExpressionsForFields(phv, fieldExpressions),
             new AddValidityBitSets(phv, pragmaAlias),
             new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions),

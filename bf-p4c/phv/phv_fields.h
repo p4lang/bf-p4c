@@ -1324,6 +1324,7 @@ class PhvInfo {
  private:
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
+    bool                                trivial_alloc_ = false;  // MAU group constraints not met
 
     /// Stores the mutual exclusion relationships between different PHV fields
     SymBitMatrix                             field_mutex_i;
@@ -1476,7 +1477,10 @@ class PhvInfo {
     iterator<safe_vector<PHV::Field *>::const_iterator> end() const { return by_id.end(); }
 
     bool alloc_done() const { return alloc_done_; }
-    void set_done() { alloc_done_ = true; }
+    bool trivial_alloc() const { return trivial_alloc_; }
+    void set_done(bool trivial = false) {
+        alloc_done_ = true;
+        trivial_alloc_ = trivial; }
 
     /// Container_to_fields map related functions
     /// Clear the container_to_fields map

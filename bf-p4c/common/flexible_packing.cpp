@@ -162,7 +162,7 @@ std::string LogRepackedHeaders::getFieldName(std::string hdr, const IR::StructFi
     return s;
 }
 
-std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) {
+std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) const {
     // Number of bytes we have used
     unsigned byte_ctr = 0;
     // Number of bits in the current byte we have used
@@ -389,6 +389,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
     flexiblePacking = new FlexiblePacking(phv, uses, deps, options,
             packWithConstraintSolver, map);
     flexiblePacking->addDebugHook(options.getDebugHook(), true);
+    PragmaAlias *pragmaAlias = new PragmaAlias(phv);
     addPasses({
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
@@ -413,7 +414,9 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new InstructionSelection(options, phv),
         new FindDependencyGraph(phv, deps, &options, "program_graph", "Pack Flexible Headers"),
         new CollectPhvInfo(phv),
-        new Alias(phv),
+        pragmaAlias,
+        new AutoAlias(phv, *pragmaAlias),
+        new Alias(phv, *pragmaAlias),
         new CollectPhvInfo(phv),
         // Run after InstructionSelection, before deadcode elimination.
         flexiblePacking,

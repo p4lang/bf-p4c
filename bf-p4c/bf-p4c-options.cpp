@@ -259,6 +259,12 @@ BFN_Options::BFN_Options() {
     registerOption("--quick-phv-alloc", nullptr,
         [this](const char *) { quick_phv_alloc = true; return true; },
          "Reduce PHV allocation search space for faster compilation");
+#if BAREFOOT_INTERNAL
+    registerOption("--alt-phv-alloc", nullptr,
+        [this](const char *) { alt_phv_alloc = true; return true; },
+         "Alternate PHV allocation ordering (trivial alloc before table placement, "
+         "real allocation after)");
+#endif
     registerOption("--traffic-limit", "arg",
         [this](const char* arg) {
             int temp = std::atoi(arg);

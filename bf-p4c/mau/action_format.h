@@ -565,18 +565,19 @@ class ALUOperation {
     bool right_shift_set() const { return _right_shift_set; }
 
     friend std::ostream &operator<<(std::ostream &out, const ALUOperation& op) {
-        out << " ALU Operation : "
-            << " params : " << op._params
-            << " phv bits : " << op._phv_bits
-            << " right_shift : " << op._right_shift
-            << " right_shift_set : " << op._right_shift_set
-            << " container : " << op._container
-            << " op constraint : " << op._constraint
-            << " alias : " << op._alias
-            << " mask alias : " << op._mask_alias
-            << " mask params : " << op._mask_params
-            << " mask bits : " << op._mask_bits
-            << " action name : " << op._action_name;
+        out << " ALU Operation { "
+            << " params: " << op._params
+            << " phv bits: " << op._phv_bits
+            << " right_shif : " << op._right_shift
+            << " right_shift_set: " << op._right_shift_set
+            << " container: " << op._container
+            << " op constraint: " << op._constraint;
+        if (op._alias) out << " alias: " << op._alias;
+        if (op._mask_alias) out << " mask alias: " << op._mask_alias;
+        out << " mask params: " << op._mask_params
+            << " mask bits: " << op._mask_bits
+            << " action name: " << op._action_name;
+        out << " }";
         return out;
     }
 };
@@ -832,9 +833,9 @@ struct ALUPosition {
         : alu_op(ao), loc(l), start_byte(sb) { }
 
     friend std::ostream &operator<<(std::ostream &out, const ALUPosition& pos) {
-        out << "ALU Position { op : " << *pos.alu_op
-                        << ", loc : " << pos.loc
-                        << ", start_byte : " << pos.start_byte
+        out << "ALU Position { op: " << *pos.alu_op
+                        << ", loc: " << pos.loc
+                        << ", start_byte: " << pos.start_byte
                         << " } ";
         return out;
     }
@@ -1051,5 +1052,13 @@ class Format {
 };
 
 }  // namespace ActionData
+
+// FIXME -- these overloads should be in namespace ActionData, but for some reason doing
+// so causes the operator<<(ostream &, std::vector<T> &) template(s) in log.h to be hidden
+// and not seen (causing overload resolution failures).  This could perhaps be fixed by
+// putting those templates in 'namespace std', but that is technically not allowed by
+// the standard.
+std::ostream &operator<<(std::ostream &, ActionData::Location_t);
+std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use);
 
 #endif  /* EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_ */

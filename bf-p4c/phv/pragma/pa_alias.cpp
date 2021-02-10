@@ -265,7 +265,7 @@ std::ostream &operator<<(std::ostream& out, const PragmaAlias::AliasDestination&
     return out;
 }
 
-std::string PragmaAlias::pretty_print() {
+std::string PragmaAlias::pretty_print() const {
     std::stringstream out;
     out << "Alias pragmas:" << std::endl;
 

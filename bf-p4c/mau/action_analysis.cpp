@@ -2291,11 +2291,13 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     error_message = "In the ALU operation over container " + container.toString() +
                     " in action " + action_name + ", ";
 
-    bool phv_group_correct = verify_phv_mau_group(container);
-    if (!phv_group_correct) {
-        error_code |= MAU_GROUP_MISMATCH;
-        error_message += "a read phv is in an incompatible PHV group";
-        return false;
+    if (!phv.trivial_alloc()) {
+        bool phv_group_correct = verify_phv_mau_group(container);
+        if (!phv_group_correct) {
+            error_code |= MAU_GROUP_MISMATCH;
+            error_message += "a read phv is in an incompatible PHV group";
+            return false;
+        }
     }
 
     if (is_shift()) {
