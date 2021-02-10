@@ -330,9 +330,10 @@ int main(int ac, char **av) {
     if (!substitute.getToplevelBlock())
         return PROGRAM_ERROR;
 
-    program->apply(SourceInfoLogging(std::string(BFNContext::get().getOutputDirectory() +
-                                         "/source.json").c_str(),
-                                     *midend.sourceInfoLogging));
+    if (options.debugInfo) {
+        program->apply(SourceInfoLogging(BFNContext::get().getOutputDirectory().c_str(),
+                                         "source.json", *midend.sourceInfoLogging));
+    }
 
 #if !BAREFOOT_INTERNAL
     // turn all errors into "fatal errors" by exiting on the first error encountered

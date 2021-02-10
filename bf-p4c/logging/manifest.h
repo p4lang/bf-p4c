@@ -41,6 +41,7 @@ class Manifest : public Inspector {
     /// the collection of inputs for the program
     struct InputFiles {
         cstring           _rootPath;
+        cstring           _sourceInfo;  // path to source.json relative to manifest.json
         std::set<cstring> _includePaths;
         std::set<cstring> _defines;
 
@@ -237,6 +238,11 @@ class Manifest : public Inspector {
     }
     void addArchitecture(const BFN::ProgramThreads &threads) {
         _threads.insert(threads.cbegin(), threads.cend());
+    }
+    void setSourceInfo(cstring path) {
+        BUG_CHECK(_programInputs._sourceInfo.size() == 0,
+            "Trying to redefine path to source info!");
+        _programInputs._sourceInfo = path;
     }
 
     /// serialize the entire manifest

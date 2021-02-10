@@ -62,6 +62,10 @@ void Manifest::InputFiles::serialize(Writer &writer) {
     writer.StartObject();
     writer.Key("src_root");
     writer.String(_rootPath.c_str());
+    if (_sourceInfo) {
+        writer.Key("src_map");
+        writer.String(_sourceInfo.c_str());
+    }
     writer.Key("includes");
     writer.StartArray();
     for (auto i : _includePaths)

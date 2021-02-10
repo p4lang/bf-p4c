@@ -135,154 +135,154 @@ test_matrix = {
     # If needed, use "test_p4c_driver.py --gen-src-json" to (re)generate reference source jsons
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_lpm_match' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_lpm_match_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_lpm_match/tna_lpm_match.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_lpm_match/tna_lpm_match.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_lpm_match_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/bri_handle' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_bri_handle_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'bri_handle/bri_handle.p4')], None, None,
+        os.path.join(p4_16_path, 'bri_handle/bri_handle.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_bri_handle_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_timestamp' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_timestamp_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_timestamp/tna_timestamp.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_timestamp/tna_timestamp.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_timestamp_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_bridged_md' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_bridged_md_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_bridged_md/tna_bridged_md.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_bridged_md/tna_bridged_md.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_bridged_md_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_pvs' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_pvs_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_pvs/tna_pvs.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_pvs/tna_pvs.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_pvs_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_simple_switch' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_simple_switch_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_simple_switch/tna_simple_switch.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_simple_switch/tna_simple_switch.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_simple_switch_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_register' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_register_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_register/tna_register.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_register/tna_register.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_register_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_meter_lpf_wred' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_meter_lpf_wred_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_meter_lpf_wred/tna_meter_lpf_wred.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_meter_lpf_wred/tna_meter_lpf_wred.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_meter_lpf_wred_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_dkm' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_dkm_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_dkm/tna_dkm.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_dkm/tna_dkm.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_dkm_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_32q_multiprogram/program_b' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_32q_multiprogram_program_b_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_32q_multiprogram_program_b_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_32q_multiprogram/program_a' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_32q_multiprogram_program_a_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_32q_multiprogram_program_a_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_random' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_random_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_random/tna_random.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_random/tna_random.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_random_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_digest' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_digest_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_digest/tna_digest.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_digest/tna_digest.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_digest_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_multicast' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_multicast_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_multicast/tna_multicast.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_multicast/tna_multicast.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_multicast_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_port_metadata_extern' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_port_metadata_extern_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_port_metadata_extern/tna_port_metadata_extern.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_port_metadata_extern/tna_port_metadata_extern.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_port_metadata_extern_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_pktgen' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_pktgen_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_pktgen/tna_pktgen.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_pktgen/tna_pktgen.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_pktgen_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/bri_with_pdfixed_thrift' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_bri_with_pdfixed_thrift_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'bri_with_pdfixed_thrift/bri_with_pdfixed_thrift.p4')], None, None,
+        os.path.join(p4_16_path, 'bri_with_pdfixed_thrift/bri_with_pdfixed_thrift.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_bri_with_pdfixed_thrift_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_custom_hash' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_custom_hash_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_custom_hash/tna_custom_hash.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_custom_hash/tna_custom_hash.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_custom_hash_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_proxy_hash' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_proxy_hash_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_proxy_hash/tna_proxy_hash.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_proxy_hash/tna_proxy_hash.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_proxy_hash_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_exact_match' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_exact_match_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_exact_match/tna_exact_match.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_exact_match/tna_exact_match.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_exact_match_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_dyn_hashing_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_dyn_hashing/tna_dyn_hashing.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_dyn_hashing/tna_dyn_hashing.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_dyn_hashing_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_action_profile' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_action_profile_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_action_profile/tna_action_profile.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_action_profile/tna_action_profile.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_action_profile_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_symmetric_hash' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_symmetric_hash_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_symmetric_hash/tna_symmetric_hash.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_symmetric_hash/tna_symmetric_hash.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_symmetric_hash_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_idletimeout' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_idletimeout_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_idletimeout/tna_idletimeout.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_idletimeout/tna_idletimeout.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_idletimeout_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_port_metadata' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_port_metadata_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_port_metadata/tna_port_metadata.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_port_metadata/tna_port_metadata.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_port_metadata_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_meter_bytecount_adjust' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_meter_bytecount_adjust_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_meter_bytecount_adjust/tna_meter_bytecount_adjust.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_meter_bytecount_adjust/tna_meter_bytecount_adjust.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_meter_bytecount_adjust_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_ternary_match' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_ternary_match_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_ternary_match/tna_ternary_match.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_ternary_match/tna_ternary_match.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_ternary_match_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_snapshot' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_snapshot_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_snapshot/tna_snapshot.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_snapshot/tna_snapshot.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_snapshot_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_field_slice' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_field_slice_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_field_slice/tna_field_slice.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_field_slice/tna_field_slice.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_field_slice_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_action_selector' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_action_selector_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_action_selector/tna_action_selector.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_action_selector/tna_action_selector.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_action_selector_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_ports' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_ports_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_ports/tna_ports.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_ports/tna_ports.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_ports_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_32q_2pipe_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_32q_2pipe/tna_32q_2pipe.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_32q_2pipe/tna_32q_2pipe.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_32q_2pipe_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_counter' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_counter_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_counter/tna_counter.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_counter/tna_counter.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_counter_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_resubmit' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_resubmit_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_resubmit/tna_resubmit.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_resubmit/tna_resubmit.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_resubmit_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_operations' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_operations_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_operations/tna_operations.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_operations/tna_operations.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_operations_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_mirror' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_mirror_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_mirror/tna_mirror.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_mirror/tna_mirror.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_mirror_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_checksum' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_checksum_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_checksum/tna_checksum.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_checksum/tna_checksum.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_checksum_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_range_match' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_range_match_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_range_match/tna_range_match.p4')], None, None,
+        os.path.join(p4_16_path, 'tna_range_match/tna_range_match.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_range_match_source.json')),
 }

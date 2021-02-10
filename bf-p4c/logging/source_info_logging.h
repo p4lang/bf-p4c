@@ -71,17 +71,21 @@ class SourceInfoLogging : public Inspector {
  private:
     const CollectSourceInfoLogging& sourceInfo;
     Source_Info_Schema_Logger       logger;
+    std::string                     manifestPath;  // path to source.json relative to manifest.json
 
 #ifdef BF_P4C_LOGGING_SOURCE_INFO_LOGGING_H_DEBUG
     std::map<std::string, std::map<unsigned, std::set<std::string>>> sourceCoverage;
 #endif
 
  public:
-    explicit SourceInfoLogging(const char* filename,
+    explicit SourceInfoLogging(const std::string &outdir,
+                               const std::string &filename,
                                const CollectSourceInfoLogging& sourceInfo) :
-        Inspector(), sourceInfo(sourceInfo), logger(filename,
+        Inspector(), sourceInfo(sourceInfo), logger((outdir + "/" + filename).c_str(),
                                                     SOURCE_INFO_SCHEMA_VERSION,
                                                     sourceInfo.sourceRoot) {
+        manifestPath = filename;
+
         for (const auto& symbol : sourceInfo.symbols) {
             logger.append(symbol);
 
@@ -115,7 +119,7 @@ class SourceInfoLogging : public Inspector {
     }
 
     bool preorder(const IR::Node*) override { return false; }
-    void end_apply() override { logger.log(); }
+    void end_apply() override;
 };
 
 #endif  /* BF_P4C_LOGGING_SOURCE_INFO_LOGGING_H_ */

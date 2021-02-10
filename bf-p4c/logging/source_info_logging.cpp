@@ -1,8 +1,8 @@
 #include <unistd.h>
-
 #include <stack>
 
-#include "bf-p4c/logging/source_info_logging.h"
+#include "source_info_logging.h"
+#include "manifest.h"
 
 CollectSourceInfoLogging::CollectSourceInfoLogging(const P4::ReferenceMap& refMap)
     : Inspector(), refMap(refMap) {
@@ -333,4 +333,9 @@ void CollectSourceInfoLogging::end_apply() {
             addSymbol(symbolByNameMapItem.second);
         }
     }
+}
+
+void SourceInfoLogging::end_apply() {
+    logger.log();
+    Logging::Manifest::getManifest().setSourceInfo(manifestPath);
 }
