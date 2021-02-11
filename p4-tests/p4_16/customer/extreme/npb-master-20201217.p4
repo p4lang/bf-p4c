@@ -1752,6 +1752,7 @@ struct switch_ingress_metadata_t {
 @pa_container_size("egress", "eg_md.mirror.src", 8)
 @pa_container_size("egress", "eg_md.mirror.type", 8)
 
+@pa_atomic("egress", "eg_md.bypass")
 
 
 

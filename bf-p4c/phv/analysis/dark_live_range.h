@@ -337,7 +337,8 @@ class DarkLiveRange : public Inspector {
             const PHV::ContainerGroup& group,
             const PHV::Container& c,
             const ordered_set<PHV::AllocSlice>& fields,
-            const PHV::Transaction& alloc) const;
+            const PHV::Transaction& alloc,
+            bool canUseARA) const;
 
     explicit DarkLiveRange(
             PhvInfo& p,
@@ -386,7 +387,7 @@ class DarkOverlay : public PassManager {
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::AllocSlice& slice,
             const PHV::Transaction& alloc,
-            const PHV::Allocation::MutuallyLiveSlices& /* container_state */) const {
+            bool canUseARA) const {
         if (!suitableForDarkOverlay(slice)) return boost::none;
         ordered_set<PHV::AllocSlice> fields;
         PHV::Container c;
@@ -402,7 +403,7 @@ class DarkOverlay : public PassManager {
                   "Container candidate for dark overlay cannot be NULL.");
         BUG_CHECK(c == slice.container(), "Needs to be the same container");
         fields.insert(PHV::AllocSlice(slice));
-        return initNode.findInitializationNodes(group, c, fields, alloc);
+        return initNode.findInitializationNodes(group, c, fields, alloc, canUseARA);
     }
 
     explicit DarkOverlay(

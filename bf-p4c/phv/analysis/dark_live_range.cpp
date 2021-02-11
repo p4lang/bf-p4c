@@ -438,7 +438,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         const PHV::ContainerGroup& group,
         const PHV::Container& c,
         const ordered_set<PHV::AllocSlice>& fields,
-        const PHV::Transaction& alloc) const {
+        const PHV::Transaction& alloc,
+        bool canUseARA) const {
     // If one of the fields has been marked as "do not init to dark" (primarily because we did not
     // find dominator nodes for use nodes of those fields), then return false early.
     for (const auto& sl : fields)
@@ -602,7 +603,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             return boost::none;
         }
 
-        bool ARAspill = PhvInfo::darkSpillARA && movePreviousToDark && !initializeFromDark;
+        bool ARAspill = PhvInfo::darkSpillARA && movePreviousToDark && !initializeFromDark &&
+            canUseARA;
         const IR::MAU::Table* groupDominator = getGroupDominator(info.field.field(), f_nodes,
                 info.field.field()->gress);
         int firstDarkInitMaxStage = 0;

@@ -557,6 +557,7 @@ const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
  * Currently the instruction adjustment cannot work with these default constants
  */
 const IR::MAU::Action *ExpressionsToHash::preorder(IR::MAU::Action *act) {
+    LOG5("ExpressionsToHash preorder on action: " << act);
     container_actions_map.clear();
     expr_to_hash_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
@@ -646,6 +647,7 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
  *  over a container
  */
 const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
+    LOG5("MergeInstructions preorder on action: " << act);
     container_actions_map.clear();
     merged_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
@@ -810,6 +812,7 @@ const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
         auto &cont_action = container_action_info.second;
         if (!merged_fields.count(container)) continue;
         act->action.push_back(build_merge_instruction(container, cont_action));
+        LOG5("      Merged instr: " << *(act->action.rbegin()));
     }
     return act;
 }
@@ -1008,15 +1011,21 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
     if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
         *src1_p = fill_out_hash_operand(container, cont_action);
         src1_writebits = adi.alignment.write_bits();
+        LOG5("\t\tbuild_actiondata_source for hashdist " << cont_action.name <<
+             "  writebits:" << src1_writebits);
     } else if (adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
         *src1_p = fill_out_rand_operand(container, cont_action);
         src1_writebits = adi.alignment.write_bits();
+        LOG5("\t\tbuild_actiondata_source for ramdom " << cont_action.name <<
+             "  writebits:" << src1_writebits);
     } else if (cont_action.ad_renamed()) {
         auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
         fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
                                     adi.action_data_name, mo);
         *src1_p = mo;
         src1_writebits = adi.alignment.write_bits();
+        LOG5("\t\tbuild_actiondata_source for multiOp " << adi.action_data_name <<
+             "  writebits:" << src1_writebits);
     } else {
         bool single_action_data = true;
         for (auto &field_action : cont_action.field_actions) {
@@ -1029,6 +1038,9 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
                           "does require an alias");
                 *src1_p = read.expr;
                 src1_writebits = adi.alignment.write_bits();
+                LOG5("\t\tbuild_actiondata_source for field " << field_action.name <<
+                     "  writebits:" << src1_writebits);
+
                 single_action_data = false;
             }
         }
@@ -1135,6 +1147,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
 
     if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
         build_actiondata_source(cont_action, &src1, src1_writebits, brm_info, container);
+        LOG5("\t ACTION DATA SOURCE for " << cont_action.name << " : " << src1_writebits);
     } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
         // Constant merged into a single constant over the entire container
         unsigned constant_value = cont_action.ci.valid_instruction_constant(container.size());
@@ -1145,6 +1158,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             width_bits = container.size();
         src1 = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
         src1_writebits = cont_action.ci.alignment.write_bits();
+        LOG5("\t CONSTANT SOURCE for " << cont_action.name << " : " << src1_writebits);
     }
 
 
@@ -1152,6 +1166,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     // PHV fields
     build_phv_source(cont_action, &src1, &src2, src1_writebits, src2_writebits, brm_info,
                      container);
+    LOG5("\t PHV SOURCE for " << cont_action.name << " : " << src1_writebits);
+
 
     // Src1 is not sources from parameters, but instead is equal to the destination: BRIG-914
     if (cont_action.implicit_src1) {
@@ -1160,6 +1176,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         bitvec reverse = bitvec(0, container.size()) - src2_writebits;
         src1 = MakeSlice(src1, reverse.min().index(), reverse.max().index());
         src1_writebits = reverse;
+        LOG5("\t IMPLICIT SOURCE for " << cont_action.name << " : " << src1_writebits);
     }
 
     // Src2 is not sources from parameters, but instead is equal to the destination: BRIG-883
@@ -1174,6 +1191,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     if (!cont_action.partial_overwrite() && src1_writebits.popcount()
                                           != static_cast<int>(container.size())) {
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
+        LOG5("\t DESTINATION for " << cont_action.name << " : " << dst);
     }
 
     cstring instr_name = cont_action.name;
@@ -1186,6 +1204,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
 
     IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
     merged_instr->operands.push_back(dst);
+    LOG5("\t PUSHED DESTINATION for " << cont_action.name << " : " << dst);
+
     if (!cont_action.no_sources()) {
         BUG_CHECK(src1 != nullptr, "No src1 in a merged instruction");
         merged_instr->operands.push_back(src1);

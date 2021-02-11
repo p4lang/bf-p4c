@@ -153,7 +153,9 @@
 @pa_alias("egress" , "Wanamassa.Alstown.Weinert" , "Peoria.Westville.Aldan")
 @pa_alias("egress" , "Wanamassa.Knights.Tallassee" , "Peoria.Belmore.Hueytown")
 @pa_alias("egress" , "Wanamassa.Knights.Irvine" , "Peoria.Belmore.Irvine")
-@pa_alias("egress" , "Peoria.Nevis.Stilwell" , "Peoria.Nevis.Fredonia") header Chaska {
+@pa_alias("egress" , "Peoria.Nevis.Stilwell" , "Peoria.Nevis.Fredonia")
+@pa_no_pack("ingress" , "Wanamassa.Yorkshire.Noyes" , "Peoria.Whitetail.VanWert")
+header Chaska {
     bit<8> Selawik;
 }
 

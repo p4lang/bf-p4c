@@ -1219,6 +1219,34 @@ bool CoreAllocation::hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidat
     return lr_overlap;
 }
 
+// Check dark mutex of all candidates and build bitvec of container
+// slice corresponding to dark mutex slices. If the bitvec is not contiguous
+// then turn off ARA initializations; instead use regular table inits
+bool CoreAllocation::checkDarkOverlay(std::vector<PHV::AllocSlice> candidate_slices,
+                                      PHV::Transaction alloc) const {
+    bitvec cntr_bits;
+
+    for (auto sl : candidate_slices) {
+        const auto& alloced_slices = alloc.slices(sl.container(), sl.container_slice());
+
+        // Find slices that can be dark overlaid
+        if (can_overlay(phv_i.dark_mutex(), sl.field(), alloced_slices)) {
+            // Skip the ones that can also be meta and parser overlaid
+            if (can_overlay(phv_i.metadata_mutex(), sl.field(), alloced_slices) ||
+                can_overlay(mutex_i, sl.field(), alloced_slices)) continue;
+
+            // *ALEX* TODO: Could add checks for liveranges if initializations
+            //              may happen at different stages
+
+            // Update bitvec
+            le_bitrange cntr_slice = sl.container_slice();
+            cntr_bits.setrange(cntr_slice.lo, cntr_slice.size());
+        }
+    }
+
+    return cntr_bits.is_contiguous();
+}
+
 
 // FIELDSLICE LIST <--> CONTAINER GROUP allocation.
 // This function generally is used under two cases:
@@ -1380,6 +1408,7 @@ CoreAllocation::tryAllocSliceList(
         PHV::Transaction perContainerAlloc = alloc_attempt.makeTransaction();
         // Flag case that overlay requires new container such as dark overlay
         bool new_overlay_container = false;
+        bool canDarkInitUseARA = checkDarkOverlay(candidate_slices, perContainerAlloc);
         // Check that the placement can be done through metadata initialization.
         for (auto& slice : candidate_slices) {
             if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField()) continue;
@@ -1471,8 +1500,8 @@ CoreAllocation::tryAllocSliceList(
                             alloced_slices)) {
                     LOG5("    ...and can overlay " << slice << " on " << alloced_slices <<
                          " by pushing one of them into a dark container.");
-                    auto darkInitNodes = dark_init_i.findInitializationNodes(group, alloced_slices,
-                                         slice, perContainerAlloc, actual_cntr_state);
+                    auto darkInitNodes = dark_init_i.findInitializationNodes(
+                        group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA);
                     if (!darkInitNodes) {
                         LOG5("       ...but cannot find initialization points for dark "
                              "containers.");
@@ -1928,7 +1957,7 @@ CoreAllocation::tryAllocSliceList(
 
     alloc_attempt.commit(*best_candidate);
     return alloc_attempt;
-}
+}  // NOLINT(readability/fn_size)
 
 
 // Used for dark overlays - Replaces original slice allocation with
@@ -1974,22 +2003,26 @@ bool CoreAllocation::generateNewAllocSlices(
                 LOG5("\t\t Checking slice " << mls << " for common init stages");
                 le_bitrange mlsBits = mls.container_slice();
                 PHV::Container mlsCntr = PHV::Container();
-                if (mls.getInitPrimitive() && mls.getInitPrimitive()->getSourceSlice())
-                    mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
-
-                if (mls.getEarliestLiveness().second.isWrite() &&
+                // Account for bits from source container
+                if (mls.getInitPrimitive() && mls.getInitPrimitive()->getSourceSlice() &&
+                    mls.getEarliestLiveness().second.isWrite() &&
                     newSlice.getEarliestLiveness().second.isWrite() &&
-                    (mls.getEarliestLiveness().first ==
-                     initStg) &&
-                    (mls.container() == newSlice.container())) {
-                    LOG5("\t\t .... confirmed");
-                    perStageSources2Ranges[initStg][mlsCntr].setrange(mlsBits.lo,
-                                                                            mlsBits.size());
+                    (mls.getEarliestLiveness().first == initStg))
+                    mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
+                // Else account for previously allocated alive bits in destination container
+                else if (!mls.getInitPrimitive() &&
+                         !isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
+                                              newSlice.getEarliestLiveness(),
+                                              mls.getEarliestLiveness(),
+                                              mls.getLatestLiveness()))
+                    mlsCntr = mls.container();
 
-                    if (perStageSources2Ranges[initStg].size() > 2) {
-                        LOG5("\t\t\tToo many sources : " << perStageSources2Ranges[initStg].size());
-                        return false;
-                    }
+                perStageSources2Ranges[initStg][mlsCntr].setrange(mlsBits.lo,
+                                                                  mlsBits.size());
+
+                if (perStageSources2Ranges[initStg].size() > 2) {
+                    LOG5("\t\t\tToo many sources : " << perStageSources2Ranges[initStg].size());
+                    return false;
                 }
             }
         }
@@ -2001,7 +2034,8 @@ bool CoreAllocation::generateNewAllocSlices(
         foundAnyNewSliceForThisOrigSlice = true;
         rv.push_back(newSlice);
     }
-    // Check for contiguity in init slices
+    // Check for contiguity in init slices from the same source
+    // container (AlwaysRun actions can not use bitmask-set)
     for (auto stgEntry : perStageSources2Ranges) {
         if (stgEntry.second.size() == 1) continue;
 

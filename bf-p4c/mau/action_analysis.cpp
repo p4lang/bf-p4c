@@ -188,15 +188,20 @@ void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
 
 void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, expr);
-    if (auto *ao = field_action.reads.back().unsliced_expr()->to<IR::MAU::AttachedOutput>())
-        field_action.reads.back().speciality = classify_attached_output(ao);
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>())
-        field_action.reads.back().speciality = ActionParam::HASH_DIST;
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::StatefulCounter>())
-        field_action.reads.back().speciality = ActionParam::STFUL_COUNTER;
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::RandomNumber>())
-        field_action.reads.back().speciality = ActionParam::RANDOM;
+    if (auto *ao = field_action.reads.back().unsliced_expr()->to<IR::MAU::AttachedOutput>()) {
+        LOG5("\t\t Action Data is Attached Output");
+        field_action.reads.back().speciality = classify_attached_output(ao); }
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>()) {
+        LOG5("\t\t Action Data is HASH_DIST");
+        field_action.reads.back().speciality = ActionParam::HASH_DIST; }
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::StatefulCounter>()) {
+        LOG5("\t\t Action Data is STFUL_COUNTER");
+        field_action.reads.back().speciality = ActionParam::STFUL_COUNTER; }
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::RandomNumber>()) {
+        LOG5("\t\t Action Data is RANDOM");
+        field_action.reads.back().speciality = ActionParam::RANDOM; }
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::ConditionalArg>()) {
+        LOG5("\t\t Action Data is Conditional");
         field_action.reads.back().is_conditional = true;
     }
 }
@@ -318,12 +323,14 @@ std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ContainerActio
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::Instruction *instr) {
+    LOG5("ActionAnalysis preorder on instruction : " << *instr);
     field_action.clear();
     field_action.name = instr->name;
     return true;
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
+    LOG5("ActionAnalysis preorder on ActionArg : " << *arg);
     if (!findContext<IR::MAU::Instruction>())
         return false;
 
@@ -332,6 +339,7 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::ConditionalArg *ca) {
+    LOG5("ActionAnalysis preorder on ConditionalArg : " << *ca);
     initialize_action_data(ca);
     return false;
 }
@@ -344,11 +352,13 @@ bool ActionAnalysis::preorder(const IR::BFN::ReinterpretCast*) {
 }
 
 bool ActionAnalysis::preorder(const IR::Constant *constant) {
+    LOG5("ActionAnalysis preorder on const : " << *constant);
     field_action.reads.emplace_back(ActionParam::CONSTANT, constant);
     return false;
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
+    LOG5("ActionAnalysis preorder on ADConst : " << *adc);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, adc);
     return false;
 }
@@ -388,6 +398,7 @@ bool ActionAnalysis::preorder(const IR::MAU::StatefulCounter *sc) {
 }
 
 bool ActionAnalysis::preorder(const IR::Slice *sl) {
+    LOG5("ActionAnalysis preorder on Slice : " << *sl);
     if (phv.field(sl)) {
         initialize_phv_field(sl);
     } else if (isActionParam(sl)) {
@@ -407,12 +418,14 @@ bool ActionAnalysis::preorder(const IR::Cast *) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::Primitive *prim) {
+    LOG5("ActionAnalysis preorder on Primitive : " << *prim);
     BUG("%s: Primitive %s was not correctly converted in Instruction Selection", prim->srcInfo,
         prim);
     return false;
 }
 
 bool ActionAnalysis::preorder(const IR::Expression *expr) {
+    LOG5("ActionAnalysis preorder on Expression : " << *expr);
     if (phv.field(expr)) {
         initialize_phv_field(expr);
     } else {
@@ -430,7 +443,7 @@ bool ActionAnalysis::preorder(const IR::Member *mem) {
  *  later.
  */
 void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
-    LOG1("ActionAnalysis postorder on instruction : " << instr);
+    LOG5("ActionAnalysis postorder on instruction : " << instr);
     if (!field_action.write_found) {
         LOG1("ERROR: Nothing written in the instruction " << instr);
     }
@@ -1035,8 +1048,9 @@ void ActionAnalysis::determine_unused_bits(PHV::Container container,
 
     PHV::FieldUse use(PHV::FieldUse::WRITE);
     bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten,
-            cont_action.table_context, &use);
+                                                    cont_action.table_context, &use);
     bitvec unused_bits = bitvec(0, container.size()) - container_occupancy;
+    LOG5("\t Unused bits for container " << container << " : " << unused_bits);
 
     if (cont_action.adi.initialized) {
         cont_action.adi.alignment.unused_container_bits = unused_bits;
@@ -1091,6 +1105,8 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         }
 
         instr_name = to_bitmasked_set ? "to-bitmasked-set" : cont_action.field_actions[0].name;
+        LOG5("\t Instruction name: " << instr_name);
+
         for (auto &field_action : cont_action.field_actions) {
             if (instr_name == "to-bitmasked-set") {
                 if (field_action.name != "set" && field_action.name != "conditionally-set") {
@@ -1497,6 +1513,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
 
     if (read_sources() == 2) {
         convert_instr_to_deposit_field = true;
+        LOG5("  A. Convert instr to deposit field");
     } else if (read_sources() == 1 && single_src_alignment) {
         if (!single_src_alignment->deposit_field_src1()) {
             /**
@@ -1505,6 +1522,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
              */
             if (single_src_alignment->deposit_field_src2(container)) {
                 convert_instr_to_deposit_field = true;
+                LOG5("  B. Convert instr to deposit field with implicit source");
                 implicit_src1 = true;
                 max_phv_non_aligned = 0;
                 max_phv_non_contiguous = 1;
@@ -1525,6 +1543,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
          */
         } else if (single_src_alignment->is_wrapped_shift(container)) {
             convert_instr_to_deposit_field = true;
+            LOG5("  C. Convert instr to deposit field with implicit source");
             implicit_src2 = true;
         }
     } else {
@@ -1536,6 +1555,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
     if (phv_non_contiguous > max_phv_non_contiguous)
         return false;
     is_deposit_field_variant = true;
+    LOG5("  D. Convert instr to deposit field ");
     return true;
 }
 

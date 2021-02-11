@@ -566,6 +566,8 @@ bitvec PhvInfo::bits_allocated(
     auto& fields = fields_in_container(c);
 
     if (fields.size() == 0) return ret_bitvec;
+    LOG5("\t Write fields: " << writes);
+
     // Gather all the slices of written fields allocated to container c
     std::vector<PHV::AllocSlice> write_slices_in_container;
     for (auto* field : writes) {
@@ -574,8 +576,11 @@ bitvec PhvInfo::bits_allocated(
             write_slices_in_container.push_back(alloc);
         });
     }
+    LOG5("\t Write slices in container: " << write_slices_in_container);
     for (auto* field : fields) {
         if (field->padding) continue;
+        LOG3("\t   Container field: " << field->name);
+
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
             if (alloc.container() != c) return;
             le_bitrange bits = alloc.container_slice();
@@ -601,7 +606,10 @@ bitvec PhvInfo::bits_allocated(
             bool dark_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::AllocSlice& slice) {
-                    return dark_mutex_i(slice.field()->id, alloc.field()->id);
+                    LOG5("\t\t\t Dark Mutex with " << slice.field()->name << " is " <<
+                        dark_mutex_i(slice.field()->id, alloc.field()->id));
+                    return bits.overlaps(slice.container_slice()) &&
+                        dark_mutex_i(slice.field()->id, alloc.field()->id);
             });
             bool noMutex = !is_alias && !mutually_exclusive && !meta_overlay;
 
@@ -609,8 +617,8 @@ bitvec PhvInfo::bits_allocated(
             if (Device::phvSpec().hasContainerKind(PHV::Kind::dark) && !c.is(PHV::Kind::dark))
                 noMutex = noMutex && !dark_overlay;
 
-            LOG3("\t\t mutex control:" << mutually_exclusive << " meta:" << meta_overlay <<
-                 " dark:" << dark_overlay);
+            LOG3("\t\t For field " << field->name << "  mutex control:" << mutually_exclusive <<
+                 " meta:" << meta_overlay << " dark:" << dark_overlay);
 
             if (noMutex) {
                 ret_bitvec.setrange(bits.lo, bits.size());
@@ -771,7 +779,7 @@ bool PHV::Field::checkContext(
     // so the slice is valid across all contexts.
     if (ctxt == nullptr || Device::currentDevice() == Device::TOFINO) return true;
 
-    LOG7("\tCheckContext for slice: " << slice);
+    LOG5("\tCheckContext for slice: " << slice);
 
     switch (ctxt->type) {
     case AllocContext::Type::TABLE: {
@@ -805,7 +813,7 @@ bool PHV::Field::checkContext(
                     inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
                 }
             }
-            LOG3("\t\tinLiveRange: " << inLiveRange);
+            LOG5("\t\tinLiveRange: " << inLiveRange);
             return inLiveRange;
         }
 

@@ -318,6 +318,10 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         PHV::SuperCluster& cluster) const;
 
+    bool checkDarkOverlay(std::vector<PHV::AllocSlice> candidate_slices,
+                          PHV::Transaction alloc) const;
+
+
     /** Helper function for tryAlloc that tries to allocate all fields in
      * @start_positions simultaneously. Deparsed fields in particular need to be
      * placed simultaneously with their neighbors; otherwise, the `deparsed`
