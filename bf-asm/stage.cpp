@@ -395,6 +395,13 @@ unsigned AsmStage::compute_latency(gress_t gress) {
 
 static FakeTable invalid_rams("RAMS NOT PRESENT");
 
+std::map<int, std::pair<bool, int>> Stage_data::teop = {
+    { 0, { false, INT_MAX } },
+    { 1, { false, INT_MAX } },
+    { 2, { false, INT_MAX } },
+    { 3, { false, INT_MAX } }
+};
+
 Stage::Stage() {
     static_assert(sizeof(Stage_data) == sizeof(Stage),
                   "All non-static Stage fields must be in Stage_data");
@@ -812,3 +819,21 @@ void Stage::gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache) 
         reg_name = "stage_" + std::to_string(stageno) + "_parity_group_mask";
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
 }
+
+template<class REGS>
+void Stage::write_teop_regs(REGS &regs) {
+    BUG_CHECK(Target::SUPPORT_TRUE_EOP(), "teop not supported on target");
+    // Set teop bus delay regs on current stage if previous stage is driving teop
+    for (auto t : teop) {
+        if (t.second.first && t.second.second < stageno) {
+            auto delay_en = (stage_dep[EGRESS] != Stage::ACTION_DEP);
+            if (delay_en) {
+                auto delay = pipelength(EGRESS) - 4;
+                auto &adrdist = regs.rams.match.adrdist;
+                adrdist.teop_bus_ctl[t.first].teop_bus_ctl_delay = delay;
+                adrdist.teop_bus_ctl[t.first].teop_bus_ctl_delay_en = delay_en;
+            }
+        }
+    }
+}
+

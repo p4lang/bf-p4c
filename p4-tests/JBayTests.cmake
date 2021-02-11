@@ -345,6 +345,7 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_symmetric_hash
   tna_ternary_match
   tna_timestamp
+  t2na_counter_true_egress_accounting
   )
 
 # No ptf, compile-only

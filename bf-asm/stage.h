@@ -73,7 +73,10 @@ class Stage_data {
     Alloc1D<int, MAX_LONGBRANCH_TAGS> mpr_long_brch_lut;
 
 
-    int                         pass1_logical_id = -1, pass1_tcam_id = -1;
+    int pass1_logical_id = -1, pass1_tcam_id = -1;
+
+    // True egress accounting (4 buses) Tofino2/3 ONLY
+    static std::map<int, std::pair<bool, int>> teop;
 
  protected:
     Stage_data() {}
@@ -101,6 +104,7 @@ class Stage : public Stage_data {
         void gen_mau_stage_extension(REGS &regs, json::map &extend);
     template<class REGS> void write_regs(REGS &regs);
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
+    template<class REGS> void write_teop_regs(REGS &regs);
     int adr_dist_delay(gress_t gress);
     int pipelength(gress_t gress);
     int pred_cycle(gress_t gress);

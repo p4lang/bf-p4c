@@ -1,5 +1,6 @@
 // common between jbay and cloudbreak
-template<typename REGS> void CounterTable::setup_teop_regs_2(REGS &regs, int stats_group_index) {
+template<typename REGS>
+void CounterTable::setup_teop_regs_2(REGS &regs, int stats_group_index) {
     BUG_CHECK(teop >= 0 && teop < 4);
     BUG_CHECK(gress == EGRESS);
 

@@ -186,6 +186,8 @@ template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs) {
     if (options.disable_power_gating) {
         disable_jbay_power_gating(regs);
     }
+
+    write_teop_regs(regs);
 }
 
 void AlwaysRunTable::write_regs(Target::Cloudbreak::mau_regs &regs) {

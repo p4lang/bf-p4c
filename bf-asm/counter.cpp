@@ -31,12 +31,18 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             else
                 error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
         } else if (kv.key == "teop") {
+            if (gress != EGRESS)
+                error(kv.value.lineno, "tEOP can only be used in EGRESS");
             if (!Target::SUPPORT_TRUE_EOP())
                 error(kv.value.lineno, "tEOP is not available on device");
             if (CHECKTYPE(kv.value, tINT)) {
                 teop = kv.value.i;
                 if (teop < 0 || teop > 3)
-                    error(kv.value.lineno, "Invalid tEOP bus %d, valid values are 0-3", teop); }
+                    error(kv.value.lineno, "Invalid tEOP bus %d, valid values are 0-3", teop);
+                BUG_CHECK(!stage->teop[teop].first,
+                    "previously used tEOP bus %d used again in stage %d", teop, stage->stageno);
+                stage->teop[teop] = { true, stage->stageno };
+            }
         } else if (kv.key == "lrt") {
             if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
             collapse_list_of_maps(kv.value, true);

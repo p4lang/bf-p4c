@@ -77,6 +77,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
   # P4C-3473
   extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-3528.p4
 )
 
 p4c_add_xfail_reason("tofino2"
