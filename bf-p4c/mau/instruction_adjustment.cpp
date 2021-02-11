@@ -1118,7 +1118,6 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         return dest_slice_to_container(container, cont_action);
     }
 
-
     const IR::Expression *dst = nullptr;
     const IR::Expression *src1 = nullptr;
     const IR::Expression *src2 = nullptr;

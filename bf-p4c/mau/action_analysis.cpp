@@ -1319,11 +1319,10 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
         }
     } else {
         // Implicit read bits might not yet be set, in verify_alignment
-        bitvec left_shifted_read_bits = df_src1_mask() << right_shift;
-        bitvec rotated_shifted_read_bits = df_src1_mask() >> (container.size() - right_shift);
-        bitvec curr_read_bits = left_shifted_read_bits | rotated_shifted_read_bits;
-        curr_read_bits &= bitvec(0, container.size());
-
+        // Left rotate df_src1_mask which is set by implicit write bits by right
+        // shift value for dst -> src conversion
+        int left_shift = (container.size() - right_shift) % container.size();
+        bitvec curr_read_bits = df_src1_mask().rotate_right_copy(0, left_shift, container.size());
         if (curr_read_bits.is_contiguous())
             return false;
 
@@ -1344,6 +1343,8 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
  *    - Sources are not both non-contiguous and non-aligned
  */
 bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container &container) {
+    LOG3("ActionAnalysis::TotalAlignment::verify_individual_alignments on container : "
+            << container);
     bool right_shift_set = false;
     for (auto indiv_align : indiv_alignments) {
         int possible_right_shift = indiv_align.right_shift(container);
@@ -1688,13 +1689,21 @@ void ActionAnalysis::ContainerAction::determine_src1() {
 
 void ActionAnalysis::TotalAlignment::set_implicit_bits_from_mask(bitvec mask,
         PHV::Container container) {
+    LOG5("ActionAnalysis::TotalAlignment::set_implicit_bits_from_mask with mask "
+            << mask << " and container " << container);
     bitvec cont_mask(0, container.size());
     implicit_write_bits |= (mask & unused_container_bits);
-    implicit_read_bits = (implicit_write_bits >> right_shift);
-    implicit_read_bits |= (implicit_write_bits << (container.size() - right_shift)) & cont_mask;
+    // Left rotate implicit write bits by right shift value for dst -> src
+    // conversion
+    int left_shift = (container.size() - right_shift) % container.size();
+    implicit_read_bits = implicit_write_bits.rotate_right_copy(0, left_shift, container.size());
+    implicit_read_bits &= cont_mask;
+    LOG5("  Setting implicit_read_bits : 0x" << std::hex << implicit_read_bits
+            << ", implicit_write_bits : 0x" << std::hex << implicit_write_bits);
 }
 
 void ActionAnalysis::TotalAlignment::determine_df_implicit_bits(PHV::Container container) {
+    LOG5("ActionAnalysis::TotalAlignment::determine_df_implicit_bits with container " << container);
     bitvec mask = is_src1 ? df_src1_mask() : df_src2_mask(container);
     set_implicit_bits_from_mask(mask, container);
 }
