@@ -21,7 +21,7 @@ void CollectPhvLoggingInfo::collectConstraints() {
     }
 
     // Extract no overlay
-    for (auto field : pragmas->pa_no_overlay().getFields()) {
+    for (auto field : pragmas->pa_no_overlay().get_no_overlay_fields()) {
         BUG_CHECK(fieldConstraints.find(field->name) != fieldConstraints.end(),
             "No overlay constraint for field %s which is not in fieldConstraints map.",
             field->name);

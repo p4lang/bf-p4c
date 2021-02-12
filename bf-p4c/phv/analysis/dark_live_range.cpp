@@ -218,7 +218,7 @@ void DarkLiveRange::end_apply() {
         // Ignore POV fields.
         if (f.pov) continue;
         // If a field is marked by pa_no_overlay, do not consider it for dark overlay.
-        if (noOverlay.count(&f)) continue;
+        if (noOverlay.get_no_overlay_fields().count(&f)) continue;
         fieldsConsidered.insert(&f);
     }
     for (const auto* f : fieldsConsidered) setFieldLiveMap(f);
@@ -228,6 +228,7 @@ void DarkLiveRange::end_apply() {
         if (f1->isGhostField()) continue;
         for (const auto* f2 : fieldsConsidered) {
             if (f1 == f2) continue;
+            if (!noOverlay.can_overlay(f1, f2)) continue;
             if (f2->isGhostField()) continue;
             // No overlay possible if fields are of different gresses.
             if (f1->gress != f2->gress) {

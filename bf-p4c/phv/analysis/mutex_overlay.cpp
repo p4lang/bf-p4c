@@ -102,9 +102,7 @@ void BuildMutex::flow_merge(Visitor& other_) {
 
 void BuildMutex::end_apply() {
     LOG4("mutually exclusive fields:");
-    for (auto it1 = fields_encountered.begin();
-         it1 != fields_encountered.end();
-         ++it1 ) {
+    for (auto it1 = fields_encountered.begin(); it1 != fields_encountered.end(); ++it1) {
         const PHV::Field* f1 = phv.field(*it1);
         if (neverOverlay[*it1]) {
             if (f1->overlayable) {
@@ -128,10 +126,13 @@ void BuildMutex::end_apply() {
                 }
             }
 
+            if (!pragma.can_overlay(f1, f2)) continue;
+
             if (mutually_inclusive(*it1, *it2)) continue;
 
             mutually_exclusive(*it1, *it2) = true;
-            LOG4("(" << f1->name << ", " << f2->name << ")"); } }
+            LOG4("(" << f1->name << ", " << f2->name << ")"); }
+    }
 }
 
 void ExcludeAliasedHeaderFields::excludeAliasedField(const IR::Expression* alias) {
@@ -159,9 +160,10 @@ void ExcludeDeparsedIntrinsicMetadata::end_apply() {
 }
 
 void ExcludePragmaNoOverlayFields::end_apply() {
-    for (auto* f : pragma.getFields()) {
+    for (auto* f : pragma.get_no_overlay_fields()) {
         LOG1("Marking field as never overlaid because of pa_no_overlay: " << f);
-        neverOverlay.setbit(f->id); }
+        neverOverlay.setbit(f->id);
+    }
 }
 
 bool ExcludeMAUOverlays::preorder(const IR::MAU::Table* tbl) {

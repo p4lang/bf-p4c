@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
 
 #include <iostream>
+#include "bf-p4c/phv/pragma/pa_no_pack.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/bitvec.h"
@@ -59,6 +60,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
  protected:
     PhvInfo&      phv;
     const bitvec&       neverOverlay;
+    const PragmaNoOverlay&    pragma;
 
     /// If mutually_inclusive(f1->id, f2->id), then fields f1 and f2 are used
     /// or defined on the same control flow path.
@@ -85,11 +87,16 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     profile_t init_apply(const IR::Node* root) override;
 
  public:
-    BuildMutex(PhvInfo& phv, const bitvec& neverOverlay, FieldFilter_t ignore_field)
-        : phv(phv), neverOverlay(neverOverlay), mutually_exclusive(phv.field_mutex()),
+    BuildMutex(PhvInfo& phv, const bitvec& neverOverlay, const PragmaNoOverlay& pragma,
+               FieldFilter_t ignore_field)
+        : phv(phv),
+          neverOverlay(neverOverlay),
+          pragma(pragma),
+          mutually_exclusive(phv.field_mutex()),
           IgnoreField(ignore_field) {
         joinFlows = true;
-        visitDagOnce = false; }
+        visitDagOnce = false;
+    }
 
     BuildMutex *clone() const override { return new BuildMutex(*this); }
 };
@@ -109,10 +116,10 @@ class BuildParserOverlay : public BuildMutex {
     bool preorder(const IR::MAU::TableSeq*) override { return false; }
     bool preorder(const IR::BFN::Deparser*) override { return false; }
 
+
  public:
-    BuildParserOverlay(PhvInfo& phv,
-                       const bitvec& neverOverlay)
-        : BuildMutex(phv, neverOverlay, ignore_field) { }
+    BuildParserOverlay(PhvInfo& phv, const bitvec& neverOverlay, const PragmaNoOverlay& pragma)
+        : BuildMutex(phv, neverOverlay, pragma, ignore_field) {}
     BuildParserOverlay *clone() const override { return new BuildParserOverlay(*this); }
 };
 
@@ -151,9 +158,9 @@ class BuildMetadataOverlay : public BuildMutex {
     bool preorder(const IR::BFN::Deparser*) override { return false; }
 
  public:
-    BuildMetadataOverlay(PhvInfo& phv, const bitvec& neverOverlay)
-        : BuildMutex(phv, neverOverlay, ignore_field) { }
-    BuildMetadataOverlay *clone() const override { return new BuildMetadataOverlay(*this); }
+    BuildMetadataOverlay(PhvInfo& phv, const bitvec& neverOverlay, const PragmaNoOverlay& pragma)
+        : BuildMutex(phv, neverOverlay, pragma, ignore_field) {}
+    BuildMetadataOverlay* clone() const override { return new BuildMetadataOverlay(*this); }
 };
 
 /** Mark aliased header fields as never overlaid. When header fields are aliased, they are always
@@ -351,8 +358,8 @@ class MutexOverlay : public PassManager {
             new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
             &addedFields,
             new ExcludeAliasedHeaderFields(phv, neverOverlay),
-            new BuildParserOverlay(phv, neverOverlay),
-            new BuildMetadataOverlay(phv, neverOverlay),
+            new BuildParserOverlay(phv, neverOverlay, pragmas.pa_no_overlay()),
+            new BuildMetadataOverlay(phv, neverOverlay, pragmas.pa_no_overlay()),
             &parserInfo,
             &fieldToParserStates,
             new ExcludeParserLoopReachableFields(phv, fieldToParserStates, parserInfo),

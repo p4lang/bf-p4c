@@ -194,14 +194,14 @@ void MetadataLiveRange::end_apply() {
         // Ignore metadata fields marked as no_init because initialization would cause their
         // container to become valid.
         if (f.is_invalidate_from_arch()) continue;
-        if (noInitFields.count(&f) && !noOverlay.count(&f)) {
+        if (noInitFields.count(&f) && !noOverlay.get_no_overlay_fields().count(&f)) {
             fieldsConsidered.insert(&f);
             continue;
         }
         // POV bits are always live, so ignore.
         if (f.pov) continue;
         // Ignore pa_no_overlay fields.
-        if (noOverlay.count(&f)) continue;
+        if (noOverlay.get_no_overlay_fields().count(&f)) continue;
         // Ignore unreferenced fields because they are not allocated anyway.
         if (!uses.is_referenced(&f))
             continue;
@@ -222,6 +222,10 @@ void MetadataLiveRange::end_apply() {
             // No overlay possible if fields are of different gresses.
             if (f1->gress != f2->gress) {
                 overlay(f1->id, f2->id) = false;
+                continue;
+            }
+            // pair-wise no_overlay constraint check.
+            if (!noOverlay.can_overlay(f1, f2)) {
                 continue;
             }
             // If the live ranges of fields differ by more than DEP_DIST stages, then overlay due to
