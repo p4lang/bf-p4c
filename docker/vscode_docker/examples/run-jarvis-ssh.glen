@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Launch the jarvis-ssh image, doing the followiong:
+#
+# 1. Mount home directories in the image.
+# 2. Mount ~/dev as /data in the image.
+# 3. Mount ~/dev/root as /root in the image. This allows me to keep any changes
+#    inside root's home dir between launches.
+# 4. Set the working directory to /data/bf-p4c-compilers/build
+#
+# Within my VSCode session, I:
+#   - mount git repos from /data/bf-p4c-compilers
+#   - set the build directories to /data/bf-p4c-compilers/build/<repo>
+docker run --privileged \
+    --rm \
+    --user root \
+    --name ssh_target \
+    -h jarvis-ssh \
+    -v /home/grgibb/dev/root:/root \
+    -v /home/grgibb/dev:/data \
+    -v /home:/home \
+    -w /data/bf-p4c-compilers/build \
+    --publish 127.0.0.1:2222:22 \
+    -it jarvis-ssh \
+    /bin/bash

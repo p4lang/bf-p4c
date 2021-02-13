@@ -1,27 +1,48 @@
 # Visual Studio Code + Jarvis Docker Image
 
-This is a short howto which helps you to set-up the development environment in the official Jarvis docker image. The current setup is working on
-my laptop with Windows 10 and Ubuntu 18.04 VM. The development is based on freely available tools.
+This is a short howto which helps you to set-up the development environment
+built from the official Jarvis docker image. The development is based on freely
+available tools.
+
+The current setup has been tested on:
+
+Laptop:
+* Windows 10
+* MacOS 10.15 Catalina
+
+Development VM:
+* Ubuntu 18.04
 
 **Required Tools**:
 
-* Laptop - [Visual Studio Code](https://code.visualstudio.com/), SSH in WSL (my case) or native SSH in Windows
-* Server - Docker with pulled barefootnetworks/jarvis:tofino image
+* Laptop
+  * [Visual Studio Code](https://code.visualstudio.com/)
+  * SSH: SSH in WSL or native SSH in Windows/MacOS
+* Server
+  * Docker with pulled `barefootnetworks/jarvis:tofino` image
 
 ### Main Idea
 
-The main idea is simple - create a docker image with SSH which allows the connection from the Visual Studio Code with [Remove SSH plugins](https://code.visualstudio.com/docs/remote/ssh) into the Docker image. To achieve that we need to solve:
+The main idea is simple: create a docker image running an SSH server which
+allows connection from Visual Studio Code via [Remote SSH
+plugins](https://code.visualstudio.com/docs/remote/ssh).  To achieve this we
+need to solve:
 
-* File permissions of bind folder (repository)
-* Semi-automatic building of the Image
-* How to start the image and export environment variables from the standard Jarvis image
-* Start with the zip archive downloading with Dockerfile and similar stuff
+* File permissions of bind folder (repository).
+* Semi-automatic building of the Docker image.
+* How to start the image and export environment variables from the standard
+  Jarvis image.
+* Start with the zip archive downloading with Dockerfile and similar stuff.
 
-## How to build & Use the Container
+## How to build & use the image
 
-The provided container contains development tools, ssh server & start-up script which turns on the SSH server. There is also a support
-script which can be used for the automatic start of the SSH server. You can also edit it to mount corresponding folders. Mine looks
-like this (I have persistent vscode data but you can also mount your home if you are not paranoid like me):
+This process builds a Docker image that contains the necessary development
+tools, the SSH server, and a script to start the SSH server within the
+container.
+
+There is also a support script which can be used for the automatic start of the
+SSH server. You can also edit it to mount corresponding folders. Several
+examples can be found in the `examples` subdirectory. For example, Pavel's is:
 
 ```bash
 #!/usr/bin/env bash
@@ -38,11 +59,14 @@ docker run \
         /bin/bash
 ```
 
-The base docker image can be obtained like described [here](https://github.com/barefootnetworks/P4/wiki/Building-and-testing-bf-p4c-compilers-in-docker#setting-updocker-and-docker-hub) (you need to have access into group's Docker Hub).
+The base docker image can be obtained as described
+[here](https://github.com/barefootnetworks/P4/wiki/Building-and-testing-bf-p4c-compilers-in-docker#setting-updocker-and-docker-hub)
+(you need access to the group's Docker Hub).
 
-Now, we are ready to prepare the Docker image based on the Jarvis image. 
-It is also a good idea to remove the already built image if you are doing a rebuild. The build script is simple and it can be tuned
-to provide all GID,UID and USER arguments automatically but this will be a future work if the audience of users want to use it.
+Now, we are ready to prepare the Docker image based on the Jarvis image.  It is
+also a good idea to remove the already built image if you are doing a rebuild.
+
+Steps to build the image:
 
 1. Pull the standard Jarvis image:
 
@@ -50,19 +74,26 @@ to provide all GID,UID and USER arguments automatically but this will be a futur
 docker pull barefootnetworks/jarvis:tofino)
 ```
 
-2. Edit the Dockerfile and set the password and username, your GID and UID (can be obtained from using the id command on the server
-with Docker) - alternatively, edit the `build-image.sh` and add the `--build-args` arguments. For example, if you want to set the username to `foo` add the `--build-args USER=foo` argument.
-Possible arguments are USER (default: user), UID (default: 1002), GID (default: 1002), PW (defualt:docker).
-I will let it on you if you want to tune the script or specify the default arguments directly in Dockerfile.
-3. Start the `build-image.sh` script.
+2. Optional: Edit the Dockerfile if you wish to add additional packages to install.
 
-The script builds a new image which contains the ssh server and it also use the .ssh/authorized_keys from you home.
-This will be exported to the docker image and allows you to login to the container without the password
-(if you are using the SSH key authentication for login to your VM :-) ).
+3. Run the `build-image.sh` script:
+
+```bash
+./build-image.sh
+```
+
+The script builds a new image which contains tools used by Visual Studio Code
+(e.g., an updated cmake), an ssh server, and your .ssh/authorized\_keys file.
+The authorized\_keys file allows you to login to the container without a
+password (if you are using the SSH key authentication for login to your VM :-) ).
+
+The script also creates a set of SSH host keys which will be installed in every
+image you build with this script. This eliminates the need to edit your
+known\_hosts file every time you rebuild the image.
 
 Check with the docker image command if the `jarvis-ssh` image is available. The default path for your repos is `~/reps` but you can
-change the path if you need (edit the `run-jarvis-ssh` script).
-The default folder will be mounted to `/mnt/reps` folder inside the docker image. 
+change the path if you need (edit the `run-jarvis-ssh` script, or see the exmaples in the `examples` directory).
+The default `run-jarvis-ssh` script mounts the local `~/reps` intowill be mounted to `/mnt/reps` folder inside the docker image. 
 The set username is the part of the `sudo` group inside the image, default password is `docker` (if you don't change it).
 The build script also takes care about the permission and proxy setup.
 

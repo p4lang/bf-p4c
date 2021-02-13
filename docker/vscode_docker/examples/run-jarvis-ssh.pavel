@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+docker run \
+        --rm --user root \
+        --privileged \
+        -p 2222:22 \
+        -v ~/reps:/mnt/reps \
+        -v ~/tasks:/mnt/tasks \
+        -v ~/docker/user-home/ccache:/home/$USER/.ccache \
+        -v ~/docker/user-home/vscode-server:/home/$USER/.vscode-server \
+        -v ~/docker/user-home/local:/home/$USER/.local \
+        -it jarvis-ssh \
+        /bin/bash
