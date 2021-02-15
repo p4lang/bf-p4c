@@ -26,3 +26,6 @@
 [submodule "p4-tests/p4-programs"]
 	path = p4-tests/p4-programs
 	url = git@github.com:barefootnetworks/p4-tests.git
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog

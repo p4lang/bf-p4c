@@ -2,6 +2,10 @@
 find_package(PkgConfig QUIET)
 pkg_check_modules(LIBRAPIDJSON REQUIRED RapidJSON=1.1.0)
 
+# spdlog can be included header only
+# it cannot be build normally as it uses newer cmake
+set (LIBSPDLOG_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/third_party/spdlog/include")
+
 set (LOGGING_SCHEMA_FILES
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/phv_schema
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/power_schema

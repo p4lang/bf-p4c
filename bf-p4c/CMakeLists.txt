@@ -680,6 +680,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/constrained_fields.h
   logging/container_size_extractor.h
+  logging/event_logger.h
   logging/filelog.h
   logging/logging.h
   logging/manifest.h
@@ -695,6 +696,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_SRCS
   logging/constrained_fields.cpp
   logging/container_size_extractor.cpp
+  logging/event_logger.cpp
   logging/filelog.cpp
   logging/manifest.cpp
   logging/group_constraint_extractor.cpp
@@ -827,6 +829,7 @@ build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 add_library(tofinobackend ${BF_P4C_SOURCES})
 add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
+target_include_directories(tofinobackend PRIVATE "${CMAKE_SOURCE_DIR}/third_party/spdlog/include")
 
 add_library(bfp4c ${P4C_BAREFOOT_SRCS})
 target_link_libraries (bfp4c tofinobackend bfn_p4runtime
@@ -875,6 +878,7 @@ target_include_directories(bfp4c
 target_include_directories(bfp4c
   INTERFACE logging
   INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/logging
+  INTERFACE ${CMAKE_SOURCE_DIR}/third_party/spdlog/include
 )
 
 add_executable(p4c-barefoot p4c-barefoot.cpp)
