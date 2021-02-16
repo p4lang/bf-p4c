@@ -302,6 +302,8 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 				)],
 				[table.make_data(
 					[],
+#					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+#					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
 					'SwitchIngress.ingress_port_mapping.set_port_properties'
 				)]
 			)

@@ -56,6 +56,7 @@
 // ===== feature defines ====================================
 
 // ----- parser -----
+#undef  INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID  // populate tunnei_id w/ session_id
 #undef  INGRESS_PARSER_POPULATES_LKP_0
 #define INGRESS_PARSER_POPULATES_LKP_1
 #define INGRESS_PARSER_POPULATES_LKP_2
@@ -100,7 +101,7 @@
 #define SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE // only valid if TRANSPORT_ENABLE is defined
 #define SFC_TRANSPORT_NETSAP_TABLE_ENABLE        // only valid if TRANSPORT_ENABLE is defined
 #define SFC_OUTER_TUNNEL_TABLE_ENABLE
-#define SFC_TIMESTAMP_ENABLE                     // undef for sims, define for real chip
+#undef  SFC_TIMESTAMP_ENABLE                     // undef for sims, define for real chip
 
 // ----- npb: sff -----
 #undef  SFF_SCHD_SIMPLE                       // define for selecting simple tables, rather than action_selectors/action_profiles tables.
@@ -158,4 +159,5 @@
 #define FIELD_WIDTHS_REDUCED                  // to help w/ fitting
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
-#undef  MIRROR_METERS                         // this feature currently doesn't fit
+#define MIRROR_METERS                         // this feature currently doesn't fit
+#undef  REFRAMER_SUPPORTS_OLD_SYTLE_NSH       // this feature currently doesn't fit

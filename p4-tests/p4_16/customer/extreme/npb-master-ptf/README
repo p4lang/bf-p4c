@@ -1,0 +1,20 @@
+Some pseudo-documentation on how to update this directory.
+
+  Q: If I wanted to update the Extreme packet tests, do I just dump *.p4 into
+     npb-master-ptf and *.py into npb-master-ptf/tests?
+
+  A: this is what I did - cd nbp-master-ptf/tests && rm -rf *.py
+
+     and updated their sanity_barefoot/symlinks.sh to copy python files rather
+     than symlink to this folder
+
+     note that whatever commented is left out..
+
+     and cd scripts/run_custom_tests/patches/scapy and update if there are any
+     new files/changes in the corresponding scapy directory in their package
+
+     for p4, what you do is right
+
+     only for python -> we need to do this, as I had some old tests from the
+     previous instance not in the newer version - which caused interface errors
+     and all the subsequent tests failed

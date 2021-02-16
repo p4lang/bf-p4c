@@ -1103,7 +1103,7 @@ control EgressMacAcl(
 ) (
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1171,7 +1171,7 @@ control EgressIpAcl(
 )(
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1272,7 +1272,7 @@ control EgressIpv4Acl(
 ) (
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1378,7 +1378,7 @@ control EgressIpv6Acl(
 )(
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 

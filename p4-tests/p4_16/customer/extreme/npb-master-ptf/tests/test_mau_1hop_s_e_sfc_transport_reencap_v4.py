@@ -115,29 +115,29 @@ class test(BfRuntimeTest):
 		# Ingress Tunnel
 		# -----------------
 
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.VXLAN.value,   0xf, sap+5, vpn+1, ig_lag_ptr)
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.IPINIP.value,  0xf, sap+5, vpn+1, ig_lag_ptr)
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.NVGRE.value,   0xf, sap+5, vpn+1, ig_lag_ptr)
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.GRE.value,     0xf, sap+5, vpn+1, ig_lag_ptr)
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.GTPC.value,    0xf, sap+5, vpn+1, ig_lag_ptr)
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.GTPU.value,    0xf, sap+5, vpn+1, ig_lag_ptr)
-#		npb_tunnel_network_src_vtep_add(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.VXLAN.value,   0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.IPINIP.value,  0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.NVGRE.value,   0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.GRE.value,     0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.GTPC.value,    0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.GTPU.value,    0xf, sap+5, vpn+1, ig_lag_ptr)
+#		npb_tunnel_network_src_vtep_add(self, self.target, sip, 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf, sap+5, vpn+1, ig_lag_ptr)
 
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.VXLAN.value,   0xf, 0)
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.IPINIP.value,  0xf, 0)
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.NVGRE.value,   0xf, 0)
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.GRE.value,     0xf, 0)
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.GTPC.value,    0xf, 0)
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.GTPU.value,    0xf, 0)
-#		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.VXLAN.value,   0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.IPINIP.value,  0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.NVGRE.value,   0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.GRE.value,     0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.GTPC.value,    0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.GTPU.value,    0xf, 0)
+#		npb_tunnel_network_dst_vtep_add(self, self.target, dip, 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf, 0)
 
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.VXLAN.value,   0xf, sap+5, vpn+1, ig_lag_ptr, 0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.IPINIP.value,  0xf, sap+5, vpn+1, ig_lag_ptr, 0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.NVGRE.value,   0xf, sap+5, vpn+1, ig_lag_ptr, 0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.GRE.value,     0xf, sap+5, vpn+1, ig_lag_ptr, 0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.GTPC.value,    0xf, sap+5, vpn+1, ig_lag_ptr, 0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.GTPU.value,    0xf, sap+5, vpn+1, ig_lag_ptr, 0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.ERSPAN.value,  0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.VXLAN.value,   0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.IPINIP.value,  0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.NVGRE.value,   0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.GRE.value,     0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.GTPC.value,    0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.GTPU.value,    0xf, sap+5, vpn+1, ig_lag_ptr, 0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf, sap+5, vpn+1, ig_lag_ptr, 0)
 
 		# -----------------
 
@@ -153,6 +153,8 @@ class test(BfRuntimeTest):
 
 		npb_tunnel_encap_sip_rewrite_v4_add(self, self.target, tunnel_encap_bd, sip)
 		npb_tunnel_encap_dip_rewrite_v4_add(self, self.target, tunnel_encap_ptr, dip)
+
+		# -----------------
 
 #		time.sleep(1)
 
@@ -220,29 +222,29 @@ class test(BfRuntimeTest):
 		# Ingress Tunnel
 		# -----------------
 
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.VXLAN.value,   0xf)
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.IPINIP.value,  0xf)
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.NVGRE.value,   0xf)
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.GRE.value,     0xf)
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.GTPC.value,    0xf)
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.GTPU.value,    0xf)
-#		npb_tunnel_network_src_vtep_del(self, self.target, '192.168.0.1', 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.VXLAN.value,   0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.IPINIP.value,  0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.NVGRE.value,   0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.GRE.value,     0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.GTPC.value,    0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.GTPU.value,    0xf)
+#		npb_tunnel_network_src_vtep_del(self, self.target, sip, 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf)
 
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.VXLAN.value,   0xf)
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.IPINIP.value,  0xf)
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.NVGRE.value,   0xf)
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.GRE.value,     0xf)
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.GTPC.value,    0xf)
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.GTPU.value,    0xf)
-#		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.2', 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.VXLAN.value,   0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.IPINIP.value,  0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.NVGRE.value,   0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.GRE.value,     0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.GTPC.value,    0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.GTPU.value,    0xf)
+#		npb_tunnel_network_dst_vtep_del(self, self.target, dip, 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf)
 
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.VXLAN.value,   0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.IPINIP.value,  0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.NVGRE.value,   0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.GRE.value,     0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.GTPC.value,    0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.GTPU.value,    0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, '192.168.0.1', 0x00000000, '192.168.0.2', 0x00000000, IngressTunnelType.ERSPAN.value,  0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.VXLAN.value,   0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.IPINIP.value,  0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.NVGRE.value,   0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.GRE.value,     0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.GTPC.value,    0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.GTPU.value,    0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, sip, 0xffffffff, dip, 0xffffffff, IngressTunnelType.ERSPAN.value,  0xf)
 
 		# -----------------
 

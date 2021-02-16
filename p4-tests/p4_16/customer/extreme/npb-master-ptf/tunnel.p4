@@ -113,7 +113,6 @@ control IngressTunnel(
 	switch_uint32_t ipv4_dst_vtep_table_size=1024,
 	switch_uint32_t ipv6_dst_vtep_table_size=1024
 ) {
-
 	DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_src_vtep;
 	DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_dst_vtep;
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
@@ -431,7 +430,7 @@ control IngressTunnel(
 				if (hdr_0.ipv4.isValid()) {
 //				if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV4) {
       #ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-					src_vtep.apply().hit;
+					src_vtep.apply();
       #endif // ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 					switch(dst_vtep.apply().action_run) {
 //						dst_vtep_tunid_hit : {
@@ -446,7 +445,7 @@ control IngressTunnel(
 				} else if (hdr_0.ipv6.isValid()) {
 //				} else if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV6) {
       #ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-					src_vtepv6.apply().hit;
+					src_vtepv6.apply();
       #endif // ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 					switch(dst_vtepv6.apply().action_run) {
 //						dst_vtepv6_tunid_hit : {
@@ -1896,8 +1895,9 @@ control TunnelEncap(
 #endif
 	}
 
-	action add_l2_header() {
+	action add_l2_header(bit<16> ethertype) {
 		hdr_0.ethernet.setValid();
+		hdr_0.ethernet.ether_type = ethertype;
 	}
 
 	// -------------------------------------
@@ -1976,7 +1976,6 @@ control TunnelEncap(
 
 	action rewrite_ipv4_gre() {
 #ifdef GRE_TRANSPORT_EGRESS_ENABLE_V4
-		add_l2_header();
 		// ----- l3 -----
 		add_ipv4_header(IP_PROTOCOLS_GRE, 2);
 		// Total length = packet length + 24
@@ -1987,7 +1986,7 @@ control TunnelEncap(
 		add_gre_header(GRE_PROTOCOLS_IP, 0, 0);
 
 		// ----- l2 -----
-		hdr_0.ethernet.ether_type = ETHERTYPE_IPV4;
+		add_l2_header(ETHERTYPE_IPV4);
 
 		hdr_1.ethernet.setInvalid();
 		hdr_1.vlan_tag[0].setInvalid();
@@ -1997,7 +1996,6 @@ control TunnelEncap(
 
 	action rewrite_ipv4_erspan(switch_mirror_session_t session_id) {
 #ifdef ERSPAN_TRANSPORT_EGRESS_ENABLE
-		add_l2_header();
 		// ----- l3 -----
 		add_ipv4_header(IP_PROTOCOLS_GRE, 2);
 		// Total length = packet length + 36
@@ -2010,7 +2008,7 @@ control TunnelEncap(
 		add_erspan_header_type2(session_id);
 
 		// ----- l2 -----
-		hdr_0.ethernet.ether_type = ETHERTYPE_IPV4;
+		add_l2_header(ETHERTYPE_IPV4);
 #endif /* ERSPAN_TRANSPORT_EGRESS_ENABLE */
 	}
 
@@ -2020,7 +2018,6 @@ control TunnelEncap(
 
 	action rewrite_ipv6_gre() {
 #ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
-		add_l2_header();
 		// ----- l3 -----
 //		hdr_0.inner_ethernet = hdr_0.ethernet;
 		add_ipv6_header(IP_PROTOCOLS_GRE);
@@ -2032,7 +2029,7 @@ control TunnelEncap(
 		add_gre_header(GRE_PROTOCOLS_IP, 0, 0);
 
 		// ----- l2 -----
-		hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
+		add_l2_header(ETHERTYPE_IPV6);
 
 		hdr_1.ethernet.setInvalid();
 		hdr_1.vlan_tag[0].setInvalid();
@@ -2041,7 +2038,6 @@ control TunnelEncap(
 	}
 /*
 	action rewrite_ipv6_erspan(switch_mirror_session_t session_id) {
-		add_l2_header();
 		// ----- l3 -----
 //		hdr_0.inner_ethernet = hdr_0.ethernet;
 		add_ipv6_header(IP_PROTOCOLS_GRE);
@@ -2055,16 +2051,35 @@ control TunnelEncap(
 		add_erspan_header_type2(session_id);
 
 		// ----- l2 -----
-		hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
+		add_l2_header(ETHERTYPE_IPV6);
 	}
 */
 	// -------------------------------------
 	// Extreme Networks - Added
 	// -------------------------------------
 
+	action rewrite_mac_in_mac_nsh_type1(
+		bit<24> tool_address
+	) {
+		add_l2_header(ETHERTYPE_NSH);
+
+		// This is a hack to support the old nsh type 1 header
+		// for slx.  It really should be done in a nsh table,
+		// as putting it here in the encap logic violates the
+		// whole "separation of concerns" principle.  However,
+		// time is tight on this program and the goal is to
+		// minimize changes, so I'm putting it here....
+		hdr_0.nsh_type1.spi = tool_address;
+		hdr_0.nsh_type1.si  = 0x1;
+#ifdef REFRAMER_SUPPORTS_OLD_SYTLE_NSH
+		hdr_0.nsh_type1.ver = 0x1;
+#endif
+	}
+
+	// -------------------------------------
+
 	action rewrite_mac_in_mac() {
-		add_l2_header();
-		hdr_0.ethernet.ether_type = ETHERTYPE_NSH;
+		add_l2_header(ETHERTYPE_NSH);
 	}
 
 	// -------------------------------------
@@ -2077,28 +2092,15 @@ control TunnelEncap(
 		actions = {
 			NoAction;
 
-			rewrite_mac_in_mac;   // extreme added
-			rewrite_ipv4_gre;     // extreme added
-			rewrite_ipv6_gre;     // extreme added
-			rewrite_ipv4_erspan;  // extreme added
-//			rewrite_ipv6_erspan;  // extreme added
+			rewrite_mac_in_mac_nsh_type1; // extreme added
+			rewrite_mac_in_mac;           // extreme added
+			rewrite_ipv4_gre;             // extreme added
+			rewrite_ipv6_gre;             // extreme added
+			rewrite_ipv4_erspan;          // extreme added
+//			rewrite_ipv6_erspan;          // extreme added
 		}
 
 		const default_action = NoAction;
-
-		// ---------------------------------
-		// Extreme Networks - Added
-		// ---------------------------------
-		/*
-		// Note that this table should just be programmed with the
-		// following constants, but the language doesn't seem to allow it....
-		const entries = {
-			(SWITCH_TUNNEL_TYPE_NSH)      = rewrite_mac_in_mac();  // extreme added
-			(SWITCH_TUNNEL_TYPE_GRE)      = rewrite_ipv4_gre();    // extreme added
-			(SWITCH_TUNNEL_TYPE_ERSPAN)   = rewrite_ipv4_erspan(); // extreme added
-		}
-		*/
-		// ---------------------------------
 	}
 
 	//=============================================================================

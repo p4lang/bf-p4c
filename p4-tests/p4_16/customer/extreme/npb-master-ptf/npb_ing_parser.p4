@@ -464,7 +464,11 @@ parser NpbIngressParser(
         pkt.extract(hdr.transport.gre_sequence);
         pkt.extract(hdr.transport.erspan_type2);
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_ERSPAN;
-        ig_md.lkp_0.tunnel_id = 0; // todo: should this be populated?
+#ifdef INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID
+        ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.transport.erspan_type2.session_id;
+#else
+        ig_md.lkp_0.tunnel_id = 0;
+#endif // INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID    
         transition parse_outer_ethernet;
     }
     

@@ -322,7 +322,6 @@ control LAG(
  
 	action set_lag_port(switch_port_t port) {
 		stats_in.count();
-//		stats_out.count(port);
 
 		egress_port = port;
 	}
@@ -381,6 +380,8 @@ control LAG(
                                       ig_md.lkp_1.l4_dst_port,
                                       ig_md.lkp_1.l4_src_port});
 		lag.apply();
+
+//		stats_out.count(port);
 	}
 }
 
