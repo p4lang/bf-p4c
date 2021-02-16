@@ -52,6 +52,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaAlpmSubtreePartitions, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaAtcamPartitions, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaAtcamPartitionIndex, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaAlpmAtcamExcludeFieldMsbs, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE(PragmaCalculatedFieldUpdateLocation, PARSE, StringLiteral, extPragma);
         BFN_PARSE_EMPTY(PragmaChainAddress, PARSE_EMPTY, intPragma);
         BFN_PARSE(PragmaChainTotalSize, PARSE, Expression, intPragma);

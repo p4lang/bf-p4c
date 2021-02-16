@@ -89,6 +89,17 @@ const char *PragmaAtcamPartitionIndex::help =
     "field is not part of the algorithmic TCAM table’s match key.  This "
     "pragma turns on the algorithmic TCAM implementation path.";
 
+const char *PragmaAlpmAtcamExcludeFieldMsbs::name = "alpm_atcam_exclude_field_msbs";
+const char *PragmaAlpmAtcamExcludeFieldMsbs::description =
+    "Specifies that the indicated field should 'ghost' the specified number of msb bits";
+const char *PragmaAlpmAtcamExcludeFieldMsbs::help =
+    "@alpm_atcam_exclude_field_msbs(ipv4.dst_addr, 4)\n"
+    "+ attached to P4 alpm match tables\n"
+    "\n"
+    "Specifies that the indicated field should exclude the specified number of msb bits "
+    "from atcam keys. If no number is specified, the entire field should be excluded "
+    "from atcam keys.";
+
 const char *PragmaAutoInitMetadata::name = "pa_auto_init_metadata";
 const char *PragmaAutoInitMetadata::description =
     "Enables automatic metadata initialization.";

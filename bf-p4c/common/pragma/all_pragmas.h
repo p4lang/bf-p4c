@@ -18,6 +18,7 @@ DEFINE_PRAGMA_CLASS(PragmaAlpmPartitions);
 DEFINE_PRAGMA_CLASS(PragmaAlpmSubtreePartitions);
 DEFINE_PRAGMA_CLASS(PragmaAtcamPartitions);
 DEFINE_PRAGMA_CLASS(PragmaAtcamPartitionIndex);
+DEFINE_PRAGMA_CLASS(PragmaAlpmAtcamExcludeFieldMsbs);
 DEFINE_PRAGMA_CLASS(PragmaAutoInitMetadata);
 DEFINE_PRAGMA_CLASS(PragmaCalculatedFieldUpdateLocation);
 DEFINE_PRAGMA_CLASS(PragmaChainAddress);

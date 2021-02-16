@@ -15,6 +15,8 @@ const std::set<unsigned> SplitAlpm::valid_partition_values = {1024, 2048, 4096, 
 const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = PragmaAlpmPartitions::name;
 const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION =
     PragmaAlpmSubtreePartitions::name;
+const cstring SplitAlpm::ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS =
+    PragmaAlpmAtcamExcludeFieldMsbs::name;
 
 const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
         const IR::P4Table* tbl, unsigned number_actions,
@@ -86,10 +88,29 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions
     return actions;
 }
 
+void SplitAlpm::apply_pragma_exclude_msbs(const IR::P4Table* tbl,
+        const ordered_map<cstring, int>* fields_to_exclude,
+        IR::Vector<IR::KeyElement>& keys) {
+    for (auto k : tbl->getKey()->keyElements) {
+        auto fname = k->expression->toString();
+        if (fields_to_exclude->find(fname) != fields_to_exclude->end()) {
+            auto msb = fields_to_exclude->at(fname);
+            auto key_width = k->expression->type->width_bits();
+            if (msb < key_width) {
+                keys.push_back(
+                    new IR::KeyElement(k->srcInfo, k->annotations,
+                        new IR::Slice(k->expression, key_width - msb - 1, 0),
+                        k->matchType)); }
+        } else {
+            keys.push_back(k); }
+    }
+}
+
 const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
         unsigned partition_count,
         unsigned subtrees_per_partition, unsigned number_actions,
-        int atcam_subset_width, int shift_granularity) {
+        int atcam_subset_width, int shift_granularity,
+        ordered_map<cstring, int>& fields_to_exclude) {
     auto properties = new IR::IndexedVector<IR::Property>;
 
     // create partition_index
@@ -104,8 +125,8 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
                     new IR::PathExpression(IR::ID("lpm"))));
     } else {
-        for (auto k : tbl->getKey()->keyElements) {
-            keys.push_back(k); } }
+        apply_pragma_exclude_msbs(tbl, &fields_to_exclude, keys);
+    }
     keys.push_back(new IR::KeyElement(
                 new IR::PathExpression(IR::ID(tbl->name + "_partition_index")),
                 new IR::PathExpression(IR::ID("atcam_partition_index"))));
@@ -281,6 +302,7 @@ bool SplitAlpm::values_through_pragmas(const IR::P4Table *tbl,
                     ALGORITHMIC_LPM_SUBTREES_PER_PARTITION, pragma_val->value, tbl->name);
         }
     }
+
     return ::errorCount() == 0;
 }
 
@@ -359,6 +381,97 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
     return true;
 }
 
+bool SplitAlpm::pragma_exclude_msbs(const IR::P4Table* tbl,
+        ordered_map<cstring, int>& fields_to_exclude) {
+    ordered_map<cstring, int> field_name_to_width;
+    ordered_set<cstring> field_name_is_lpm;
+    ordered_set<cstring> field_name_is_partition_index;
+    ordered_map<cstring, int> field_name_cnt;
+
+    auto analyze_key_name_and_type = [&](const IR::KeyElement* k, cstring fname) {
+        field_name_to_width.emplace(fname, k->expression->type->width_bits());
+        if (k->matchType->path->name == "lpm")
+            field_name_is_lpm.insert(fname);
+        if (k->matchType->path->name == "atcam_partition_index")
+            field_name_is_partition_index.insert(fname);
+        field_name_cnt[fname] += 1;
+    };
+
+    for (auto k : tbl->getKey()->keyElements) {
+        auto fname = k->expression->toString();
+        analyze_key_name_and_type(k, fname);
+        // alternatively, if user refers to the name in @name annotation
+        // that also works. This is needed for programs translated from p4-14.
+        auto fname_annot = k->getAnnotation("name");
+        if (fname_annot != nullptr) {
+            auto fname = fname_annot->expr.at(0)->to<IR::StringLiteral>()->value;
+            // if annotation use a different name than the original field.
+            if (field_name_to_width.count(fname) == 0) {
+                analyze_key_name_and_type(k, fname);
+            }
+        }
+    }
+    auto annot = tbl->getAnnotations();
+    for (auto an : annot->annotations) {
+        if (an->name != ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS)
+            continue;
+        if (an->expr.size() != 1 && an->expr.size() != 2) {
+            ::error("Invalid %s pragma on table %s.\n Expected field name "
+                    "and optional msb bits %s",
+                ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, an->expr); }
+        cstring fname;
+        if (auto annot = an->expr.at(0)->to<IR::StringLiteral>()) {
+            fname = annot->value;
+        } else {
+            fname = an->expr.at(0)->toString();
+        }
+        if (field_name_to_width.find(fname) == field_name_to_width.end()) {
+            ::error("Invalid %s pragma on table %s.\n Field %s is not part of the table key.",
+                    ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, fname);
+        } else if (field_name_is_partition_index.count(fname) != 0) {
+            ::error("Invalid %s pragma on table %s.\n Pragma cannot be used on "
+                    "the table's partition index '%s'.",
+                    ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, fname);
+        } else if (field_name_cnt.at(fname) != 1) {
+            ::error("Invalid %s pragma on table %s.\n Pragma cannot be used when "
+                    "different slices of field '%s' are used.",
+                    ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, fname);
+        }
+        std::stringstream additional;
+        bool msb_error = false;
+        if (an->expr.size() == 2) {
+            auto msb_bits_to_exclude = an->expr.at(1)->to<IR::Constant>()->value;
+            if (msb_bits_to_exclude <= 0) {
+                msb_error = true;
+            } else if (msb_bits_to_exclude > field_name_to_width.at(fname)) {
+                msb_error = true;
+                additional << "Bits specified is larger than the field.";
+            } else if (field_name_is_lpm.count(fname) > 0 &&
+                    msb_bits_to_exclude >= field_name_to_width.at(fname)) {
+                msb_error = true;
+                additional << "The field with match type 'lpm' cannot be completely excluded.";
+            }
+            fields_to_exclude.emplace(fname, msb_bits_to_exclude);
+        } else {
+            auto msb_bits_to_exclude = field_name_to_width.at(fname);
+            if (field_name_is_lpm.count(fname) > 0) {
+                msb_error = true;
+                additional << "The field with match type 'lpm' cannot be completely excluded.";
+            }
+            fields_to_exclude.emplace(fname, msb_bits_to_exclude);
+        }
+        if (msb_error) {
+            ::error("Invalid %s pragma on table %s.\n "
+                    "  Invalid most significant bits to exclude value of '%s'.\n"
+                    "%s",
+                    ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, an->expr[0],
+                    additional.str());
+        }
+    }
+
+    return ::errorCount() == 0;
+}
+
 const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
     if (alpm_info->alpm_table.count(tbl->name) == 0)
         return tbl;
@@ -390,13 +503,27 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
     auto partition_index_bits = ::ceil_log2(number_partitions);
     auto number_entries = number_partitions * number_subtrees_per_partition;
 
+    ordered_map<cstring, int> fields_to_exclude;
+    if (!pragma_exclude_msbs(tbl, fields_to_exclude))
+        return tbl;
+
+    // @alpm_atcam_exclude_field_msbs pragma and
+    // Alpm( ..., ..., atcam_subset_width, shift_granularity) are
+    // mutually exclusive features.
+    bool used_pragma_exclude_msb_bits = (fields_to_exclude.size() != 0);
+    bool used_alpm_subset_width_opt = (atcam_subset_width != -1 || shift_granularity != -1);
+    ERROR_CHECK(!(used_pragma_exclude_msb_bits && used_alpm_subset_width_opt),
+                "@alpm_atcam_exclude_field_msbs cannot be applied to alpm table %s"
+                " if 'atcam_subset_width' and 'shift_granularity' are specified on"
+                " the Alpm extern", tbl->name);
+
     if (atcam_subset_width == -1)
         atcam_subset_width = lpm_key_width;
 
     if (shift_granularity == -1)
         shift_granularity = lpm_key_width;
 
-    LOG1("atcam_subset_width " << atcam_subset_width << " shift_granularity " << shift_granularity);
+    LOG3("atcam_subset_width " << atcam_subset_width << " shift_granularity " << shift_granularity);
     ERROR_CHECK(atcam_subset_width % shift_granularity == 0, "To use algorithmic lpm, "
             "atcam_subset_width must be an integer multiple of shift_granularity.");
     auto number_actions = (lpm_key_width - atcam_subset_width) / shift_granularity + 1;
@@ -417,7 +544,8 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
 
     // create atcam
     auto atcam_table = create_atcam_table(tbl, number_partitions,
-            number_subtrees_per_partition, number_actions, atcam_subset_width, shift_granularity);
+            number_subtrees_per_partition, number_actions,
+            atcam_subset_width, shift_granularity, fields_to_exclude);
     decls->push_back(atcam_table);
 
     return decls;

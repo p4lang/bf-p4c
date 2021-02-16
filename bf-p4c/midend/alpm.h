@@ -103,6 +103,7 @@ class SplitAlpm : public Transform {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
     static const std::set<unsigned> valid_partition_values;
+
     const IR::MAU::Table* create_pre_classifier_tcam(
             IR::MAU::Table* tbl, IR::TempVar* tv, IR::TempVar* tk,
             unsigned partition_index_bits,
@@ -113,6 +114,8 @@ class SplitAlpm : public Transform {
     bool values_through_impl(const IR::P4Table *tbl, int &number_of_partitions,
             int &number_subtrees_per_partition, int &atcam_subset_width,
             int &shift_granularity);
+    bool pragma_exclude_msbs(const IR::P4Table* tbl,
+            ordered_map<cstring, int>& fields_to_exclude);
 
     const IR::Node* postorder(IR::P4Table* tbl) override;
     const IR::Node* postorder(IR::MethodCallStatement*) override;
@@ -126,11 +129,16 @@ class SplitAlpm : public Transform {
     const IR::P4Table* create_preclassifier_table(const IR::P4Table*, unsigned,
             unsigned, unsigned, unsigned);
     const IR::P4Table* create_atcam_table(const IR::P4Table*, unsigned,
-            unsigned, unsigned, int, int);
+            unsigned, unsigned, int, int,
+            ordered_map<cstring, int>& fields_to_exclude);
+    void apply_pragma_exclude_msbs(const IR::P4Table* tbl,
+            const ordered_map<cstring, int>* fields_to_exclude,
+            IR::Vector<IR::KeyElement>& keys);
 
  public:
     static const cstring ALGORITHMIC_LPM_PARTITIONS;
     static const cstring ALGORITHMIC_LPM_SUBTREES_PER_PARTITION;
+    static const cstring ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS;
 
     SplitAlpm(CollectAlpmInfo *info, P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
         alpm_info(info), refMap(refMap), typeMap(typeMap) {}
