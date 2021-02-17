@@ -71,6 +71,7 @@ ignoreFilePatterns=(
   '^scripts/gen_reference_outputs/inputs/.*\.p4$'
   '^scripts/pkg-src/src/.*\.patch$'
   '^scripts/run_custom_tests/patches/scapy/.*\.py$'
+  '^third_party/'
 
   # The only file we ship from Glass seems to be primitives.json, which can't
   # have comments anyway.
@@ -164,7 +165,7 @@ while IFS= read -r -d '' -u 9 path ; do
 
   # Files whose names are lowercase alphanumeric and don't contain a file
   # extension tend to be scripts. Defer to `file` for these if we haven't
-  # classified them already. 
+  # classified them already.
   if [[ -z "${fileType}" && "${path}" =~ (^|/)[a-z0-9_-]+$ ]] ; then
     if [[ "$(file -b "${path}")" =~ 'script, ASCII text executable' ]] ; then
       fileType=sh
