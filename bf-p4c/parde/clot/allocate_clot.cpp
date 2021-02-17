@@ -1,8 +1,8 @@
 #include "allocate_clot.h"
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
+#include "field_pov_analysis.h"
 #include "header_removal_analysis.h"
-
 /**
  * This implements a greedy CLOT-allocation algorithm, as described in
  * https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
@@ -991,6 +991,9 @@ clotInfo(clotInfo) {
         &uses,
         &clotInfo.parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation") : nullptr,
+        /// FieldPovAnalysis runs a data flow analysis on parser and fills result in
+        /// clotInfo.pov_extracted_without_fields
+        new FieldPovAnalysis(clotInfo, phv),
         new CollectClotInfo(phv, clotInfo),
         new GreedyClotAllocator(phv, clotInfo, log)
     });

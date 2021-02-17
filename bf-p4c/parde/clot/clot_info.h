@@ -25,7 +25,6 @@ class ClotInfo {
     friend class GreedyClotAllocator;
 
     PhvUse &uses;
-    CollectParserInfo parserInfo;
 
     /// Maps parser states to all fields extracted in that state, regardless of source.
     ordered_map<const IR::BFN::ParserState*,
@@ -73,6 +72,9 @@ class ClotInfo {
 
     std::map<gress_t, DeparseGraph> deparse_graph_;
 
+    /// Maps each field to its pov bits.
+    std::map<const PHV::Field*, PovBitSet> fields_to_pov_bits_;
+
  public:
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
 
@@ -88,6 +90,12 @@ class ClotInfo {
                                      const PHV::Field* field) const;
 
  public:
+    CollectParserInfo parserInfo;
+
+    /// A POV is in this set if there is a path through the parser in which the field is not
+    /// extracted, but its POV bit is set.
+    std::set<const PHV::Field*> pov_extracted_without_fields;
+
     const std::map<const Clot*, std::pair<gress_t, std::set<cstring>>, Clot::Less>&
     clot_to_parser_states() const {
         return clot_to_parser_states_;
@@ -144,6 +152,9 @@ class ClotInfo {
 
     /// Determines whether a field is extracted in multiple states that are not mutually exclusive.
     bool is_extracted_in_multiple_non_mutex_states(const PHV::Field* f) const;
+
+    /// Returns true when all paths that set @field's pov bit also extracts @field
+    bool extracted_with_pov(const PHV::Field* field) const;
 
     /// Determines whether a field has the same bit-in-byte offset (i.e., the same bit offset,
     /// modulo 8) in all parser states that extract the field.
@@ -343,7 +354,6 @@ class ClotInfo {
 class CollectClotInfo : public Inspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;
-    std::map<const PHV::Field*, PovBitSet> fields_to_pov_bits;
     Logging::FileLog* log = nullptr;
 
  public:

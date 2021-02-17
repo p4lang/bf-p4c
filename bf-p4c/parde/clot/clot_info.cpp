@@ -2,7 +2,6 @@
 
 #include <array>
 #include <vector>
-
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/logging/logging.h"
@@ -295,6 +294,16 @@ bool ClotInfo::has_consistent_bit_in_byte_offset(const PHV::Field* field) const 
 
     return true;
 }
+bool ClotInfo::extracted_with_pov(const PHV::Field* field) const {
+    if (!fields_to_pov_bits_.count(field))
+        return true;
+    for (auto pov : fields_to_pov_bits_.at(field)) {
+        if (pov_extracted_without_fields.count(pov->field())) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
     if (is_added_by_mau(field->header())) {
@@ -328,6 +337,12 @@ bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
     if (!has_consistent_bit_in_byte_offset(field)) {
         LOG5("  Field " << field->name << " can't be in a CLOT: it has different bit-in-byte "
              "offsets in different parser states");
+        return false;
+    }
+
+    if (!extracted_with_pov(field)) {
+        LOG5(" Field " << field->name << " can't be in a CLOT: there is exists a path through "
+             "the parser where POV bit of this field is set, but the field is not extracted");
         return false;
     }
 
@@ -967,6 +982,7 @@ void ClotInfo::clear() {
     is_modified_.clear();
     parser_state_to_fields_.clear();
     field_to_parser_states_.clear();
+    fields_to_pov_bits_.clear();
     field_to_byte_idx.clear();
     byte_idx_to_field.clear();
     checksum_dests_.clear();
@@ -1029,7 +1045,6 @@ std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>* ClotInfo::find_l
 Visitor::profile_t CollectClotInfo::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
     clotInfo.clear();
-    fields_to_pov_bits.clear();
 
     // Configure logging for this visitor.
     if (BackendOptions().verbose > 0) {
@@ -1044,8 +1059,9 @@ bool CollectClotInfo::preorder(const IR::BFN::Extract* extract) {
     auto state = findContext<IR::BFN::ParserState>();
 
     if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
-        if (auto f = phv.field(field_lval->field))
+        if (auto f = phv.field(field_lval->field)) {
             clotInfo.add_field(f, extract->source, state);
+        }
     }
 
     return true;
@@ -1058,7 +1074,7 @@ bool CollectClotInfo::preorder(const IR::BFN::EmitField* emit) {
     le_bitrange slice;
     auto pov = phv.field(irPov, &slice);
 
-    fields_to_pov_bits[field].insert(new PHV::FieldSlice(pov, slice));
+    clotInfo.fields_to_pov_bits_[field].insert(new PHV::FieldSlice(pov, slice));
     return true;
 }
 
@@ -1074,7 +1090,7 @@ bool CollectClotInfo::preorder(const IR::BFN::EmitChecksum* emit) {
     le_bitrange slice;
     auto pov = phv.field(emit->povBit->field, &slice);
 
-    fields_to_pov_bits[f].insert(new PHV::FieldSlice(pov, slice));
+    clotInfo.fields_to_pov_bits_[f].insert(new PHV::FieldSlice(pov, slice));
 
     return true;
 }
@@ -1125,7 +1141,7 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
         } else {
             // Current emit is a field. Create a pseudoheader if its pov set is different from
             // previous field.
-            auto pov_bits = fields_to_pov_bits.at(cur_field);
+            auto pov_bits = clotInfo.fields_to_pov_bits_.at(cur_field);
 
             if (cur_pov_bits != pov_bits) {
                 add_pseudoheader(cur_pov_bits, cur_fields, allocated);

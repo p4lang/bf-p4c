@@ -427,6 +427,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/clot_info.cpp
   parde/clot/deparse_graph.cpp
   parde/clot/field_slice_extract_info.cpp
+  parde/clot/field_pov_analysis.cpp
   parde/clot/header_removal_analysis.cpp
   parde/clot/pseudoheader.cpp
   )
@@ -467,6 +468,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/deparse_graph.h
   parde/clot/field_slice_extract_info.h
   parde/clot/field_slice_set.h
+  parde/clot/field_pov_analysis.h
   parde/clot/header_removal_analysis.h
   parde/clot/pseudoheader.h
   parde/p4i/gen_parser_json.h
