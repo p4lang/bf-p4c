@@ -66,7 +66,7 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaNoOverlay::name,
+                min_required_arguments, false, PragmaNoOverlay::name,
                 "`gress', `field'")) {
             continue;
         }
