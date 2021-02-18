@@ -8,6 +8,127 @@ template <> void Parser::Checksum::write_config(Target::Cloudbreak::parser_regs 
     else error(lineno, "invalid unit for parser checksum");
 }
 
+
+/**
+ * Helping class for a dynamic identification of required RAM banks
+ * which needs to be enabled.
+ *
+ * TODO: Remove the static code and implement it in walle tool
+ */
+class RamEnGen {
+    const Target::Cloudbreak::parser_regs::_memory::_po_action_row &m_po;
+
+    bool check_ram0() {
+        if (m_po.hdr_len_inc_stop) return true;
+        if (m_po.hdr_len_inc) return true;
+        if (m_po.val_const[0]) return true;
+        if (m_po.phv_ext_cnt_16) return true;
+        if  (m_po.phv_ext_cnt_8_hi || m_po.phv_ext_cnt_8_lo) return true;
+        for (int idx = 0; idx < 6; idx++) {
+            if (m_po.phv_src[idx] || m_po.phv_dst[idx])
+                return true;
+        }
+        if (m_po.pri_upd_type) return true;
+        if (m_po.pri_upd_en_shr) return true;
+        if (m_po.pri_upd_val_mask) return true;
+        if (m_po.pri_upd_src & 0x7) return true;
+
+        return false;
+    }
+
+    bool check_ram1() {
+        if (m_po.pri_upd_src & 0x18) return true;
+        for (int idx = 6; idx < 10; idx++) {
+            if (m_po.phv_src[idx] || m_po.phv_dst[idx])
+                return true;
+        }
+        if (m_po.val_const[1]) return true;
+        if (m_po.clot_type[0]) return true;
+        if (m_po.clot_len_src[0]) return true;
+        if (m_po.clot_en_len_shr[0]) return true;
+        if (m_po.clot_len_mask[0]) return true;
+        if (m_po.clot_offset[0]) return true;
+        if (m_po.clot_tag[0]) return true;
+        if (m_po.clot_has_csum[0]) return true;
+        if (m_po.clot_len_add_0) return true;
+        for (int idx = 0; idx < 3; idx++) {
+            if (m_po.csum_addr[idx] || m_po.csum_en[idx])
+                return true;
+        }
+        if (m_po.disable_partial_hdr_err) return true;
+
+        return false;
+    }
+
+    bool check_ram2() {
+        if (m_po.partial_hdr_err_proc) return true;
+        for (int idx = 10; idx < 16; idx++) {
+            if (m_po.phv_src[idx] || m_po.phv_dst[idx])
+                return true;
+        }
+        for (int idx = 3; idx < 5; idx++) {
+            if (m_po.csum_addr[idx] || m_po.csum_en[idx])
+                return true;
+        }
+        if (m_po.dst_offset_inc || m_po.dst_offset_rst) return true;
+        for (int idx = 0; idx < 16; idx++) {
+            if (m_po.phv_offset_add_dst[idx])
+                return true;
+        }
+        if (m_po.clot_tag_offset_add[0]) return true;
+        for (auto idx = 0; idx < 2; idx++) {
+            if (m_po.val_const_rot[idx])
+                return true;
+        }
+        if (m_po.val_const_32b_bond) return true;
+        if (m_po.phv_src[16] & 0x1f) return true;
+
+        return false;
+    }
+
+    bool check_ram3() {
+        if (m_po.phv_src[16] & 0x20) return true;
+        for (int idx = 17; idx < 20; idx++) {
+            if (m_po.phv_src[idx])
+                return true;
+        }
+        for (int idx = 16; idx < 20; idx++) {
+            if (m_po.phv_dst[idx])
+                return true;
+        }
+        if (m_po.clot_type[1]) return true;
+        if (m_po.clot_len_src[1]) return true;
+        if (m_po.clot_en_len_shr[1]) return true;
+        if (m_po.clot_len_mask[1]) return true;
+        if (m_po.clot_offset[1]) return true;
+        if (m_po.clot_tag[1]) return true;
+        if (m_po.clot_has_csum[1]) return true;
+        for (int idx = 16; idx < 20; idx++) {
+            if (m_po.phv_offset_add_dst[idx])
+                return true;
+        }
+        if (m_po.clot_tag_offset_add[1]) return true;
+        if (m_po.ver_upd_type) return true;
+        if (m_po.ver_upd_en_shr) return true;
+        if (m_po.ver_upd_val_mask) return true;
+        if (m_po.ver_upd_src) return true;
+
+        return false;
+    }
+
+ public:
+    explicit RamEnGen(const Target::Cloudbreak::parser_regs::_memory::_po_action_row &po) :
+        m_po(po) {}
+
+    int get_ram_enable() {
+        // Enable bank 0 by default
+        if (check_ram3()) return 3;
+        if (check_ram2()) return 2;
+        if (check_ram1()) return 1;
+        return 0;
+    }
+};
+
 struct cloudbreak_row_output_state {
     gress_t     gress;
     int         row;
@@ -307,13 +428,15 @@ template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parse
     write_common_row_config(regs, pa, state, row, def, ctxt_json);
     auto &action_row = regs.memory[state->gress].po_action_row[row];
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
-    // FIXME -- should set this based on which banks are needed -- for now enable all
-    ea_row.action_ram_en = 3;
 
     // FIXME -- CB Parser uArch doc recommends only doing this in the last state for a
     // specific header, though its not clear why
     if (shift || (def && def->shift))
         action_row.hdr_len_inc = 1;
+
+    // Enable the required number of RAM banks
+    RamEnGen en_gen(action_row);
+    ea_row.action_ram_en = en_gen.get_ram_enable();
 }
 
 template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
