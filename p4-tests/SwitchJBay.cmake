@@ -70,10 +70,10 @@ set_tests_properties(
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino2/smoketest_switch_16_compile_y1_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino2/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino2/smoketest_switch_16_compile_y3_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino2/smoketest_switch_16_compile_y1_profile" PROPERTIES TIMEOUT 1600)
+set_tests_properties("tofino2/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT 1600)
+set_tests_properties("tofino2/smoketest_switch_16_compile_y3_profile" PROPERTIES TIMEOUT 1600)
+set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1600)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y1" PROPERTIES TIMEOUT 7300)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y2" PROPERTIES TIMEOUT 7300)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y0" PROPERTIES TIMEOUT 7300)

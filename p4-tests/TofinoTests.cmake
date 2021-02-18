@@ -101,8 +101,8 @@ set (TOFINO_V1_TEST_SUITES
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${TOFINO_V1_TEST_SUITES}")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 1200")
-set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 1600")
+set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 1600)
 
 set (TOFINO_V1_TEST_SUITES_P416
   ${v1tests}
@@ -136,7 +136,7 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2030.
 
 # Disable power check on these Arista profiles
 # P4C-3039
-set (P16_TNA_ARISTA_NO_POWER_CHECK_FILES
+set (P16_TNA_ARISTA_SET_MAX_POWER_FILES
   "obfuscated-nat.p4"
   "obfuscated-nat_static.p4"
 )
@@ -144,8 +144,8 @@ set (P16_TNA_ARISTA_NO_POWER_CHECK_FILES
 cmake_policy(SET CMP0057 NEW)
 # p4_16/customer/arista/obfuscated-*.p4
 foreach (t IN LISTS P16_TNA_ARISTA_FILES)
-  if (${t} IN_LIST P16_TNA_ARISTA_NO_POWER_CHECK_FILES)
-      set (POWER_CHECK_ARG "-Xp4c=\"--no-power-check\"")
+  if (${t} IN_LIST P16_TNA_ARISTA_SET_MAX_POWER_FILES)
+      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 62.0\"")
   else()
       set (POWER_CHECK_ARG "-Xp4c=\"--disable-power-check\"")
   endif()
