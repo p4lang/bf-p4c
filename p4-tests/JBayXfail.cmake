@@ -531,3 +531,10 @@ p4c_add_xfail_reason("tofino2"
    "Unexpected port .*"
    p4_16_programs_tna_multicast
 )
+
+# P4C-3570
+p4c_add_xfail_reason("tofino2"
+   "Expected packet was not received on device 0, port 8"
+   p4c-3570
+)
+
