@@ -44,6 +44,7 @@
 #include "bf-p4c/parde/resolve_negative_extract.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/analysis/dark.h"
+#include "bf-p4c/phv/add_alias_allocation.h"
 #include "bf-p4c/phv/auto_init_metadata.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
@@ -224,7 +225,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
                                     // Undo results of privatization for the doNotPrivatize fields
             new ValidateActions(phv, false, true, false),
         }),
-        new AddAliasAllocation(phv),
+        new PHV::AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         // This pass must be called before instruction adjustment since the primitive info
@@ -248,7 +249,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
             options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
                                     // Undo results of privatization for the doNotPrivatize fields
             new ValidateActions(phv, false, true, false),
-            new AddAliasAllocation(phv),
+            new PHV::AddAliasAllocation(phv),
             new ReinstateAliasSources(phv),  // revert AliasMembers/Slices to their original
             [this]() {
                 // FIXME -- PHV (re)allocation may have invalidated action bus allocation (at

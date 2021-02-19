@@ -520,6 +520,12 @@ p4c_add_xfail_reason("tofino2"
    p4c-3484
 )
 
+# P4C-3379
+p4c_add_xfail_reason("tofino2"
+   "PHV allocation was not successful"
+   p4c-3379
+)
+
 # DRV-4430
 p4c_add_xfail_reason("tofino2"
    "Expected packet was not received on device 0, port"
