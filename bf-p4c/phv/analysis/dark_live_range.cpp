@@ -461,17 +461,15 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
     PHV::DarkInitMap rv;
     PHV::DarkInitEntry* firstDarkInitEntry = nullptr;
     for (const auto& info : *fieldsInOrder) {
-        if (LOGGING(2)) {
-            LOG2("\tTrying to allocate field " << idx << ": " << info.field << " in container "
-                                               << c);
-            LOG2("\t\tRelevant units:");
-            for (const auto* u : info.units) {
-                std::stringstream ss;
-                ss << "\t\t  " << DBPrint::Brief << u;
-                if (const auto* t = u->to<IR::MAU::Table>())
-                    ss << " (Stage " << dg.min_stage(t) << ")";
-                LOG2(ss.str());
-            }
+        LOG2("\tTrying to allocate field " << idx << ": " << info.field << " in container " <<
+                c);
+        LOG2("\t\tRelevant units:");
+        for (const auto* u : info.units) {
+            std::stringstream ss;
+            ss << "\t\t  " << DBPrint::Brief << u;
+            if (const auto* t = u->to<IR::MAU::Table>())
+                ss << " (Stage " << dg.min_stage(t) << ")";
+            LOG2(ss.str());
         }
         if (idx == 0) {
             LOG2("\t  Field with earliest live range: " << info.field << " already allocated "
@@ -769,24 +767,6 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         ++idx;
         lastField = &info;
     }
-
-    // XXX(yumin): fix dark Init nodes: NOP should not overwrite parser read.
-    // it should be fixed somewhere right above.
-    for (auto& entry : rv) {
-        if (!entry.isNOP()) continue;
-        const auto& new_earliest = entry.getDestinationSlice().getEarliestLiveness();
-        if (new_earliest.first != 0) continue;
-        const auto new_slice = PHV::FieldSlice(entry.getDestinationSlice().field(),
-                                               entry.getDestinationSlice().field_slice());
-        for (const auto& slice : fields) {
-            const auto prev_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
-            const auto prev_earliest = slice.getEarliestLiveness();
-            if (new_slice == prev_slice && new_earliest > prev_earliest) {
-                entry.setDestinationEarliestLiveness(prev_earliest);
-            }
-        }
-    }
-
     return rv;
 }
 

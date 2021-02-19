@@ -1,8 +1,6 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_CONTAINER_TYPE_H_
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_CONTAINER_TYPE_H_
 
-#include <boost/optional/optional.hpp>
-#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
@@ -17,7 +15,7 @@ class PragmaContainerType : public Inspector {
     /// Map of fields for which the pragma pa_container_type has been specified to the kind of
     /// suggested container.
     /// Used to print logging messages
-    ordered_map<const PHV::Field*, PHV::Kind> fields;
+    ordered_map<const PHV::Field*, cstring> fields;
 
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
@@ -27,7 +25,7 @@ class PragmaContainerType : public Inspector {
 
     /// Adds the constraint that @field_name should be allocated to container type @kind.
     bool add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
-                        cstring field_name, PHV::Kind kind);
+        cstring field_name, cstring kind);
 
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
@@ -36,11 +34,9 @@ class PragmaContainerType : public Inspector {
 
     /// @returns the map of fields and suggested container type for which the pragma
     /// pa_container_type has been specified in the program.
-    const ordered_map<const PHV::Field*, PHV::Kind>& getFields() const {
+    const ordered_map<const PHV::Field*, cstring> getFields() const {
         return fields;
     }
-
-    boost::optional<PHV::Kind> required_kind(const PHV::Field* f) const;
 
     /// BFN::Pragma interface
     static const char *name;

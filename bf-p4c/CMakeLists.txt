@@ -492,7 +492,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
   phv/parde_phv_constraints.cpp
-  phv/add_alias_allocation.cpp
   phv/phv_analysis.cpp
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
@@ -560,7 +559,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/make_clusters.h
   phv/mau_backtracker.h
   phv/parde_phv_constraints.h
-  phv/add_alias_allocation.h
   phv/phv_analysis.h
   phv/phv_fields.h
   phv/phv_parde_mau_use.h

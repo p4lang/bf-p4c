@@ -396,9 +396,8 @@ class ActionPhvConstraints : public Inspector {
       * @returns the number of container sources used in @action
       */
     NumContainers num_container_sources(const PHV::Allocation& alloc,
-                                        const PHV::Allocation::MutuallyLiveSlices& container_state,
-                                        const IR::MAU::Action* action,
-                                        PackingConstraints& copacking_constraints) const;
+            PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action,
+            PackingConstraints& copacking_constraints) const;
 
     /** Return the first allocated (in @alloc) or proposed (in @slices) source
      * of an instruction in @action that writes to @slice, if any.  There may

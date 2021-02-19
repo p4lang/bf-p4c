@@ -105,9 +105,5 @@ TEST_F(PaContainerTypePragmaTest, Basic) {
     EXPECT_EQ(h1_f3->is_mocha_candidate(), false);
     EXPECT_EQ(h1_f2->is_dark_candidate(), false);
     EXPECT_EQ(h1_f2->is_mocha_candidate(), true);
-
-    EXPECT_EQ(pa_container_type.required_kind(h1_f4), PHV::Kind::dark);
-    EXPECT_EQ(pa_container_type.required_kind(h1_f3), PHV::Kind::normal);
-    EXPECT_EQ(pa_container_type.required_kind(h1_f2), PHV::Kind::mocha);
 }
 }  // namespace Test

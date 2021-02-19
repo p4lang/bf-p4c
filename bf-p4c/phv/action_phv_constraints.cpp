@@ -518,23 +518,15 @@ int ActionPhvConstraints::min_stage(const IR::MAU::Action* action) const {
 
 ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
         const PHV::Allocation &alloc,
-        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        PHV::Allocation::MutuallyLiveSlices container_state,
         const IR::MAU::Action* action,
         ActionPhvConstraints::PackingConstraints& packing_constraints) const {
-    // source containers used in @p action
-    ordered_set<PHV::Container> source_containers;
-    // source -> destinations mapping.
-    ordered_map<PHV::FieldSlice, ordered_set<PHV::AllocSlice>> source_to_dest;
-    // unallocated slices, grouped by field
-    ordered_map<const PHV::Field*, ordered_set<PHV::FieldSlice>> unalloc_slices;
-    int num_unallocated = 0;
-    // XXX(yumin): these num_double_* were introduced in
-    // https://github.com/barefootnetworks/bf-p4c-compilers/pull/3559/files
-    // to capture a cornor case: slices alive at the same time in a container
-    // written by same source, the source should count as two sources.
-    // NOTE: although named as double_*, can be multiple.
-    int num_double_allocated = 0;
-    int num_double_unallocated = 0;
+    ordered_set<PHV::Container> containerList;
+    ordered_map<PHV::FieldSlice, PHV::FieldSlice> readSlices;
+    size_t num_unallocated = 0;
+    size_t doubleAllocatedCount = 0;
+    size_t doubleUnallocatedCount = 0;
+    ordered_map<const PHV::Field*, ordered_set<PHV::FieldSlice>> unallocFieldToSlices;
     int stage = min_stage(action);
     for (auto slice : container_state) {
         auto reads = constraint_tracker.sources(slice, action);
@@ -543,96 +535,66 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
         if (reads.size() == 0)
             LOG5("\t\t\t\tSlice " << slice << " is not written in action " << action->name);
         for (auto operand : reads) {
-            if (operand.ad || operand.constant || !operand.phv_used) {
+            if (operand.ad || operand.constant) {
                 LOG6("\t\t\t\t" << operand << " doesn't count as a container source");
-                continue;
-            }
-            // update copacking constraint
-            const PHV::FieldSlice& source = *(operand.phv_used);
-            if (!packing_constraints[action].contains(source)) {
-                LOG1("\t\t\t\t\tInserting " << source << " into copacking_constraints for action "
-                                            << action->name);
-                packing_constraints[action].insert(source);
-            }
-
-            // compute allocated slices for this source, which is
-            // current allocation object + in this container.
-            ordered_set<PHV::AllocSlice> source_allocated_slices =
-                alloc.slices(source.field(), source.range(), stage,
-                             PHV::FieldUse(PHV::FieldUse::READ));
-            for (auto container_source : container_state) {
-                if (container_source.field() == source.field() &&
-                    container_source.field_slice().overlaps(source.range())) {
-                    source_allocated_slices.insert(container_source);
-                }
-            }
-
-            // compute allocated container of this source.
-            ordered_set<PHV::Container> source_allocated_containers;
-            for (auto source_slice : source_allocated_slices) {
-                source_allocated_containers.insert(source_slice.container());
-                LOG5("\t\t\t\t\tSource slice for " << slice << " : " << source_slice);
-            }
-
-            // double_read check, note that slices with disjoint liveranges should
-            // not be considered as double_read.
-            bool source_was_read_before = false;
-            if (source_to_dest.count(source)) {
-                for (const auto& prev_dest : source_to_dest.at(source)) {
-                    if (!prev_dest.isLiveRangeDisjoint(slice)) {
-                        LOG5("\t\t\t\t" << source.field()->name << source.range()
-                                        << " has already been read by "
-                                        << source_to_dest.at(source));
-                        source_was_read_before = true;
-                    }
-                }
-            }
-            source_to_dest[source].insert(slice);
-
-            if (source_allocated_containers.size() == 0) {
-                LOG5("\t\t\t\tSource " << source << " has not been allocated yet.");
-                unalloc_slices[source.field()].insert(source);
-                if (source_was_read_before) ++num_double_unallocated;
+                continue; }
+            const PHV::Field* fieldRead = operand.phv_used->field();
+            le_bitrange rangeRead = operand.phv_used->range();
+            bool thisUnallocated = false;
+            if (readSlices.count(*(operand.phv_used))) {
+                LOG5("\t\t\t\t" << fieldRead->name << " [" << rangeRead.lo << ", " << rangeRead.hi
+                     << "] already read earlier for source " << readSlices.at(*(operand.phv_used)));
+                thisUnallocated = true;
             } else {
-                source_containers.insert(source_allocated_containers.begin(),
-                                         source_allocated_containers.end());
-                if (source_was_read_before) ++num_double_allocated;
+                readSlices[*(operand.phv_used)] = PHV::FieldSlice(slice.field(),
+                        slice.field_slice());
+            }
+
+            LOG1("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
+                    rangeRead.hi << "] into copacking_constraints for action " << action->name);
+            packing_constraints[action].insert(*operand.phv_used);
+
+            ordered_set<PHV::Container> per_source_containers;
+            ordered_set<PHV::AllocSlice> per_source_slices =
+                alloc.slices(fieldRead, rangeRead, stage, PHV::FieldUse(PHV::FieldUse::READ));
+            for (auto source : container_state)
+                if (source.field() == fieldRead && source.field_slice().overlaps(rangeRead))
+                    per_source_slices.insert(source);
+
+            for (auto source_slice : per_source_slices) {
+                per_source_containers.insert(source_slice.container());
+                LOG5("\t\t\t\t\tSource slice for " << slice << " : " << source_slice); }
+            if (per_source_containers.size() == 0) {
+                LOG5("\t\t\t\tSource " << *(operand.phv_used) << " has not been allocated yet.");
+                unallocFieldToSlices[fieldRead].insert(*(operand.phv_used));
+                if (thisUnallocated) ++doubleUnallocatedCount;
+            } else {
+                containerList.insert(per_source_containers.begin(), per_source_containers.end());
+                if (thisUnallocated) ++doubleAllocatedCount;
             }
         }
     }
-
-    // compute number of containers needed for unallocated slices.
-    for (auto kv : unalloc_slices) {
+    for (auto kv : unallocFieldToSlices) {
         LOG5("\t\t\t\tSource field: " << kv.first->name);
         if (kv.first->no_split() || kv.first->no_holes()) {
-            // If fields were
-            // (1) no_split: they will end up in one container.
-            // (2) no_holes: used in special instructions like funnel-shift
-            //     and wide_arithmetic ops, we can treat them as sourcing
-            //     from one container. XXX(yumin): need to verify this.
             ++num_unallocated;
-        } else {
-            for (auto slice : kv.second) {
-                LOG5("\t\t\t\t  Unallocated slice: " << slice);
-                ++num_unallocated;
-            }
+            continue;
+        }
+        for (auto slice : kv.second) {
+            LOG5("\t\t\t\t  Unallocated slice: " << slice);
+            ++num_unallocated;
         }
     }
-
-    // XXX(yumin): not sure why we add num_double_unallocated to this?
-    const int total_allocated = source_containers.size() + num_double_allocated;
-    const int total_unallocated = num_unallocated + num_double_unallocated;
-
-    if (LOGGING(5)) {
-        LOG5("\t\t\t\tDouble allocation, allocated: " << num_double_allocated <<
-             ", unallocated: " << num_double_unallocated);
-        LOG5("\t\t\t\tNumber of allocated sources  : " << total_allocated);
-        LOG5("\t\t\t\tNumber of unallocated sources: " << total_unallocated);
-        LOG5("\t\t\t\tTotal number of sources      : " << total_allocated + total_unallocated);
-    }
-
-    NumContainers rv(total_allocated, total_unallocated);
-    rv.double_unallocated = (num_double_unallocated > 0);
+    LOG5("\t\t\t\tDouble allocation, allocated: " << doubleAllocatedCount <<
+         ", unallocated: " << doubleUnallocatedCount);
+    LOG5("\t\t\t\tNumber of allocated sources  : " << containerList.size() + doubleAllocatedCount);
+    LOG5("\t\t\t\tNumber of unallocated sources: " << num_unallocated + doubleUnallocatedCount);
+    LOG5("\t\t\t\tTotal number of sources      : " << (containerList.size() + num_unallocated +
+         doubleAllocatedCount + doubleUnallocatedCount));
+    NumContainers rv(containerList.size() + doubleAllocatedCount, num_unallocated +
+            doubleUnallocatedCount);
+    if (doubleUnallocatedCount)
+        rv.double_unallocated = true;
     return rv;
 }
 

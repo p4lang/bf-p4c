@@ -3,27 +3,9 @@
 #include <string>
 #include <numeric>
 
-#include "bf-p4c/phv/phv.h"
 #include "lib/log.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
-
-namespace {
-
-boost::optional<PHV::Kind> str_to_kind(cstring str) {
-    if (str == "tagalong") {
-        return PHV::Kind::tagalong;
-    } else if (str == "normal") {
-       return PHV::Kind::normal;
-    } else if (str == "mocha") {
-       return PHV::Kind::mocha;
-    } else if (str == "dark") {
-        return PHV::Kind::dark;
-    }
-    return boost::none;
-}
-
-}  // namespace
 
 /// BFN::Pragma interface
 const char *PragmaContainerType::name = "pa_container_type";
@@ -31,26 +13,30 @@ const char *PragmaContainerType::description =
     "Forces the allocation of a field in the specified container type.";
 const char *PragmaContainerType::help = "??";  // FIXME
 
-bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
-                                         cstring field_name, PHV::Kind kind) {
+bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe,
+        const IR::Expression* expr, cstring field_name, cstring kind) {
     // check field name
     PHV::Field* field = phv_i.field(field_name);
     if (!field) {
         PHV::Pragmas::reportNoMatchingPHV(pipe, expr, field_name);
         return false;
     }
-    if (kind == PHV::Kind::mocha) {
+    if (kind == "mocha") {
         field->set_mocha_candidate(true);
         field->set_dark_candidate(false);
-    } else if (kind == PHV::Kind::dark) {
+    } else if (kind == "dark") {
         field->set_mocha_candidate(false);
         field->set_dark_candidate(true);
-    } else if (kind == PHV::Kind::normal) {
+    } else if (kind == "normal") {
         field->set_mocha_candidate(false);
         field->set_dark_candidate(false);
-    } else if (kind == PHV::Kind::tagalong) {
+    } else if (kind == "tagalong") {
         ::warning("@prama pa_container_type currently does not support tagalong containers, "
                   "skipped", field_name);
+        return false;
+    } else {
+        ::warning("@pragma pa_container_type's argument %1% does not match any valid container "
+                  "types, skipped", field_name);
         return false;
     }
     fields[field] = kind;
@@ -95,24 +81,9 @@ bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
 
         auto field_name = gress_arg->value + "::" + field_ir->value;
         LOG1("Adding container type " << container_type->value << " for " << field_name);
-        auto kind = str_to_kind(container_type->value);
-        if (!kind) {
-            ::warning(
-                "@pragma pa_container_type's argument %1% does not match any valid container "
-                "types, skipped",
-                field_name);
-        } else {
-            add_constraint(pipe, field_ir, field_name, *kind);
-        }
+        add_constraint(pipe, field_ir, field_name, container_type->value);
     }
     return true;
-}
-
-boost::optional<PHV::Kind> PragmaContainerType::required_kind(const PHV::Field* f) const {
-    if (fields.count(f)) {
-        return fields.at(f);
-    }
-    return boost::none;
 }
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerType& pa_ct) {

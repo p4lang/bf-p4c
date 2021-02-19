@@ -881,8 +881,6 @@ header fabric_h {
     bit<8> reserved2;
 }
 
-// XXX(yumin): For fitting
-@pa_container_type("egress", "hdr.cpu.reason_code", "normal")
 // CPU header
 header cpu_h {
     bit<5> egress_queue;

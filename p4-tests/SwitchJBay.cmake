@@ -49,8 +49,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
         ^switch_l3.L3SVITest
         ^switch_l2.L2LagTest
         ^switch_l3.L3ECMPTest
-        ^switch_l3.L3MulticastTest
-        ^switch_l2.VlanScaleTest")
+        ^switch_l3.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y0" ${SWITCH_P4_16}
   "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y0_tofino2 -to 7200" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh

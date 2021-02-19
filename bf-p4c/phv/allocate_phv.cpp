@@ -177,14 +177,10 @@ ordered_map<MetricName, int> default_weighted_sum(const AllocScore& delta) {
 bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& right) {
     AllocScore delta = left - right;
     const int DARK_TO_PHV_DISTANCE = 2;
-    int container_type_score = 0;
-    if (Device::currentDevice() == Device::TOFINO) {
-        container_type_score = delta.general[n_tphv_on_phv_bits];
-    } else {
-        container_type_score = DARK_TO_PHV_DISTANCE * delta.general[n_dark_on_phv_bits] +
-                               delta.general[n_mocha_on_phv_bits] +
-                               delta.general[n_dark_on_mocha_bits];
-    }
+    int container_type_score = delta.general[n_tphv_on_phv_bits]
+        + DARK_TO_PHV_DISTANCE * delta.general[n_dark_on_phv_bits]
+        + delta.general[n_mocha_on_phv_bits]
+        + delta.general[n_dark_on_mocha_bits];
 
     auto weighted_delta = default_weighted_sum(delta);
     std::vector<AllocScoreCmpCond> conds;
@@ -436,17 +432,12 @@ AllocScore::AllocScore(
         if (kind == PHV::Kind::normal) {
             for (const auto& slice : slices) {
                 PHV::FieldSlice fieldSlice(slice.field(), slice.field_slice());
-                if (Device::currentDevice() == Device::TOFINO) {
-                    if (fieldSlice.is_tphv_candidate(uses))
-                        general[n_tphv_on_phv_bits] += (slice.width());
-                } else {
-                    if (slice.field()->is_mocha_candidate())
-                        general[n_mocha_on_phv_bits] += (slice.width());
-                    else if (slice.field()->is_dark_candidate())
-                        general[n_dark_on_phv_bits] += (slice.width());
-                }
-            }
-        }
+                if (fieldSlice.is_tphv_candidate(uses))
+                    general[n_tphv_on_phv_bits] += (slice.width());
+                else if (slice.field()->is_mocha_candidate())
+                    general[n_mocha_on_phv_bits] += (slice.width());
+                else if (slice.field()->is_dark_candidate())
+                    general[n_dark_on_phv_bits] += (slice.width()); } }
 
         if (kind == PHV::Kind::mocha)
             for (const auto& slice : slices)
@@ -679,15 +670,6 @@ bool CoreAllocation::satisfies_constraints(
         std::vector<PHV::AllocSlice> slices,
         const PHV::Allocation& alloc) const {
     if (slices.size() == 0) return true;
-
-    // pa_container_type constraint check
-    auto& pa_ct = pragmas_i.pa_container_type();
-    for (const auto& slice : slices) {
-        auto required_kind = pa_ct.required_kind(slice.field());
-        if (required_kind && *required_kind != slice.container().type().kind()) {
-            return false;
-        }
-    }
 
     // Slices placed together must be placed in the same container.
     auto DifferentContainer = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
@@ -1582,22 +1564,6 @@ CoreAllocation::tryAllocSliceList(
             for (auto& slice : candidate_slices) LOG6("\t\t  " << slice);
             LOG6("\t\tExisting slices in container: " << c);
             for (auto& slice : perContainerAlloc.slices(c)) LOG6("\t\t\t" << slice);
-        }
-
-        // check pa_container_type constraints for candidates after dark overlay.
-        bool pa_container_type_ok = true;
-        for (const auto& sl : candidate_slices) {
-            auto req_kind = pragmas().pa_container_type().required_kind(sl.field());
-            if (req_kind && sl.container().type().kind() != *req_kind) {
-                LOG5("\t\t not possible because @pa_container_type specify that "
-                     << sl.field() << " must be allocated to " << *req_kind << ", so "
-                     << sl.container() << " is not allowed");
-                pa_container_type_ok = false;
-                break;
-            }
-        }
-        if (!pa_container_type_ok) {
-            continue;
         }
 
         // ALEX : Add special handling for dark overlays of Mocha containers
@@ -3806,9 +3772,11 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
 
     // calc whether the cluster has container type pragma. Only for JBay.
     if (Device::currentDevice() != Device::TOFINO) {
+        const ordered_map<const PHV::Field*, cstring> container_type_pragmas =
+            core_alloc_i.pragmas().pa_container_type().getFields();
         for (auto* cluster : cluster_groups) {
             cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
-                if (core_alloc_i.pragmas().pa_container_type().required_kind(fs.field()))
+                if (container_type_pragmas.count(fs.field()))
                     has_container_type_pragma.insert(cluster);
             });
         }
@@ -3917,8 +3885,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
 
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
         if (Device::currentDevice() != Device::TOFINO) {
-            // if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
-            //     return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
+            if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
+                return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
             if (n_high_pri_cnt_size_pragma.at(l) != n_high_pri_cnt_size_pragma.at(r))
                 return n_high_pri_cnt_size_pragma.at(l) > n_high_pri_cnt_size_pragma.at(r);
         }
