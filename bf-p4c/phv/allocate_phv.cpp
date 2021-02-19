@@ -1433,6 +1433,7 @@ CoreAllocation::tryAllocSliceList(
                 // information about the initialization required and allocated slices for later
                 // constraint verification.
                 bool is_mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+                // Get non parser-mutually-exclusive slices allocated in container c
                 PHV::Allocation::MutuallyLiveSlices container_state =
                     perContainerAlloc.slicesByLiveness(c, candidate_slices);
                 // Actual slices in the container, after accounting for metadata overlay.
@@ -1514,6 +1515,7 @@ CoreAllocation::tryAllocSliceList(
                                                     actual_cntr_state)) {
                             LOG5("\t\tNew dark primitives extend previously defined slice "
                                  "live ranges; thus skipping container " << c);
+                            can_place = false;
                             break; }
 
                         can_place = true;
@@ -1982,43 +1984,91 @@ bool CoreAllocation::generateNewAllocSlices(
     std::vector<PHV::AllocSlice> rv;
     LOG5("\t\t\tOriginal candidate slice: " << origSlice);
     bool foundAnyNewSliceForThisOrigSlice = false;
+    PHV::Container dstCntr = origSlice.container();
     // Create mapping from sources of writes to bitranges for each stage
     std::map<int, std::map<PHV::Container, bitvec> > perStageSources2Ranges;
     for (auto& newSlice : initializedAllocSlices) {
         // Init stage of newSlice
         int initStg = newSlice.getEarliestLiveness().first;
+        // srcCntr is not set for zeroInits and NOPs
         PHV::Container srcCntr = PHV::Container();
 
-        if (newSlice.getInitPrimitive() && newSlice.getInitPrimitive()->getSourceSlice())
+        BUG_CHECK(newSlice.getInitPrimitive(), "DarkInitPrimitive does not exist?");
+
+        if (newSlice.getInitPrimitive()->getSourceSlice())
             srcCntr = newSlice.getInitPrimitive()->getSourceSlice()->container();
 
         le_bitrange cBits = newSlice.container_slice();
 
-        perStageSources2Ranges[initStg][srcCntr].setrange(cBits.lo, cBits.size());
+        if (newSlice.container() == dstCntr && !newSlice.getInitPrimitive()->isNOP()) {
+            perStageSources2Ranges[initStg][srcCntr].setrange(cBits.lo, cBits.size());
+
+        if (srcCntr == PHV::Container())
+            LOG6("\t\tAdding bits "  << cBits << " for stage " << initStg << " from zero init");
+        else
+            LOG6("\t\tAdding bits "  << cBits << " for stage " << initStg <<
+                 " from source container " << srcCntr);
+        }
 
         if (!origSlice.representsSameFieldSlice(newSlice)) continue;
         LOG5("\t\t\t  Found new slice: " << newSlice);
+
         if (container_state.size() > 1) {
             for (auto mls : container_state) {
-                LOG5("\t\t Checking slice " << mls << " for common init stages");
                 le_bitrange mlsBits = mls.container_slice();
+
+                // If mls is overlaid with origSlice then skip mls
+                // because this is the slice prior to overlay
+                if (mlsBits.intersectWith(cBits).size() > 0) continue;
+
                 PHV::Container mlsCntr = PHV::Container();
+                bool hasPrim = mls.hasInitPrimitive();
+                LOG5("\t\t Checking slice " << mls << " for common init stages (has Dark prim:" <<
+                     hasPrim << ")");
+                if (hasPrim && mls.getInitPrimitive()->getSourceSlice()) {
+                    LOG6("\t\t\t with source " << mls.getInitPrimitive()->getSourceSlice());
+                } else if (hasPrim) {
+                    LOG6("\t\t\t isNop: " << mls.getInitPrimitive()->isNOP() <<
+                         " zeroInit: " << mls.getInitPrimitive()->destAssignedToZero());
+                } else {
+                    bool disjoint_lr = isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
+                                                           newSlice.getEarliestLiveness(),
+                                                           mls.getEarliestLiveness(),
+                                                           mls.getLatestLiveness());
+                    LOG6("\t\t\t disjoint liveranges " << disjoint_lr);
+                    LOG6("\t\t\t empty: " << mls.getInitPrimitive()->isEmpty());
+                }
+
                 // Account for bits from source container
-                if (mls.getInitPrimitive() && mls.getInitPrimitive()->getSourceSlice() &&
+                if (hasPrim && mls.getInitPrimitive()->getSourceSlice() &&
                     mls.getEarliestLiveness().second.isWrite() &&
                     newSlice.getEarliestLiveness().second.isWrite() &&
-                    (mls.getEarliestLiveness().first == initStg))
+                    (mls.getEarliestLiveness().first == initStg)) {
                     mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
+                    LOG6("\t\t\tA. mls container: " << mlsCntr << "\n Prim: " <<
+                         mls.getInitPrimitive());
                 // Else account for previously allocated alive bits in destination container
-                else if (!mls.getInitPrimitive() &&
-                         !isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
-                                              newSlice.getEarliestLiveness(),
-                                              mls.getEarliestLiveness(),
-                                              mls.getLatestLiveness()))
+                } else if (!hasPrim &&
+                           !isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
+                                                newSlice.getEarliestLiveness(),
+                                                mls.getEarliestLiveness(),
+                                                mls.getLatestLiveness())) {
                     mlsCntr = mls.container();
+                    LOG6("\t\t\tB. mls container: " << mlsCntr);
+                }
 
-                perStageSources2Ranges[initStg][mlsCntr].setrange(mlsBits.lo,
+                if (!(hasPrim && mls.getInitPrimitive()->isNOP())) {
+                    // Update per stage sources unless dark prim is NOP
+                    perStageSources2Ranges[initStg][mlsCntr].setrange(mlsBits.lo,
                                                                   mlsBits.size());
+                    if (mlsCntr == PHV::Container()) {
+                        LOG6("\t\tAdding bits "  << mlsBits << " for stage " << initStg <<
+                             " from zero init");
+                    } else {
+                        LOG6("\t\tAdding bits "  << mlsBits << " for stage " << initStg <<
+                             " from container" << mlsCntr);
+                    }
+                }
 
                 if (perStageSources2Ranges[initStg].size() > 2) {
                     LOG5("\t\t\tToo many sources : " << perStageSources2Ranges[initStg].size());
@@ -2028,6 +2078,8 @@ bool CoreAllocation::generateNewAllocSlices(
         }
 
         if (newSlice.extends_live_range(origSlice)) {
+            LOG5("\t\tNew dark primitive " << newSlice << " extend original slice liverange" <<
+                 origSlice << ";  thus skipping container " << newSlice.container());
             return false;
         }
 
@@ -2048,7 +2100,7 @@ bool CoreAllocation::generateNewAllocSlices(
                     cntrSS << srcEntry.first;
 
                 LOG5("\t\t\tNon contiguous bits from source " << cntrSS.str()  <<
-                         " (" << srcEntry.second << ")");
+                     " (" << srcEntry.second << ") in stage " << stgEntry.first);
                 return false;
             }
         }
@@ -2067,6 +2119,8 @@ bool CoreAllocation::generateNewAllocSlices(
             if (!alreadyAllocatedSlice.representsSameFieldSlice(newSlice)) continue;
             LOG5("\t\t\t  Found new slice: " << newSlice);
             if (newSlice.extends_live_range(alreadyAllocatedSlice)) {
+                LOG5("\t\tNew dark primitive " << newSlice << " extend original slice liverange" <<
+                 alreadyAllocatedSlice << ";  thus skipping container " << newSlice.container());
                 return false;
             }
             foundAnyNewSliceForThisAllocatedSlice = true;
