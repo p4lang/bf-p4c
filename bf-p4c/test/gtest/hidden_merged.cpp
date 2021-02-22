@@ -52,7 +52,7 @@ TEST(HiddenMerged, DISABLED_HiddenMerged) {
         "`.*`",
         "exact_match test_table_`\\d+``.*`:",
         "`.*`",
-        "p4: { name: ingress_control.test_table,`.*`hidden: true }"
+        "p4: {`.*`name: ingress_control.test_table,`.*`hidden: true`.*`}"
     };
     RUN_CHECK(input, expected);
 }
