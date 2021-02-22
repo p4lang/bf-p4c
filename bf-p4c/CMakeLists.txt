@@ -1304,7 +1304,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/equiv_align_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

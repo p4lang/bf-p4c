@@ -134,7 +134,6 @@ class TestCode {
     std::string ends;       // How our optional block starts and ends.
 
  public:
-    const IR::P4Program* get_program() { return program; }
     /// Useful strings.
     static std::string any_to_brace() {return "`([^\\{]*\\{)`";}  // viz ".*{"
     static std::string empty_state() {return "state start {transition accept;}";}

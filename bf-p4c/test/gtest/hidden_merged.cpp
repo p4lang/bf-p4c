@@ -31,7 +31,7 @@ auto defs = R"(
 
 // N.B. The placement runs faster when there is only one table.
 
-TEST(HiddenMerged, HiddenMerged) {
+TEST(HiddenMerged, DISABLED_HiddenMerged) {
     auto input = R"(
             action test_action() {
                 hdr.h.f1 = 0;
