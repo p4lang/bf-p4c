@@ -10,6 +10,7 @@
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/size_of.h"
 #include "bf-p4c/common/utils.h"
@@ -124,6 +125,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
+        new CatchBacktrack<LongBranchAllocFailed>(
+            [] { BackendOptions().disable_long_branch = true; }),
         new MultipleApply(options),
         new AddSelectorSalu,
         new FixupStatefulAlu,

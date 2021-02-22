@@ -237,4 +237,8 @@ class JbayNextTable : public PassManager, public NextTable {
     };
 };
 
+struct LongBranchAllocFailed : public Backtrack::trigger {
+    LongBranchAllocFailed() : trigger(OK) {}
+};
+
 #endif /* EXTENSIONS_BF_P4C_MAU_JBAY_NEXT_TABLE_H_ */

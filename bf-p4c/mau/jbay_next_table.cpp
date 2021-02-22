@@ -688,6 +688,7 @@ IR::Node* JbayNextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
     if (!success) {
         LOG1("TAG REDUCTION FAILED! BACKTRACKING AND RETRYING WITHOUT LONG BRANCHES!");
         // Backtrack, because we can't add DTs to fix the problem!
+        throw LongBranchAllocFailed();
         prune();
         return p;
     }

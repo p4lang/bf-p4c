@@ -442,7 +442,7 @@ std::ostream& MprSettings::emit_stage_asm(std::ostream& out, int stage) const {
 MprSettings::MprSettings(gress_t gress, MauFeatures &mf) : gress_(gress), mau_features_(mf) {}
 
 void MprSettings::set_mpr_stage(int stage, int mpr_stage) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_stage_id_[stage] = mpr_stage;
 }
 
@@ -451,12 +451,12 @@ int MprSettings::get_mpr_stage(int stage) const {
 }
 
 void MprSettings::set_mpr_always_run(int stage, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_always_run_[stage] = id_vector;
 }
 
 void MprSettings::set_or_mpr_always_run(int stage, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_always_run_[stage] |= id_vector;
 }
 
@@ -465,16 +465,14 @@ int MprSettings::get_mpr_always_run_for_stage(int stage) const {
 }
 
 void MprSettings::set_mpr_next_table(int stage, int logical_id, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  BUG_CHECK(logical_id >= 0 && logical_id < Memories::LOGICAL_TABLES,
-            "Invalid logical_id %d", logical_id);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
+  BUG_CHECK(logical_id >= 0, "Invalid logical_id %d", logical_id);
   mpr_next_table_[stage][logical_id] = id_vector;
 }
 
 void MprSettings::set_or_mpr_next_table(int stage, int logical_id, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  BUG_CHECK(logical_id >= 0 && logical_id < Memories::LOGICAL_TABLES,
-            "Invalid logical_id %d", logical_id);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
+  BUG_CHECK(logical_id >= 0, "Invalid logical_id %d", logical_id);
   mpr_next_table_[stage][logical_id] |= id_vector;
 }
 
@@ -483,16 +481,14 @@ int MprSettings::get_mpr_next_table(int stage, int logical_id) const {
 }
 
 void MprSettings::set_mpr_global_exec(int stage, int exec_bit, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  BUG_CHECK(exec_bit >= 0 && exec_bit < Memories::LOGICAL_TABLES,
-            "Invalid execute bit %d", exec_bit);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
+  BUG_CHECK(exec_bit >= 0, "Invalid execute bit %d", exec_bit);
   mpr_global_exec_[stage][exec_bit] = id_vector;
 }
 
 void MprSettings::set_or_mpr_global_exec(int stage, int exec_bit, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  BUG_CHECK(exec_bit >= 0 && exec_bit < Memories::LOGICAL_TABLES,
-            "Invalid execute bit %d", exec_bit);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
+  BUG_CHECK(exec_bit >= 0, "Invalid execute bit %d", exec_bit);
   mpr_global_exec_[stage][exec_bit] |= id_vector;
 }
 
@@ -501,9 +497,8 @@ int MprSettings::get_mpr_global_exec(int stage, int exec_bit) const {
 }
 
 void MprSettings::set_mpr_long_branch(int stage, int tag_id, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  BUG_CHECK(tag_id >= 0 && tag_id < Device::numLongBranchTags(),
-            "Invalid long branch tag_id %d", tag_id);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
+  BUG_CHECK(tag_id >= 0, "Invalid long branch tag_id %d", tag_id);
   mpr_long_branch_[stage][tag_id] = id_vector;
 }
 
@@ -512,19 +507,18 @@ int MprSettings::get_mpr_long_branch(int stage, int tag_id) const {
 }
 
 void MprSettings::set_or_mpr_long_branch(int stage, int tag_id, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  BUG_CHECK(tag_id >= 0 && tag_id < Device::numLongBranchTags(),
-            "Invalid long branch tag_id %d", tag_id);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
+  BUG_CHECK(tag_id >= 0, "Invalid long branch tag_id %d", tag_id);
   mpr_long_branch_[stage][tag_id] |= id_vector;
 }
 
 void MprSettings::set_mpr_bus_dep_glob_exec(int stage, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_bus_dep_glob_exec_[stage] = id_vector;
 }
 
 void MprSettings::set_or_mpr_bus_dep_glob_exec(int stage, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_bus_dep_glob_exec_[stage] |= id_vector;
 }
 
@@ -533,12 +527,12 @@ int MprSettings::get_mpr_bus_dep_glob_exec(int stage) const {
 }
 
 void MprSettings::set_mpr_bus_dep_long_brch(int stage, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_bus_dep_long_brch_[stage] = id_vector;
 }
 
 void MprSettings::set_or_mpr_bus_dep_long_brch(int stage, int id_vector) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(stage >= 0, "Invalid stage %d", stage);
   mpr_bus_dep_long_brch_[stage] |= id_vector;
 }
 
