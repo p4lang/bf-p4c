@@ -57,8 +57,8 @@ ParserResourcesLogging::logStateTransitionsByMatch(const std::string &nextStateN
     const auto shifts = match->shift;
     const auto hasCounter = !match->counters.empty();
     const auto nextStateId = getStateId(nextStateName);
-    const auto prevStateId = prevState ? getStateId(prevState->name.c_str()) : 0;
-    const auto prevStateName = prevState ? prevState->name.c_str() : "";
+    const auto prevStateId = getStateId(prevState->name.c_str());
+    const auto prevStateName = prevState->name.c_str();
 
     std::vector<ParserResourcesLogging::ParserStateTransition*> result;
 
