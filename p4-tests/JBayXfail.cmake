@@ -526,6 +526,12 @@ p4c_add_xfail_reason("tofino2"
    extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4
 )
 
+# P4C-3379
+p4c_add_xfail_reason("tofino2"
+   "PHV allocation was not successful"
+   p4c-3379
+)
+
 # DRV-4430
 p4c_add_xfail_reason("tofino2"
    "Expected packet was not received on device 0, port"
@@ -537,10 +543,3 @@ p4c_add_xfail_reason("tofino2"
    "Unexpected port .*"
    p4_16_programs_tna_multicast
 )
-
-# P4C-3570
-p4c_add_xfail_reason("tofino2"
-   "Expected packet was not received on device 0, port 8"
-   p4c-3570
-)
-

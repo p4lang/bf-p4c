@@ -110,9 +110,8 @@ Visitor::profile_t CollectDarkPrivatizationCandidates::init_apply(const IR::Node
 }
 
 void CollectDarkPrivatizationCandidates::end_apply() {
-    const ordered_map<const PHV::Field*, cstring> pragmaFields = pragma.getFields();
     for (PHV::Field& f : phv) {
-        if (pragmaFields.count(&f)) {
+        if (pragma.required_kind(&f)) {
             LOG5("    Field " << f << " has a container type pragma.");
             continue;
         }

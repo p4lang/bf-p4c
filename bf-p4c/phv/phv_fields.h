@@ -1674,31 +1674,6 @@ class CollectExtractedTogetherFields : public Inspector {
     explicit CollectExtractedTogetherFields(PhvInfo &p) : phv_i(p) { }
 };
 
-/**
-  * @brief Create allocation objects (PHV::AllocSlice) for alias source
-  * fields in preparation for assembly output
-  * @pre PhvAnalysis_Pass has been run so that allocation objects are available.
-  */
-class AddAliasAllocation : public Inspector {
-    PhvInfo& phv;
-    ordered_set<const PHV::Field*> seen;
-
-    /// Set @source allocation to that of the @range of @dest.  The size of
-    /// @range must match the size of @source.
-    void addAllocation(PHV::Field* source, PHV::Field* dest, le_bitrange range);
-
-    profile_t init_apply(const IR::Node* root) override {
-        seen.clear();
-        return Inspector::init_apply(root);
-    }
-    bool preorder(const IR::BFN::AliasMember*) override;
-    bool preorder(const IR::BFN::AliasSlice*) override;
-    void end_apply() override;
-
- public:
-    explicit AddAliasAllocation(PhvInfo& p) : phv(p) { }
-};
-
 // Map field to the parser states in which they are extracted
 struct MapFieldToParserStates : public Inspector {
     const PhvInfo& phv_i;
