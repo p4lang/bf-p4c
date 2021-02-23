@@ -2823,6 +2823,12 @@ void Table::add_match_key_cfg(json::map& tbl) const {
                 tbl["uses_range"] = true; } }
 }
 
+template<typename T>
+void Table::init_json_node(json::map &tbl, const char* name) const {
+    if (tbl.count(name)) return;
+    tbl[name] = T();
+}
+
 void Table::common_tbl_cfg(json::map &tbl) const {
     tbl["default_action_handle"] = get_default_action_handle();
     tbl["action_profile"] = action_profile();
@@ -2840,8 +2846,8 @@ void Table::common_tbl_cfg(json::map &tbl) const {
     if (p4_table && p4_table->disable_atomic_modify)
         tbl["disable_atomic_modify"] = true;
     add_match_key_cfg(tbl);
-    tbl["ap_bind_indirect_res_to_match"] = json::vector();
-    tbl["static_entries"] = json::vector();
+    init_json_node<json::vector>(tbl, "ap_bind_indirect_res_to_match");
+    init_json_node<json::vector>(tbl, "static_entries");
     if (context_json) {
         add_json_node_to_table(tbl, "ap_bind_indirect_res_to_match");
     }
@@ -2857,7 +2863,6 @@ void Table::add_result_physical_buses(json::map &stage_tbl) const {
 }
 
 void Table::merge_context_json(json::map &tbl, json::map&stage_tbl) const {
-    tbl["static_entries"] = json::vector();
     if (context_json) {
         add_json_node_to_table(tbl, "static_entries");
         stage_tbl.merge(*context_json);
