@@ -54,6 +54,10 @@ MESSAGE(STATUS "Found manifest schema version ${MANIFEST_SCHEMA_VERSION}")
 set_source_files_properties(logging/manifest.cpp PROPERTIES
   COMPILE_DEFINITIONS MANIFEST_SCHEMA_VERSION=\"${MANIFEST_SCHEMA_VERSION}\")
 
+get_schema_version(event_log_schema EVENT_LOG_SCHEMA_VERSION)
+MESSAGE(STATUS "Found event log schema version ${EVENT_LOG_SCHEMA_VERSION}")
+add_definitions("-DEVENT_LOG_SCHEMA_VERSION=\"${EVENT_LOG_SCHEMA_VERSION}\"")
+
 get_schema_version(phv_schema PHV_SCHEMA_VERSION)
 MESSAGE(STATUS "Found phv schema version ${PHV_SCHEMA_VERSION}")
 add_definitions("-DPHV_SCHEMA_VERSION=\"${PHV_SCHEMA_VERSION}\"")
@@ -844,6 +848,7 @@ target_link_libraries (bfp4c tofinobackend bfn_p4runtime
 target_compile_definitions(bfp4c
   INTERFACE "-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP"
   INTERFACE "-DMAX_LOGGING_LEVEL=${MAX_LOGGING_LEVEL}"
+  INTERFACE "-DEVENT_LOG_SCHEMA_VERSION=\"${EVENT_LOG_SCHEMA_VERSION}\""
   INTERFACE "-DPHV_SCHEMA_VERSION=\"${PHV_SCHEMA_VERSION}\""
   INTERFACE "-DCONFIG_PREFIX=\"${CMAKE_INSTALL_PREFIX}\""
   INTERFACE "-DCONFIG_PKGDATADIR=\"${CMAKE_INSTALL_PREFIX}/${P4C_ARTIFACTS_OUTPUT_DIRECTORY}\""
@@ -1053,6 +1058,7 @@ set (LOGGING_FILES
 set (SCHEMA_FILES
   ${INTERFACES_DIR}/schemas/bfrt_schema.py
   ${INTERFACES_DIR}/schemas/context_schema.py
+  ${INTERFACES_DIR}/schemas/event_log_schema.py
   ${INTERFACES_DIR}/schemas/jgf_schema.py
   ${INTERFACES_DIR}/schemas/manifest_schema.py
   ${INTERFACES_DIR}/schemas/mau_schema.py
@@ -1264,6 +1270,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/elim_cast.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/event_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp

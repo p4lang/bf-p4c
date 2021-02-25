@@ -13,7 +13,8 @@
 
 namespace Logging {
 
-using Writer = rapidjson::PrettyWriter<rapidjson::StringBuffer>;
+using Writer = rapidjson::Writer<rapidjson::StringBuffer>;
+using PrettyWriter = rapidjson::PrettyWriter<rapidjson::StringBuffer>;
 
 /// Define the levels of logging. All messages above the set level for logger are logged.
 enum LogLevel_t { LOG, DEBUG, INFO, WARNING, ERROR, CRITICAL };
@@ -37,7 +38,7 @@ class Logger : public rapidjson::Document {
     virtual void serialize(Writer &) const = 0;
     virtual void log() {
         rapidjson::StringBuffer sb;
-        Writer writer(sb);
+        PrettyWriter writer(sb);
         serialize(writer);
         _logFile << sb.GetString();
         _logFile.flush();

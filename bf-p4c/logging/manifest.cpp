@@ -117,6 +117,12 @@ void Manifest::serialize() {
     writer.Key("p4_version");
     writer.String((_options.langVersion == BFN_Options::FrontendVersion::P4_14) ?
                   "p4-14" : "p4-16");
+
+    if (_eventLogPath.size() > 0) {
+        writer.Key("event_log_file");
+        writer.String(_eventLogPath.c_str());
+    }
+
     _programInputs.serialize(writer);
     serializePipes(writer);
     writer.EndObject();  // end CompiledProgram

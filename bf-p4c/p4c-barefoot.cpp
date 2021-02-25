@@ -17,6 +17,7 @@
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/logging/source_info_logging.h"
+#include "bf-p4c/logging/event_logger.h"
 #include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/midend/type_checker.h"
@@ -211,6 +212,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
     auto pipeName = maupipe->name;
     BFN::Backend backend(options, maupipe->id);
+    backend.addDebugHook(EventLogger::getDebugHook(), true);
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
@@ -274,6 +276,12 @@ int main(int ac, char **av) {
         }
     }
 
+    // Initialize EventLogger and register it in manifest
+    if (BackendOptions().debugInfo) {
+        EventLogger::get().init(BFNContext::get().getOutputDirectory().c_str(), "events.json");
+        Logging::Manifest::getManifest().setEventLog("events.json");
+    }
+
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
@@ -297,6 +305,7 @@ int main(int ac, char **av) {
     auto hook = options.getDebugHook();
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook, true);
+    midend.addDebugHook(EventLogger::getDebugHook(), true);
 
     // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
@@ -314,6 +323,7 @@ int main(int ac, char **av) {
     auto map = new RepackedHeaderTypes;
     BFN::BridgedPacking bridgePacking(options, *map, *midend.sourceInfoLogging);
     bridgePacking.addDebugHook(hook, true);
+    bridgePacking.addDebugHook(EventLogger::getDebugHook(), true);
 
     program->apply(bridgePacking);
     if (!program)
@@ -321,6 +331,7 @@ int main(int ac, char **av) {
 
     BFN::SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
     substitute.addDebugHook(hook, true);
+    substitute.addDebugHook(EventLogger::getDebugHook(), true);
 
     program = program->apply(substitute);
     log_dump(program, "After flexiblePacking");
@@ -363,6 +374,8 @@ int main(int ac, char **av) {
     for (auto& kv : substitute.pipes) {
         auto pipe = kv.second;
         manifest.setPipe(pipe->id, pipe->name.name);
+        EventLogger::get().pipeChange(pipe->id);
+
         // generate graphs
         // In principle this should not fail, so we call it before the backend
         if (options.create_graphs) {

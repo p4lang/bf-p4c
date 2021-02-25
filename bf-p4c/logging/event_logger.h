@@ -6,12 +6,13 @@
 
 namespace IR {
 class Node;  // Forward declare IR::Node for debug hook
-class Pipe;  // Forward declare IR::Pipe for pipeChange
 }
 
 namespace Util {
 class SourceInfo;  // Forward declare Util::SourceInfo for errors/warnings
 };
+
+class EventBaseWrapper;  // Wraps Schema::Event_Log_Schema_Logger::Event_Base
 
 // Copy typedef of DebugHook so we don't have to depend on ir/ir.h
 typedef std::function<void(const char*, unsigned, const char*, const IR::Node*)> DebugHook;
@@ -20,20 +21,55 @@ typedef std::function<void(const char*, unsigned, const char*, const IR::Node*)>
  *  Custom logger for emitting EventLog for P4I
  *  Almost every message in the compiler should be logged via this interface.
  *  This class manages backward compatibility of logs.
+ *
+ *  \warning By default this class dumps all messages to null sink. To log them
+ *  into actual logfile, you need to call method init()
  */
 class EventLogger {
  protected:
+    // Used for deduplicating passChange messages
+    std::string lastManager = "";
+    std::string lastPass = "";
+    unsigned lastSeq = 0;
+
+    EventLogger();
+    EventLogger(EventLogger &&other) = delete;
+    EventLogger(const EventLogger &other) = delete;
+    EventLogger &operator=(const EventLogger &other) = delete;
+    ~EventLogger() {}
+
     /**
-     *  Uses lib/log.h capabilities to check whether particular C++ source file
-     *  has verbosity level set to at least 'level'
+     *  Used in testing to manually reset spdlog at will
      */
-    bool isVerbosityAtLeast(unsigned level, const std::string &file) const;
+    void deinit();
 
     /**
      *  Each message requires current timestamp in form of number of seconds
      *  since 1970-01-01 00:00
      */
-    static std::string getCurrentTimestamp();
+    virtual std::string getCurrentTimestamp() const;
+
+    /**
+     *  Gets output stream to which LOGn messages are normally emitted
+     *  (backwards compatibility)
+     */
+    virtual std::ostream &getDebugStream(unsigned level, const std::string &file) const;
+
+    /**
+     *  Uses lib/log.h capabilities to check whether particular C++ source file
+     *  has verbosity level set to at least 'level'
+     *
+     *  Used to determine whether particular debug/decision log should be emitted
+     *  (backwards compatibility)
+     */
+    virtual bool isVerbosityAtLeast(unsigned level, const std::string &file) const;
+
+    /**
+     *  This is sink function for all logging functions. It accepts object to
+     *  be serialized, serializes it to JSON and then calls underlying logger
+     *  to dump it to output.
+     */
+    void logSink(const EventBaseWrapper &obj);
 
     /**
      *  This function is called from constructor, bootstrapping event log with
@@ -46,18 +82,22 @@ class EventLogger {
      */
     void passChange(const std::string &manager, const std::string &pass, unsigned seq);
 
-    EventLogger();
-    EventLogger(EventLogger &&other) = delete;
-    EventLogger(const EventLogger &other) = delete;
-    EventLogger &operator=(const EventLogger &other) = delete;
-    ~EventLogger() {}
-
  public:
     enum class AllocPhase {
         PhvAllocation, TablePlacement
     };
 
     static EventLogger &get();
+
+    /**
+     *  This function initializes the logger and emits EventLogStart to logfile
+     *
+     * \p outdir    Path to directory in which manifest.json is located
+     * \p filename  Path to logfile, relative to manifest.json
+     *
+     * \note Until this function is called, all events go to null sink
+     */
+    void init(const std::string &outdir, const std::string &filename);
 
     /**
      *  This function is expected to be called from ErrorReporter
@@ -69,14 +109,14 @@ class EventLogger {
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for error messages
      */
-    void error(const std::string &message, const std::string &name = "",
+    void error(const std::string &message, const std::string &type = "",
                const Util::SourceInfo *info = nullptr);
 
     /**
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for warning messages
      */
-    void warning(const std::string &message, const std::string &name = "",
+    void warning(const std::string &message, const std::string &type = "",
                  const Util::SourceInfo *info = nullptr);
 
     /**
@@ -99,7 +139,7 @@ class EventLogger {
     /**
      *  This function should be called when backend is executed on a particular pipe
      */
-    void pipeChange(const IR::Pipe *pipe);
+    void pipeChange(int pipeId);
 
     /**
      *  Get callback for logging changes in pass managers
@@ -119,7 +159,7 @@ class EventLogger {
  *
  *  These macros log into both Event Log and regular LOGn.
  */
-#define LOG_DEBUG(level, message) Logging::EventLogger::get().debug(level, __FILE__, message);
+#define LOG_DEBUG(level, message) EventLogger::get().debug(level, __FILE__, message);
 #define LOG_DEBUG1(message) LOG_DEBUG(1, message)
 #define LOG_DEBUG2(message) LOG_DEBUG(2, message)
 #define LOG_DEBUG3(message) LOG_DEBUG(3, message)

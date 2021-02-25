@@ -153,6 +153,7 @@ class Manifest : public Inspector {
     /// map of pipe-id to OutputFiles
     std::map<unsigned, OutputFiles *> _pipeOutputs;
     InputFiles                        _programInputs;
+    cstring                    _eventLogPath;
     /// reference to ProgramThreads to generate the architecture configuration
     BFN::ProgramThreads        _threads;
     int                        _pipeId = -1;  /// the current pipe id (for the visitor methods)
@@ -243,6 +244,11 @@ class Manifest : public Inspector {
         BUG_CHECK(_programInputs._sourceInfo.size() == 0,
             "Trying to redefine path to source info!");
         _programInputs._sourceInfo = path;
+    }
+    void setEventLog(cstring path) {
+        BUG_CHECK(_eventLogPath.size() == 0,
+            "Trying to redefine path to source info!");
+        _eventLogPath = path;
     }
 
     /// serialize the entire manifest

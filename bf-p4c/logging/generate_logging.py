@@ -766,7 +766,15 @@ class ClassGenerator:
             self.write('/// internal serializer\n')
             isOverride = ''
             if self.root is not None: isOverride = ' override'
-            self.write('virtual void internalSerialize(Writer &writer) const' + isOverride + ' {\n')
+
+            # If class has no members to serialize, use unnamed param to surpress warnings
+            self.write('virtual void internalSerialize(Writer &')
+            if len(self.dataMembers) == 0 and len(self.superClasses) == 0:
+                self.write('/* unused */')
+            else:
+                self.write('writer')
+            self.write(') const' + isOverride + ' {\n')
+
             self.generator.incrIndent()
             for d in self.dataMembers:
                 d.genSerializer(self.generator)
@@ -829,7 +837,7 @@ class ClassGenerator:
             if dmAdded > 0:
                 scConstructorInitializer = scConstructorInitializer[:-2]
             scConstructorInitializer += '),'
-        
+
         first = self.root is None
         for d in self.dataMembers:
             if not d.isBasicType() and len(superClasses) < 1: continue
@@ -958,7 +966,7 @@ for schema in opts.schemas:
     else:
         if debug > 0: print("loading JSON")
         schema_json = json.load(open(schema, 'r'))
-    if debug > 0: 
+    if debug > 0:
         out_path = os.path.join(MYPATH, "..", "..", "build/p4c/extensions/bf-p4c/logging/")
         json_file = os.path.join(out_path, file_name + '.json')
         print('Writing intermediate json: {}'.format(json_file))

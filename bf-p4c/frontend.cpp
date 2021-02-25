@@ -2,6 +2,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/fromv1.0/programStructure.h"
 #include "bf-p4c/common/parse_annotations.h"
+#include "bf-p4c/logging/event_logger.h"
 #include "bf-p4c/lib/error_type.h"
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/options.h"
@@ -31,5 +32,8 @@ const IR::P4Program* run_frontend() {
     BFNOptionPragmaParser optionsPragmaParser;
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
-    return P4::FrontEnd(BFN::ParseAnnotations(), hook).run(options, program, options.skip_seo);
+    auto frontend = P4::FrontEnd(BFN::ParseAnnotations());
+    frontend.addDebugHook(hook);
+    frontend.addDebugHook(EventLogger::getDebugHook());
+    return frontend.run(options, program, options.skip_seo);
 }
