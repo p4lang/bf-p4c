@@ -130,7 +130,7 @@ install_linux_packages() {
         $SUDO apt-get install -y $apt_packages || \
         die "Failed to install needed packages"
         if [[ $linux_distro == "Ubuntu" && $linux_version =~ "14.04" ]]; then
-            $SUDO add-apt-repository ppa:ubuntu-toolchain-r/test
+            $SUDO add-apt-repository -y ppa:ubuntu-toolchain-r/test
             $SUDO apt-get install -y g++-4.9
             $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
             $SUDO update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20

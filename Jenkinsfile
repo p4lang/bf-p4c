@@ -77,7 +77,7 @@ node ('compiler-nodes') {
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
-                            sh "docker pull barefootnetworks/model:tofino_master"
+                            sh "docker pull barefootnetworks/model:tofino_debug"
                             sh "docker build -f docker/Dockerfile.tofino -t bf-p4c-compilers_${image_tag} --build-arg MAKEFLAGS=j16 --build-arg BFN_P4C_GIT_SHA=${git_sha} ."
                             sh "echo 'Tag and push docker image'"
                             sh "docker tag bf-p4c-compilers_${image_tag} barefootnetworks/bf-p4c-compilers:${image_tag}"

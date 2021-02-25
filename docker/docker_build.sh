@@ -165,8 +165,8 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get --purge remove -y 'libboost*-dev'
 
 # Configure apt repositories and update apt.
-add-apt-repository ppa:ubuntu-toolchain-r/test
-add-apt-repository ppa:mhier/libboost-latest
+add-apt-repository -y ppa:ubuntu-toolchain-r/test
+add-apt-repository -y ppa:mhier/libboost-latest
 apt-get update
 
 # Install packages.
