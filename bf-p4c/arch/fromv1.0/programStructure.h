@@ -920,8 +920,9 @@ class ModifyParserForChecksum : public Modifier {
         for (auto expr : state->components) {
             if (!expr->is<IR::MethodCallStatement>())
                 continue;
-            auto mce = expr->to<IR::MethodCallStatement>();
-            auto inst = P4::MethodInstance::resolve(mce, refMap, typeMap);
+            auto mce = expr->to<IR::MethodCallStatement>()->methodCall;
+            auto inst = P4::MethodInstance::resolve(mce, refMap, typeMap, nullptr /* ctxt */,
+                                                    true /* incomplete */);
             if (inst == nullptr)
                 continue;
             if (auto em = inst->to<P4::ExternMethod>()) {
@@ -1164,7 +1165,8 @@ class ModifyParserForChecksum : public Modifier {
     }
 
     void postorder(IR::MethodCallExpression* mce) override {
-        auto inst = P4::MethodInstance::resolve(mce, refMap, typeMap);
+        auto inst = P4::MethodInstance::resolve(mce, refMap, typeMap, nullptr /* ctxt */,
+                                                true /* incomplete */);
         if (!inst->is<P4::ExternMethod>())
             return;
         auto em = inst->to<P4::ExternMethod>();
