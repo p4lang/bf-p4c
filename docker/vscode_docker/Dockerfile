@@ -22,7 +22,8 @@ ARG PW=docker
 RUN echo "Acquire::http::proxy \"${HTTP_PROXY}\"; Acquire::https::proxy \"${HTTPS_PROXY}\";" > /etc/apt/apt.conf.d/99HttpProxy
 
 # Install useful packages
-RUN apt-get update && apt-get install -y graphviz openssh-server sudo htop mc
+RUN apt-get update && apt-get install -y graphviz openssh-server sudo htop mc clang-format clang-tidy clang-format-8 clang-tidy-8
+
 RUN python3 -m pip --proxy ${HTTPS_PROXY} install cpplint pylint autopep8
 
 # Install updated version of cmake
