@@ -106,12 +106,16 @@ Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node* root) {
     equivalences_i.clear();
     // Wrap each field in a slice.
     for (auto& f : phv_i) {
-        if (pa_sizes_i.has_no_pack_slice(&f)) {
-            auto no_pack_slices = pa_sizes_i.get_no_pack_slices(&f);
-            for (auto& slice : no_pack_slices) {
-                self.fields_to_slices_i[&f].push_back(slice);
+        if (pa_sizes_i.is_specified(&f)) {
+            auto layout = pa_sizes_i.field_to_layout().at(&f);
+            int offset = 0;
+            for (const int size : layout) {
+                auto slice = PHV::FieldSlice(
+                        &f, StartLen(offset, std::min(f.size - offset, size)));
                 LOG5("Clustering::MakeSlices: breaking " << f.name << " into " << slice.range()
                                                          << " due to pa_container_size");
+                self.fields_to_slices_i[&f].push_back(slice);
+                offset += size;
             }
         } else {
             self.fields_to_slices_i[&f].push_back(PHV::FieldSlice(&f, StartLen(0, f.size)));
@@ -512,6 +516,22 @@ void Clustering::CollectPlaceTogetherConstraints::pack_bridged_extracted_togethe
     for (auto* sl : bridged_extracted_together_i) {
         LOG3("Adding a bridged extracted slice lists " << sl);
         place_together_i[Reason::BridgedTogether].push_back(sl);
+    }
+}
+
+void Clustering::CollectPlaceTogetherConstraints::pack_pa_container_sized_metadata() {
+    for (const auto& kv : self.pa_container_sizes_i.field_to_layout()) {
+        const auto* field = kv.first;
+        // XXX(yumin): don't need to put fields smaller than 8 bits into slicelist
+        // because they won't be split anyway.
+        if (field->size <= 8) {
+            continue;
+        }
+        auto* sl = new PHV::SuperCluster::SliceList();
+        for (const auto& fs : self.fields_to_slices_i.at(field)) {
+            sl->push_back(fs);
+        }
+        place_together_i[Reason::PaContainerSize].push_back(sl);
     }
 }
 
@@ -1080,6 +1100,7 @@ void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constrain
 
 void Clustering::CollectPlaceTogetherConstraints::end_apply() {
     // constraint solving
+    pack_pa_container_sized_metadata();
     pack_constrained_metadata();
     pack_bridged_extracted_together();
     solve_place_together_constraints();

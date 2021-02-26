@@ -235,6 +235,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/multiple_apply.cpp
   common/pragma/pragmas.cpp
   common/run_id.cpp
+  common/scc_toposort.cpp
   common/slice.cpp
   common/size_of.cpp
   )
@@ -261,6 +262,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/parse_annotations.h
   common/pragma/all_pragmas.h
   common/run_id.h
+  common/scc_toposort.h
   common/slice.h
   common/size_of.h
   common/table_printer.h
@@ -1313,6 +1315,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/equiv_align_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

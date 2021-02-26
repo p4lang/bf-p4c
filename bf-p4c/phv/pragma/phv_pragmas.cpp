@@ -125,15 +125,21 @@ bool PHV::Pragmas::checkPipeApplication(const IR::Annotation *annotation,
 void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
         const IR::Expression* expr, cstring field_name) {
     if (expr) {
+        // DO NOT print extremely long expression.
+        std::string expr_str = expr->toString().c_str();
+        const int MAX_EXPR_SIZE = 200;
+        if (expr_str.length() > MAX_EXPR_SIZE) {
+            expr_str = expr_str.substr(0, 200) + "......";
+        }
         if (pipe && pipe->name) {
             // If the pipe is named
             ::warning(ErrorType::WARN_INVALID,
                 "%1%: No matching PHV field in the pipe `%2%'. Ignoring pragma.",
-                expr, pipe->name);
+                      expr_str, pipe->name);
         } else {
             ::warning(ErrorType::WARN_INVALID,
                 "%1%: No matching PHV field. Ignoring pragma.",
-                expr);
+                expr_str);
         }
     } else {
         // No source info available

@@ -102,20 +102,20 @@ TEST_F(PaContainerSizePragmaTest, SliceRequirement) {
     auto* h1_f2 = phv.field("ingress::h1.f2");
     auto* h2_f1 = phv.field("ingress::h2.f1");
 
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h1_f1)),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h1_f1)),
               PHV::Size::b8);
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h1_f2, FromTo(0, 7))),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h1_f2, FromTo(0, 7))),
               PHV::Size::b8);
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h1_f2, FromTo(8, 15))),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h1_f2, FromTo(8, 15))),
               PHV::Size::b8);
 
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h2_f1, FromTo(0, 7))),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h2_f1, FromTo(0, 7))),
               PHV::Size::b8);
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h2_f1, FromTo(8, 15))),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h2_f1, FromTo(8, 15))),
               PHV::Size::b8);
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h2_f1, FromTo(16, 23))),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h2_f1, FromTo(16, 23))),
               PHV::Size::b8);
-    EXPECT_EQ(*pa_cs.field_slice_req(PHV::FieldSlice(h2_f1, FromTo(24, 39))),
+    EXPECT_EQ(*pa_cs.expected_container_size(PHV::FieldSlice(h2_f1, FromTo(24, 39))),
               PHV::Size::b16);
 }
 

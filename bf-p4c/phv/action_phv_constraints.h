@@ -679,11 +679,22 @@ class ActionPhvConstraints : public Inspector {
         return constraint_tracker.read_in(PHV::FieldSlice(f, StartLen(0, f->size)));
     }
 
-    /// @returns the set of fields which are sources for field @f across all actions.
-    ordered_set<const PHV::Field*> field_sources(const PHV::Field* f) const;
+    /// @returns the set of fields which are sources of @p slices of @p f across all actions.
+    /// NOTE: sources are returned iff it completely writes some slice in @p slices.
+    /// e.g.,
+    /// assume we have f<32>[0:28] = a<28>;
+    /// slices_sources(f, {f[0:31]}) will return {} instead of {a}, because the operation does
+    /// not completely write any source slice.
+    ordered_set<const PHV::Field*> slices_sources(
+        const PHV::Field* dest, const std::vector<PHV::FieldSlice>& slices) const;
 
-    /// @returns the set of fields which use field @f as sources, across all actions.
-    ordered_set<const PHV::Field*> field_destinations(const PHV::Field* f) const;
+    /// @returns the set of fields which are destinations of @p slices of @p f across all actions.
+    /// NOTE: destination are returned iff it completely read from some slice in @p slices.
+    /// e.g., assume we have f<32>[0:28] = a<32>[0:28];
+    /// slices_destinations(a, {a[0:31]}) will return {} instead of {f},
+    /// because the operation does not completely write any source slice.
+    ordered_set<const PHV::Field*> slices_destinations(
+        const PHV::Field* src, const std::vector<PHV::FieldSlice>& slices) const;
 
     /// @returns the destination of field @f in action @action. @returns boost::none if @f is not
     /// written in @action.
@@ -855,6 +866,34 @@ class ActionPhvConstraints : public Inspector {
       * Checks if the write_to_reads_per_action ordered_map entry is valid or not
       */
     bool is_in_write_to_reads(cstring, const IR::MAU::Action *, cstring) const;
+
+    /** compute_sources_first_order returns a mapping from field to an integer which
+     *  represents the priority (lower number higher priority) if we need to allocate
+     *  source fields first. Because fields can form a strongly connected component, i.e. a loop,
+     *  in terms of writes, e.g. two fields write to each other, we will run a Tarjan algorithm
+     *  first to replace those SCCs with a single node and then we run a topological sort.
+     *  For example, Assume a <- b represents b writes to a, and we have
+     *
+     *  a <- b <- c <-> e
+     *       ^
+     *       |
+     *       d
+     *
+     *  will be converted to,
+     *  a <- b <- {c, e}
+     *       ^
+     *       |
+     *       d
+     *
+     *  and the output will be,
+     *  d, c, e: 1
+     *  b: 2
+     *  a: 3
+     *
+     *  i.e. we encounter a loop, convert that loop into one node.
+     */
+    ordered_map<const PHV::Field*, int> compute_sources_first_order(
+        const ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>>& fields) const;
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);

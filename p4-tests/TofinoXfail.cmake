@@ -233,7 +233,7 @@ p4c_add_xfail_reason("tofino"
 
 # timeout
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful|./p4c TIMEOUT"
+  "PHV allocation was not successful|./p4c TIMEOUT|This program violates action constraints imposed by Tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
 )
@@ -465,10 +465,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  # Error returned is a bit less explicit than it used to be, this should be fixed by the
-  # pa_container_size pragma rewrite.
-  #"compiler only supports allocation of meter color destination field .* to an 8-bit container"
-  "Compiler Bug.*: The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
+  "compiler only supports allocation of meter color destination field .* to an 8-bit container"
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 )
@@ -840,7 +837,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
-  extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
   extensions/p4_tests/p4_16/compile_only/multi-constraint.p4
@@ -849,6 +845,11 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Internal compiler error: Alloc2D"
+  extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -892,7 +893,6 @@ p4c_add_xfail_reason("tofino"
   "Cannot find a slicing to satisfy @pa_container_size"
   extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
-  ../glass/testsuite/p4_tests/phv/test_config_275_match_key_range.p4
   ../glass/testsuite/p4_tests/phv/test_config_593_reduce_extraction_bandwidth_32.p4
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
   )

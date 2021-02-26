@@ -1686,7 +1686,9 @@ struct switch_port_metadata_t {
 
 @pa_container_size("ingress", "ig_md.mirror.src", 8)
 @pa_container_size("ingress", "ig_md.mirror.type", 8)
-//@pa_container_size("ingress", "smac_src_move", 16)
+@pa_container_size("egress", "eg_md.nsh_md.l2_fwd_en", 32)
+@pa_container_size("ingress", "smac_src_move", 16)
+@pa_container_size("egress", "eg_md.nsh_md.dsap", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 
 @pa_alias("ingress", "ig_md.multicast.id", "ig_intr_md_for_tm.mcast_grp_b")

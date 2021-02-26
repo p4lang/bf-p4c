@@ -343,16 +343,20 @@ CollectConstraints::findAllRelatedFields(const PHV::Field* field) {
         relatedFields.insert(currentField);
         fieldsNotVisited.pop();
         LOG6("\t\tVisiting new field: " << currentField);
-        auto operands = actionConstraints.field_sources(currentField);
+        auto operands =
+            actionConstraints.slices_sources(currentField, {PHV::FieldSlice(currentField)});
         // Add all unvisited operands to fieldsNotVisited.
         for (const PHV::Field* f : operands) {
             if (!relatedFields.count(f))
-                fieldsNotVisited.push(f); }
-        auto destinations = actionConstraints.field_destinations(currentField);
+                fieldsNotVisited.push(f);
+        }
+        auto destinations =
+            actionConstraints.slices_destinations(currentField, {PHV::FieldSlice(currentField)});
         // Add all unvisited destinations to fieldsNotVisited.
         for (const PHV::Field* f : destinations) {
             if (!relatedFields.count(f))
-                fieldsNotVisited.push(f); }
+                fieldsNotVisited.push(f);
+        }
         // Add alignment constraints inferred from extracts
         // e.g.,
         // state A:
@@ -485,11 +489,13 @@ CollectConstraints::findAllReachingFields(const PHV::Field* field) {
         relatedFields.insert(currentField);
         fieldsNotVisited.pop();
         LOG6("\t\tVisiting new field: " << currentField);
-        auto destinations = actionConstraints.field_destinations(currentField);
+        auto destinations =
+            actionConstraints.slices_destinations(currentField, {PHV::FieldSlice(currentField)});
         // Add all unvisited destinations to fieldsNotVisited.
         for (const PHV::Field* f : destinations) {
             if (!relatedFields.count(f))
-                fieldsNotVisited.push(f); }
+                fieldsNotVisited.push(f);
+        }
         LOG6("\t\t  Now, we have " << fieldsNotVisited.size() << " fields unvisited"); }
 
     return relatedFields;
@@ -532,9 +538,11 @@ CollectConstraints::findAllSourcingFields(const PHV::Field* field) {
         relatedFields.insert(currentField);
         fieldsNotVisited.pop();
         LOG6("\t\tVisiting new field: " << currentField);
-        auto destinations = actionConstraints.field_destinations(currentField);
+        auto destinations =
+            actionConstraints.slices_destinations(currentField, {PHV::FieldSlice(currentField)});
         // Add all unvisited destinations to fieldsNotVisited.
-        auto operands = actionConstraints.field_sources(currentField);
+        auto operands =
+            actionConstraints.slices_sources(currentField, {PHV::FieldSlice(currentField)});
         // Add all unvisited operands to fieldsNotVisited.
         for (const PHV::Field* f : operands) {
             if (!relatedFields.count(f))

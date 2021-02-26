@@ -109,7 +109,7 @@ std::ostream& operator<<(std::ostream& out, const PHV::Size sz) {
         case PHV::Size::b8:  return out << "B";
         case PHV::Size::b16: return out << "H";
         case PHV::Size::b32: return out << "W";
-        default:    BUG("Unknown PHV container size");
+        default:             return out << "null";
     }
 }
 

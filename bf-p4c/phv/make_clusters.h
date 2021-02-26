@@ -45,7 +45,7 @@ class Clustering : public PassManager {
     PhvInfo& phv_i;
     PhvUse& uses_i;
     const PackConflicts& conflicts_i;
-    const PragmaContainerSize& pragma_i;
+    const PragmaContainerSize& pa_container_sizes_i;
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -307,6 +307,7 @@ class Clustering : public PassManager {
             Pktgen          = 5,  // unknown
             BridgedTogether = 6,  // egress metadata that are bridged together
             ConstrainedMeta = 7,  // metadata with constraints like solitary needs to in a list.
+            PaContainerSize = 8,  // metadata with pa_container_size pragmas.
         };
 
         /// lists that must be placed together, may contains duplicated fieldslices.
@@ -348,6 +349,9 @@ class Clustering : public PassManager {
         /// a slice list). For example, being header is the most prioritized reason,
         /// because those fields are parsed and deparsed. See comments of Reason for more.
         void solve_place_together_constraints();
+
+        // pack metadata fieldslices with pa_container_size pramgas into a slicelist.
+        void pack_pa_container_sized_metadata();
 
         /// pack metadata fieldslices with constraints together.
         /// e.g.
@@ -462,7 +466,7 @@ class Clustering : public PassManager {
  public:
     Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa,
                const ActionPhvConstraints& a)
-        : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this, pa) {
+        : phv_i(p), uses_i(u), conflicts_i(c), pa_container_sizes_i(pa), slice_i(*this, pa) {
         auto* inconsistent_extracts =
             new CollectInconsistentFlexibleFieldExtract(*this, this->phv_i);
         auto* place_togethers =

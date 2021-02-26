@@ -81,7 +81,7 @@ void AddSpecialConstraints::end_apply() {
         const PHV::Field &field = kv.second;
         if (field.name.startsWith("ghost::gh_intr_md") && !field.pov) {
             auto* ghost_field = phv_i.field(field.id);
-            pragmas_i.pa_container_sizes().add_constraint(ghost_field, { PHV::Size::b32 }, false);
+            pragmas_i.pa_container_sizes().add_constraint(ghost_field, { PHV::Size::b32 });
             ghost_field->set_no_split(true);
         }
     }

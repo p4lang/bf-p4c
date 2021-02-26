@@ -456,10 +456,13 @@ bool DfsItrContext::split_by_pa_container_size(const SuperCluster* sc,
         const auto& sizes = kv.second;
         int total_sz =
             std::accumulate(sizes.begin(), sizes.end(), 0, [](int a, int s) { return a + int(s); });
-        // invalid pragma, ignore, the earlier passes should catch and error it,
-        // if it's supposed to be errored out.
+        // invalid pragma, ignore, the earlier passes may not catch and error it,
+        // because some pragma may be added by other passes, like meter_color,
+        // and those passes do not check the validity.
         if (total_sz < field->size) {
-            LOG6("Invalid pragma, ingored: " << field);
+            LOG6("Invalid pragma found on: " << field <<
+                 ", with total @pa_container_size pragma sizes: " << total_sz);
+            return false;
         } else if (total_sz == field->size) {
             LOG6("Found pa_container_size with same-size: " << field);
             exact_size_pragmas.insert(field);

@@ -4,6 +4,7 @@
 #include <boost/optional/optional_io.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <numeric>
+#include <sstream>
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
@@ -151,13 +152,23 @@ std::pair<bool, cstring> prioritized_cmp(std::vector<AllocScoreCmpCond> conds) {
     return {false, "equal"};
 }
 
-ordered_map<MetricName, int> default_weighted_sum(const AllocScore& delta) {
+ordered_map<MetricName, int> weighted_sum(const AllocScore& delta,
+                                          const int dark_weight = 0,
+                                          const int mocha_weight = 3,
+                                          const int normal_weight = 3,
+                                          const int tagalong_weight = 1) {
     ordered_map<MetricName, int> weighted_delta;
     for (auto kind : Device::phvSpec().containerKinds()) {
-        // Exclude dark PHVs from score because we want to use them as a spill space.
-        if (kind == PHV::Kind::dark) continue;
-        const int weight = (kind == PHV::Kind::normal || kind == PHV::Kind::mocha) ? 3 : 1;
-        // Add this score.
+        int weight = 0;
+        switch (kind) {
+            case PHV::Kind::dark:  weight = dark_weight;        break;
+            case PHV::Kind::mocha: weight = mocha_weight;       break;
+            case PHV::Kind::normal:weight = normal_weight;      break;
+            case PHV::Kind::tagalong:weight = tagalong_weight;  break;
+        }
+        if (weight == 0) {
+            continue;
+        }
         if (delta.by_kind.count(kind)) {
             const auto& ks = delta.by_kind.at(kind);
             for (const auto& m : AllocScore::g_by_kind_metrics) {
@@ -186,11 +197,10 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
                                delta.general[n_dark_on_mocha_bits];
     }
 
-    auto weighted_delta = default_weighted_sum(delta);
+    auto weighted_delta = weighted_sum(delta);
     std::vector<AllocScoreCmpCond> conds;
     if (Device::currentDevice() != Device::TOFINO) {
         conds = {
-            {parser_extractor_balance, delta.general[parser_extractor_balance], true},
             {n_clot_bits, weighted_delta[n_clot_bits], false},
             {n_overlay_bits, weighted_delta[n_overlay_bits], true},  // if !tofino
             {"container_type_score",
@@ -238,43 +248,65 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
     return rst.first;
 }
 
-/** tofino_only_alloc_score_is_better
+/** less_fragment_alloc_score_is_better
+ * This is a generally better heuristic set: rules and priorities are reasonable compared
+ * with the default one. We still keep the default one there because the compiler is still
+ * buggy at this moment. If we entirely retired the default strategy, we will see a lot of
+ * regressions because bugs are triggered.
  */
-bool tofino_only_alloc_score_is_better(const AllocScore& left, const AllocScore& right) {
+bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScore& right) {
     AllocScore delta = left - right;
-    ordered_map<MetricName, int> weighted_delta;
-    for (auto kind : Device::phvSpec().containerKinds()) {
-        int weight = (kind == PHV::Kind::normal) ? 3 : 1;
-        if (delta.by_kind.count(kind)) {
-            const auto& ks = delta.by_kind.at(kind);
-            for (const auto& m : AllocScore::g_by_kind_metrics) {
-                if (!ks.count(m)) {
-                    continue;
-                }
-                weighted_delta[m] += weight * ks.at(m);
-            }
-        }
+    auto weighted_delta = weighted_sum(delta, 0, 1, 3, 1);
+
+    std::vector<AllocScoreCmpCond> conds;
+    if (Device::currentDevice() == Device::TOFINO) {
+        conds = {
+            {n_tphv_on_phv_bits, delta.general[n_tphv_on_phv_bits], false},
+            {n_wasted_bits, weighted_delta[n_wasted_bits], false},
+            {n_inc_small_containers, weighted_delta[n_inc_small_containers], false},
+            {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
+            {n_inc_containers, weighted_delta[n_inc_containers], false},
+            {n_overlay_bits, weighted_delta[n_overlay_bits], true},
+            {n_packing_bits, weighted_delta[n_packing_bits], true},
+            {n_packing_priority, weighted_delta[n_packing_priority], false},
+            {n_bitmasked_set, delta.general[n_bitmasked_set], false},
+            {parser_extractor_balance, delta.general[parser_extractor_balance], true},
+            {n_set_gress, weighted_delta[n_set_gress], false},
+            {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
+            {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
+        };
+    } else {
+        const int dark_penalty = 2;
+        const int mocha_penalty = 3;
+        int bad_container_bits = delta.general[n_tphv_on_phv_bits] +
+                                   dark_penalty * delta.general[n_dark_on_phv_bits] +
+                                   mocha_penalty * delta.general[n_mocha_on_phv_bits] +
+                                   delta.general[n_dark_on_mocha_bits];
+        conds = {
+            {n_clot_bits, weighted_delta[n_clot_bits], false},
+            {"bad_container_bits", bad_container_bits, false},
+            {n_wasted_pov_bits, delta.general[n_wasted_pov_bits], false},
+            {n_wasted_bits, weighted_delta[n_wasted_bits], false},
+            // XXX(yumin): Starting with Tofino2, because of dark containers, we have to
+            // promote the priority of overlay to almost the highest to encourage dark
+            // overlay fields.
+            {n_overlay_bits, weighted_delta[n_overlay_bits], true},
+            {n_inc_small_containers, weighted_delta[n_inc_small_containers], false},
+            {n_inc_containers, weighted_delta[n_inc_containers], false},
+            {n_packing_bits, weighted_delta[n_packing_bits], true},
+            {n_packing_priority, weighted_delta[n_packing_priority], false},
+            {n_bitmasked_set, delta.general[n_bitmasked_set], false},
+            {n_set_gress, weighted_delta[n_set_gress], false},
+            {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
+            {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
+        };
     }
 
-    std::vector<AllocScoreCmpCond> conds = {
-        {n_tphv_on_phv_bits, delta.general[n_tphv_on_phv_bits], false},
-        {n_wasted_bits, weighted_delta[n_wasted_bits], false},
-        {n_inc_small_containers, weighted_delta[n_inc_small_containers], false},
-        {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
-        {n_inc_containers, weighted_delta[n_inc_containers], false},
-        {n_overlay_bits, weighted_delta[n_overlay_bits], true},  // if tofino
-        {n_packing_bits, weighted_delta[n_packing_bits], true},
-        {n_packing_priority, weighted_delta[n_packing_priority], false},
-        {n_bitmasked_set, delta.general[n_bitmasked_set], false},
-        {parser_extractor_balance, delta.general[parser_extractor_balance], true},
-        {n_set_gress, weighted_delta[n_set_gress], false},
-        {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
-        {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
-        {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
-    };
     auto rst = prioritized_cmp(conds);
     if (rst.second != "equal") {
-        LOG6("better because: " << rst.second);
+        LOG6("left-hand-side score is better because: " << rst.second);
     }
     return rst.first;
 }
@@ -413,16 +445,27 @@ AllocScore::AllocScore(
             if (slice.field()->pov)
                 n_pov_bits += slice.width();
         if (n_pov_bits != 0)
-            general[n_wasted_pov_bits] += (container.size() - n_pov_bits);
+            general[n_wasted_pov_bits] +=
+                (container.size() > n_pov_bits ? (container.size() - n_pov_bits) : 0);
 
         // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {
-            if (slice.field()->is_solitary() &&
-                !wasted_bits_counted.count({slice.field(), container})) {
-                by_kind[kind][n_wasted_bits] += (container.size() - slice.field()->size);
+            if (!slice.field()->is_solitary()) continue;
+            PHV::FieldSlice field_slice(slice.field(), slice.field_slice());
+            if (wasted_bits_counted.count({slice.field(), container})) {
+                // correct over-counted bits
+                by_kind[kind][n_wasted_bits] -= slice.field()->size;
+            } else {
+                // Assume all other bits are wasted because of this slice.
+                // The number will be corrected when fieldslice of the same field
+                // enter the if branch above.
+                by_kind[kind][n_wasted_bits] += (container.size() - field_slice.size());
                 wasted_bits_counted.insert({slice.field(), container});
             }
+        }
 
+        // calc n_clot_bits
+        for (const auto& slice : slices) {
             // Loop over all CLOT-allocated slices that overlap with "slice" and add the number of
             // overlapping bits to the score.
             PHV::FieldSlice field_slice(slice.field(), slice.field_slice());
@@ -461,7 +504,7 @@ AllocScore::AllocScore(
             by_kind[kind][n_inc_containers]++;
 
             // calc n_inc_small_containers
-            if (container.size() < 32) {
+            if (container.size() < 32 && container.type().kind() == PHV::Kind::normal) {
                 by_kind[kind][n_inc_small_containers]++;
             }
         }
@@ -667,7 +710,7 @@ bool CoreAllocation::satisfies_constraints(
 bool CoreAllocation::satisfies_constraints(
         const PHV::ContainerGroup& group,
         const PHV::FieldSlice& slice) const {
-    auto req = pragmas_i.pa_container_sizes().field_slice_req(slice);
+    auto req = pragmas_i.pa_container_sizes().expected_container_size(slice);
     if (req && !group.is(*req)) {
         LOG5("        constraint: @pa_container_size mark that: "
              << slice << " must go to " << *req << " container ");
@@ -1380,7 +1423,8 @@ CoreAllocation::tryAllocSliceList(
     AllocScore best_score = AllocScore::make_lowest();
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container& c : group) {
-        int num_bitmasks = 0;
+        LOG5("    trying allocate to " << c);
+
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
         if (previous_container != PHV::Container() && previous_container != c) {
@@ -1415,6 +1459,7 @@ CoreAllocation::tryAllocSliceList(
 
         // Check slice list<-->container constraints.
         if (!satisfies_constraints(candidate_slices, alloc_attempt)) continue;
+
 
         // Check that there's space.
         // Results of metadata initialization. This is a map of field to the initialization actions
@@ -1713,6 +1758,7 @@ CoreAllocation::tryAllocSliceList(
             continue;
         }
 
+        int num_bitmasks = 0;
         if (!action_constraints) {
             LOG5("        ...action constraint: cannot pack into container " << c
                     << canPackErrorCode);
@@ -2682,51 +2728,51 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     }
 
     BruteForceStrategyConfig default_config {
-        /*.name:*/                   "default",
+        /*.name:*/                   "default_alloc_config",
         /*.is_better:*/              default_alloc_score_is_better,
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            128,
         /*.max_sl_alignment_try:*/   1,
-        /*.tofino_only:*/            false,
+        /*.unsupported_devices:*/    boost::none,
         /*.pre_slicing_validation:*/ false,
-        /*.enable_ara_in_overlays:*/ true
+        /*.enable_ara_in_overlays:*/ PhvInfo::darkSpillARA
     };
-    BruteForceStrategyConfig no_ara_config {
-        /*.name:*/                   "disable_ara",
-        /*.is_better:*/              default_alloc_score_is_better,
-        /*.max_failure_retry:*/      0,
-        /*.max_slicing:*/            128,
-        /*.max_sl_alignment_try:*/   1,
-        /*.tofino_only:*/            false,
-        /*.pre_slicing_validation:*/ false,
-        /*.enable_ara_in_overlays:*/ false
-    };
-    BruteForceStrategyConfig tofino_only_backup_config {
-        /*.name:*/                   "tofino_only_backup",
-        /*.is_better:*/              tofino_only_alloc_score_is_better,
+    BruteForceStrategyConfig less_fragment_backup_config {
+        /*.name:*/                   "less_fragment_alloc_config",
+        /*.is_better:*/              less_fragment_alloc_score_is_better,
         /*.max_failure_retry:*/      1,
         /*.max_slicing:*/            256,
         /*.max_sl_alignment_try:*/   5,
-        /*.tofino_only:*/            true,
+        /*.unsupported_devices:*/    boost::none,
         /*.pre_slicing_validation:*/ false,
-        /*.enable_ara_in_overlays:*/ false
+        /*.enable_ara_in_overlays:*/ PhvInfo::darkSpillARA
     };
     std::vector<BruteForceStrategyConfig> configs = {
-        default_config, no_ara_config, tofino_only_backup_config,
+        default_config,
+        less_fragment_backup_config,
     };
+    if (PhvInfo::darkSpillARA && Device::currentDevice() != Device::TOFINO) {
+        BruteForceStrategyConfig no_ara_config {
+            /*.name:*/                   "disable_ara_alloc_config",
+            /*.is_better:*/              default_alloc_score_is_better,
+            /*.max_failure_retry:*/      0,
+            /*.max_slicing:*/            128,
+            /*.max_sl_alignment_try:*/   1,
+            /*.unsupported_devices:*/    std::unordered_set<Device::Device_t>{Device::TOFINO},
+            /*.pre_slicing_validation:*/ false,
+            /*.enable_ara_in_overlays:*/ false
+        };
+        configs.push_back(no_ara_config);
+    }
 
     AllocResult result(
         AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
     std::vector<const PHV::SuperCluster::SliceList*> unallocatable_lists;
     for (const auto& config : configs) {
-        if (!PhvInfo::darkSpillARA && (config.name == "default")) continue;
-        if (config.enable_ara_in_overlays && Device::currentDevice() == Device::TOFINO) {
+        if (config.unsupported_devices &&
+            config.unsupported_devices.get().count(Device::currentDevice())) {
             continue;
         }
-        if (config.tofino_only && Device::currentDevice() != Device::TOFINO) {
-            continue;
-        }
-
         PhvInfo::darkSpillARA = PhvInfo::darkSpillARA && config.enable_ara_in_overlays;
 
         BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
@@ -2765,12 +2811,12 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
             LOG1("pre-slicing validation is enabled for " << unallocatable_lists.front());
             // create a config that validate pre_slicing results.
             BruteForceStrategyConfig config{
-                /*.name:*/                   "default_validate_pre_slicing",
-                /*.is_better:*/              default_alloc_score_is_better,
+                /*.name:*/                   "less_fragment_validate_pre_slicing",
+                /*.is_better:*/              less_fragment_alloc_score_is_better,
                 /*.max_failure_retry:*/      0,
                 /*.max_slicing:*/            256,
                 /*.max_sl_alignment_try:*/   5,
-                /*.tofino_only:*/            false,
+                /*.tofino_only:*/            boost::none,
                 /*.pre_slicing_validation:*/ true,
                 /*.enable_ara_in_overlays:*/ false
             };
@@ -3340,7 +3386,6 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
 
     auto score_ctx = AllocContext(name, config_i.is_better);
     std::list<PHV::SuperCluster*> allocated_sc;
-    auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     for (auto* sc : cluster_groups) {
         // clusters with slice lists are not considered.
         if (sc->slice_lists().size()) {
@@ -3363,14 +3408,6 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
                 LOG5("Pounder slicing: " << sc << " to ");
                 for (auto* new_sc : *slice_rst) {
                     LOG5(new_sc); } }
-
-            // If the pounder slicing does not satisfy pa_container_size requirements, then ignore
-            // and go to the next slicing. This is required to ensure that pa_container_size pragma
-            // is always respected after preslicing.
-            ordered_set<const PHV::Field*> unsatisfiable_fields =
-                pa_container_sizes.unsatisfiable_fields(*slice_rst);
-            if (unsatisfiable_fields.size() > 0)
-                continue;
 
             std::list<PHV::SuperCluster*> sliced_sc = *slice_rst;
             auto try_this_slicing = rst.makeTransaction();
@@ -3403,10 +3440,10 @@ BruteForceAllocationStrategy::preslice_validation(
             if (n_tried > config_i.max_slicing) {
                 return false;
             }
-            if (pa_container_sizes.unsatisfiable_fields(sliced).size() > 0) {
-                // LOG4("Container size unsatisfiable slicing, continue ...");
-                return true;
-            }
+            // if (pa_container_sizes.unsatisfiable_fields(sliced).size() > 0) {
+            //     // LOG4("Container size unsatisfiable slicing, continue ...");
+            //     return true;
+            // }
             for (auto* sc : sliced) {
                 // we don't validate stridedAlloc cluster.
                 if (!sc->needsStridedAlloc()) {
@@ -3441,39 +3478,51 @@ BruteForceAllocationStrategy::preslice_clusters(
         std::list<PHV::SuperCluster*>& unsliceable) {
     auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     auto& meter_color_dests = core_alloc_i.actionConstraints().meter_color_dests();
-    auto throw_failure = [&] (
-        PHV::SuperCluster* sc,
-        const std::list<PHV::SuperCluster*>& clusters,
-        int n_tried) {
+    auto throw_failure = [&](PHV::SuperCluster* sc, int n_tried) {
         unsliceable.push_back(sc);
-        auto unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(clusters);
-        if (unsatisfiable_fields.size() > 0) {
-            LOG6("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
-        }
-        for (const auto* f : unsatisfiable_fields) {
-            LOG6("\t" << f);
-            if (meter_color_dests.count(f)) {
-                if (f->size > 8) {
-                    P4C_UNIMPLEMENTED(
-                        "Currently the compiler only supports allocation "
-                        "of meter color destination field %1% to an 8-bit container. "
-                        "However, meter color destination %1% with size %2% bits "
-                        "cannot be split based on its use. Therefore, it cannot be "
-                        "allocated to an 8-bit container. Suggest using a meter color "
-                        "destination that is less than or equal to 8b in size.",
-                        f->name, f->size);
-                } else {
-                    P4C_UNIMPLEMENTED(
-                        "Currently the compiler only supports allocation of "
-                        "meter color destination field %1% to an 8-bit container. "
-                        "However, %1% cannot be allocated to an 8-bit container.",
-                        f->name);
+        ordered_set<const PHV::Field*> unsat_fields;
+        sc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
+            const auto* f = fs.field();
+            if (!unsat_fields.count(f) && pa_container_sizes.field_to_layout().count(f)) {
+                unsat_fields.insert(f);
+                if (meter_color_dests.count(f)) {
+                    if (f->size > 8) {
+                        P4C_UNIMPLEMENTED(
+                            "Currently the compiler only supports allocation "
+                            "of meter color destination field %1% to an 8-bit container. "
+                            "However, meter color destination %1% with size %2% bits "
+                            "cannot be split based on its use. Therefore, it cannot be "
+                            "allocated to an 8-bit container. Suggest using a meter color "
+                            "destination that is less than or equal to 8b in size.",
+                            f->name, f->size);
+                    } else {
+                        P4C_UNIMPLEMENTED(
+                            "Currently the compiler only supports allocation of "
+                            "meter color destination field %1% to an 8-bit container. "
+                            "However, %1% cannot be allocated to an 8-bit container.",
+                            f->name);
+                    }
                 }
             }
+        });
+        if (LOGGING(5)) {
+            if (unsat_fields.size() > 0) {
+                LOG5("Found " << unsat_fields.size() << " unsatisfiable fields.");
+            }
+            for (const auto* f : unsat_fields) {
+                LOG5("\t" << f);
+            }
         }
-        if (unsatisfiable_fields.size() > 0) {
-            ::error("Cannot find a slicing to satisfy @pa_container_size: \n%1%",
-                    cstring::to_cstring(sc));
+        if (unsat_fields.size() > 0) {
+            std::stringstream ss;
+            ss << "Cannot find a slicing to satisfy @pa_container_size pragma(s): ";
+            std::string sep = "";
+            for (const auto* f : unsat_fields) {
+                ss << sep << f->name;
+                sep = ", ";
+            }
+            ss << "\n" << sc;
+            ::error("%1%", ss.str());
         } else if (n_tried == 0) {
             BUG("invalid SuperCluster was formed");
         }
@@ -3487,7 +3536,8 @@ BruteForceAllocationStrategy::preslice_clusters(
             // Try until we find one (1) satisfies pa_container_size pragmas
             // (2) allocatable, because we do not take action constraints into account
             // in slicing iterator, we need to do a virtual allocation test to see whether
-            // the presliced clusters can be allocated. enabled by config.pre_slicing_validation
+            // the presliced clusters can be allocated. It is enabled if
+            // config.pre_slicing_validation is true.
             bool found = false;
             int n_tried = 0;
             std::list<PHV::SuperCluster*> sliced;
@@ -3500,14 +3550,14 @@ BruteForceAllocationStrategy::preslice_clusters(
                 if (n_tried > config_i.max_slicing) {
                     return false;
                 }
-                pa_container_sizes.adjust_requirements(sliced_clusters);
-                auto unsatisfiable_fields =
-                    pa_container_sizes.unsatisfiable_fields(sliced_clusters);
-                if (unsatisfiable_fields.size() > 0) {
-                    LOG5("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
-                    for (const auto* f : unsatisfiable_fields) LOG5("\t" << f);
-                }
-                if (unsatisfiable_fields.size() == 0) {
+                // pa_container_sizes.adjust_requirements(sliced_clusters);
+                // auto unsatisfiable_fields =
+                //     pa_container_sizes.unsatisfiable_fields(sliced_clusters);
+                // if (unsatisfiable_fields.size() > 0) {
+                //     LOG5("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
+                //     for (const auto* f : unsatisfiable_fields) LOG5("\t" << f);
+                // }
+                // if (unsatisfiable_fields.size() == 0) {
                     if (config_i.pre_slicing_validation) {
                         // validation did not pass
                         if (auto unallocatable =
@@ -3519,8 +3569,8 @@ BruteForceAllocationStrategy::preslice_clusters(
                     found = true;
                     sliced = sliced_clusters;
                     return false;
-                }
-                return true;
+                // }
+                // return true;
             });
             if (found) {
                 LOG5("--- into new slices -->");
@@ -3530,7 +3580,7 @@ BruteForceAllocationStrategy::preslice_clusters(
                 }
             } else {
                 LOG5("slicing tried " << n_tried << " but still failed");
-                throw_failure(sc, { sc }, n_tried);
+                throw_failure(sc, n_tried);
             }
         } catch (const Util::CompilerBug& e) {
             BUG("The compiler failed in slicing the following group of fields related by "
@@ -3793,7 +3843,6 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::set<const PHV::SuperCluster*> has_pov;
     std::map<const PHV::SuperCluster*, int> n_extracted_uninitialized;
     std::map<const PHV::SuperCluster*, size_t> n_container_size_pragma;
-    std::map<const PHV::SuperCluster*, size_t> n_high_pri_cnt_size_pragma;
     std::set<const PHV::SuperCluster*> has_container_type_pragma;
 
     // calc whether the cluster has pov bits.
@@ -3818,16 +3867,11 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     const auto& container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     for (auto* cluster : cluster_groups) {
         ordered_set<const PHV::Field*> fields;
-        ordered_set<const PHV::Field*> hi_pri_fields;
         cluster->forall_fieldslices([&] (const PHV::FieldSlice& fs) {
-            if (container_sizes.is_specified(fs.field())) {
+            if (container_sizes.is_specified(fs.field()))
                 fields.insert(fs.field());
-                if (container_sizes.is_high_priority(fs.field()))
-                    hi_pri_fields.insert(fs.field());
-            }
         });
         n_container_size_pragma[cluster] = fields.size();
-        n_high_pri_cnt_size_pragma[cluster] = hi_pri_fields.size();
     }
 
     // calc num_pack_conflicts
@@ -3919,12 +3963,11 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         if (Device::currentDevice() != Device::TOFINO) {
             // if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
             //     return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
-            if (n_high_pri_cnt_size_pragma.at(l) != n_high_pri_cnt_size_pragma.at(r))
-                return n_high_pri_cnt_size_pragma.at(l) > n_high_pri_cnt_size_pragma.at(r);
-        }
-        if (Device::currentDevice() != Device::TOFINO)
+            if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
+                return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
             if (has_pov.count(l) != has_pov.count(r))
                 return has_pov.count(l) > has_pov.count(r);
+        }
         if (has_solitary.count(l) != has_solitary.count(r)) {
             return has_solitary.count(l) > has_solitary.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {
@@ -3940,11 +3983,6 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             if (l->slice_lists().size() != r->slice_lists().size()) {
                 return l->slice_lists().size() > r->slice_lists().size(); }
         } else {
-            if (Device::currentDevice() != Device::TOFINO) {
-                // for metadata fields, prioritize pa_container size pragmas
-                if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
-                    return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
-            }
             if  (Device::currentDevice() == Device::TOFINO)
                if (has_pov.count(l) != has_pov.count(r))
                    return has_pov.count(l) > has_pov.count(r);
@@ -4326,17 +4364,6 @@ BruteForceAllocationStrategy::allocLoop(
                     LOG4(sc);
             }
 
-            // If the current slicing does not satisfy pa_container_size requirements, then ignore
-            // and go to the next slice. This is required to ensure that later slicings (after
-            // pre-slicing) respect the pa_container_size pragma.
-            ordered_set<const PHV::Field*> unsatisfiable_fields =
-                pa_container_sizes.unsatisfiable_fields(slicing);
-
-            if (unsatisfiable_fields.size() > 0) {
-                LOG4("Container size unsatisfiable slicing, continue ...");
-                return true;
-            }
-
             if (cluster_group->needsStridedAlloc()) {
                 if (!is_valid_stride_slicing(slicing)) {
                     LOG4("Invalid stride slicing, continue ...");
@@ -4439,7 +4466,10 @@ BruteForceAllocationStrategy::allocLoop(
             alloc_history << "FAILED to allocate " << cluster_group << "\n";
             alloc_history << "when the things are like: " << "\n";
             alloc_history << rst.getTransactionSummary() << "\n";
-            if (diagnosed_unallocatables.size() > 0) {
+            // XXX(yumin): if a slice is unallocatable, then it must be unallocatable in
+            // all different slicings, so that diagnosed_unallocatables.size() must be
+            // equal or larger to n_tried.
+            if (int(diagnosed_unallocatables.size()) >= n_tried) {
                 bool all_same = diagnosed_unallocatables.size() == 1 ||
                                 std::all_of(diagnosed_unallocatables.begin() + 1,
                                             diagnosed_unallocatables.end(),
@@ -4557,7 +4587,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            1,
         /*.max_sl_alignment_try:*/   1,
-        /*.tofino_only:*/            false,
+        /*.tofino_only:*/            boost::none,
         /*.pre_slicing_validation:*/ false,
         /*.enable_ara_in_overlays:*/ false,
     };

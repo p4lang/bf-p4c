@@ -461,8 +461,8 @@ struct BruteForceStrategyConfig {
     // the number of alignments of slicelists generated.
     // XXX(yumin): currently stopped at the first alloc-able alignment.
     int max_sl_alignment;
-    // whether this score is tofino only.
-    bool tofino_only;
+    // unsupported devices for this config.
+    boost::optional<std::unordered_set<Device::Device_t>> unsupported_devices;
     // enable validation on pre-sliced super clusters to avoid creating unallocatable
     // clusters at preslicing.
     bool pre_slicing_validation;

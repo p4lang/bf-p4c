@@ -1694,6 +1694,7 @@ struct switch_port_metadata_t {
 @pa_container_size("egress", "protocol_outer_0", 8)
 @pa_container_size("egress", "protocol_inner_0", 8)
 @pa_container_size("egress", "eg_md.lkp_1.tcp_flags", 8)
+@pa_container_type("egress", "hdr.cpu.reason_code", "normal")
 
 // --------------------------------------------------------------------------------
 // Ingress Metadata

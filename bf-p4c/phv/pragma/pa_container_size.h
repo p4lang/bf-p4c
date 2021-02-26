@@ -9,51 +9,35 @@
 
 /** pa_container_size pragma support.
  *
- * This pass will gathering all pa_container_size prama and generate:
+ * This pass will gather all pa_container_size prama and generate:
  * 1. pa_container_sizes_i: map specified fields to specified sizes;
- * 2. field_slice_req_i: if enforcing a pragma, the fieldslices it must be splitted to,
- *    and the size of container that that fieldslice must be allocated to.
- *
- * Use satisfies_pragmas() on a set of sliced super_cluster to check whether this slice
- * satisfies pragmas, when slicing.
+ * 2. field_layouts_i: expected container layout of fields.
  *
  * Use field_slice_req() when allocating a fieldslice to a container.
  */
 class PragmaContainerSize : public Inspector {
+    // This pass may mutate field properties, e.g., add no_split on field.
     PhvInfo& phv_i;
-
-    // By default all of the container size pragma defined externally will be processed as high
-    // priority when sorting supercluster. Other internally defined container size pragma can
-    // select to be prioritize over all the other supercluster or not through the add_constraint()
-    // high_pri argument.
-    ordered_set<const PHV::Field*> pa_container_sizes_high_pri_i;
+    // pa_container_sizes_i pragmas collected from program.
     ordered_map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
-    ordered_map<PHV::FieldSlice, PHV::Size> field_slice_req_i;
-    // Set of all slices that become no-pack because of pa_container_size pragmas.
-    std::map<const PHV::Field*, std::set<PHV::FieldSlice>> no_pack_slices_i;
+    // field_layouts_i is the expected container layout of the field. It is different
+    // from the above raw pa_container_sizes, e.g. @pa_container_size("f1<32>", 8) will make
+    // pa_container_sizes_i = {f1: [B]}
+    // field_layouts_i = {f1: [8, 8, 8, 8]}.
+    ordered_map<const PHV::Field*, std::vector<int>> field_layouts_i;
 
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         pa_container_sizes_i.clear();
-        pa_container_sizes_high_pri_i.clear();
-        no_pack_slices_i.clear();
-        field_slice_req_i.clear();
+        field_layouts_i.clear();
         return rv;
     }
 
-    /** Get global pragma pa_container_size.
-     */
+    /// Get global pragma pa_container_size.
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
-    /** Populate field_slice_req_i based on pa_container_sizes_i.
-     */
+    /// Populate field_layouts_i based on pa_container_sizes_i.
     void end_apply() override;
-
-    boost::optional<PHV::Size>
-    convert_to_phv_size(const IR::Constant* ir);
-
-    void update_field_slice_req(const PHV::Field* field,
-                                const std::vector<PHV::Size>& sizes);
 
     // Add no-split constraint if the field has only one container size associated with it adn the
     // size of the container is larger than or equal to the size of the field. The pragma also
@@ -76,43 +60,21 @@ class PragmaContainerSize : public Inspector {
     // field_to_layout return the container layout of the field.
     // e.g.
     // "f1" => [8,8,8,8], @pa_container_size("f1<32>", 8)
-    // "f2" => [8, 16], @pa_container_size("f2<16>", 8, 16).
-    ordered_map<const PHV::Field*, std::vector<int>>
-    field_to_layout() const;
+    // "f2" => [8,16], @pa_container_size("f2<16>", 8, 16).
+    const ordered_map<const PHV::Field*, std::vector<int>>&
+    field_to_layout() const { return field_layouts_i; }
 
-    bool is_specified(const PHV::Field* field) const {
-        return pa_container_sizes_i.count(field); }
+    // expected_container_size returns the expected container size for this fs.
+    // if not specified, return boost::none, and
+    // if @p fs spans over more than one container, return PHV::Size::null
+    boost::optional<PHV::Size> expected_container_size(const PHV::FieldSlice& fs) const;
 
-    bool is_high_priority(const PHV::Field* field) const {
-        return pa_container_sizes_high_pri_i.count(field); }
-
-    // Require @field is specified.
-    bool is_single_parameter(const PHV::Field* field) const {
-        return pa_container_sizes_i.at(field).size() == 1; }
-
-    const ordered_map<PHV::FieldSlice, PHV::Size>& field_slice_reqs() const {
-        return field_slice_req_i; }
-
-    /** Returns the requirement for this FieldSlice.
-     */
-    boost::optional<PHV::Size> field_slice_req(const PHV::FieldSlice& fs) const;
-
-    /** For a result of slicing a supercluster, a list of supercluster, return
-     * a set of fields that is sliced in the way that pragma can not be satisfied.
-     *
-     *  Require: Forall field showed in @p sliced, all FieldSlices of that field
-     *  exists in @p sliced.
-     */
-    ordered_set<const PHV::Field*>
-    unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced);
+    bool is_specified(const PHV::Field* field) const { return pa_container_sizes_i.count(field); }
 
     /**
      *  Add constraint regardless of whether constraint is already specified on the field.
-     *  @high_pri argument defines if this constraint should increase the supercluster priority to
-     *  one of the highest.
      */
-    void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes,
-                        bool high_pri = true);
+    void add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
 
     /** Pretty print existing size requirements specified in vector @sizes.
       */
@@ -123,33 +85,6 @@ class PragmaContainerSize : public Inspector {
       * Otherwise, add the constraint.
       */
     bool check_and_add_constraint(const PHV::Field* field, std::vector<PHV::Size> sizes);
-
-    /** Adjust field_slice_req_i based on slice list.
-     *
-     * Since slice list ensures that all fieldslice will be allocated together, so that
-     * even if fields are not sliced in the way specified by pragma, however,
-     * they will be allocated while satisfying pragmas, for example,
-     * slice lists:
-        [ abc<16> meta no_split [0:11]
-          abc<16> meta no_split [12:12]
-          abc<16> meta no_split [13:15] ]
-     * rotational clusters:
-     *  [[abc<16> meta no_split [0:11]]]
-     *  [[abc<16> meta no_split [12:12]]]
-     *  [[abc<16> meta no_split [13:15]]]
-     * and @pa_container_size("ingress", "abc", 16) is actually Okay.
-     */
-    void adjust_requirements(const std::list<PHV::SuperCluster*>& sliced);
-
-    bool has_no_pack_slice(const PHV::Field* field) const {
-        return no_pack_slices_i.count(field);
-    }
-
-    const std::set<PHV::FieldSlice> get_no_pack_slices(const PHV::Field* field) const {
-        static std::set<PHV::FieldSlice> emptySet;
-        if (!has_no_pack_slice(field)) return emptySet;
-        return no_pack_slices_i.at(field);
-    }
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs);

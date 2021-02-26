@@ -1,8 +1,11 @@
 #include <boost/optional/optional_io.hpp>
+
 #include "lib/algorithm.h"
 #include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/common/scc_toposort.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
+#include "lib/exceptions.h"
 
 int ActionPhvConstraints::ConstraintTracker::current_action = 0;
 
@@ -400,10 +403,30 @@ void ActionPhvConstraints::ConstraintTracker::print_field_ordering(
                 field_slices_to_reads[sl]); }
 }
 
-void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list) {
-    auto SliceListComparator = [this](
-            const PHV::SuperCluster::SliceList* l,
-            const PHV::SuperCluster::SliceList* r) {
+void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& slice_lists) {
+    ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>> fields;
+    for (const auto* sl : slice_lists) {
+        for (const auto& fs : *sl) {
+            fields[fs.field()].push_back(fs);
+        }
+    }
+    auto priorities = compute_sources_first_order(fields);
+    ordered_map<const PHV::SuperCluster::SliceList*, int> list_priority;
+    for (const auto* sl : slice_lists) {
+        for (const auto& fs : *sl) {
+            if (list_priority.count(sl)) {
+                list_priority[sl] = std::min(list_priority[sl], priorities.at(fs.field()));
+            } else {
+                list_priority[sl] = priorities.at(fs.field());
+            }
+        }
+    }
+
+    auto SliceListComparator = [&](const PHV::SuperCluster::SliceList* l,
+                                   const PHV::SuperCluster::SliceList* r) {
+        if (list_priority.at(l) != list_priority.at(r)) {
+            return list_priority.at(l) < list_priority.at(r);
+        }
         auto l_reads = 0;
         auto l_writes = 0;
         auto r_reads = 0;
@@ -411,11 +434,13 @@ void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& 
 
         for (auto& sl : *l) {
             l_reads += this->constraint_tracker.read_in(sl).size();
-            l_writes += this->constraint_tracker.written_in(sl).size(); }
+            l_writes += this->constraint_tracker.written_in(sl).size();
+        }
 
         for (auto &sl : *r) {
             r_reads += this->constraint_tracker.read_in(sl).size();
-            r_writes += this->constraint_tracker.written_in(sl).size(); }
+            r_writes += this->constraint_tracker.written_in(sl).size();
+        }
 
         if (l_writes < r_writes) {
             return true;
@@ -425,17 +450,29 @@ void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& 
             if (l_reads > r_reads) {
                 return true;
             } else {
-                return false; } } };
-    slice_list.sort(SliceListComparator);
+                return false;
+            }
+        }
+    };
+    slice_lists.sort(SliceListComparator);
     LOG6("Slice list on output");
-    for (auto sl : slice_list) {
+    for (auto sl : slice_lists) {
         LOG6("  " << sl);
     }
 }
 
-void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
-    std::sort(slice_list.begin(), slice_list.end(),
-        [this](PHV::FieldSlice l, PHV::FieldSlice r) {
+void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slices) {
+    ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>> fields;
+    for (const auto& fs : slices) {
+        fields[fs.field()].push_back(fs);
+    }
+    auto priorities = compute_sources_first_order(fields);
+
+    std::sort(slices.begin(), slices.end(),
+        [&](PHV::FieldSlice l, PHV::FieldSlice r) {
+            if (priorities.at(l.field()) != priorities.at(r.field())) {
+                return priorities.at(l.field()) < priorities.at(r.field());
+            }
             auto l_reads = this->constraint_tracker.read_in(l).size();
             auto l_writes = this->constraint_tracker.written_in(l).size();
             auto r_reads = this->constraint_tracker.read_in(r).size();
@@ -1634,7 +1671,8 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
 
     PHV::Allocation::MutuallyLiveSlices container_state;
-    LOG4("\t\tOriginal existing container state: ");
+    LOG4("\t\tOriginal existing container state: " <<
+         (original_container_state.size() ? "" : "{}"));
     for (auto slice : original_container_state) {
         LOG4("\t\t\t" << slice);
         auto IsDisjoint = [&](const PHV::AllocSlice& alloc_slice) {
@@ -2760,25 +2798,32 @@ ActionPhvConstraints::actionWrites(const IR::MAU::Action* act) const {
     return rv;
 }
 
-ordered_set<const PHV::Field*> ActionPhvConstraints::field_sources(const PHV::Field* f) const {
+ordered_set<const PHV::Field*> ActionPhvConstraints::slices_sources(
+    const PHV::Field* dest, const std::vector<PHV::FieldSlice>& slices) const {
     ordered_set<const PHV::Field*> rv;
-    PHV::FieldSlice dest(f, StartLen(0, f->size));
-    for (const IR::MAU::Action* act : constraint_tracker.written_in(dest)) {
-        auto operands = constraint_tracker.sources(dest, act);
-        for (auto it = operands.begin(); it != operands.end(); ++it) {
-            if (!(it->phv_used)) continue;
-            PHV::FieldSlice sourceFieldSlice = *(it->phv_used);
-            rv.insert(sourceFieldSlice.field()); } }
+    for (const IR::MAU::Action* act : constraint_tracker.written_in(PHV::FieldSlice(dest))) {
+        for (const auto& fs : slices) {
+            BUG_CHECK(fs.field() == dest, "field slice %1% is not part of %2%", fs, dest->name);
+            auto operands = constraint_tracker.sources(fs, act);
+            for (const auto& operand : operands) {
+                if (operand.phv_used) {
+                    rv.insert(operand.phv_used->field());
+                }
+            }
+        }
+    }
     return rv;
 }
 
-ordered_set<const PHV::Field*> ActionPhvConstraints::field_destinations(const PHV::Field* f) const {
+ordered_set<const PHV::Field*> ActionPhvConstraints::slices_destinations(
+    const PHV::Field* src, const std::vector<PHV::FieldSlice>& slices) const {
     ordered_set<const PHV::Field*> rv;
-    PHV::FieldSlice source(f, StartLen(0, f->size));
-    for (const IR::MAU::Action* act : constraint_tracker.read_in(source)) {
-        auto destinations = constraint_tracker.destinations(source, act);
-        for (auto slice : destinations)
-            rv.insert(slice.field()); }
+    for (const IR::MAU::Action* act : constraint_tracker.read_in(PHV::FieldSlice(src))) {
+        for (const auto& fs : slices) {
+            auto destinations = constraint_tracker.destinations(fs, act);
+            for (auto slice : destinations) rv.insert(slice.field());
+        }
+    }
     return rv;
 }
 
@@ -3246,6 +3291,35 @@ bool ActionPhvConstraints::is_in_write_to_reads(
     auto reads = constraint_tracker.sources(write_slice, act);
     return std::any_of(reads.begin(), reads.end(), [&](const OperandInfo& info) {
                             return info.phv_used && info.phv_used->field() == read_field; });
+}
+
+ordered_map<const PHV::Field*, int> ActionPhvConstraints::compute_sources_first_order(
+    const ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>>& fields) const {
+    // forall writes, add them to dep graph.
+    ordered_map<const PHV::Field*, int> field_to_nodes;
+    SccTopoSorter topo_sorter;
+    for (const auto& kv : fields) {
+        const auto* f = kv.first;
+        const auto& slices = kv.second;
+        LOG1("checking " << f);
+        if (!field_to_nodes.count(f)) {
+            field_to_nodes[f] = topo_sorter.new_node();
+        }
+        for (const auto* src : slices_sources(f, slices)) {
+            LOG1(f << " is written by " << src);
+            if (!field_to_nodes.count(src)) {
+                field_to_nodes[src] = topo_sorter.new_node();
+            }
+            // allocation of f depends on its source src.
+            topo_sorter.add_dep(field_to_nodes[src], field_to_nodes[f]);
+        }
+    }
+    auto topo_orders = topo_sorter.scc_topo_sort();
+    ordered_map<const PHV::Field*, int> rst;
+    for (const auto& kv : field_to_nodes) {
+        rst[kv.first] = topo_orders[kv.second];
+    }
+    return rst;
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info) {
