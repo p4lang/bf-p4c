@@ -83,6 +83,7 @@ ignoreFilePatterns=(
 # will always add an Intel copyright notice to these files. Use
 # `ignoreFilePatterns` to disable this behaviour for specific files.
 noCopyrightCheckPatterns=(
+  '^Jenkinsfile$'
   '^scripts/package_p4c_for_tofino\.sh$'
   '^scripts/packaging/copyright-stamp$'
 )
