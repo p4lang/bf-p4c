@@ -1593,7 +1593,7 @@ TnaProgramStructure::createEgressParserStates() {
     if (useBridgeMetadata()) {
         auto member = new IR::Member(new IR::PathExpression("meta"),
                 IR::ID("bridged_header"));
-        bridgeStateStmts.push_back(BFN::createExtractCall("pkt", member));
+        bridgeStateStmts.push_back(BFN::createExtractCall("pkt", "bridged_header_t", member));
 
         for (auto f : bridgedFields) {
             if (!bridgedFieldInfo.count(f))
