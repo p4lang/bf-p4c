@@ -31,6 +31,18 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
     unsigned enumSize(unsigned /* size */) const override { return 8; }
 };
 
+class MeterColorTo8Bits: public P4::ChooseEnumRepresentation {
+    bool convert(const IR::Type_Enum *type) const override {
+        if (type->name != "PSA_MeterColor_t") {
+            return false;
+        }
+        LOG3("Convert Enum to Bits " << type->name);
+        return true;
+    }
+
+    unsigned enumSize(unsigned /* size */) const override { return 8; }
+};
+
 class AnalyzeProgram : public Inspector {
     template<class P4Type, class BlockType>
     void analyzeArchBlock(cstring gressName, cstring blockName, cstring type) {
@@ -307,9 +319,6 @@ class TranslateProgram : public Inspector {
     void InternetChecksumTranslation(const IR::StatOrDecl* stmt,
                                      const P4::ExternMethod* em) {
         auto declName = em->object->to<IR::Declaration_Instance>()->name;
-        auto decl = new IR::Declaration_Instance(declName,
-                           new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
-        structure->_map.emplace(em->object->to<IR::Declaration_Instance>(), decl);
         if (em->method->name == "add" || em->method->name == "subtract") {
             auto sourceList = (*em->expr->arguments)[0]->
                                    expression->to<IR::ListExpression>();
@@ -673,6 +682,11 @@ class TranslateProgram : public Inspector {
             auto name = typeName->path->name;
             if (name == "ActionSelector") {
                 cvtActionSelector(node);
+            } else if (name == "InternetChecksum") {
+                auto declName = node->name;
+                auto decl = new IR::Declaration_Instance(declName,
+                           new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
+                structure->_map.emplace(node, decl);
             }
         }
     }
@@ -855,6 +869,7 @@ struct ConvertNames : public PassManager {
             P4::TypeMap *typeMap) {
         addPasses({new BFN::PSA::PathExpressionConverter(structure),
                    new BFN::PSA::TypeNameExpressionConverter(structure),
+                   new BFN::PSA::TypeNameConverter(structure),
                    new P4::ClearTypeMap(typeMap),
                    new P4::TypeChecking(refMap, typeMap, true),
                    new P4::EliminateSerEnums(refMap, typeMap)});
@@ -968,6 +983,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
                                          "psa_direct_meter", "psa_idle_timeout",
                                          "psa_empty_group_action"}),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
+        new P4::ConvertEnums(refMap, typeMap, new PSA::MeterColorTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
         evaluator,
