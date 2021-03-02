@@ -1556,7 +1556,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                     if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
                         auto portMetadataFullName =
                             getFullyQualifiedName(parserBlock, PortMetadata::name(), isMultiParser);
-                        function(portMetadataFullName);
+                        function(portMetadataFullName, parserBlock);
                     }
                 }
             });
@@ -1570,7 +1570,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
                     auto portMetadataFullName =
                         getFullyQualifiedName(parserBlock, PortMetadata::name());
-                    function(portMetadataFullName);
+                    function(portMetadataFullName, parserBlock);
                 }
             });
         }
@@ -1720,7 +1720,12 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         auto *params = parser->getApplyParameters();
         for (auto p : *params) {
             if (p->type->toString() == "ingress_intrinsic_metadata_t") {
-                ingressIntrinsicMdParamName = p->name;
+                BUG_CHECK(
+                    ingressIntrinsicMdParamName.count(parserBlock) == 0 ||
+                    strcmp(ingressIntrinsicMdParamName[parserBlock], p->name.toString()) == 0,
+                    "%1%: Multiple names of intrinsic metadata found in this parser block",
+                    parser->getName());
+                ingressIntrinsicMdParamName[parserBlock] = p->name;
                 break;
             }
         }
@@ -1880,7 +1885,8 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
 
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances to symbol table
-        forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName) {
+        forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName,
+                                                       const IR::ParserBlock* parserBlock) {
             symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
         });
     }
@@ -2040,7 +2046,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             if (blockNamePrefixMap.count(parserBlock)) {
                 auto portMetadataFullName =
                     getFullyQualifiedName(parserBlock, PortMetadata::name(), isMultiParser);
-                addPortMetadata(symbols, p4info, *portMetadata, portMetadataFullName);
+                addPortMetadata(symbols, p4info, *portMetadata, portMetadataFullName, parserBlock);
             }
         }
     }
@@ -2087,8 +2093,9 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
 
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances
-        forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName) {
-            addPortMetadataDefault(symbols, p4info, portMetadataFullName);
+        forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName,
+                                                       const IR::ParserBlock* parserBlock) {
+            addPortMetadataDefault(symbols, p4info, portMetadataFullName, parserBlock);
         });
 
         for (const auto& snapshot : snapshotInfo)
@@ -2120,19 +2127,33 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     void addPortMetadata(const P4RuntimeSymbolTableIface& symbols,
                          p4configv1::P4Info* p4Info,
                          const PortMetadata& portMetadataExtract,
-                         const cstring& name) {
+                         const cstring& name,
+                         const IR::ParserBlock* parserBlock) {
         ::barefoot::PortMetadata portMetadata;
         portMetadata.mutable_type_spec()->CopyFrom(*portMetadataExtract.typeSpec);
-        portMetadata.set_key_name(ingressIntrinsicMdParamName);
+        CHECK_NULL(parserBlock);
+        auto parser = parserBlock->container;
+        CHECK_NULL(parser);
+        BUG_CHECK(ingressIntrinsicMdParamName.count(parserBlock),
+                  "%1%: Name of the intrinsic metadata not found for this parser block",
+                  parser->getName());
+        portMetadata.set_key_name(ingressIntrinsicMdParamName[parserBlock]);
         addP4InfoExternInstance(
             symbols, SymbolType::PORT_METADATA(), "PortMetadata",
             name, nullptr, portMetadata, p4Info);
     }
 
     void addPortMetadataDefault(const P4RuntimeSymbolTableIface& symbols,
-                                p4configv1::P4Info* p4Info, const cstring& name) {
+                                p4configv1::P4Info* p4Info, const cstring& name,
+                                const IR::ParserBlock* parserBlock) {
         ::barefoot::PortMetadata portMetadata;
-        portMetadata.set_key_name(ingressIntrinsicMdParamName);
+        CHECK_NULL(parserBlock);
+        auto parser = parserBlock->container;
+        CHECK_NULL(parser);
+        BUG_CHECK(ingressIntrinsicMdParamName.count(parserBlock),
+                  "%1%: Name of the intrinsic metadata not found for this parser block",
+                  parser->getName());
+        portMetadata.set_key_name(ingressIntrinsicMdParamName[parserBlock]);
         addP4InfoExternInstance(
             symbols, SymbolType::PORT_METADATA(), "PortMetadata",
             name, nullptr, portMetadata, p4Info);
@@ -2235,8 +2256,8 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     std::unordered_set<const IR::Block *> hasUserPortMetadata;
 
     /// This is the user defined value for ingress_intrinsic_metadata_t as
-    /// specified in the P4 program
-    cstring ingressIntrinsicMdParamName;
+    /// specified in the P4 program (can be different for each pipe/parser)
+    std::unordered_map<const IR::ParserBlock *, cstring> ingressIntrinsicMdParamName;
 
     using SnapshotInfoMap = std::map<const IR::ControlBlock*, SnapshotInfo>;
     SnapshotInfoMap snapshotInfo;
