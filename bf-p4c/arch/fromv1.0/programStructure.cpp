@@ -745,7 +745,7 @@ TnaProgramStructure::convert(const IR::CounterOrMeter* cm, cstring newName) {
         if (c->max_width >= 0)
             annos = annos->addAnnotation("max_width", new IR::Constant(c->max_width));
     }
-    type_args->push_back(IR::Type_Bits::get(32));  // by default, index is bit<32>
+    type_args->push_back(IR::Type_Bits::get(cm->index_width()));
     auto type = new IR::Type_Specialized(type_name, type_args);
     auto decl = new IR::Declaration_Instance(newName, annos, type, args, nullptr);
     return decl;
