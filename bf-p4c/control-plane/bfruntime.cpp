@@ -2265,8 +2265,8 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
             // Replace header stack indices hdr[<index>] with hdr$<index>. This
             // is output in the context.json
-            std::regex hdrStackRegex(R"(\[([0-9]+)\]\.)");
-            keyName = std::regex_replace(keyName, hdrStackRegex, "$$$1.");
+            std::regex hdrStackRegex(R"(\[([0-9]+)\])");
+            keyName = std::regex_replace(keyName, hdrStackRegex, "$$$1");
 
             // Control plane requires there's no duplicate key in one table.
             if (dupKey.count(keyName) != 0) {
