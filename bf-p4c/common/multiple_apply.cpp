@@ -4,6 +4,11 @@
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/common/utils.h"
 
+Visitor::profile_t MultipleApply::MutuallyExclusiveApplies::init_apply(const IR::Node *root) {
+    mutex_apply.clear();
+    return MauInspector::init_apply(root);
+}
+
 void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table* tbl) {
     // Ensure the table being visited was derived from an actual table in the P4 source.
     if (tbl->match_table == nullptr) return;

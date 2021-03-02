@@ -126,8 +126,10 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
-        new CatchBacktrack<LongBranchAllocFailed>(
-            [] { BackendOptions().disable_long_branch = true; }),
+        new CatchBacktrack<LongBranchAllocFailed>([this] {
+            BackendOptions().disable_long_branch = true;
+            table_summary.resetPlacement();
+        }),
         new MultipleApply(options),
         new AddSelectorSalu,
         new FixupStatefulAlu,

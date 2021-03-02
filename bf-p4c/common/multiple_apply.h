@@ -66,6 +66,7 @@ class MultipleApply : public PassManager {
         /// invocations of that P4 table.
         ordered_map<const IR::P4Table*, ordered_set<const IR::MAU::Table*>> mutex_apply;
 
+        Visitor::profile_t init_apply(const IR::Node* root) override;
         void postorder(const IR::MAU::Table*) override;
 
      public:

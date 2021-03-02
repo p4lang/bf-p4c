@@ -144,6 +144,7 @@ class TableSummary: public MauInspector {
     void clearPlacementErrors() { tablePlacementErrors.clear(); }
     int placementErrorCount() { return tablePlacementErrors.size(); }
     void FinalizePlacement() { state = FINAL_PLACEMENT; }
+    void resetPlacement() { state = INITIAL; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

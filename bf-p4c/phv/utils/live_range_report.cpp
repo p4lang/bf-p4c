@@ -185,6 +185,8 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     stageToWriteBits.clear();
     stageToAccessBits.clear();
     stageToLiveBits.clear();
+    livemap.clear();
+    aliases.clear();
 
     int maxStagesInAlloc = alloc.maxStages();
     int maxDeviceStages = Device::numStages();
