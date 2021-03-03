@@ -19,4 +19,19 @@ class NextTable : public virtual Visitor {
         return -1; }
 };
 
+class DynamicNextTable : public DynamicVisitor, public NextTable {
+    NextTable   *pass;
+
+ public:
+    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const {
+        return pass->next_for(tbl, what); }
+    void dbprint(std::ostream &out) const { pass->dbprint(out); }
+    const std::unordered_map<int, std::set<UniqueId>> &long_branches(UniqueId id) const {
+        return pass->long_branches(id); }
+    std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId id) const {
+        return pass->get_live_range_for_lb_with_dest(id); }
+    void setVisitor(NextTable *v) { DynamicVisitor::setVisitor((pass = v)); }
+    DynamicNextTable *clone() const override { BUG("DynamicNextTable not cloneable"); }
+};
+
 #endif /* BF_P4C_MAU_NEXT_TABLE_H_ */

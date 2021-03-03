@@ -217,7 +217,7 @@ struct DecidePlacement::GroupPlace {
             ancestors |= p->ancestors; }
         LOG4("    new seq " << seq->clone_id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
-        if (Device::numLongBranchTags() == 0 || self.self.options.disable_long_branch) {
+        if (Device::numLongBranchTags() == 0 || self.self.disable_long_branch) {
             // Table run only with next_table, so can't continue placing ancestors until
             // this group is finished
             if (LOGGING(5)) {
@@ -2029,7 +2029,7 @@ std::ostream &operator<<(std::ostream &out, const ordered_set<const IR::MAU::Tab
 bool DecidePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
         const ordered_set<const IR::MAU::Table *> &partly_placed,
         const TablePlacement::Placed *placed) {
-     if (!(Device::numLongBranchTags() == 0 || self.options.disable_long_branch))
+     if (!(Device::numLongBranchTags() == 0 || self.disable_long_branch))
          return true;
 
     for (auto pp : partly_placed) {
@@ -2093,7 +2093,7 @@ bool DecidePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
  */
 bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl,
         const TablePlacement::Placed *placed) {
-    if (!Device::hasLongBranches() || self.options.disable_long_branch)
+    if (!Device::hasLongBranches() || self.disable_long_branch)
         return true;
     if (!tbl->uses_gateway())
         return true;
@@ -2182,7 +2182,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 if (it == work.end()) it = add;
                 continue; }
             BUG_CHECK(grp->ancestors.count(grp) == 0, "group is its own ancestor!");
-            if (Device::numLongBranchTags() == 0 || self.options.disable_long_branch) {
+            if (Device::numLongBranchTags() == 0 || self.disable_long_branch) {
                 // Table run only with next_table, so can't continue placing ancestors until
                 // this group is finished
                 if (LOGGING(5)) {
@@ -3766,15 +3766,16 @@ void dump(const ordered_set<const DecidePlacement::GroupPlace *> &work) {
 TablePlacement::TablePlacement(const BFN_Options &opt, DependencyGraph &d,
                                const TablesMutuallyExclusive &m, PhvInfo &p,
                                LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
-                               SplitAttachedInfo &sia, TableSummary &summary_)
-    : options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s),
-      ddm(ntp, con_paths, d), att_info(sia), summary(summary_) {
-     addPasses({
-         &ntp,
-         &con_paths,
-         new SetupInfo(*this),
-         new DecidePlacement(*this),
-         new TransformTables(*this)
-         // new MergeAlwaysRunActions(*this)
-     });
+                               SplitAttachedInfo &sia, TableSummary &summary_,
+                               const bool &disable_long_branch)
+    : options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, d),
+      att_info(sia), summary(summary_), disable_long_branch(disable_long_branch) {
+    addPasses({
+        &ntp,
+        &con_paths,
+        new SetupInfo(*this),
+        new DecidePlacement(*this),
+        new TransformTables(*this)
+        // new MergeAlwaysRunActions(*this)
+    });
 }

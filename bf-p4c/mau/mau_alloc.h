@@ -21,11 +21,13 @@ class TableAllocPass : public Logging::PassManager {
     SplitAttachedInfo                   att_info;
     TablesMutuallyExclusive             mutex;
     ActionMutuallyExclusive             action_mutex;
+    bool                                disable_long_branch;
 
  public:
     static int table_placement_round;
     TableAllocPass(const BFN_Options& options, PhvInfo& phv,
                     DependencyGraph &deps, TableSummary &, Util::JsonObject*);
+    void setDisableLongBranch() { disable_long_branch = true; }
 };
 
 

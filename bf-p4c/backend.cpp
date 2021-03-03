@@ -98,20 +98,21 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     uses(phv),
     defuse(phv),
     decaf(phv, uses, defuse, deps),
-    table_summary(pipe_id, deps) {
+    table_summary(pipe_id, deps),
+    table_alloc(options, phv, deps, table_summary, &jsonGraph) {
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
-                                              defuse, deps, decaf, table_alloc,
+                                              defuse, deps, decaf, mau_backtracker,
                                               phvLoggingInfo /*, &jsonGraph */);
     // Collect next table info if we're using LBs
     if (Device::numLongBranchTags() > 0 && !options.disable_long_branch)
-        nextTblProp = new JbayNextTable;
+        nextTblProp.setVisitor(new JbayNextTable);
     else
-        nextTblProp = new DefaultNext(true);
+        nextTblProp.setVisitor(new DefaultNext(true));
 
     // Create even if Tofino, since this checks power is within limits.
-    power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, nextTblProp, options);
+    power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, &nextTblProp, options);
 
     auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
         new AllocateClot(clot, phv, uses) : nullptr;
@@ -127,8 +128,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new CatchBacktrack<LongBranchAllocFailed>([this] {
-            BackendOptions().disable_long_branch = true;
+            table_alloc.setDisableLongBranch();
             table_summary.resetPlacement();
+            nextTblProp.setVisitor(new DefaultNext(true));
         }),
         new MultipleApply(options),
         new AddSelectorSalu,
@@ -178,7 +180,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // stage). As some of these no-pack conflicts may be related to bridged metadata fields, we
         // need to pull out the backtracking point from close to PHV allocation to before bridged
         // metadata packing.
-        &table_alloc,
+        &mau_backtracker,
         new ResolveSizeOfOperator(),
         new DumpPipe("After ResolveSizeOfOperator"),
         // Run after bridged metadata packing as bridged packing updates the parser state.
@@ -237,7 +239,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // is per P4 actions. This should also happen before table placement which may cause
         // tables to be split across stages.
         new GeneratePrimitiveInfo(phv, primNode),
-        new TableAllocPass(options, phv, deps, table_summary, &jsonGraph),
+        &table_alloc,
         new DumpPipe("After TableAlloc"),
         &table_summary,
         options.alt_phv_alloc ? new PassIf([this]() { return phv.trivial_alloc(); }, {
@@ -272,7 +274,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         options.alt_phv_alloc ? nullptr :
             new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
         new InstructionAdjustment(phv),
-        nextTblProp,  // Must be run after all modifications to the table graph have finished!
+        &nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
         new AdjustExtract(phv),
         // Rewrite parser and deparser IR to reflect the PHV allocation such that field operations

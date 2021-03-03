@@ -33,6 +33,7 @@ class TablePlacement : public PassManager {
     DynamicDependencyMetrics ddm;
     SplitAttachedInfo &att_info;
     TableSummary &summary;
+    const bool &disable_long_branch;
 
     struct Placed;
     struct RewriteForSplitAttached;
@@ -66,7 +67,8 @@ class TablePlacement : public PassManager {
 
     TablePlacement(const BFN_Options &, DependencyGraph &,
                    const TablesMutuallyExclusive &, PhvInfo &, LayoutChoices &,
-                   const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &);
+                   const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &,
+                   const bool &disable_long_branch);
 
     struct RedoTablePlacement : public Backtrack::trigger {
         RedoTablePlacement() : Backtrack::trigger(OK) {}
