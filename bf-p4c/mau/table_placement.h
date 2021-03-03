@@ -95,6 +95,17 @@ class TablePlacement : public PassManager {
     } choice_t;
     bool backtrack(trigger &) override;
 
+    // tracking reasons tables were passed up for logging.  Currently not backtracking
+    // friendly
+    struct RejectReason {
+        choice_t                reason;
+        int                     stage;
+        int                     entries;
+        attached_entries_t      attached_entries;
+    };
+    std::map<cstring, std::map<cstring, RejectReason>>  rejected_placements;
+    void reject_placement(const Placed *of, choice_t reason, const Placed *better);
+
     // In both in class.  Remove
     std::array<bool, 3> table_in_gress = { { false, false, false } };
     cstring error_message;
@@ -121,7 +132,6 @@ class TablePlacement : public PassManager {
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current, GatewayMergeChoices &gmc);
 
-    void log_choice(const Placed *t, const Placed *best, choice_t choice);
     bool is_better(const Placed *a, const Placed *b, choice_t& choice);
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
 
@@ -197,7 +207,7 @@ class TransformTables : public MauTransform {
     int errorCount() const { return self.errorCount(); }
 };
 
-
+std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice);
 
 class MergeAlwaysRunActions : public PassManager {
     TablePlacement &self;

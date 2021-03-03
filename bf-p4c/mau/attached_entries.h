@@ -26,4 +26,7 @@ struct attached_entries_element_t {
 
 typedef ordered_map<const IR::MAU::AttachedMemory *, attached_entries_element_t> attached_entries_t;
 
+// not a consistent ordering -- true if first has more of anything than second
+bool operator>(const attached_entries_t&, const attached_entries_t &);
+
 #endif /* BF_P4C_MAU_ATTACHED_ENTRIES_H_ */

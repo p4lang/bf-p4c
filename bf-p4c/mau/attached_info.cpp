@@ -578,3 +578,12 @@ std::string ActionData::FormatType_t::toString() const {
     tmp << *this;
     return tmp.str();
 }
+
+// Test to see if first potential allocation has more of something than the second.
+// THIS IS NOT A CONSISTENT (PARTIAL) ORDER -- not suitable for use as map/set key
+bool operator>(const attached_entries_t &a, const attached_entries_t &b) {
+    BUG_CHECK(a.size() == b.size(), "comparing incomparable attached_entries_t");
+    for (auto &ae : a)
+        if (ae.second.entries > b.at(ae.first).entries) return true;
+    return false;
+}

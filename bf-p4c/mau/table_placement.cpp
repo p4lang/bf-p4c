@@ -2136,6 +2136,7 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
     }
     if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
         new GroupPlace(*this, work, {}, pipe->ghost_thread); }
+    self.rejected_placements.clear();
 }
 
 bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
@@ -2325,11 +2326,17 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         for (auto t : trial) {
             if (best)
                 LOG3("For trial t : " << t->name << " with best: " << best->name);
-            if (!best || self.is_better(t, best, choice)) {
-                self.log_choice(t, best, choice);
+            if (!best) {
+                LOG3("Initial best is first table seen: " << t->name);
                 best = t;
-            } else if (best) {
-                self.log_choice(nullptr, best, choice); } }
+            } else if (self.is_better(t, best, choice)) {
+                LOG3("    Updating best to " << t->name << " from " << best->name <<
+                     " for reason: " << choice);
+                self.reject_placement(best, choice, t);
+                best = t;
+            } else {
+                LOG3("    Keeping best " << best->name << " for reason: " << choice);
+                self.reject_placement(t, choice, best); } }
 
         if (placed && best->stage > placed->stage &&
             !self.options.disable_table_placement_backfill) {
@@ -2407,6 +2414,14 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     return false;
 }
 
+void TablePlacement::reject_placement(const Placed *of, choice_t reason, const Placed *better) {
+    auto &rp = rejected_placements[of->name][better->name];
+    rp.reason = reason;
+    rp.stage = of->stage;
+    rp.entries = of->entries;
+    rp.attached_entries = of->attached_entries;
+}
+
 /* Human-readable strings for the choice_t enum used to return
  * is_better decision info.
  */
@@ -2435,21 +2450,6 @@ std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
         out << "unknown choice <0x" << hex(choice) << ">";
     }
     return out;
-}
-
-/*  Called when is_better indicates that a better table to place has been found.
- *  Prints a human-readable explanation for why that new table was chosen over
- *  the old one.
- */
-void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t choice) {
-    if (!best) {
-        LOG3("    Updating best to first table seen: " << t->name);
-    } else if (!t) {
-        LOG3("    Keeping best " << best->name << " for reason: " << choice);
-    } else {
-        LOG3("    Updating best to " << t->name << " from " << best->name
-             << " for reason: " << choice);
-    }
 }
 
 IR::Node *TransformTables::preorder(IR::BFN::Pipe *pipe) {
@@ -2870,7 +2870,7 @@ class SplitEntriesList {
             return nullptr;
         if (num_entries >= available) {
             if (next == list->entries.begin()) {
-                // All entires fit in this table.
+                // All entries fit in this table.
                 available = 0;
                 return list;
             }
@@ -2922,8 +2922,13 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                 for (auto &p : i->second) {
                     LOG_FEATURE("stage_advance", 2, "  stage " << i->first << ": " <<
                                 "dependency (" << p.second << ") on " << p.first->name <<
-                                " in stage " << p.first->stage); } }
-        }
+                                " in stage " << p.first->stage); } } }
+        for (auto &rr : self.rejected_placements[tbl->name]) {
+            if (rr.second.stage < it->second->stage || rr.second.entries > it->second->entries ||
+                rr.second.attached_entries > it->second->attached_entries) {
+                LOG_FEATURE("stage_advance", 3, "  - preferred " << rr.first << "(" <<
+                            rr.second.reason << ") over " << rr.second.entries << " of " <<
+                            tbl->name << " in stage " << rr.second.stage); } }
     }
 
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
