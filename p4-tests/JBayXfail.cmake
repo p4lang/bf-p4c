@@ -522,3 +522,10 @@ p4c_add_xfail_reason("tofino2"
    "Unexpected port .*"
    p4_16_programs_tna_multicast
 )
+
+# P4C-3610
+p4c_add_xfail_reason("tofino2"
+   "PHV allocation was not successful"
+   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210225.p4
+   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210301.p4
+)

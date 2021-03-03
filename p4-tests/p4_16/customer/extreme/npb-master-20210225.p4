@@ -1,6 +1,6 @@
 #include <t2na.p4>
 # 1 "npb.p4"
-# 38 "npb.p4"
+# 36 "npb.p4"
 # 1 "features_t2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -29,9 +29,9 @@
 // ===== pkt header defines =================================
 
 // ----- applies to: transport -----
-# 36 "features_t2.p4"
+# 37 "features_t2.p4"
 // ----- applies to: outer -----
-# 46 "features_t2.p4"
+# 48 "features_t2.p4"
 // ----- applies to: inner -----
 
 
@@ -43,13 +43,7 @@
 // ===== feature defines ====================================
 
 // ----- parser -----
-
-
-
-
-
-
-
+# 69 "features_t2.p4"
 // ----- switch: mirroring -----
 
 
@@ -57,7 +51,7 @@
 
 
 // ----- switch: cpu -----
-# 79 "features_t2.p4"
+# 84 "features_t2.p4"
 // ----- switch: dtel -----
 
 
@@ -86,9 +80,9 @@
 
 
 // ----- npb: sf #0 -----
-# 118 "features_t2.p4"
+# 124 "features_t2.p4"
 // ----- npb: sf #2  -----
-# 133 "features_t2.p4"
+# 139 "features_t2.p4"
 // ----- tofino 1 fitting -----
 
 
@@ -105,9 +99,8 @@
 
 
 
-
 // ----- other wanted / needed features that don't fit -----
-# 39 "npb.p4" 2
+# 37 "npb.p4" 2
 
 
 # 1 "field_widths.p4" 1
@@ -124,7 +117,7 @@
     // -------------------------------------
     // NPB Widths
     // -------------------------------------
-# 42 "npb.p4" 2
+# 40 "npb.p4" 2
 # 1 "table_sizes.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -165,7 +158,7 @@
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-# 194 "table_sizes.p4"
+# 205 "table_sizes.p4"
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -196,9 +189,9 @@ const bit<32> RMAC_TABLE_SIZE = 64;
 const bit<32> MAC_TABLE_SIZE = 1024;
 
 // Tunnels - 4K IPv4 + 1K IPv6
-const bit<32> IPV4_DST_TUNNEL_TABLE_SIZE = 64; // ingress
+const bit<32> IPV4_DST_TUNNEL_TABLE_SIZE = 1024; // ingress
 const bit<32> IPV4_SRC_TUNNEL_TABLE_SIZE = 256; // ingress
-const bit<32> IPV6_DST_TUNNEL_TABLE_SIZE = 64; // ingress
+const bit<32> IPV6_DST_TUNNEL_TABLE_SIZE = 1024; // ingress
 const bit<32> IPV6_SRC_TUNNEL_TABLE_SIZE = 256; // ingress
 
 const bit<32> TUNNEL_SRC_REWRITE_TABLE_SIZE = 512; // egress
@@ -218,9 +211,9 @@ const bit<32> OUTER_ECMP_SELECT_TABLE_SIZE = 16384; // derek: unused; changed ta
 
 // Lag
 const bit<32> LAG_TABLE_SIZE = 1024; // switch.p4 was 1024
-const bit<32> LAG_GROUP_TABLE_SIZE = 16; // switch.p4 was 256
-const bit<32> LAG_MAX_MEMBERS_PER_GROUP = 16; // switch.p4 was 64
-const bit<32> LAG_SELECTOR_TABLE_SIZE = 128; // 256 * 64 // switch.p4 was 16384
+const bit<32> LAG_GROUP_TABLE_SIZE = 32; // switch.p4 was 256
+const bit<32> LAG_MAX_MEMBERS_PER_GROUP = 64; // switch.p4 was 64
+const bit<32> LAG_SELECTOR_TABLE_SIZE = 2048; // 256 * 64 // switch.p4 was 16384
 
 // Ingress ACLs
 const bit<32> INGRESS_MAC_ACL_TABLE_SIZE = 2048; // derek: was told to change this from the 512 in the spec.
@@ -255,32 +248,37 @@ const bit<32> NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH = 256;
 const bit<32> NPB_ING_SFC_SF_SEL_TABLE_DEPTH = 8192; // derek, what size to make this?
 
 // sf #0 -- basic / advanced
-const bit<32> NPB_ING_SF_0_BAS_ADV_ACT_SEL_TABLE_DEPTH = 1024;
+const bit<32> NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH = 1024;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L3_LEN_RNG_TABLE_DEPTH = 128;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_SRC_RNG_TABLE_DEPTH = 128;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH = 128;
 
+// sf #0 - sfp select
+const bit<32> NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH = 128;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE = 64;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE = 32;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP = 32;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE = 1024; // 32 * 32
+
 // sff -- forwards the packets to the sf's, then forwards to the packet along the chain.
-const bit<32> NPB_ING_SFF_FLW_CLS_TABLE_DEPTH = 128;
-const bit<32> NPB_ING_SFF_SCHD_TABLE_SIZE = 64;
-const bit<32> NPB_ING_SFF_SCHD_GROUP_TABLE_SIZE = 32;
-const bit<32> NPB_ING_SFF_SCHD_MAX_MEMBERS_PER_GROUP = 32;
-const bit<32> NPB_ING_SFF_SCHD_SELECTOR_TABLE_SIZE = 1024; // 32 * 32
 const bit<32> NPB_ING_SFF_ARP_TABLE_DEPTH = 8192;
 
 // sf #1 -- replication
-const bit<32> NPB_ING_SF_1_MULTICAST_ACT_SEL_TABLE_DEPTH = 1024;
+const bit<32> NPB_ING_SF_1_MULTICAST_SFF_TABLE_DEPTH = 1024;
 const bit<32> NPB_ING_SF_1_MULTICAST_RID_TABLE_SIZE = 2096;
 
 // sf #2 -- tool proxy
-const bit<32> NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH = 8192;
+const bit<32> NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH = 8192;
 
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L3_LEN_RNG_TABLE_DEPTH= 128;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_SRC_RNG_TABLE_DEPTH= 128;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_DST_RNG_TABLE_DEPTH= 128;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_HDR_STRIP_TABLE_DEPTH = 8; // unused in latest spec
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_TRUNC_TABLE_DEPTH = 8; // unused in latest spec
-# 43 "npb.p4" 2
+
+// sff -- forwards the packets to the sf's, then forwards to the packet along the chain.
+const bit<32> NPB_EGR_SFF_ARP_TABLE_DEPTH = 8192;
+# 41 "npb.p4" 2
 # 1 "headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -399,6 +397,7 @@ header ipv4_h {
     ipv4_addr_t dst_addr;
 }
 
+
 header ipv4_option_h {
     bit<8> type;
     bit<8> length;
@@ -446,6 +445,7 @@ header udp_h {
     bit<16> checksum;
 }
 
+
 header tcp_h {
     bit<16> src_port;
     bit<16> dst_port;
@@ -459,12 +459,14 @@ header tcp_h {
     bit<16> urgent_ptr;
 }
 
+
 header sctp_h {
     bit<16> src_port;
     bit<16> dst_port;
     bit<32> verifTag;
     bit<32> checksum;
 }
+
 
 
 //////////////////////////////////////////////////////////////
@@ -728,7 +730,8 @@ header udf_h {
 
 
 
-
+// min ip-length in order to accomodate full UDF extraction
+# 460 "headers.p4"
 //////////////////////////////////////////////////////////////
 // DTel
 //////////////////////////////////////////////////////////////
@@ -748,10 +751,18 @@ header dtel_report_v05_h {
 
 // DTel report base header
 header dtel_report_base_h {
+
+
+
     bit<7> pad0;
-    bit<9> ingress_port;
+
+    PortId_t ingress_port;
+
+
+
     bit<7> pad1;
-    bit<9> egress_port;
+
+    PortId_t egress_port;
 
 
 
@@ -789,23 +800,81 @@ header dtel_report_v10_h {
     bit<32> timestamp;
 }
 
+// Telemetry report header -- version 2.0
+// See https://github.com/p4lang/p4-applications/blob/master/docs/telemetry_report_v2_0.pdf
+header dtel_report_v20_h {
+    bit<4> version;
+    // Telemetry Report v2.0 hw_id is 6 bits, however due to p4 constraints,
+    // shrinking it to 4 bits
+    bit<4> hw_id;
+    // Telemetry Report v2.0 seq_number is 22 bits, however due to p4
+    // constraints, expanding it to 24 bits, always leaving the top 2 bits as 0
+    bit<24> seq_number;
+    bit<32> switch_id;
+    // Due to p4 constraints, need to treat the following as one field:
+    // bit<4> rep_type;
+    // bit<4> in_type;
+    // bit<16> report_length;
+    bit<16> report_length;
+    bit<8> md_length;
+    bit<3> d_q_f;
+    bit<5> reserved;
+    bit<16> rep_md_bits;
+    bit<16> domain_specific_id;
+    bit<16> ds_md_bits;
+    bit<16> ds_md_status;
+}
+
 // Optional metadata present in the telemetry report.
-struct dtel_report_metadata_0 {
-    bit<16> ingress_port;
-    bit<16> egress_port;
+header dtel_metadata_1_h {
+
+
+
+    bit<7> pad0;
+
+    PortId_t ingress_port;
+
+
+
+    bit<7> pad1;
+
+    PortId_t egress_port;
 }
 
-struct dtel_report_metadata_2 {
-    bit<8> queue_id;
-    bit<24> queue_occupancy;
+header dtel_metadata_2_h {
+    bit<32> hop_latency;
 }
 
-struct dtel_report_metadata_3 {
-    bit<32> timestamp;
+header dtel_metadata_3_h {
+
+
+
+
+    bit<1> pad2;
+    bit<7> queue_id;
+
+    bit<5> pad3;
+    bit<19> queue_occupancy;
 }
 
-struct dtel_report_metadata_4 {
-    bit<8> queue_id;
+header dtel_metadata_4_h {
+    bit<16> pad;
+    bit<48> ingress_timestamp;
+}
+
+header dtel_metadata_5_h {
+    bit<16> pad;
+    bit<48> egress_timestamp;
+}
+
+header dtel_report_metadata_15_h {
+
+
+
+
+    bit<1> pad;
+    bit<7> queue_id;
+
     bit<8> drop_reason;
     bit<16> reserved;
 }
@@ -874,7 +943,7 @@ header snoop_enet_cpu_h {
     mac_addr_t enet_dst_addr;
     mac_addr_t enet_src_addr;
     bit<16> enet_ether_type; // lookahead<bit<112>>()[15:0]
-# 601 "headers.p4"
+# 679 "headers.p4"
     bit<5> cpu_egress_queue;
     bit<1> cpu_tx_bypass;
     bit<1> cpu_capture_ts;
@@ -933,7 +1002,7 @@ header snoop_head_enet_vlan_ipv4_h {
     bit<8> ipv4_ttl;
     bit<8> ipv4_protocol; // lookahead<bit<224>>()[7:0]
 } // 14B + 4B + 10B = 28B
-# 44 "npb.p4" 2
+# 42 "npb.p4" 2
 # 1 "types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -982,9 +1051,15 @@ typedef bit<8> switch_uint8_t;
 
 
 typedef PortId_t switch_port_t; // defined in tna
-const switch_port_t SWITCH_PORT_INVALID = 9w0x1ff;
 
-typedef QueueId_t switch_qid_t; // defined in tna
+
+
+
+const switch_port_t SWITCH_PORT_INVALID = 9w0x1ff;
+typedef bit<7> switch_port_padding_t;
+
+
+typedef QueueId_t switch_qid_t; // defined in tna (t2 = 7 bits)
 
 typedef ReplicationId_t switch_rid_t; // defined in tna
 const switch_rid_t SWITCH_RID_DEFAULT = 0xffff;
@@ -1005,6 +1080,10 @@ typedef bit<12> switch_outer_nexthop_t;
 
 typedef bit<32> switch_hash_t;
 
+
+
+
+
 typedef bit<16> switch_xid_t;
 typedef bit<9> switch_yid_t;
 
@@ -1018,10 +1097,9 @@ const switch_cpu_reason_t SWITCH_CPU_REASON_PTP = 8;
 const switch_cpu_reason_t SWITCH_CPU_REASON_IG_PORT_MIRRROR = 254;
 const switch_cpu_reason_t SWITCH_CPU_REASON_EG_PORT_MIRRROR = 255;
 
-
 struct switch_cpu_port_value_set_t {
     bit<16> ether_type;
-    bit<9> port;
+    switch_port_t port;
 }
 
 //#define switch_drop_reason_width 8
@@ -1090,24 +1168,26 @@ const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_L2 = 8w0x01;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_ACL = 8w0x02;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_MCAST = 8w0x04;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFF = 8w0x08;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE = 8w0x10; // derek: used in common ingress and egress code...make sure they have the same value!
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE = 8w0x10;
 
 // Add more ingress bypass flags here.
 
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_ALL = 8w0xff;
 
+//#define INGRESS_BYPASS(t) (false)
 
 typedef bit<8> switch_egress_bypass_t;
 //const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE         = 8w0x01;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SF_ACL = 8w0x02;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SFF = 8w0x04;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE = 8w0x10; // derek: used in common ingress and egress code...make sure they have the same value!
+const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE = 8w0x10;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_MTU = 8w0x80;
 
 // Add more egress bypass flags here.
 
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_ALL = 8w0xff;
 
+//#define EGRESS_BYPASS(t) (false)
 
 // PKT ------------------------------------------------------------------------
 
@@ -1184,24 +1264,39 @@ struct switch_mirror_metadata_t {
     switch_mirror_meter_id_t meter_index;
 }
 
-header switch_port_mirror_metadata_h {
+header switch_port_mirror_metadata_h { // this is a header!
     switch_pkt_src_t src;
     switch_mirror_type_t type;
-//  bit<48> timestamp;
+    switch_port_padding_t _pad1; // 7  \ 16 total
+    switch_port_t port; // 9  /
+    switch_bd_t bd; // 16
+
+
+
+
+    bit<6> _pad2; // 6  \ 16 total
+    switch_port_lag_index_t port_lag_index; // 10 /
+
+    bit<32> timestamp;
 
 
 
     switch_mirror_session_t session_id;
 }
 
-header switch_cpu_mirror_metadata_h {
+header switch_cpu_mirror_metadata_h { // this is a header!
     switch_pkt_src_t src; // 8
     switch_mirror_type_t type; // 8
-    bit<7> _pad1; // 7  \ 16 total
+    switch_port_padding_t _pad1; // 7  \ 16 total
     switch_port_t port; // 9  /
     switch_bd_t bd; // 16
+
+
+
+
     bit<6> _pad2; // 6  \ 16 total
     switch_port_lag_index_t port_lag_index; // 10 /
+
     switch_cpu_reason_t reason_code; // 16
 }
 
@@ -1220,6 +1315,8 @@ const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GTPU = 6;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_ERSPAN = 7;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GRE = 8;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_VLAN = 9;
+const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_MPLS = 10;
+const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_UNSUPPORTED = 11;
 
 //#ifndef switch_tunnel_index_width
 //#define switch_tunnel_index_width 16
@@ -1233,25 +1330,26 @@ typedef bit<32> switch_tunnel_id_t;
 //	bool ipv6_isValid;
 //}
 
-struct switch_tunnel_metadata_t {
+struct switch_tunnel_metadata_t { // for transport
  // note: in addition to tunnel stuff, this structure serves as a catch-all for all non-scoped signals (tunnel related or not)
  // --------------------------------
-    switch_tunnel_type_t type;
-    switch_tunnel_id_t id;
-
     switch_tunnel_index_t index;
- bit<8> nvgre_flow_id;
+    switch_tunnel_id_t id;
 //  switch_ifindex_t ifindex;
 //  bit<16> hash;
+
+    switch_tunnel_type_t type; // only used by egress encap code (parser does not set)
+
+ bit<8> nvgre_flow_id;
 
  bool terminate;
  bool encap;
 }
 
-struct switch_tunnel_metadata_reduced_t {
+struct switch_tunnel_metadata_reduced_t { // for outer and inner
  // note: in addition to tunnel stuff, this structure serves as a catch-all for all non-scoped signals (tunnel related or not)
  // --------------------------------
- switch_tunnel_type_t type;
+//	switch_tunnel_type_t type; // not used (parser does not set)
 
  bit<8> nvgre_flow_id;
  bool terminate;
@@ -1278,6 +1376,21 @@ const switch_dtel_report_type_t SWITCH_DTEL_REPORT_TYPE_ETRAP_HIT = 0b10000000;
 
 typedef bit<8> switch_ifa_sample_id_t;
 
+
+
+
+
+
+typedef bit<6> switch_dtel_hw_id_t;
+
+// Outer header sizes for DTEL Reports
+/* Up to the beginning of the DTEL Report v0.5 header
+ * 14 (Eth) + 20 (IPv4) + 8 (UDP) + 4 (CRC) = 46 bytes */
+const bit<16> DTEL_REPORT_V0_5_OUTER_HEADERS_LENGTH = 46;
+/* Outer headers + part of DTEL Report v2 length not included in report_length
+ * 14 (Eth) + 20 (IPv4) + 8 (UDP) + 12 (DTEL) + 4 (CRC) = 58 bytes */
+const bit<16> DTEL_REPORT_V2_OUTER_HEADERS_LENGTH = 58;
+
 struct switch_dtel_metadata_t {
     switch_dtel_report_type_t report_type;
     bit<1> ifa_gen_clone; // Ingress only, indicates desire to clone this packet
@@ -1301,10 +1414,10 @@ header switch_dtel_switch_local_mirror_metadata_h {
     switch_mirror_session_t session_id;
     bit<32> hash;
     switch_dtel_report_type_t report_type;
-    bit<7> _pad2;
-    bit<9> ingress_port;
-    bit<7> _pad3;
-    bit<9> egress_port;
+    switch_port_padding_t _pad2;
+    switch_port_t ingress_port;
+    switch_port_padding_t _pad3;
+    switch_port_t egress_port;
 
 
 
@@ -1313,7 +1426,11 @@ header switch_dtel_switch_local_mirror_metadata_h {
     switch_qid_t qid;
     bit<5> _pad5;
     bit<19> qdepth;
+
+
+
     bit<32> egress_timestamp;
+
 }
 
 header switch_dtel_drop_mirror_metadata_h {
@@ -1326,10 +1443,10 @@ header switch_dtel_drop_mirror_metadata_h {
     switch_mirror_session_t session_id;
     bit<32> hash;
     switch_dtel_report_type_t report_type;
-    bit<7> _pad2;
-    bit<9> ingress_port;
-    bit<7> _pad3;
-    bit<9> egress_port;
+    switch_port_padding_t _pad2;
+    switch_port_t ingress_port;
+    switch_port_padding_t _pad3;
+    switch_port_t egress_port;
 
 
 
@@ -1354,7 +1471,7 @@ struct switch_bridged_metadata_dtel_extension_t {
     switch_dtel_report_type_t report_type;
     switch_mirror_session_t session_id;
     bit<32> hash;
-    bit<9> egress_port;
+    switch_port_t egress_port;
 }
 
 //-----------------------------------------------------------------------------
@@ -1373,14 +1490,17 @@ struct nsh_metadata_t {
     bit<12> sfc; // ingress only (for sfp sel)
  bit<16> hash_1; // ingress only (for sfp sel)
     bool l2_fwd_en; // ingress only
+ bit<32> hash_2; // ingress only (for dedup)
+ bit<6> lag_hash_mask_en; // ingress only
 
-    bit<10> dsap; // egress only (for egress sf)
-    bool strip_e_tag; // egress only
-    bool strip_vn_tag; // egress only
-    bool strip_vlan_tag; // egress only
-    bit<8> add_vlan_tag_bd; // egress only
+    bit<16> dsap; // egress only (for egress sf)
+    bool strip_tag_e; // egress only
+    bool strip_tag_vn; // egress only
+    bool strip_tag_vlan; // egress only
+    bit<8> add_tag_vlan_bd; // egress only
     bool terminate_outer; // egress only
     bool terminate_inner; // egress only
+    bool dedup_en; // egress only
 }
 
 // ** Note: tenant id definition, from draft-wang-sfc-nsh-ns-allocation-00:
@@ -1403,17 +1523,19 @@ struct switch_ingress_flags_t {
     bool ipv4_checksum_err_1;
     bool ipv4_checksum_err_2;
     //  bool acl_deny;
-    bool port_vlan_miss;
+//  bool port_vlan_miss;
     bool rmac_hit;
- bool dmac_miss;
-    //  bool glean;
+//	bool dmac_miss;
+//  bool glean;
+ bool bypass_egress;
     // Add more flags here.
 }
 
 struct switch_egress_flags_t {
-    bool ipv4_checksum_err_0;
-    bool ipv4_checksum_err_1;
-    bool ipv4_checksum_err_2;
+ bool bypass_egress;
+//  bool ipv4_checksum_err_0;
+//  bool ipv4_checksum_err_1;
+//  bool ipv4_checksum_err_2;
 //  bool acl_deny;
     bool rmac_hit;
     // Add more flags here.
@@ -1434,7 +1556,7 @@ struct switch_lookup_fields_t {
     mac_addr_t mac_dst_addr;
     bit<16> mac_type;
     bit<3> pcp;
- bit<2> pad; // to keep everything byte-aligned, so that the parser can extract to this struct.
+ bit<1> pad; // to keep everything byte-aligned, so that the parser can extract to this struct.
  vlan_id_t vid;
 
  // l3
@@ -1466,6 +1588,8 @@ struct switch_lookup_fields_t {
     switch_tunnel_type_t tunnel_outer_type; // egress only
     switch_tunnel_type_t tunnel_inner_type; // egress only
 
+ // misc
+ bool next_lyr_valid;
     switch_drop_reason_t drop_reason;
 }
 
@@ -1478,31 +1602,28 @@ struct switch_lookup_fields_t {
 struct switch_bridged_metadata_t {
     // user-defined metadata carried over from ingress to egress.
     switch_port_t ingress_port;
+
+
+
     switch_port_lag_index_t ingress_port_lag_index;
+
     switch_bd_t ingress_bd;
     switch_nexthop_t nexthop;
 //  switch_pkt_type_t pkt_type;
  switch_cpu_reason_t cpu_reason;
 //  bit<48> timestamp;
  bool rmac_hit;
+ bool bypass_egress;
 
     // Add more fields here.
+}
 
-    // ---------------
-    // nsh meta data
-    // ---------------
-    bool nsh_md_start_of_path;
-    bool nsh_md_end_of_path;
-    bool nsh_md_l2_fwd_en;
-//  bool                            nsh_md_sf1_active;
+// ----------------------------------------
 
-    // ---------------
-    // dedup stuff
-    // ---------------
-
-
-
-
+@flexible
+struct switch_bridged_metadata_acl_extension_t {
+# 683 "types.p4"
+    bit<8> tcp_flags;
 
 }
 
@@ -1515,13 +1636,37 @@ struct switch_bridged_metadata_tunnel_extension_t {
 //  bit<16> hash;
 
 //  bool terminate;
-    bool terminate_0; // unused, but removing causes a compiler error
+//  bool terminate_0; // unused, but removing causes a compiler error
 //  bool terminate_1;
 //  bool terminate_2;
 }
 
 // ----------------------------------------
-# 657 "types.p4"
+
+@flexible
+struct switch_bridged_metadata_nsh_extension_t {
+    // ---------------
+    // nsh meta data
+    // ---------------
+    bool nsh_md_start_of_path;
+    bool nsh_md_end_of_path;
+    bool nsh_md_l2_fwd_en;
+//  bool                            nsh_md_sf1_active;
+
+ bool nsh_md_dedup_en;
+
+    // ---------------
+    // dedup stuff
+    // ---------------
+
+
+
+
+
+}
+
+// ----------------------------------------
+# 749 "types.p4"
 // ----------------------------------------
 
 typedef bit<8> switch_bridge_type_t;
@@ -1530,6 +1675,7 @@ header switch_bridged_metadata_h {
     switch_pkt_src_t src;
     switch_bridge_type_t type;
     switch_bridged_metadata_t base;
+ switch_bridged_metadata_nsh_extension_t nsh;
 
 
 
@@ -1565,6 +1711,8 @@ struct switch_port_metadata_t {
 
 }
 
+@pa_auto_init_metadata
+
 // --------------------------------------------------------------------------------
 // Ingress Metadata
 // --------------------------------------------------------------------------------
@@ -1579,7 +1727,7 @@ struct switch_port_metadata_t {
 //@pa_alias("ingress", "ig_md.qos.qid", "ig_intr_md_for_tm.qid")
 //@pa_alias("ingress", "ig_md.qos.icos", "ig_intr_md_for_tm.ingress_cos")
 
-
+@pa_alias("ingress", "ig_intr_md_for_dprsr.mirror_type", "ig_md.mirror.type")
 
 
 struct switch_ingress_metadata_t {
@@ -1587,7 +1735,6 @@ struct switch_ingress_metadata_t {
     switch_port_t egress_port; /* egress  port */
     switch_port_lag_index_t port_lag_index; /* ingress port/lag index */
     switch_port_lag_index_t egress_port_lag_index; /* egress  port/lag index */ /* derek: passed to egress */
-    bit<4> egress_port_lag_hash_sel; /* egress  port/lag hash_sel */
     switch_bd_t bd;
     switch_nexthop_t nexthop; /* derek: egress table pointer #1 */
     switch_outer_nexthop_t outer_nexthop; /* derek: egress table pointer #2 */
@@ -1595,7 +1742,7 @@ struct switch_ingress_metadata_t {
 //  bool acl_redirect;
  switch_nexthop_t unused_nexthop;
 
-//  bit<48> timestamp;
+    bit<48> timestamp;
     bit<32> hash;
 //  bit<32> hash_nsh;
 
@@ -1605,9 +1752,9 @@ struct switch_ingress_metadata_t {
 
  switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason;
-    switch_drop_reason_t drop_reason_0;
-    switch_drop_reason_t drop_reason_1;
-    switch_drop_reason_t drop_reason_2;
+//  switch_drop_reason_t drop_reason_0;
+//  switch_drop_reason_t drop_reason_1;
+//  switch_drop_reason_t drop_reason_2;
 
     switch_lookup_fields_t lkp_0;
     switch_lookup_fields_t lkp_1; // initially non-scoped, later scoped, version of fields
@@ -1625,12 +1772,8 @@ struct switch_ingress_metadata_t {
 
     nsh_metadata_t nsh_md;
 
-//#ifdef UDF_ENABLE
-//    bit<1>                  parse_udf_reached;
-//#endif
-
- bool copp_enable;
- switch_copp_meter_id_t copp_meter_id;
+//	bool copp_enable;
+//	switch_copp_meter_id_t copp_meter_id;
 
 //	switch_header_inner_inner_t inner_inner;
 }
@@ -1653,12 +1796,19 @@ struct switch_egress_metadata_t {
 
     switch_port_lag_index_t port_lag_index; /* egress port/lag index */
     switch_port_t port; /* Mutable copy of egress port */
+
+
+
     switch_port_t ingress_port; /* ingress port */
     switch_bd_t bd;
     switch_nexthop_t nexthop;
     switch_outer_nexthop_t outer_nexthop;
 
-//  bit<32> timestamp;
+
+
+
+    bit<32> timestamp;
+
 //  bit<48> ingress_timestamp;
 
     switch_egress_flags_t flags;
@@ -1667,9 +1817,9 @@ struct switch_egress_metadata_t {
 
  switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason;
-    switch_drop_reason_t drop_reason_0;
-    switch_drop_reason_t drop_reason_1;
-    switch_drop_reason_t drop_reason_2;
+//  switch_drop_reason_t drop_reason_0;
+//  switch_drop_reason_t drop_reason_1;
+//  switch_drop_reason_t drop_reason_2;
 
     switch_lookup_fields_t lkp_1; //     scoped version of fields
 //  switch_tunnel_type_t   lkp_1_tunnel_outer_type;
@@ -1683,13 +1833,13 @@ struct switch_egress_metadata_t {
 
     nsh_metadata_t nsh_md;
 
- bool copp_enable;
- switch_copp_meter_id_t copp_meter_id;
+//	bool copp_enable;
+//	switch_copp_meter_id_t copp_meter_id;
 
-//  bit<6>                                              action_bitmask;
-//  bit<NPB_EGR_SF_EGRESS_SFP_ACT_SEL_TABLE_DEPTH_POW2> action_3_meter_id;
-//  bit<10>                                             action_3_meter_id;
-//  bit<8>                                              action_3_meter_overhead;
+//  bit<6>                                          action_bitmask;
+//  bit<NPB_EGR_SF_EGRESS_SFP_SFF_TABLE_DEPTH_POW2> action_3_meter_id;
+//  bit<10>                                         action_3_meter_id;
+//  bit<8>                                          action_3_meter_overhead;
 
 //	switch_header_inner_inner_t inner_inner;
 }
@@ -1769,12 +1919,12 @@ struct switch_header_outer_t {
 
     gtp_v1_base_h gtp_v1_base;
     gtp_v1_optional_h gtp_v1_optional;
-
-
+# 1012 "types.p4"
     dtel_report_v05_h dtel;
     dtel_report_base_h dtel_report;
     dtel_switch_local_report_h dtel_switch_local_report;
     dtel_drop_report_h dtel_drop_report;
+
 }
 
 // -----------------------------------------------------------------------------
@@ -1795,6 +1945,7 @@ struct switch_header_inner_t {
 
 
     gre_h gre;
+    gre_optional_h gre_optional;
 
 
 
@@ -1856,7 +2007,7 @@ struct switch_header_t {
     udf_h udf;
 
 }
-# 45 "npb.p4" 2
+# 43 "npb.p4" 2
 # 1 "util.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -1908,40 +2059,23 @@ struct switch_header_t {
 
 control HashMask(
  inout switch_lookup_fields_t lkp_1,
- in bit<4> lkp_1_hash_sel
+ inout bit<6> lkp_1_hash_mask_en
 ) {
- bit<9> lkp_1_hash_sel_bitmask_ = 0x1ff;
-
- // -----------------------------------------
-
- action hash_sel_hit(
-  bit<9> lkp_1_hash_sel_bitmask
- ) {
-  lkp_1_hash_sel_bitmask_ = lkp_1_hash_sel_bitmask;
- }
-
- table hash_sel {
-  key = {
-   lkp_1_hash_sel : exact;
-  }
-
-  actions = {
-   NoAction;
-   hash_sel_hit;
-  }
-
-  const default_action = NoAction;
-  size = 16;
- }
 
  // -----------------------------------------
 
  apply {
-  // convert select to bitmask
-  hash_sel.apply();
 
-  // mask
-# 73 "util.p4"
+//		if(lkp_1_hash_mask_en[0:0] == 1) { lkp_1.mac_type     = 0; }
+//		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_src_addr = 0; }
+//		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_dst_addr = 0; }
+  if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_src_addr = 0; }
+  if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_dst_addr = 0; }
+  if(lkp_1_hash_mask_en[3:3] == 1) { lkp_1.ip_proto = 0; }
+  if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_src_port = 0; }
+  if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_dst_port = 0; }
+  if(lkp_1_hash_mask_en[5:5] == 1) { lkp_1.tunnel_id = 0; }
+
  }
 }
 
@@ -1965,7 +2099,7 @@ control Ipv4Hash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
    lkp.ip_proto,
    lkp.l4_dst_port,
    lkp.l4_src_port,
-   lkp.tunnel_id
+   lkp.tunnel_id // extreme added
   });
  }
 }
@@ -1983,7 +2117,7 @@ control Ipv6Hash(in switch_lookup_fields_t lkp, out switch_hash_t hash) {
    lkp.ip_proto,
    lkp.l4_dst_port,
    lkp.l4_src_port,
-   lkp.tunnel_id
+   lkp.tunnel_id // extreme added
   });
  }
 }
@@ -2013,33 +2147,40 @@ action add_bridged_md(
  bridged_md.src = SWITCH_PKT_SRC_BRIDGED;
  bridged_md.base = {
   ig_md.port,
+
+
+
   ig_md.port_lag_index,
+
   ig_md.bd,
   ig_md.nexthop,
 //		ig_md.lkp.pkt_type,
   ig_md.cpu_reason,
 //		ig_md.timestamp,
   ig_md.flags.rmac_hit,
+  ig_md.flags.bypass_egress
+ };
 
+ bridged_md.nsh = {
   // nsh metadata
   ig_md.nsh_md.start_of_path,
   ig_md.nsh_md.end_of_path,
-  ig_md.nsh_md.l2_fwd_en
-//		ig_md.nsh_md.sf1_active
+  ig_md.nsh_md.l2_fwd_en,
+//		ig_md.nsh_md.sf1_active,
+  ig_md.nsh_md.dedup_en
  };
 
 
  bridged_md.tunnel = {
   ig_md.tunnel_0.index,
-  ig_md.outer_nexthop,
+  ig_md.outer_nexthop
 //		ig_md.hash[15:0],
 
-  ig_md.tunnel_0.terminate // unused, but removing causes a compiler error
+//		ig_md.tunnel_0.terminate // unused, but removing causes a compiler error
 //		ig_md.tunnel_1.terminate,
 //		ig_md.tunnel_2.terminate
  };
-
-
+# 160 "util.p4"
 }
 
 // -----------------------------------------------------------------------------
@@ -2049,7 +2190,9 @@ action set_ig_intr_md(
  inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
 ) {
+ ig_intr_md_for_tm.mcast_grp_b = ig_md.multicast.id;
 
+ // Set PRE hash values
  bit<13> hash;
 
 
@@ -2057,11 +2200,14 @@ action set_ig_intr_md(
  hash = ig_md.hash[32/2+12:32/2]; // cap  at 13 bits
 
 
- // Set PRE hash values
-//  ig_intr_md_for_tm.level1_mcast_hash = ig_md.hash[12:0];
+//	ig_intr_md_for_tm.level1_mcast_hash = ig_md.hash[12:0];
 //	ig_intr_md_for_tm.level2_mcast_hash = ig_md.hash[28:16];
  ig_intr_md_for_tm.level2_mcast_hash = hash;
- ig_intr_md_for_tm.mcast_grp_b = ig_md.multicast.id;
+
+//	ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
+
+
+
 }
 
 // -----------------------------------------------------------------------------
@@ -2080,7 +2226,7 @@ action set_eg_intr_md(
 
 
 }
-# 46 "npb.p4" 2
+# 44 "npb.p4" 2
 
 # 1 "l3.p4" 1
 /*******************************************************************************
@@ -2163,7 +2309,6 @@ action set_eg_intr_md(
 
 control Scoper(
   in switch_lookup_fields_t lkp_in,
-  in switch_drop_reason_t drop_reason,
 
   inout switch_lookup_fields_t lkp
 ) {
@@ -2189,8 +2334,8 @@ control Scoper(
   lkp.ip_src_addr = lkp_in.ip_src_addr;
   lkp.ip_dst_addr = lkp_in.ip_dst_addr;
   // Comment the two below as they are alias fields and do not need to be written again.
-  //lkp.ip_src_addr_v4   = lkp_in.ip_src_addr_v4;
-  //lkp.ip_dst_addr_v4   = lkp_in.ip_dst_addr_v4;
+  //lkp.ip_src_addr_v4    = lkp_in.ip_src_addr_v4;
+  //lkp.ip_dst_addr_v4    = lkp_in.ip_dst_addr_v4;
   lkp.ip_len = lkp_in.ip_len;
 
   // l4
@@ -2201,10 +2346,15 @@ control Scoper(
   // tunnel
   lkp.tunnel_type = lkp_in.tunnel_type;
   lkp.tunnel_id = lkp_in.tunnel_id;
-  lkp.tunnel_outer_type = lkp_in.tunnel_outer_type;
-  lkp.tunnel_inner_type = lkp_in.tunnel_inner_type;
 
-  lkp.drop_reason = lkp_in.drop_reason;
+
+  // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
+  lkp.tunnel_outer_type = lkp_in.tunnel_outer_type; // egress only
+  lkp.tunnel_inner_type = lkp_in.tunnel_inner_type; // egress only
+
+
+  // misc
+  lkp.next_lyr_valid = lkp_in.next_lyr_valid;
 
  }
 }
@@ -2318,7 +2468,7 @@ control ScoperOuter(
    (true, false, false, true, true ): scope_l2_2tags();
    (true, true, false, true, true ): scope_l2_2tags();
    (true, false, true, true, true ): scope_l2_2tags();
-# 225 "scoper.p4"
+# 229 "scoper.p4"
         }
  }
 
@@ -2478,7 +2628,7 @@ control ScoperOuter(
    (false, true, false, true, false): scope_l3_v6_l4_udp();
    (true, false, false, false, true ): scope_l3_v4_l4_sctp();
    (false, true, false, false, true ): scope_l3_v6_l4_sctp();
-# 392 "scoper.p4"
+# 396 "scoper.p4"
   }
  }
 
@@ -3027,7 +3177,7 @@ control ScoperInner(
 
    (true, false, false, true, false, false, true ): scope_l2_0tag_l3_v6_l4_sctp();
    (true, true, false, true, false, false, true ): scope_l2_1tag_l3_v6_l4_sctp();
-# 958 "scoper.p4"
+# 962 "scoper.p4"
   }
  }
 
@@ -3144,23 +3294,160 @@ control Scoper_l7(
 }
 */
 # 27 "acl.p4" 2
+# 1 "copp.p4" 1
+
+
+
+// -----------------------------------------------------------------------------
+// Ingress COPP
+// -----------------------------------------------------------------------------
+
+control IngressCopp (
+ in switch_copp_meter_id_t copp_meter_id,
+
+ inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+) (
+) {
+
+
+
+ //-------------------------------------------------------------
+
+ Meter<bit<8>>(1 << 8, MeterType_t.PACKETS) copp_meter;
+
+ action meter_index(switch_copp_meter_id_t index) {
+  ig_intr_md_for_tm.packet_color = (bit<2>) copp_meter.execute(index);
+ }
+
+ //-------------------------------------------------------------
+
+ DirectCounter<bit<32>>(CounterType_t.PACKETS) copp_stats;
+
+ action copp_drop() {
+  ig_intr_md_for_tm.copy_to_cpu = 1w0;
+  copp_stats.count();
+ }
+
+ action copp_permit() {
+  copp_stats.count();
+ }
+
+ table copp {
+  key = {
+   ig_intr_md_for_tm.packet_color : ternary;
+   copp_meter_id : ternary @name("copp_meter_id");
+  }
+
+  actions = {
+   copp_permit;
+   copp_drop;
+  }
+
+  const default_action = copp_permit;
+  size = (1 << 8 + 1);
+  counters = copp_stats;
+ }
+
+
+
+ //-------------------------------------------------------------
+
+ apply {
+
+
+  // apply the meter, then process the result
+  meter_index(copp_meter_id);
+  copp.apply();
+
+
+ }
+
+}
+
+// -----------------------------------------------------------------------------
+// Egress COPP
+// -----------------------------------------------------------------------------
+
+control EgressCopp (
+ in switch_copp_meter_id_t copp_meter_id,
+
+ inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr
+) (
+) {
+
+
+
+ switch_pkt_color_t copp_color;
+
+ //-------------------------------------------------------------
+
+ Meter<bit<8>>(1 << 8, MeterType_t.PACKETS) copp_meter;
+
+ action meter_index(switch_copp_meter_id_t index) {
+  copp_color = (bit<2>) copp_meter.execute(index);
+ }
+
+ //-------------------------------------------------------------
+
+ DirectCounter<bit<32>>(CounterType_t.PACKETS) copp_stats;
+
+ action copp_drop() {
+  eg_intr_md_for_dprsr.mirror_type = 0;
+  copp_stats.count();
+ }
+
+ action copp_permit() {
+  copp_stats.count();
+ }
+
+ table copp {
+  key = {
+   copp_color : exact;
+   copp_meter_id : exact;
+  }
+
+  actions = {
+   copp_permit;
+   copp_drop;
+  }
+
+  const default_action = copp_permit;
+  size = (1 << 8 + 1);
+  counters = copp_stats;
+ }
+
+
+
+ //-------------------------------------------------------------
+
+ apply {
+
+
+  // apply the meter, then process the result
+  meter_index(copp_meter_id);
+  copp.apply();
+
+
+ }
+}
+# 28 "acl.p4" 2
 
 //-----------------------------------------------------------------------------
 // Common Ingress ACL match keys and Actions
 //-----------------------------------------------------------------------------
-# 107 "acl.p4"
+# 108 "acl.p4"
 //-----------------------------------------------------------------------------
 // Common Egress ACL match keys and Actions
 //-----------------------------------------------------------------------------
-# 175 "acl.p4"
+# 176 "acl.p4"
 //-----------------------------------------------------------------------------
 // Common Ingress ACL actions.
 //-----------------------------------------------------------------------------
-# 222 "acl.p4"
+# 233 "acl.p4"
 //-----------------------------------------------------------------------------
 // Common Egress ACL actions.
 //-----------------------------------------------------------------------------
-# 274 "acl.p4"
+# 289 "acl.p4"
 // ============================================================================
 // ============================================================================
 // Ingress ACL ================================================================
@@ -3193,13 +3480,16 @@ control IngressMacAcl(
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
  inout switch_copp_meter_id_t copp_meter_id_,
- inout bit<8> flow_class_
+ inout bit<8> flow_class_,
+ inout bool dtel_report_type_enable_,
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action NoAction_() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3215,17 +3505,14 @@ control IngressMacAcl(
 
    lkp.vid : ternary;
 
-   // -------------------------------------------
-//			hdr_1.e_tag.isValid()                  : ternary @name("hdr.e_tag.$valid");
-//			hdr_1.vn_tag.isValid()                 : ternary @name("hdr.vn_tag.$valid");
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -3260,13 +3547,16 @@ control IngressIpAcl(
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
  inout switch_copp_meter_id_t copp_meter_id_,
- inout bit<8> flow_class_
+ inout bit<8> flow_class_,
+ inout bool dtel_report_type_enable_,
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action NoAction_() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3319,11 +3609,11 @@ control IngressIpAcl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -3358,13 +3648,16 @@ control IngressIpv4Acl(
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
  inout switch_copp_meter_id_t copp_meter_id_,
- inout bit<8> flow_class_
+ inout bit<8> flow_class_,
+ inout bool dtel_report_type_enable_,
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action NoAction_() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3419,10 +3712,10 @@ control IngressIpv4Acl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -3459,13 +3752,16 @@ control IngressIpv6Acl(
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
  inout switch_copp_meter_id_t copp_meter_id_,
- inout bit<8> flow_class_
+ inout bit<8> flow_class_,
+ inout bool dtel_report_type_enable_,
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action NoAction_() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3520,11 +3816,11 @@ control IngressIpv6Acl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -3562,17 +3858,20 @@ control IngressL7Acl(
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
  inout switch_copp_meter_id_t copp_meter_id_,
- inout bit<8> flow_class_
+ inout bit<8> flow_class_,
+ inout bool dtel_report_type_enable_,
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action NoAction_() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
-   hdr_udf.opaque : ternary;
+  
 
    // extreme added
 
@@ -3585,11 +3884,11 @@ control IngressL7Acl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -3649,8 +3948,13 @@ control IngressAcl(
 
  IngressMacAcl(mac_table_size) mac_acl;
 
- IngressL7Acl(l7_table_size) l7_acl;
 
+
+
+//	Counter<bit<32>, PortId_t>(512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+ Counter<bit<32>, bit<15>>(32768, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 
  switch_nexthop_t nexthop;
  bool drop;
@@ -3659,8 +3963,11 @@ control IngressAcl(
  switch_cpu_reason_t cpu_reason;
  bool copy_to_cpu;
  bool redirect_to_cpu;
+ bool dtel_report_type_enable;
  switch_copp_meter_id_t copp_meter_id;
  bit<8> flow_class;
+ switch_dtel_report_type_t dtel_report_type;
+ bit<6> indirect_counter_index;
 
  // -------------------------------------
  // Table: Scope Increment
@@ -3705,11 +4012,13 @@ control IngressAcl(
   scope = false;
   copy_to_cpu = false;
   redirect_to_cpu = false;
+  dtel_report_type_enable = false;
   cpu_reason = 0;
-//		copp_meter_id = 0; // TODO: this may be data and therefore not need to be initialized
+//		copp_meter_id                = 0; // TODO: this may be data and therefore not need to be initialized
   flow_class = 0;
 
   ig_md.nsh_md.truncate_enable = false;
+  ig_md.nsh_md.dedup_en = false;
   ig_md.nsh_md.sfc_enable = false;
 
   // --------------
@@ -3736,11 +4045,13 @@ control IngressAcl(
    drop,
    terminate,
    scope,
-   copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class
+   copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+   dtel_report_type_enable, dtel_report_type,
+   indirect_counter_index
   );
 
   // ----- l3/4 -----
-# 873 "acl.p4"
+# 914 "acl.p4"
   if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
 
    ipv6_acl.apply(
@@ -3757,7 +4068,9 @@ control IngressAcl(
     drop,
     terminate,
     scope,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class
+    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+    dtel_report_type_enable, dtel_report_type,
+    indirect_counter_index
    );
 
   } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
@@ -3775,34 +4088,15 @@ control IngressAcl(
     drop,
     terminate,
     scope,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class
+    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+    dtel_report_type_enable, dtel_report_type,
+    indirect_counter_index
    );
   }
 
 
   // ----- l7 -----
-
-  if (hdr_udf.isValid()) {
-   l7_acl.apply(
-    lkp,
-    hdr_0,
-    hdr_udf,
-    ig_md,
-    ig_intr_md_for_dprsr,
-    ip_len, ip_len_is_rng_bitmask,
-    l4_src_port, l4_src_port_is_rng_bitmask,
-    l4_dst_port, l4_dst_port_is_rng_bitmask,
-    int_ctrl_flags,
-    // ----- results -----
-    nexthop,
-    drop,
-    terminate,
-    scope,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class
-   );
-  }
-
-
+# 982 "acl.p4"
   // --------------
   // results
   // --------------
@@ -3815,45 +4109,48 @@ control IngressAcl(
 
   // note: terminate + !scope is an illegal condition
 
-  // ----- terminate -----
+  if(lkp.next_lyr_valid == true) {
 
-  if(terminate == true) {
-   ig_md.tunnel_1.terminate = true;
-   if(hdr_0.nsh_type1.scope == 1) {
-    ig_md.tunnel_2.terminate = true;
-   }
-  }
+   // ----- terminate -----
 
-  // ----- scope -----
-
-
-  if(scope == true) {
-   if(hdr_0.nsh_type1.scope == 0) {
-
-    // note: need to change scope here so that the lag
-    // hash gets the new values....
-
-
-    Scoper.apply(
-     ig_md.lkp_2,
-     ig_md.drop_reason_2,
-
-     ig_md.lkp_1
-    );
-# 982 "acl.p4"
-//				ig_md.nsh_md.hash_1 = ig_md.nsh_md.hash_2;
+   if(terminate == true) {
+    ig_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     ig_md.tunnel_2.terminate = true;
+    }
    }
 
-   hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
-//			scope_inc.apply();
-  }
+   // ----- scope -----
 
+
+   if(scope == true) {
+    if(hdr_0.nsh_type1.scope == 0) {
+
+     // note: need to change scope here so that the lag
+     // hash gets the new values....
+
+
+     Scoper.apply(
+      ig_md.lkp_2,
+//						ig_md.drop_reason_2,
+
+      ig_md.lkp_1
+     );
+# 1031 "acl.p4"
+//					ig_md.nsh_md.hash_1 = ig_md.nsh_md.hash_2;
+    }
+
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+//				scope_inc.apply();
+   }
+
+  }
 
   // ----- truncate -----
 
   if(ig_md.nsh_md.truncate_enable) {
 
-   ig_intr_md_for_dprsr.mtu_trunc_len = ig_md.nsh_md.truncate_len + 45;
+   ig_intr_md_for_dprsr.mtu_trunc_len = ig_md.nsh_md.truncate_len + 43;
 
   }
 
@@ -3866,9 +4163,11 @@ control IngressAcl(
    copy_to_cpu_process_results(cpu_reason, copp_meter_id);
   }
 
-  ig_md.copp_enable = copy_to_cpu;
-  ig_md.copp_meter_id = copp_meter_id;
-
+  if((copy_to_cpu == true) || (redirect_to_cpu == true)) {
+   IngressCopp.apply(copp_meter_id, ig_intr_md_for_tm);
+  }
+# 1069 "acl.p4"
+  indirect_counter.count(ig_md.port ++ indirect_counter_index);
  }
 }
 
@@ -3900,13 +4199,14 @@ control EgressMacAcl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action NoAction_() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_e_tag = strip_tag_e; eg_md.nsh_md.strip_vn_tag = strip_tag_vn; eg_md.nsh_md.strip_vlan_tag = strip_tag_vlan; eg_md.nsh_md.add_vlan_tag_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3929,17 +4229,14 @@ control EgressMacAcl(
 //			eg_md.tunnel_1.type                    : ternary @name("tunnel_outer_type");
 //			eg_md.tunnel_2.type                    : ternary @name("tunnel_inner_type");
 
-   // -------------------------------------------
-//			hdr_1.e_tag.isValid()                  : ternary @name("hdr.e_tag.$valid");
-//			hdr_1.vn_tag.isValid()                 : ternary @name("hdr.vn_tag.$valid");
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -3970,13 +4267,14 @@ control EgressIpAcl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 )(
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action NoAction_() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_e_tag = strip_tag_e; eg_md.nsh_md.strip_vn_tag = strip_tag_vn; eg_md.nsh_md.strip_vlan_tag = strip_tag_vlan; eg_md.nsh_md.add_vlan_tag_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4036,11 +4334,11 @@ control EgressIpAcl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -4070,13 +4368,14 @@ control EgressIpv4Acl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action NoAction_() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_e_tag = strip_tag_e; eg_md.nsh_md.strip_vn_tag = strip_tag_vn; eg_md.nsh_md.strip_vlan_tag = strip_tag_vlan; eg_md.nsh_md.add_vlan_tag_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4138,11 +4437,11 @@ control EgressIpv4Acl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -4175,13 +4474,14 @@ control EgressIpv6Acl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 )(
  switch_uint32_t table_size=512
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action NoAction_() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_e_tag = strip_tag_e; eg_md.nsh_md.strip_vn_tag = strip_tag_vn; eg_md.nsh_md.strip_vlan_tag = strip_tag_vlan; eg_md.nsh_md.add_vlan_tag_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4243,11 +4543,11 @@ control EgressIpv6Acl(
   }
 
   actions = {
-   NoAction_;
+   no_action;
    hit();
   }
 
-  const default_action = NoAction_;
+  const default_action = no_action;
   counters = stats;
   size = table_size;
  }
@@ -4296,12 +4596,18 @@ control EgressAcl(
 
  EgressMacAcl(mac_table_size) egress_mac_acl;
 
+//	Counter<bit<32>, PortId_t>(512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+ Counter<bit<32>, bit<15>>(32768, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+
  bool drop;
  bool terminate;
  bool copy_to_cpu;
  bool redirect_to_cpu;
  switch_cpu_reason_t cpu_reason;
  switch_copp_meter_id_t copp_meter_id;
+ bit<6> indirect_counter_index;
 
  // -------------------------------------
  // Table: Terminate
@@ -4371,7 +4677,15 @@ control EgressAcl(
  // -------------------------------------
  // Table: COPP
  // -------------------------------------
-# 1521 "acl.p4"
+
+ action copy_to_cpu_process_results(in switch_cpu_reason_t cpu_reason_, in switch_copp_meter_id_t copp_meter_id_) {
+  eg_md.cpu_reason = cpu_reason_;
+  eg_intr_md_for_dprsr.mirror_type = 2;
+  eg_md.mirror.type = 2;
+  eg_md.mirror.session_id = SWITCH_MIRROR_SESSION_CPU;
+  eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS;
+ }
+
  // -------------------------------------
  // Apply
  // -------------------------------------
@@ -4382,13 +4696,14 @@ control EgressAcl(
   copy_to_cpu = false;
   redirect_to_cpu = false;
   cpu_reason = 0;
-//		copp_meter_id = 0; // TODO: this may be data and therefore not need to be initialized
+//		copp_meter_id                = 0; // TODO: this may be data and therefore not need to be initialized
 
-  eg_md.nsh_md.strip_e_tag = false;
-  eg_md.nsh_md.strip_vn_tag = false;
-  eg_md.nsh_md.strip_vlan_tag = false;
-  eg_md.nsh_md.add_vlan_tag_bd = 0;
+  eg_md.nsh_md.strip_tag_e = false;
+  eg_md.nsh_md.strip_tag_vn = false;
+  eg_md.nsh_md.strip_tag_vlan = false;
+  eg_md.nsh_md.add_tag_vlan_bd = 0;
   eg_md.nsh_md.truncate_enable = false;
+  eg_md.nsh_md.dedup_en = false;
   eg_md.nsh_md.terminate_outer = false;
   eg_md.nsh_md.terminate_inner = false;
 
@@ -4413,11 +4728,12 @@ control EgressAcl(
    // ----- results -----
    drop,
    terminate,
-   copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id
+   copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+   indirect_counter_index
   );
 
   // ----- l3/4 -----
-# 1583 "acl.p4"
+# 1653 "acl.p4"
   if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
 
    egress_ipv6_acl.apply(
@@ -4431,7 +4747,8 @@ control EgressAcl(
     // ----- results -----
     drop,
     terminate,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id
+    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+    indirect_counter_index
    );
 
   } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
@@ -4446,7 +4763,8 @@ control EgressAcl(
     // ----- results -----
     drop,
     terminate,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id
+    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+    indirect_counter_index
    );
   }
 
@@ -4464,21 +4782,69 @@ control EgressAcl(
   // note: terminate + !scope is an illegal condition
 
   // ----- terminate -----
-
-  // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-  if(terminate || eg_md.nsh_md.terminate_inner) {
-   eg_md.tunnel_1.terminate = true;
+/*
+		if(terminate || eg_md.nsh_md.terminate_inner) {
+			eg_md.tunnel_1.terminate           = true;
+			if(hdr_0.nsh_type1.scope == 1) {
+				eg_md.tunnel_2.terminate           = true;
+			}
+		}
+*/
+  if((eg_md.nsh_md.terminate_inner == true)) {
+   // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
    if(hdr_0.nsh_type1.scope == 1) {
-    eg_md.tunnel_2.terminate = true;
+    eg_md.tunnel_1.terminate = true;
    }
   }
 
-  // ----- scope -----
+  if(lkp.next_lyr_valid == true) {
 
-  // note: don't need to adjust scope here, as nobody else looks at the data after this.
+   // ----- terminate -----
+
+   if(terminate == true) {
+    eg_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     eg_md.tunnel_2.terminate = true;
+    }
+
+   }
+
+   // ----- scope -----
+
+   // since we don't have an explicit 'scope' signal in egress acl, use 'terminate':
+   if(terminate == true) {
+
+    // note: don't need to advance the data here, as nobody else looks at it after this.
+
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+//				scope_inc.apply();
+   }
+  }
+
+  // ----- truncate -----
+
+  if(eg_md.nsh_md.truncate_enable) {
+
+   eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len;
+
+  }
 
   // ----- copy to cpu -----
-# 1654 "acl.p4"
+
+  if(copy_to_cpu == true) {
+   copy_to_cpu_process_results(cpu_reason, copp_meter_id);
+  } else if(redirect_to_cpu == true) {
+   copy_to_cpu_process_results(cpu_reason, copp_meter_id);
+   eg_intr_md_for_dprsr.drop_ctl = 0x1;
+  }
+
+  if((copy_to_cpu == true) || (redirect_to_cpu == true)) {
+   EgressCopp.apply(copp_meter_id, eg_intr_md_for_dprsr);
+  }
+
+
+
+  indirect_counter.count(eg_md.port ++ indirect_counter_index);
  }
 }
 # 26 "l3.p4" 2
@@ -4529,44 +4895,43 @@ control DMAC(
  switch_uint32_t table_size
 ) {
 
- bool copp_enable_;
- switch_copp_meter_id_t copp_meter_id_;
+//	bool copp_enable_;
+//	switch_copp_meter_id_t copp_meter_id_;
 
  //-------------------------------------------------------------
 
- action dmac_miss(bool copp_enable, switch_copp_meter_id_t copp_meter_id) {
+ action dmac_miss(//bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ ) {
   ig_md.egress_port_lag_index = SWITCH_FLOOD;
-  ig_md.flags.dmac_miss = true;
+//		ig_md.flags.dmac_miss = true;
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
- action dmac_hit(switch_port_lag_index_t port_lag_index, bit<4> port_lag_hash_sel, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ action dmac_hit(switch_port_lag_index_t port_lag_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
  ) {
   ig_md.egress_port_lag_index = port_lag_index;
-  ig_md.egress_port_lag_hash_sel = port_lag_hash_sel;
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
- action dmac_multicast(switch_mgid_t index, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ action dmac_multicast(switch_mgid_t index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
  ) {
   ig_md.multicast.id = index;
   ig_md.egress_port_lag_index = 0; // derek added
-  ig_md.egress_port_lag_hash_sel = 0; // derek added
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
- action dmac_redirect(switch_nexthop_t nexthop_index, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ action dmac_redirect(switch_nexthop_t nexthop_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
  ) {
   ig_md.nexthop = nexthop_index;
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
  table dmac {
@@ -4582,22 +4947,23 @@ control DMAC(
    dmac_redirect;
   }
 
-  const default_action = dmac_miss(false, 0);
+//		const default_action = dmac_miss(false, 0);
+  const default_action = dmac_miss;
   size = table_size;
  }
 
  //-------------------------------------------------------------
 
  apply {
-  ig_md.flags.dmac_miss = false;
+//		ig_md.flags.dmac_miss = false;
 
   if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_L2 != 0)) {
    dmac.apply();
   }
 
 
-  ig_md.copp_enable = copp_enable_;
-        ig_md.copp_meter_id = copp_meter_id_;
+//		ig_md.copp_enable = copp_enable_;
+//      ig_md.copp_meter_id = copp_meter_id_;
 
  }
 }
@@ -4801,50 +5167,36 @@ control VlanXlate(
 }
 # 27 "l3.p4" 2
 
+//-----------------------------------------------------------------------------
+// Router MAC lookup
+// key: destination MAC address.
+// - Route the packet if the destination MAC address is owned by the switch.
+//-----------------------------------------------------------------------------
+# 59 "l3.p4"
+//-----------------------------------------------------------------------------
+// @param lkp : Lookup fields used to perform L2/L3 lookups.
+// @param ig_md : Ingress metadata fields.
+// @param dmac : DMAC instance (See l2.p4)
+//-----------------------------------------------------------------------------
 control IngressUnicast(
- in switch_header_transport_t hdr,
+    in switch_lookup_fields_t lkp,
     inout switch_ingress_metadata_t ig_md
 ) (
- switch_uint32_t rmac_table_size = 1024
 ) {
 
-    //-----------------------------------------------------------------------------
-    // Router MAC lookup
-    // key: destination MAC address.
-    // - Route the packet if the destination MAC address is owned by the switch.
-    //-----------------------------------------------------------------------------
-/*
-    action rmac_hit() {
-        ig_md.flags.rmac_hit = true;
-    }
+//  RMAC
 
-    action rmac_miss() {
-        ig_md.flags.rmac_hit = false;
-    }
-
-    table rmac {
-        key = {
-            hdr.ethernet.dst_addr : exact;
-        }
-
-        actions = {
-            rmac_hit;
-            @defaultonly rmac_miss;
-        }
-
-        const default_action = rmac_miss;
-        size = rmac_table_size;
-    }
-*/
  //-----------------------------------------------------------------------------
  // Apply
  //-----------------------------------------------------------------------------
 
     apply {
-//		rmac.apply();
+//      if (rmac.apply().hit) {
+//      } else {
+//      }
     }
 }
-# 48 "npb.p4" 2
+# 46 "npb.p4" 2
 # 1 "nexthop.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -4898,46 +5250,62 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
                    ecmp_group_table_size) ecmp_selector;
 #endif
 */
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+
+    action no_action(
+ ) {
+  stats.count();
+
+ }
+
     action set_nexthop_properties(
   switch_port_lag_index_t port_lag_index,
-  bit<4> port_lag_hash_sel,
         switch_bd_t bd
  ) {
+  stats.count();
+
         ig_md.egress_port_lag_index = port_lag_index;
-  ig_md.egress_port_lag_hash_sel = port_lag_hash_sel;
     }
 
     action set_nexthop_properties_post_routed_flood(
   switch_bd_t bd,
   switch_mgid_t mgid
  ) {
+  stats.count();
+
         ig_md.egress_port_lag_index = 0;
-        ig_md.egress_port_lag_hash_sel = 0;
         ig_md.multicast.id = mgid;
     }
 /*
     action set_nexthop_properties_glean(
 	) {
+		stats.count();
+
         ig_md.flags.glean = true;
     }
 */
     action set_nexthop_properties_drop(
  ) {
+  stats.count();
+
         ig_md.drop_reason = SWITCH_DROP_REASON_NEXTHOP;
     }
 /*
     action set_ecmp_properties(
 		switch_port_lag_index_t port_lag_index,
-		bit<4> port_lag_hash_sel,
         switch_bd_t bd,
         switch_nexthop_t nexthop_index
 	) {
+		stats.count();
+
         ig_md.nexthop = nexthop_index;
-        set_nexthop_properties(port_lag_index, port_lag_hash_sel, bd);
+        set_nexthop_properties(port_lag_index, bd);
     }
 
     action set_ecmp_properties_drop(
 	) {
+		stats.count();
+
         set_nexthop_properties_drop();
     }
 
@@ -4946,6 +5314,8 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
         switch_mgid_t mgid,
         switch_nexthop_t nexthop_index
 	) {
+		stats.count();
+
         ig_md.nexthop = nexthop_index;
         set_nexthop_properties_post_routed_flood(bd, mgid);
     }
@@ -4953,19 +5323,34 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
     action set_ecmp_properties_glean(
 		switch_nexthop_t nexthop_index
 	) {
+		stats.count();
+
         ig_md.nexthop = nexthop_index;
         set_nexthop_properties_glean();
     }
 */
-    action set_tunnel_properties(
+    action set_nexthop_properties_tunnel(
   switch_bd_t bd,
   switch_tunnel_index_t tunnel_index
  ) {
+  stats.count();
+
         // TODO(msharif) : Disable cut-through for non-ip packets.
         ig_md.tunnel_0.index = tunnel_index;
-        ig_md.egress_port_lag_hash_sel = 0;
         ig_md.egress_port_lag_index = 0;
     }
+/*
+    action set_ecmp_properties_tunnel(
+		switch_bd_t bd,
+		switch_tunnel_index_t tunnel_index,
+		switch_nexthop_t nexthop_index
+	) {
+		stats.count();
+
+        set_nexthop_properties_tunnel(bd, tunnel_index);
+        ig_md.nexthop = nexthop_index;
+    }
+*/
 /*
     table ecmp {
         key = {
@@ -4979,7 +5364,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
             set_ecmp_properties_drop;
             set_ecmp_properties_glean;
             set_ecmp_properties_post_routed_flood;
-            set_tunnel_properties;
+            set_ecmp_properties_tunnel;
         }
 
         const default_action = NoAction;
@@ -4996,15 +5381,16 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
         }
 
         actions = {
-            NoAction;
+            no_action;
             set_nexthop_properties;
             set_nexthop_properties_drop;
 //          set_nexthop_properties_glean;
             set_nexthop_properties_post_routed_flood;
-            set_tunnel_properties;
+            set_nexthop_properties_tunnel;
         }
 
-        const default_action = NoAction;
+        const default_action = no_action;
+  counters = stats;
         size = nexthop_table_size;
     }
 
@@ -5040,14 +5426,22 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
 //                 ECMP_MAX_MEMBERS_PER_GROUP,
 //                 ecmp_group_table_size) ecmp_selector;
 
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+
+    action no_action(
+ ) {
+  stats.count();
+
+ }
+
     action set_nexthop_properties(
   switch_port_lag_index_t port_lag_index,
-  bit<4> port_lag_hash_sel,
         switch_outer_nexthop_t nexthop_index
  ) {
+  stats.count();
+
         ig_md.outer_nexthop = nexthop_index;
         ig_md.egress_port_lag_index = port_lag_index;
-  ig_md.egress_port_lag_hash_sel = port_lag_hash_sel;
     }
 
     table fib {
@@ -5057,12 +5451,13 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
         }
 
         actions = {
-            NoAction;
+            no_action;
             set_nexthop_properties;
         }
 
-        const default_action = NoAction;
+        const default_action = no_action;
 //      implementation = ecmp_selector;
+  counters = stats;
         size = fib_table_size;
     }
 
@@ -5072,7 +5467,7 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
 
     }
 }
-# 49 "npb.p4" 2
+# 47 "npb.p4" 2
 # 1 "port.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -5161,76 +5556,128 @@ control Rewrite(inout switch_header_outer_t hdr,
  // Table: Nexthop Rewrite
  // ---------------------------------------------
 
- action rewrite_l2_with_tunnel( // tun type
+ action rewrite_l2_with_tunnel( // ---- + -- + tun type + -------
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
+
   switch_tunnel_type_t type
  ) {
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+
 
   tunnel.type = type;
 
  }
 
- action rewrite_l3( // dmac + bd
+ // ---------------------------------------------
+
+ action rewrite_l3( // dmac + bd + -------- + -------
 //		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
   switch_bd_t bd
  ) {
 //		hdr.ethernet.dst_addr = dmac;
-  eg_md.bd = bd;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = bd; // derek: add in later
  }
+
+ // ---------------------------------------------
 
  action rewrite_l3_with_tunnel_id( // dmac + bd + tun type + tun id
 //		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
 
   switch_tunnel_type_t type,
   switch_tunnel_id_t id
  ) {
 
 //		hdr.ethernet.dst_addr = dmac;
-  eg_md.bd = SWITCH_BD_DEFAULT_VRF;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = SWITCH_BD_DEFAULT_VRF; // derek: add in later
 
   tunnel.type = type;
   tunnel.id = id;
 
  }
 
- action rewrite_l3_with_tunnel_bd( // dmac + bd + tun type
+ // ---------------------------------------------
+
+ action rewrite_l3_with_tunnel_bd( // dmac + bd + tun type + -------
 //		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
   switch_bd_t bd,
 
   switch_tunnel_type_t type
  ) {
 
 //		hdr.ethernet.dst_addr = dmac;
-  eg_md.bd = bd;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = bd; // derek: add in later
 
   tunnel.type = type;
 
  }
 
- action rewrite_l3_with_tunnel( // dmac + tun type
+ // ---------------------------------------------
+
+ action rewrite_l3_with_tunnel( // dmac + bd(vrf) + tun type + -------
 //		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
 
   switch_tunnel_type_t type
  ) {
 
 //		hdr.ethernet.dst_addr = dmac;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
 //		eg_md.bd = (switch_bd_t) eg_md.vrf;
 
   tunnel.type = type;
 
  }
 
+ // ---------------------------------------------
+
  table nexthop_rewrite {
   key = { eg_md.nexthop : exact; }
   actions = {
+
    NoAction;
+
+
    rewrite_l2_with_tunnel;
    rewrite_l3;
    rewrite_l3_with_tunnel;
    rewrite_l3_with_tunnel_bd;
    rewrite_l3_with_tunnel_id;
+
+
+
   }
 
+
   const default_action = NoAction;
+
+
+
   size = nexthop_table_size;
  }
 
@@ -5261,12 +5708,12 @@ control Rewrite(inout switch_header_outer_t hdr,
 
   // Should not rewrite packets redirected to CPU.
 
-
-
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0)) {
+
+
+
    nexthop_rewrite.apply();
   }
-
 
 //		egress_bd.apply(hdr, eg_md.bd,                          eg_md.pkt_src,
 //			smac_index);
@@ -5279,28 +5726,33 @@ control Rewrite(inout switch_header_outer_t hdr,
 # 24 "port.p4" 2
 
 //-----------------------------------------------------------------------------
-// Port Mirroring
+// Ingress/Egress Port Mirroring
 //-----------------------------------------------------------------------------
 
 control PortMirror(
   in switch_port_t port,
   in switch_pkt_src_t src,
-  inout switch_mirror_metadata_t mirror_md,
-  in bit<8> cpu_reason_code, // extreme added
-  inout bit<8> cpu_reason // extreme added
-)(
+  inout switch_mirror_metadata_t mirror_md // derek added
+) (
   switch_uint32_t table_size=288
 ) {
 
- action set_mirror_id(switch_mirror_session_t session_id) {
+ action set_mirror_id(
+  switch_mirror_session_t session_id,
+  switch_mirror_meter_id_t meter_index // derek added
+ ) {
   mirror_md.type = 1;
   mirror_md.src = src;
   mirror_md.session_id = session_id;
-  cpu_reason = cpu_reason_code; // extreme added
+
+  mirror_md.meter_index = meter_index; // derek added
+
  }
 
  table port_mirror {
-  key = { port : exact; }
+  key = {
+   port : exact;
+  }
   actions = {
    NoAction;
    set_mirror_id;
@@ -5331,11 +5783,9 @@ control IngressPortMapping(
   switch_uint32_t vlan_table_size=4096
 ) {
 
-
+ PortMirror(port_table_size) port_mirror;
 
  ActionProfile(bd_table_size) bd_action_profile;
-
- bool valid_cpu;
 
  // ----------------------------------------------
  // Table: Port Mapping
@@ -5343,126 +5793,58 @@ control IngressPortMapping(
 
  // Helper action:
 
- switch_cpu_reason_t cpu_reason_;
- bool copy_to_cpu_;
- bool redirect_to_cpu_;
- switch_copp_meter_id_t copp_meter_id_;
-
- action copy_to_cpu_process_results(in switch_cpu_reason_t cpu_reason, in switch_copp_meter_id_t copp_meter_id) {
-  ig_intr_md_for_tm.copy_to_cpu = 1w1;
-  ig_md.cpu_reason = cpu_reason;
- }
-
- // --------------------------
-
- // Helper action:
-
  action terminate_cpu_packet() {
+  // ig_md.bypass = (bit<8>) hdr.cpu.reason_code;                                 // Done in parser
+//		ig_md.port = (switch_port_t) hdr.cpu.ingress_port;                              // Done in parser
+//		ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index; // Done in parser
+//		ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue;                    // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
 
-  // ig_md.bypass = hdr.cpu.reason_code;                                             // Done in parser
-  // ig_md.port = (switch_port_t) hdr.cpu.ingress_port;                              // Done in parser
-  // ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index; // Done in parser
-  // hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;                             // Wants to be done in parser (see bf-case 10933)
-
-  //XXX(msharif) : Fix this for Tofino2
-  // ig_intr_md_for_tm.qid = hdr.cpu.egress_queue;
+//		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;                           // Done in parser
+//		DEREK: This next line should be deleted, but doing so causes us not to fit!?!?  ¯\_('')_/¯
 
   ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass; // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
 
 
-  valid_cpu = true;
+//		hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;                             // Wants to be done in parser (see bf-case 10933)
  }
 
  // --------------------------
 
- action set_cpu_port_properties_with_nsh(
-//		switch_port_lag_index_t port_lag_index,
-//		switch_port_lag_label_t port_lag_label,
-  switch_yid_t exclusion_id
-//		switch_qos_trust_mode_t trust_mode,
-//		switch_qos_group_t qos_group,
-//		switch_pkt_color_t color,
-//		switch_tc_t tc
- ) {
-
-//		ig_md.port_lag_index = port_lag_index;
-//		ig_md.port_lag_label = port_lag_label;
-//		ig_md.qos.trust_mode = trust_mode;
-//		ig_md.qos.group = qos_group;
-//		ig_md.qos.color = color;
-//		ig_md.qos.tc = tc;
-  ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-
-  terminate_cpu_packet();
-
- }
-
- action set_cpu_port_properties_without_nsh(
-//		switch_port_lag_index_t port_lag_index,
+ action set_cpu_port_properties(
+  switch_port_lag_index_t port_lag_index,
 //		switch_port_lag_label_t port_lag_label,
   switch_yid_t exclusion_id,
 //		switch_qos_trust_mode_t trust_mode,
 //		switch_qos_group_t qos_group,
 //		switch_pkt_color_t color,
 //		switch_tc_t tc
-
-  bit<12> sap,
-  bit<12> vpn,
-  bit<24> spi,
-  bit<8> si,
-  bit<8> si_predec
+  bool l2_fwd_en
  ) {
 
-//		ig_md.port_lag_index = port_lag_index;
+  ig_md.port_lag_index = port_lag_index;
 //		ig_md.port_lag_label = port_lag_label;
 //		ig_md.qos.trust_mode = trust_mode;
 //		ig_md.qos.group = qos_group;
 //		ig_md.qos.color = color;
 //		ig_md.qos.tc = tc;
   ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
+  ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
 
   terminate_cpu_packet();
-
-  hdr.transport.nsh_type1.sap = (bit<16>)sap; // 16 bits
-  hdr.transport.nsh_type1.vpn = (bit<16>)vpn; // 16 bits
-  hdr.transport.nsh_type1.spi = spi; // 24 bits
-  hdr.transport.nsh_type1.si = si; //  8 bits
-  ig_md.nsh_md.si_predec = si_predec; //  8 bits
 
  }
 
  // --------------------------
 
- action set_port_properties_with_nsh(
-  switch_yid_t exclusion_id
-# 190 "port.p4"
- ) {
-  ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-
-
-
-
-
-
-
- }
-
- action set_port_properties_without_nsh(
+ action set_port_properties(
+  // note: for regular ports, port_lag_index and l2_fwd_en come from the port_metadata table.
   switch_yid_t exclusion_id,
-# 211 "port.p4"
-  bit<12> sap,
-  bit<12> vpn,
-  bit<24> spi,
-  bit<8> si,
-  bit<8> si_predec
+  switch_port_lag_index_t port_lag_index,
+  bool l2_fwd_en
  ) {
   ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-# 226 "port.p4"
-  hdr.transport.nsh_type1.sap = (bit<16>)sap; // 16 bits
-  hdr.transport.nsh_type1.vpn = (bit<16>)vpn; // 16 bits
-  hdr.transport.nsh_type1.spi = spi; // 24 bits
-  hdr.transport.nsh_type1.si = si; //  8 bits
-  ig_md.nsh_md.si_predec = si_predec; //  8 bits
+  ig_md.port_lag_index = port_lag_index;
+  ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
  }
 
  // --------------------------
@@ -5470,20 +5852,18 @@ control IngressPortMapping(
  table port_mapping {
   key = {
    ig_md.port : exact;
+
    hdr.cpu.isValid() : exact;
 //			hdr.cpu.ingress_port : exact; // DEREK: IS THIS NEEDED / WHAT IS IT FOR?
 
-   hdr.transport.nsh_type1.isValid() : exact;
   }
 
   actions = {
-   set_port_properties_with_nsh; // {nsh, cpu} = {0, 0}
-   set_port_properties_without_nsh; // {nsh, cpu} = {1, 0}
-   set_cpu_port_properties_with_nsh; // {nsh, cpu} = {0, 1}
-   set_cpu_port_properties_without_nsh; // {nsh, cpu} = {1, 1}
+   set_port_properties;
+   set_cpu_port_properties;
   }
 
-  size = port_table_size * 4; // derek: was 2 in switch, but doubling to 4 because we added nsh valid to it.
+  size = port_table_size * 2;
  }
 
  // ----------------------------------------------
@@ -5500,7 +5880,7 @@ control IngressPortMapping(
  ) {
   ig_md.bd = bd;
 
-
+  ig_intr_md_for_tm.rid = rid;
 
  }
 
@@ -5570,36 +5950,45 @@ control IngressPortMapping(
  // ----------------------------------------------
 
  apply {
-  valid_cpu = false;
 /*
 		switch (port_mapping.apply().action_run) {
+#ifdef CPU_BD_MAP_ENABLE
+			set_cpu_port_properties : {
+				cpu_to_bd_mapping.apply();
+			}
+#endif
+
 			set_port_properties : {
-				if (!port_vlan_to_bd_mapping.apply().hit) {
-					if (hdr.transport.vlan_tag[0].isValid()) {
-						vlan_to_bd_mapping.apply();
+
+
+
+					if (!port_vlan_to_bd_mapping.apply().hit) {
+						if (hdr.transport.vlan_tag[0].isValid())
+							vlan_to_bd_mapping.apply();
 					}
-				}
+
+
+
 			}
 		}
 */
   if(port_mapping.apply().hit) {
    if(hdr.cpu.isValid()) {
+
     cpu_to_bd_mapping.apply();
+
    } else {
     if (!port_vlan_to_bd_mapping.apply().hit) {
      if (hdr.transport.vlan_tag[0].isValid()) {
-
-// derek: removing this for tofino 1, because it causes a bunch of valids to not fit (compiler bug?)
       vlan_to_bd_mapping.apply();
-
      }
     }
    }
   }
-# 379 "port.p4"
-  // derek: this copy-to-cpu feature was added here, because port mirroring
-  // (above) is not fitting....
-# 389 "port.p4"
+
+
+  port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror);
+
  }
 }
 
@@ -5634,8 +6023,18 @@ control LAG(
  // Table: LAG
  // ----------------------------------------------
 
+ bit<4> indirect_counter_index_;
+
+ DirectCounter<bit<32> >(type=CounterType_t.PACKETS_AND_BYTES) stats_in; // direct counter
+# 334 "port.p4"
  action set_lag_port(switch_port_t port) {
+
+  stats_in.count();
+
   egress_port = port;
+
+
+
  }
 
 
@@ -5644,7 +6043,10 @@ control LAG(
 
 
 
- action lag_miss() { }
+ action lag_miss() {
+  stats_in.count();
+
+ }
 
  table lag {
   key = {
@@ -5671,6 +6073,7 @@ control LAG(
 
   const default_action = lag_miss;
   size = LAG_TABLE_SIZE;
+  counters = stats_in;
   implementation = lag_selector;
  }
 
@@ -5688,6 +6091,10 @@ control LAG(
                                       ig_md.lkp_1.l4_dst_port,
                                       ig_md.lkp_1.l4_src_port});
   lag.apply();
+
+
+
+
  }
 }
 
@@ -5704,18 +6111,12 @@ control EgressPortMapping(
  switch_uint32_t table_size=288
 ) {
 
-
+ PortMirror(table_size) port_mirror;
 
 
  // ----------------------------------------------
  // Table: Port Mapping
  // ----------------------------------------------
-
- action port_normal(
-  switch_port_lag_index_t port_lag_index
- ) {
-  eg_md.port_lag_index = port_lag_index;
- }
 
  action cpu_rewrite() {
   // ----- add fabric header -----
@@ -5728,27 +6129,33 @@ control EgressPortMapping(
 
   // ----- add cpu header -----
   hdr.cpu.setValid();
-/*
-		hdr.cpu.egress_queue = 0;
-		hdr.cpu.tx_bypass = 0;
-		hdr.cpu.capture_ts = 0;
-		hdr.cpu.reserved = 0;
-*/
+  hdr.cpu.egress_queue = 0;
+  hdr.cpu.tx_bypass = 0;
+  hdr.cpu.capture_ts = 0;
+  hdr.cpu.reserved = 0;
   // Both these line are here instead of parser out due to compiler... "error: Field is
   // extracted in the parser into multiple containers, but the container
   // slices after the first aren't byte aligned"
   hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
+
+
+
   hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
-/*
-		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
-		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
-		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
-*/
+
+  hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
+  hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
+  hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 
 
 
   hdr.outer.ethernet.ether_type = 0x9001;
 
+ }
+
+ action port_normal(
+  switch_port_lag_index_t port_lag_index
+ ) {
+  eg_md.port_lag_index = port_lag_index;
  }
 
  action port_cpu(
@@ -5784,927 +6191,12 @@ control EgressPortMapping(
   port_mapping.apply();
 
 
-
+  port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror);
 
  }
 }
-# 50 "npb.p4" 2
-# 1 "validation.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- ******************************************************************************/
-
-
-
-
-// ============================================================================
-// Transport Validation
-// ============================================================================
-
-control PktValidation(
-        in switch_header_transport_t hdr, // src
-  in bool ipv4_checksum_err, // src
-  in switch_tunnel_metadata_t tunnel, // src
-        inout switch_lookup_fields_t lkp, // dst
-        out switch_drop_reason_t drop_reason // dst
-) {
-
-    const switch_uint32_t table_size = 64;
-
-    // -----------------------------
- // L2
-    // -----------------------------
-
-    action malformed_pkt(bit<8> reason) {
-        drop_reason = reason;
-    }
-
-    action malformed_non_ip_pkt(bit<8> reason) {
-        malformed_pkt(reason);
-    }
-
-    action valid_unicast_pkt_untagged() {
-    }
-
-    action valid_unicast_pkt_tagged() {
-    }
-
-    table validate_ethernet {
-        key = {
-            hdr.ethernet.isValid() : exact;
-            hdr.ethernet.src_addr : ternary;
-            hdr.ethernet.dst_addr : ternary;
-            hdr.vlan_tag[0].isValid() : ternary;
-        }
-
-        actions = {
-            malformed_non_ip_pkt;
-            valid_unicast_pkt_untagged;
-            valid_unicast_pkt_tagged;
-        }
-
-        size = table_size;
-        /* const entries = {
-            (_, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_MULTICAST);
-            (0, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_ZERO);
-            (_, 0, _) : malformed_non_ip_pkt(SWITCH_DROP_DST_MAC_ZERO);
-        } */
-    }
-
-    // -----------------------------
- // L3, v4
-    // -----------------------------
-
-
-    action malformed_ipv4_pkt(bit<8> reason) {
-        // Set common lookup fields just for dtel acl and hash purposes
-        malformed_pkt(reason);
-    }
-
-    action valid_ipv4_pkt(switch_ip_frag_t ip_frag) {
-        // Set common lookup fields
-    }
-
-    table validate_ipv4 {
-        key = {
-            ipv4_checksum_err : ternary;
-            hdr.ipv4.version : ternary;
-            hdr.ipv4.ihl : ternary;
-            hdr.ipv4.flags : ternary;
-            hdr.ipv4.frag_offset : ternary;
-            hdr.ipv4.ttl : ternary;
-            hdr.ipv4.src_addr[31:24] : ternary;
-        }
-
-        actions = {
-            valid_ipv4_pkt;
-            malformed_ipv4_pkt;
-        }
-
-        size = table_size;
-    }
-
-
-// Current encap requirments do not include UDP in the transport stack
-//     // -----------------------------
-// 	// L4
-//     // -----------------------------
-// 
-//     action set_udp_ports() {
-//         lkp.l4_src_port = hdr.udp.src_port;
-//         lkp.l4_dst_port = hdr.udp.dst_port;
-//     }
-// 
-//     // Not much of a validation as it only sets the lookup fields.
-//     table validate_other {
-//         key = {
-//             hdr.udp.isValid() : exact;
-//         }
-// 
-//         actions = {
-// 			NoAction;
-//             set_udp_ports;
-//         }
-// 
-//         const default_action = NoAction;
-//         const entries = {
-// /*
-//             (true, false, false, false, false, false) : set_tcp_ports();
-//             (false, true, false, false, false, false) : set_udp_ports();
-//             (false, false, true, false, false, false) : set_sctp_ports();
-//             (false, false, false, true, false, false) : set_icmp_type();
-//             (false, false, false, false, true, false) : set_igmp_type();
-//             (false, false, false, false, false, true) : set_arp_opcode();
-// */
-//             (true) : set_udp_ports();
-//         }
-//     }
-// 
-// 
-//     // -----------------------------
-// 	   // L4
-//     // -----------------------------
-// 
-//     action set_udp_ports() {
-//     }
-// 
-//     // Not much of a validation as it only sets the lookup fields.
-//     table validate_other {
-//         key = {
-//             hdr.udp.isValid() : exact;
-//         }
-// 
-//         actions = {
-// 			NoAction;
-//             set_udp_ports;
-//         }
-// 
-//         const default_action = NoAction;
-//         const entries = {
-//             (true) : set_udp_ports();
-//         }
-//     }
-
-    // -----------------------------
-    // TUNNEL
-    // -----------------------------
-
-    action validate_tunnel_none() {
-    }
-
-    action validate_tunnel_vlan() {
-    }
-
-    action validate_tunnel_vni() {
-    }
-
-    table validate_tunnel {
-        key = {
-            tunnel.type : ternary;
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid: ternary;
-        }
-        actions = {
-            validate_tunnel_vni;
-            validate_tunnel_vlan;
-            validate_tunnel_none;
-        }
-        const entries = {
-   // highest -> lowest priority in tcam
-            (0, true, 0): validate_tunnel_none(); // tag has priority only
-            (0, true, _): validate_tunnel_vlan(); // tag has priority and vlan
-            (_, true, _): validate_tunnel_vni();
-            (_, false, _): validate_tunnel_vni();
-            (0, false, _): validate_tunnel_none();
-        }
-
-    }
-
-    // -------------------------------------
-    // Extreme Networks - Added
-    // -------------------------------------
-
-    // Validate Extreme NSH underlay header.
-    //
-    // Currently, we only support parsing of our own, fixed length Extreme
-    // (MD-Type1), NSH. This validation logic will drop any NSH pkt that does
-    // not conform. In the future, when PHV resources are less tight, we plan
-    // to add support for parsing non-Extreme NSH as well.
-    //
-    //   Drop the packet if:
-    //
-    //        version != 0                     -> Base Header          
-    //              o == 1  (oam)                     :                
-    //            ttl == 0                            :                
-    //            len != 6  (4B words)                :                
-    //        md_type != 1                            :                
-    //     next_proto != 3  (enet)                    :                
-    //             si == 0                     -> Service Path Header      
-    //       md_class != ?  (todo)             -> Variable Length Context Header
-    //           type != ?  (todo)                    :                
-    //         md_len != 8  (bytes)                   :                
-    //           todo == ?  (any checks here?) -> Variable Length Metadata   
-
-    table validate_nsh {
-
-        key = {
-            hdr.nsh_type1.version : range;
-            hdr.nsh_type1.o : ternary;
-            hdr.nsh_type1.ttl : ternary;
-            hdr.nsh_type1.len : range;
-            hdr.nsh_type1.md_type : range;
-            hdr.nsh_type1.next_proto : range;
-            hdr.nsh_type1.si : ternary;
-            //hdr.nsh_type1.md_class : ternary;
-            //hdr.nsh_type1.type : ternary;
-            //hdr.nsh_type1.md_len : range;
-            //hdr.nsh_type1.xxx : ternary;
-        }
-
-        actions = {
-            NoAction;
-            malformed_pkt;
-        }
-
-        size = table_size;
-        const default_action = NoAction;
-        const entries = {
-            // Can a range match type be a don't care? (it compiles..)
-            (2w1 .. 2w3, _, _, _, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_VERSION_INVALID);
-            (_, 1, _, _, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_OAM);
-   // Derek: Consider removing this ttl check.  The RFC allows
-   // an incoming TTL of 0 for backwards compatibility....
-            (_, _, 0, _, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_TTL_ZERO);
-            (_, _, _, 6w0 .. 6w5, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_LEN_INVALID);
-            (_, _, _, 6w7 .. 6w63, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_LEN_INVALID);
-            (_, _, _, _, 4w0 .. 4w0, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MDTYPE_INVALID);
-            (_, _, _, _, 4w2 .. 4w15, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MDTYPE_INVALID);
-            (_, _, _, _, _, 8w0 .. 8w0, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_NEXT_PROTO_INVALID);
-            (_, _, _, _, _, 8w4 .. 8w255, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_NEXT_PROTO_INVALID);
-            (_, _, _, _, _, _, 0):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_SI_ZERO);
-//          (_, _, _, _, _, _, _, 7w0 .. 7w7):
-//          malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MD_LEN_INVALID);
-//          (_, _, _, _, _, _, _, 7w9 .. 7w127):
-//          malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MD_LEN_INVALID);
-            // todo: Instead of all the above ranges, would it be better to
-            // create a single bit key field (len_eq_5) based on a length
-            // compare?
-        }
-    }
-
-    // -----------------------------
- // Apply
-    // -----------------------------
-
-    apply {
-        // -------------------------------------
-        // Extreme Networks - Modified
-        // -------------------------------------
-/*
-        switch(validate_ethernet.apply().action_run) {
-            malformed_non_ip_pkt : {}
-            default : {
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-#ifdef IPV6_ENABLE
-                else if (hdr.ipv6.isValid()) {
-                    validate_ipv6.apply();
-                }
-#endif
-
-                validate_other.apply();
-            }
-        }
-    }
-*/
-        if (hdr.nsh_type1.isValid()) { // extreme added
-            // --- PACKET HAS UNDERLAY ---
-            switch(validate_nsh.apply().action_run) { // extreme added
-                malformed_pkt : {} // extreme added
-                default: { // extreme added
-                    switch(validate_ethernet.apply().action_run) {
-                        malformed_non_ip_pkt : {}
-
-                        default : {
-
-                            if (hdr.ipv4.isValid()) {
-                                validate_ipv4.apply();
-                            }
-
-                            //validate_other.apply();
-
-                            validate_tunnel.apply();
-                        }
-                    }
-                } // extreme added
-            } // extreme added
-        }
-
-        // currently only NSH transport supported
-        // if NSH invalid, then there will be no transport headers to validate
-        // else { // extreme added
-        //     // --- PACKET DOES NOT HAVE UNDERLAY ---
-        //             switch(validate_ethernet.apply().action_run) {
-        //                 malformed_non_ip_pkt : {}
-        //                 default : {
-        //                     if (hdr.ipv4.isValid()) {
-        //                         validate_ipv4.apply();
-        //                     }
-        // 
-        //                     validate_other.apply();
-        // 
-        //                     validate_tunnel.apply();
-        //                 }
-        //             }
-        // } // extreme added
-    }
-}
-
-// ============================================================================
-// Outer Validation
-// ============================================================================
-
-control OuterPktValidation(
-    in switch_header_outer_t hdr, // src
- in bool ipv4_checksum_err, // src
- in switch_tunnel_metadata_reduced_t tunnel, // src
-    inout switch_lookup_fields_t lkp, // dst
-    out switch_drop_reason_t drop_reason // dst
-) {
-
-    const switch_uint32_t table_size = 64;
-
-    // -----------------------------
- // L2
-    // -----------------------------
-
-    action malformed_pkt(bit<8> reason) {
-        drop_reason = reason;
-    }
-
-    action malformed_non_ip_pkt(bit<8> reason) {
-        malformed_pkt(reason);
-    }
-
-    action valid_unicast_pkt_untagged() {
-    }
-
-    action valid_unicast_pkt_tagged() {
-    }
-
-    action valid_unicast_pkt_double_tagged() {
-    }
-
-
-    action valid_unicast_pkt_e_tagged() {
-    }
-
-
-
-    action valid_unicast_pkt_vn_tagged() {
-    }
-
-
-    table validate_ethernet {
-        key = {
-            hdr.ethernet.isValid() : exact;
-            hdr.ethernet.src_addr : ternary;
-            hdr.ethernet.dst_addr : ternary;
-            hdr.vlan_tag[0].isValid() : ternary;
-            hdr.vlan_tag[1].isValid() : ternary;
-
-            hdr.e_tag.isValid() : ternary;
-
-
-            hdr.vn_tag.isValid() : ternary;
-
-        }
-
-        actions = {
-            malformed_non_ip_pkt;
-            valid_unicast_pkt_untagged;
-            valid_unicast_pkt_tagged;
-            valid_unicast_pkt_double_tagged;
-
-            valid_unicast_pkt_e_tagged;
-
-
-            valid_unicast_pkt_vn_tagged;
-
-        }
-
-        size = table_size;
-        /* const entries = {
-            (_, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_MULTICAST);
-            (0, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_ZERO);
-            (_, 0, _) : malformed_non_ip_pkt(SWITCH_DROP_DST_MAC_ZERO);
-        } */
-    }
-
-    // -----------------------------
- // L3, v4
-    // -----------------------------
-
-    action malformed_ipv4_pkt(bit<8> reason) {
-        // Set common lookup fields just for dtel acl and hash purposes
-        malformed_pkt(reason);
-    }
-
-    action valid_ipv4_pkt(switch_ip_frag_t ip_frag) {
-        // Set common lookup fields
-    }
-
-    table validate_ipv4 {
-        key = {
-            ipv4_checksum_err : ternary;
-            hdr.ipv4.version : ternary;
-            hdr.ipv4.ihl : ternary;
-            hdr.ipv4.flags : ternary;
-            hdr.ipv4.frag_offset : ternary;
-            hdr.ipv4.ttl : ternary;
-            hdr.ipv4.src_addr[31:24] : ternary;
-        }
-
-        actions = {
-            valid_ipv4_pkt;
-            malformed_ipv4_pkt;
-        }
-
-        size = table_size;
-    }
-
-    // -----------------------------
- // L3, v6
-    // -----------------------------
-
-
-
-    action malformed_ipv6_pkt(bit<8> reason) {
-        // Set common lookup fields just for dtel acl and hash purposes
-        malformed_pkt(reason);
-    }
-
-    action valid_ipv6_pkt() {
-        // Set common lookup fields
-    }
-
-    table validate_ipv6 {
-        key = {
-            hdr.ipv6.version : ternary;
-            hdr.ipv6.hop_limit : ternary;
-            hdr.ipv6.src_addr[127:96] : ternary; //TODO define the bit range.
-        }
-
-        actions = {
-            valid_ipv6_pkt;
-            malformed_ipv6_pkt;
-        }
-
-        size = table_size;
-    }
-
-
-
-    // -----------------------------
- // L4
-    // -----------------------------
-
-    action set_tcp_ports() {
-    }
-
-    action set_udp_ports() {
-    }
-
-    action set_sctp_ports() {
-    }
-
-    // Not much of a validation as it only sets the lookup fields.
-    table validate_other {
-        key = {
-            hdr.tcp.isValid() : exact;
-            hdr.udp.isValid() : exact;
-            hdr.sctp.isValid() : exact;
-        }
-
-        actions = {
-   NoAction;
-            set_tcp_ports;
-            set_udp_ports;
-            set_sctp_ports;
-        }
-
-        const default_action = NoAction;
-        const entries = {
-            ( true, false, false) : set_tcp_ports();
-            (false, true, false) : set_udp_ports();
-            (false, false, true) : set_sctp_ports();
-        }
-    }
-
-    // -----------------------------
-    // TUNNEL
-    // -----------------------------
-
-    action validate_tunnel_none() {
-    }
-
-    action validate_tunnel_vlan() {
-    }
-
-    action validate_tunnel_vni() {
-    }
-
-    table validate_tunnel {
-        key = {
-            tunnel.type : ternary;
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid: ternary;
-        }
-        actions = {
-            validate_tunnel_vni;
-            validate_tunnel_vlan;
-            validate_tunnel_none;
-        }
-        const entries = {
-   // highest -> lowest priority in tcam
-            (0, true, 0): validate_tunnel_none(); // tag has priority only
-            (0, true, _): validate_tunnel_vlan(); // tag has priority and vlan
-            (_, true, _): validate_tunnel_vni();
-            (_, false, _): validate_tunnel_vni();
-            (0, false, _): validate_tunnel_none();
-        }
-
-    }
-
-    // -----------------------------
- // Apply
-    // -----------------------------
-
-    apply {
-        // -------------------------------------
-        // Extreme Networks - Modified
-        // -------------------------------------
-
-/*
-        switch(validate_ethernet.apply().action_run) {
-            malformed_non_ip_pkt : {}
-            default : {
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-#ifdef IPV6_ENABLE
-                else if (hdr.ipv6.isValid()) {
-                    validate_ipv6.apply();
-                }
-#endif
-                validate_other.apply();
-
-				validate_tunnel.apply();
-            }
-        }
-*/
-    validate_ethernet.apply();
-
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-
-                else if (hdr.ipv6.isValid()) {
-                    validate_ipv6.apply();
-                }
-
-                validate_other.apply();
-
-    validate_tunnel.apply();
-    }
-}
-
-// ============================================================================
-// Inner Validation
-// ============================================================================
-
-control InnerPktValidation(
-    in switch_header_inner_t hdr, // src
- in bool ipv4_checksum_err, // src
- in switch_tunnel_metadata_reduced_t tunnel, // src
-    inout switch_lookup_fields_t lkp, // dst
-    inout switch_drop_reason_t drop_reason // dst
-) (
- bool test=true
-) {
-
-    // -------------------------------------
-    // L2
-    // -------------------------------------
-
-    action valid_unicast_pkt_untagged() {
-        // Set the common L2 lookup fields
-
-    }
-
-    action valid_unicast_pkt_tagged() {
-    }
-
-    action malformed_pkt(bit<8> reason) {
-        drop_reason = reason;
-    }
-
-    table validate_ethernet {
-        key = {
-            hdr.ethernet.isValid() : exact;
-            hdr.ethernet.dst_addr : ternary;
-            hdr.vlan_tag[0].isValid() : ternary;
-        }
-
-        actions = {
-            NoAction;
-            valid_unicast_pkt_untagged;
-            valid_unicast_pkt_tagged;
-            malformed_pkt;
-        }
-    }
-
-    // -------------------------------------
-    // L3, v4
-    // -------------------------------------
-
-    action valid_ipv4_pkt() {
-        // Set the common IP lookup fields
-    }
-
-    table validate_ipv4 {
-        key = {
-            ipv4_checksum_err : ternary;
-            hdr.ipv4.version : ternary;
-            hdr.ipv4.ihl : ternary;
-            hdr.ipv4.ttl : ternary;
-        }
-
-        actions = {
-            valid_ipv4_pkt;
-            malformed_pkt;
-        }
-        /*
-        const default_action = malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_VERSION_INVALID);
-        const entries = {
-            (_, _, _, _, 0x7f) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_SRC_LOOPBACK);
-            (_, _, _, _, 0xe0 &&& 0xf0) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_SRC_MULTICAST);
-            (_, _, _, 0, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_TTL_ZERO);
-            (_, _, 0 &&& 0xc, _, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_IHL_INVALID);
-            (_, _, 4 &&& 0xf, _, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_IHL_INVALID);
-            (false, 4 &&& 0xf, _, _, _) : valid_ipv4_pkt();
-            (true, 4 &&& 0xf, _, _, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_VERSION_INVALID);
-        }
-        */
-    }
-
-    // -------------------------------------
-    // L3, v6
-    // -------------------------------------
-
-
-    action valid_ipv6_pkt() {
-        // Set the common IP lookup fields
-    }
-
-    table validate_ipv6 {
-        key = {
-            hdr.ipv6.version : ternary;
-            hdr.ipv6.hop_limit : ternary;
-        }
-
-        actions = {
-            valid_ipv6_pkt;
-            malformed_pkt;
-        }
-        const entries = {
-            (0 &&& 0, 0) : malformed_pkt(SWITCH_DROP_REASON_IP_IHL_INVALID);
-            (6, 0 &&& 0) : valid_ipv6_pkt();
-            (0 &&& 0, 0 &&& 0) : malformed_pkt(SWITCH_DROP_REASON_IP_VERSION_INVALID);
-        }
-    }
-
-
-    // -------------------------------------
-    // L4
-    // -------------------------------------
-
-    action set_tcp_ports() {
-    }
-
-    action set_udp_ports() {
-    }
-
-    action set_sctp_ports() {
-    }
-
-    table validate_other {
-        key = {
-            hdr.tcp.isValid() : exact;
-            hdr.udp.isValid() : exact;
-            hdr.sctp.isValid() : exact;
-        }
-
-        actions = {
-            NoAction;
-            set_tcp_ports;
-            set_udp_ports;
-            set_sctp_ports;
-        }
-
-        const default_action = NoAction;
-        const entries = {
-            (true, false, false) : set_tcp_ports();
-            (false, true, false) : set_udp_ports();
-            (false, false, true) : set_sctp_ports();
-        }
-    }
-
-    // -----------------------------
-    // TUNNEL
-    // -----------------------------
-
-    action validate_tunnel_none() {
-    }
-
-    action validate_tunnel_vlan() {
-    }
-
-    action validate_tunnel_vni() {
-    }
-
-    table validate_tunnel {
-        key = {
-            tunnel.type : ternary;
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid: ternary;
-        }
-        actions = {
-            validate_tunnel_vni;
-            validate_tunnel_vlan;
-            validate_tunnel_none;
-        }
-        const entries = {
-   // highest -> lowest priority in tcam
-            (0, true, 0): validate_tunnel_none(); // tag has priority only
-            (0, true, _): validate_tunnel_vlan(); // tag has priority and vlan
-            (_, true, _): validate_tunnel_vni();
-            (_, false, _): validate_tunnel_vni();
-            (0, false, _): validate_tunnel_none();
-        }
-
-    }
-
-    // -----------------------------
- // Apply
-    // -----------------------------
-
-    apply {
-/*
-        switch(validate_ethernet.apply().action_run) {
-            malformed_pkt : {}
-            default : {
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-#ifdef IPV6_TUNNEL_ENABLE
-                else if (hdr.ipv6.isValid()) {
-					if(test == true) {
-                        validate_ipv6.apply();
-					}
-                }
-#endif
-
-                validate_other.apply();
-
-  				validate_tunnel.apply();
-            }
-        }
-*/
-    validate_ethernet.apply();
-
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-//#ifdef IPV6_TUNNEL_ENABLE
-
-               else if (hdr.ipv6.isValid()) {
-     if(test == true) {
-                        validate_ipv6.apply();
-     }
-                }
-
-
-                validate_other.apply();
-
-      validate_tunnel.apply();
-    }
-}
-
-// ============================================================================
-// Parser Validation
-// ============================================================================
-
-// From tofino2.p4:  todo: are these mutually exclusive?
-// ------------------------------------------------------
-// typedef error ParserError_t;
-// const bit<16> PARSER_ERROR_OK            = 16w0x0000;
-// const bit<16> PARSER_ERROR_NO_TCAM       = 16w0x0001;
-// const bit<16> PARSER_ERROR_PARTIAL_HDR   = 16w0x0002;
-// const bit<16> PARSER_ERROR_CTR_RANGE     = 16w0x0004;
-// const bit<16> PARSER_ERROR_TIMEOUT_USER  = 16w0x0008;
-// const bit<16> PARSER_ERROR_TIMEOUT_HW    = 16w0x0010;
-// const bit<16> PARSER_ERROR_SRC_EXT       = 16w0x0020;
-// const bit<16> PARSER_ERROR_PHV_OWNER     = 16w0x0080;
-// const bit<16> PARSER_ERROR_MULTIWRITE    = 16w0x0100;
-// const bit<16> PARSER_ERROR_ARAM_MBE      = 16w0x0400;
-// const bit<16> PARSER_ERROR_FCS           = 16w0x0800;
-// const bit<16> PARSER_ERROR_CSUM_MBE      = 16w0x1000;
-
-control ParserValidation(
-        inout switch_header_t hdr,
-  in switch_ingress_metadata_t ig_md,
-        in ingress_intrinsic_metadata_from_parser_t ig_intr_from_prsr,
-        out ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-        inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
-) {
-
-    // see slide 97 of the BF Training Material (Data Plane Programming):
-    // default actions can be changed at runtime using the APIs.
-    // todo: do we need to invalidate udf header here too?
-    action drop() { ig_intr_md_for_dprsr.drop_ctl = 1; exit; }
-    action except() { ig_intr_md_for_dprsr.drop_ctl = 0; }
-//     action copy_to_cpu()   { ig_intr_md_for_tm.copy_to_cpu = 1; }
-// #ifdef MIRROR_INGRESS_ENABLE
-//     action mirror_to_cpu() { ig_intr_md_for_dprsr.mirror_type = 1; }
-// #endif // MIRROR_INGRESS_ENABLE
-
-    table handle_parser_errors {
-        key = {
-            //hdr.udf.isValid() : exact;
-            //ig_md.parse_udf_reached : exact;
-            ig_intr_from_prsr.parser_err: exact;
-        }
-
-        actions = {
-            drop;
-            except;
-//             copy_to_cpu;
-// #ifdef MIRROR_INGRESS_ENABLE
-//             mirror_to_cpu;
-// #endif // MIRROR_INGRESS_ENABLE
-            NoAction;
-        }
-
-        const default_action = drop;
-        const entries = {
-            // the parser is able to roll off the end of small packets
-            // when extracting the opaque UDF data. we want to make an
-            // exception for this case, and not drop these frame.
-            //(false,  1, (PARSER_ERROR_PARTIAL_HDR & PARSER_ERROR_SRC_EXT)) : except();
-            //(false,  1, (0xFFFF &&& PARSER_ERROR_PARTIAL_HDR)) : except(); 
-            PARSER_ERROR_PARTIAL_HDR: except();
-        }
-    }
-
-    // -----------------------------
-
- apply {
-        if (ig_intr_from_prsr.parser_err != 0) {
-            handle_parser_errors.apply();
-        }
- }
-}
-# 51 "npb.p4" 2
+# 48 "npb.p4" 2
+//#include "validation.p4"
 # 1 "rewrite.p4" 1
 
 /*******************************************************************************
@@ -6728,7 +6220,7 @@ control ParserValidation(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 52 "npb.p4" 2
+# 50 "npb.p4" 2
 # 1 "tunnel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -6857,19 +6349,16 @@ control IngressTunnelRMAC(
 
 control IngressTunnel(
  inout switch_ingress_metadata_t ig_md,
- inout bool ig_md_flags_ipv4_checksum_err,
  inout switch_header_transport_t hdr_0,
  inout switch_lookup_fields_t lkp_0,
  inout switch_tunnel_metadata_t tunnel_0,
- inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr, // extreme added
- out bool hit
+ inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr // extreme added
 ) (
  switch_uint32_t ipv4_src_vtep_table_size=1024,
  switch_uint32_t ipv6_src_vtep_table_size=1024,
  switch_uint32_t ipv4_dst_vtep_table_size=1024,
  switch_uint32_t ipv6_dst_vtep_table_size=1024
 ) {
-
  DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_src_vtep;
  DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_dst_vtep;
 
@@ -6878,22 +6367,24 @@ control IngressTunnel(
 
 
  // -------------------------------------
- // Table: IPv4/v6 Src VTEP
+ // Table: IPv4 Src VTEP
  // -------------------------------------
 
  // Derek note: These tables are unused in latest switch.p4 code from barefoot
 
  action src_vtep_hit(
-  switch_port_lag_index_t port_lag_index,
-  bit<12> sap,
+//		switch_port_lag_index_t port_lag_index,
+  bit<16> sap,
   bit<12> vpn
  ) {
   stats_src_vtep.count();
 
-  ig_md.port_lag_index = port_lag_index;
+//		ig_md.port_lag_index    = port_lag_index;
   hdr_0.nsh_type1.sap = (bit<16>)sap;
   hdr_0.nsh_type1.vpn = (bit<16>)vpn;
  }
+
+ // -------------------------------------
 
  action src_vtep_miss(
  ) {
@@ -6926,41 +6417,49 @@ control IngressTunnel(
  }
 
  // -------------------------------------
+ // Table: IPv6 Src VTEP
  // -------------------------------------
-# 221 "tunnel.p4"
+# 223 "tunnel.p4"
  // -------------------------------------
- // Table: IPv4/v6 Dst VTEP
+ // Table: IPv4 Dst VTEP
  // -------------------------------------
+
+ bool drop_ = false;
 
  action dst_vtep_hit(
 //		switch_bd_t bd,
 
-  bit<3> drop
+  bool drop
 
 
-
-
-
-
+  ,
+//		switch_port_lag_index_t port_lag_index,
+  bit<16> sap,
+  bit<12> vpn
 
  ) {
   stats_dst_vtep.count();
 
 //		ig_md.bd = bd;
 
-  ig_intr_md_for_dprsr.drop_ctl = drop;
+//		ig_intr_md_for_dprsr.drop_ctl = drop;
+  drop_ = drop;
 
 
-
-
-
+//		ig_md.port_lag_index    = port_lag_index;
+  hdr_0.nsh_type1.sap = (bit<16>)sap;
+  hdr_0.nsh_type1.vpn = (bit<16>)vpn;
 
  }
 
- action dst_vtep_tunid_hit(
- ) {
-  stats_dst_vtep.count();
- }
+ // -------------------------------------
+
+//	action dst_vtep_tunid_hit(
+//	) {
+//		stats_dst_vtep.count();
+//	}
+
+ // -------------------------------------
 
  action NoAction_(
  ) {
@@ -6971,7 +6470,17 @@ control IngressTunnel(
 
  table dst_vtep {
   key = {
-# 275 "tunnel.p4"
+
+
+
+
+
+   hdr_0.ipv4.src_addr : ternary @name("src_addr");
+
+
+
+
+
    hdr_0.ipv4.dst_addr : ternary @name("dst_addr");
 
 
@@ -6982,7 +6491,7 @@ control IngressTunnel(
   actions = {
    NoAction_;
    dst_vtep_hit;
-   dst_vtep_tunid_hit;
+//			dst_vtep_tunid_hit;
   }
 
   const default_action = NoAction_;
@@ -6991,8 +6500,9 @@ control IngressTunnel(
  }
 
  // -------------------------------------
+ // Table: IPv6 Dst VTEP
  // -------------------------------------
-# 366 "tunnel.p4"
+# 381 "tunnel.p4"
  // -------------------------------------
  // Table: VNI to BD
  // -------------------------------------
@@ -7015,7 +6525,7 @@ control IngressTunnel(
 	// -------------------------------------
 	// -------------------------------------
 
-#ifdef IPV6_TRANSPORT_INGRESS_ENABLE
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
     // Tunnel id -> BD Translation
     table vni_to_bd_mappingv6 {
         key = {
@@ -7045,29 +6555,35 @@ control IngressTunnel(
     if (hdr_0.ipv4.isValid()) {
 //				if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV4) {
 
-     hit = src_vtep.apply().hit;
+
 
      switch(dst_vtep.apply().action_run) {
+//						dst_vtep_tunid_hit : {
+//							// Vxlan
+//							vni_to_bd_mapping.apply();
+//						}
       dst_vtep_hit : {
       }
-      dst_vtep_tunid_hit : {
-       // Vxlan
-//							vni_to_bd_mapping.apply();
-      }
      }
-# 443 "tunnel.p4"
-    } else {
-     hit = false;
+# 460 "tunnel.p4"
     }
 
 //			}
 //		}
 
+  // --------------------
+
+  if(drop_ == true) {
+   ig_intr_md_for_dprsr.drop_ctl = 0x1;
+//			ig_intr_md_for_dprsr.drop_ctl = (bit<3>)drop_;
+  }
+
+
  }
 }
 
 //-----------------------------------------------------------------------------
-// Ingress Tunnel Decap: Network (does not alter packet!)
+// Ingress Tunnel Decap: Network SAP (does not alter packet!)
 //-----------------------------------------------------------------------------
 
 control IngressTunnelNetwork(
@@ -7095,7 +6611,7 @@ control IngressTunnelNetwork(
  }
 
  action sap_hit (
-  bit<12> sap,
+  bit<16> sap,
   bit<12> vpn
  ) {
   stats.count();
@@ -7144,7 +6660,7 @@ control IngressTunnelNetwork(
 }
 
 //-----------------------------------------------------------------------------
-// Ingress Tunnel Decap: Outer (does not alter packet!)
+// Ingress Tunnel Decap: Outer SAP (does not alter packet!)
 //-----------------------------------------------------------------------------
 
 control IngressTunnelOuter(
@@ -7159,7 +6675,7 @@ control IngressTunnelOuter(
  switch_uint32_t sap_exm_table_size=32w1024,
  switch_uint32_t sap_tcam_table_size=32w1024
 ) {
- DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_exm;
+//	DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_exm;
  DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_tcam;
 
  // -------------------------------------
@@ -7168,52 +6684,52 @@ control IngressTunnelOuter(
 
  bool terminate_ = false;
  bool scope_ = false;
+/*
+	action NoAction_exm (
+	) {
+		stats_exm.count();
+	}
 
- action NoAction_exm (
- ) {
-  stats_exm.count();
- }
+	action sap_exm_hit(
+		bit<SSAP_ID_WIDTH> sap,
+		bit<VPN_ID_WIDTH>  vpn,
+		bool               scope,
+		bool               terminate
+	) {
+		stats_exm.count();
 
- action sap_exm_hit(
-  bit<12> sap,
-  bit<12> vpn,
-  bool scope,
-  bool terminate
- ) {
-  stats_exm.count();
+		hdr_0.nsh_type1.sap     = (bit<16>)sap;
+		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		scope_                  = scope;
+		terminate_              = terminate;
+	}
 
-  hdr_0.nsh_type1.sap = (bit<16>)sap;
-  hdr_0.nsh_type1.vpn = (bit<16>)vpn;
-  scope_ = scope;
-  terminate_ = terminate;
- }
+	// -------------------------------------
 
- // -------------------------------------
+	table sap_exm {
+		key = {
+			hdr_0.nsh_type1.sap : exact @name("sap");
 
- table sap_exm {
-  key = {
-   hdr_0.nsh_type1.sap : exact @name("sap");
+			// l3
+			lkp.ip_type         : exact @name("ip_type");
+			lkp.ip_src_addr     : exact @name("ip_src_addr");
+			lkp.ip_dst_addr     : exact @name("ip_dst_addr");
 
-   // l3
-   lkp.ip_type : exact @name("ip_type");
-   lkp.ip_src_addr : exact @name("ip_src_addr");
-   lkp.ip_dst_addr : exact @name("ip_dst_addr");
+			// tunnel
+			lkp.tunnel_type     : exact @name("tunnel_type");
+			lkp.tunnel_id       : exact @name("tunnel_id");
+		}
 
-   // tunnel
-   lkp.tunnel_type : exact @name("tunnel_type");
-   lkp.tunnel_id : exact @name("tunnel_id");
-  }
+		actions = {
+			NoAction_exm;
+			sap_exm_hit;
+		}
 
-  actions = {
-   NoAction_exm;
-   sap_exm_hit;
-  }
-
-  const default_action = NoAction_exm;
-  counters = stats_exm;
-  size = sap_exm_table_size;
- }
-
+		const default_action = NoAction_exm;
+		counters = stats_exm;
+		size = sap_exm_table_size;
+	}
+*/
  // -------------------------------------
  // -------------------------------------
 
@@ -7223,7 +6739,7 @@ control IngressTunnelOuter(
  }
 
  action sap_tcam_hit(
-  bit<12> sap,
+  bit<16> sap,
   bit<12> vpn,
   bool scope,
   bool terminate
@@ -7294,33 +6810,35 @@ control IngressTunnelOuter(
    sap_tcam.apply();
 //		}
 
-  if(terminate_ == true) {
-   ig_md.tunnel_1.terminate = true;
-   if(hdr_0.nsh_type1.scope == 1) {
-    ig_md.tunnel_2.terminate = true;
-   }
-  }
-
-  if(scope_ == true) {
-   if(hdr_0.nsh_type1.scope == 0) {
-
-    Scoper.apply(
-     lkp_2,
-     ig_md.drop_reason_2,
-
-     ig_md.lkp_1
-    );
-# 706 "tunnel.p4"
+  if(lkp.next_lyr_valid == true) {
+   if(terminate_ == true) {
+    ig_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     ig_md.tunnel_2.terminate = true;
+    }
    }
 
-//			scope_inc.apply();
-   hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   if(scope_ == true) {
+    if(hdr_0.nsh_type1.scope == 0) {
+
+     Scoper.apply(
+      lkp_2,
+//						ig_md.drop_reason_2,
+
+      lkp
+     );
+# 730 "tunnel.p4"
+    }
+
+//				scope_inc.apply();
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   }
   }
  }
 }
 
 //-----------------------------------------------------------------------------
-// Ingress Tunnel Decap: Inner (does not alter packet!)
+// Ingress Tunnel Decap: Inner SAP (does not alter packet!)
 //-----------------------------------------------------------------------------
 
 control IngressTunnelInner(
@@ -7351,7 +6869,7 @@ control IngressTunnelInner(
  }
 
  action sap_exm_hit(
-  bit<12> sap,
+  bit<16> sap,
   bit<12> vpn,
   bool scope,
   bool terminate
@@ -7394,7 +6912,7 @@ control IngressTunnelInner(
  }
 
  action sap_tcam_hit(
-  bit<12> sap,
+  bit<16> sap,
   bit<12> vpn,
   bool scope,
   bool terminate
@@ -7460,27 +6978,29 @@ control IngressTunnelInner(
    sap_tcam.apply();
   }
 
-  if(terminate_ == true) {
-   ig_md.tunnel_1.terminate = true;
-   if(hdr_0.nsh_type1.scope == 1) {
-    ig_md.tunnel_2.terminate = true;
-   }
-  }
-
-  if(scope_ == true) {
-   if(hdr_0.nsh_type1.scope == 0) {
-
-    Scoper.apply(
-     lkp_2,
-     ig_md.drop_reason_2,
-
-     ig_md.lkp_1
-    );
-# 880 "tunnel.p4"
+  if(lkp.next_lyr_valid == true) {
+   if(terminate_ == true) {
+    ig_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     ig_md.tunnel_2.terminate = true;
+    }
    }
 
-//			scope_inc.apply();
-   hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   if(scope_ == true) {
+    if(hdr_0.nsh_type1.scope == 0) {
+
+     Scoper.apply(
+      lkp_2,
+//						ig_md.drop_reason_2,
+
+      lkp
+     );
+# 906 "tunnel.p4"
+    }
+
+//				scope_inc.apply();
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   }
   }
  }
 }
@@ -7649,11 +7169,8 @@ control TunnelDecapOuter(
   if(tunnel_1.terminate) {
    // ----- l2 -----
 
-   // keep my l2 when mine is valid and the next layer's isn't -- except when the next layer is being terminated and the next-next layer's is
-   if(hdr_1.ethernet.isValid() && !hdr_2.ethernet.isValid() && !(tunnel_2.terminate && hdr_3.ethernet.isValid())) {
-    // keep l2
-   } else {
-    // remove l2
+   // only remove l2 when the next layer's is valid
+   if(hdr_2.ethernet.isValid() || (tunnel_2.terminate && hdr_3.ethernet.isValid())) {
     hdr_1.ethernet.setInvalid();
 
 
@@ -7806,11 +7323,8 @@ control TunnelDecapInner(
   if(tunnel_2.terminate) {
    // ----- l2 -----
 
-   // keep my l2 when mine is valid and the next layer's isn't
-   if(hdr_2.ethernet.isValid() && !hdr_3.ethernet.isValid()) {
-    // keep l2
-   } else {
-    // remove l2
+   // only remove l2 when the next layer's is valid
+   if(hdr_3.ethernet.isValid()) {
     hdr_2.ethernet.setInvalid();
     hdr_2.vlan_tag[0].setInvalid(); // extreme added
    }
@@ -7829,6 +7343,7 @@ control TunnelDecapInner(
    // ----- tunnel -----
 
    hdr_2.gre.setInvalid();
+   hdr_2.gre_optional.setInvalid();
 
 
    hdr_2.gtp_v1_base.setInvalid(); // extreme added
@@ -7933,7 +7448,7 @@ control TunnelDecapFixEthertype(
   hdr_2.ethernet.setInvalid();
   hdr_2.vlan_tag[0].setInvalid(); // extreme added
  }
-# 1470 "tunnel.p4"
+# 1492 "tunnel.p4"
  // -------------------------------------
  // Apply
  // -------------------------------------
@@ -8053,7 +7568,7 @@ control TunnelRewrite(
  // Tunnel source IP rewrite
  action rewrite_ipv4_src(ipv4_addr_t src_addr) {
 
-
+  hdr_0.ipv4.src_addr = src_addr;
 
  }
 
@@ -8078,7 +7593,18 @@ control TunnelRewrite(
  // -------------------------------------
 
  // Tunnel destination IP rewrite
-# 1644 "tunnel.p4"
+
+ action rewrite_ipv4_dst(ipv4_addr_t dst_addr) {
+  hdr_0.ipv4.dst_addr = dst_addr;
+ }
+# 1649 "tunnel.p4"
+ table ipv4_dst_addr_rewrite {
+  key = { tunnel.index : exact; }
+  actions = { rewrite_ipv4_dst; }
+//		const default_action = rewrite_ipv4_dst(0); // extreme modified!
+  size = ipv4_dst_addr_rewrite_table_size;
+ }
+# 1666 "tunnel.p4"
  // -------------------------------------
  // Table: SMAC Rewrite
  // -------------------------------------
@@ -8111,7 +7637,20 @@ control TunnelRewrite(
   if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
    egress_bd.apply(hdr_0, eg_md.bd, eg_md.pkt_src,
     smac_index);
-# 1698 "tunnel.p4"
+
+
+  if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
+   src_addr_rewrite.apply();
+
+  if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
+
+   if (hdr_0.ipv4.isValid()) {
+    ipv4_dst_addr_rewrite.apply();
+    }
+# 1717 "tunnel.p4"
+  }
+
+
   smac_rewrite.apply();
 
  }
@@ -8167,8 +7706,8 @@ control TunnelEncap(
 
  action copy_ipv4_header() {
 
-
-
+  // Copy all of the IPv4 header fields.
+  hdr_0.ipv4.setInvalid(); // is this supposed to be transport hdr_0?
 
  }
 
@@ -8194,7 +7733,7 @@ control TunnelEncap(
  }
 
  // --------------------------------
-# 1793 "tunnel.p4"
+# 1815 "tunnel.p4"
  // --------------------------------
 
  table encap_outer {
@@ -8253,7 +7792,18 @@ control TunnelEncap(
  // -------------------------------------
 
  action add_gre_header(bit<16> proto, bit<1> K, bit<1> S) {
-# 1863 "tunnel.p4"
+
+  hdr_0.gre.setValid();
+  hdr_0.gre.proto = proto;
+  hdr_0.gre.C = 0;
+  hdr_0.gre.R = 0;
+  hdr_0.gre.K = K;
+  hdr_0.gre.S = S;
+  hdr_0.gre.s = 0;
+  hdr_0.gre.recurse = 0;
+  hdr_0.gre.flags = 0;
+  hdr_0.gre.version = 0;
+
  }
 
  // -------------------------------------
@@ -8267,17 +7817,18 @@ control TunnelEncap(
 
  }
 
- action add_l2_header() {
+ action add_l2_header(bit<16> ethertype) {
   hdr_0.ethernet.setValid();
+  hdr_0.ethernet.ether_type = ethertype;
  }
 
  // -------------------------------------
 
- action add_erspan_header_type2(bit<10> session_id) {
-# 1892 "tunnel.p4"
+ action add_erspan_header_type2(switch_mirror_session_t session_id) {
+# 1915 "tunnel.p4"
  }
 
- // action add_erspan_header(bit<32> timestamp, bit<10> session_id) {
+ // action add_erspan_header(bit<32> timestamp, switch_mirror_session_t session_id) {
  // 	hdr_0.erspan_type3.setValid();
  // 	hdr_0.erspan_type3.timestamp = timestamp;
  // 	hdr_0.erspan_type3.session_id = (bit<10>) session_id;
@@ -8288,12 +7839,30 @@ control TunnelEncap(
 
  // -------------------------------------
 
- action add_ipv4_header(bit<8> proto) {
-# 1925 "tunnel.p4"
+ action add_ipv4_header(bit<8> proto, bit<3> flags) {
+
+  hdr_0.ipv4.setValid();
+  hdr_0.ipv4.version = 4w4;
+  hdr_0.ipv4.ihl = 4w5;
+  // hdr_0.ipv4.total_len = 0;
+  hdr_0.ipv4.identification = 0;
+  hdr_0.ipv4.flags = flags; // derek: was 0 originally, but request came in to set 'don't frag' bit
+  hdr_0.ipv4.frag_offset = 0;
+  hdr_0.ipv4.protocol = proto;
+  // hdr_0.ipv4.src_addr = 0;
+  // hdr_0.ipv4.dst_addr = 0;
+
+  if (mode == switch_tunnel_mode_t.UNIFORM) {
+   // NoAction.
+  } else if (mode == switch_tunnel_mode_t.PIPE) {
+   hdr_0.ipv4.ttl = 8w64;
+   hdr_0.ipv4.tos = 0;
+  }
+
  }
 
  action add_ipv6_header(bit<8> proto) {
-# 1944 "tunnel.p4"
+# 1967 "tunnel.p4"
  }
 
  //-----------------------------------------------------------------------------
@@ -8305,11 +7874,27 @@ control TunnelEncap(
  // =====================================
 
  action rewrite_ipv4_gre() {
-# 1973 "tunnel.p4"
+
+  // ----- l3 -----
+  add_ipv4_header(47, 2);
+  // Total length = packet length + 24
+  //   IPv4 (20) + GRE (4)
+  hdr_0.ipv4.total_len = payload_len + 16w24;
+
+  // ----- tunnel -----
+  add_gre_header(0x0800, 0, 0);
+
+  // ----- l2 -----
+  add_l2_header(0x0800);
+
+  hdr_1.ethernet.setInvalid();
+  hdr_1.vlan_tag[0].setInvalid();
+  hdr_1.vlan_tag[1].setInvalid();
+
  }
 
- action rewrite_ipv4_erspan() {
-# 1992 "tunnel.p4"
+ action rewrite_ipv4_erspan(switch_mirror_session_t session_id) {
+# 2013 "tunnel.p4"
  }
 
  // =====================================
@@ -8317,11 +7902,10 @@ control TunnelEncap(
  // =====================================
 
  action rewrite_ipv6_gre() {
-# 2018 "tunnel.p4"
+# 2038 "tunnel.p4"
  }
 /*
 	action rewrite_ipv6_erspan(switch_mirror_session_t session_id) {
-		add_l2_header();
 		// ----- l3 -----
 //		hdr_0.inner_ethernet = hdr_0.ethernet;
 		add_ipv6_header(IP_PROTOCOLS_GRE);
@@ -8335,7 +7919,7 @@ control TunnelEncap(
 		add_erspan_header_type2(session_id);
 
 		// ----- l2 -----
-		hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
+		add_l2_header(ETHERTYPE_IPV6);
 	}
 */
  // -------------------------------------
@@ -8343,8 +7927,7 @@ control TunnelEncap(
  // -------------------------------------
 
  action rewrite_mac_in_mac() {
-  add_l2_header();
-  hdr_0.ethernet.ether_type = 0x894F;
+  add_l2_header(0x894F);
  }
 
  // -------------------------------------
@@ -8361,24 +7944,10 @@ control TunnelEncap(
    rewrite_ipv4_gre; // extreme added
    rewrite_ipv6_gre; // extreme added
    rewrite_ipv4_erspan; // extreme added
-//			rewrite_ipv6_erspan;  // extreme added
+//			rewrite_ipv6_erspan;          // extreme added
   }
 
   const default_action = NoAction;
-
-  // ---------------------------------
-  // Extreme Networks - Added
-  // ---------------------------------
-  /*
-		// Note that this table should just be programmed with the
-		// following constants, but the language doesn't seem to allow it....
-		const entries = {
-			(SWITCH_TUNNEL_TYPE_NSH)      = rewrite_mac_in_mac();  // extreme added
-			(SWITCH_TUNNEL_TYPE_GRE)      = rewrite_ipv4_gre();    // extreme added
-			(SWITCH_TUNNEL_TYPE_ERSPAN)   = rewrite_ipv4_erspan(); // extreme added
-		}
-		*/
-  // ---------------------------------
  }
 
  //=============================================================================
@@ -8401,7 +7970,7 @@ control TunnelEncap(
 
  }
 }
-# 53 "npb.p4" 2
+# 51 "npb.p4" 2
 # 1 "multicast.p4" 1
 
 
@@ -8418,10 +7987,6 @@ control MulticastReplication (
 ) (
  switch_uint32_t table_size = NPB_ING_SF_1_MULTICAST_RID_TABLE_SIZE
 ) {
-
- // =========================================================================
- // Notes
- // =========================================================================
 
  // =========================================================================
  // Table #1: 
@@ -8489,48 +8054,257 @@ control MulticastReplication (
 
  }
 }
-# 54 "npb.p4" 2
-# 1 "copp.p4" 1
+# 52 "npb.p4" 2
+# 1 "meter.p4" 1
+/*******************************************************************************
+ * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
+ *
+ * Copyright (c) 2015-2019 Barefoot Networks, Inc.
+
+ * All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains the property of
+ * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+ * technical concepts contained herein are proprietary to Barefoot Networks,
+ * Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+ * process, and are protected by trade secret or copyright law.
+ * Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from
+ * Barefoot Networks, Inc.
+ *
+ * No warranty, explicit or implicit is provided, unless granted under a
+ * written agreement with Barefoot Networks, Inc.
+ *
+ ******************************************************************************/
 
 
 
-control IngressCopp (
- in bool copp_enable,
- in switch_copp_meter_id_t copp_meter_id,
 
- inout switch_ingress_metadata_t ig_md,
- inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
-) (
-) {
-# 47 "copp.p4"
- //-------------------------------------------------------------
+# 1 "acl.p4" 1
+/*******************************************************************************
+ * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
+ *
+ * Copyright (c) 2015-2019 Barefoot Networks, Inc.
 
- apply {
-# 58 "copp.p4"
- }
+ * All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains the property of
+ * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+ * technical concepts contained herein are proprietary to Barefoot Networks,
+ * Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+ * process, and are protected by trade secret or copyright law.
+ * Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from
+ * Barefoot Networks, Inc.
+ *
+ * No warranty, explicit or implicit is provided, unless granted under a
+ * written agreement with Barefoot Networks, Inc.
+ *
+ ******************************************************************************/
+# 27 "meter.p4" 2
+/*
+//-------------------------------------------------------------------------------------------------
+// Storm Control
+//
+// Monitors incoming traffic and prevents the excessive traffic on a particular interface by
+// dropping the traffic. Each port has a single storm control levels for all types of traffic
+// (broadcast, multicast, and unicast).
+//
+// @param ig_md : Ingress metadata fields
+// @param pkt_type : One of Unicast, Multicast, or Broadcast packet types.
+// @param flag : Indicating whether the packet should get dropped or not.
+// @param table_size : Size of the storm control table [per pipe]
+// @param meter_size : Size of storm control meters [global pool]
+// Stats table size must be 512 per pipe - each port with 6 stat entries [2 colors per pkt-type]
+//-------------------------------------------------------------------------------------------------
+control StormControl(inout switch_ingress_metadata_t ig_md,
+                     in switch_pkt_type_t pkt_type,
+                     out bool flag)(
+                     switch_uint32_t table_size=256,
+                     switch_uint32_t meter_size=1024) {
+    DirectCounter<bit<switch_counter_width>>(CounterType_t.PACKETS) storm_control_stats;
+    Meter<bit<16>>(meter_size, MeterType_t.PACKETS) meter;
 
+    action count() {
+        storm_control_stats.count();
+        flag = false;
+    }
+
+    action drop_and_count() {
+        storm_control_stats.count();
+        flag = true;
+    }
+
+    table stats {
+        key = {
+            ig_md.qos.storm_control_color: exact;
+            pkt_type : ternary;
+            ig_md.port: exact;
+            ig_md.flags.dmac_miss : ternary;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            count;
+            drop_and_count;
+        }
+
+        const default_action = NoAction;
+        size = table_size*2;
+        counters = storm_control_stats;
+    }
+
+    action set_meter(bit<16> index) {
+        ig_md.qos.storm_control_color = (bit<2>) meter.execute(index);
+    }
+
+    table storm_control {
+        key =  {
+            ig_md.port : exact;
+            pkt_type : ternary;
+            ig_md.flags.dmac_miss : ternary;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            set_meter;
+        }
+
+        const default_action = NoAction;
+        size = table_size;
+    }
+
+    apply {
+#ifdef STORM_CONTROL_ENABLE
+        if (!INGRESS_BYPASS(STORM_CONTROL))
+            storm_control.apply();
+
+        if (!INGRESS_BYPASS(STORM_CONTROL))
+            stats.apply();
+#endif
+    }
+}
+*/
+//-------------------------------------------------------------------------------------------------
+// Ingress Mirror Meter
+//-------------------------------------------------------------------------------------------------
+control IngressMirrorMeter(inout switch_ingress_metadata_t ig_md)(
+                     switch_uint32_t table_size=256) {
+    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+    Meter<bit<9>>(table_size, MeterType_t.PACKETS) meter;
+    switch_pkt_color_t color;
+
+    action mirror_and_count() {
+        stats.count();
+    }
+
+    action no_mirror_and_count() {
+        stats.count();
+        ig_md.mirror.type = 0;
+    }
+
+    table meter_action {
+        key = {
+            color: exact;
+            ig_md.mirror.meter_index: exact;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            mirror_and_count;
+            no_mirror_and_count;
+        }
+
+        const default_action = NoAction;
+        size = table_size*2;
+        counters = stats;
+    }
+
+    action set_meter(bit<9> index) {
+        color = (bit<2>) meter.execute(index);
+    }
+
+    table meter_index {
+        key = {
+            ig_md.mirror.meter_index : exact;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            set_meter;
+        }
+
+        const default_action = NoAction;
+        size = table_size;
+    }
+
+    apply {
+            meter_index.apply();
+            meter_action.apply();
+    }
 }
 
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+// Egress Mirror Meter
+//-------------------------------------------------------------------------------------------------
+control EgressMirrorMeter(inout switch_egress_metadata_t eg_md)(
+                     switch_uint32_t table_size=256) {
+    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+    Meter<bit<9>>(table_size, MeterType_t.PACKETS) meter;
+    switch_pkt_color_t color;
 
-control EgressCopp (
- in bool copp_enable,
- in switch_copp_meter_id_t copp_meter_id,
+    action mirror_and_count() {
+        stats.count();
+    }
 
- inout switch_egress_metadata_t eg_md,
- inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr
-) (
-) {
-# 110 "copp.p4"
- //-------------------------------------------------------------
+    action no_mirror_and_count() {
+        stats.count();
+        eg_md.mirror.type = 0;
+    }
 
- apply {
-# 121 "copp.p4"
- }
+    table meter_action {
+        key = {
+            color: exact;
+            eg_md.mirror.meter_index: exact;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            mirror_and_count;
+            no_mirror_and_count;
+        }
+
+        const default_action = NoAction;
+        size = table_size*2;
+        counters = stats;
+    }
+
+    action set_meter(bit<9> index) {
+        color = (bit<2>) meter.execute(index);
+    }
+
+    table meter_index {
+        key = {
+            eg_md.mirror.meter_index : exact;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            set_meter;
+        }
+
+        const default_action = NoAction;
+        size = table_size;
+    }
+
+    apply {
+            meter_index.apply();
+            meter_action.apply();
+    }
 }
-# 55 "npb.p4" 2
+# 53 "npb.p4" 2
 # 1 "dtel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -8581,7 +8355,7 @@ control DeflectOnDrop(
         key = {
             ig_md.dtel.report_type : ternary;
             ig_intr_md_for_tm.ucast_egress_port : ternary @name("egress_port");
-//          ig_md.qos.qid: ternary @name("qid");
+//          ig_md.qos.qid: ternary @name("qid"); // derek hack
             ig_md.multicast.id : ternary;
             ig_md.cpu_reason : ternary; // to avoid validity issues, replaces
                                          // ig_intr_md_for_tm.copy_to_cpu
@@ -8654,7 +8428,7 @@ control MirrorOnDrop(in switch_drop_reason_t drop_reason,
 // @param hash : Hash value used to query the bloom filter.
 // @param flag : A flag indicating that the report needs to be suppressed.
 //-----------------------------------------------------------------------------
-control DropReport(in switch_header_t hdr,
+control DropReport(in switch_header_outer_t hdr,
                    in switch_egress_metadata_t eg_md,
                    in bit<32> hash, inout bit<2> flag) {
     // Two bit arrays of 128K bits.
@@ -8679,14 +8453,15 @@ control DropReport(in switch_header_t hdr,
                                       SWITCH_DTEL_SUPPRESS_REPORT |
                                       SWITCH_DTEL_REPORT_TYPE_ETRAP_CHANGE)
             == SWITCH_DTEL_REPORT_TYPE_DROP
-            && hdr.outer.dtel_drop_report.isValid())
-            flag[0:0] = filter1.execute(hash[16:0]);
+            && hdr.dtel_drop_report.isValid())
+            flag[0:0] = filter1.execute(hash[(17 - 1):0]);
         if (eg_md.dtel.report_type & (SWITCH_DTEL_REPORT_TYPE_DROP |
                                       SWITCH_DTEL_SUPPRESS_REPORT |
                                       SWITCH_DTEL_REPORT_TYPE_ETRAP_CHANGE)
             == SWITCH_DTEL_REPORT_TYPE_DROP
-            && hdr.outer.dtel_drop_report.isValid())
-            flag[1:1] = filter2.execute(hash[31:15]);
+            && hdr.dtel_drop_report.isValid())
+            flag[1:1] = filter2.execute(hash[31:(32 - 17)]);
+
     }
 }
 
@@ -8723,8 +8498,8 @@ control QueueReport(inout switch_egress_metadata_t eg_md,
     RegisterAction<switch_queue_alert_threshold_t, bit<16>, bit<1>>(thresholds) check_thresholds = {
         void apply(inout switch_queue_alert_threshold_t reg, out bit<1> flag) {
             // Set the flag if either of qdepth or latency exceeds the threshold.
-//          if (reg.latency <= eg_md.dtel.latency || reg.qdepth <= (bit<32>) eg_md.qos.qdepth) {
-            if (reg.latency <= eg_md.dtel.latency) {
+//          if (reg.latency <= eg_md.dtel.latency || reg.qdepth <= (bit<32>) eg_md.qos.qdepth) { // derek hack
+            if (reg.latency <= eg_md.dtel.latency ) { // derek hack
                 flag = 1;
             }
         }
@@ -8742,7 +8517,7 @@ control QueueReport(inout switch_egress_metadata_t eg_md,
 
     table queue_alert {
         key = {
-//          eg_md.qos.qid : exact @name("qid");
+//          eg_md.qos.qid : exact @name("qid"); // derek hack
             eg_md.port : exact @name("port");
         }
 
@@ -8807,7 +8582,7 @@ control QueueReport(inout switch_egress_metadata_t eg_md,
         key = {
             eg_md.pkt_src : exact;
             qalert : exact;
-//          eg_md.qos.qid : exact @name("qid");
+//          eg_md.qos.qid : exact @name("qid"); // derek hack
             eg_md.port : exact @name("port");
         }
 
@@ -8869,11 +8644,11 @@ control FlowReport(in switch_egress_metadata_t eg_md, out bit<2> flag) {
     };
 
     apply {
-# 351 "dtel.p4"
+# 352 "dtel.p4"
     }
 }
 
-control IngressDtel(in switch_header_t hdr,
+control IngressDtel(in switch_header_outer_t hdr,
                     in switch_lookup_fields_t lkp,
                     inout switch_ingress_metadata_t ig_md,
                     in bit<16> hash,
@@ -8895,7 +8670,10 @@ control IngressDtel(in switch_header_t hdr,
     }
 
     table mirror_session {
-        key = { hash : selector; }
+        key = {
+            hdr.ethernet.isValid() : ternary;
+            hash : selector;
+        }
         actions = {
             NoAction;
             set_mirror_session;
@@ -8905,19 +8683,22 @@ control IngressDtel(in switch_header_t hdr,
     }
 
     apply {
-# 396 "dtel.p4"
+# 400 "dtel.p4"
     }
 }
 
 
-control DtelConfig(inout switch_header_t hdr,
+control DtelConfig(inout switch_header_outer_t hdr,
+                   inout bit<32> hdr_transport_timestamp, // derek hack
                    inout switch_egress_metadata_t eg_md,
                    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
 
     Register<bit<32>, switch_mirror_session_t>(1024) seq_number;
     RegisterAction<bit<32>, switch_mirror_session_t, bit<32>>(seq_number) get_seq_number = {
         void apply(inout bit<32> reg, out bit<32> rv) {
+# 422 "dtel.p4"
             reg = reg + 1;
+
             rv = reg;
         }
     };
@@ -8976,27 +8757,40 @@ control DtelConfig(inout switch_header_t hdr,
 
     action update(
             switch_uint32_t switch_id,
-            bit<6> hw_id,
+            switch_dtel_hw_id_t hw_id,
+
+
+
+
             bit<4> next_proto,
+
             switch_dtel_report_type_t report_type) {
-        hdr.outer.dtel.setValid();
-        hdr.outer.dtel.version = 0;
-        hdr.outer.dtel.next_proto = next_proto;
-        hdr.outer.dtel.d_q_f = (bit<3>) report_type;
-        hdr.outer.dtel.reserved = 0;
-        hdr.outer.dtel.hw_id = hw_id;
-        hdr.outer.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
-//      hdr.outer.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
-        hdr.outer.dtel.timestamp = (bit<32>) hdr.transport.nsh_type1.timestamp;
-        hdr.outer.dtel.switch_id = switch_id;
+        hdr.dtel.setValid();
+        hdr.dtel.hw_id = hw_id;
+        hdr.dtel.switch_id = switch_id;
+        hdr.dtel.d_q_f = (bit<3>) report_type;
+# 504 "dtel.p4"
+        hdr.dtel.version = 0;
+        hdr.dtel.next_proto = next_proto;
+        hdr.dtel.reserved = 0;
+        hdr.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
+//      hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
+        hdr.dtel.timestamp = (bit<32>) hdr_transport_timestamp; // derek hack
+
     }
 
     action update_and_mirror_truncate(
             switch_uint32_t switch_id,
-            bit<6> hw_id,
+            switch_dtel_hw_id_t hw_id,
             bit<4> next_proto,
+            bit<8> md_length,
+            bit<16> rep_md_bits,
             switch_dtel_report_type_t report_type) {
+
+
+
         update(switch_id, hw_id, next_proto, report_type);
+
         eg_md.mirror.type = 5;
         eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS;
         // Drop the report.
@@ -9005,89 +8799,93 @@ control DtelConfig(inout switch_header_t hdr,
 
     action update_and_set_etrap(
             switch_uint32_t switch_id,
-            bit<6> hw_id,
+            switch_dtel_hw_id_t hw_id,
             bit<4> next_proto,
+            bit<8> md_length,
+            bit<16> rep_md_bits,
             switch_dtel_report_type_t report_type,
             bit<2> etrap_status) {
-        hdr.outer.dtel.setValid();
-        hdr.outer.dtel.version = 0;
-        hdr.outer.dtel.next_proto = next_proto;
-        hdr.outer.dtel.d_q_f = (bit<3>) report_type;
-        hdr.outer.dtel.reserved[14:13] = etrap_status; // etrap indication
-        hdr.outer.dtel.hw_id = hw_id;
-        hdr.outer.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
-//      hdr.outer.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
-        hdr.outer.dtel.timestamp = (bit<32>) hdr.transport.nsh_type1.timestamp;
-        hdr.outer.dtel.switch_id = switch_id;
+        hdr.dtel.setValid();
+        hdr.dtel.hw_id = hw_id;
+        hdr.dtel.switch_id = switch_id;
+        hdr.dtel.d_q_f = (bit<3>) report_type;
+# 554 "dtel.p4"
+        hdr.dtel.version = 0;
+        hdr.dtel.next_proto = next_proto;
+        hdr.dtel.reserved[14:13] = etrap_status; // etrap indication
+        hdr.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
+//      hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
+        hdr.dtel.timestamp = (bit<32>) hdr_transport_timestamp; // derek hack
+
     }
 
     action set_ipv4_dscp_all(bit<6> dscp) {
-        hdr.outer.ipv4.tos[7:2] = dscp;
+        hdr.ipv4.tos[7:2] = dscp;
     }
 
     action set_ipv6_dscp_all(bit<6> dscp) {
 
-        hdr.outer.ipv6.tos[7:2] = dscp;
+        hdr.ipv6.tos[7:2] = dscp;
 
     }
 
     action set_ipv4_dscp_2(bit<1> dscp_bit_value) {
-        hdr.outer.ipv4.tos[2:2] = dscp_bit_value;
+        hdr.ipv4.tos[2:2] = dscp_bit_value;
     }
 
     action set_ipv6_dscp_2(bit<1> dscp_bit_value) {
 
-        hdr.outer.ipv6.tos[2:2] = dscp_bit_value;
+        hdr.ipv6.tos[2:2] = dscp_bit_value;
 
     }
 
     action set_ipv4_dscp_3(bit<1> dscp_bit_value) {
-        hdr.outer.ipv4.tos[3:3] = dscp_bit_value;
+        hdr.ipv4.tos[3:3] = dscp_bit_value;
     }
 
     action set_ipv6_dscp_3(bit<1> dscp_bit_value) {
 
-        hdr.outer.ipv6.tos[3:3] = dscp_bit_value;
+        hdr.ipv6.tos[3:3] = dscp_bit_value;
 
     }
 
     action set_ipv4_dscp_4(bit<1> dscp_bit_value) {
-        hdr.outer.ipv4.tos[4:4] = dscp_bit_value;
+        hdr.ipv4.tos[4:4] = dscp_bit_value;
     }
 
     action set_ipv6_dscp_4(bit<1> dscp_bit_value) {
 
-        hdr.outer.ipv6.tos[4:4] = dscp_bit_value;
+        hdr.ipv6.tos[4:4] = dscp_bit_value;
 
     }
 
     action set_ipv4_dscp_5(bit<1> dscp_bit_value) {
-        hdr.outer.ipv4.tos[5:5] = dscp_bit_value;
+        hdr.ipv4.tos[5:5] = dscp_bit_value;
     }
 
     action set_ipv6_dscp_5(bit<1> dscp_bit_value) {
 
-        hdr.outer.ipv6.tos[5:5] = dscp_bit_value;
+        hdr.ipv6.tos[5:5] = dscp_bit_value;
 
     }
 
     action set_ipv4_dscp_6(bit<1> dscp_bit_value) {
-        hdr.outer.ipv4.tos[6:6] = dscp_bit_value;
+        hdr.ipv4.tos[6:6] = dscp_bit_value;
     }
 
     action set_ipv6_dscp_6(bit<1> dscp_bit_value) {
 
-        hdr.outer.ipv6.tos[6:6] = dscp_bit_value;
+        hdr.ipv6.tos[6:6] = dscp_bit_value;
 
     }
 
     action set_ipv4_dscp_7(bit<1> dscp_bit_value) {
-        hdr.outer.ipv4.tos[7:7] = dscp_bit_value;
+        hdr.ipv4.tos[7:7] = dscp_bit_value;
     }
 
     action set_ipv6_dscp_7(bit<1> dscp_bit_value) {
 
-        hdr.outer.ipv6.tos[7:7] = dscp_bit_value;
+        hdr.ipv6.tos[7:7] = dscp_bit_value;
 
     }
 
@@ -9175,8 +8973,8 @@ control DtelConfig(inout switch_header_t hdr,
             eg_md.dtel.queue_report_flag : ternary;
             eg_md.drop_reason : ternary;
             eg_md.mirror.type : ternary;
-            hdr.outer.dtel_drop_report.isValid() : ternary;
-# 680 "dtel.p4"
+            hdr.dtel_drop_report.isValid() : ternary;
+# 732 "dtel.p4"
         }
 
         actions = {
@@ -9187,7 +8985,7 @@ control DtelConfig(inout switch_header_t hdr,
             mirror_drop;
             mirror_drop_and_set_q_bit;
             update;
-# 717 "dtel.p4"
+# 769 "dtel.p4"
         }
 
         const default_action = NoAction;
@@ -9229,7 +9027,8 @@ control IntEdge(inout switch_egress_metadata_t eg_md)(
     }
 }
 
-control EgressDtel(inout switch_header_t hdr,
+control EgressDtel(inout switch_header_outer_t hdr,
+                   inout bit<32> hdr_transport_timestamp, // derek hack
                    inout switch_egress_metadata_t eg_md,
                    in egress_intrinsic_metadata_t eg_intr_md,
                    in bit<32> hash) {
@@ -9239,13 +9038,22 @@ control EgressDtel(inout switch_header_t hdr,
     IntEdge() int_edge;
 
     action convert_ingress_port(switch_port_t port) {
-        hdr.outer.dtel_report.ingress_port = port;
+
+
+
+        hdr.dtel_report.ingress_port = port;
+
     }
 
     table ingress_port_conversion {
         key = {
-          hdr.outer.dtel_report.ingress_port : exact @name("port");
-          hdr.outer.dtel_report.isValid() : exact;
+
+
+
+
+          hdr.dtel_report.ingress_port : exact @name("port");
+          hdr.dtel_report.isValid() : exact @name("dtel_report_valid");
+
         }
         actions = {
             NoAction;
@@ -9256,13 +9064,22 @@ control EgressDtel(inout switch_header_t hdr,
     }
 
     action convert_egress_port(switch_port_t port) {
-        hdr.outer.dtel_report.egress_port = port;
+
+
+
+        hdr.dtel_report.egress_port = port;
+
     }
 
     table egress_port_conversion {
         key = {
-          hdr.outer.dtel_report.egress_port : exact @name("port");
-          hdr.outer.dtel_report.isValid() : exact;
+
+
+
+
+          hdr.dtel_report.egress_port : exact @name("port");
+          hdr.dtel_report.isValid() : exact @name("dtel_report_valid");
+
         }
         actions = {
             NoAction;
@@ -9273,10 +9090,10 @@ control EgressDtel(inout switch_header_t hdr,
     }
 
     apply {
-# 829 "dtel.p4"
+# 920 "dtel.p4"
     }
 }
-# 56 "npb.p4" 2
+# 54 "npb.p4" 2
 
 # 1 "npb_ing_parser.p4" 1
 
@@ -9296,8 +9113,10 @@ parser NpbIngressParser(
 
     //value_set<bit<32>>(20) my_mac_lo;
     //value_set<bit<16>>(20) my_mac_hi;
-    value_set<bit<32>>(8) my_mac_lo;
-    value_set<bit<16>>(8) my_mac_hi;
+    //value_set<bit<32>>(8) my_mac_lo;
+    //value_set<bit<16>>(8) my_mac_hi;
+    value_set<bit<32>>(1) my_mac_lo;
+    value_set<bit<16>>(1) my_mac_hi;
 
  //bit<8>  protocol_outer;
  //bit<8>  protocol_inner;
@@ -9305,12 +9124,7 @@ parser NpbIngressParser(
     state start {
         pkt.extract(ig_intr_md);
         ig_md.port = ig_intr_md.ingress_port;
-//      ig_md.timestamp      = ig_intr_md.ingress_mac_tstamp;
-
-
-
-        hdr.transport.nsh_type1.timestamp = 0;
-
+        ig_md.timestamp = ig_intr_md.ingress_mac_tstamp;
         ig_md.flags.rmac_hit = false;
 
         // Check for resubmit flag if packet is resubmitted.
@@ -9325,7 +9139,7 @@ parser NpbIngressParser(
         ig_md.lkp_1.tunnel_id = 0;
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
         ig_md.lkp_2.tunnel_id = 0;
-# 73 "npb_ing_parser.p4"
+# 68 "npb_ing_parser.p4"
         // initialize lookup struct to zeros
         ig_md.lkp_1.mac_src_addr = 0;
         ig_md.lkp_1.mac_dst_addr = 0;
@@ -9335,7 +9149,7 @@ parser NpbIngressParser(
         ig_md.lkp_1.vid = 0;
         ig_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
         ig_md.lkp_1.ip_proto = 0;
-        //ig_md.lkp_1.ip_tos = 0; // not byte-aligned so set in mau
+        ig_md.lkp_1.ip_tos = 0; // not byte-aligned so set in mau
         ig_md.lkp_1.ip_flags = 0;
         ig_md.lkp_1.ip_src_addr = 0;
         ig_md.lkp_1.ip_dst_addr = 0;
@@ -9343,8 +9157,6 @@ parser NpbIngressParser(
         ig_md.lkp_1.tcp_flags = 0;
         ig_md.lkp_1.l4_src_port = 0;
         ig_md.lkp_1.l4_dst_port = 0;
-        //ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_NONE; // do this always (above)
-        //ig_md.lkp_1.tunnel_id = 0;                         // do this always (above)
         ig_md.lkp_1.drop_reason = 0;
 
 
@@ -9359,7 +9171,7 @@ parser NpbIngressParser(
         ig_md.lkp_2.vid = 0;
         ig_md.lkp_2.ip_type = SWITCH_IP_TYPE_NONE;
         ig_md.lkp_2.ip_proto = 0;
-        //ig_md.lkp_2.ip_tos = 0; // not byte-aligned so set in mau
+        ig_md.lkp_2.ip_tos = 0; // not byte-aligned so set in mau
         ig_md.lkp_2.ip_flags = 0;
         ig_md.lkp_2.ip_src_addr = 0;
         ig_md.lkp_2.ip_dst_addr = 0;
@@ -9367,8 +9179,6 @@ parser NpbIngressParser(
         ig_md.lkp_2.tcp_flags = 0;
         ig_md.lkp_2.l4_src_port = 0;
         ig_md.lkp_2.l4_dst_port = 0;
-        //ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_NONE; // do this always (above)
-        //ig_md.lkp_2.tunnel_id = 0;                         // do this always (above)
         ig_md.lkp_2.drop_reason = 0;
 
 
@@ -9393,9 +9203,10 @@ parser NpbIngressParser(
 
     state parse_port_metadata {
         // Parse port metadata produced by ibuf
-        switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-        ig_md.port_lag_index = port_md.port_lag_index;
-  ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+//      switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
+//      ig_md.port_lag_index = port_md.port_lag_index;
+//		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+  pkt.advance(PORT_METADATA_SIZE);
         transition check_from_cpu;
     }
 
@@ -9416,7 +9227,7 @@ parser NpbIngressParser(
             default: check_my_mac_lo;
         }
     }
-# 171 "npb_ing_parser.p4"
+# 163 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // My-MAC Check
@@ -9474,7 +9285,7 @@ parser NpbIngressParser(
     state parse_transport_ethernet {
         ig_md.flags.rmac_hit = true;
         pkt.extract(hdr.transport.ethernet);
-# 236 "npb_ing_parser.p4"
+# 228 "npb_ing_parser.p4"
         // populate for L3-tunnel case (where there's no L2 present)
         ig_md.lkp_1.mac_src_addr = hdr.transport.ethernet.src_addr;
         ig_md.lkp_1.mac_dst_addr = hdr.transport.ethernet.dst_addr;
@@ -9495,7 +9306,10 @@ parser NpbIngressParser(
 
             0x0800: parse_transport_ipv4;
 
-            default: parse_udf;
+
+
+
+           default: accept;
         }
     }
 
@@ -9510,14 +9324,13 @@ parser NpbIngressParser(
         pkt.extract(hdr.cpu);
 
 
-
+  ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
 
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
+  ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
   ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
-
-  hdr.transport.ethernet.ether_type = hdr.cpu.ether_type; // done in port.p4 for now (see bf-case 10933)
-
+  hdr.transport.ethernet.ether_type = hdr.cpu.ether_type;
 // #ifdef PTP_ENABLE
 //         ig_md.flags.capture_ts = (bool) hdr.cpu.capture_ts;  // todo
 // #endif // PTP_ENABLE
@@ -9549,7 +9362,10 @@ parser NpbIngressParser(
 
             0x0800: parse_transport_ipv4;
 
-           default: parse_udf;
+
+
+
+            default: accept;
         }
     }
 
@@ -9558,7 +9374,7 @@ parser NpbIngressParser(
     state parse_transport_vlan {
 
      pkt.extract(hdr.transport.vlan_tag[0]);
-# 332 "npb_ing_parser.p4"
+# 329 "npb_ing_parser.p4"
 // populate for L3-tunnel case (where there's no L2 present)
 
         ig_md.lkp_1.pcp = hdr.transport.vlan_tag[0].pcp;
@@ -9582,16 +9398,19 @@ parser NpbIngressParser(
 
             0x0800: parse_transport_ipv4;
 
-            default: parse_udf;
+
+
+
+            default: accept;
         }
     }
-
-
 
 
     ///////////////////////////////////////////////////////////////////////////
     // Layer3 - Transport
     ///////////////////////////////////////////////////////////////////////////
+
+
 
     state parse_transport_ipv4 {
      pkt.extract(hdr.transport.ipv4);
@@ -9601,14 +9420,15 @@ parser NpbIngressParser(
 # 383 "npb_ing_parser.p4"
         transition select(hdr.transport.ipv4.protocol) {
            47: parse_transport_gre;
-           default : parse_udf;
+           default : accept;
         }
     }
-
-
+# 415 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Transport
     ///////////////////////////////////////////////////////////////////////////    
+
+
 
     //-------------------------------------------------------------------------
     // GRE - Transport
@@ -9637,7 +9457,7 @@ parser NpbIngressParser(
             (0,0,0,1,0,0,0,0,0x88BE): parse_transport_erspan_t2;
           //(0,0,0,1,0,0,0,0,GRE_PROTOCOLS_ERSPAN_TYPE_3): parse_transport_erspan_t3;
 
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -9654,7 +9474,11 @@ parser NpbIngressParser(
         pkt.extract(hdr.transport.gre_sequence);
         pkt.extract(hdr.transport.erspan_type2);
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_ERSPAN;
-        ig_md.lkp_0.tunnel_id = 0; // todo: should this be populated?
+
+
+
+        ig_md.lkp_0.tunnel_id = 0;
+
         transition parse_outer_ethernet;
     }
 
@@ -9684,7 +9508,7 @@ parser NpbIngressParser(
      pkt.extract(hdr.transport.nsh_type1);
         transition select(hdr.transport.nsh_type1.next_proto) {
             0x3: parse_outer_ethernet;
-            default: parse_udf; // todo: support ipv4? ipv6?
+            default: accept; // todo: support ipv4? ipv6?
         }
     }
 
@@ -9735,10 +9559,10 @@ parser NpbIngressParser(
 
 
 
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x0800 : parse_outer_ipv4;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -9750,12 +9574,14 @@ parser NpbIngressParser(
 
         pkt.extract(hdr.cpu);
 
+
+  ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
+
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
+  ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
   ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
-
-  hdr.outer.ethernet.ether_type = hdr.cpu.ether_type; // done in port.p4 for now (see bf-case 10933)
-
+  hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;
 // #ifdef PTP_ENABLE
 //         ig_md.flags.capture_ts = (bool) hdr.cpu.capture_ts;  // todo
 // #endif // PTP_ENABLE
@@ -9791,10 +9617,10 @@ parser NpbIngressParser(
 
 
 
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x0800 : parse_outer_ipv4;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -9820,9 +9646,9 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -9847,9 +9673,9 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -9887,9 +9713,9 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -9911,23 +9737,23 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Layer 2.5 - Outer
-    ///////////////////////////////////////////////////////////////////////////
-
-    state parse_outer_arp {
-        // pkt.extract(hdr.outer.arp);
-        // transition accept;
-        transition parse_udf;
-
-    }
+    // ///////////////////////////////////////////////////////////////////////////
+    // // Layer 2.5 - Outer
+    // ///////////////////////////////////////////////////////////////////////////
+    // 
+    // state parse_outer_arp {
+    //     // pkt.extract(hdr.outer.arp);
+    //     // transition accept;
+    //     transition accept;
+    // 
+    // }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -9941,7 +9767,7 @@ parser NpbIngressParser(
 //         // todo: should the lkp struct be set in state parse_outer_ipv4_no_options_frags instead?
 //         ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV4;
 //         ig_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
-//         //ig_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
+//         ig_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
 //         ig_md.lkp_1.ip_flags      = hdr.outer.ipv4.flags;
 //         ig_md.lkp_1.ip_src_addr   = (bit<128>)hdr.outer.ipv4.src_addr;
 //         ig_md.lkp_1.ip_dst_addr   = (bit<128>)hdr.outer.ipv4.dst_addr;
@@ -9951,15 +9777,15 @@ parser NpbIngressParser(
 //         ipv4_checksum_outer.add(hdr.outer.ipv4);
 //         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
 //             (5, 0): parse_outer_ipv4_no_options_frags;
-//             default : parse_udf;
+//             default : accept;
 //         }
 //     }
 // 
 //     state parse_outer_ipv4_no_options_frags {
 //         ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
 //         transition select(hdr.outer.ipv4.protocol) {
-//             IP_PROTOCOLS_ICMP: parse_outer_icmp_igmp_overload;
-//             IP_PROTOCOLS_IGMP: parse_outer_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMP: parse_outer_icmp_igmp_overload;
+//             //IP_PROTOCOLS_IGMP: parse_outer_icmp_igmp_overload;
 //             default: branch_outer_l3_protocol;
 //         }
 //     }
@@ -9967,10 +9793,11 @@ parser NpbIngressParser(
     state parse_outer_ipv4 {
         pkt.extract(hdr.outer.ipv4);
 
+
         // todo: should the lkp struct be set in state parse_outer_ipv4_no_options_frags instead?
         ig_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
         ig_md.lkp_1.ip_proto = hdr.outer.ipv4.protocol;
-        //ig_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
+        ig_md.lkp_1.ip_tos = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_1.ip_flags = hdr.outer.ipv4.flags;
         ig_md.lkp_1.ip_src_addr = (bit<128>)hdr.outer.ipv4.src_addr;
         ig_md.lkp_1.ip_dst_addr = (bit<128>)hdr.outer.ipv4.dst_addr;
@@ -9980,23 +9807,23 @@ parser NpbIngressParser(
         ipv4_checksum_outer.add(hdr.outer.ipv4);
         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
             (5, 0): parse_outer_ipv4_no_options_frags;
-            default : parse_udf;
+            default : accept;
         }
     }
 
     state parse_outer_ipv4_no_options_frags {
         ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
-        transition select(hdr.outer.ipv4.protocol) {
-            1: parse_outer_icmp_igmp_overload;
-            2: parse_outer_icmp_igmp_overload;
-            4: parse_outer_ipinip_set_tunnel_type;
-            41: parse_outer_ipv6inip_set_tunnel_type;
-            17: parse_outer_udp;
-            6: parse_outer_tcp;
-            0x84: parse_outer_sctp;
-            47: parse_outer_gre;
-            0x32: parse_outer_esp_overload;
-            default: parse_udf;
+        transition select(hdr.outer.ipv4.protocol, hdr.outer.ipv4.total_len) {
+            (4, _ ): parse_outer_ipinip_set_tunnel_type;
+            (41, _ ): parse_outer_ipv6inip_set_tunnel_type;
+            (47, _ ): parse_outer_gre;
+# 816 "npb_ing_parser.p4"
+            (17, _ ): parse_outer_udp_noudf;
+            (6, _ ): parse_outer_tcp_noudf;
+            (0x84, _ ): parse_outer_sctp_noudf;
+
+
+            default: accept;
         }
     }
 
@@ -10014,7 +9841,7 @@ parser NpbIngressParser(
 //         ig_md.lkp_1.ip_len        = hdr.outer.ipv6.payload_len;
 // #endif // INGRESS_PARSER_POPULATES_LKP_1
 //         transition select(hdr.outer.ipv6.next_hdr) {
-//             IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
 //             default: branch_outer_l3_protocol;
 //         }
 // #else
@@ -10027,6 +9854,7 @@ parser NpbIngressParser(
 
         pkt.extract(hdr.outer.ipv6);
 
+
         ig_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_1.ip_proto = hdr.outer.ipv6.next_hdr;
         //ig_md.lkp_1.ip_tos        = hdr.outer.ipv6.tos; // not byte-aligned so set in mau
@@ -10034,16 +9862,17 @@ parser NpbIngressParser(
         ig_md.lkp_1.ip_dst_addr = hdr.outer.ipv6.dst_addr;
         ig_md.lkp_1.ip_len = hdr.outer.ipv6.payload_len;
 
-        transition select(hdr.outer.ipv6.next_hdr) {
-            58: parse_outer_icmp_igmp_overload;
-            4: parse_outer_ipinip_set_tunnel_type;
-            41: parse_outer_ipv6inip_set_tunnel_type;
-            17: parse_outer_udp;
-            6: parse_outer_tcp;
-            0x84: parse_outer_sctp;
-            47: parse_outer_gre;
-            0x32: parse_outer_esp_overload;
-            default: parse_udf;
+        transition select(hdr.outer.ipv6.next_hdr, hdr.outer.ipv6.payload_len) {
+            //IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
+            (4, _ ): parse_outer_ipinip_set_tunnel_type;
+            (41, _ ): parse_outer_ipv6inip_set_tunnel_type;
+            (47, _ ): parse_outer_gre;
+# 873 "npb_ing_parser.p4"
+            (17, _ ): parse_outer_udp_noudf;
+            (6, _ ): parse_outer_tcp_noudf;
+            (0x84, _ ): parse_outer_sctp_noudf;
+
+            default: accept;
         }
 
 
@@ -10060,20 +9889,10 @@ parser NpbIngressParser(
     //         IP_PROTOCOLS_TCP: parse_outer_tcp;
     //         IP_PROTOCOLS_SCTP: parse_outer_sctp;
     //         IP_PROTOCOLS_GRE: parse_outer_gre;
-    //         IP_PROTOCOLS_ESP: parse_outer_esp_overload;
-    //         default: parse_udf;
+    //         //IP_PROTOCOLS_ESP: parse_outer_esp_overload;
+    //         default: accept;
     //    }
     // }
-
-
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
-    state parse_outer_icmp_igmp_overload {
-
-         ig_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
-
-        transition parse_udf;
-    }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -10084,7 +9903,7 @@ parser NpbIngressParser(
     // User Datagram Protocol (UDP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_udp {
+    state parse_outer_udp_noudf {
         pkt.extract(hdr.outer.udp);
 
 
@@ -10092,52 +9911,51 @@ parser NpbIngressParser(
         ig_md.lkp_1.l4_dst_port = hdr.outer.udp.dst_port;
 
 
-        transition select(hdr.outer.udp.src_port, hdr.outer.udp.dst_port) {
+        transition select(
+            hdr.outer.udp.src_port,
+            hdr.outer.udp.dst_port) {
 
 
             (_, 4789): parse_outer_vxlan;
 
 
 
-            // (_, UDP_PORT_GTP_C): parse_outer_gtp_c;
-            // (UDP_PORT_GTP_C, _): parse_outer_gtp_c;
-            // (_, UDP_PORT_GTP_U): parse_outer_gtp_u;
-            // (UDP_PORT_GTP_U, _): parse_outer_gtp_u;
-            (2123, 2123): parse_outer_gtp_c;
-            (2152, 2152): parse_outer_gtp_u;
+            (_, 2123): parse_outer_gtp_c;
+            (2123, _): parse_outer_gtp_c;
+            (_, 2152): parse_outer_gtp_u;
+            (2152, _): parse_outer_gtp_u;
 
-            default : parse_udf;
+            default : accept;
         }
     }
-
+# 964 "npb_ing_parser.p4"
     //-------------------------------------------------------------------------
     // Transmission Control Protocol (TCP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_tcp {
+    state parse_outer_tcp_noudf {
         pkt.extract(hdr.outer.tcp);
 
         ig_md.lkp_1.l4_src_port = hdr.outer.tcp.src_port;
         ig_md.lkp_1.l4_dst_port = hdr.outer.tcp.dst_port;
         ig_md.lkp_1.tcp_flags = hdr.outer.tcp.flags;
 
-        transition parse_udf;
+        transition accept;
     }
-
+# 991 "npb_ing_parser.p4"
     //-------------------------------------------------------------------------
     // Stream Control Transmission Protocol (SCTP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_sctp {
+    state parse_outer_sctp_noudf {
         pkt.extract(hdr.outer.sctp);
 
         ig_md.lkp_1.l4_src_port = hdr.outer.sctp.src_port;
         ig_md.lkp_1.l4_dst_port = hdr.outer.sctp.dst_port;
 
-        transition parse_udf;
+        transition accept;
     }
-
-
+# 1017 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////////
     // Layer X - Outer
     ///////////////////////////////////////////////////////////////////////////////
@@ -10145,7 +9963,7 @@ parser NpbIngressParser(
     //-------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
     //-------------------------------------------------------------------------
-# 951 "npb_ing_parser.p4"
+# 1061 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
@@ -10160,6 +9978,10 @@ parser NpbIngressParser(
         pkt.extract(hdr.outer.vxlan);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VXLAN;
         ig_md.lkp_1.tunnel_id = (bit<32>)hdr.outer.vxlan.vni;
+
+
+
+
         transition parse_inner_ethernet;
     }
 
@@ -10174,6 +9996,10 @@ parser NpbIngressParser(
 
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         ig_md.lkp_1.tunnel_id = 0;
+
+
+
+
         transition parse_inner_ipv4;
 
 
@@ -10184,6 +10010,10 @@ parser NpbIngressParser(
 
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         ig_md.lkp_1.tunnel_id = 0;
+
+
+
+
         transition parse_inner_ipv6;
 
 
@@ -10196,36 +10026,63 @@ parser NpbIngressParser(
     //-------------------------------------------------------------------------
 
     state parse_outer_gre {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_outer_gre_qualified;
+            (1,0,0,0,0,0,0,0): parse_outer_gre_qualified;
+            (0,0,1,0,0,0,0,0): parse_outer_gre_qualified;
+            (0,0,0,1,0,0,0,0): parse_outer_gre_qualified;
+            default: accept;
+        }
+    }
+
+    state parse_outer_gre_qualified {
         pkt.extract(hdr.outer.gre);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         ig_md.lkp_1.tunnel_id = 0;
 
+
+
+
+
         transition select(
             hdr.outer.gre.C,
-            hdr.outer.gre.R,
             hdr.outer.gre.K,
             hdr.outer.gre.S,
-            hdr.outer.gre.s,
-            hdr.outer.gre.recurse,
-            hdr.outer.gre.flags,
-            hdr.outer.gre.version,
             hdr.outer.gre.proto) {
 
-          // C R K S s r f v
+          // C K S
 
-            (0,0,1,0,0,0,0,0,0x6558): parse_outer_nvgre;
+            (0,1,0,0x6558): parse_outer_nvgre;
 
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_ipv6;
+            (0,0,0,0x0800): parse_inner_ipv4;
+            (0,0,0,0x86dd): parse_inner_ipv6;
 
 
 
-            (1,0,0,0,0,0,0,0,_): parse_outer_gre_optional;
-            (0,0,1,0,0,0,0,0,_): parse_outer_gre_optional;
-            (0,0,0,1,0,0,0,0,_): parse_outer_gre_optional;
-            default: parse_udf;
+            (1,0,0,_): parse_outer_gre_optional;
+            (0,1,0,_): parse_outer_gre_optional;
+            (0,0,1,_): parse_outer_gre_optional;
+            default: accept;
         }
     }
+
 
     state parse_outer_gre_optional {
         pkt.extract(hdr.outer.gre_optional);
@@ -10236,14 +10093,14 @@ parser NpbIngressParser(
 
 
 
-            default: parse_udf;
+            default: accept;
         }
     }
 
 
 
     //-------------------------------------------------------------------------
-    // Network Virtualization using GRE (NVGRE) - Outer
+    // Network Virtualization using GRE (NVGRE) - (aka: L2 GRE) - Outer
     //-------------------------------------------------------------------------
 
     state parse_outer_nvgre {
@@ -10251,6 +10108,9 @@ parser NpbIngressParser(
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_NVGRE;
         ig_md.lkp_1.tunnel_id = (bit<32>)hdr.outer.nvgre.vsid;
         ig_md.tunnel_1.nvgre_flow_id = hdr.outer.nvgre.flow_id; // from switch
+
+
+
 
         transition parse_inner_ethernet;
     }
@@ -10261,14 +10121,13 @@ parser NpbIngressParser(
     // Encapsulating Security Payload (ESP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_esp_overload {
-
-         ig_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
-         ig_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
-
-        transition parse_udf;
-    }
-
+//     state parse_outer_esp_overload {
+// #if defined(PARSER_L4_PORT_OVERLOAD) && defined(INGRESS_PARSER_POPULATES_LKP_1)
+//         ig_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//         ig_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif
+//         transition accept;
+//     }
 
 
     //-------------------------------------------------------------------------
@@ -10280,23 +10139,32 @@ parser NpbIngressParser(
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_outer_gtp_c {
+
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_outer_gtp_c;
-            default: parse_udf;
+            (2, 1): parse_outer_gtp_c_qualified;
+            default: accept;
         }
     }
 
-    state extract_outer_gtp_c {
+    state parse_outer_gtp_c_qualified {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
-     transition parse_udf;
+
+
+
+
+     transition accept;
     }
 
     // GTP-U
@@ -10306,6 +10174,12 @@ parser NpbIngressParser(
 
     state parse_outer_gtp_u {
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+
+
         transition select(
             snoop_gtp_v1_base.version,
             snoop_gtp_v1_base.PT,
@@ -10313,34 +10187,42 @@ parser NpbIngressParser(
             snoop_gtp_v1_base.S,
             snoop_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_outer_gtp_u;
-            (1, 1, 0, 1, 0): extract_outer_gtp_u_with_optional;
-            default: parse_udf;
+            (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified;
+            (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional;
+            default: accept;
         }
     }
 
-    state extract_outer_gtp_u {
+    state parse_outer_gtp_u_qualified {
         pkt.extract(hdr.outer.gtp_v1_base);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_1.tunnel_id = hdr.outer.gtp_v1_base.teid;
+
+
+
+
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_ipv4;
             6: parse_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
-    state extract_outer_gtp_u_with_optional {
+    state parse_outer_gtp_u_with_optional {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_1.tunnel_id = hdr.outer.gtp_v1_base.teid;
+
+
+
+
         transition select(
             hdr.outer.gtp_v1_base.E,
             pkt.lookahead<bit<4>>()) {
             (0, 4): parse_inner_ipv4;
             (0, 6): parse_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -10369,16 +10251,15 @@ parser NpbIngressParser(
 
 
         transition select(hdr.inner.ethernet.ether_type) {
-            0x0806: parse_inner_arp;
+            //ETHERTYPE_ARP:  parse_inner_arp;
             0x8100: parse_inner_vlan;
             0x0800: parse_inner_ipv4;
             0x86dd: parse_inner_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
     state parse_inner_vlan {
-
         pkt.extract(hdr.inner.vlan_tag[0]);
 
 
@@ -10394,23 +10275,23 @@ parser NpbIngressParser(
 
 
         transition select(hdr.inner.vlan_tag[0].ether_type) {
-            0x0806: parse_inner_arp;
+            //ETHERTYPE_ARP:  parse_inner_arp;
             0x0800: parse_inner_ipv4;
             0x86dd: parse_inner_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Layer 2.5 - Inner
-    ///////////////////////////////////////////////////////////////////////////
-
-    state parse_inner_arp {
-        // pkt.extract(hdr.inner.arp);
-        // transition accept;
-        transition parse_udf;
-    }
+    // ///////////////////////////////////////////////////////////////////////////
+    // // Layer 2.5 - Inner
+    // ///////////////////////////////////////////////////////////////////////////
+    // 
+    // state parse_inner_arp {
+    //     // pkt.extract(hdr.inner.arp);
+    //     // transition accept;
+    //     transition accept;
+    // }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -10429,7 +10310,7 @@ parser NpbIngressParser(
 // 
 //         ig_md.lkp_2.ip_type       = SWITCH_IP_TYPE_IPV4;
 //         ig_md.lkp_2.ip_proto      = hdr.inner.ipv4.protocol;
-//         //ig_md.lkp_2.ip_tos        = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
+//         ig_md.lkp_2.ip_tos        = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
 //         ig_md.lkp_2.ip_flags      = hdr.inner.ipv4.flags;
 //         ig_md.lkp_2.ip_src_addr   = (bit<128>)hdr.inner.ipv4.src_addr;
 //         ig_md.lkp_2.ip_dst_addr   = (bit<128>)hdr.inner.ipv4.dst_addr;
@@ -10442,15 +10323,15 @@ parser NpbIngressParser(
 //             hdr.inner.ipv4.ihl,
 //             hdr.inner.ipv4.frag_offset) {
 //             (5, 0): parse_inner_ipv4_no_options_frags;
-//             default: parse_udf;
+//             default: accept;
 //         }
 //     }
 // 
 //     state parse_inner_ipv4_no_options_frags {
 //         ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
 //         transition select(hdr.inner.ipv4.protocol) {
-//             IP_PROTOCOLS_ICMP: parse_inner_icmp_igmp_overload;
-//             IP_PROTOCOLS_IGMP: parse_inner_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMP: parse_inner_icmp_igmp_overload;
+//             //IP_PROTOCOLS_IGMP: parse_inner_icmp_igmp_overload;
 //             default: branch_inner_l3_protocol;
 //         }
 //     }
@@ -10466,7 +10347,7 @@ parser NpbIngressParser(
 
         ig_md.lkp_2.ip_type = SWITCH_IP_TYPE_IPV4;
         ig_md.lkp_2.ip_proto = hdr.inner.ipv4.protocol;
-        //ig_md.lkp_2.ip_tos        = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
+        ig_md.lkp_2.ip_tos = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_2.ip_flags = hdr.inner.ipv4.flags;
         ig_md.lkp_2.ip_src_addr = (bit<128>)hdr.inner.ipv4.src_addr;
         ig_md.lkp_2.ip_dst_addr = (bit<128>)hdr.inner.ipv4.dst_addr;
@@ -10479,25 +10360,23 @@ parser NpbIngressParser(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset) {
             (5, 0): parse_inner_ipv4_no_options_frags;
-            default: parse_udf;
+            default: accept;
         }
     }
 
     state parse_inner_ipv4_no_options_frags {
         ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
-        transition select(hdr.inner.ipv4.protocol) {
-            1: parse_inner_icmp_igmp_overload;
-            2: parse_inner_icmp_igmp_overload;
-            17: parse_inner_udp;
-            6: parse_inner_tcp;
-            0x84: parse_inner_sctp;
+        transition select(hdr.inner.ipv4.protocol, hdr.inner.ipv4.total_len) {
+            (4, _): parse_inner_ipinip_set_tunnel_type;
+            (41, _): parse_inner_ipv6inip_set_tunnel_type;
 
-            47: parse_inner_gre;
+            (47, _): parse_inner_gre;
+# 1478 "npb_ing_parser.p4"
+            (17, _ ): parse_inner_udp_noudf;
+            (6, _ ): parse_inner_tcp_noudf;
+            (0x84, _ ): parse_inner_sctp_noudf;
 
-            0x32: parse_inner_esp_overload;
-            4: parse_inner_ipinip_set_tunnel_type;
-            41: parse_inner_ipv6inip_set_tunnel_type;
-            default : parse_udf;
+            default: accept;
         }
     }
 
@@ -10521,7 +10400,7 @@ parser NpbIngressParser(
 // #endif // INGRESS_PARSER_POPULATES_LKP_2        
 // 
 //         transition select(hdr.inner.ipv6.next_hdr) {
-//             IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload;
 //             default: branch_inner_l3_protocol;
 //         }
 // #else
@@ -10545,18 +10424,17 @@ parser NpbIngressParser(
         ig_md.lkp_2.ip_len = hdr.inner.ipv6.payload_len;
 
 
-        transition select(hdr.inner.ipv6.next_hdr) {
-            58: parse_inner_icmp_igmp_overload;
-            17: parse_inner_udp;
-            6: parse_inner_tcp;
-            0x84: parse_inner_sctp;
+        transition select(hdr.inner.ipv6.next_hdr, hdr.inner.ipv6.payload_len) {
+            (4, _): parse_inner_ipinip_set_tunnel_type;
+            (41, _): parse_inner_ipv6inip_set_tunnel_type;
 
-            47: parse_inner_gre;
+            (47, _): parse_inner_gre;
+# 1545 "npb_ing_parser.p4"
+            (17, _ ): parse_inner_udp_noudf;
+            (6, _ ): parse_inner_tcp_noudf;
+            (0x84, _ ): parse_inner_sctp_noudf;
 
-            0x32: parse_inner_esp_overload;
-            4: parse_inner_ipinip_set_tunnel_type;
-            41: parse_inner_ipv6inip_set_tunnel_type;
-            default : parse_udf;
+            default: accept;
         }
 
 
@@ -10573,66 +10451,70 @@ parser NpbIngressParser(
 // #ifdef INNER_GRE_ENABLE
 //             IP_PROTOCOLS_GRE: parse_inner_gre;
 // #endif // INNER_GRE_ENABLE
-//             IP_PROTOCOLS_ESP: parse_inner_esp_overload;
+//             //IP_PROTOCOLS_ESP: parse_inner_esp_overload;
 //             IP_PROTOCOLS_IPV4: parse_inner_ipinip_set_tunnel_type;
 //             IP_PROTOCOLS_IPV6: parse_inner_ipv6inip_set_tunnel_type;
-//             default : parse_udf;
+//             default : accept;
 //        }
 //     }    
 
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.     
-    state parse_inner_icmp_igmp_overload {
-
-        ig_md.lkp_2.l4_src_port = pkt.lookahead<bit<16>>();
-
-        transition parse_udf;
-    }
 
 
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
     ///////////////////////////////////////////////////////////////////////////
 
-    state parse_inner_udp {
+    //-------------------------------------------------------------------------
+    // User Datagram Protocol (UDP) - Inner
+    //-------------------------------------------------------------------------
+
+    state parse_inner_udp_noudf {
         pkt.extract(hdr.inner.udp);
 
         ig_md.lkp_2.l4_src_port = hdr.inner.udp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.udp.dst_port;
 
-        transition select(hdr.inner.udp.src_port, hdr.inner.udp.dst_port) {
+        transition select(
+            hdr.inner.udp.src_port,
+            hdr.inner.udp.dst_port) {
 
-            // (_, UDP_PORT_GTP_C): parse_inner_gtp_c;
-            // (UDP_PORT_GTP_C, _): parse_inner_gtp_c;
-            // (_, UDP_PORT_GTP_U): parse_inner_gtp_u;
-            // (UDP_PORT_GTP_U, _): parse_inner_gtp_u;
-            (2123, 2123): parse_inner_gtp_c;
-            (2152, 2152): parse_inner_gtp_u;
 
-            default: parse_udf;
+            (_, 2123): parse_inner_gtp_c;
+            (2123, _): parse_inner_gtp_c;
+            (_, 2152): parse_inner_gtp_u;
+            (2152, _): parse_inner_gtp_u;
+
+            default: accept;
         }
     }
+# 1627 "npb_ing_parser.p4"
+    //-------------------------------------------------------------------------
+    // Transmission Control Protocol (TCP) - Inner
+    //-------------------------------------------------------------------------
 
-    state parse_inner_tcp {
+    state parse_inner_tcp_noudf {
         pkt.extract(hdr.inner.tcp);
 
         ig_md.lkp_2.l4_src_port = hdr.inner.tcp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.tcp.dst_port;
         ig_md.lkp_2.tcp_flags = hdr.inner.tcp.flags;
 
-        transition parse_udf;
+        transition accept;
     }
+# 1655 "npb_ing_parser.p4"
+    //-------------------------------------------------------------------------
+    // Stream Control Transmission Protocol (SCTP) - Inner
+    //-------------------------------------------------------------------------
 
-    state parse_inner_sctp {
+    state parse_inner_sctp_noudf {
         pkt.extract(hdr.inner.sctp);
 
         ig_md.lkp_2.l4_src_port = hdr.inner.sctp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.sctp.dst_port;
 
-        transition parse_udf;
+        transition accept;
     }
-
-
+# 1682 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Inner
     ///////////////////////////////////////////////////////////////////////////
@@ -10667,13 +10549,13 @@ parser NpbIngressParser(
     // Encapsulating Security Payload (ESP) - Inner
     //-------------------------------------------------------------------------
 
-    state parse_inner_esp_overload {
-
-         ig_md.lkp_2.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
-         ig_md.lkp_2.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
-
-        transition parse_udf;
-    }
+//     state parse_inner_esp_overload {
+// #if defined(PARSER_L4_PORT_OVERLOAD) && defined(INGRESS_PARSER_POPULATES_LKP_2)
+//         ig_md.lkp_2.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//         ig_md.lkp_2.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif
+//         transition accept;
+//     }    
 
 
     //-------------------------------------------------------------------------
@@ -10683,25 +10565,54 @@ parser NpbIngressParser(
 
 
     state parse_inner_gre {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_inner_gre_qualified;
+            (1,0,0,0,0,0,0,0): parse_inner_gre_qualified;
+            (0,0,1,0,0,0,0,0): parse_inner_gre_qualified;
+            (0,0,0,1,0,0,0,0): parse_inner_gre_qualified;
+            default: accept;
+        }
+    }
+
+    state parse_inner_gre_qualified {
         pkt.extract(hdr.inner.gre);
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         ig_md.lkp_2.tunnel_id = 0;
 
         transition select(
             hdr.inner.gre.C,
-            hdr.inner.gre.R,
             hdr.inner.gre.K,
             hdr.inner.gre.S,
-            hdr.inner.gre.s,
-            hdr.inner.gre.recurse,
-            hdr.inner.gre.flags,
-            hdr.inner.gre.version,
             hdr.inner.gre.proto) {
 
-          // C R K S s r f v
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_inner_ipv6;
-            default: parse_udf;
+            (0,0,0,0x0800): parse_inner_inner_ipv4;
+            (0,0,0,0x86dd): parse_inner_inner_ipv6;
+            (1,0,0,_): parse_inner_gre_optional;
+            (0,1,0,_): parse_inner_gre_optional;
+            (0,0,1,_): parse_inner_gre_optional;
+            default: accept;
+        }
+    }
+
+    state parse_inner_gre_optional {
+        pkt.extract(hdr.inner.gre_optional);
+        transition select(hdr.inner.gre.proto) {
+            0x0800: parse_inner_inner_ipv4;
+            0x86dd: parse_inner_inner_ipv6;
+            default: accept;
         }
     }
 
@@ -10711,14 +10622,13 @@ parser NpbIngressParser(
 
 
     //-------------------------------------------------------------------------
-    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Outer
+    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Inner
     //-------------------------------------------------------------------------
     // Based on pseudo code from Glenn (see email from 03/11/2019):
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_inner_gtp_c {
         //gtp_v2_base_h snoop_inner_gtp_v2_base = pkt.lookahead<gtp_v2_base_h>();
@@ -10726,23 +10636,25 @@ parser NpbIngressParser(
         //    snoop_inner_gtp_v2_base.version,
         //    snoop_inner_gtp_v2_base.T) {
 
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_inner_gtp_c;
-            default: parse_udf;
+            (2, 1): parse_inner_gtp_c_qualified;
+            default: accept;
         }
     }
 
-    state extract_inner_gtp_c {
+    state parse_inner_gtp_c_qualified {
         //pkt.extract(hdr.inner.gtp_v2_base);
         //ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         //ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v2_base.teid;
 
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_2.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
-        transition parse_udf;
+        transition accept;
     }
 
     // GTP-U
@@ -10752,6 +10664,8 @@ parser NpbIngressParser(
 
     state parse_inner_gtp_u {
         gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             snoop_inner_gtp_v1_base.version,
             snoop_inner_gtp_v1_base.PT,
@@ -10759,24 +10673,24 @@ parser NpbIngressParser(
             snoop_inner_gtp_v1_base.S,
             snoop_inner_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_inner_gtp_u;
-            (1, 1, 0, 1, 0): extract_inner_gtp_u_with_optional;
-            default: parse_udf;
+            (1, 1, 0, 0, 0): parse_inner_gtp_u_qualified;
+            (1, 1, 0, 1, 0): parse_inner_gtp_u_with_optional;
+            default: accept;
         }
     }
 
-    state extract_inner_gtp_u {
+    state parse_inner_gtp_u_qualified {
         pkt.extract(hdr.inner.gtp_v1_base);
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v1_base.teid;
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_inner_ipv4;
             6: parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
-    state extract_inner_gtp_u_with_optional {
+    state parse_inner_gtp_u_with_optional {
         pkt.extract(hdr.inner.gtp_v1_base);
         pkt.extract(hdr.inner.gtp_v1_optional);
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -10786,7 +10700,7 @@ parser NpbIngressParser(
             pkt.lookahead<bit<4>>()) {
             (0, 4): parse_inner_inner_ipv4;
             (0, 6): parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -10803,29 +10717,21 @@ parser NpbIngressParser(
     state parse_inner_inner_ipv4 {
   hdr.inner_inner.ipv4.setValid();
 //      ig_md.inner_inner.ipv4_isValid = true;
-  transition parse_udf;
+  transition accept;
     }
     state parse_inner_inner_ipv6 {
   hdr.inner_inner.ipv6.setValid();
 //      ig_md.inner_inner.ipv6_isValid = true;
-  transition parse_udf;
+  transition accept;
     }
 
 
     ///////////////////////////////////////////////////////////////////////////
     // UDF
     ///////////////////////////////////////////////////////////////////////////
-
-    state parse_udf {
-
-        //ig_md.parse_udf_reached = 1;
-        pkt.extract(hdr.udf);
-
-        transition accept;
-    }
-
+# 1905 "npb_ing_parser.p4"
 }
-# 58 "npb.p4" 2
+# 56 "npb.p4" 2
 # 1 "npb_ing_set_lkp.p4" 1
 
 
@@ -10845,6 +10751,23 @@ control IngressSetLookup(
     // -----------------------------
 
     apply {
+
+  ig_md.lkp_0.next_lyr_valid = true;
+//		if((ig_md.lkp_0.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (ig_md.lkp_0.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (ig_md.lkp_0.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+//			ig_md.lkp_0.next_lyr_valid = true;
+//		}
+
+//		ig_md.lkp_1.next_lyr_valid = true;
+  if((ig_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (ig_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (ig_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+   ig_md.lkp_1.next_lyr_valid = true;
+  }
+
+//		ig_md.lkp_2.next_lyr_valid = true;
+  if((ig_md.lkp_2.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (ig_md.lkp_2.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (ig_md.lkp_2.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+   ig_md.lkp_2.next_lyr_valid = true;
+  }
+
+  // -----------------------------------------------------------------------
 
         // Override whatever the parser set "ip_type" to.  Doing so allows the
         // signal to fit when normally it doesn't.  This code should be only
@@ -10878,9 +10801,9 @@ control IngressSetLookup(
    ig_md.lkp_1.ip_tos = hdr.outer.ipv6.tos;
   }
 
-  if(hdr.outer.ipv4.isValid()) {
-   ig_md.lkp_1.ip_tos = hdr.outer.ipv4.tos;
-  }
+//		if(hdr.outer.ipv4.isValid()) {
+//			ig_md.lkp_1.ip_tos = hdr.outer.ipv4.tos;
+//		}        
 
 
 
@@ -10888,14 +10811,14 @@ control IngressSetLookup(
    ig_md.lkp_2.ip_tos = hdr.inner.ipv6.tos;
   }
 
-  if(hdr.inner.ipv4.isValid()) {
-   ig_md.lkp_2.ip_tos = hdr.inner.ipv4.tos;
-  }
+//		if(hdr.inner.ipv4.isValid()) {
+//			ig_md.lkp_2.ip_tos = hdr.inner.ipv4.tos;
+//		}
 
 
     }
 }
-# 59 "npb.p4" 2
+# 57 "npb.p4" 2
 # 1 "npb_ing_top.p4" 1
 # 1 "npb_ing_sfc_top.p4" 1
 # 1 "tunnel.p4" 1
@@ -10940,6 +10863,8 @@ control npb_ing_sfc_top (
  in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
  inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+) (
+ switch_uint32_t port_table_size=288
 ) {
 
 
@@ -10959,59 +10884,13 @@ control npb_ing_sfc_top (
  IngressTunnelInner(NPB_ING_SFC_TUNNEL_OUTER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: bitmask defined as follows....
- //
- //   [0:0] sf  #1: ingress basic/advanced
- //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy
-
- // =========================================================================
- // W/O NSH... Table #0: FlowType Classifier / SFC Classifier
- // =========================================================================
-/*
-#ifdef TRANSPORT_ENABLE
-  #ifdef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
-
-	action tunnel_transport_sap_hit (
-		bit<SSAP_ID_WIDTH>              sap,
-		bit<VPN_ID_WIDTH>               vpn
-	) {
-		hdr_0.nsh_type1.sap     = (16)sap;
-		hdr_0.nsh_type1.vpn     = (16)vpn;
-	}
-
-	// ---------------------------------
-
-	table tunnel_transport_sap {
-		key = {
-			hdr_0.nsh_type1.sap    : exact @name("sap");
-			tunnel_0.type          : exact @name("tunnel_type");
-			tunnel_0.id            : exact @name("tunnel_id");
-		}
-
-		actions = {
-			NoAction;
-			tunnel_transport_sap_hit;
-		}
-
-		size = NPB_ING_SFC_TUNNEL_NETWORK_SAP_TABLE_DEPTH;
-	}
-  #endif
-#endif
-*/
- // =========================================================================
- // W/  NSH... Table #0:
+ // W/  NSH... Table #0a:
  // =========================================================================
 
  action ing_sfc_sf_sel_hit(
   bit<8> si_predec
-
  ) {
   ig_md.nsh_md.si_predec = si_predec;
-
  }
 
  // ---------------------------------
@@ -11033,10 +10912,52 @@ control npb_ing_sfc_top (
   actions = {
    ing_sfc_sf_sel_hit;
    ing_sfc_sf_sel_miss;
+   NoAction;
   }
 
   const default_action = ing_sfc_sf_sel_miss;
   size = NPB_ING_SFC_SF_SEL_TABLE_DEPTH;
+ }
+
+ // =========================================================================
+ // W/  NSH... Table #0b:
+ // =========================================================================
+# 120 "npb_ing_sfc_top.p4"
+ // =========================================================================
+ // W/O NSH... Table #0:
+ // =========================================================================
+
+ action set_port_properties(
+  bit<8> si_predec,
+
+  bit<16> sap,
+  bit<12> vpn,
+  bit<24> spi,
+  bit<8> si
+ ) {
+  ig_md.nsh_md.si_predec = si_predec; //  8 bits
+
+  hdr_0.nsh_type1.sap = (bit<16>)sap; // 16 bits
+  hdr_0.nsh_type1.vpn = (bit<16>)vpn; // 16 bits
+  hdr_0.nsh_type1.spi = spi; // 24 bits
+  hdr_0.nsh_type1.si = si; //  8 bits
+ }
+
+ // ---------------------------------
+
+ table port_mapping {
+  key = {
+   ig_md.port : exact @name("port");
+//			ig_md.port_lag_index : exact @name("port_lag_index");
+  }
+
+  actions = {
+   set_port_properties;
+   NoAction;
+  }
+
+  const default_action = NoAction;
+  size = port_table_size;
  }
 
  // =========================================================================
@@ -11061,101 +10982,107 @@ control npb_ing_sfc_top (
   if(hdr_0.nsh_type1.isValid()) {
 
    // -----------------------------------------------------------------
-   // Packet already has  a NSH header on it (is already classified) --> just copy it to internal NSH structure
+   // Packet does    have a NSH header on it (is already classified)
    // -----------------------------------------------------------------
 
-   // metadata
+   // ----- metadata -----
    ig_md.nsh_md.start_of_path = false;
-   ig_md.nsh_md.sfc_enable = false;
+//			ig_md.nsh_md.sfc_enable    = false;
 
-   // -----------------------------------------------------------------
-
+   // ----- table -----
+# 197 "npb_ing_sfc_top.p4"
    ing_sfc_sf_sel.apply();
+
 
   } else {
 
    // -----------------------------------------------------------------
-   // Packet doesn't have a NSH header on it (needs classification) --> try to classify / populate internal NSH structure
+   // Packet doesn't have a NSH header on it -- add it (needs classification)
    // -----------------------------------------------------------------
 
    // ----- metadata -----
    ig_md.nsh_md.start_of_path = true; // * see design note below
-   ig_md.nsh_md.sfc_enable = false; // * see design note below
+//			ig_md.nsh_md.sfc_enable    = false; // * see design note below
 
    // ----- header -----
-   hdr_0.nsh_type1.setValid();
 
-   // base: word 0
-   hdr_0.nsh_type1.next_proto = 0x3;
-   // (nothing to do, will be done in egress)
+   // note: according to p4 spec, initializing a header also automatically sets it valid.
+//			hdr_0.nsh_type1.setValid();
+   hdr_0.nsh_type1 = {
+    version = 0x0,
+    o = 0x0,
+    reserved = 0x0,
+    ttl = 0x3f, // 63 is the rfc's recommended default value.
+    len = 0x6, // in 4-byte words (1 + 1 + 4).
+    reserved2 = 0x0,
+    md_type = 0x1, // 0 = reserved, 1 = fixed len, 2 = variable len.
+    next_proto = 0x3, // 1 = ipv4, 2 = ipv6, 3 = ethernet, 4 = nsh, 5 = mpls.
 
-   // base: word 1
-//			hdr_0.nsh_type1.spi                          = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
-//			hdr_0.nsh_type1.si                           = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
+    spi = 0x0,
+    si = 0x0,
 
-   // ext: type 1 - word 1-3
-   hdr_0.nsh_type1.scope = 0;
-//			hdr_0.nsh_type1.sap                          = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
-//			hdr_0.nsh_type1.vpn                          = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
-   hdr_0.nsh_type1.sfc_data = 0;
+    ver = 0x2,
+    reserved3 = 0x0,
+    lag_hash = 0x0,
+
+    vpn = 0x0,
+    sfc_data = 0x0,
+
+    reserved4 = 0x0,
+    scope = 0x0,
+    sap = 0x0,
 
 
 
-//			hdr_0.nsh_type1.timestamp                    = 0;                     // FOR SIMS
 
+    timestamp = 0
 
-   // * design note: we have to ensure that all sfc tables have hits, otherwise
-   // we can end up with a partially classified packet -- which would be bad.
-   // one "cheap" (resource-wise) way of doing this is to initially set all
-   // the control signals valid, and then have any table that misses clear them....
+   };
+
+   // ----- table -----
+   port_mapping.apply();
 
    // -----------------------------------------------------------------
 
-//			if(ig_md.flags.rmac_hit == true) { // note: hit is forced "false" if there is no transport present
    if(hdr_0.ethernet.isValid()) {
 
     // ---------------------------
-    // ----- normally tapped -----
+    // ----- Normally Tapped -----
     // ---------------------------
 
-    bool hit;
+
+    tunnel_transport.apply(ig_md, hdr_0, ig_md.lkp_0, tunnel_0, ig_intr_md_for_dprsr);
 
 
-    tunnel_transport.apply(ig_md, ig_md.flags.ipv4_checksum_err_0, hdr_0, ig_md.lkp_0, tunnel_0, ig_intr_md_for_dprsr, hit);
-
-
-//				if(hit) {
-//					tunnel_transport_sap.apply();
-     tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0, tunnel_0);
-//				}
+    // -----------------------
+    // Network SAP
+    // -----------------------
+    tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0, tunnel_0);
 
 
    } else {
 
     // ----------------------------
-    // ----- optically tapped -----
+    // ----- Optically Tapped -----
     // ----------------------------
 
     // -----------------------
-    // Tunnel - Outer
+    // Outer SAP
     // -----------------------
-
 
     tunnel_outer.apply(ig_md, ig_md.lkp_1, hdr_0, ig_md.lkp_2, hdr_2, tunnel_2);
 
    }
 
    // -----------------------
-   // Tunnel - Inner
+   // Inner SAP
    // -----------------------
-
    tunnel_inner.apply(ig_md, ig_md.lkp_1, hdr_0, ig_md.lkp_2, hdr_2, tunnel_2);
 
   }
 
   // always terminate transport headers
   tunnel_0.terminate = true;
-
  }
 }
 # 2 "npb_ing_top.p4" 2
@@ -11177,10 +11104,6 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
  in bit<16> l4_dst_port,
  out bit<16> hash
 ) {
- // =========================================================================
- // Notes
- // =========================================================================
-
  // =========================================================================
  // Table #1 (main lkp struct):
  // =========================================================================
@@ -11213,7 +11136,7 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
   }
 
   const default_action = NoAction;
-  size = NPB_ING_SFF_FLW_CLS_TABLE_DEPTH;
+  size = NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH;
  }
 
  // =========================================================================
@@ -11260,7 +11183,7 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
  // =========================================================================
  // Table #1: Action Selector
  // =========================================================================
-# 116 "npb_ing_sf_npb_basic_adv_sfp_sel.p4"
+# 112 "npb_ing_sf_npb_basic_adv_sfp_sel.p4"
  // Use an Action Selector with the table...
     Hash<bit<16>>(
   HashAlgorithm_t.IDENTITY
@@ -11280,14 +11203,14 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 		HashAlgorithm_t.CRC32
 	) selector_hash;
 */
- ActionProfile(NPB_ING_SFF_SCHD_SELECTOR_TABLE_SIZE) schd_action_profile;
+ ActionProfile(NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE) schd_action_profile;
     ActionSelector(
   schd_action_profile,
   selector_hash,
 //		SelectorMode_t.FAIR,
   SelectorMode_t.RESILIENT,
-  NPB_ING_SFF_SCHD_MAX_MEMBERS_PER_GROUP,
-  NPB_ING_SFF_SCHD_GROUP_TABLE_SIZE
+  NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP,
+  NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE
  ) schd_selector;
 
 
@@ -11327,7 +11250,7 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
   }
 
   const default_action = NoAction;
-  size = NPB_ING_SFF_SCHD_TABLE_SIZE;
+  size = NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE;
 
   implementation = schd_selector;
 
@@ -11345,13 +11268,15 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 
 }
 # 3 "npb_ing_sf_npb_basic_adv_top.p4" 2
-//#include "npb_ing_sf_npb_basic_adv_dedup.p4"
+
+
+
 
 control npb_ing_sf_npb_basic_adv_top (
  inout switch_header_transport_t hdr_0,
  inout switch_header_outer_t hdr_1,
  inout switch_header_inner_t hdr_2,
-    inout udf_h hdr_udf,
+ inout udf_h hdr_udf,
 
  inout switch_ingress_metadata_t ig_md,
  in ingress_intrinsic_metadata_t ig_intr_md,
@@ -11370,45 +11295,26 @@ control npb_ing_sf_npb_basic_adv_top (
   INGRESS_L7_ACL_TABLE_SIZE
  ) acl;
 
- // temporary internal variables
-//	bit<2>  action_bitmask_internal;
-
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: egress action_bitmask defined as follows....
- //
- //   [0:0] act #1: policy
- //   [1:1] act #2: unused (was dedup)
-
- // =========================================================================
- // Table #1: Action Select
+ // Table #1: SFF Action Select
  // =========================================================================
 
  bit<8> int_ctrl_flags = 0;
 
  action ing_sf_action_sel_hit(
-//		bit<2>  action_bitmask,
 
 
 
-//      bit<3>  discard
  ) {
-//		action_bitmask_internal = action_bitmask;
 
 
 
-
-//      ig_intr_md_for_dprsr.drop_ctl = discard; // drop packet
  }
 
  // =====================================
 
  action ing_sf_action_sel_miss(
  ) {
-//		action_bitmask_internal = 0;
-//		int_ctrl_flags = 0;
  }
 
  // =====================================
@@ -11426,11 +11332,11 @@ control npb_ing_sf_npb_basic_adv_top (
   }
 
   const default_action = NoAction;
-  size = NPB_ING_SF_0_BAS_ADV_ACT_SEL_TABLE_DEPTH;
+  size = NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH;
  }
 
  // =========================================================================
- // Table #2: IP Length Range
+ // Table #2: SF IP Length Range
  // =========================================================================
 
  bit<16> ip_len = 0;
@@ -11471,7 +11377,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 
  // =========================================================================
- // Table #2: L4 Src Port Range
+ // Table #3: SF L4 Src Port Range
  // =========================================================================
 
  bit<16> l4_src_port = 0;
@@ -11512,7 +11418,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 
  // =========================================================================
- // Table #2: L4 Dst Port Range
+ // Table #4: SF L4 Dst Port Range
  // =========================================================================
 
  bit<16> l4_dst_port = 0;
@@ -11587,80 +11493,52 @@ control npb_ing_sf_npb_basic_adv_top (
    // Action(s)
    // =====================================
 
-//			if(action_bitmask_internal[0:0] == 1) {
-
-    // -------------------------------------
-    // Action #0 - Policy
-    // -------------------------------------
+   // -------------------------------------
+   // Action #0 - Policy
+   // -------------------------------------
 
 
-    ing_sf_ip_len_rng.apply();
+   ing_sf_ip_len_rng.apply();
 
 
 
 
 
-    ing_sf_l4_src_port_rng.apply();
+   ing_sf_l4_src_port_rng.apply();
 
 
 
 
 
-    ing_sf_l4_dst_port_rng.apply();
+   ing_sf_l4_dst_port_rng.apply();
 
 
 
 
 
-    acl.apply(
-     ig_md.lkp_1,
-     ig_md,
-     ig_intr_md_for_dprsr,
-     ig_intr_md_for_tm,
-     ip_len,
-     ip_len_is_rng_bitmask,
-     l4_src_port,
-     l4_src_port_is_rng_bitmask,
-     l4_dst_port,
-     l4_dst_port_is_rng_bitmask,
-     hdr_0,
-     hdr_1,
-     hdr_2,
-     hdr_udf,
-     int_ctrl_flags
-    );
-//			}
+   acl.apply(
+    ig_md.lkp_1,
+    ig_md,
+    ig_intr_md_for_dprsr,
+    ig_intr_md_for_tm,
+    ip_len,
+    ip_len_is_rng_bitmask,
+    l4_src_port,
+    l4_src_port_is_rng_bitmask,
+    l4_dst_port,
+    l4_dst_port_is_rng_bitmask,
+    hdr_0,
+    hdr_1,
+    hdr_2,
+    hdr_udf,
+    int_ctrl_flags
+   );
 
-//			if(action_bitmask_internal[1:1] == 1) {
-
-    // -------------------------------------
-    // Action #1 - Deduplication
-    // -------------------------------------
-/*
-#ifdef SF_0_DEDUP_ENABLE
-				npb_ing_sf_npb_basic_adv_dedup.apply (
-					hdr_0,
-					ig_md,
-					ig_intr_md,
-					ig_intr_md_from_prsr,
-					ig_intr_md_for_dprsr,
-					ig_intr_md_for_tm
-				);
-#endif
-*/
-//			}
-
+   // -------------------------------------
+   // Action #1 - Deduplication
+   // -------------------------------------
+# 286 "npb_ing_sf_npb_basic_adv_top.p4"
   }
-/*
-		npb_ing_sf_npb_basic_adv_sfp_sel.apply(
-			hdr_0,
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm
-		);
-*/
  }
 }
 # 3 "npb_ing_top.p4" 2
@@ -11677,41 +11555,25 @@ control npb_ing_sf_multicast_top_part1 (
  inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
 ) (
- switch_uint32_t table_size = NPB_ING_SF_1_MULTICAST_ACT_SEL_TABLE_DEPTH
+ switch_uint32_t table_size = NPB_ING_SF_1_MULTICAST_SFF_TABLE_DEPTH
 ) {
-
- // temporary internal variables
-//  bit<1> action_bitmask_internal;
-
- // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: egress action_bitmask defined as follows....
- //
- //   [0:0] act #1: multicast
 
  // =========================================================================
  // Table #1: Action Select
  // =========================================================================
 
  action ing_sf_action_sel_hit(
-//		bit<1> action_bitmask,
   switch_mgid_t mgid
  ) {
-//		action_bitmask_internal = action_bitmask;
-
   ig_md.multicast.id = mgid;
 
   ig_md.egress_port_lag_index = 0;
-  ig_md.egress_port_lag_hash_sel = 0;
  }
 
  // =====================================
 
  action ing_sf_action_sel_miss(
  ) {
-//		action_bitmask_internal = 0;
  }
 
  // =====================================
@@ -11743,8 +11605,6 @@ control npb_ing_sf_multicast_top_part1 (
 
   if(ing_sf_action_sel.apply().hit) {
 
-//			ig_md.nsh_md.sf1_active = true;
-
    // =====================================
    // Decrement SI
    // =====================================
@@ -11762,18 +11622,6 @@ control npb_ing_sf_multicast_top_part1 (
 
 
 
-   // =====================================
-   // Action(s)
-   // =====================================
-
-//			if(action_bitmask_internal[0:0] == 1) {
-
-    // There used to be a table here that took sfc and gave mgid.  It has been removed in the latest iteration.
-
-//			}
-
-  } else {
-//			ig_md.nsh_md.sf1_active = false;
   }
 
  }
@@ -11793,104 +11641,15 @@ control npb_egr_sf_multicast_top_part2 (
 ) {
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // =========================================================================
  // Table #1: 
  // =========================================================================
-/*
-#ifdef MULTICAST_ENABLE
-	action rid_hit_nsh(
-		switch_bd_t bd,
 
-		bit<24>               spi,
-		bit<8>                si,
-
-		switch_nexthop_t nexthop_index,
-		switch_tunnel_index_t tunnel_index,
-		switch_outer_nexthop_t outer_nexthop_index
-	) {
-		eg_md.bd = bd;
-
-		hdr_0.nsh_type1.spi     = spi;
-		hdr_0.nsh_type1.si      = si;
-
-		eg_md.nexthop = nexthop_index;
-		eg_md.tunnel_0.index = tunnel_index;
-		eg_md.outer_nexthop = outer_nexthop_index;
-	}
-
-	action rid_hit(
-		switch_bd_t bd
-	) {
-		eg_md.bd = bd;
-	}
-
-	action rid_miss() {
-	}
-
-	table rid {
-		key = {
-			replication_id : exact;
-		}
-		actions = {
-			rid_miss;
-			rid_hit;
-			rid_hit_nsh;
-		}
-
-		size = table_size;
-		const default_action = rid_miss;
-	}
-#endif
-*/
  // =========================================================================
  // Apply
  // =========================================================================
 
  apply {
 
-  // =====================================
-  // Action Lookup
-  // =====================================
-/*
-		if(eg_md.nsh_md.sf1_active == true) {
-
-			// =====================================
-			// Decrement SI
-			// =====================================
-
-			// Derek: We have moved this here, rather than at the end of the sf,
-			// in violation of RFC8300.  This is because of an issue were a sf
-			// can reclassify the packet with a new si, which would then get immediately
-			// decremented.  This means firmware would have to add 1 to the si value
-			// the really wanted.  So we move it here so that is gets decremented after
-			// the lookup that uses it, but before any actions have run....
-
-			// NOTE: THIS IS DONE IN EGRESS INSTEAD OF INGRESS, BECAUSE WE DON"T FIT OTHERWISE!
-
-#ifdef BUG_09719_WORKAROUND
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si - 1; // decrement sp_index
-#else
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si |-| 1; // decrement sp_index
-#endif
-			// =====================================
-			// Action(s)
-			// =====================================
-
-		}
-*/
-  // =====================================
-  // Replication ID Lookup
-  // =====================================
-/*
-#ifdef MULTICAST_ENABLE
-		if(replication_id != 0) {
-			rid.apply();
-		}
-#endif
-*/
  }
 }
 # 5 "npb_ing_top.p4" 2
@@ -11904,355 +11663,20 @@ control npb_ing_sff_top (
  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
 ) {
 
- bit<8> hdr_nsh_type1_si_predec; // local copy used for pre-decrementing prior to forwarding lookup.
-
  // =========================================================================
- // Notes
+ // Table #1: FIB
  // =========================================================================
 
- // Note: bitmask defined as follows....
- //
- //   [0:0] sf  #1: ingress basic/advanced
- //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- // =========================================================================
- // Table #1 - SI  Decrement
- // =========================================================================
-
- // this table just does a 'pop count' on the bitmask....
-
-//	bit<8> nsh_si_dec_amount;
- bit<2> ig_md_nsh_md_sf_bitmask_2_1;
-
- action new_si(
-  bit<8> dec
- ) {
-//		ig_md.nsh_md.si = ig_md.nsh_md.si |-| (bit<8>)dec; // saturating subtract
-//		nsh_si_dec_amount = dec;
-  hdr_nsh_type1_si_predec = dec;
- }
-
- // NOTE: SINCE THE FIRST SF HAS ALREADY RUN, WE ONLY NEED TO ACCOUNT FOR
- // THE REMAINING SFs...
-
- // this is code we'd like to use, but it doesn't work! -- barefoot bug?
-/*
-	table ing_sff_dec_si {
-		key = {
-			ig_md.nsh_md.sf_bitmask[2:1] : exact;
-		}
-		actions = {
-			new_si;
-		}
-		const entries = {
-			(0)  : new_si(0); // 0 bits set
-			(1)  : new_si(1); // 1 bits set
-			(2)  : new_si(1); // 1 bits set
-			(3)  : new_si(2); // 2 bits set
-		}
-	}
-*/
-/*
-	table ing_sff_dec_si {
-		key = {
-			hdr_0.nsh_type1.si : exact;
-//			ig_md.nsh_md.sf_bitmask[2:1] : exact;
-			ig_md_nsh_md_sf_bitmask_2_1 : exact;
-		}
-		actions = {
-			new_si;
-		}
-		const entries = {
-			(   0 , 0 ) : new_si(   0 );  (   0 , 1 ) : new_si(   0 );  (   0 , 2 ) : new_si(   0 );  (   0 , 3 ) : new_si(   0 );
-			(   1 , 0 ) : new_si(   1 );  (   1 , 1 ) : new_si(   0 );  (   1 , 2 ) : new_si(   0 );  (   1 , 3 ) : new_si(   0 );
-			(   2 , 0 ) : new_si(   2 );  (   2 , 1 ) : new_si(   1 );  (   2 , 2 ) : new_si(   1 );  (   2 , 3 ) : new_si(   0 );
-			(   3 , 0 ) : new_si(   3 );  (   3 , 1 ) : new_si(   2 );  (   3 , 2 ) : new_si(   2 );  (   3 , 3 ) : new_si(   1 );
-			(   4 , 0 ) : new_si(   4 );  (   4 , 1 ) : new_si(   3 );  (   4 , 2 ) : new_si(   3 );  (   4 , 3 ) : new_si(   2 );
-			(   5 , 0 ) : new_si(   5 );  (   5 , 1 ) : new_si(   4 );  (   5 , 2 ) : new_si(   4 );  (   5 , 3 ) : new_si(   3 );
-			(   6 , 0 ) : new_si(   6 );  (   6 , 1 ) : new_si(   5 );  (   6 , 2 ) : new_si(   5 );  (   6 , 3 ) : new_si(   4 );
-			(   7 , 0 ) : new_si(   7 );  (   7 , 1 ) : new_si(   6 );  (   7 , 2 ) : new_si(   6 );  (   7 , 3 ) : new_si(   5 );
-			(   8 , 0 ) : new_si(   8 );  (   8 , 1 ) : new_si(   7 );  (   8 , 2 ) : new_si(   7 );  (   8 , 3 ) : new_si(   6 );
-			(   9 , 0 ) : new_si(   9 );  (   9 , 1 ) : new_si(   8 );  (   9 , 2 ) : new_si(   8 );  (   9 , 3 ) : new_si(   7 );
-			(  10 , 0 ) : new_si(  10 );  (  10 , 1 ) : new_si(   9 );  (  10 , 2 ) : new_si(   9 );  (  10 , 3 ) : new_si(   8 );
-			(  11 , 0 ) : new_si(  11 );  (  11 , 1 ) : new_si(  10 );  (  11 , 2 ) : new_si(  10 );  (  11 , 3 ) : new_si(   9 );
-			(  12 , 0 ) : new_si(  12 );  (  12 , 1 ) : new_si(  11 );  (  12 , 2 ) : new_si(  11 );  (  12 , 3 ) : new_si(  10 );
-			(  13 , 0 ) : new_si(  13 );  (  13 , 1 ) : new_si(  12 );  (  13 , 2 ) : new_si(  12 );  (  13 , 3 ) : new_si(  11 );
-			(  14 , 0 ) : new_si(  14 );  (  14 , 1 ) : new_si(  13 );  (  14 , 2 ) : new_si(  13 );  (  14 , 3 ) : new_si(  12 );
-			(  15 , 0 ) : new_si(  15 );  (  15 , 1 ) : new_si(  14 );  (  15 , 2 ) : new_si(  14 );  (  15 , 3 ) : new_si(  13 );
-			(  16 , 0 ) : new_si(  16 );  (  16 , 1 ) : new_si(  15 );  (  16 , 2 ) : new_si(  15 );  (  16 , 3 ) : new_si(  14 );
-			(  17 , 0 ) : new_si(  17 );  (  17 , 1 ) : new_si(  16 );  (  17 , 2 ) : new_si(  16 );  (  17 , 3 ) : new_si(  15 );
-			(  18 , 0 ) : new_si(  18 );  (  18 , 1 ) : new_si(  17 );  (  18 , 2 ) : new_si(  17 );  (  18 , 3 ) : new_si(  16 );
-			(  19 , 0 ) : new_si(  19 );  (  19 , 1 ) : new_si(  18 );  (  19 , 2 ) : new_si(  18 );  (  19 , 3 ) : new_si(  17 );
-			(  20 , 0 ) : new_si(  20 );  (  20 , 1 ) : new_si(  19 );  (  20 , 2 ) : new_si(  19 );  (  20 , 3 ) : new_si(  18 );
-			(  21 , 0 ) : new_si(  21 );  (  21 , 1 ) : new_si(  20 );  (  21 , 2 ) : new_si(  20 );  (  21 , 3 ) : new_si(  19 );
-			(  22 , 0 ) : new_si(  22 );  (  22 , 1 ) : new_si(  21 );  (  22 , 2 ) : new_si(  21 );  (  22 , 3 ) : new_si(  20 );
-			(  23 , 0 ) : new_si(  23 );  (  23 , 1 ) : new_si(  22 );  (  23 , 2 ) : new_si(  22 );  (  23 , 3 ) : new_si(  21 );
-			(  24 , 0 ) : new_si(  24 );  (  24 , 1 ) : new_si(  23 );  (  24 , 2 ) : new_si(  23 );  (  24 , 3 ) : new_si(  22 );
-			(  25 , 0 ) : new_si(  25 );  (  25 , 1 ) : new_si(  24 );  (  25 , 2 ) : new_si(  24 );  (  25 , 3 ) : new_si(  23 );
-			(  26 , 0 ) : new_si(  26 );  (  26 , 1 ) : new_si(  25 );  (  26 , 2 ) : new_si(  25 );  (  26 , 3 ) : new_si(  24 );
-			(  27 , 0 ) : new_si(  27 );  (  27 , 1 ) : new_si(  26 );  (  27 , 2 ) : new_si(  26 );  (  27 , 3 ) : new_si(  25 );
-			(  28 , 0 ) : new_si(  28 );  (  28 , 1 ) : new_si(  27 );  (  28 , 2 ) : new_si(  27 );  (  28 , 3 ) : new_si(  26 );
-			(  29 , 0 ) : new_si(  29 );  (  29 , 1 ) : new_si(  28 );  (  29 , 2 ) : new_si(  28 );  (  29 , 3 ) : new_si(  27 );
-			(  30 , 0 ) : new_si(  30 );  (  30 , 1 ) : new_si(  29 );  (  30 , 2 ) : new_si(  29 );  (  30 , 3 ) : new_si(  28 );
-			(  31 , 0 ) : new_si(  31 );  (  31 , 1 ) : new_si(  30 );  (  31 , 2 ) : new_si(  30 );  (  31 , 3 ) : new_si(  29 );
-			(  32 , 0 ) : new_si(  32 );  (  32 , 1 ) : new_si(  31 );  (  32 , 2 ) : new_si(  31 );  (  32 , 3 ) : new_si(  30 );
-			(  33 , 0 ) : new_si(  33 );  (  33 , 1 ) : new_si(  32 );  (  33 , 2 ) : new_si(  32 );  (  33 , 3 ) : new_si(  31 );
-			(  34 , 0 ) : new_si(  34 );  (  34 , 1 ) : new_si(  33 );  (  34 , 2 ) : new_si(  33 );  (  34 , 3 ) : new_si(  32 );
-			(  35 , 0 ) : new_si(  35 );  (  35 , 1 ) : new_si(  34 );  (  35 , 2 ) : new_si(  34 );  (  35 , 3 ) : new_si(  33 );
-			(  36 , 0 ) : new_si(  36 );  (  36 , 1 ) : new_si(  35 );  (  36 , 2 ) : new_si(  35 );  (  36 , 3 ) : new_si(  34 );
-			(  37 , 0 ) : new_si(  37 );  (  37 , 1 ) : new_si(  36 );  (  37 , 2 ) : new_si(  36 );  (  37 , 3 ) : new_si(  35 );
-			(  38 , 0 ) : new_si(  38 );  (  38 , 1 ) : new_si(  37 );  (  38 , 2 ) : new_si(  37 );  (  38 , 3 ) : new_si(  36 );
-			(  39 , 0 ) : new_si(  39 );  (  39 , 1 ) : new_si(  38 );  (  39 , 2 ) : new_si(  38 );  (  39 , 3 ) : new_si(  37 );
-			(  40 , 0 ) : new_si(  40 );  (  40 , 1 ) : new_si(  39 );  (  40 , 2 ) : new_si(  39 );  (  40 , 3 ) : new_si(  38 );
-			(  41 , 0 ) : new_si(  41 );  (  41 , 1 ) : new_si(  40 );  (  41 , 2 ) : new_si(  40 );  (  41 , 3 ) : new_si(  39 );
-			(  42 , 0 ) : new_si(  42 );  (  42 , 1 ) : new_si(  41 );  (  42 , 2 ) : new_si(  41 );  (  42 , 3 ) : new_si(  40 );
-			(  43 , 0 ) : new_si(  43 );  (  43 , 1 ) : new_si(  42 );  (  43 , 2 ) : new_si(  42 );  (  43 , 3 ) : new_si(  41 );
-			(  44 , 0 ) : new_si(  44 );  (  44 , 1 ) : new_si(  43 );  (  44 , 2 ) : new_si(  43 );  (  44 , 3 ) : new_si(  42 );
-			(  45 , 0 ) : new_si(  45 );  (  45 , 1 ) : new_si(  44 );  (  45 , 2 ) : new_si(  44 );  (  45 , 3 ) : new_si(  43 );
-			(  46 , 0 ) : new_si(  46 );  (  46 , 1 ) : new_si(  45 );  (  46 , 2 ) : new_si(  45 );  (  46 , 3 ) : new_si(  44 );
-			(  47 , 0 ) : new_si(  47 );  (  47 , 1 ) : new_si(  46 );  (  47 , 2 ) : new_si(  46 );  (  47 , 3 ) : new_si(  45 );
-			(  48 , 0 ) : new_si(  48 );  (  48 , 1 ) : new_si(  47 );  (  48 , 2 ) : new_si(  47 );  (  48 , 3 ) : new_si(  46 );
-			(  49 , 0 ) : new_si(  49 );  (  49 , 1 ) : new_si(  48 );  (  49 , 2 ) : new_si(  48 );  (  49 , 3 ) : new_si(  47 );
-			(  50 , 0 ) : new_si(  50 );  (  50 , 1 ) : new_si(  49 );  (  50 , 2 ) : new_si(  49 );  (  50 , 3 ) : new_si(  48 );
-			(  51 , 0 ) : new_si(  51 );  (  51 , 1 ) : new_si(  50 );  (  51 , 2 ) : new_si(  50 );  (  51 , 3 ) : new_si(  49 );
-			(  52 , 0 ) : new_si(  52 );  (  52 , 1 ) : new_si(  51 );  (  52 , 2 ) : new_si(  51 );  (  52 , 3 ) : new_si(  50 );
-			(  53 , 0 ) : new_si(  53 );  (  53 , 1 ) : new_si(  52 );  (  53 , 2 ) : new_si(  52 );  (  53 , 3 ) : new_si(  51 );
-			(  54 , 0 ) : new_si(  54 );  (  54 , 1 ) : new_si(  53 );  (  54 , 2 ) : new_si(  53 );  (  54 , 3 ) : new_si(  52 );
-			(  55 , 0 ) : new_si(  55 );  (  55 , 1 ) : new_si(  54 );  (  55 , 2 ) : new_si(  54 );  (  55 , 3 ) : new_si(  53 );
-			(  56 , 0 ) : new_si(  56 );  (  56 , 1 ) : new_si(  55 );  (  56 , 2 ) : new_si(  55 );  (  56 , 3 ) : new_si(  54 );
-			(  57 , 0 ) : new_si(  57 );  (  57 , 1 ) : new_si(  56 );  (  57 , 2 ) : new_si(  56 );  (  57 , 3 ) : new_si(  55 );
-			(  58 , 0 ) : new_si(  58 );  (  58 , 1 ) : new_si(  57 );  (  58 , 2 ) : new_si(  57 );  (  58 , 3 ) : new_si(  56 );
-			(  59 , 0 ) : new_si(  59 );  (  59 , 1 ) : new_si(  58 );  (  59 , 2 ) : new_si(  58 );  (  59 , 3 ) : new_si(  57 );
-			(  60 , 0 ) : new_si(  60 );  (  60 , 1 ) : new_si(  59 );  (  60 , 2 ) : new_si(  59 );  (  60 , 3 ) : new_si(  58 );
-			(  61 , 0 ) : new_si(  61 );  (  61 , 1 ) : new_si(  60 );  (  61 , 2 ) : new_si(  60 );  (  61 , 3 ) : new_si(  59 );
-			(  62 , 0 ) : new_si(  62 );  (  62 , 1 ) : new_si(  61 );  (  62 , 2 ) : new_si(  61 );  (  62 , 3 ) : new_si(  60 );
-			(  63 , 0 ) : new_si(  63 );  (  63 , 1 ) : new_si(  62 );  (  63 , 2 ) : new_si(  62 );  (  63 , 3 ) : new_si(  61 );
-			(  64 , 0 ) : new_si(  64 );  (  64 , 1 ) : new_si(  63 );  (  64 , 2 ) : new_si(  63 );  (  64 , 3 ) : new_si(  62 );
-			(  65 , 0 ) : new_si(  65 );  (  65 , 1 ) : new_si(  64 );  (  65 , 2 ) : new_si(  64 );  (  65 , 3 ) : new_si(  63 );
-			(  66 , 0 ) : new_si(  66 );  (  66 , 1 ) : new_si(  65 );  (  66 , 2 ) : new_si(  65 );  (  66 , 3 ) : new_si(  64 );
-			(  67 , 0 ) : new_si(  67 );  (  67 , 1 ) : new_si(  66 );  (  67 , 2 ) : new_si(  66 );  (  67 , 3 ) : new_si(  65 );
-			(  68 , 0 ) : new_si(  68 );  (  68 , 1 ) : new_si(  67 );  (  68 , 2 ) : new_si(  67 );  (  68 , 3 ) : new_si(  66 );
-			(  69 , 0 ) : new_si(  69 );  (  69 , 1 ) : new_si(  68 );  (  69 , 2 ) : new_si(  68 );  (  69 , 3 ) : new_si(  67 );
-			(  70 , 0 ) : new_si(  70 );  (  70 , 1 ) : new_si(  69 );  (  70 , 2 ) : new_si(  69 );  (  70 , 3 ) : new_si(  68 );
-			(  71 , 0 ) : new_si(  71 );  (  71 , 1 ) : new_si(  70 );  (  71 , 2 ) : new_si(  70 );  (  71 , 3 ) : new_si(  69 );
-			(  72 , 0 ) : new_si(  72 );  (  72 , 1 ) : new_si(  71 );  (  72 , 2 ) : new_si(  71 );  (  72 , 3 ) : new_si(  70 );
-			(  73 , 0 ) : new_si(  73 );  (  73 , 1 ) : new_si(  72 );  (  73 , 2 ) : new_si(  72 );  (  73 , 3 ) : new_si(  71 );
-			(  74 , 0 ) : new_si(  74 );  (  74 , 1 ) : new_si(  73 );  (  74 , 2 ) : new_si(  73 );  (  74 , 3 ) : new_si(  72 );
-			(  75 , 0 ) : new_si(  75 );  (  75 , 1 ) : new_si(  74 );  (  75 , 2 ) : new_si(  74 );  (  75 , 3 ) : new_si(  73 );
-			(  76 , 0 ) : new_si(  76 );  (  76 , 1 ) : new_si(  75 );  (  76 , 2 ) : new_si(  75 );  (  76 , 3 ) : new_si(  74 );
-			(  77 , 0 ) : new_si(  77 );  (  77 , 1 ) : new_si(  76 );  (  77 , 2 ) : new_si(  76 );  (  77 , 3 ) : new_si(  75 );
-			(  78 , 0 ) : new_si(  78 );  (  78 , 1 ) : new_si(  77 );  (  78 , 2 ) : new_si(  77 );  (  78 , 3 ) : new_si(  76 );
-			(  79 , 0 ) : new_si(  79 );  (  79 , 1 ) : new_si(  78 );  (  79 , 2 ) : new_si(  78 );  (  79 , 3 ) : new_si(  77 );
-			(  80 , 0 ) : new_si(  80 );  (  80 , 1 ) : new_si(  79 );  (  80 , 2 ) : new_si(  79 );  (  80 , 3 ) : new_si(  78 );
-			(  81 , 0 ) : new_si(  81 );  (  81 , 1 ) : new_si(  80 );  (  81 , 2 ) : new_si(  80 );  (  81 , 3 ) : new_si(  79 );
-			(  82 , 0 ) : new_si(  82 );  (  82 , 1 ) : new_si(  81 );  (  82 , 2 ) : new_si(  81 );  (  82 , 3 ) : new_si(  80 );
-			(  83 , 0 ) : new_si(  83 );  (  83 , 1 ) : new_si(  82 );  (  83 , 2 ) : new_si(  82 );  (  83 , 3 ) : new_si(  81 );
-			(  84 , 0 ) : new_si(  84 );  (  84 , 1 ) : new_si(  83 );  (  84 , 2 ) : new_si(  83 );  (  84 , 3 ) : new_si(  82 );
-			(  85 , 0 ) : new_si(  85 );  (  85 , 1 ) : new_si(  84 );  (  85 , 2 ) : new_si(  84 );  (  85 , 3 ) : new_si(  83 );
-			(  86 , 0 ) : new_si(  86 );  (  86 , 1 ) : new_si(  85 );  (  86 , 2 ) : new_si(  85 );  (  86 , 3 ) : new_si(  84 );
-			(  87 , 0 ) : new_si(  87 );  (  87 , 1 ) : new_si(  86 );  (  87 , 2 ) : new_si(  86 );  (  87 , 3 ) : new_si(  85 );
-			(  88 , 0 ) : new_si(  88 );  (  88 , 1 ) : new_si(  87 );  (  88 , 2 ) : new_si(  87 );  (  88 , 3 ) : new_si(  86 );
-			(  89 , 0 ) : new_si(  89 );  (  89 , 1 ) : new_si(  88 );  (  89 , 2 ) : new_si(  88 );  (  89 , 3 ) : new_si(  87 );
-			(  90 , 0 ) : new_si(  90 );  (  90 , 1 ) : new_si(  89 );  (  90 , 2 ) : new_si(  89 );  (  90 , 3 ) : new_si(  88 );
-			(  91 , 0 ) : new_si(  91 );  (  91 , 1 ) : new_si(  90 );  (  91 , 2 ) : new_si(  90 );  (  91 , 3 ) : new_si(  89 );
-			(  92 , 0 ) : new_si(  92 );  (  92 , 1 ) : new_si(  91 );  (  92 , 2 ) : new_si(  91 );  (  92 , 3 ) : new_si(  90 );
-			(  93 , 0 ) : new_si(  93 );  (  93 , 1 ) : new_si(  92 );  (  93 , 2 ) : new_si(  92 );  (  93 , 3 ) : new_si(  91 );
-			(  94 , 0 ) : new_si(  94 );  (  94 , 1 ) : new_si(  93 );  (  94 , 2 ) : new_si(  93 );  (  94 , 3 ) : new_si(  92 );
-			(  95 , 0 ) : new_si(  95 );  (  95 , 1 ) : new_si(  94 );  (  95 , 2 ) : new_si(  94 );  (  95 , 3 ) : new_si(  93 );
-			(  96 , 0 ) : new_si(  96 );  (  96 , 1 ) : new_si(  95 );  (  96 , 2 ) : new_si(  95 );  (  96 , 3 ) : new_si(  94 );
-			(  97 , 0 ) : new_si(  97 );  (  97 , 1 ) : new_si(  96 );  (  97 , 2 ) : new_si(  96 );  (  97 , 3 ) : new_si(  95 );
-			(  98 , 0 ) : new_si(  98 );  (  98 , 1 ) : new_si(  97 );  (  98 , 2 ) : new_si(  97 );  (  98 , 3 ) : new_si(  96 );
-			(  99 , 0 ) : new_si(  99 );  (  99 , 1 ) : new_si(  98 );  (  99 , 2 ) : new_si(  98 );  (  99 , 3 ) : new_si(  97 );
-			( 100 , 0 ) : new_si( 100 );  ( 100 , 1 ) : new_si(  99 );  ( 100 , 2 ) : new_si(  99 );  ( 100 , 3 ) : new_si(  98 );
-			( 101 , 0 ) : new_si( 101 );  ( 101 , 1 ) : new_si( 100 );  ( 101 , 2 ) : new_si( 100 );  ( 101 , 3 ) : new_si(  99 );
-			( 102 , 0 ) : new_si( 102 );  ( 102 , 1 ) : new_si( 101 );  ( 102 , 2 ) : new_si( 101 );  ( 102 , 3 ) : new_si( 100 );
-			( 103 , 0 ) : new_si( 103 );  ( 103 , 1 ) : new_si( 102 );  ( 103 , 2 ) : new_si( 102 );  ( 103 , 3 ) : new_si( 101 );
-			( 104 , 0 ) : new_si( 104 );  ( 104 , 1 ) : new_si( 103 );  ( 104 , 2 ) : new_si( 103 );  ( 104 , 3 ) : new_si( 102 );
-			( 105 , 0 ) : new_si( 105 );  ( 105 , 1 ) : new_si( 104 );  ( 105 , 2 ) : new_si( 104 );  ( 105 , 3 ) : new_si( 103 );
-			( 106 , 0 ) : new_si( 106 );  ( 106 , 1 ) : new_si( 105 );  ( 106 , 2 ) : new_si( 105 );  ( 106 , 3 ) : new_si( 104 );
-			( 107 , 0 ) : new_si( 107 );  ( 107 , 1 ) : new_si( 106 );  ( 107 , 2 ) : new_si( 106 );  ( 107 , 3 ) : new_si( 105 );
-			( 108 , 0 ) : new_si( 108 );  ( 108 , 1 ) : new_si( 107 );  ( 108 , 2 ) : new_si( 107 );  ( 108 , 3 ) : new_si( 106 );
-			( 109 , 0 ) : new_si( 109 );  ( 109 , 1 ) : new_si( 108 );  ( 109 , 2 ) : new_si( 108 );  ( 109 , 3 ) : new_si( 107 );
-			( 110 , 0 ) : new_si( 110 );  ( 110 , 1 ) : new_si( 109 );  ( 110 , 2 ) : new_si( 109 );  ( 110 , 3 ) : new_si( 108 );
-			( 111 , 0 ) : new_si( 111 );  ( 111 , 1 ) : new_si( 110 );  ( 111 , 2 ) : new_si( 110 );  ( 111 , 3 ) : new_si( 109 );
-			( 112 , 0 ) : new_si( 112 );  ( 112 , 1 ) : new_si( 111 );  ( 112 , 2 ) : new_si( 111 );  ( 112 , 3 ) : new_si( 110 );
-			( 113 , 0 ) : new_si( 113 );  ( 113 , 1 ) : new_si( 112 );  ( 113 , 2 ) : new_si( 112 );  ( 113 , 3 ) : new_si( 111 );
-			( 114 , 0 ) : new_si( 114 );  ( 114 , 1 ) : new_si( 113 );  ( 114 , 2 ) : new_si( 113 );  ( 114 , 3 ) : new_si( 112 );
-			( 115 , 0 ) : new_si( 115 );  ( 115 , 1 ) : new_si( 114 );  ( 115 , 2 ) : new_si( 114 );  ( 115 , 3 ) : new_si( 113 );
-			( 116 , 0 ) : new_si( 116 );  ( 116 , 1 ) : new_si( 115 );  ( 116 , 2 ) : new_si( 115 );  ( 116 , 3 ) : new_si( 114 );
-			( 117 , 0 ) : new_si( 117 );  ( 117 , 1 ) : new_si( 116 );  ( 117 , 2 ) : new_si( 116 );  ( 117 , 3 ) : new_si( 115 );
-			( 118 , 0 ) : new_si( 118 );  ( 118 , 1 ) : new_si( 117 );  ( 118 , 2 ) : new_si( 117 );  ( 118 , 3 ) : new_si( 116 );
-			( 119 , 0 ) : new_si( 119 );  ( 119 , 1 ) : new_si( 118 );  ( 119 , 2 ) : new_si( 118 );  ( 119 , 3 ) : new_si( 117 );
-			( 120 , 0 ) : new_si( 120 );  ( 120 , 1 ) : new_si( 119 );  ( 120 , 2 ) : new_si( 119 );  ( 120 , 3 ) : new_si( 118 );
-			( 121 , 0 ) : new_si( 121 );  ( 121 , 1 ) : new_si( 120 );  ( 121 , 2 ) : new_si( 120 );  ( 121 , 3 ) : new_si( 119 );
-			( 122 , 0 ) : new_si( 122 );  ( 122 , 1 ) : new_si( 121 );  ( 122 , 2 ) : new_si( 121 );  ( 122 , 3 ) : new_si( 120 );
-			( 123 , 0 ) : new_si( 123 );  ( 123 , 1 ) : new_si( 122 );  ( 123 , 2 ) : new_si( 122 );  ( 123 , 3 ) : new_si( 121 );
-			( 124 , 0 ) : new_si( 124 );  ( 124 , 1 ) : new_si( 123 );  ( 124 , 2 ) : new_si( 123 );  ( 124 , 3 ) : new_si( 122 );
-			( 125 , 0 ) : new_si( 125 );  ( 125 , 1 ) : new_si( 124 );  ( 125 , 2 ) : new_si( 124 );  ( 125 , 3 ) : new_si( 123 );
-			( 126 , 0 ) : new_si( 126 );  ( 126 , 1 ) : new_si( 125 );  ( 126 , 2 ) : new_si( 125 );  ( 126 , 3 ) : new_si( 124 );
-			( 127 , 0 ) : new_si( 127 );  ( 127 , 1 ) : new_si( 126 );  ( 127 , 2 ) : new_si( 126 );  ( 127 , 3 ) : new_si( 125 );
-			( 128 , 0 ) : new_si( 128 );  ( 128 , 1 ) : new_si( 127 );  ( 128 , 2 ) : new_si( 127 );  ( 128 , 3 ) : new_si( 126 );
-			( 129 , 0 ) : new_si( 129 );  ( 129 , 1 ) : new_si( 128 );  ( 129 , 2 ) : new_si( 128 );  ( 129 , 3 ) : new_si( 127 );
-			( 130 , 0 ) : new_si( 130 );  ( 130 , 1 ) : new_si( 129 );  ( 130 , 2 ) : new_si( 129 );  ( 130 , 3 ) : new_si( 128 );
-			( 131 , 0 ) : new_si( 131 );  ( 131 , 1 ) : new_si( 130 );  ( 131 , 2 ) : new_si( 130 );  ( 131 , 3 ) : new_si( 129 );
-			( 132 , 0 ) : new_si( 132 );  ( 132 , 1 ) : new_si( 131 );  ( 132 , 2 ) : new_si( 131 );  ( 132 , 3 ) : new_si( 130 );
-			( 133 , 0 ) : new_si( 133 );  ( 133 , 1 ) : new_si( 132 );  ( 133 , 2 ) : new_si( 132 );  ( 133 , 3 ) : new_si( 131 );
-			( 134 , 0 ) : new_si( 134 );  ( 134 , 1 ) : new_si( 133 );  ( 134 , 2 ) : new_si( 133 );  ( 134 , 3 ) : new_si( 132 );
-			( 135 , 0 ) : new_si( 135 );  ( 135 , 1 ) : new_si( 134 );  ( 135 , 2 ) : new_si( 134 );  ( 135 , 3 ) : new_si( 133 );
-			( 136 , 0 ) : new_si( 136 );  ( 136 , 1 ) : new_si( 135 );  ( 136 , 2 ) : new_si( 135 );  ( 136 , 3 ) : new_si( 134 );
-			( 137 , 0 ) : new_si( 137 );  ( 137 , 1 ) : new_si( 136 );  ( 137 , 2 ) : new_si( 136 );  ( 137 , 3 ) : new_si( 135 );
-			( 138 , 0 ) : new_si( 138 );  ( 138 , 1 ) : new_si( 137 );  ( 138 , 2 ) : new_si( 137 );  ( 138 , 3 ) : new_si( 136 );
-			( 139 , 0 ) : new_si( 139 );  ( 139 , 1 ) : new_si( 138 );  ( 139 , 2 ) : new_si( 138 );  ( 139 , 3 ) : new_si( 137 );
-			( 140 , 0 ) : new_si( 140 );  ( 140 , 1 ) : new_si( 139 );  ( 140 , 2 ) : new_si( 139 );  ( 140 , 3 ) : new_si( 138 );
-			( 141 , 0 ) : new_si( 141 );  ( 141 , 1 ) : new_si( 140 );  ( 141 , 2 ) : new_si( 140 );  ( 141 , 3 ) : new_si( 139 );
-			( 142 , 0 ) : new_si( 142 );  ( 142 , 1 ) : new_si( 141 );  ( 142 , 2 ) : new_si( 141 );  ( 142 , 3 ) : new_si( 140 );
-			( 143 , 0 ) : new_si( 143 );  ( 143 , 1 ) : new_si( 142 );  ( 143 , 2 ) : new_si( 142 );  ( 143 , 3 ) : new_si( 141 );
-			( 144 , 0 ) : new_si( 144 );  ( 144 , 1 ) : new_si( 143 );  ( 144 , 2 ) : new_si( 143 );  ( 144 , 3 ) : new_si( 142 );
-			( 145 , 0 ) : new_si( 145 );  ( 145 , 1 ) : new_si( 144 );  ( 145 , 2 ) : new_si( 144 );  ( 145 , 3 ) : new_si( 143 );
-			( 146 , 0 ) : new_si( 146 );  ( 146 , 1 ) : new_si( 145 );  ( 146 , 2 ) : new_si( 145 );  ( 146 , 3 ) : new_si( 144 );
-			( 147 , 0 ) : new_si( 147 );  ( 147 , 1 ) : new_si( 146 );  ( 147 , 2 ) : new_si( 146 );  ( 147 , 3 ) : new_si( 145 );
-			( 148 , 0 ) : new_si( 148 );  ( 148 , 1 ) : new_si( 147 );  ( 148 , 2 ) : new_si( 147 );  ( 148 , 3 ) : new_si( 146 );
-			( 149 , 0 ) : new_si( 149 );  ( 149 , 1 ) : new_si( 148 );  ( 149 , 2 ) : new_si( 148 );  ( 149 , 3 ) : new_si( 147 );
-			( 150 , 0 ) : new_si( 150 );  ( 150 , 1 ) : new_si( 149 );  ( 150 , 2 ) : new_si( 149 );  ( 150 , 3 ) : new_si( 148 );
-			( 151 , 0 ) : new_si( 151 );  ( 151 , 1 ) : new_si( 150 );  ( 151 , 2 ) : new_si( 150 );  ( 151 , 3 ) : new_si( 149 );
-			( 152 , 0 ) : new_si( 152 );  ( 152 , 1 ) : new_si( 151 );  ( 152 , 2 ) : new_si( 151 );  ( 152 , 3 ) : new_si( 150 );
-			( 153 , 0 ) : new_si( 153 );  ( 153 , 1 ) : new_si( 152 );  ( 153 , 2 ) : new_si( 152 );  ( 153 , 3 ) : new_si( 151 );
-			( 154 , 0 ) : new_si( 154 );  ( 154 , 1 ) : new_si( 153 );  ( 154 , 2 ) : new_si( 153 );  ( 154 , 3 ) : new_si( 152 );
-			( 155 , 0 ) : new_si( 155 );  ( 155 , 1 ) : new_si( 154 );  ( 155 , 2 ) : new_si( 154 );  ( 155 , 3 ) : new_si( 153 );
-			( 156 , 0 ) : new_si( 156 );  ( 156 , 1 ) : new_si( 155 );  ( 156 , 2 ) : new_si( 155 );  ( 156 , 3 ) : new_si( 154 );
-			( 157 , 0 ) : new_si( 157 );  ( 157 , 1 ) : new_si( 156 );  ( 157 , 2 ) : new_si( 156 );  ( 157 , 3 ) : new_si( 155 );
-			( 158 , 0 ) : new_si( 158 );  ( 158 , 1 ) : new_si( 157 );  ( 158 , 2 ) : new_si( 157 );  ( 158 , 3 ) : new_si( 156 );
-			( 159 , 0 ) : new_si( 159 );  ( 159 , 1 ) : new_si( 158 );  ( 159 , 2 ) : new_si( 158 );  ( 159 , 3 ) : new_si( 157 );
-			( 160 , 0 ) : new_si( 160 );  ( 160 , 1 ) : new_si( 159 );  ( 160 , 2 ) : new_si( 159 );  ( 160 , 3 ) : new_si( 158 );
-			( 161 , 0 ) : new_si( 161 );  ( 161 , 1 ) : new_si( 160 );  ( 161 , 2 ) : new_si( 160 );  ( 161 , 3 ) : new_si( 159 );
-			( 162 , 0 ) : new_si( 162 );  ( 162 , 1 ) : new_si( 161 );  ( 162 , 2 ) : new_si( 161 );  ( 162 , 3 ) : new_si( 160 );
-			( 163 , 0 ) : new_si( 163 );  ( 163 , 1 ) : new_si( 162 );  ( 163 , 2 ) : new_si( 162 );  ( 163 , 3 ) : new_si( 161 );
-			( 164 , 0 ) : new_si( 164 );  ( 164 , 1 ) : new_si( 163 );  ( 164 , 2 ) : new_si( 163 );  ( 164 , 3 ) : new_si( 162 );
-			( 165 , 0 ) : new_si( 165 );  ( 165 , 1 ) : new_si( 164 );  ( 165 , 2 ) : new_si( 164 );  ( 165 , 3 ) : new_si( 163 );
-			( 166 , 0 ) : new_si( 166 );  ( 166 , 1 ) : new_si( 165 );  ( 166 , 2 ) : new_si( 165 );  ( 166 , 3 ) : new_si( 164 );
-			( 167 , 0 ) : new_si( 167 );  ( 167 , 1 ) : new_si( 166 );  ( 167 , 2 ) : new_si( 166 );  ( 167 , 3 ) : new_si( 165 );
-			( 168 , 0 ) : new_si( 168 );  ( 168 , 1 ) : new_si( 167 );  ( 168 , 2 ) : new_si( 167 );  ( 168 , 3 ) : new_si( 166 );
-			( 169 , 0 ) : new_si( 169 );  ( 169 , 1 ) : new_si( 168 );  ( 169 , 2 ) : new_si( 168 );  ( 169 , 3 ) : new_si( 167 );
-			( 170 , 0 ) : new_si( 170 );  ( 170 , 1 ) : new_si( 169 );  ( 170 , 2 ) : new_si( 169 );  ( 170 , 3 ) : new_si( 168 );
-			( 171 , 0 ) : new_si( 171 );  ( 171 , 1 ) : new_si( 170 );  ( 171 , 2 ) : new_si( 170 );  ( 171 , 3 ) : new_si( 169 );
-			( 172 , 0 ) : new_si( 172 );  ( 172 , 1 ) : new_si( 171 );  ( 172 , 2 ) : new_si( 171 );  ( 172 , 3 ) : new_si( 170 );
-			( 173 , 0 ) : new_si( 173 );  ( 173 , 1 ) : new_si( 172 );  ( 173 , 2 ) : new_si( 172 );  ( 173 , 3 ) : new_si( 171 );
-			( 174 , 0 ) : new_si( 174 );  ( 174 , 1 ) : new_si( 173 );  ( 174 , 2 ) : new_si( 173 );  ( 174 , 3 ) : new_si( 172 );
-			( 175 , 0 ) : new_si( 175 );  ( 175 , 1 ) : new_si( 174 );  ( 175 , 2 ) : new_si( 174 );  ( 175 , 3 ) : new_si( 173 );
-			( 176 , 0 ) : new_si( 176 );  ( 176 , 1 ) : new_si( 175 );  ( 176 , 2 ) : new_si( 175 );  ( 176 , 3 ) : new_si( 174 );
-			( 177 , 0 ) : new_si( 177 );  ( 177 , 1 ) : new_si( 176 );  ( 177 , 2 ) : new_si( 176 );  ( 177 , 3 ) : new_si( 175 );
-			( 178 , 0 ) : new_si( 178 );  ( 178 , 1 ) : new_si( 177 );  ( 178 , 2 ) : new_si( 177 );  ( 178 , 3 ) : new_si( 176 );
-			( 179 , 0 ) : new_si( 179 );  ( 179 , 1 ) : new_si( 178 );  ( 179 , 2 ) : new_si( 178 );  ( 179 , 3 ) : new_si( 177 );
-			( 180 , 0 ) : new_si( 180 );  ( 180 , 1 ) : new_si( 179 );  ( 180 , 2 ) : new_si( 179 );  ( 180 , 3 ) : new_si( 178 );
-			( 181 , 0 ) : new_si( 181 );  ( 181 , 1 ) : new_si( 180 );  ( 181 , 2 ) : new_si( 180 );  ( 181 , 3 ) : new_si( 179 );
-			( 182 , 0 ) : new_si( 182 );  ( 182 , 1 ) : new_si( 181 );  ( 182 , 2 ) : new_si( 181 );  ( 182 , 3 ) : new_si( 180 );
-			( 183 , 0 ) : new_si( 183 );  ( 183 , 1 ) : new_si( 182 );  ( 183 , 2 ) : new_si( 182 );  ( 183 , 3 ) : new_si( 181 );
-			( 184 , 0 ) : new_si( 184 );  ( 184 , 1 ) : new_si( 183 );  ( 184 , 2 ) : new_si( 183 );  ( 184 , 3 ) : new_si( 182 );
-			( 185 , 0 ) : new_si( 185 );  ( 185 , 1 ) : new_si( 184 );  ( 185 , 2 ) : new_si( 184 );  ( 185 , 3 ) : new_si( 183 );
-			( 186 , 0 ) : new_si( 186 );  ( 186 , 1 ) : new_si( 185 );  ( 186 , 2 ) : new_si( 185 );  ( 186 , 3 ) : new_si( 184 );
-			( 187 , 0 ) : new_si( 187 );  ( 187 , 1 ) : new_si( 186 );  ( 187 , 2 ) : new_si( 186 );  ( 187 , 3 ) : new_si( 185 );
-			( 188 , 0 ) : new_si( 188 );  ( 188 , 1 ) : new_si( 187 );  ( 188 , 2 ) : new_si( 187 );  ( 188 , 3 ) : new_si( 186 );
-			( 189 , 0 ) : new_si( 189 );  ( 189 , 1 ) : new_si( 188 );  ( 189 , 2 ) : new_si( 188 );  ( 189 , 3 ) : new_si( 187 );
-			( 190 , 0 ) : new_si( 190 );  ( 190 , 1 ) : new_si( 189 );  ( 190 , 2 ) : new_si( 189 );  ( 190 , 3 ) : new_si( 188 );
-			( 191 , 0 ) : new_si( 191 );  ( 191 , 1 ) : new_si( 190 );  ( 191 , 2 ) : new_si( 190 );  ( 191 , 3 ) : new_si( 189 );
-			( 192 , 0 ) : new_si( 192 );  ( 192 , 1 ) : new_si( 191 );  ( 192 , 2 ) : new_si( 191 );  ( 192 , 3 ) : new_si( 190 );
-			( 193 , 0 ) : new_si( 193 );  ( 193 , 1 ) : new_si( 192 );  ( 193 , 2 ) : new_si( 192 );  ( 193 , 3 ) : new_si( 191 );
-			( 194 , 0 ) : new_si( 194 );  ( 194 , 1 ) : new_si( 193 );  ( 194 , 2 ) : new_si( 193 );  ( 194 , 3 ) : new_si( 192 );
-			( 195 , 0 ) : new_si( 195 );  ( 195 , 1 ) : new_si( 194 );  ( 195 , 2 ) : new_si( 194 );  ( 195 , 3 ) : new_si( 193 );
-			( 196 , 0 ) : new_si( 196 );  ( 196 , 1 ) : new_si( 195 );  ( 196 , 2 ) : new_si( 195 );  ( 196 , 3 ) : new_si( 194 );
-			( 197 , 0 ) : new_si( 197 );  ( 197 , 1 ) : new_si( 196 );  ( 197 , 2 ) : new_si( 196 );  ( 197 , 3 ) : new_si( 195 );
-			( 198 , 0 ) : new_si( 198 );  ( 198 , 1 ) : new_si( 197 );  ( 198 , 2 ) : new_si( 197 );  ( 198 , 3 ) : new_si( 196 );
-			( 199 , 0 ) : new_si( 199 );  ( 199 , 1 ) : new_si( 198 );  ( 199 , 2 ) : new_si( 198 );  ( 199 , 3 ) : new_si( 197 );
-			( 200 , 0 ) : new_si( 200 );  ( 200 , 1 ) : new_si( 199 );  ( 200 , 2 ) : new_si( 199 );  ( 200 , 3 ) : new_si( 198 );
-			( 201 , 0 ) : new_si( 201 );  ( 201 , 1 ) : new_si( 200 );  ( 201 , 2 ) : new_si( 200 );  ( 201 , 3 ) : new_si( 199 );
-			( 202 , 0 ) : new_si( 202 );  ( 202 , 1 ) : new_si( 201 );  ( 202 , 2 ) : new_si( 201 );  ( 202 , 3 ) : new_si( 200 );
-			( 203 , 0 ) : new_si( 203 );  ( 203 , 1 ) : new_si( 202 );  ( 203 , 2 ) : new_si( 202 );  ( 203 , 3 ) : new_si( 201 );
-			( 204 , 0 ) : new_si( 204 );  ( 204 , 1 ) : new_si( 203 );  ( 204 , 2 ) : new_si( 203 );  ( 204 , 3 ) : new_si( 202 );
-			( 205 , 0 ) : new_si( 205 );  ( 205 , 1 ) : new_si( 204 );  ( 205 , 2 ) : new_si( 204 );  ( 205 , 3 ) : new_si( 203 );
-			( 206 , 0 ) : new_si( 206 );  ( 206 , 1 ) : new_si( 205 );  ( 206 , 2 ) : new_si( 205 );  ( 206 , 3 ) : new_si( 204 );
-			( 207 , 0 ) : new_si( 207 );  ( 207 , 1 ) : new_si( 206 );  ( 207 , 2 ) : new_si( 206 );  ( 207 , 3 ) : new_si( 205 );
-			( 208 , 0 ) : new_si( 208 );  ( 208 , 1 ) : new_si( 207 );  ( 208 , 2 ) : new_si( 207 );  ( 208 , 3 ) : new_si( 206 );
-			( 209 , 0 ) : new_si( 209 );  ( 209 , 1 ) : new_si( 208 );  ( 209 , 2 ) : new_si( 208 );  ( 209 , 3 ) : new_si( 207 );
-			( 210 , 0 ) : new_si( 210 );  ( 210 , 1 ) : new_si( 209 );  ( 210 , 2 ) : new_si( 209 );  ( 210 , 3 ) : new_si( 208 );
-			( 211 , 0 ) : new_si( 211 );  ( 211 , 1 ) : new_si( 210 );  ( 211 , 2 ) : new_si( 210 );  ( 211 , 3 ) : new_si( 209 );
-			( 212 , 0 ) : new_si( 212 );  ( 212 , 1 ) : new_si( 211 );  ( 212 , 2 ) : new_si( 211 );  ( 212 , 3 ) : new_si( 210 );
-			( 213 , 0 ) : new_si( 213 );  ( 213 , 1 ) : new_si( 212 );  ( 213 , 2 ) : new_si( 212 );  ( 213 , 3 ) : new_si( 211 );
-			( 214 , 0 ) : new_si( 214 );  ( 214 , 1 ) : new_si( 213 );  ( 214 , 2 ) : new_si( 213 );  ( 214 , 3 ) : new_si( 212 );
-			( 215 , 0 ) : new_si( 215 );  ( 215 , 1 ) : new_si( 214 );  ( 215 , 2 ) : new_si( 214 );  ( 215 , 3 ) : new_si( 213 );
-			( 216 , 0 ) : new_si( 216 );  ( 216 , 1 ) : new_si( 215 );  ( 216 , 2 ) : new_si( 215 );  ( 216 , 3 ) : new_si( 214 );
-			( 217 , 0 ) : new_si( 217 );  ( 217 , 1 ) : new_si( 216 );  ( 217 , 2 ) : new_si( 216 );  ( 217 , 3 ) : new_si( 215 );
-			( 218 , 0 ) : new_si( 218 );  ( 218 , 1 ) : new_si( 217 );  ( 218 , 2 ) : new_si( 217 );  ( 218 , 3 ) : new_si( 216 );
-			( 219 , 0 ) : new_si( 219 );  ( 219 , 1 ) : new_si( 218 );  ( 219 , 2 ) : new_si( 218 );  ( 219 , 3 ) : new_si( 217 );
-			( 220 , 0 ) : new_si( 220 );  ( 220 , 1 ) : new_si( 219 );  ( 220 , 2 ) : new_si( 219 );  ( 220 , 3 ) : new_si( 218 );
-			( 221 , 0 ) : new_si( 221 );  ( 221 , 1 ) : new_si( 220 );  ( 221 , 2 ) : new_si( 220 );  ( 221 , 3 ) : new_si( 219 );
-			( 222 , 0 ) : new_si( 222 );  ( 222 , 1 ) : new_si( 221 );  ( 222 , 2 ) : new_si( 221 );  ( 222 , 3 ) : new_si( 220 );
-			( 223 , 0 ) : new_si( 223 );  ( 223 , 1 ) : new_si( 222 );  ( 223 , 2 ) : new_si( 222 );  ( 223 , 3 ) : new_si( 221 );
-			( 224 , 0 ) : new_si( 224 );  ( 224 , 1 ) : new_si( 223 );  ( 224 , 2 ) : new_si( 223 );  ( 224 , 3 ) : new_si( 222 );
-			( 225 , 0 ) : new_si( 225 );  ( 225 , 1 ) : new_si( 224 );  ( 225 , 2 ) : new_si( 224 );  ( 225 , 3 ) : new_si( 223 );
-			( 226 , 0 ) : new_si( 226 );  ( 226 , 1 ) : new_si( 225 );  ( 226 , 2 ) : new_si( 225 );  ( 226 , 3 ) : new_si( 224 );
-			( 227 , 0 ) : new_si( 227 );  ( 227 , 1 ) : new_si( 226 );  ( 227 , 2 ) : new_si( 226 );  ( 227 , 3 ) : new_si( 225 );
-			( 228 , 0 ) : new_si( 228 );  ( 228 , 1 ) : new_si( 227 );  ( 228 , 2 ) : new_si( 227 );  ( 228 , 3 ) : new_si( 226 );
-			( 229 , 0 ) : new_si( 229 );  ( 229 , 1 ) : new_si( 228 );  ( 229 , 2 ) : new_si( 228 );  ( 229 , 3 ) : new_si( 227 );
-			( 230 , 0 ) : new_si( 230 );  ( 230 , 1 ) : new_si( 229 );  ( 230 , 2 ) : new_si( 229 );  ( 230 , 3 ) : new_si( 228 );
-			( 231 , 0 ) : new_si( 231 );  ( 231 , 1 ) : new_si( 230 );  ( 231 , 2 ) : new_si( 230 );  ( 231 , 3 ) : new_si( 229 );
-			( 232 , 0 ) : new_si( 232 );  ( 232 , 1 ) : new_si( 231 );  ( 232 , 2 ) : new_si( 231 );  ( 232 , 3 ) : new_si( 230 );
-			( 233 , 0 ) : new_si( 233 );  ( 233 , 1 ) : new_si( 232 );  ( 233 , 2 ) : new_si( 232 );  ( 233 , 3 ) : new_si( 231 );
-			( 234 , 0 ) : new_si( 234 );  ( 234 , 1 ) : new_si( 233 );  ( 234 , 2 ) : new_si( 233 );  ( 234 , 3 ) : new_si( 232 );
-			( 235 , 0 ) : new_si( 235 );  ( 235 , 1 ) : new_si( 234 );  ( 235 , 2 ) : new_si( 234 );  ( 235 , 3 ) : new_si( 233 );
-			( 236 , 0 ) : new_si( 236 );  ( 236 , 1 ) : new_si( 235 );  ( 236 , 2 ) : new_si( 235 );  ( 236 , 3 ) : new_si( 234 );
-			( 237 , 0 ) : new_si( 237 );  ( 237 , 1 ) : new_si( 236 );  ( 237 , 2 ) : new_si( 236 );  ( 237 , 3 ) : new_si( 235 );
-			( 238 , 0 ) : new_si( 238 );  ( 238 , 1 ) : new_si( 237 );  ( 238 , 2 ) : new_si( 237 );  ( 238 , 3 ) : new_si( 236 );
-			( 239 , 0 ) : new_si( 239 );  ( 239 , 1 ) : new_si( 238 );  ( 239 , 2 ) : new_si( 238 );  ( 239 , 3 ) : new_si( 237 );
-			( 240 , 0 ) : new_si( 240 );  ( 240 , 1 ) : new_si( 239 );  ( 240 , 2 ) : new_si( 239 );  ( 240 , 3 ) : new_si( 238 );
-			( 241 , 0 ) : new_si( 241 );  ( 241 , 1 ) : new_si( 240 );  ( 241 , 2 ) : new_si( 240 );  ( 241 , 3 ) : new_si( 239 );
-			( 242 , 0 ) : new_si( 242 );  ( 242 , 1 ) : new_si( 241 );  ( 242 , 2 ) : new_si( 241 );  ( 242 , 3 ) : new_si( 240 );
-			( 243 , 0 ) : new_si( 243 );  ( 243 , 1 ) : new_si( 242 );  ( 243 , 2 ) : new_si( 242 );  ( 243 , 3 ) : new_si( 241 );
-			( 244 , 0 ) : new_si( 244 );  ( 244 , 1 ) : new_si( 243 );  ( 244 , 2 ) : new_si( 243 );  ( 244 , 3 ) : new_si( 242 );
-			( 245 , 0 ) : new_si( 245 );  ( 245 , 1 ) : new_si( 244 );  ( 245 , 2 ) : new_si( 244 );  ( 245 , 3 ) : new_si( 243 );
-			( 246 , 0 ) : new_si( 246 );  ( 246 , 1 ) : new_si( 245 );  ( 246 , 2 ) : new_si( 245 );  ( 246 , 3 ) : new_si( 244 );
-			( 247 , 0 ) : new_si( 247 );  ( 247 , 1 ) : new_si( 246 );  ( 247 , 2 ) : new_si( 246 );  ( 247 , 3 ) : new_si( 245 );
-			( 248 , 0 ) : new_si( 248 );  ( 248 , 1 ) : new_si( 247 );  ( 248 , 2 ) : new_si( 247 );  ( 248 , 3 ) : new_si( 246 );
-			( 249 , 0 ) : new_si( 249 );  ( 249 , 1 ) : new_si( 248 );  ( 249 , 2 ) : new_si( 248 );  ( 249 , 3 ) : new_si( 247 );
-			( 250 , 0 ) : new_si( 250 );  ( 250 , 1 ) : new_si( 249 );  ( 250 , 2 ) : new_si( 249 );  ( 250 , 3 ) : new_si( 248 );
-			( 251 , 0 ) : new_si( 251 );  ( 251 , 1 ) : new_si( 250 );  ( 251 , 2 ) : new_si( 250 );  ( 251 , 3 ) : new_si( 249 );
-			( 252 , 0 ) : new_si( 252 );  ( 252 , 1 ) : new_si( 251 );  ( 252 , 2 ) : new_si( 251 );  ( 252 , 3 ) : new_si( 250 );
-			( 253 , 0 ) : new_si( 253 );  ( 253 , 1 ) : new_si( 252 );  ( 253 , 2 ) : new_si( 252 );  ( 253 , 3 ) : new_si( 251 );
-			( 254 , 0 ) : new_si( 254 );  ( 254 , 1 ) : new_si( 253 );  ( 254 , 2 ) : new_si( 253 );  ( 254 , 3 ) : new_si( 252 );
-			( 255 , 0 ) : new_si( 255 );  ( 255 , 1 ) : new_si( 254 );  ( 255 , 2 ) : new_si( 254 );  ( 255 , 3 ) : new_si( 253 );
-		}
-	}
-*/
-/*
-	table ing_sff_dec_si {
-		key = {
-			ig_md.nsh_md.sf_bitmask : exact;
-		}
-		actions = {
-			new_si;
-		 }
-		const entries = {
-			0  : new_si(0); // 0 bits set
-			1  : new_si(0); // 1 bits set -- but don't count bit 0
-			2  : new_si(1); // 1 bits set
-			3  : new_si(1); // 2 bits set -- but don't count bit 0
-			4  : new_si(1); // 1 bits set
-			5  : new_si(1); // 2 bits set -- but don't count bit 0
-			6  : new_si(2); // 2 bits set
-			7  : new_si(2); // 3 bits set -- but don't count bit 0
-		}
-		const default_action = new_si(0);
-	}
-*/
-
- // =========================================================================
- // Table #2: ARP
- // =========================================================================
+ // =====================================
 
  action drop_pkt (
  ) {
+  stats.count();
+
   ig_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
-  ig_md.nsh_md.end_of_path = false;
+//		ig_md.nsh_md.end_of_path = false;
  }
 
  // =====================================
@@ -12260,30 +11684,35 @@ control npb_ing_sff_top (
  action unicast(
   switch_nexthop_t nexthop_index,
 
-  bool end_of_chain
+  bool end_of_chain,
+  bit<6> lag_hash_mask_en
  ) {
+  stats.count();
+
   ig_md.nexthop = nexthop_index;
 
   ig_md.nsh_md.end_of_path = end_of_chain;
+  ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
  }
 
  // =====================================
 
  action multicast(
-  bool end_of_chain
+  bool end_of_chain,
+  bit<6> lag_hash_mask_en
  ) {
+  stats.count();
+
   ig_md.nsh_md.end_of_path = end_of_chain;
+  ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
  }
 
- // =====================================
- // Table
  // =====================================
 
  table ing_sff_fib {
   key = {
    hdr_0.nsh_type1.spi : exact @name("spi");
 
-//			hdr_nsh_type1_si_predec : exact @name("si");
    ig_md.nsh_md.si_predec : exact @name("si");
 
 
@@ -12303,6 +11732,7 @@ control npb_ing_sff_top (
   // be dropped by the SFF.
 
   const default_action = drop_pkt;
+  counters = stats;
   size = NPB_ING_SFF_ARP_TABLE_DEPTH;
  }
 
@@ -12310,82 +11740,14 @@ control npb_ing_sff_top (
  // Apply
  // =========================================================================
 
- // Need to do one table lookups here:
- //
- // 1: forwarding lookup, after any sf's have reclassified the packet.
-
  apply {
-//		ig_md.nsh_md.end_of_path = false;
+  // -------------------------------------
+  // Forwarding Lookup
+  // -------------------------------------
 
-  // +---------------+---------------+-----------------------------+
-  // | hdr nsh valid | our nsh valid | signals / actions           |
-  // +---------------+---------------+-----------------------------+
-  // | n/a           | FALSE         | --> (classification failed) |
-  // | FALSE         | TRUE          | --> we  classified          |
-  // | TRUE          | TRUE          | --> was classified          |
-  // +---------------+---------------+-----------------------------+
-
-//		if(ig_md.nsh_md.valid == 1) {
-
-   // Note: All of this code has to come after, serially, the first service function.
-   // This is because the first service function can reclassify / change just about
-   // anything with regard to the packet and it's service path.
-
-   // -------------------------------------
-   // Perform Flow Scheduling
-   // -------------------------------------
-/*
-			npb_ing_sf_npb_basic_adv_sfp_sel.apply(
-				hdr,
-				ig_md,
-				ig_intr_md,
-				ig_intr_md_from_prsr,
-				ig_intr_md_for_dprsr,
-				ig_intr_md_for_tm
-			);
-*/
-   // -------------------------------------
-   // Pre-Decrement SI
-   // -------------------------------------
-
-   // Here we decrement the SI for all SF's we are going to do in the
-   // chip.  We have to do all the decrements prior to the forwarding
-   // lookup.  However, each SF still needs to do it's own decrement so
-   // the the next SF gets the correct value.  Thus we don't want to
-   // save this value permanently....
-
-
-//			ig_md_nsh_md_sf_bitmask_2_1 = ig_md.nsh_md.sf_bitmask[2:1];
-
-//			ing_sff_dec_si.apply(); // do a pop-count on the bitmask
-
-//			hdr_nsh_type1_si_predec = hdr_0.nsh_type1.si |-| (bit<8>)nsh_si_dec_amount; // saturating subtract
-//			hdr_nsh_type1_si_predec = (bit<8>)nsh_si_dec_amount; // saturating subtract
-
-   // -------------------------------------
-   // Perform Forwarding Lookup
-   // -------------------------------------
-
-   ing_sff_fib.apply();
-
-   // -------------------------------------
-   // Check SI
-   // -------------------------------------
-
-   // RFC 8300, Page 12: "an SFF that is not the terminal SFF for an SFP
-   // will discard any NSH packet with an SI of 0, as there will be no
-   // valid next SF information."
-
-//			if((ig_md_nsh_md_si == 0) && (ig_md.tunnel_0.terminate == false)) { // check for si of 0 (or underflow, since we used a saturating subtract)
-//				ig_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
-//			}
-
-   // NOTE: MOVED TO EGRESS
-
-//		}
+  ing_sff_fib.apply();
 
  }
-
 }
 # 6 "npb_ing_top.p4" 2
 
@@ -12431,21 +11793,12 @@ control npb_ing_top (
 ) {
 
 
-//  Scoper_l7() scoper_l7;
-
-
-
  npb_ing_sf_npb_basic_adv_sfp_hash() npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1;
-
-//	npb_ing_sf_npb_basic_adv_sfp_hash() npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2;
-
 
 
  TunnelDecapTransportIngress(switch_tunnel_mode_t.PIPE) tunnel_decap_transport_ingress;
  TunnelDecapOuter(switch_tunnel_mode_t.PIPE) tunnel_decap_outer;
  TunnelDecapInner(switch_tunnel_mode_t.PIPE) tunnel_decap_inner;
-
- TunnelEncapTransportIngress(switch_tunnel_mode_t.PIPE) tunnel_encap_transport_ingress;
 
  // =========================================================================
  // Apply
@@ -12466,16 +11819,15 @@ control npb_ing_top (
   if(hdr_0.nsh_type1.scope == 0) {
 
    // do nothing
-# 71 "npb_ing_top.p4"
+# 61 "npb_ing_top.p4"
   } else {
 
    Scoper.apply(
     ig_md.lkp_2,
-    ig_md.drop_reason_2,
 
     ig_md.lkp_1
    );
-# 88 "npb_ing_top.p4"
+# 76 "npb_ing_top.p4"
   }
 
   // -----------------------------------------------------------------
@@ -12485,19 +11837,6 @@ control npb_ing_top (
 
 
 
-
-
-  // -----------------------------------------------------------------
-
-  // populate udf in lkp struct for the following cases:
-  //   scope==inner
-  //   scope==outer and no inner stack present
-  // todo: do we need to qualify this w/ hdr_udf.isValid()? (the thinking is it will just work w/o doing so)
-
-
-//      if(hdr_0.nsh_type1.scope==1 || (hdr_0.nsh_type1.scope==0 && !hdr_2.ethernet.isValid())) {
-//              scoper_l7.apply(hdr_udf, ig_md.lkp);
-//      }
 
 
   // -------------------------------------
@@ -12540,39 +11879,11 @@ control npb_ing_top (
    ig_md.nsh_md.hash_1
   );
 
+
   // -------------------------------------
-/*
-  #ifdef SF_0_ALLOW_SCOPE_CHANGES
-
-    #ifdef INGRESS_PARSER_POPULATES_LKP_2
-    #else
-		ScoperInner.apply(
-			hdr_2,
-			tunnel_2,
-			ig_md.drop_reason_2,
-
-			ig_md.lkp_2
-		);
-    #endif
-
-		npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.apply(
-			hdr_0,
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm,
-
-			ig_md.lkp_2.mac_type,
-			ig_md.lkp_2.ip_proto,
-			ig_md.lkp_2.l4_src_port,
-			ig_md.lkp_2.l4_dst_port,
-			ig_md.nsh_md.hash_2
-		);
-  #endif // SF_0_ALLOW_SCOPE_CHANGES
-*/
-
-
+  //
+  // -------------------------------------
+# 142 "npb_ing_top.p4"
   // -------------------------------------
   // SF #0 - Policy
   // -------------------------------------
@@ -12604,7 +11915,7 @@ control npb_ing_top (
   }
 
   // -------------------------------------
-  // SFF Reframing
+  // SFF - Reframing
   // -------------------------------------
 
   // Decaps ------------------------------
@@ -12616,15 +11927,13 @@ control npb_ing_top (
   tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
   tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
   TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
-# 243 "npb_ing_top.p4"
+# 196 "npb_ing_top.p4"
   // Encaps ------------------------------
 
-  tunnel_0.encap = true;
-  tunnel_encap_transport_ingress.apply(hdr_0, tunnel_0, hdr_1);
+//		tunnel_0.encap = true;
+//		tunnel_encap_transport_ingress.apply(hdr_0, tunnel_0, hdr_1);
 
   // -------------------------------------
   // SFF
@@ -12657,7 +11966,7 @@ control npb_ing_top (
   }
  }
 }
-# 60 "npb.p4" 2
+# 58 "npb.p4" 2
 # 1 "npb_ing_deparser.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -12743,11 +12052,35 @@ control IngressMirror(
 // header.
 
 
-
+    Mirror() mirror;
 
 
     apply {
-# 54 "npb_ing_deparser.p4"
+
+        if (ig_intr_md_for_dprsr.mirror_type == 1) {
+            mirror.emit<switch_port_mirror_metadata_h>(ig_md.mirror.session_id, {
+                ig_md.mirror.src,
+                ig_md.mirror.type,
+                0,
+                ig_md.port,
+                ig_md.bd,
+                0,
+
+
+
+                ig_md.port_lag_index,
+
+//               ig_md.timestamp,
+                 (bit<32>)hdr.transport.nsh_type1.timestamp,
+
+
+
+                ig_md.mirror.session_id
+            });
+        } else if (ig_intr_md_for_dprsr.mirror_type == 3) {
+# 85 "npb_ing_deparser.p4"
+        }
+
     }
 }
 
@@ -12821,6 +12154,7 @@ control SwitchIngressDeparser(
 
 
         pkt.emit(hdr.inner.gre);
+        pkt.emit(hdr.inner.gre_optional);
 
 
         pkt.emit(hdr.inner.gtp_v1_base);
@@ -12828,11 +12162,11 @@ control SwitchIngressDeparser(
 
 
 
-        pkt.emit(hdr.udf);
+
 
     }
 }
-# 61 "npb.p4" 2
+# 59 "npb.p4" 2
 # 1 "npb_egr_parser.p4" 1
 
 
@@ -12880,11 +12214,22 @@ parser NpbEgressParser(
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NONE; // note: inner here means "current scope - 1"
 
 
-//      eg_md.inner_inner.ethernet_isValid = false;
-//      eg_md.inner_inner.ipv4_isValid = false;
-//      eg_md.inner_inner.ipv6_isValid = false;
-# 64 "npb_egr_parser.p4"
-        transition parse_bridged_pkt;
+
+        switch_port_mirror_metadata_h mirror_md = pkt.lookahead<switch_port_mirror_metadata_h>();
+        transition select(eg_intr_md.deflection_flag, mirror_md.src, mirror_md.type) {
+
+
+
+
+            (_, SWITCH_PKT_SRC_BRIDGED, _ ) : parse_bridged_pkt;
+//          (_, _,                             SWITCH_MIRROR_TYPE_PORT             ) : parse_port_mirrored_metadata;
+            (_, SWITCH_PKT_SRC_CLONED_INGRESS, 1 ) : parse_ig_port_mirrored_metadata; // derek added
+            (_, SWITCH_PKT_SRC_CLONED_EGRESS, 1 ) : parse_eg_port_mirrored_metadata; // derek added
+            (_, SWITCH_PKT_SRC_CLONED_EGRESS, 2 ) : parse_cpu_mirrored_metadata;
+# 67 "npb_egr_parser.p4"
+        }
+
+
 
     }
 
@@ -12894,13 +12239,18 @@ parser NpbEgressParser(
 
   // ---- extract base bridged metadata -----
         eg_md.ingress_port = hdr.bridged_md.base.ingress_port;
+
+
+
         eg_md.port_lag_index = hdr.bridged_md.base.ingress_port_lag_index;
+
         eg_md.bd = hdr.bridged_md.base.ingress_bd;
         eg_md.nexthop = hdr.bridged_md.base.nexthop;
 //      eg_md.pkt_type             = hdr.bridged_md.base.pkt_type;
         eg_md.cpu_reason = hdr.bridged_md.base.cpu_reason;
 //      eg_md.ingress_timestamp    = hdr.bridged_md.base.timestamp;
         eg_md.flags.rmac_hit = hdr.bridged_md.base.rmac_hit;
+  eg_md.flags.bypass_egress = hdr.bridged_md.base.bypass_egress;
 
         eg_md.outer_nexthop = hdr.bridged_md.tunnel.outer_nexthop;
         eg_md.tunnel_0.index = hdr.bridged_md.tunnel.index;
@@ -12912,31 +12262,21 @@ parser NpbEgressParser(
 
 
   // ----- extract nsh bridged metadata -----
-        eg_md.nsh_md.start_of_path = hdr.bridged_md.base.nsh_md_start_of_path;
-  eg_md.nsh_md.end_of_path = hdr.bridged_md.base.nsh_md_end_of_path;
-  eg_md.nsh_md.l2_fwd_en = hdr.bridged_md.base.nsh_md_l2_fwd_en;
-//      eg_md.nsh_md.sf1_active    = hdr.bridged_md.base.nsh_md_sf1_active;
+        eg_md.nsh_md.start_of_path = hdr.bridged_md.nsh.nsh_md_start_of_path;
+  eg_md.nsh_md.end_of_path = hdr.bridged_md.nsh.nsh_md_end_of_path;
+  eg_md.nsh_md.l2_fwd_en = hdr.bridged_md.nsh.nsh_md_l2_fwd_en;
+//      eg_md.nsh_md.sf1_active    = hdr.bridged_md.nsh.nsh_md_sf1_active;
 
   // ----- extract dedup bridged metadata -----
+//#ifdef SF_2_DEDUP_ENABLE
+  eg_md.nsh_md.dedup_en = hdr.bridged_md.nsh.nsh_md_dedup_en;
+//#endif
 
 
 
 
 
 
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) hdr.bridged_md.base.ingress_port;
-        //hdr.cpu.port_lag_index     = (bit<16>) hdr.bridged_md.base.ingress_port_lag_index;
-        hdr.cpu.ingress_bd = (bit<16>) hdr.bridged_md.base.ingress_bd;
-        hdr.cpu.reason_code = (bit<16>) hdr.bridged_md.base.cpu_reason;
 
         // -----------------------------
         // packet will always have NSH present
@@ -12951,7 +12291,7 @@ parser NpbEgressParser(
         //            or SFC Bypass (nsh)   Transport
 
         transition select(
-            (bit<1>)hdr.bridged_md.base.nsh_md_l2_fwd_en,
+            (bit<1>)hdr.bridged_md.nsh.nsh_md_l2_fwd_en,
             (bit<1>)hdr.bridged_md.base.rmac_hit) {
 
             (1, 0): parse_outer_ethernet_scope0; // SFC Optical-Tap / Bridging Path
@@ -12965,29 +12305,24 @@ parser NpbEgressParser(
         switch_port_mirror_metadata_h port_md;
         pkt.extract(port_md);
         pkt.extract(hdr.outer.ethernet);
-        eg_md.pkt_src = port_md.src;
-        eg_md.mirror.session_id = port_md.session_id;
-//      eg_md.ingress_timestamp = port_md.timestamp;
+        eg_md.pkt_src = port_md.src; // for cpu header
+        eg_md.bd = port_md.bd; // for cpu header (derek added)
+  eg_md.ingress_port = port_md.port; // for cpu header (derek added)
+
+
+
+        eg_md.port_lag_index = port_md.port_lag_index; // for cpu header (derek added)
+
+  eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRRROR; // for cpu header (derek added)
+        eg_md.mirror.session_id = port_md.session_id; // for ??? header
+//      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 
 
 
 
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) 0; // derek, what to set to?
-        //hdr.cpu.port_lag_index     = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.ingress_bd = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.reason_code = (bit<16>) SWITCH_CPU_REASON_IG_PORT_MIRRROR;
-// Derek: I think this is broken -- packet may have an nsh header at the start instead of an ethernet header -- code needs to look more like above "transition select"?
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
+
+
 
         transition accept;
     }
@@ -12996,28 +12331,24 @@ parser NpbEgressParser(
         switch_port_mirror_metadata_h port_md;
         pkt.extract(port_md);
         pkt.extract(hdr.outer.ethernet);
-        eg_md.pkt_src = port_md.src;
-        eg_md.mirror.session_id = port_md.session_id;
-//      eg_md.ingress_timestamp = port_md.timestamp;
+        eg_md.pkt_src = port_md.src; // for cpu header
+        eg_md.bd = port_md.bd; // for cpu header (derek added)
+  eg_md.ingress_port = port_md.port; // for cpu header (derek added)
+
+
+
+        eg_md.port_lag_index = port_md.port_lag_index; // for cpu header (derek added)
+
+  eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRRROR; // for cpu header (derek added)
+        eg_md.mirror.session_id = port_md.session_id; // for ??? header
+//      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 
 
 
 
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) 0; // derek, what to set to?
-        //hdr.cpu.port_lag_index     = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.ingress_bd = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.reason_code = (bit<16>) SWITCH_CPU_REASON_EG_PORT_MIRRROR;
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type; // derek: does this need to be done after reframings?
+
+
 
         transition accept;
     }
@@ -13026,36 +12357,26 @@ parser NpbEgressParser(
         switch_cpu_mirror_metadata_h cpu_md;
         pkt.extract(cpu_md);
         pkt.extract(hdr.outer.ethernet);
-        eg_md.pkt_src = cpu_md.src;
-        eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
+        eg_md.pkt_src = cpu_md.src; // for cpu header
         eg_md.bd = cpu_md.bd; // for cpu header
-        // eg_md.ingress_port = cpu_md.md.port; // for cpu header
+        eg_md.ingress_port = cpu_md.port; // for cpu header
+
+
+
+        eg_md.port_lag_index = cpu_md.port_lag_index; // for cpu header (derek added)
+
         eg_md.cpu_reason = cpu_md.reason_code; // for cpu header
+        eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 
 
 
 
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) cpu_md.port;
-        //hdr.cpu.port_lag_index     = (bit<16>) cpu_md.port_lag_index;
-        hdr.cpu.ingress_bd = (bit<16>) cpu_md.bd;
-        hdr.cpu.reason_code = (bit<16>) cpu_md.reason_code;
 
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type; // derek: does this need to be done after reframings? // derek: this line is needed in the code, but get a compiler error!
 
 
         transition accept;
     }
-
-
+# 427 "npb_egr_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // Transport Layer 2 (L2-U)
@@ -13116,7 +12437,6 @@ parser NpbEgressParser(
 
     state parse_outer_ethernet_scope0 {
         pkt.extract(hdr.outer.ethernet);
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 
         eg_md.lkp_1.mac_src_addr = hdr.outer.ethernet.src_addr;
         eg_md.lkp_1.mac_dst_addr = hdr.outer.ethernet.dst_addr;
@@ -13235,7 +12555,6 @@ parser NpbEgressParser(
 
     state parse_outer_ethernet_scope1 {
         pkt.extract(hdr.outer.ethernet);
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 
 // populate for L3-tunnel case (where there's no L2 present)
 
@@ -13320,7 +12639,7 @@ parser NpbEgressParser(
   eg_md.lkp_1.vid = hdr.outer.vlan_tag[0].vid;
 
         eg_md.lkp_1.mac_type = hdr.outer.vlan_tag[0].ether_type;
-# 508 "npb_egr_parser.p4"
+# 697 "npb_egr_parser.p4"
         transition select(hdr.outer.vlan_tag[0].ether_type) {
             0x8100 : parse_outer_vlan_1_scope1;
             0x88A8 : parse_outer_vlan_1_scope1;
@@ -13377,15 +12696,15 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_dst_addr = (bit<128>)hdr.outer.ipv4.dst_addr;
         eg_md.lkp_1.ip_len = hdr.outer.ipv4.total_len;
 
-        // Flag packet (to be sent to host) if it's a frag or has options.
 
+        // Flag packet (to be sent to host) if it's a frag or has options.
         transition select(
             hdr.outer.ipv4.ihl,
             hdr.outer.ipv4.frag_offset,
             hdr.outer.ipv4.protocol) {
 
-            (5, 0, 1): parse_outer_icmp_igmp_overload_scope0;
-            (5, 0, 2): parse_outer_icmp_igmp_overload_scope0;
+            //(5, 0, IP_PROTOCOLS_ICMP): parse_outer_icmp_igmp_overload_scope0;
+            //(5, 0, IP_PROTOCOLS_IGMP): parse_outer_icmp_igmp_overload_scope0;
             (5, 0, _): branch_outer_l3_protocol_scope0;
             default: accept;
         }
@@ -13404,10 +12723,11 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_len = hdr.outer.ipv6.payload_len;
 
 
-        transition select(hdr.outer.ipv6.next_hdr) {
-            58: parse_outer_icmp_igmp_overload_scope0;
-            default: branch_outer_l3_protocol_scope0;
-        }
+        transition branch_outer_l3_protocol_scope0;
+        // transition select(hdr.outer.ipv6.next_hdr) {
+        //     IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload_scope0;
+        //     default: branch_outer_l3_protocol_scope0;
+        // }
 
 
 
@@ -13416,13 +12736,13 @@ parser NpbEgressParser(
     // shared fanout/branch state to save tcam resource
     state branch_outer_l3_protocol_scope0 {
         transition select(protocol_outer) {
-           4: parse_outer_ipinip_set_tunnel_type_scope0;
-           41: parse_outer_ipv6inip_set_tunnel_type_scope0;
+           4: parse_outer_ipinip_set_tunnel_scope0;
+           41: parse_outer_ipv6inip_set_tunnel_scope0;
            17: parse_outer_udp_scope0;
            6: parse_outer_tcp_scope0;
            0x84: parse_outer_sctp_scope0;
            47: parse_outer_gre_scope0;
-           0x32: parse_outer_esp_overload_scope0;
+           //IP_PROTOCOLS_ESP: parse_outer_esp_overload_scope0;
            default: accept;
        }
     }
@@ -13458,8 +12778,8 @@ parser NpbEgressParser(
     // shared fanout/branch state to save tcam resource
     state branch_outer_l3_protocol_scope1 {
         transition select(protocol_outer) {
-           4: parse_outer_ipinip_set_tunnel_type_scope1;
-           41: parse_outer_ipv6inip_set_tunnel_type_scope1;
+           4: parse_outer_ipinip_set_tunnel_scope1;
+           41: parse_outer_ipv6inip_set_tunnel_scope1;
            17: parse_outer_udp_scope1;
            6: parse_outer_tcp_scope1;
            0x84: parse_outer_sctp_scope1;
@@ -13469,14 +12789,16 @@ parser NpbEgressParser(
     }
 
 
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
-    state parse_outer_icmp_igmp_overload_scope0 {
-
-        eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
-
-        transition accept;
-    }
+//     // For ICMP and IGMP, we're not actually extracting the header;
+//     // We're simply over-loading L4-port info for policy via lookahead.    
+//     state parse_outer_icmp_igmp_overload_scope0 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
+// #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
 
@@ -13503,12 +12825,12 @@ parser NpbEgressParser(
 
 
 
-            // (_, UDP_PORT_GTP_C): parse_outer_gtp_c_scope0;
-            // (UDP_PORT_GTP_C, _): parse_outer_gtp_c_scope0;
-            // (_, UDP_PORT_GTP_U): parse_outer_gtp_u_scope0;
-            // (UDP_PORT_GTP_U, _): parse_outer_gtp_u_scope0;
-            (2123, 2123): parse_outer_gtp_c_scope0;
-            (2152, 2152): parse_outer_gtp_u_scope0;
+            (_, 2123): parse_outer_gtp_c_scope0;
+            (2123, _): parse_outer_gtp_c_scope0;
+            (_, 2152): parse_outer_gtp_u_scope0;
+            (2152, _): parse_outer_gtp_u_scope0;
+            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_outer_gtp_c_scope0;
+            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_outer_gtp_u_scope0;
 
             default : accept;
         }
@@ -13523,12 +12845,12 @@ parser NpbEgressParser(
 
 
 
-            // (_, UDP_PORT_GTP_C): parse_outer_gtp_c_scope1;
-            // (UDP_PORT_GTP_C, _): parse_outer_gtp_c_scope1;
-            // (_, UDP_PORT_GTP_U): parse_outer_gtp_u_scope1;
-            // (UDP_PORT_GTP_U, _): parse_outer_gtp_u_scope1;
-            (2123, 2123): parse_outer_gtp_c_scope1;
-            (2152, 2152): parse_outer_gtp_u_scope1;
+            (_, 2123): parse_outer_gtp_c_scope1;
+            (2123, _): parse_outer_gtp_c_scope1;
+            (_, 2152): parse_outer_gtp_u_scope1;
+            (2152, _): parse_outer_gtp_u_scope1;
+            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_outer_gtp_c_scope1;
+            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_outer_gtp_u_scope1;
 
             default : accept;
         }
@@ -13578,7 +12900,7 @@ parser NpbEgressParser(
     //-------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
     //-------------------------------------------------------------------------
-# 803 "npb_egr_parser.p4"
+# 1016 "npb_egr_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
@@ -13611,7 +12933,7 @@ parser NpbEgressParser(
     // Internet Protocol (IP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_ipinip_set_tunnel_type_scope0 {
+    state parse_outer_ipinip_set_tunnel_scope0 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -13623,7 +12945,7 @@ parser NpbEgressParser(
 
     }
 
-    state parse_outer_ipv6inip_set_tunnel_type_scope0 {
+    state parse_outer_ipv6inip_set_tunnel_scope0 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -13636,7 +12958,7 @@ parser NpbEgressParser(
     }
 
 
-    state parse_outer_ipinip_set_tunnel_type_scope1 {
+    state parse_outer_ipinip_set_tunnel_scope1 {
 
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
         transition parse_inner_ipv4_scope1;
@@ -13645,7 +12967,7 @@ parser NpbEgressParser(
 
     }
 
-    state parse_outer_ipv6inip_set_tunnel_type_scope1 {
+    state parse_outer_ipv6inip_set_tunnel_scope1 {
 
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
         transition parse_inner_ipv6_scope1;
@@ -13661,6 +12983,56 @@ parser NpbEgressParser(
     //-------------------------------------------------------------------------
 
     state parse_outer_gre_scope0 {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+
+
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope0;
+            (1,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope0;
+            (0,0,1,0,0,0,0,0): parse_outer_gre_qualified_scope0;
+            (0,0,0,1,0,0,0,0): parse_outer_gre_qualified_scope0;
+            default: accept;
+        }
+    }
+
+    state parse_outer_gre_scope1 {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope1;
+            (1,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope1;
+            (0,0,1,0,0,0,0,0): parse_outer_gre_qualified_scope1;
+            (0,0,0,1,0,0,0,0): parse_outer_gre_qualified_scope1;
+            default: accept;
+        }
+    }
+
+
+    state parse_outer_gre_qualified_scope0 {
         pkt.extract(hdr.outer.gre);
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
@@ -13669,58 +13041,48 @@ parser NpbEgressParser(
 
         transition select(
             hdr.outer.gre.C,
-            hdr.outer.gre.R,
             hdr.outer.gre.K,
             hdr.outer.gre.S,
-            hdr.outer.gre.s,
-            hdr.outer.gre.recurse,
-            hdr.outer.gre.flags,
-            hdr.outer.gre.version,
             hdr.outer.gre.proto) {
 
-          // C R K S s r f v
+          // C K S
 
-            (0,0,1,0,0,0,0,0,0x6558): parse_outer_nvgre_scope0;
+            (0,1,0,0x6558): parse_outer_nvgre_scope0;
 
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_ipv4_scope0;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_ipv6_scope0;
+            (0,0,0,0x0800): parse_inner_ipv4_scope0;
+            (0,0,0,0x86dd): parse_inner_ipv6_scope0;
 
 
 
-            (1,0,0,0,0,0,0,0,_): parse_outer_gre_optional_scope0;
-            (0,0,1,0,0,0,0,0,_): parse_outer_gre_optional_scope0;
-            (0,0,0,1,0,0,0,0,_): parse_outer_gre_optional_scope0;
+            (1,0,0,_): parse_outer_gre_optional_scope0;
+            (0,1,0,_): parse_outer_gre_optional_scope0;
+            (0,0,1,_): parse_outer_gre_optional_scope0;
             default: accept;
         }
     }
 
-    state parse_outer_gre_scope1 {
+    state parse_outer_gre_qualified_scope1 {
         pkt.extract(hdr.outer.gre);
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GRE; // note: inner here means "current scope - 1"
 
         transition select(
             hdr.outer.gre.C,
-            hdr.outer.gre.R,
             hdr.outer.gre.K,
             hdr.outer.gre.S,
-            hdr.outer.gre.s,
-            hdr.outer.gre.recurse,
-            hdr.outer.gre.flags,
-            hdr.outer.gre.version,
             hdr.outer.gre.proto) {
 
-          // C R K S s r f v
+          // C K S
 
-            (0,0,1,0,0,0,0,0,0x6558): parse_outer_nvgre_scope1;
+            (0,1,0,0x6558): parse_outer_nvgre_scope1;
 
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_ipv4_scope1;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_ipv6_scope1;
+            (0,0,0,0x0800): parse_inner_ipv4_scope1;
+            (0,0,0,0x86dd): parse_inner_ipv6_scope1;
 
 
 
-            (1,0,0,0,0,0,0,0,_): parse_outer_gre_optional_scope1;
-            (0,0,1,0,0,0,0,0,_): parse_outer_gre_optional_scope1;
-            (0,0,0,1,0,0,0,0,_): parse_outer_gre_optional_scope1;
+            (1,0,0,_): parse_outer_gre_optional_scope1;
+            (0,1,0,_): parse_outer_gre_optional_scope1;
+            (0,0,1,_): parse_outer_gre_optional_scope1;
             default: accept;
         }
     }
@@ -13756,7 +13118,7 @@ parser NpbEgressParser(
 
 
     //-------------------------------------------------------------------------
-    // Network Virtualization using GRE (NVGRE) - Outer
+    // Network Virtualization using GRE (NVGRE) - (aka: L2 GRE) - Outer
     //-------------------------------------------------------------------------
 
     state parse_outer_nvgre_scope0 {
@@ -13778,17 +13140,19 @@ parser NpbEgressParser(
 
 
 
-    //-------------------------------------------------------------------------
-    // Encapsulating Security Payload (ESP) - Outer
-    //-------------------------------------------------------------------------
-
-    state parse_outer_esp_overload_scope0 {
-
-         eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
-         eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
-
-        transition accept;
-    }
+//     //-------------------------------------------------------------------------
+//     // Encapsulating Security Payload (ESP) - Outer
+//     //-------------------------------------------------------------------------
+//     
+//     state parse_outer_esp_overload_scope0 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//          eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//          eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
     //-------------------------------------------------------------------------
@@ -13800,20 +13164,24 @@ parser NpbEgressParser(
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_outer_gtp_c_scope0 {
+
+
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_outer_gtp_c_scope0;
+            (2, 1): parse_outer_gtp_c_qualified_scope0;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_c_scope0 {
+    state parse_outer_gtp_c_qualified_scope0 {
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
@@ -13822,16 +13190,18 @@ parser NpbEgressParser(
     }
 
     state parse_outer_gtp_c_scope1 {
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_outer_gtp_c_scope1;
+            (2, 1): parse_outer_gtp_c_qualified_scope1;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_c_scope1 {
+    state parse_outer_gtp_c_qualified_scope1 {
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPC; // note: inner here means "current scope - 1"
      transition accept;
     }
@@ -13843,6 +13213,11 @@ parser NpbEgressParser(
     // Does not support parsing (TLV) extension headers
 
     state parse_outer_gtp_u_scope0 {
+
+
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
         transition select(
             snoop_gtp_v1_base.version,
@@ -13851,13 +13226,13 @@ parser NpbEgressParser(
             snoop_gtp_v1_base.S,
             snoop_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_outer_gtp_u_scope0;
-            (1, 1, 0, 1, 0): extract_outer_gtp_u_with_optional_scope0;
+            (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified_scope0;
+            (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional_qualified_scope0;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_u_scope0 {
+    state parse_outer_gtp_u_qualified_scope0 {
         pkt.extract(hdr.outer.gtp_v1_base);
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -13870,7 +13245,7 @@ parser NpbEgressParser(
         }
     }
 
-    state extract_outer_gtp_u_with_optional_scope0 {
+    state parse_outer_gtp_u_with_optional_qualified_scope0 {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
 
@@ -13889,6 +13264,8 @@ parser NpbEgressParser(
 
     state parse_outer_gtp_u_scope1 {
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
         transition select(
             snoop_gtp_v1_base.version,
             snoop_gtp_v1_base.PT,
@@ -13896,13 +13273,13 @@ parser NpbEgressParser(
             snoop_gtp_v1_base.S,
             snoop_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_outer_gtp_u_scope1;
-            (1, 1, 0, 1, 0): extract_outer_gtp_u_with_optional_scope1;
+            (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified_scope1;
+            (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional_qualified_scope1;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_u_scope1 {
+    state parse_outer_gtp_u_qualified_scope1 {
         pkt.extract(hdr.outer.gtp_v1_base);
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU; // note: inner here means "current scope - 1"
         transition select(pkt.lookahead<bit<4>>()) {
@@ -13912,7 +13289,7 @@ parser NpbEgressParser(
         }
     }
 
-    state extract_outer_gtp_u_with_optional_scope1 {
+    state parse_outer_gtp_u_with_optional_qualified_scope1 {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU; // note: inner here means "current scope - 1"
@@ -14014,39 +13391,20 @@ parser NpbEgressParser(
     // Scope 0
     //-------------------------------------------------------------------------            
 
+    // For scope0 inner parsing, v4 or v6 is all that's needed downstream.
+
     state parse_inner_ipv4_scope0 {
         pkt.extract(hdr.inner.ipv4);
-        protocol_inner = hdr.inner.ipv4.protocol;
-            transition select(
-                hdr.inner.ipv4.ihl,
-                hdr.inner.ipv4.frag_offset) {
-
-           (5, 0): branch_inner_l3_protocol_scope0;
-           default : accept;
-       }
+        transition accept;
     }
 
     state parse_inner_ipv6_scope0 {
 
         pkt.extract(hdr.inner.ipv6);
-        protocol_inner = hdr.inner.ipv6.next_hdr;
-        transition branch_inner_l3_protocol_scope0;
+        transition accept;
 
 
 
-    }
-
-    state branch_inner_l3_protocol_scope0 {
-        transition select(protocol_inner) {
-           17: parse_inner_udp_scope0;
-           6: parse_inner_tcp_scope0;
-           0x84: parse_inner_sctp_scope0;
-
-           47: parse_inner_gre_scope0;
-
-           4: parse_inner_ipinip_set_tunnel_type_scope0;
-           41: parse_inner_ipv6inip_set_tunnel_type_scope0;
-        }
     }
 
 
@@ -14075,8 +13433,8 @@ parser NpbEgressParser(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset,
             hdr.inner.ipv4.protocol) {
-            (5, 0, 1): parse_inner_icmp_igmp_overload_scope1;
-            (5, 0, 2): parse_inner_icmp_igmp_overload_scope1;
+            //(5, 0, IP_PROTOCOLS_ICMP): parse_inner_icmp_igmp_overload_scope1;
+            //(5, 0, IP_PROTOCOLS_IGMP): parse_inner_icmp_igmp_overload_scope1;
             (5, 0, _): branch_inner_l3_protocol_scope1;
             default : accept;
        }
@@ -14097,10 +13455,11 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_dst_addr = hdr.inner.ipv6.dst_addr;
         eg_md.lkp_1.ip_len = hdr.inner.ipv6.payload_len;
 
-        transition select(hdr.inner.ipv6.next_hdr) {
-            58: parse_inner_icmp_igmp_overload_scope1;
-            default: branch_inner_l3_protocol_scope1;
-        }
+        transition branch_inner_l3_protocol_scope1;
+        // transition select(hdr.inner.ipv6.next_hdr) {
+        //     IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload_scope1;
+        //     default: branch_inner_l3_protocol_scope1;
+        // }
 
 
 
@@ -14114,53 +13473,26 @@ parser NpbEgressParser(
 
            47: parse_inner_gre_scope1;
 
-           0x32: parse_inner_esp_overload_scope1;
-           4: parse_inner_ipinip_set_tunnel_type_scope1;
-           41: parse_inner_ipv6inip_set_tunnel_type_scope1;
+           //IP_PROTOCOLS_ESP:  parse_inner_esp_overload_scope1;
+           4: parse_inner_ipinip_set_tunnel_scope1;
+           41: parse_inner_ipv6inip_set_tunnel_scope1;
         }
     }
 
 
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
-    state parse_inner_icmp_igmp_overload_scope1 {
-        eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
-        transition accept;
-    }
+//     // For ICMP and IGMP, we're not actually extracting the header;
+//     // We're simply over-loading L4-port info for policy via lookahead.    
+//     state parse_inner_icmp_igmp_overload_scope1 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+//         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
     ///////////////////////////////////////////////////////////////////////////
-
-    //-------------------------------------------------------------------------
-    // Scope 0
-    //-------------------------------------------------------------------------
-
-    state parse_inner_udp_scope0 {
-        pkt.extract(hdr.inner.udp);
-        transition select(hdr.inner.udp.src_port, hdr.inner.udp.dst_port) {
-
-            // (_, UDP_PORT_GTP_C): parse_inner_gtp_c_scope0;
-            // (UDP_PORT_GTP_C, _): parse_inner_gtp_c_scope0;
-            // (_, UDP_PORT_GTP_U): parse_inner_gtp_u_scope0;
-            // (UDP_PORT_GTP_U, _): parse_inner_gtp_u_scope0;
-            (2123, 2123): parse_inner_gtp_c_scope0;
-            (2152, 2152): parse_inner_gtp_u_scope0;
-
-            default: accept;
-        }
-    }
-
-    state parse_inner_tcp_scope0 {
-        pkt.extract(hdr.inner.tcp);
-        transition accept;
-    }
-
-    state parse_inner_sctp_scope0 {
-        pkt.extract(hdr.inner.sctp);
-        transition accept;
-    }
 
     //-------------------------------------------------------------------------
     // Scope 1
@@ -14175,12 +13507,12 @@ parser NpbEgressParser(
             hdr.inner.udp.dst_port) {
 
 
-            // (_, UDP_PORT_GTP_C): parse_inner_gtp_c_scope1;
-            // (UDP_PORT_GTP_C, _): parse_inner_gtp_c_scope1;
-            // (_, UDP_PORT_GTP_U): parse_inner_gtp_u_scope1;
-            // (UDP_PORT_GTP_U, _): parse_inner_gtp_u_scope1;
-            (2123, 2123): parse_inner_gtp_c_scope1;
-            (2152, 2152): parse_inner_gtp_u_scope1;
+            (_, 2123): parse_inner_gtp_c_scope1;
+            (2123, _): parse_inner_gtp_c_scope1;
+            (_, 2152): parse_inner_gtp_u_scope1;
+            (2152, _): parse_inner_gtp_u_scope1;
+            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_inner_gtp_c_scope1;
+            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_inner_gtp_u_scope1;
 
             default: accept;
         }
@@ -14207,31 +13539,11 @@ parser NpbEgressParser(
     // Tunnels - Inner
     ///////////////////////////////////////////////////////////////////////////
 
-
     //-------------------------------------------------------------------------
     // Internet Protocol (IP) - Inner
     //-------------------------------------------------------------------------
 
-    state parse_inner_ipinip_set_tunnel_type_scope0 {
-
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
-        transition parse_inner_inner_ipv4;
-
-
-
-    }
-
-    state parse_inner_ipv6inip_set_tunnel_type_scope0 {
-
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
-        transition parse_inner_inner_ipv6;
-
-
-
-    }
-
-
-    state parse_inner_ipinip_set_tunnel_type_scope1 {
+    state parse_inner_ipinip_set_tunnel_scope1 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -14243,7 +13555,7 @@ parser NpbEgressParser(
 
     }
 
-    state parse_inner_ipv6inip_set_tunnel_type_scope1 {
+    state parse_inner_ipv6inip_set_tunnel_scope1 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -14256,15 +13568,17 @@ parser NpbEgressParser(
     }
 
 
-    //-------------------------------------------------------------------------
-    // Encapsulating Security Payload (ESP) - Inner
-    //-------------------------------------------------------------------------
-
-    state parse_inner_esp_overload_scope1 {
-        eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
-        eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
-        transition accept;
-    }
+//     //-------------------------------------------------------------------------
+//     // Encapsulating Security Payload (ESP) - Inner
+//     //-------------------------------------------------------------------------
+//      
+//     state parse_inner_esp_overload_scope1 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+//         eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//         eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
     //-------------------------------------------------------------------------
@@ -14273,46 +13587,54 @@ parser NpbEgressParser(
 
 
 
-    state parse_inner_gre_scope0 {
-        pkt.extract(hdr.inner.gre);
+    state parse_inner_gre_scope1 {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
 
         transition select(
-            hdr.inner.gre.C,
-            hdr.inner.gre.R,
-            hdr.inner.gre.K,
-            hdr.inner.gre.S,
-            hdr.inner.gre.s,
-            hdr.inner.gre.recurse,
-            hdr.inner.gre.flags,
-            hdr.inner.gre.version,
-            hdr.inner.gre.proto) {
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
 
           // C R K S s r f v
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_inner_ipv6;
+            (0,0,0,0,0,0,0,0): parse_inner_gre_qualified_scope1;
+            (1,0,0,0,0,0,0,0): parse_inner_gre_qualified_scope1;
+            (0,0,1,0,0,0,0,0): parse_inner_gre_qualified_scope1;
+            (0,0,0,1,0,0,0,0): parse_inner_gre_qualified_scope1;
             default: accept;
         }
     }
 
-    state parse_inner_gre_scope1 {
+    state parse_inner_gre_qualified_scope1 {
         pkt.extract(hdr.inner.gre);
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         eg_md.lkp_1.tunnel_id = 0;
 
         transition select(
             hdr.inner.gre.C,
-            hdr.inner.gre.R,
             hdr.inner.gre.K,
             hdr.inner.gre.S,
-            hdr.inner.gre.s,
-            hdr.inner.gre.recurse,
-            hdr.inner.gre.flags,
-            hdr.inner.gre.version,
             hdr.inner.gre.proto) {
 
-          // C R K S s r f v
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_inner_ipv6;
+            (0,0,0,0x0800): parse_inner_inner_ipv4;
+            (0,0,0,0x86dd): parse_inner_inner_ipv6;
+            (1,0,0,_): parse_inner_gre_optional;
+            (0,1,0,_): parse_inner_gre_optional;
+            (0,0,1,_): parse_inner_gre_optional;
+            default: accept;
+        }
+    }
+
+    state parse_inner_gre_optional {
+        pkt.extract(hdr.inner.gre_optional);
+        transition select(hdr.inner.gre.proto) {
+            0x0800: parse_inner_inner_ipv4;
+            0x86dd: parse_inner_inner_ipv6;
             default: accept;
         }
     }
@@ -14323,39 +13645,27 @@ parser NpbEgressParser(
 
 
     //-------------------------------------------------------------------------
-    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Outer
+    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Inner
     //-------------------------------------------------------------------------
     // Based on pseudo code from Glenn (see email from 03/11/2019):
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
-
-    state parse_inner_gtp_c_scope0 {
-        transition select(
-            pkt.lookahead<gtp_v2_base_h>().version,
-            pkt.lookahead<gtp_v2_base_h>().T
-        ) {
-            (2, 1): extract_inner_gtp_c_scope0;
-            default: accept;
-        }
-    }
-    state extract_inner_gtp_c_scope0 {
-     transition accept;
-    }
-
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_inner_gtp_c_scope1 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_inner_gtp_c_scope1;
+            (2, 1): parse_inner_gtp_c_qualified_scope1;
             default: accept;
         }
     }
-    state extract_inner_gtp_c_scope1 {
+
+    state parse_inner_gtp_c_qualified_scope1 {
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
         transition accept;
@@ -14367,45 +13677,10 @@ parser NpbEgressParser(
     // Only supports optional header for sequence-number
     // Does not support parsing (TLV) extension headers
 
-    state parse_inner_gtp_u_scope0 {
-        gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
-        transition select(
-            snoop_inner_gtp_v1_base.version,
-            snoop_inner_gtp_v1_base.PT,
-            snoop_inner_gtp_v1_base.E,
-            snoop_inner_gtp_v1_base.S,
-            snoop_inner_gtp_v1_base.PN) {
-
-            (1, 1, 0, 0, 0): extract_inner_gtp_u_scope0;
-            (1, 1, 0, 1, 0): extract_inner_gtp_u_with_optional_scope0;
-            default: accept;
-        }
-    }
-
-    state extract_inner_gtp_u_scope0 {
-        pkt.extract(hdr.inner.gtp_v1_base);
-        transition select(pkt.lookahead<bit<4>>()) {
-            4: parse_inner_inner_ipv4;
-            6: parse_inner_inner_ipv6;
-            default: accept;
-        }
-    }
-
-    state extract_inner_gtp_u_with_optional_scope0 {
-        pkt.extract(hdr.inner.gtp_v1_base);
-        pkt.extract(hdr.inner.gtp_v1_optional);
-        transition select(
-            hdr.inner.gtp_v1_base.E,
-            pkt.lookahead<bit<4>>()) {
-            (0, 4): parse_inner_inner_ipv4;
-            (0, 6): parse_inner_inner_ipv6;
-            default: accept;
-        }
-    }
-
-
     state parse_inner_gtp_u_scope1 {
         gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             snoop_inner_gtp_v1_base.version,
             snoop_inner_gtp_v1_base.PT,
@@ -14413,13 +13688,13 @@ parser NpbEgressParser(
             snoop_inner_gtp_v1_base.S,
             snoop_inner_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_inner_gtp_u_scope1;
-            (1, 1, 0, 1, 0): extract_inner_gtp_u_with_optional_scope1;
+            (1, 1, 0, 0, 0): parse_inner_gtp_u_qualified_scope1;
+            (1, 1, 0, 1, 0): parse_inner_gtp_u_with_optional_qualified_scope1;
             default: accept;
         }
     }
 
-    state extract_inner_gtp_u_scope1 {
+    state parse_inner_gtp_u_qualified_scope1 {
         pkt.extract(hdr.inner.gtp_v1_base);
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         eg_md.lkp_1.tunnel_id = hdr.inner.gtp_v1_base.teid;
@@ -14430,7 +13705,7 @@ parser NpbEgressParser(
         }
     }
 
-    state extract_inner_gtp_u_with_optional_scope1 {
+    state parse_inner_gtp_u_with_optional_qualified_scope1 {
         pkt.extract(hdr.inner.gtp_v1_base);
         pkt.extract(hdr.inner.gtp_v1_optional);
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -14456,60 +13731,15 @@ parser NpbEgressParser(
 
     state parse_inner_inner_ipv4 {
   hdr.inner_inner.ipv4.setValid();
-//      eg_md.inner_inner.ipv4_isValid = true;
   transition accept;
     }
     state parse_inner_inner_ipv6 {
   hdr.inner_inner.ipv6.setValid();
-//      eg_md.inner_inner.ipv6_isValid = true;
   transition accept;
     }
 
-
-
-
-
-// ///////////////////////////////////////////////////////////////////////////////
-// // Transport Encaps
-// ///////////////////////////////////////////////////////////////////////////////
-// 
-// //-----------------------------------------------------------------------------
-// // Encapsulated Remote Switch Port Analyzer (ERSPAN)
-// //-----------------------------------------------------------------------------
-// 
-// state parse_erspan_t1 {
-//     pkt.extract(hdr.erspan_type1);
-//     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T1
-//     transition parse_inner_ethernet;
-// }
-// 
-// state parse_erspan_t2 {
-//     pkt.extract(hdr.erspan_type2);
-//     //verify(hdr.erspan_typeII.version == 1, error.Erspan2VersionNotOne);
-//     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T2
-//     transition parse_inner_ethernet;
-// }
-// 
-// // state parse_erspan_t3 {
-// //     pkt.extract(hdr.erspan_type3);
-// //     //verify(hdr.erspan_typeIII.version == 2, error.Erspan3VersionNotTwo);
-// //     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T3
-// //     transition select(hdr.erspan_type3.o) {
-// //         1: parse_erspan_type3_platform;
-// //         default: parse_inner_ethernet;
-// //     }
-// // }
-// // 
-// // state parse_erspan_type3_platform {
-// //     pkt.extract(hdr.erspan_platform);
-// //     transition parse_inner_ethernet;
-// // }
-// 
-// 
-
-
 }
-# 62 "npb.p4" 2
+# 60 "npb.p4" 2
 # 1 "npb_egr_set_lkp.p4" 1
 
 
@@ -14529,6 +13759,13 @@ control EgressSetLookup(
     // -----------------------------
 
     apply {
+
+//		eg_md.lkp_1.next_lyr_valid = true;
+  if((eg_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (eg_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (eg_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+   eg_md.lkp_1.next_lyr_valid = true;
+  }
+
+        // -----------------------------------------------------------------------
 
         // Override whatever the parser set "ip_type" to.  Doing so allows the
         // signal to fit when normally it doesn't.  This code should be only
@@ -14580,17 +13817,17 @@ control EgressSetLookup(
 //				eg_md.lkp_1.ip_tos = hdr.inner.ipv4.tos;
 //			}
   }
-# 85 "npb_egr_set_lkp.p4"
+# 92 "npb_egr_set_lkp.p4"
     }
 }
-# 63 "npb.p4" 2
+# 61 "npb.p4" 2
 # 1 "npb_egr_top.p4" 1
 
 
 
 
 # 1 "npb_egr_sff_top.p4" 1
-control npb_egr_sff_top_part1 (
+control npb_egr_sff_top (
  inout switch_header_transport_t hdr_0,
  inout switch_egress_metadata_t eg_md,
  in egress_intrinsic_metadata_t eg_intr_md,
@@ -14600,17 +13837,7 @@ control npb_egr_sff_top_part1 (
 ) {
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: bitmask defined as follows....
- //
- //   [0:0] sf  #1: ingress basic/advanced
- //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
-
- // =========================================================================
- // Table
+ // Table #1: 
  // =========================================================================
 
  // RFC 8300, Page 9: Decrementing (the TTL) from an incoming value of 0 shall
@@ -14700,124 +13927,60 @@ control npb_egr_sff_top_part1 (
     }
 
  // =========================================================================
- // Apply
+ // Table #2: SFF
  // =========================================================================
 
- apply {
-
-  // =====================================
-  // SFF
-  // =====================================
-
-  // -------------------------------------
-  // Reframer
-  // -------------------------------------
-
-  // Three mutually-exclusive reframing scenarios are supported:
-  //
-  // 1: First  in chain --> encap
-  // 2: Middle in chain --> rewrite
-  // 3: Last   in chain --> decap
-  //
-  // Note that the example in the RFC shows either a first/middle or last -- but not
-  // combinations of these.  Howver, conceivabably I suppose you could have a last
-  // (i.e. decap) followed by a first (i.e. encap).  Regardless, the RFC example
-  // doesn't show this, and so we don't support it (currently anyway).
-  //
-  // To support these three reframing scenarios, I look at three signals:
-  //
-  // +---------------+---------------+--------------+-------------------------------------+
-  // | hdr nsh valid | our nsh valid | terminate    | signals / actions                   |
-  // +---------------+---------------+--------------+-------------------------------------+
-  // | n/a           | FALSE         | n/a          | --> (classification failed)         |
-  // | FALSE         | TRUE          | FALSE        | --> first  / encap                  |
-  // | FALSE         | TRUE          | TRUE         | --> first  / encap   & last / decap |
-  // | TRUE          | TRUE          | FALSE        | --> middle / rewrite                |
-  // | TRUE          | TRUE          | TRUE         | --> last   / decap                  |
-  // +---------------+---------------+--------------+-------------------------------------+
-  //
-  // Note: The above truth table just shows how my logic handles the three scenarios,
-  // although you could devise other ways to look at these signals and still get the
-  // same results.
-
-  // ----------------------------------------
-  // Move NSH Metadata to NSH Header
-  // ----------------------------------------
-
-//		if((eg_md.nsh_md.valid == 1) && (hdr_0.nsh_type1.isValid())) {
-//		if(hdr_0.nsh_type1.isValid()) {
-  if(eg_md.nsh_md.start_of_path == false) {
-
-   // ---------------
-   // need to do a rewrite...
-   // ---------------
-
-   npb_egr_sff_dec_ttl.apply();
-
-  } else {
-
-   // ---------------
-   // need to do a encap...
-   // ---------------
-
-//			hdr_0.nsh_type1.setValid();
-
-   // base: word 0
-   hdr_0.nsh_type1.version = 0x0;
-   hdr_0.nsh_type1.o = 0x0;
-   hdr_0.nsh_type1.reserved = 0x0;
-   hdr_0.nsh_type1.ttl = 0x3f; // 63 is the rfc's recommended default value.
-   hdr_0.nsh_type1.len = 0x6; // in 4-byte words (1 + 1 + 4).
-   hdr_0.nsh_type1.reserved2 = 0x0;
-   hdr_0.nsh_type1.md_type = 0x1; // 0 = reserved, 1 = fixed len, 2 = variable len.
-//			hdr_0.nsh_type1.next_proto               = 0x3;  // 1 = ipv4, 2 = ipv6, 3 = ethernet, 4 = nsh, 5 = mpls.
-
-   // base: word 1
-   // (nothing to do)
-
-   // ext: type 1 - word 0-3
-   hdr_0.nsh_type1.ver = 0x2; // word 0
-   hdr_0.nsh_type1.reserved3 = 0x0; // word 0
-
-   hdr_0.nsh_type1.lag_hash = 0x0; // word 0
+ action drop_pkt(
+ ) {
 
 
-   hdr_0.nsh_type1.reserved4 = 0x0; // word 2
-
-
-   hdr_0.nsh_type1.timestamp = 0x0; // word 3 // FOR SIMS
-
-
-  }
 
  }
 
-}
+ // =====================================
 
-// =============================================================================
-// =============================================================================
-// =============================================================================
-// =============================================================================
-// =============================================================================
+ action fwd_pkt_nsh_hdr_ver_1(
+  bit<24> tool_address
+ ) {
+  // hdr reformat to old type 1 format (slx-style)
+  hdr_0.nsh_type1.spi = tool_address;
+  hdr_0.nsh_type1.si = 0x1;
 
-control npb_egr_sff_top_part2 (
- inout switch_header_transport_t hdr_0,
- inout switch_egress_metadata_t eg_md,
- in egress_intrinsic_metadata_t eg_intr_md,
- in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
- inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
- inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport
-) {
+  hdr_0.nsh_type1.ver = 0x1;
+  hdr_0.nsh_type1.reserved3 = 0x0; // not necessary, but allows the design to fit.
+ }
 
- // =========================================================================
- // Notes
- // =========================================================================
+ // =====================================
 
- // Note: bitmask defined as follows....
- //
- //   [0:0] sf  #1: ingress basic/advanced
- //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
+ action fwd_pkt_nsh_hdr_ver_2(
+ ) {
+  // hdr already in new type 2 format -- nothing to do
+ }
+
+ // =====================================
+
+ table egr_sff_fib {
+  key = {
+   hdr_0.nsh_type1.spi : exact @name("spi");
+   hdr_0.nsh_type1.si : exact @name("si");
+  }
+
+  actions = {
+   drop_pkt;
+   fwd_pkt_nsh_hdr_ver_1;
+   fwd_pkt_nsh_hdr_ver_2;
+  }
+
+  // Derek: drop packet on miss...
+  //
+  // RFC 8300, Page 15: If an SFF receives a packet with an SPI and SI that
+  // do not correspond to a valid next hop in a valid SFP, that packet MUST
+  // be dropped by the SFF.
+
+//		const default_action = drop_pkt;
+  const default_action = fwd_pkt_nsh_hdr_ver_2; // for backwards compatibility with firmware
+  size = NPB_EGR_SFF_ARP_TABLE_DEPTH;
+ }
 
  // =========================================================================
  // Apply
@@ -14837,36 +14000,78 @@ control npb_egr_sff_top_part2 (
   // will discard any NSH packet with an SI of 0, as there will be no
   // valid next SF information."
 
-//		if((hdr_0.nsh_type1.si == 0) && (eg_md.tunnel_0.terminate == false)) { // check for si of 0 (or underflow, since we used a saturating subtracts)
-//			eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
-//		}
-
-//		if(eg_md.tunnel_0.terminate == false) { // check for si of 0 (or underflow, since we used a saturating subtracts)
-  if(eg_md.nsh_md.end_of_path == false) { // check for si of 0 (or underflow, since we used a saturating subtracts)
+  if(eg_md.nsh_md.start_of_path == true) {
 
    // ---------------
-   // need to do a rewrite...
+   // add new header
    // ---------------
 
-   if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
-    eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+   // (done in ingress)
+
+   // ---------------
+
+   if(eg_md.nsh_md.end_of_path == true) {
+
+    // ---------------
+    // process start + end of chain
+    // ---------------
+
+    hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+
+   } else {
+
+    // ---------------
+    // process start of chain
+    // ---------------
+
+    if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
+     eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+    }
+
    }
+
+
   } else {
 
    // ---------------
-   // need to do a decap...
+   // update existing header
    // ---------------
 
-   hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+   npb_egr_sff_dec_ttl.apply();
+
+   // ---------------
+
+   if(eg_md.nsh_md.end_of_path == true) {
+
+    // ---------------
+    // process end of chain
+    // ---------------
+
+    hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+
+   } else {
+
+    // ---------------
+    // process middle of chain
+    // ---------------
+
+    if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
+     eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+    }
+
+   }
+
   }
 
   // -------------------------------------
   // Fowrarding Lookup
   // -------------------------------------
 
-  // Derek: I guess the forwarding lookup would normally
+  // Derek: The forwarding lookup would normally
   // be done here.  However, since Tofino requires the outport
   // to set in ingress, it has to be done there instead....
+
+  egr_sff_fib.apply();
 
  }
 
@@ -14958,12 +14163,12 @@ control npb_egr_sf_proxy_hdr_strip (
 //			hdr_1.vlan_tag[1].isValid() : exact;
 
 
-   eg_md.nsh_md.strip_e_tag : ternary;
+   eg_md.nsh_md.strip_tag_e : ternary;
 
 
-   eg_md.nsh_md.strip_vn_tag : ternary;
+   eg_md.nsh_md.strip_tag_vn : ternary;
 
-   eg_md.nsh_md.strip_vlan_tag : ternary;
+   eg_md.nsh_md.strip_tag_vlan : ternary;
   }
 
   actions = {
@@ -15080,7 +14285,7 @@ control npb_egr_sf_proxy_hdr_edit (
     }
 
     table bd_to_vlan_mapping {
-        key = { eg_md.nsh_md.add_vlan_tag_bd : exact @name("bd"); }
+        key = { eg_md.nsh_md.add_tag_vlan_bd : exact @name("bd"); }
         actions = {
    set_vlan_tagged;
    NoAction;
@@ -15311,7 +14516,9 @@ control npb_egr_sf_proxy_truncate (
 }
 # 4 "npb_egr_sf_proxy_top.p4" 2
 //#include "npb_egr_sf_proxy_meter.p4"
-//#include "npb_ing_sf_npb_basic_adv_dedup.p4"
+
+
+
 
 # 1 "acl.p4" 1
 /*******************************************************************************
@@ -15335,7 +14542,7 @@ control npb_egr_sf_proxy_truncate (
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 8 "npb_egr_sf_proxy_top.p4" 2
+# 10 "npb_egr_sf_proxy_top.p4" 2
 
 control npb_egr_sf_proxy_top (
  inout switch_header_transport_t hdr_0,
@@ -15357,51 +14564,27 @@ control npb_egr_sf_proxy_top (
  ) acl;
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: egress action_bitmask defined as follows....
- //
- //   [0:0] act #1: policy
- //   [1:1] act #2: header strip
- //   [2:2] act #3: header edit
- //   [3:3] act #4: truncate
- //   [4:4] act #5: meter
- //   [5:5] act #6: dedup
-
- // =========================================================================
- // Table #1: Action Select
+ // Table #1: SFF Action Select
  // =========================================================================
 
  bit<8> int_ctrl_flags = 0;
 
  action egr_sf_action_sel_hit(
-//		bit<6>                                                action_bitmask,
 
 
 
-  bit<10> dsap
-//		bit<NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH_POW2> action_3_meter_id,
-//		bit<8>                                                action_3_meter_overhead
-//		bit<3>                                                discard
+  bit<16> dsap
  ) {
-//		eg_md.action_bitmask          = action_bitmask;
 
 
 
   eg_md.nsh_md.dsap = dsap;
-
-//		eg_md.action_3_meter_id       = action_3_meter_id;
-//		eg_md.action_3_meter_overhead = action_3_meter_overhead;
-
-//		eg_intr_md_for_dprsr.drop_ctl = discard; // drop packet
  }
 
  // =====================================
 
  action egr_sf_action_sel_miss(
  ) {
-//		eg_md.action_bitmask          = 0;
 //		int_ctrl_flags                = 0;
 //		eg_md.nsh_md.dsap             = 0;
  }
@@ -15421,11 +14604,11 @@ control npb_egr_sf_proxy_top (
   }
 
   const default_action = egr_sf_action_sel_miss;
-  size = NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH;
+  size = NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH;
  }
 
  // =========================================================================
- // Table #x: Ip Length Range
+ // Table #x: SF Ip Length Range
  // =========================================================================
 
  bit<16> ip_len = 0;
@@ -15466,7 +14649,7 @@ control npb_egr_sf_proxy_top (
 
 
  // =========================================================================
- // Table #2: L4 Src Port Range
+ // Table #2: SF L4 Src Port Range
  // =========================================================================
 
  bit<16> l4_src_port = 0;
@@ -15507,7 +14690,7 @@ control npb_egr_sf_proxy_top (
 
 
  // =========================================================================
- // Table #2: L4 Dst Port Range
+ // Table #2: SF L4 Dst Port Range
  // =========================================================================
 
  bit<16> l4_dst_port = 0;
@@ -15582,113 +14765,386 @@ control npb_egr_sf_proxy_top (
    // Actions(s)
    // ==================================
 
-//			if(eg_md.action_bitmask[0:0] == 1) {
-
-    // ----------------------------------
-    // Action #0 - Policy
-    // ----------------------------------
+   // ----------------------------------
+   // Action #0 - Policy
+   // ----------------------------------
 
 
-    egr_sf_ip_len_rng.apply();
+   egr_sf_ip_len_rng.apply();
 
 
 
 
 
-    egr_sf_l4_src_port_rng.apply();
+   egr_sf_l4_src_port_rng.apply();
 
 
 
 
 
-    egr_sf_l4_dst_port_rng.apply();
+   egr_sf_l4_dst_port_rng.apply();
 
 
 
 
 
-    acl.apply(
-     eg_md.lkp_1,
-     eg_md,
-     eg_intr_md_for_dprsr,
-     ip_len,
-     ip_len_is_rng_bitmask,
-     l4_src_port,
-     l4_src_port_is_rng_bitmask,
-     l4_dst_port,
-     l4_dst_port_is_rng_bitmask,
-     hdr_0,
-     hdr_1,
-     int_ctrl_flags
-    );
-//			}
+   acl.apply(
+    eg_md.lkp_1,
+    eg_md,
+    eg_intr_md_for_dprsr,
+    ip_len,
+    ip_len_is_rng_bitmask,
+    l4_src_port,
+    l4_src_port_is_rng_bitmask,
+    l4_dst_port,
+    l4_dst_port_is_rng_bitmask,
+    hdr_0,
+    hdr_1,
+    int_ctrl_flags
+   );
 
-//			if(eg_md.action_bitmask[1:1] == 1) {
+   // ----------------------------------
+   // Action #1 - Hdr Strip
+   // ----------------------------------
+   npb_egr_sf_proxy_hdr_strip.apply (
+    hdr_0,
+    hdr_1,
+    eg_md,
+    eg_intr_md,
+    eg_intr_md_from_prsr,
+    eg_intr_md_for_dprsr,
+    eg_intr_md_for_oport
+   );
 
-    // ----------------------------------
-    // Action #1 - Hdr Strip
-    // ----------------------------------
-    npb_egr_sf_proxy_hdr_strip.apply (
-     hdr_0,
-     hdr_1,
-     eg_md,
-     eg_intr_md,
-     eg_intr_md_from_prsr,
-     eg_intr_md_for_dprsr,
-     eg_intr_md_for_oport
-    );
+   // ----------------------------------
+   // Action #2 - Hdr Edit
+   // ----------------------------------
+   npb_egr_sf_proxy_hdr_edit.apply (
+    hdr_0,
+    hdr_1,
+    eg_md,
+    eg_intr_md,
+    eg_intr_md_from_prsr,
+    eg_intr_md_for_dprsr,
+    eg_intr_md_for_oport
+   );
 
-//			}
+/*
+			// ----------------------------------
+			// Action #3 - Truncate
+			// ----------------------------------
+			npb_egr_sf_proxy_truncate.apply (
+				hdr_0,
+				eg_md,
+				eg_intr_md,
+				eg_intr_md_from_prsr,
+				eg_intr_md_for_dprsr,
+				eg_intr_md_for_oport
+			);
+*/
 
-//			if(eg_md.action_bitmask[2:2] == 1) {
+   // ----------------------------------
+   // Action #4 - Meter
+   // ----------------------------------
+# 324 "npb_egr_sf_proxy_top.p4"
+   // ----------------------------------
+   // Action #5 - Deduplication
+   // ----------------------------------
+# 338 "npb_egr_sf_proxy_top.p4"
+  }
+ }
+}
+# 8 "npb_egr_top.p4" 2
+# 1 "npb_ing_sf_npb_basic_adv_dedup.p4" 1
+/* -*- P4_16 -*- */
 
-    // ----------------------------------
-    // Action #2 - Hdr Edit
-    // ----------------------------------
-    npb_egr_sf_proxy_hdr_edit.apply (
-     hdr_0,
-     hdr_1,
-     eg_md,
-     eg_intr_md,
-     eg_intr_md_from_prsr,
-     eg_intr_md_for_dprsr,
-     eg_intr_md_for_oport
-    );
 
-//			}
 
-//			if(eg_md.action_bitmask[3:3] == 1) {
 
-    // ----------------------------------
-    // Action #3 - Truncate
-    // ----------------------------------
-    npb_egr_sf_proxy_truncate.apply (
-     hdr_0,
-     eg_md,
-     eg_intr_md,
-     eg_intr_md_from_prsr,
-     eg_intr_md_for_dprsr,
-     eg_intr_md_for_oport
-    );
 
-//			}
 
-//			if(eg_md.action_bitmask[4:4] == 1) {
 
-    // ----------------------------------
-    // Action #4 - Meter
-    // ----------------------------------
-# 360 "npb_egr_sf_proxy_top.p4"
-//			}
+//#define DEPTH      32w131072
+//#define DEPTH_POW2 17
 
-//			if(eg_md.action_bitmask[5:5] == 1) {
+//#define DEPTH      32w262144
+//#define DEPTH_POW2 18
 
-    // ----------------------------------
-    // Action #5 - Deduplication
-    // ----------------------------------
-# 377 "npb_egr_sf_proxy_top.p4"
-//			}
 
+
+// =============================================================================
+// =============================================================================
+// =============================================================================
+// Register (Ingress & Egress Shared Code)
+// =============================================================================
+// =============================================================================
+// =============================================================================
+
+struct pair_t {
+ bit<16> hash;
+ bit<16> data;
+};
+
+// =============================================================================
+
+// note: this register code has been structured such that multiple registers can
+// be laid down, perhaps using upper bits of the hash to select between them....
+
+control npb_dedup_reg (
+ in bit<16> flowtable_hash_lo, // address
+ in bit<16> flowtable_hash_hi, // data -- always 16 bits
+ in bit<16> ssap,
+
+ out bit<1> drop
+) {
+
+ // =========================================================================
+ // Register Array
+ // =========================================================================
+
+ // This code works similar to how vpp's flow collector works...on a hash
+ // collision, the current flow occupying the slot is simply replaced with
+ // the new flow (i.e. the old flow is simply booted out of the cache).
+
+ Register <pair_t, bit<16>>(32w65536) test_reg; // syntax seems to be <data type, index type>
+
+ // =========================================================================
+
+ RegisterAction<pair_t, bit<16>, bit<1>>(test_reg) register_array = { // syntax seems to be <data type, index type, return type>
+  void apply(
+   inout pair_t reg_value, // register entry
+   out bit<1> return_value // return value
+  ) {
+   if(reg_value.hash == (bit<16>)flowtable_hash_hi) {
+    // existing flow
+    // --------
+    if(reg_value.data == (bit<16>)ssap) {
+     // same ssap
+     // ---------
+     return_value = 0; // pass packet
+    } else {
+     // different ssap
+     // ---------
+     return_value = 1; // drop packet
+    }
+   } else {
+    // new flow (entry collision, overwrite old flow)
+    // --------
+    // update entry
+    reg_value.hash = (bit<16>)flowtable_hash_hi;
+    reg_value.data = (bit<16>)ssap;
+
+    return_value = 0; // pass packet
+   }
+  }
+ };
+
+ // =========================================================================
+ // Apply Block
+ // =========================================================================
+
+ apply {
+  drop = register_array.execute(flowtable_hash_lo);
+ }
+
+}
+
+// =============================================================================
+// =============================================================================
+// =============================================================================
+// Ingress
+// =============================================================================
+// =============================================================================
+// =============================================================================
+
+control npb_ing_sf_npb_basic_adv_dedup_hash (
+ in switch_lookup_fields_t lkp, // for hash
+ in bit<12> vpn, // for hash
+ out bit<32> hash
+) {
+ // =========================================================================
+ // Hash
+ // =========================================================================
+
+
+
+
+
+ Hash<bit<32 >>(HashAlgorithm_t.CRC32) h;
+
+
+ // =========================================================================
+ // Apply
+ // =========================================================================
+
+ apply {
+  // ***** hash the key *****
+# 143 "npb_ing_sf_npb_basic_adv_dedup.p4"
+  hash = h.get ({
+   vpn,
+   lkp.ip_src_addr,
+   lkp.ip_dst_addr,
+   lkp.ip_proto,
+   lkp.l4_src_port,
+   lkp.l4_dst_port
+  });
+ }
+
+}
+
+// =============================================================================
+
+control npb_ing_sf_npb_basic_adv_dedup (
+ in bool enable,
+ in switch_lookup_fields_t lkp, // for hash
+ in bit<12> vpn, // for hash
+ in bit<32> hash,
+ in bit<16> ssap, // for dedup
+ inout bit<3> drop_ctl
+) {
+ npb_dedup_reg() npb_dedup_reg_0;
+ npb_dedup_reg() npb_dedup_reg_1;
+ npb_dedup_reg() npb_dedup_reg_2;
+ npb_dedup_reg() npb_dedup_reg_3;
+ npb_dedup_reg() npb_dedup_reg_4;
+ npb_dedup_reg() npb_dedup_reg_5;
+ npb_dedup_reg() npb_dedup_reg_6;
+ npb_dedup_reg() npb_dedup_reg_7;
+ npb_dedup_reg() npb_dedup_reg_8;
+ npb_dedup_reg() npb_dedup_reg_9;
+ npb_dedup_reg() npb_dedup_reg_10;
+ npb_dedup_reg() npb_dedup_reg_11;
+ npb_dedup_reg() npb_dedup_reg_12;
+ npb_dedup_reg() npb_dedup_reg_13;
+ npb_dedup_reg() npb_dedup_reg_14;
+ npb_dedup_reg() npb_dedup_reg_15;
+/*
+	npb_dedup_reg() npb_dedup_reg_16;
+	npb_dedup_reg() npb_dedup_reg_17;
+	npb_dedup_reg() npb_dedup_reg_18;
+	npb_dedup_reg() npb_dedup_reg_19;
+	npb_dedup_reg() npb_dedup_reg_20;
+	npb_dedup_reg() npb_dedup_reg_21;
+	npb_dedup_reg() npb_dedup_reg_22;
+	npb_dedup_reg() npb_dedup_reg_23;
+	npb_dedup_reg() npb_dedup_reg_24;
+	npb_dedup_reg() npb_dedup_reg_25;
+	npb_dedup_reg() npb_dedup_reg_26;
+	npb_dedup_reg() npb_dedup_reg_27;
+	npb_dedup_reg() npb_dedup_reg_28;
+	npb_dedup_reg() npb_dedup_reg_29;
+	npb_dedup_reg() npb_dedup_reg_30;
+	npb_dedup_reg() npb_dedup_reg_31;
+*/
+
+ // =========================================================================
+
+ bit<32> flowtable_hash = 0;
+
+ bit<16> flowtable_hash_lo;
+ bit<16> flowtable_hash_hi; // always 16 bits
+ bit<4> flowtable_hash_chk; // always 16 bits
+
+ bit<1> drop = 0;
+
+ // =========================================================================
+ // Hash
+ // =========================================================================
+
+
+
+
+
+ Hash<bit<32 >>(HashAlgorithm_t.CRC32) h;
+
+
+ // =========================================================================
+ // Apply
+ // =========================================================================
+
+ apply {
+  // ***** hash the key *****
+# 246 "npb_ing_sf_npb_basic_adv_dedup.p4"
+/*
+		flowtable_hash    = h.get ({
+			vpn,
+			lkp.ip_src_addr,
+			lkp.ip_dst_addr,
+			lkp.ip_proto,
+			lkp.l4_src_port,
+			lkp.l4_dst_port
+		});
+		flowtable_hash_lo  = flowtable_hash[15: 0];
+		flowtable_hash_hi  = flowtable_hash[31:16];
+		flowtable_hash_chk = flowtable_hash[31:28];
+*/
+  flowtable_hash_lo = hash[15: 0];
+  flowtable_hash_hi = hash[31:16];
+  flowtable_hash_chk = hash[31:28];
+
+
+  // note: putting the enable check around all the dedup blocks doesn't fit, so instead if disabled
+  // we force it to use block 0 by setting hash_chk to 0, and then put the enable check around only that block.
+
+  // ***** call dedup function *****
+  if(enable) {
+          if(flowtable_hash_chk == 0) { npb_dedup_reg_0.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 1) { npb_dedup_reg_1.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 2) { npb_dedup_reg_2.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 3) { npb_dedup_reg_3.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 4) { npb_dedup_reg_4.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 5) { npb_dedup_reg_5.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 6) { npb_dedup_reg_6.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 7) { npb_dedup_reg_7.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 8) { npb_dedup_reg_8.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 9) { npb_dedup_reg_9.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 10) { npb_dedup_reg_10.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 11) { npb_dedup_reg_11.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 12) { npb_dedup_reg_12.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 13) { npb_dedup_reg_13.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 14) { npb_dedup_reg_14.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 15) { npb_dedup_reg_15.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   }
+
+/*
+			       if(flowtable_hash_chk ==  0) { npb_dedup_reg_0.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  1) { npb_dedup_reg_1.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  2) { npb_dedup_reg_2.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  3) { npb_dedup_reg_3.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  4) { npb_dedup_reg_4.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  5) { npb_dedup_reg_5.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  6) { npb_dedup_reg_6.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  7) { npb_dedup_reg_7.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  8) { npb_dedup_reg_8.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  9) { npb_dedup_reg_9.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 10) { npb_dedup_reg_10.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 11) { npb_dedup_reg_11.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 12) { npb_dedup_reg_12.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 13) { npb_dedup_reg_13.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 14) { npb_dedup_reg_14.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 15) { npb_dedup_reg_15.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 16) { npb_dedup_reg_16.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 17) { npb_dedup_reg_17.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 18) { npb_dedup_reg_18.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 19) { npb_dedup_reg_19.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 20) { npb_dedup_reg_20.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 21) { npb_dedup_reg_21.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 22) { npb_dedup_reg_22.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 23) { npb_dedup_reg_23.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 24) { npb_dedup_reg_24.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 25) { npb_dedup_reg_25.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 26) { npb_dedup_reg_26.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 27) { npb_dedup_reg_27.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 28) { npb_dedup_reg_28.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 29) { npb_dedup_reg_29.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 30) { npb_dedup_reg_30.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 31) { npb_dedup_reg_31.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			}
+*/
+  }
+
+  if(drop == 1) {
+   drop_ctl = 0x1;
   }
  }
 }
@@ -15696,150 +15152,161 @@ control npb_egr_sf_proxy_top (
 // =============================================================================
 // =============================================================================
 // =============================================================================
+// Egress
 // =============================================================================
 // =============================================================================
-/*
-control npb_egr_sf_proxy_top_part2 (
-	inout switch_header_transport_t                   hdr_0,
-	inout switch_header_outer_t                       hdr_1,
-	inout switch_egress_metadata_t                    eg_md,
-	in    egress_intrinsic_metadata_t                 eg_intr_md,
-	in    egress_intrinsic_metadata_from_parser_t     eg_intr_md_from_prsr,
-	inout egress_intrinsic_metadata_for_deparser_t    eg_intr_md_for_dprsr,
-	inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport
+// =============================================================================
+
+control npb_egr_sf_proxy_dedup (
+ in bool enable,
+ in switch_lookup_fields_t lkp, // for hash
+ in bit<12> vpn, // for hash
+ in bit<16> ssap, // for dedup
+ inout bit<3> drop_ctl
 ) {
-
-	// =========================================================================
-	// Notes
-	// =========================================================================
-
-	// Note: egress action_bitmask defined as follows....
-	//
-	//   [0:0] act #1: unused (was header strip)
-	//   [1:1] act #2: unused (was header edit)
-	//   [2:2] act #3: unused (reserved for truncate)
-	//   [3:3] act #4: meter
-	//   [4:4] act #5: dedup
-
-	// =========================================================================
-	// Apply
-	// =========================================================================
-
-	apply {
-
-		if(eg_md.nsh_md.sf_bitmask[2:2] == 1) {
-
-			// ==================================
-			// Actions(s)
-			// ==================================
-
-			if(eg_md.action_bitmask[0:0] == 1) {
-
-				// ----------------------------------
-				// Action #0 - Policy
-				// ----------------------------------
-
-#ifdef SF_2_RNG_TABLE_ENABLE
-				egr_sf_ip_len_rng.apply();
-#endif
-
-				// multiple small policy tables....
-				acl.apply(
-					eg_md.lkp,
-					eg_md,
-					eg_intr_md_for_dprsr,
-					ip_len_rng_bitmask_internal
-				);
-			}
-
-			if(eg_md.action_bitmask[1:1] == 1) {
-
-				// ----------------------------------
-				// Action #1 - Hdr Strip
-				// ----------------------------------
-				npb_egr_sf_proxy_hdr_strip.apply (
-					hdr_0,
-					hdr_1,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
-
-			}
-
-			if(eg_md.action_bitmask[2:2] == 1) {
-
-				// ----------------------------------
-				// Action #2 - Hdr Edit
-				// ----------------------------------
-				npb_egr_sf_proxy_hdr_edit.apply (
-					hdr_0,
-					hdr_1,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
-
-			}
-
-			if(eg_md.action_bitmask[3:3] == 1) {
-
-				// ----------------------------------
-				// Action #3 - Truncate
-				// ----------------------------------
-				npb_egr_sf_proxy_truncate.apply (
-					hdr_0,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
-
-			}
-
-			if(eg_md.action_bitmask[4:4] == 1) {
-
-				// ----------------------------------
-				// Action #4 - Meter
-				// ----------------------------------
-#ifdef SF_2_METER_ENABLE
-				npb_egr_sf_proxy_meter.apply (
-					hdr,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
-#endif
-			}
-
-			if(eg_md.action_bitmask[5:5] == 1) {
-
-				// ----------------------------------
-				// Action #5 - Deduplication
-				// ----------------------------------
-#ifdef SF_2_DEDUP_ENABLE
-				npb_ing_sf_npb_basic_adv_dedup.apply (
-					hdr,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
-#endif
-			}
-		}
-	}
-}
+ npb_dedup_reg() npb_dedup_reg_0;
+ npb_dedup_reg() npb_dedup_reg_1;
+ npb_dedup_reg() npb_dedup_reg_2;
+ npb_dedup_reg() npb_dedup_reg_3;
+ npb_dedup_reg() npb_dedup_reg_4;
+ npb_dedup_reg() npb_dedup_reg_5;
+ npb_dedup_reg() npb_dedup_reg_6;
+ npb_dedup_reg() npb_dedup_reg_7;
+ npb_dedup_reg() npb_dedup_reg_8;
+ npb_dedup_reg() npb_dedup_reg_9;
+ npb_dedup_reg() npb_dedup_reg_10;
+ npb_dedup_reg() npb_dedup_reg_11;
+ npb_dedup_reg() npb_dedup_reg_12;
+ npb_dedup_reg() npb_dedup_reg_13;
+ npb_dedup_reg() npb_dedup_reg_14;
+ npb_dedup_reg() npb_dedup_reg_15;
+/*
+	npb_dedup_reg() npb_dedup_reg_16;
+	npb_dedup_reg() npb_dedup_reg_17;
+	npb_dedup_reg() npb_dedup_reg_18;
+	npb_dedup_reg() npb_dedup_reg_19;
+	npb_dedup_reg() npb_dedup_reg_20;
+	npb_dedup_reg() npb_dedup_reg_21;
+	npb_dedup_reg() npb_dedup_reg_22;
+	npb_dedup_reg() npb_dedup_reg_23;
+	npb_dedup_reg() npb_dedup_reg_24;
+	npb_dedup_reg() npb_dedup_reg_25;
+	npb_dedup_reg() npb_dedup_reg_26;
+	npb_dedup_reg() npb_dedup_reg_27;
+	npb_dedup_reg() npb_dedup_reg_28;
+	npb_dedup_reg() npb_dedup_reg_29;
+	npb_dedup_reg() npb_dedup_reg_30;
+	npb_dedup_reg() npb_dedup_reg_31;
 */
-# 8 "npb_egr_top.p4" 2
+
+ // =========================================================================
+
+ bit<32> flowtable_hash = 0;
+
+ bit<16> flowtable_hash_lo;
+ bit<16> flowtable_hash_hi; // always 16 bits
+ bit<4> flowtable_hash_chk; // always 16 bits
+
+ bit<1> drop = 0;
+
+ // =========================================================================
+ // Hash
+ // =========================================================================
+
+
+
+
+
+ Hash<bit<32 >>(HashAlgorithm_t.CRC32) h;
+
+
+ // =========================================================================
+ // Apply
+ // =========================================================================
+
+ apply {
+  // ***** hash the key *****
+# 426 "npb_ing_sf_npb_basic_adv_dedup.p4"
+  flowtable_hash = h.get ({
+   vpn,
+   lkp.ip_src_addr,
+   lkp.ip_dst_addr,
+   lkp.ip_proto,
+   lkp.l4_src_port,
+   lkp.l4_dst_port
+  });
+
+  flowtable_hash_lo = flowtable_hash[15: 0];
+  flowtable_hash_hi = flowtable_hash[31:16];
+  flowtable_hash_chk = flowtable_hash[31:28];
+
+
+  // note: putting the enable check around all the dedup blocks doesn't fit, so instead if disabled
+  // we force it to use block 0 by setting hash_chk to 0, and then put the enable check around only that block.
+
+  // ***** call dedup function *****
+  if(enable) {
+          if(flowtable_hash_chk == 0) { npb_dedup_reg_0.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 1) { npb_dedup_reg_1.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 2) { npb_dedup_reg_2.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 3) { npb_dedup_reg_3.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 4) { npb_dedup_reg_4.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 5) { npb_dedup_reg_5.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 6) { npb_dedup_reg_6.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 7) { npb_dedup_reg_7.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 8) { npb_dedup_reg_8.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 9) { npb_dedup_reg_9.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 10) { npb_dedup_reg_10.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 11) { npb_dedup_reg_11.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 12) { npb_dedup_reg_12.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 13) { npb_dedup_reg_13.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 14) { npb_dedup_reg_14.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   } else if(flowtable_hash_chk == 15) { npb_dedup_reg_15.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+   }
+
+/*
+			       if(flowtable_hash_chk ==  0) { npb_dedup_reg_0.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  1) { npb_dedup_reg_1.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  2) { npb_dedup_reg_2.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  3) { npb_dedup_reg_3.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  4) { npb_dedup_reg_4.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  5) { npb_dedup_reg_5.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  6) { npb_dedup_reg_6.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  7) { npb_dedup_reg_7.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  8) { npb_dedup_reg_8.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk ==  9) { npb_dedup_reg_9.apply (flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 10) { npb_dedup_reg_10.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 11) { npb_dedup_reg_11.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 12) { npb_dedup_reg_12.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 13) { npb_dedup_reg_13.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 14) { npb_dedup_reg_14.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 15) { npb_dedup_reg_15.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 16) { npb_dedup_reg_16.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 17) { npb_dedup_reg_17.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 18) { npb_dedup_reg_18.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 19) { npb_dedup_reg_19.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 20) { npb_dedup_reg_20.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 21) { npb_dedup_reg_21.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 22) { npb_dedup_reg_22.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 23) { npb_dedup_reg_23.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 24) { npb_dedup_reg_24.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 25) { npb_dedup_reg_25.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 26) { npb_dedup_reg_26.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 27) { npb_dedup_reg_27.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 28) { npb_dedup_reg_28.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 29) { npb_dedup_reg_29.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 30) { npb_dedup_reg_30.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			} else if(flowtable_hash_chk == 31) { npb_dedup_reg_31.apply(flowtable_hash_lo, flowtable_hash_hi, ssap, drop);
+			}
+*/
+  }
+
+  if(drop == 1) {
+   drop_ctl = 0x1;
+  }
+ }
+}
+# 9 "npb_egr_top.p4" 2
 
 # 1 "scoper.p4" 1
 /*******************************************************************************
@@ -15863,7 +15330,7 @@ control npb_egr_sf_proxy_top_part2 (
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 10 "npb_egr_top.p4" 2
+# 11 "npb_egr_top.p4" 2
 
 control npb_egr_top (
  inout switch_header_transport_t hdr_0,
@@ -15895,20 +15362,9 @@ control npb_egr_top (
  apply {
 
   // -------------------------------------
-  // SFF Part 1 --> *** before reframing ***
+  // Ingress Dedup (continued from ingress side)
   // -------------------------------------
-
-  if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SFF != 0)) {
-   npb_egr_sff_top_part1.apply (
-    hdr_0,
-    eg_md,
-    eg_intr_md,
-    eg_intr_md_from_prsr,
-    eg_intr_md_for_dprsr,
-    eg_intr_md_for_oport
-   );
-  }
-
+# 74 "npb_egr_top.p4"
   // -------------------------------------
   // Set Initial Scope
   // -------------------------------------
@@ -15916,23 +15372,15 @@ control npb_egr_top (
   if(hdr_0.nsh_type1.scope == 0) {
 
    // do nothing
-# 72 "npb_egr_top.p4"
-   // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-//			eg_md.lkp_1.tunnel_outer_type = SWITCH_TUNNEL_TYPE_NONE;
-//			eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NONE;
-
+# 89 "npb_egr_top.p4"
   } else {
 
    // do nothing
-# 89 "npb_egr_top.p4"
-   // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-//			eg_md.lkp_1.tunnel_outer_type = SWITCH_TUNNEL_TYPE_NONE;
-//			eg_md.lkp_1.tunnel_inner_type = eg_md.tunnel_1.type;
-
+# 100 "npb_egr_top.p4"
   }
 
   // -------------------------------------
-  // SF(s): Part 1 --> *** before reframing ***
+  // SF #1 - Multicast
   // -------------------------------------
 
   npb_egr_sf_multicast_top_part2.apply (
@@ -15942,6 +15390,8 @@ control npb_egr_top (
    eg_md
   );
 
+  // -------------------------------------
+  // SF #2 - Policy
   // -------------------------------------
 
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SF_ACL != 0)) {
@@ -15957,37 +15407,23 @@ control npb_egr_top (
   }
 
   // -------------------------------------
-  // SFF Reframing
+  // SFF - Pkt Decap(s)
   // -------------------------------------
+
+  // Decaps ------------------------------
 
   tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
   tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
   TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
 
   // -------------------------------------
-  // SF(s): Part 2 --> *** after reframing ***
-  // -------------------------------------
-/*
-		npb_egr_sf_proxy_top_part2.apply (
-			hdr_0,
-			hdr_1,
-			eg_md,
-			eg_intr_md,
-			eg_intr_md_from_prsr,
-			eg_intr_md_for_dprsr,
-			eg_intr_md_for_oport
-		);
-*/
-  // -------------------------------------
-  // SFF: Part 2 --> *** after reframing ***
+  // SFF - Hdr Decap / Encap
   // -------------------------------------
 
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SFF != 0)) {
-   npb_egr_sff_top_part2.apply (
+   npb_egr_sff_top.apply (
     hdr_0,
     eg_md,
     eg_intr_md,
@@ -15999,7 +15435,7 @@ control npb_egr_top (
 
  }
 }
-# 64 "npb.p4" 2
+# 62 "npb.p4" 2
 # 1 "npb_egr_deparser.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -16088,9 +15524,50 @@ control EgressMirror(
     apply {
 
         if (eg_intr_md_for_dprsr.mirror_type == 1) {
-# 51 "npb_egr_deparser.p4"
+
+            mirror.emit<switch_port_mirror_metadata_h>(eg_md.mirror.session_id, {
+                eg_md.mirror.src,
+                eg_md.mirror.type,
+                0,
+                eg_md.ingress_port,
+                eg_md.bd,
+                0,
+
+
+
+                eg_md.port_lag_index,
+
+//              eg_md.ingress_timestamp,
+                (bit<32>)hdr.transport.nsh_type1.timestamp,
+
+
+
+                eg_md.mirror.session_id
+            });
+
         } else if (eg_intr_md_for_dprsr.mirror_type == 2) {
-# 63 "npb_egr_deparser.p4"
+
+            mirror.emit<switch_cpu_mirror_metadata_h>(eg_md.mirror.session_id, {
+                eg_md.mirror.src,
+                eg_md.mirror.type,
+                0,
+                eg_md.ingress_port,
+                eg_md.bd,
+                0,
+
+
+
+                eg_md.port_lag_index,
+
+                eg_md.cpu_reason
+            });
+
+        } else if (eg_intr_md_for_dprsr.mirror_type == 4) {
+# 104 "npb_egr_deparser.p4"
+        } else if (eg_intr_md_for_dprsr.mirror_type == 3) {
+# 127 "npb_egr_deparser.p4"
+        } else if (eg_intr_md_for_dprsr.mirror_type == 5) {
+# 138 "npb_egr_deparser.p4"
         }
 
     }
@@ -16106,15 +15583,33 @@ control SwitchEgressDeparser(
 
  EgressMirror() mirror;
 
-
+    Checksum() ipv4_checksum_transport;
 
     Checksum() ipv4_checksum_outer;
 
     apply {
   mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);
-# 103 "npb_egr_deparser.p4"
-        if (hdr.outer.ipv4.isValid()) {
 
+
+        if (hdr.transport.ipv4.isValid()) {
+            hdr.transport.ipv4.hdr_checksum = ipv4_checksum_transport.update({
+                hdr.transport.ipv4.version,
+                hdr.transport.ipv4.ihl,
+                hdr.transport.ipv4.tos,
+                hdr.transport.ipv4.total_len,
+                hdr.transport.ipv4.identification,
+                hdr.transport.ipv4.flags,
+                hdr.transport.ipv4.frag_offset,
+                hdr.transport.ipv4.ttl,
+                hdr.transport.ipv4.protocol,
+                hdr.transport.ipv4.src_addr,
+                hdr.transport.ipv4.dst_addr});
+        }
+
+
+
+/*
+        if (hdr.outer.ipv4.isValid()) {
             hdr.outer.ipv4.hdr_checksum = ipv4_checksum_outer.update({
                     hdr.outer.ipv4.version,
                     hdr.outer.ipv4.ihl,
@@ -16128,13 +15623,25 @@ control SwitchEgressDeparser(
                     hdr.outer.ipv4.src_addr,
                     hdr.outer.ipv4.dst_addr});
         }
+*/
 
 
         // ***** TRANSPORT *****
         pkt.emit(hdr.transport.ethernet);
         pkt.emit(hdr.transport.vlan_tag);
         pkt.emit(hdr.transport.nsh_type1);
-# 143 "npb_egr_deparser.p4"
+
+
+        pkt.emit(hdr.transport.ipv4);
+
+
+
+
+
+
+
+        pkt.emit(hdr.transport.gre);
+# 219 "npb_egr_deparser.p4"
         // ***** OUTER *****
         pkt.emit(hdr.outer.ethernet);
 
@@ -16174,8 +15681,16 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.outer.gtp_v1_optional);
 
         pkt.emit(hdr.outer.dtel); // Egress only.
+
+
+
+
+
+
+
         pkt.emit(hdr.outer.dtel_report); // Egress only.
         pkt.emit(hdr.outer.dtel_switch_local_report); // Egress only.
+
         pkt.emit(hdr.outer.dtel_drop_report); // Egress only.
 
         // ***** INNER *****
@@ -16190,6 +15705,7 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.inner.sctp);
 
         pkt.emit(hdr.inner.gre);
+        pkt.emit(hdr.inner.gre_optional);
 
 
         pkt.emit(hdr.inner.gtp_v1_base);
@@ -16198,7 +15714,7 @@ control SwitchEgressDeparser(
 
     }
 }
-# 65 "npb.p4" 2
+# 63 "npb.p4" 2
 
 
 # 1 "npb_ing_hdr_stack_counters.p4" 1
@@ -16213,7 +15729,7 @@ control IngressHdrStackCounters(
     DirectCounter<bit<32>>(CounterType_t.PACKETS) outer_stack_hdr_cntrs;
     DirectCounter<bit<32>>(CounterType_t.PACKETS) inner_stack_hdr_cntrs;
 
-    DirectCounter<bit<32>>(CounterType_t.PACKETS) udf_hdr_cntrs;
+
 
 
 
@@ -16232,6 +15748,7 @@ control IngressHdrStackCounters(
     bool hdr_inner_gtp_v1_base_isValid;
     bool hdr_inner_gtp_v1_optional_isValid;
     bool hdr_inner_gre_isValid;
+    bool hdr_inner_gre_optional_isValid;
 
 
 
@@ -16398,12 +15915,8 @@ control IngressHdrStackCounters(
             hdr.outer.vlan_tag[1].isValid(): exact;
 
             hdr.outer.ipv4.isValid(): exact;
-#if REMOVE_PHV_ALLOC_XFAIL
-            hdr.outer.ipv6.isValid(): exact;
-#else
-#warning REMOVE_PHV_ALLOC_XFAIL not enabled
             hdr_outer_ipv6_isValid: exact;
-#endif
+
             hdr.outer.udp.isValid(): exact;
             hdr.outer.tcp.isValid(): exact;
             hdr.outer.sctp.isValid(): exact;
@@ -16724,17 +16237,17 @@ control IngressHdrStackCounters(
 // VXLAN  NVGRE  ETAG  VNTAG
 //   1      1      1     0
 //   1      1      0     1
-# 747 "npb_ing_hdr_stack_counters.p4"
+# 748 "npb_ing_hdr_stack_counters.p4"
 // VXLAN  NVGRE  ETAG  VNTAG
 //   1      0      1     1
 //   0      1      1     1        
-# 1041 "npb_ing_hdr_stack_counters.p4"
+# 1042 "npb_ing_hdr_stack_counters.p4"
 // VXLAN  NVGRE  ETAG  VNTAG
 //   1      0      1     0
 //   1      0      0     1
 //   0      1      1     0
 //   0      1      0     1
-# 1276 "npb_ing_hdr_stack_counters.p4"
+# 1277 "npb_ing_hdr_stack_counters.p4"
     }
 
 
@@ -16761,6 +16274,7 @@ control IngressHdrStackCounters(
 
 
             hdr.inner.gre.isValid(): exact;
+            hdr.inner.gre_optional.isValid(): exact;
 
 
             hdr.inner.gtp_v1_base.isValid(): exact;
@@ -16778,132 +16292,105 @@ control IngressHdrStackCounters(
 
 
 
-        size = 45; // Was 47 prior to removing arp
+        size = 51; // Was 45 prior to addnig gre optional
         // todo: does setting this as default option give us an "unexpected counter"
         // const default_action = bump_inner_stack_hdr_cntr;
         // Cannot have constant entries if we're going to clear counters in our test.
         // const entries = {
         // 
-        //     //enet   vlan0  ipv4   ipv6   udp    tcp    sctp   gre    gtp_v1 gtp_v1_opt
-        // 
-        //     // None (invalid)
-        //     ( false, false, false, false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2
-        //     ( true,  false, false, false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3
-        //     ( true,  false, true,  false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3 / UDP
-        //     ( true,  false, true,  false, true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3 / TCP
-        //     ( true,  false, true,  false, false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3 / SCTP
-        //     ( true,  false, true,  false, false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3 / GRE
-        //     ( true,  false, true,  false, false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3 / UDP / GTP-U
-        //     ( true,  false, true,  false, true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L2 / L3 / UDP / GTP-U w/ Sequence Number
-        //     ( true,  false, true,  false, true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  true,  false, true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        //     ( true,  false, false, true,  true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        //     ( true,  true,  false, true,  true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3
-        //     ( false, false, true,  false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3 / UDP
-        //     ( false, false, true,  false, true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3 / TCP
-        //     ( false, false, true,  false, false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3 / SCTP
-        //     ( false, false, true,  false, false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3 / GRE
-        //     ( false, false, true,  false, false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3 / UDP / GTP-U
-        //     ( false, false, true,  false, true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        // 
-        //     // L3 / UDP / GTP-U w/ Sequence Number
-        //     ( false, false, true,  false, true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        //     ( false, false, false, true,  true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
+        //     //enet   vlan0  ipv4   ipv6   udp    tcp    sctp   gre    gre_opt gtp_v1 gtp_v1_opt
+        //                                                                      
+        //     // None (invalid)                                                
+        //     ( false, false, false, false, false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2                                                             
+        //     ( true,  false, false, false, false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, false, false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3                                                        
+        //     ( true,  false, true,  false, false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / UDP                                                  
+        //     ( true,  false, true,  false, true,  false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, true,  false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  true,  false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  true,  false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / TCP                                                  
+        //     ( true,  false, true,  false, false, true,  false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, false, true,  false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  false, true,  false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  false, true,  false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / SCTP                                                 
+        //     ( true,  false, true,  false, false, false, true,  false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, false, false, true,  false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  false, false, true,  false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  false, false, true,  false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / GRE                                                  
+        //     ( true,  false, true,  false, false, false, false, true,  false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, false, false, false, true,  false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  false, false, false, true,  false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  false, false, false, true,  false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / GRE w/ OPTIONAL                                       
+        //     ( true,  false, true,  false, false, false, false, true,  true,   false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, false, false, false, true,  true,   false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  false, false, false, true,  true,   false, false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  false, false, false, true,  true,   false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / UDP / GTP-U                                          
+        //     ( true,  false, true,  false, true,  false, false, false, false,  true,  false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, true,  false, false, false, false,  true,  false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  true,  false, false, false, false,  true,  false ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  true,  false, false, false, false,  true,  false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L2 / L3 / UDP / GTP-U w/ Sequence Number                       
+        //     ( true,  false, true,  false, true,  false, false, false, false,  true,  true  ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  true,  false, true,  false, false, false, false,  true,  true  ): bump_inner_stack_hdr_cntr;
+        //     ( true,  false, false, true,  true,  false, false, false, false,  true,  true  ): bump_inner_stack_hdr_cntr;
+        //     ( true,  true,  false, true,  true,  false, false, false, false,  true,  true  ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3                                                             
+        //     ( false, false, true,  false, false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  false, false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / UDP                                                       
+        //     ( false, false, true,  false, true,  false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  true,  false, false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / TCP                                                       
+        //     ( false, false, true,  false, false, true,  false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  false, true,  false, false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / SCTP                                                      
+        //     ( false, false, true,  false, false, false, true,  false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  false, false, true,  false, false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / GRE                                                       
+        //     ( false, false, true,  false, false, false, false, true,  false,  false, false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  false, false, false, true,  false,  false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / GRE w/ OPTIONAL                                            
+        //     ( false, false, true,  false, false, false, false, true,  true,   false, false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  false, false, false, true,  true,   false, false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / UDP / GTP-U                                               
+        //     ( false, false, true,  false, true,  false, false, false, false,  true,  false ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  true,  false, false, false, false,  true,  false ): bump_inner_stack_hdr_cntr;
+        //                                                                       
+        //     // L3 / UDP / GTP-U w/ Sequence Number                            
+        //     ( false, false, true,  false, true,  false, false, false, false,  true,  true  ): bump_inner_stack_hdr_cntr;
+        //     ( false, false, false, true,  true,  false, false, false, false,  true,  true  ): bump_inner_stack_hdr_cntr;
         // 
         // }
-# 1631 "npb_ing_hdr_stack_counters.p4"
+# 1643 "npb_ing_hdr_stack_counters.p4"
     }
-
-
-
-
-
-    // ------------------------------------------------------------
-    // Layer7 UDF -------------------------------------------------
-    // ------------------------------------------------------------
-
-    action bump_udf_hdr_cntr() {
-        udf_hdr_cntrs.count();
-    }
-
-    table udf_hdr_cntr_tbl {
-        key = {
-            hdr.udf.isValid(): exact;
-        }
-
-        actions = {
-            //NoAction;
-            //bump_transport_stack_unexpected_hdr_cntr;
-            bump_udf_hdr_cntr;
-        }
-
-        size = 2;
-        // todo: does setting this as default option give us an "unexpected counter"
-        // const default_action = bump_udf_hdr_cntr;
-        counters = udf_hdr_cntrs;
-
-//         // Cannot have constant entries if we're going to clear counters in our test.
-//         const entries = {
-//             false: bump_udf_hdr_cntr; 
-//             true:  bump_udf_hdr_cntr; 
-//         }
-    }
-
-
-
+# 1682 "npb_ing_hdr_stack_counters.p4"
     // ------------------------------------------------------------
     // apply ------------------------------------------------------
     // ------------------------------------------------------------
@@ -16949,6 +16436,8 @@ control IngressHdrStackCounters(
 
 
         hdr_inner_gre_isValid = hdr.inner.gre.isValid();
+        hdr_inner_gre_optional_isValid = hdr.inner.gre_optional.isValid();
+
 
 
 
@@ -16963,15 +16452,24 @@ control IngressHdrStackCounters(
         outer_stack_hdr_cntr_tbl.apply();
         inner_stack_hdr_cntr_tbl.apply();
 
-        udf_hdr_cntr_tbl.apply();
+
 
     }
 
 }
-# 68 "npb.p4" 2
+# 66 "npb.p4" 2
 
 
-//@pa_auto_init_metadata
+@pa_auto_init_metadata
+@pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
+@pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
+@pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
+@pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
+@pa_atomic("egress" , "eg_md.bypass")
+@pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
+@pa_container_size("egress" , "protocol_outer_0" , 8)
+@pa_container_size("egress" , "protocol_inner_0" , 8)
+@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -17002,7 +16500,9 @@ control SwitchIngress(
  Ipv4Hash() ipv4_hash;
  Ipv6Hash() ipv6_hash;
  NonIpHash() non_ip_hash;
-   IngressIpAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
+// 	IngressIpAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
+ IngressMirrorMeter() ingress_mirror_meter;
+//	IngressIpDtelSampleAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
  Nexthop(NEXTHOP_TABLE_SIZE, ECMP_GROUP_TABLE_SIZE, ECMP_SELECT_TABLE_SIZE) nexthop;
  OuterFib(OUTER_NEXTHOP_TABLE_SIZE, OUTER_ECMP_GROUP_TABLE_SIZE, OUTER_ECMP_SELECT_TABLE_SIZE) outer_fib;
  LAG() lag;
@@ -17019,14 +16519,14 @@ control SwitchIngress(
 
 
 
-  IngressSetLookup.apply(hdr, ig_md); // set lookup structure fields that parser couldn't        
+  IngressSetLookup.apply(hdr, ig_md); // set lookup structure fields that parser couldn't
 
 
   IngressHdrStackCounters.apply(hdr);
 
 
   // -----------------------------------------------------
-# 142 "npb.p4"
+# 151 "npb.p4"
   ingress_port_mapping.apply(hdr, ig_md, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
 
 //		unicast.apply(hdr.transport, ig_md);
@@ -17063,8 +16563,16 @@ control SwitchIngress(
    );
 
   }
-# 186 "npb.p4"
-  HashMask.apply(ig_md.lkp_1, ig_md.egress_port_lag_hash_sel);
+
+
+  ingress_mirror_meter.apply(ig_md);
+
+
+  // if lag hash masking enabled, move this before the hash
+  nexthop.apply(ig_md);
+  outer_fib.apply(ig_md);
+
+  HashMask.apply(ig_md.lkp_1, ig_md.nsh_md.lag_hash_mask_en);
 
   if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
    non_ip_hash.apply(ig_md.lkp_1, ig_md.hash[31:0]);
@@ -17073,15 +16581,8 @@ control SwitchIngress(
   } else {
    ipv6_hash.apply(ig_md.lkp_1, ig_md.hash[31:0]);
   }
-
-
-  // this code should be removed if lag hash masking ever fits
-  nexthop.apply(ig_md);
-  outer_fib.apply(ig_md);
-
-
-
-
+# 213 "npb.p4"
+  hdr.transport.nsh_type1.lag_hash = ig_md.hash[32 -1:32/2];
 
 
   if (ig_md.egress_port_lag_index == SWITCH_FLOOD) {
@@ -17090,18 +16591,16 @@ control SwitchIngress(
    lag.apply(ig_md, ig_md.hash[32 -1:32/2], ig_intr_md_for_tm.ucast_egress_port);
   }
 
-  IngressCopp.apply(ig_md.copp_enable, ig_md.copp_meter_id, ig_md, ig_intr_md_for_tm);
-
   // Only add bridged metadata if we are NOT bypassing egress pipeline.
   if (ig_intr_md_for_tm.bypass_egress == 1w0) {
    add_bridged_md(hdr.bridged_md, ig_md);
   }
 
-//		ingress_ip_dtel_acl.apply(ig_md, ig_md.unused_nexthop);
-//		dtel.apply(hdr, ig_md.lkp_1, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
+
+
 
   set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-# 234 "npb.p4"
+# 242 "npb.p4"
  }
 }
 
@@ -17122,6 +16621,7 @@ control SwitchEgress(
 
  EgressSetLookup() egress_set_lookup;
  EgressPortMapping(PORT_TABLE_SIZE) egress_port_mapping;
+ EgressMirrorMeter() egress_mirror_meter;
  VlanDecap() vlan_decap;
  Rewrite(NEXTHOP_TABLE_SIZE, BD_TABLE_SIZE) rewrite;
  TunnelEncap(switch_tunnel_mode_t.PIPE) tunnel_encap;
@@ -17137,60 +16637,67 @@ control SwitchEgress(
 
  apply {
 
-  eg_intr_md_for_dprsr.drop_ctl = 0;
-//		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
+//		eg_intr_md_for_dprsr.drop_ctl = 0;
+  eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
 
-  egress_set_lookup.apply(hdr, eg_md); // set lookup structure fields that parser couldn't                
+  egress_set_lookup.apply(hdr, eg_md); // set lookup structure fields that parser couldn't
 
   egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 
-  multicast_replication.apply (
-   hdr.transport,
-   eg_intr_md.egress_rid,
-   eg_intr_md.egress_port,
-   eg_md
-  );
 
 
-
-
-  if((eg_md.flags.rmac_hit == false) && (eg_md.nsh_md.l2_fwd_en == true)) {
-   // do nothing (bridging the packet)
-  } else {
-
-   npb_egr_top.apply (
+  if (eg_md.flags.bypass_egress == false) {
+   multicast_replication.apply (
     hdr.transport,
-    eg_md.tunnel_0,
-    hdr.outer,
-    eg_md.tunnel_1,
-    hdr.inner,
-    eg_md.tunnel_2,
-    hdr.inner_inner,
-
-    eg_md,
-    eg_intr_md,
-    eg_intr_md_from_prsr,
-    eg_intr_md_for_dprsr,
-    eg_intr_md_for_oport
+    eg_intr_md.egress_rid,
+    eg_intr_md.egress_port,
+    eg_md
    );
 
+
+   if((eg_md.flags.rmac_hit == false) && (eg_md.nsh_md.l2_fwd_en == true)) {
+    // do nothing (bridging the packet)
+   } else {
+
+    npb_egr_top.apply (
+     hdr.transport,
+     eg_md.tunnel_0,
+     hdr.outer,
+     eg_md.tunnel_1,
+     hdr.inner,
+     eg_md.tunnel_2,
+     hdr.inner_inner,
+
+     eg_md,
+     eg_intr_md,
+     eg_intr_md_from_prsr,
+     eg_intr_md_for_dprsr,
+     eg_intr_md_for_oport
+    );
+
+   }
+
+
+   egress_mirror_meter.apply(eg_md);
+
+   // ----- nexthop               code: operates on 'outer' ----
+   rewrite.apply(hdr.outer, eg_md, eg_md.tunnel_0);
+//			npb_egr_sf_proxy_hdr_strip.apply(hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
+//			npb_egr_sf_proxy_hdr_edit.apply (hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
+
+   // ---- outer nexthop (tunnel) code: operates on 'transport' ----
+   vlan_decap.apply(hdr.transport, eg_md);
+   tunnel_encap.apply(hdr.transport, hdr.outer, eg_md, eg_md.tunnel_0);
+   tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
+   if (eg_md.tunnel_0.type != SWITCH_TUNNEL_TYPE_NONE) { // derek added this check
+    vlan_xlate.apply(hdr.transport, eg_md);
+   }
+
+
+
+
+
   }
-
-
-  // nexthop -- operates on 'outer'
-  rewrite.apply(hdr.outer, eg_md, eg_md.tunnel_0);
-
-  // outer nexthop (tunnel) -- operates on 'transport'
-  vlan_decap.apply(hdr.transport, eg_md);
-  tunnel_encap.apply(hdr.transport, hdr.outer, eg_md, eg_md.tunnel_0);
-  tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
-  vlan_xlate.apply(hdr.transport, eg_md);
-
-  EgressCopp.apply(eg_md.copp_enable, eg_md.copp_meter_id, eg_md, eg_intr_md_for_dprsr);
-
-//		dtel.apply(hdr, eg_md, eg_intr_md, eg_md.dtel.hash);
-//		dtel_config.apply(hdr, eg_md, eg_intr_md_for_dprsr);
-
   set_eg_intr_md(eg_md, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
 
 

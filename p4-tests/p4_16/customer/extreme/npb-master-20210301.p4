@@ -43,7 +43,7 @@
 // ===== feature defines ====================================
 
 // ----- parser -----
-# 68 "features_t2.p4"
+# 69 "features_t2.p4"
 // ----- switch: mirroring -----
 
 
@@ -95,7 +95,6 @@
 
 
 // ----- bug fixes -----
-
 
 
 
@@ -159,7 +158,7 @@
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-# 194 "table_sizes.p4"
+# 207 "table_sizes.p4"
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -190,9 +189,9 @@ const bit<32> RMAC_TABLE_SIZE = 64;
 const bit<32> MAC_TABLE_SIZE = 1024;
 
 // Tunnels - 4K IPv4 + 1K IPv6
-const bit<32> IPV4_DST_TUNNEL_TABLE_SIZE = 64; // ingress
+const bit<32> IPV4_DST_TUNNEL_TABLE_SIZE = 1024; // ingress
 const bit<32> IPV4_SRC_TUNNEL_TABLE_SIZE = 256; // ingress
-const bit<32> IPV6_DST_TUNNEL_TABLE_SIZE = 64; // ingress
+const bit<32> IPV6_DST_TUNNEL_TABLE_SIZE = 1024; // ingress
 const bit<32> IPV6_SRC_TUNNEL_TABLE_SIZE = 256; // ingress
 
 const bit<32> TUNNEL_SRC_REWRITE_TABLE_SIZE = 512; // egress
@@ -212,9 +211,9 @@ const bit<32> OUTER_ECMP_SELECT_TABLE_SIZE = 16384; // derek: unused; changed ta
 
 // Lag
 const bit<32> LAG_TABLE_SIZE = 1024; // switch.p4 was 1024
-const bit<32> LAG_GROUP_TABLE_SIZE = 16; // switch.p4 was 256
-const bit<32> LAG_MAX_MEMBERS_PER_GROUP = 16; // switch.p4 was 64
-const bit<32> LAG_SELECTOR_TABLE_SIZE = 128; // 256 * 64 // switch.p4 was 16384
+const bit<32> LAG_GROUP_TABLE_SIZE = 32; // switch.p4 was 256
+const bit<32> LAG_MAX_MEMBERS_PER_GROUP = 64; // switch.p4 was 64
+const bit<32> LAG_SELECTOR_TABLE_SIZE = 2048; // 256 * 64 // switch.p4 was 16384
 
 // Ingress ACLs
 const bit<32> INGRESS_MAC_ACL_TABLE_SIZE = 2048; // derek: was told to change this from the 512 in the spec.
@@ -247,33 +246,39 @@ const bit<32> NPB_ING_SFC_TUNNEL_OUTER_TCAM_TABLE_DEPTH = 1024; // was 256;
 const bit<32> NPB_ING_SFC_TUNNEL_INNER_EXM_TABLE_DEPTH = 8192;
 const bit<32> NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH = 256;
 const bit<32> NPB_ING_SFC_SF_SEL_TABLE_DEPTH = 8192; // derek, what size to make this?
+const bit<32> NPB_ING_SFC_SF_SEL_NSH_XLATE_TABLE_DEPTH = 8192; // derek, what size to make this?
 
 // sf #0 -- basic / advanced
-const bit<32> NPB_ING_SF_0_BAS_ADV_ACT_SEL_TABLE_DEPTH = 1024;
+const bit<32> NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH = 1024;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L3_LEN_RNG_TABLE_DEPTH = 128;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_SRC_RNG_TABLE_DEPTH = 128;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH = 128;
 
+// sf #0 - sfp select
+const bit<32> NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH = 128;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE = 64;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE = 32;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP = 32;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE = 1024; // 32 * 32
+
 // sff -- forwards the packets to the sf's, then forwards to the packet along the chain.
-const bit<32> NPB_ING_SFF_FLW_CLS_TABLE_DEPTH = 128;
-const bit<32> NPB_ING_SFF_SCHD_TABLE_SIZE = 64;
-const bit<32> NPB_ING_SFF_SCHD_GROUP_TABLE_SIZE = 32;
-const bit<32> NPB_ING_SFF_SCHD_MAX_MEMBERS_PER_GROUP = 32;
-const bit<32> NPB_ING_SFF_SCHD_SELECTOR_TABLE_SIZE = 1024; // 32 * 32
 const bit<32> NPB_ING_SFF_ARP_TABLE_DEPTH = 8192;
 
 // sf #1 -- replication
-const bit<32> NPB_ING_SF_1_MULTICAST_ACT_SEL_TABLE_DEPTH = 1024;
+const bit<32> NPB_ING_SF_1_MULTICAST_SFF_TABLE_DEPTH = 1024;
 const bit<32> NPB_ING_SF_1_MULTICAST_RID_TABLE_SIZE = 2096;
 
 // sf #2 -- tool proxy
-const bit<32> NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH = 8192;
+const bit<32> NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH = 8192;
 
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L3_LEN_RNG_TABLE_DEPTH= 128;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_SRC_RNG_TABLE_DEPTH= 128;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_DST_RNG_TABLE_DEPTH= 128;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_HDR_STRIP_TABLE_DEPTH = 8; // unused in latest spec
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_TRUNC_TABLE_DEPTH = 8; // unused in latest spec
+
+// sff -- forwards the packets to the sf's, then forwards to the packet along the chain.
+const bit<32> NPB_EGR_SFF_ARP_TABLE_DEPTH = 8192;
 # 41 "npb.p4" 2
 # 1 "headers.p4" 1
 /*******************************************************************************
@@ -393,6 +398,7 @@ header ipv4_h {
     ipv4_addr_t dst_addr;
 }
 
+
 header ipv4_option_h {
     bit<8> type;
     bit<8> length;
@@ -440,6 +446,7 @@ header udp_h {
     bit<16> checksum;
 }
 
+
 header tcp_h {
     bit<16> src_port;
     bit<16> dst_port;
@@ -453,12 +460,14 @@ header tcp_h {
     bit<16> urgent_ptr;
 }
 
+
 header sctp_h {
     bit<16> src_port;
     bit<16> dst_port;
     bit<32> verifTag;
     bit<32> checksum;
 }
+
 
 
 //////////////////////////////////////////////////////////////
@@ -722,7 +731,8 @@ header udf_h {
 
 
 
-
+// min ip-length in order to accomodate full UDF extraction
+# 460 "headers.p4"
 //////////////////////////////////////////////////////////////
 // DTel
 //////////////////////////////////////////////////////////////
@@ -934,7 +944,7 @@ header snoop_enet_cpu_h {
     mac_addr_t enet_dst_addr;
     mac_addr_t enet_src_addr;
     bit<16> enet_ether_type; // lookahead<bit<112>>()[15:0]
-# 667 "headers.p4"
+# 679 "headers.p4"
     bit<5> cpu_egress_queue;
     bit<1> cpu_tx_bypass;
     bit<1> cpu_capture_ts;
@@ -1159,24 +1169,26 @@ const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_L2 = 8w0x01;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_ACL = 8w0x02;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_MCAST = 8w0x04;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFF = 8w0x08;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE = 8w0x10; // derek: used in common ingress and egress code...make sure they have the same value!
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE = 8w0x10;
 
 // Add more ingress bypass flags here.
 
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_ALL = 8w0xff;
 
+//#define INGRESS_BYPASS(t) (false)
 
 typedef bit<8> switch_egress_bypass_t;
 //const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE         = 8w0x01;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SF_ACL = 8w0x02;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SFF = 8w0x04;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE = 8w0x10; // derek: used in common ingress and egress code...make sure they have the same value!
+const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE = 8w0x10;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_MTU = 8w0x80;
 
 // Add more egress bypass flags here.
 
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_ALL = 8w0xff;
 
+//#define EGRESS_BYPASS(t) (false)
 
 // PKT ------------------------------------------------------------------------
 
@@ -1253,9 +1265,19 @@ struct switch_mirror_metadata_t {
     switch_mirror_meter_id_t meter_index;
 }
 
-header switch_port_mirror_metadata_h {
+header switch_port_mirror_metadata_h { // this is a header!
     switch_pkt_src_t src;
     switch_mirror_type_t type;
+    switch_port_padding_t _pad1; // 7  \ 16 total
+    switch_port_t port; // 9  /
+    switch_bd_t bd; // 16
+
+
+
+
+    bit<6> _pad2; // 6  \ 16 total
+    switch_port_lag_index_t port_lag_index; // 10 /
+
     bit<32> timestamp;
 
 
@@ -1263,14 +1285,19 @@ header switch_port_mirror_metadata_h {
     switch_mirror_session_t session_id;
 }
 
-header switch_cpu_mirror_metadata_h {
+header switch_cpu_mirror_metadata_h { // this is a header!
     switch_pkt_src_t src; // 8
     switch_mirror_type_t type; // 8
     switch_port_padding_t _pad1; // 7  \ 16 total
     switch_port_t port; // 9  /
     switch_bd_t bd; // 16
+
+
+
+
     bit<6> _pad2; // 6  \ 16 total
     switch_port_lag_index_t port_lag_index; // 10 /
+
     switch_cpu_reason_t reason_code; // 16
 }
 
@@ -1290,6 +1317,7 @@ const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_ERSPAN = 7;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GRE = 8;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_VLAN = 9;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_MPLS = 10;
+const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_UNSUPPORTED = 11;
 
 //#ifndef switch_tunnel_index_width
 //#define switch_tunnel_index_width 16
@@ -1303,25 +1331,26 @@ typedef bit<32> switch_tunnel_id_t;
 //	bool ipv6_isValid;
 //}
 
-struct switch_tunnel_metadata_t {
+struct switch_tunnel_metadata_t { // for transport
  // note: in addition to tunnel stuff, this structure serves as a catch-all for all non-scoped signals (tunnel related or not)
  // --------------------------------
-    switch_tunnel_type_t type;
-    switch_tunnel_id_t id;
-
     switch_tunnel_index_t index;
- bit<8> nvgre_flow_id;
+    switch_tunnel_id_t id;
 //  switch_ifindex_t ifindex;
 //  bit<16> hash;
+
+    switch_tunnel_type_t type; // only used by egress encap code (parser does not set)
+
+ bit<8> nvgre_flow_id;
 
  bool terminate;
  bool encap;
 }
 
-struct switch_tunnel_metadata_reduced_t {
+struct switch_tunnel_metadata_reduced_t { // for outer and inner
  // note: in addition to tunnel stuff, this structure serves as a catch-all for all non-scoped signals (tunnel related or not)
  // --------------------------------
- switch_tunnel_type_t type;
+//	switch_tunnel_type_t type; // not used (parser does not set)
 
  bit<8> nvgre_flow_id;
  bool terminate;
@@ -1495,20 +1524,19 @@ struct switch_ingress_flags_t {
     bool ipv4_checksum_err_1;
     bool ipv4_checksum_err_2;
     //  bool acl_deny;
-    bool port_vlan_miss;
+//  bool port_vlan_miss;
     bool rmac_hit;
- bool dmac_miss;
-    //  bool glean;
+//	bool dmac_miss;
+//  bool glean;
+ bool bypass_egress;
     // Add more flags here.
-
-
-
 }
 
 struct switch_egress_flags_t {
-    bool ipv4_checksum_err_0;
-    bool ipv4_checksum_err_1;
-    bool ipv4_checksum_err_2;
+ bool bypass_egress;
+//  bool ipv4_checksum_err_0;
+//  bool ipv4_checksum_err_1;
+//  bool ipv4_checksum_err_2;
 //  bool acl_deny;
     bool rmac_hit;
     // Add more flags here.
@@ -1561,6 +1589,8 @@ struct switch_lookup_fields_t {
     switch_tunnel_type_t tunnel_outer_type; // egress only
     switch_tunnel_type_t tunnel_inner_type; // egress only
 
+ // misc
+ bool next_lyr_valid;
     switch_drop_reason_t drop_reason;
 }
 
@@ -1573,23 +1603,27 @@ struct switch_lookup_fields_t {
 struct switch_bridged_metadata_t {
     // user-defined metadata carried over from ingress to egress.
     switch_port_t ingress_port;
+
+
+
     switch_port_lag_index_t ingress_port_lag_index;
+
     switch_bd_t ingress_bd;
     switch_nexthop_t nexthop;
 //  switch_pkt_type_t pkt_type;
  switch_cpu_reason_t cpu_reason;
 //  bit<48> timestamp;
  bool rmac_hit;
+ bool bypass_egress;
 
     // Add more fields here.
-
 }
 
 // ----------------------------------------
 
 @flexible
 struct switch_bridged_metadata_acl_extension_t {
-# 659 "types.p4"
+# 683 "types.p4"
     bit<8> tcp_flags;
 
 }
@@ -1603,7 +1637,7 @@ struct switch_bridged_metadata_tunnel_extension_t {
 //  bit<16> hash;
 
 //  bool terminate;
-    bool terminate_0; // unused, but removing causes a compiler error
+//  bool terminate_0; // unused, but removing causes a compiler error
 //  bool terminate_1;
 //  bool terminate_2;
 }
@@ -1633,7 +1667,7 @@ struct switch_bridged_metadata_nsh_extension_t {
 }
 
 // ----------------------------------------
-# 725 "types.p4"
+# 749 "types.p4"
 // ----------------------------------------
 
 typedef bit<8> switch_bridge_type_t;
@@ -1686,9 +1720,7 @@ struct switch_port_metadata_t {
 
 @pa_container_size("ingress", "ig_md.mirror.src", 8)
 @pa_container_size("ingress", "ig_md.mirror.type", 8)
-@pa_container_size("egress", "eg_md.nsh_md.l2_fwd_en", 32)
-@pa_container_size("ingress", "smac_src_move", 16)
-@pa_container_size("egress", "eg_md.nsh_md.dsap", 16)
+//@pa_container_size("ingress", "smac_src_move", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 
 @pa_alias("ingress", "ig_md.multicast.id", "ig_intr_md_for_tm.mcast_grp_b")
@@ -1711,7 +1743,7 @@ struct switch_ingress_metadata_t {
 //  bool acl_redirect;
  switch_nexthop_t unused_nexthop;
 
-//  bit<48> timestamp;
+    bit<48> timestamp;
     bit<32> hash;
 //  bit<32> hash_nsh;
 
@@ -1721,9 +1753,9 @@ struct switch_ingress_metadata_t {
 
  switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason;
-    switch_drop_reason_t drop_reason_0;
-    switch_drop_reason_t drop_reason_1;
-    switch_drop_reason_t drop_reason_2;
+//  switch_drop_reason_t drop_reason_0;
+//  switch_drop_reason_t drop_reason_1;
+//  switch_drop_reason_t drop_reason_2;
 
     switch_lookup_fields_t lkp_0;
     switch_lookup_fields_t lkp_1; // initially non-scoped, later scoped, version of fields
@@ -1741,8 +1773,8 @@ struct switch_ingress_metadata_t {
 
     nsh_metadata_t nsh_md;
 
- bool copp_enable;
- switch_copp_meter_id_t copp_meter_id;
+//	bool copp_enable;
+//	switch_copp_meter_id_t copp_meter_id;
 
 //	switch_header_inner_inner_t inner_inner;
 }
@@ -1754,7 +1786,6 @@ struct switch_ingress_metadata_t {
 @pa_container_size("egress", "eg_md.mirror.src", 8)
 @pa_container_size("egress", "eg_md.mirror.type", 8)
 
-@pa_atomic("egress", "eg_md.bypass")
 
 
 
@@ -1766,6 +1797,9 @@ struct switch_egress_metadata_t {
 
     switch_port_lag_index_t port_lag_index; /* egress port/lag index */
     switch_port_t port; /* Mutable copy of egress port */
+
+
+
     switch_port_t ingress_port; /* ingress port */
     switch_bd_t bd;
     switch_nexthop_t nexthop;
@@ -1784,9 +1818,9 @@ struct switch_egress_metadata_t {
 
  switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason;
-    switch_drop_reason_t drop_reason_0;
-    switch_drop_reason_t drop_reason_1;
-    switch_drop_reason_t drop_reason_2;
+//  switch_drop_reason_t drop_reason_0;
+//  switch_drop_reason_t drop_reason_1;
+//  switch_drop_reason_t drop_reason_2;
 
     switch_lookup_fields_t lkp_1; //     scoped version of fields
 //  switch_tunnel_type_t   lkp_1_tunnel_outer_type;
@@ -1800,13 +1834,13 @@ struct switch_egress_metadata_t {
 
     nsh_metadata_t nsh_md;
 
- bool copp_enable;
- switch_copp_meter_id_t copp_meter_id;
+//	bool copp_enable;
+//	switch_copp_meter_id_t copp_meter_id;
 
-//  bit<6>                                              action_bitmask;
-//  bit<NPB_EGR_SF_EGRESS_SFP_ACT_SEL_TABLE_DEPTH_POW2> action_3_meter_id;
-//  bit<10>                                             action_3_meter_id;
-//  bit<8>                                              action_3_meter_overhead;
+//  bit<6>                                          action_bitmask;
+//  bit<NPB_EGR_SF_EGRESS_SFP_SFF_TABLE_DEPTH_POW2> action_3_meter_id;
+//  bit<10>                                         action_3_meter_id;
+//  bit<8>                                          action_3_meter_overhead;
 
 //	switch_header_inner_inner_t inner_inner;
 }
@@ -1886,7 +1920,7 @@ struct switch_header_outer_t {
 
     gtp_v1_base_h gtp_v1_base;
     gtp_v1_optional_h gtp_v1_optional;
-# 985 "types.p4"
+# 1012 "types.p4"
     dtel_report_v05_h dtel;
     dtel_report_base_h dtel_report;
     dtel_switch_local_report_h dtel_switch_local_report;
@@ -2036,8 +2070,8 @@ control HashMask(
 //		if(lkp_1_hash_mask_en[0:0] == 1) { lkp_1.mac_type     = 0; }
 //		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_src_addr = 0; }
 //		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_dst_addr = 0; }
-//		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_src_addr  = 0; }
-//		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_dst_addr  = 0; }
+  if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_src_addr = 0; }
+  if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_dst_addr = 0; }
   if(lkp_1_hash_mask_en[3:3] == 1) { lkp_1.ip_proto = 0; }
   if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_src_port = 0; }
   if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_dst_port = 0; }
@@ -2114,13 +2148,18 @@ action add_bridged_md(
  bridged_md.src = SWITCH_PKT_SRC_BRIDGED;
  bridged_md.base = {
   ig_md.port,
+
+
+
   ig_md.port_lag_index,
+
   ig_md.bd,
   ig_md.nexthop,
 //		ig_md.lkp.pkt_type,
   ig_md.cpu_reason,
 //		ig_md.timestamp,
-  ig_md.flags.rmac_hit
+  ig_md.flags.rmac_hit,
+  ig_md.flags.bypass_egress
  };
 
  bridged_md.nsh = {
@@ -2135,14 +2174,14 @@ action add_bridged_md(
 
  bridged_md.tunnel = {
   ig_md.tunnel_0.index,
-  ig_md.outer_nexthop,
+  ig_md.outer_nexthop
 //		ig_md.hash[15:0],
 
-  ig_md.tunnel_0.terminate // unused, but removing causes a compiler error
+//		ig_md.tunnel_0.terminate // unused, but removing causes a compiler error
 //		ig_md.tunnel_1.terminate,
 //		ig_md.tunnel_2.terminate
  };
-# 155 "util.p4"
+# 160 "util.p4"
 }
 
 // -----------------------------------------------------------------------------
@@ -2162,11 +2201,11 @@ action set_ig_intr_md(
  hash = ig_md.hash[32/2+12:32/2]; // cap  at 13 bits
 
 
-//  ig_intr_md_for_tm.level1_mcast_hash = ig_md.hash[12:0];
+//	ig_intr_md_for_tm.level1_mcast_hash = ig_md.hash[12:0];
 //	ig_intr_md_for_tm.level2_mcast_hash = ig_md.hash[28:16];
  ig_intr_md_for_tm.level2_mcast_hash = hash;
 
-//    ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
+//	ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
 
 
 
@@ -2271,7 +2310,6 @@ action set_eg_intr_md(
 
 control Scoper(
   in switch_lookup_fields_t lkp_in,
-  in switch_drop_reason_t drop_reason,
 
   inout switch_lookup_fields_t lkp
 ) {
@@ -2309,10 +2347,15 @@ control Scoper(
   // tunnel
   lkp.tunnel_type = lkp_in.tunnel_type;
   lkp.tunnel_id = lkp_in.tunnel_id;
-  lkp.tunnel_outer_type = lkp_in.tunnel_outer_type;
-  lkp.tunnel_inner_type = lkp_in.tunnel_inner_type;
 
-  lkp.drop_reason = lkp_in.drop_reason;
+
+  // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
+  lkp.tunnel_outer_type = lkp_in.tunnel_outer_type; // egress only
+  lkp.tunnel_inner_type = lkp_in.tunnel_inner_type; // egress only
+
+
+  // misc
+  lkp.next_lyr_valid = lkp_in.next_lyr_valid;
 
  }
 }
@@ -2426,7 +2469,7 @@ control ScoperOuter(
    (true, false, false, true, true ): scope_l2_2tags();
    (true, true, false, true, true ): scope_l2_2tags();
    (true, false, true, true, true ): scope_l2_2tags();
-# 225 "scoper.p4"
+# 229 "scoper.p4"
         }
  }
 
@@ -2586,7 +2629,7 @@ control ScoperOuter(
    (false, true, false, true, false): scope_l3_v6_l4_udp();
    (true, false, false, false, true ): scope_l3_v4_l4_sctp();
    (false, true, false, false, true ): scope_l3_v6_l4_sctp();
-# 392 "scoper.p4"
+# 396 "scoper.p4"
   }
  }
 
@@ -3135,7 +3178,7 @@ control ScoperInner(
 
    (true, false, false, true, false, false, true ): scope_l2_0tag_l3_v6_l4_sctp();
    (true, true, false, true, false, false, true ): scope_l2_1tag_l3_v6_l4_sctp();
-# 958 "scoper.p4"
+# 962 "scoper.p4"
   }
  }
 
@@ -3252,23 +3295,160 @@ control Scoper_l7(
 }
 */
 # 27 "acl.p4" 2
+# 1 "copp.p4" 1
+
+
+
+// -----------------------------------------------------------------------------
+// Ingress COPP
+// -----------------------------------------------------------------------------
+
+control IngressCopp (
+ in switch_copp_meter_id_t copp_meter_id,
+
+ inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+) (
+) {
+
+
+
+ //-------------------------------------------------------------
+
+ Meter<bit<8>>(1 << 8, MeterType_t.PACKETS) copp_meter;
+
+ action meter_index(switch_copp_meter_id_t index) {
+  ig_intr_md_for_tm.packet_color = (bit<2>) copp_meter.execute(index);
+ }
+
+ //-------------------------------------------------------------
+
+ DirectCounter<bit<32>>(CounterType_t.PACKETS) copp_stats;
+
+ action copp_drop() {
+  ig_intr_md_for_tm.copy_to_cpu = 1w0;
+  copp_stats.count();
+ }
+
+ action copp_permit() {
+  copp_stats.count();
+ }
+
+ table copp {
+  key = {
+   ig_intr_md_for_tm.packet_color : ternary;
+   copp_meter_id : ternary @name("copp_meter_id");
+  }
+
+  actions = {
+   copp_permit;
+   copp_drop;
+  }
+
+  const default_action = copp_permit;
+  size = (1 << 8 + 1);
+  counters = copp_stats;
+ }
+
+
+
+ //-------------------------------------------------------------
+
+ apply {
+
+
+  // apply the meter, then process the result
+  meter_index(copp_meter_id);
+  copp.apply();
+
+
+ }
+
+}
+
+// -----------------------------------------------------------------------------
+// Egress COPP
+// -----------------------------------------------------------------------------
+
+control EgressCopp (
+ in switch_copp_meter_id_t copp_meter_id,
+
+ inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr
+) (
+) {
+
+
+
+ switch_pkt_color_t copp_color;
+
+ //-------------------------------------------------------------
+
+ Meter<bit<8>>(1 << 8, MeterType_t.PACKETS) copp_meter;
+
+ action meter_index(switch_copp_meter_id_t index) {
+  copp_color = (bit<2>) copp_meter.execute(index);
+ }
+
+ //-------------------------------------------------------------
+
+ DirectCounter<bit<32>>(CounterType_t.PACKETS) copp_stats;
+
+ action copp_drop() {
+  eg_intr_md_for_dprsr.mirror_type = 0;
+  copp_stats.count();
+ }
+
+ action copp_permit() {
+  copp_stats.count();
+ }
+
+ table copp {
+  key = {
+   copp_color : exact;
+   copp_meter_id : exact;
+  }
+
+  actions = {
+   copp_permit;
+   copp_drop;
+  }
+
+  const default_action = copp_permit;
+  size = (1 << 8 + 1);
+  counters = copp_stats;
+ }
+
+
+
+ //-------------------------------------------------------------
+
+ apply {
+
+
+  // apply the meter, then process the result
+  meter_index(copp_meter_id);
+  copp.apply();
+
+
+ }
+}
+# 28 "acl.p4" 2
 
 //-----------------------------------------------------------------------------
 // Common Ingress ACL match keys and Actions
 //-----------------------------------------------------------------------------
-# 107 "acl.p4"
+# 108 "acl.p4"
 //-----------------------------------------------------------------------------
 // Common Egress ACL match keys and Actions
 //-----------------------------------------------------------------------------
-# 175 "acl.p4"
+# 176 "acl.p4"
 //-----------------------------------------------------------------------------
 // Common Ingress ACL actions.
 //-----------------------------------------------------------------------------
-# 229 "acl.p4"
+# 233 "acl.p4"
 //-----------------------------------------------------------------------------
 // Common Egress ACL actions.
 //-----------------------------------------------------------------------------
-# 283 "acl.p4"
+# 289 "acl.p4"
 // ============================================================================
 // ============================================================================
 // Ingress ACL ================================================================
@@ -3303,13 +3483,14 @@ control IngressMacAcl(
  inout switch_copp_meter_id_t copp_meter_id_,
  inout bit<8> flow_class_,
  inout bool dtel_report_type_enable_,
- inout switch_dtel_report_type_t dtel_report_type_
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3369,13 +3550,14 @@ control IngressIpAcl(
  inout switch_copp_meter_id_t copp_meter_id_,
  inout bit<8> flow_class_,
  inout bool dtel_report_type_enable_,
- inout switch_dtel_report_type_t dtel_report_type_
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3469,13 +3651,14 @@ control IngressIpv4Acl(
  inout switch_copp_meter_id_t copp_meter_id_,
  inout bit<8> flow_class_,
  inout bool dtel_report_type_enable_,
- inout switch_dtel_report_type_t dtel_report_type_
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3572,13 +3755,14 @@ control IngressIpv6Acl(
  inout switch_copp_meter_id_t copp_meter_id_,
  inout bit<8> flow_class_,
  inout bool dtel_report_type_enable_,
- inout switch_dtel_report_type_t dtel_report_type_
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3677,13 +3861,14 @@ control IngressL7Acl(
  inout switch_copp_meter_id_t copp_meter_id_,
  inout bit<8> flow_class_,
  inout bool dtel_report_type_enable_,
- inout switch_dtel_report_type_t dtel_report_type_
+ inout switch_dtel_report_type_t dtel_report_type_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
- action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit ( bool drop, bool terminate, bool scope, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool sfc_enable, bit<12> sfc, bit<8> flow_class, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; scope_ = scope; ig_md.nsh_md.truncate_enable= truncate_enable; ig_md.nsh_md.truncate_len = truncate_len; ig_md.nsh_md.dedup_en = dedup_en; ig_md.nsh_md.sfc_enable = sfc_enable; ig_md.nsh_md.sfc = sfc; flow_class_ = flow_class; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -3767,6 +3952,11 @@ control IngressAcl(
 
 
 
+//	Counter<bit<32>, PortId_t>(512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+ Counter<bit<32>, bit<15>>(32768, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+
  switch_nexthop_t nexthop;
  bool drop;
  bool terminate;
@@ -3778,6 +3968,7 @@ control IngressAcl(
  switch_copp_meter_id_t copp_meter_id;
  bit<8> flow_class;
  switch_dtel_report_type_t dtel_report_type;
+ bit<6> indirect_counter_index;
 
  // -------------------------------------
  // Table: Scope Increment
@@ -3856,11 +4047,12 @@ control IngressAcl(
    terminate,
    scope,
    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
-   dtel_report_type_enable, dtel_report_type
+   dtel_report_type_enable, dtel_report_type,
+   indirect_counter_index
   );
 
   // ----- l3/4 -----
-# 895 "acl.p4"
+# 914 "acl.p4"
   if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
 
    ipv6_acl.apply(
@@ -3878,7 +4070,8 @@ control IngressAcl(
     terminate,
     scope,
     copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
-    dtel_report_type_enable, dtel_report_type
+    dtel_report_type_enable, dtel_report_type,
+    indirect_counter_index
    );
 
   } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
@@ -3897,13 +4090,14 @@ control IngressAcl(
     terminate,
     scope,
     copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
-    dtel_report_type_enable, dtel_report_type
+    dtel_report_type_enable, dtel_report_type,
+    indirect_counter_index
    );
   }
 
 
   // ----- l7 -----
-# 960 "acl.p4"
+# 982 "acl.p4"
   // --------------
   // results
   // --------------
@@ -3916,45 +4110,48 @@ control IngressAcl(
 
   // note: terminate + !scope is an illegal condition
 
-  // ----- terminate -----
+  if(lkp.next_lyr_valid == true) {
 
-  if(terminate == true) {
-   ig_md.tunnel_1.terminate = true;
-   if(hdr_0.nsh_type1.scope == 1) {
-    ig_md.tunnel_2.terminate = true;
-   }
-  }
+   // ----- terminate -----
 
-  // ----- scope -----
-
-
-  if(scope == true) {
-   if(hdr_0.nsh_type1.scope == 0) {
-
-    // note: need to change scope here so that the lag
-    // hash gets the new values....
-
-
-    Scoper.apply(
-     ig_md.lkp_2,
-     ig_md.drop_reason_2,
-
-     ig_md.lkp_1
-    );
-# 1007 "acl.p4"
-//				ig_md.nsh_md.hash_1 = ig_md.nsh_md.hash_2;
+   if(terminate == true) {
+    ig_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     ig_md.tunnel_2.terminate = true;
+    }
    }
 
-   hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
-//			scope_inc.apply();
-  }
+   // ----- scope -----
 
+
+   if(scope == true) {
+    if(hdr_0.nsh_type1.scope == 0) {
+
+     // note: need to change scope here so that the lag
+     // hash gets the new values....
+
+
+     Scoper.apply(
+      ig_md.lkp_2,
+//						ig_md.drop_reason_2,
+
+      ig_md.lkp_1
+     );
+# 1031 "acl.p4"
+//					ig_md.nsh_md.hash_1 = ig_md.nsh_md.hash_2;
+    }
+
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+//				scope_inc.apply();
+   }
+
+  }
 
   // ----- truncate -----
 
   if(ig_md.nsh_md.truncate_enable) {
 
-   ig_intr_md_for_dprsr.mtu_trunc_len = ig_md.nsh_md.truncate_len + 42;
+   ig_intr_md_for_dprsr.mtu_trunc_len = ig_md.nsh_md.truncate_len + 43;
 
   }
 
@@ -3967,9 +4164,11 @@ control IngressAcl(
    copy_to_cpu_process_results(cpu_reason, copp_meter_id);
   }
 
-  ig_md.copp_enable = copy_to_cpu;
-  ig_md.copp_meter_id = copp_meter_id;
-# 1042 "acl.p4"
+  if((copy_to_cpu == true) || (redirect_to_cpu == true)) {
+   IngressCopp.apply(copp_meter_id, ig_intr_md_for_tm);
+  }
+# 1069 "acl.p4"
+  indirect_counter.count(ig_md.port ++ indirect_counter_index);
  }
 }
 
@@ -4001,13 +4200,14 @@ control EgressMacAcl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4068,13 +4268,14 @@ control EgressIpAcl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 )(
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4168,13 +4369,14 @@ control EgressIpv4Acl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 ) (
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4273,13 +4475,14 @@ control EgressIpv6Acl(
  inout bool copy_to_cpu_,
  inout bool redirect_to_cpu_,
  inout switch_cpu_reason_t cpu_reason_,
- inout switch_copp_meter_id_t copp_meter_id_
+ inout switch_copp_meter_id_t copp_meter_id_,
+ inout bit<6> indirect_counter_index_
 )(
  switch_uint32_t table_size=512
 ) {
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
 
- action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); }
+ action no_action() { stats.count(); } action hit( bool drop, bool terminate, bool strip_tag_e, bool strip_tag_vn, bool strip_tag_vlan, bit<8> add_tag_vlan_bd, bool truncate_enable, bit<14> truncate_len, bool dedup_en, bool terminate_outer, bool terminate_inner, bool copy_to_cpu, bool redirect_to_cpu, switch_cpu_reason_t cpu_reason_code, switch_copp_meter_id_t copp_meter_id, bit<6> indirect_counter_index ) { drop_ = drop; terminate_ = terminate; eg_md.nsh_md.strip_tag_e = strip_tag_e; eg_md.nsh_md.strip_tag_vn = strip_tag_vn; eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan; eg_md.nsh_md.add_tag_vlan_bd= add_tag_vlan_bd; eg_md.nsh_md.truncate_enable= truncate_enable; eg_md.nsh_md.truncate_len = truncate_len; eg_md.nsh_md.dedup_en = dedup_en; eg_md.nsh_md.terminate_outer= terminate_outer; eg_md.nsh_md.terminate_inner= terminate_inner; copy_to_cpu_ = copy_to_cpu; redirect_to_cpu_ = redirect_to_cpu; cpu_reason_ = cpu_reason_code; copp_meter_id_ = copp_meter_id; stats.count(); indirect_counter_index_ = indirect_counter_index; }
 
  table acl {
   key = {
@@ -4394,12 +4597,18 @@ control EgressAcl(
 
  EgressMacAcl(mac_table_size) egress_mac_acl;
 
+//	Counter<bit<32>, PortId_t>(512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+ Counter<bit<32>, bit<15>>(32768, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+//	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+
  bool drop;
  bool terminate;
  bool copy_to_cpu;
  bool redirect_to_cpu;
  switch_cpu_reason_t cpu_reason;
  switch_copp_meter_id_t copp_meter_id;
+ bit<6> indirect_counter_index;
 
  // -------------------------------------
  // Table: Terminate
@@ -4520,11 +4729,12 @@ control EgressAcl(
    // ----- results -----
    drop,
    terminate,
-   copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id
+   copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+   indirect_counter_index
   );
 
   // ----- l3/4 -----
-# 1613 "acl.p4"
+# 1653 "acl.p4"
   if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
 
    egress_ipv6_acl.apply(
@@ -4538,7 +4748,8 @@ control EgressAcl(
     // ----- results -----
     drop,
     terminate,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id
+    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+    indirect_counter_index
    );
 
   } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
@@ -4553,7 +4764,8 @@ control EgressAcl(
     // ----- results -----
     drop,
     terminate,
-    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id
+    copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+    indirect_counter_index
    );
   }
 
@@ -4571,18 +4783,44 @@ control EgressAcl(
   // note: terminate + !scope is an illegal condition
 
   // ----- terminate -----
-
-  // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-  if(terminate || eg_md.nsh_md.terminate_inner) {
-   eg_md.tunnel_1.terminate = true;
+/*
+		if(terminate || eg_md.nsh_md.terminate_inner) {
+			eg_md.tunnel_1.terminate           = true;
+			if(hdr_0.nsh_type1.scope == 1) {
+				eg_md.tunnel_2.terminate           = true;
+			}
+		}
+*/
+  if((eg_md.nsh_md.terminate_inner == true)) {
+   // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
    if(hdr_0.nsh_type1.scope == 1) {
-    eg_md.tunnel_2.terminate = true;
+    eg_md.tunnel_1.terminate = true;
    }
   }
 
-  // ----- scope -----
+  if(lkp.next_lyr_valid == true) {
 
-  // note: don't need to adjust scope here, as nobody else looks at the data after this.
+   // ----- terminate -----
+
+   if(terminate == true) {
+    eg_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     eg_md.tunnel_2.terminate = true;
+    }
+
+   }
+
+   // ----- scope -----
+
+   // since we don't have an explicit 'scope' signal in egress acl, use 'terminate':
+   if(terminate == true) {
+
+    // note: don't need to advance the data here, as nobody else looks at it after this.
+
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+//				scope_inc.apply();
+   }
+  }
 
   // ----- truncate -----
 
@@ -4601,9 +4839,13 @@ control EgressAcl(
    eg_intr_md_for_dprsr.drop_ctl = 0x1;
   }
 
-  eg_md.copp_enable = copy_to_cpu;
-  eg_md.copp_meter_id = copp_meter_id;
+  if((copy_to_cpu == true) || (redirect_to_cpu == true)) {
+   EgressCopp.apply(copp_meter_id, eg_intr_md_for_dprsr);
+  }
 
+
+
+  indirect_counter.count(eg_md.port ++ indirect_counter_index);
  }
 }
 # 26 "l3.p4" 2
@@ -4654,42 +4896,43 @@ control DMAC(
  switch_uint32_t table_size
 ) {
 
- bool copp_enable_;
- switch_copp_meter_id_t copp_meter_id_;
+//	bool copp_enable_;
+//	switch_copp_meter_id_t copp_meter_id_;
 
  //-------------------------------------------------------------
 
- action dmac_miss(bool copp_enable, switch_copp_meter_id_t copp_meter_id) {
+ action dmac_miss(//bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ ) {
   ig_md.egress_port_lag_index = SWITCH_FLOOD;
-  ig_md.flags.dmac_miss = true;
+//		ig_md.flags.dmac_miss = true;
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
- action dmac_hit(switch_port_lag_index_t port_lag_index, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ action dmac_hit(switch_port_lag_index_t port_lag_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
  ) {
   ig_md.egress_port_lag_index = port_lag_index;
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
- action dmac_multicast(switch_mgid_t index, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ action dmac_multicast(switch_mgid_t index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
  ) {
   ig_md.multicast.id = index;
   ig_md.egress_port_lag_index = 0; // derek added
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
- action dmac_redirect(switch_nexthop_t nexthop_index, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+ action dmac_redirect(switch_nexthop_t nexthop_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
  ) {
   ig_md.nexthop = nexthop_index;
 
-  copp_enable_ = copp_enable;
-  copp_meter_id_ = copp_meter_id;
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
  }
 
  table dmac {
@@ -4705,22 +4948,23 @@ control DMAC(
    dmac_redirect;
   }
 
-  const default_action = dmac_miss(false, 0);
+//		const default_action = dmac_miss(false, 0);
+  const default_action = dmac_miss;
   size = table_size;
  }
 
  //-------------------------------------------------------------
 
  apply {
-  ig_md.flags.dmac_miss = false;
+//		ig_md.flags.dmac_miss = false;
 
   if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_L2 != 0)) {
    dmac.apply();
   }
 
 
-  ig_md.copp_enable = copp_enable_;
-        ig_md.copp_meter_id = copp_meter_id_;
+//		ig_md.copp_enable = copp_enable_;
+//      ig_md.copp_meter_id = copp_meter_id_;
 
  }
 }
@@ -4871,7 +5115,7 @@ control VlanXlate(
  action set_vlan_untagged() {
   //NoAction.
  }
-# 281 "l2.p4"
+# 283 "l2.p4"
  action set_vlan_tagged(vlan_id_t vid, bit<3> pcp) {
 
 
@@ -4910,7 +5154,7 @@ control VlanXlate(
   const default_action = set_vlan_untagged;
   size = bd_table_size;
  }
-# 348 "l2.p4"
+# 350 "l2.p4"
  apply {
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0)) {
    if (!port_bd_to_vlan_mapping.apply().hit) {
@@ -5465,16 +5709,12 @@ control Rewrite(inout switch_header_outer_t hdr,
 
   // Should not rewrite packets redirected to CPU.
 
-
-
-
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0)) {
 
 
 
    nexthop_rewrite.apply();
   }
-
 
 //		egress_bd.apply(hdr, eg_md.bd,                          eg_md.pkt_src,
 //			smac_index);
@@ -5487,28 +5727,33 @@ control Rewrite(inout switch_header_outer_t hdr,
 # 24 "port.p4" 2
 
 //-----------------------------------------------------------------------------
-// Ingress Port Mirroring
+// Ingress/Egress Port Mirroring
 //-----------------------------------------------------------------------------
 
 control PortMirror(
   in switch_port_t port,
   in switch_pkt_src_t src,
-  inout switch_mirror_metadata_t mirror_md,
-  in bit<8> cpu_reason_code, // extreme added
-  inout bit<8> cpu_reason // extreme added
-)(
+  inout switch_mirror_metadata_t mirror_md // derek added
+) (
   switch_uint32_t table_size=288
 ) {
 
- action set_mirror_id(switch_mirror_session_t session_id) {
+ action set_mirror_id(
+  switch_mirror_session_t session_id,
+  switch_mirror_meter_id_t meter_index // derek added
+ ) {
   mirror_md.type = 1;
   mirror_md.src = src;
   mirror_md.session_id = session_id;
-  cpu_reason = cpu_reason_code; // extreme added
+
+  mirror_md.meter_index = meter_index; // derek added
+
  }
 
  table port_mirror {
-  key = { port : exact; }
+  key = {
+   port : exact;
+  }
   actions = {
    NoAction;
    set_mirror_id;
@@ -5543,132 +5788,64 @@ control IngressPortMapping(
 
  ActionProfile(bd_table_size) bd_action_profile;
 
- bool valid_cpu;
-
  // ----------------------------------------------
  // Table: Port Mapping
  // ----------------------------------------------
 
  // Helper action:
 
- switch_cpu_reason_t cpu_reason_;
- bool copy_to_cpu_;
- bool redirect_to_cpu_;
- switch_copp_meter_id_t copp_meter_id_;
-
- action copy_to_cpu_process_results(in switch_cpu_reason_t cpu_reason, in switch_copp_meter_id_t copp_meter_id) {
-  ig_intr_md_for_tm.copy_to_cpu = 1w1;
-  ig_md.cpu_reason = cpu_reason;
- }
-
- // --------------------------
-
- // Helper action:
-
  action terminate_cpu_packet() {
+  // ig_md.bypass = (bit<8>) hdr.cpu.reason_code;                                 // Done in parser
+//		ig_md.port = (switch_port_t) hdr.cpu.ingress_port;                              // Done in parser
+//		ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index; // Done in parser
+//		ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue;                    // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
 
-  // ig_md.bypass = hdr.cpu.reason_code;                                             // Done in parser
-  // ig_md.port = (switch_port_t) hdr.cpu.ingress_port;                              // Done in parser
-  // ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index; // Done in parser
-  ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue; // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+//		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;                           // Done in parser
+//		DEREK: This next line should be deleted, but doing so causes us not to fit!?!?  ¯\_('')_/¯
 
   ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass; // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
 
-  // hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;                             // Wants to be done in parser (see bf-case 10933)
 
-  valid_cpu = true;
+//		hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;                             // Wants to be done in parser (see bf-case 10933)
  }
 
  // --------------------------
 
- action set_cpu_port_properties_with_nsh(
-//		switch_port_lag_index_t port_lag_index,
-//		switch_port_lag_label_t port_lag_label,
-  switch_yid_t exclusion_id
-//		switch_qos_trust_mode_t trust_mode,
-//		switch_qos_group_t qos_group,
-//		switch_pkt_color_t color,
-//		switch_tc_t tc
- ) {
-
-//		ig_md.port_lag_index = port_lag_index;
-//		ig_md.port_lag_label = port_lag_label;
-//		ig_md.qos.trust_mode = trust_mode;
-//		ig_md.qos.group = qos_group;
-//		ig_md.qos.color = color;
-//		ig_md.qos.tc = tc;
-  ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-
-  terminate_cpu_packet();
-
- }
-
- action set_cpu_port_properties_without_nsh(
-//		switch_port_lag_index_t port_lag_index,
+ action set_cpu_port_properties(
+  switch_port_lag_index_t port_lag_index,
 //		switch_port_lag_label_t port_lag_label,
   switch_yid_t exclusion_id,
 //		switch_qos_trust_mode_t trust_mode,
 //		switch_qos_group_t qos_group,
 //		switch_pkt_color_t color,
 //		switch_tc_t tc
-
-  bit<16> sap,
-  bit<12> vpn,
-  bit<24> spi,
-  bit<8> si,
-  bit<8> si_predec
+  bool l2_fwd_en
  ) {
 
-//		ig_md.port_lag_index = port_lag_index;
+  ig_md.port_lag_index = port_lag_index;
 //		ig_md.port_lag_label = port_lag_label;
 //		ig_md.qos.trust_mode = trust_mode;
 //		ig_md.qos.group = qos_group;
 //		ig_md.qos.color = color;
 //		ig_md.qos.tc = tc;
   ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
+  ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
 
   terminate_cpu_packet();
-
-  hdr.transport.nsh_type1.sap = (bit<16>)sap; // 16 bits
-  hdr.transport.nsh_type1.vpn = (bit<16>)vpn; // 16 bits
-  hdr.transport.nsh_type1.spi = spi; // 24 bits
-  hdr.transport.nsh_type1.si = si; //  8 bits
-  ig_md.nsh_md.si_predec = si_predec; //  8 bits
 
  }
 
  // --------------------------
 
- action set_port_properties_with_nsh(
-  switch_yid_t exclusion_id
-# 188 "port.p4"
- ) {
-  ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-
-
-
-
-
-
-
- }
-
- action set_port_properties_without_nsh(
+ action set_port_properties(
+  // note: for regular ports, port_lag_index and l2_fwd_en come from the port_metadata table.
   switch_yid_t exclusion_id,
-# 209 "port.p4"
-  bit<16> sap,
-  bit<12> vpn,
-  bit<24> spi,
-  bit<8> si,
-  bit<8> si_predec
+  switch_port_lag_index_t port_lag_index,
+  bool l2_fwd_en
  ) {
   ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-# 224 "port.p4"
-  hdr.transport.nsh_type1.sap = (bit<16>)sap; // 16 bits
-  hdr.transport.nsh_type1.vpn = (bit<16>)vpn; // 16 bits
-  hdr.transport.nsh_type1.spi = spi; // 24 bits
-  hdr.transport.nsh_type1.si = si; //  8 bits
-  ig_md.nsh_md.si_predec = si_predec; //  8 bits
+  ig_md.port_lag_index = port_lag_index;
+  ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
  }
 
  // --------------------------
@@ -5680,17 +5857,14 @@ control IngressPortMapping(
    hdr.cpu.isValid() : exact;
 //			hdr.cpu.ingress_port : exact; // DEREK: IS THIS NEEDED / WHAT IS IT FOR?
 
-   hdr.transport.nsh_type1.isValid() : exact;
   }
 
   actions = {
-   set_port_properties_with_nsh; // {nsh, cpu} = {0, 0}
-   set_port_properties_without_nsh; // {nsh, cpu} = {1, 0}
-   set_cpu_port_properties_with_nsh; // {nsh, cpu} = {0, 1}
-   set_cpu_port_properties_without_nsh; // {nsh, cpu} = {1, 1}
+   set_port_properties;
+   set_cpu_port_properties;
   }
 
-  size = port_table_size * 4; // derek: was 2 in switch, but doubling to 4 because we added nsh valid to it.
+  size = port_table_size * 2;
  }
 
  // ----------------------------------------------
@@ -5777,7 +5951,6 @@ control IngressPortMapping(
  // ----------------------------------------------
 
  apply {
-  valid_cpu = false;
 /*
 		switch (port_mapping.apply().action_run) {
 #ifdef CPU_BD_MAP_ENABLE
@@ -5813,15 +5986,10 @@ control IngressPortMapping(
     }
    }
   }
-# 385 "port.p4"
-  port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror, SWITCH_CPU_REASON_IG_PORT_MIRRROR, ig_md.cpu_reason);
 
 
-  // ----------------------------------------------------------------------
+  port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror);
 
-  // derek: this copy-to-cpu feature was added here, because port mirroring
-  // (above) is not fitting....
-# 400 "port.p4"
  }
 }
 
@@ -5856,12 +6024,18 @@ control LAG(
  // Table: LAG
  // ----------------------------------------------
 
- DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+ bit<4> indirect_counter_index_;
 
+ DirectCounter<bit<32> >(type=CounterType_t.PACKETS_AND_BYTES) stats_in; // direct counter
+# 334 "port.p4"
  action set_lag_port(switch_port_t port) {
-  stats.count();
+
+  stats_in.count();
 
   egress_port = port;
+
+
+
  }
 
 
@@ -5871,7 +6045,7 @@ control LAG(
 
 
  action lag_miss() {
-  stats.count();
+  stats_in.count();
 
  }
 
@@ -5900,7 +6074,7 @@ control LAG(
 
   const default_action = lag_miss;
   size = LAG_TABLE_SIZE;
-  counters = stats;
+  counters = stats_in;
   implementation = lag_selector;
  }
 
@@ -5918,6 +6092,10 @@ control LAG(
                                       ig_md.lkp_1.l4_dst_port,
                                       ig_md.lkp_1.l4_src_port});
   lag.apply();
+
+
+
+
  }
 }
 
@@ -5941,12 +6119,6 @@ control EgressPortMapping(
  // Table: Port Mapping
  // ----------------------------------------------
 
- action port_normal(
-  switch_port_lag_index_t port_lag_index
- ) {
-  eg_md.port_lag_index = port_lag_index;
- }
-
  action cpu_rewrite() {
   // ----- add fabric header -----
 
@@ -5958,27 +6130,33 @@ control EgressPortMapping(
 
   // ----- add cpu header -----
   hdr.cpu.setValid();
-/*
-		hdr.cpu.egress_queue = 0;
-		hdr.cpu.tx_bypass = 0;
-		hdr.cpu.capture_ts = 0;
-		hdr.cpu.reserved = 0;
-*/
+  hdr.cpu.egress_queue = 0;
+  hdr.cpu.tx_bypass = 0;
+  hdr.cpu.capture_ts = 0;
+  hdr.cpu.reserved = 0;
   // Both these line are here instead of parser out due to compiler... "error: Field is
   // extracted in the parser into multiple containers, but the container
   // slices after the first aren't byte aligned"
   hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
+
+
+
   hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
-/*
-		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
-		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
-		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
-*/
+
+  hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
+  hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
+  hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 
 
 
   hdr.outer.ethernet.ether_type = 0x9001;
 
+ }
+
+ action port_normal(
+  switch_port_lag_index_t port_lag_index
+ ) {
+  eg_md.port_lag_index = port_lag_index;
  }
 
  action port_cpu(
@@ -6014,872 +6192,12 @@ control EgressPortMapping(
   port_mapping.apply();
 
 
-  port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror, SWITCH_CPU_REASON_EG_PORT_MIRRROR, eg_md.cpu_reason);
+  port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror);
 
  }
 }
 # 48 "npb.p4" 2
-# 1 "validation.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- ******************************************************************************/
-
-
-
-
-// ============================================================================
-// Transport Validation
-// ============================================================================
-
-control PktValidation(
-        in switch_header_transport_t hdr, // src
-  in bool ipv4_checksum_err, // src
-  in switch_tunnel_metadata_t tunnel, // src
-        inout switch_lookup_fields_t lkp, // dst
-        out switch_drop_reason_t drop_reason // dst
-) {
-
-    const switch_uint32_t table_size = 64;
-
-    // -----------------------------
- // L2
-    // -----------------------------
-
-    action malformed_pkt(bit<8> reason) {
-        drop_reason = reason;
-    }
-
-    action malformed_non_ip_pkt(bit<8> reason) {
-        malformed_pkt(reason);
-    }
-
-    action valid_unicast_pkt_untagged() {
-    }
-
-    action valid_unicast_pkt_tagged() {
-    }
-
-    table validate_ethernet {
-        key = {
-            hdr.ethernet.isValid() : exact;
-            hdr.ethernet.src_addr : ternary;
-            hdr.ethernet.dst_addr : ternary;
-            hdr.vlan_tag[0].isValid() : ternary;
-        }
-
-        actions = {
-            malformed_non_ip_pkt;
-            valid_unicast_pkt_untagged;
-            valid_unicast_pkt_tagged;
-        }
-
-        size = table_size;
-        /* const entries = {
-            (_, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_MULTICAST);
-            (0, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_ZERO);
-            (_, 0, _) : malformed_non_ip_pkt(SWITCH_DROP_DST_MAC_ZERO);
-        } */
-    }
-
-    // -----------------------------
- // L3, v4
-    // -----------------------------
-
-
-    action malformed_ipv4_pkt(bit<8> reason) {
-        // Set common lookup fields just for dtel acl and hash purposes
-        malformed_pkt(reason);
-    }
-
-    action valid_ipv4_pkt(switch_ip_frag_t ip_frag) {
-        // Set common lookup fields
-    }
-
-    table validate_ipv4 {
-        key = {
-            ipv4_checksum_err : ternary;
-            hdr.ipv4.version : ternary;
-            hdr.ipv4.ihl : ternary;
-            hdr.ipv4.flags : ternary;
-            hdr.ipv4.frag_offset : ternary;
-            hdr.ipv4.ttl : ternary;
-            hdr.ipv4.src_addr[31:24] : ternary;
-        }
-
-        actions = {
-            valid_ipv4_pkt;
-            malformed_ipv4_pkt;
-        }
-
-        size = table_size;
-    }
-
-
-// Current encap requirments do not include UDP in the transport stack
-//     // -----------------------------
-// 	// L4
-//     // -----------------------------
-// 
-//     action set_udp_ports() {
-//         lkp.l4_src_port = hdr.udp.src_port;
-//         lkp.l4_dst_port = hdr.udp.dst_port;
-//     }
-// 
-//     // Not much of a validation as it only sets the lookup fields.
-//     table validate_other {
-//         key = {
-//             hdr.udp.isValid() : exact;
-//         }
-// 
-//         actions = {
-// 			NoAction;
-//             set_udp_ports;
-//         }
-// 
-//         const default_action = NoAction;
-//         const entries = {
-// /*
-//             (true, false, false, false, false, false) : set_tcp_ports();
-//             (false, true, false, false, false, false) : set_udp_ports();
-//             (false, false, true, false, false, false) : set_sctp_ports();
-//             (false, false, false, true, false, false) : set_icmp_type();
-//             (false, false, false, false, true, false) : set_igmp_type();
-//             (false, false, false, false, false, true) : set_arp_opcode();
-// */
-//             (true) : set_udp_ports();
-//         }
-//     }
-// 
-// 
-//     // -----------------------------
-// 	   // L4
-//     // -----------------------------
-// 
-//     action set_udp_ports() {
-//     }
-// 
-//     // Not much of a validation as it only sets the lookup fields.
-//     table validate_other {
-//         key = {
-//             hdr.udp.isValid() : exact;
-//         }
-// 
-//         actions = {
-// 			NoAction;
-//             set_udp_ports;
-//         }
-// 
-//         const default_action = NoAction;
-//         const entries = {
-//             (true) : set_udp_ports();
-//         }
-//     }
-
-    // -----------------------------
-    // TUNNEL
-    // -----------------------------
-
-    action validate_tunnel_none() {
-    }
-
-    action validate_tunnel_vlan() {
-    }
-
-    action validate_tunnel_vni() {
-    }
-
-    table validate_tunnel {
-        key = {
-            tunnel.type : ternary;
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid: ternary;
-        }
-        actions = {
-            validate_tunnel_vni;
-            validate_tunnel_vlan;
-            validate_tunnel_none;
-        }
-        const entries = {
-   // highest -> lowest priority in tcam
-            (0, true, 0): validate_tunnel_none(); // tag has priority only
-            (0, true, _): validate_tunnel_vlan(); // tag has priority and vlan
-            (_, true, _): validate_tunnel_vni();
-            (_, false, _): validate_tunnel_vni();
-            (0, false, _): validate_tunnel_none();
-        }
-
-    }
-
-    // -------------------------------------
-    // Extreme Networks - Added
-    // -------------------------------------
-
-    // Validate Extreme NSH underlay header.
-    //
-    // Currently, we only support parsing of our own, fixed length Extreme
-    // (MD-Type1), NSH. This validation logic will drop any NSH pkt that does
-    // not conform. In the future, when PHV resources are less tight, we plan
-    // to add support for parsing non-Extreme NSH as well.
-    //
-    //   Drop the packet if:
-    //
-    //        version != 0                     -> Base Header          
-    //              o == 1  (oam)                     :                
-    //            ttl == 0                            :                
-    //            len != 6  (4B words)                :                
-    //        md_type != 1                            :                
-    //     next_proto != 3  (enet)                    :                
-    //             si == 0                     -> Service Path Header      
-    //       md_class != ?  (todo)             -> Variable Length Context Header
-    //           type != ?  (todo)                    :                
-    //         md_len != 8  (bytes)                   :                
-    //           todo == ?  (any checks here?) -> Variable Length Metadata   
-
-    table validate_nsh {
-
-        key = {
-            hdr.nsh_type1.version : range;
-            hdr.nsh_type1.o : ternary;
-            hdr.nsh_type1.ttl : ternary;
-            hdr.nsh_type1.len : range;
-            hdr.nsh_type1.md_type : range;
-            hdr.nsh_type1.next_proto : range;
-            hdr.nsh_type1.si : ternary;
-            //hdr.nsh_type1.md_class : ternary;
-            //hdr.nsh_type1.type : ternary;
-            //hdr.nsh_type1.md_len : range;
-            //hdr.nsh_type1.xxx : ternary;
-        }
-
-        actions = {
-            NoAction;
-            malformed_pkt;
-        }
-
-        size = table_size;
-        const default_action = NoAction;
-        const entries = {
-            // Can a range match type be a don't care? (it compiles..)
-            (2w1 .. 2w3, _, _, _, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_VERSION_INVALID);
-            (_, 1, _, _, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_OAM);
-   // Derek: Consider removing this ttl check.  The RFC allows
-   // an incoming TTL of 0 for backwards compatibility....
-            (_, _, 0, _, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_TTL_ZERO);
-            (_, _, _, 6w0 .. 6w5, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_LEN_INVALID);
-            (_, _, _, 6w7 .. 6w63, _, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_LEN_INVALID);
-            (_, _, _, _, 4w0 .. 4w0, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MDTYPE_INVALID);
-            (_, _, _, _, 4w2 .. 4w15, _, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MDTYPE_INVALID);
-            (_, _, _, _, _, 8w0 .. 8w0, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_NEXT_PROTO_INVALID);
-            (_, _, _, _, _, 8w4 .. 8w255, _):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_NEXT_PROTO_INVALID);
-            (_, _, _, _, _, _, 0):
-            malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_SI_ZERO);
-//          (_, _, _, _, _, _, _, 7w0 .. 7w7):
-//          malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MD_LEN_INVALID);
-//          (_, _, _, _, _, _, _, 7w9 .. 7w127):
-//          malformed_pkt(SWITCH_DROP_REASON_TRANSPORT_NSH_MD_LEN_INVALID);
-            // todo: Instead of all the above ranges, would it be better to
-            // create a single bit key field (len_eq_5) based on a length
-            // compare?
-        }
-    }
-
-    // -----------------------------
- // Apply
-    // -----------------------------
-
-    apply {
-        // -------------------------------------
-        // Extreme Networks - Modified
-        // -------------------------------------
-/*
-        switch(validate_ethernet.apply().action_run) {
-            malformed_non_ip_pkt : {}
-            default : {
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-#ifdef IPV6_ENABLE
-                else if (hdr.ipv6.isValid()) {
-                    validate_ipv6.apply();
-                }
-#endif
-
-                validate_other.apply();
-            }
-        }
-    }
-*/
-        if (hdr.nsh_type1.isValid()) { // extreme added
-            // --- PACKET HAS UNDERLAY ---
-            switch(validate_nsh.apply().action_run) { // extreme added
-                malformed_pkt : {} // extreme added
-                default: { // extreme added
-                    switch(validate_ethernet.apply().action_run) {
-                        malformed_non_ip_pkt : {}
-
-                        default : {
-
-                            if (hdr.ipv4.isValid()) {
-                                validate_ipv4.apply();
-                            }
-
-                            //validate_other.apply();
-
-                            validate_tunnel.apply();
-                        }
-                    }
-                } // extreme added
-            } // extreme added
-        }
-
-        // currently only NSH transport supported
-        // if NSH invalid, then there will be no transport headers to validate
-        // else { // extreme added
-        //     // --- PACKET DOES NOT HAVE UNDERLAY ---
-        //             switch(validate_ethernet.apply().action_run) {
-        //                 malformed_non_ip_pkt : {}
-        //                 default : {
-        //                     if (hdr.ipv4.isValid()) {
-        //                         validate_ipv4.apply();
-        //                     }
-        // 
-        //                     validate_other.apply();
-        // 
-        //                     validate_tunnel.apply();
-        //                 }
-        //             }
-        // } // extreme added
-    }
-}
-
-// ============================================================================
-// Outer Validation
-// ============================================================================
-
-control OuterPktValidation(
-    in switch_header_outer_t hdr, // src
- in bool ipv4_checksum_err, // src
- in switch_tunnel_metadata_reduced_t tunnel, // src
-    inout switch_lookup_fields_t lkp, // dst
-    out switch_drop_reason_t drop_reason // dst
-) {
-
-    const switch_uint32_t table_size = 64;
-
-    // -----------------------------
- // L2
-    // -----------------------------
-
-    action malformed_pkt(bit<8> reason) {
-        drop_reason = reason;
-    }
-
-    action malformed_non_ip_pkt(bit<8> reason) {
-        malformed_pkt(reason);
-    }
-
-    action valid_unicast_pkt_untagged() {
-    }
-
-    action valid_unicast_pkt_tagged() {
-    }
-
-    action valid_unicast_pkt_double_tagged() {
-    }
-
-
-    action valid_unicast_pkt_e_tagged() {
-    }
-
-
-
-    action valid_unicast_pkt_vn_tagged() {
-    }
-
-
-    table validate_ethernet {
-        key = {
-            hdr.ethernet.isValid() : exact;
-            hdr.ethernet.src_addr : ternary;
-            hdr.ethernet.dst_addr : ternary;
-            hdr.vlan_tag[0].isValid() : ternary;
-            hdr.vlan_tag[1].isValid() : ternary;
-
-            hdr.e_tag.isValid() : ternary;
-
-
-            hdr.vn_tag.isValid() : ternary;
-
-        }
-
-        actions = {
-            malformed_non_ip_pkt;
-            valid_unicast_pkt_untagged;
-            valid_unicast_pkt_tagged;
-            valid_unicast_pkt_double_tagged;
-
-            valid_unicast_pkt_e_tagged;
-
-
-            valid_unicast_pkt_vn_tagged;
-
-        }
-
-        size = table_size;
-        /* const entries = {
-            (_, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_MULTICAST);
-            (0, _, _) : malformed_non_ip_pkt(SWITCH_DROP_SRC_MAC_ZERO);
-            (_, 0, _) : malformed_non_ip_pkt(SWITCH_DROP_DST_MAC_ZERO);
-        } */
-    }
-
-    // -----------------------------
- // L3, v4
-    // -----------------------------
-
-    action malformed_ipv4_pkt(bit<8> reason) {
-        // Set common lookup fields just for dtel acl and hash purposes
-        malformed_pkt(reason);
-    }
-
-    action valid_ipv4_pkt(switch_ip_frag_t ip_frag) {
-        // Set common lookup fields
-    }
-
-    table validate_ipv4 {
-        key = {
-            ipv4_checksum_err : ternary;
-            hdr.ipv4.version : ternary;
-            hdr.ipv4.ihl : ternary;
-            hdr.ipv4.flags : ternary;
-            hdr.ipv4.frag_offset : ternary;
-            hdr.ipv4.ttl : ternary;
-            hdr.ipv4.src_addr[31:24] : ternary;
-        }
-
-        actions = {
-            valid_ipv4_pkt;
-            malformed_ipv4_pkt;
-        }
-
-        size = table_size;
-    }
-
-    // -----------------------------
- // L3, v6
-    // -----------------------------
-
-
-
-    action malformed_ipv6_pkt(bit<8> reason) {
-        // Set common lookup fields just for dtel acl and hash purposes
-        malformed_pkt(reason);
-    }
-
-    action valid_ipv6_pkt() {
-        // Set common lookup fields
-    }
-
-    table validate_ipv6 {
-        key = {
-            hdr.ipv6.version : ternary;
-            hdr.ipv6.hop_limit : ternary;
-            hdr.ipv6.src_addr[127:96] : ternary; //TODO define the bit range.
-        }
-
-        actions = {
-            valid_ipv6_pkt;
-            malformed_ipv6_pkt;
-        }
-
-        size = table_size;
-    }
-
-
-
-    // -----------------------------
- // L4
-    // -----------------------------
-
-    action set_tcp_ports() {
-    }
-
-    action set_udp_ports() {
-    }
-
-    action set_sctp_ports() {
-    }
-
-    // Not much of a validation as it only sets the lookup fields.
-    table validate_other {
-        key = {
-            hdr.tcp.isValid() : exact;
-            hdr.udp.isValid() : exact;
-            hdr.sctp.isValid() : exact;
-        }
-
-        actions = {
-   NoAction;
-            set_tcp_ports;
-            set_udp_ports;
-            set_sctp_ports;
-        }
-
-        const default_action = NoAction;
-        const entries = {
-            ( true, false, false) : set_tcp_ports();
-            (false, true, false) : set_udp_ports();
-            (false, false, true) : set_sctp_ports();
-        }
-    }
-
-    // -----------------------------
-    // TUNNEL
-    // -----------------------------
-
-    action validate_tunnel_none() {
-    }
-
-    action validate_tunnel_vlan() {
-    }
-
-    action validate_tunnel_vni() {
-    }
-
-    table validate_tunnel {
-        key = {
-            tunnel.type : ternary;
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid: ternary;
-        }
-        actions = {
-            validate_tunnel_vni;
-            validate_tunnel_vlan;
-            validate_tunnel_none;
-        }
-        const entries = {
-   // highest -> lowest priority in tcam
-            (0, true, 0): validate_tunnel_none(); // tag has priority only
-            (0, true, _): validate_tunnel_vlan(); // tag has priority and vlan
-            (_, true, _): validate_tunnel_vni();
-            (_, false, _): validate_tunnel_vni();
-            (0, false, _): validate_tunnel_none();
-        }
-
-    }
-
-    // -----------------------------
- // Apply
-    // -----------------------------
-
-    apply {
-        // -------------------------------------
-        // Extreme Networks - Modified
-        // -------------------------------------
-
-/*
-        switch(validate_ethernet.apply().action_run) {
-            malformed_non_ip_pkt : {}
-            default : {
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-#ifdef IPV6_ENABLE
-                else if (hdr.ipv6.isValid()) {
-                    validate_ipv6.apply();
-                }
-#endif
-                validate_other.apply();
-
-				validate_tunnel.apply();
-            }
-        }
-*/
-    validate_ethernet.apply();
-
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-
-                else if (hdr.ipv6.isValid()) {
-                    validate_ipv6.apply();
-                }
-
-                validate_other.apply();
-
-    validate_tunnel.apply();
-    }
-}
-
-// ============================================================================
-// Inner Validation
-// ============================================================================
-
-control InnerPktValidation(
-    in switch_header_inner_t hdr, // src
- in bool ipv4_checksum_err, // src
- in switch_tunnel_metadata_reduced_t tunnel, // src
-    inout switch_lookup_fields_t lkp, // dst
-    inout switch_drop_reason_t drop_reason // dst
-) (
- bool test=true
-) {
-
-    // -------------------------------------
-    // L2
-    // -------------------------------------
-
-    action valid_unicast_pkt_untagged() {
-        // Set the common L2 lookup fields
-
-    }
-
-    action valid_unicast_pkt_tagged() {
-    }
-
-    action malformed_pkt(bit<8> reason) {
-        drop_reason = reason;
-    }
-
-    table validate_ethernet {
-        key = {
-            hdr.ethernet.isValid() : exact;
-            hdr.ethernet.dst_addr : ternary;
-            hdr.vlan_tag[0].isValid() : ternary;
-        }
-
-        actions = {
-            NoAction;
-            valid_unicast_pkt_untagged;
-            valid_unicast_pkt_tagged;
-            malformed_pkt;
-        }
-    }
-
-    // -------------------------------------
-    // L3, v4
-    // -------------------------------------
-
-    action valid_ipv4_pkt() {
-        // Set the common IP lookup fields
-    }
-
-    table validate_ipv4 {
-        key = {
-            ipv4_checksum_err : ternary;
-            hdr.ipv4.version : ternary;
-            hdr.ipv4.ihl : ternary;
-            hdr.ipv4.ttl : ternary;
-        }
-
-        actions = {
-            valid_ipv4_pkt;
-            malformed_pkt;
-        }
-        /*
-        const default_action = malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_VERSION_INVALID);
-        const entries = {
-            (_, _, _, _, 0x7f) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_SRC_LOOPBACK);
-            (_, _, _, _, 0xe0 &&& 0xf0) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_SRC_MULTICAST);
-            (_, _, _, 0, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_TTL_ZERO);
-            (_, _, 0 &&& 0xc, _, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_IHL_INVALID);
-            (_, _, 4 &&& 0xf, _, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_IHL_INVALID);
-            (false, 4 &&& 0xf, _, _, _) : valid_ipv4_pkt();
-            (true, 4 &&& 0xf, _, _, _) : malformed_pkt(SWITCH_DROP_REASON_OUTER_IP_VERSION_INVALID);
-        }
-        */
-    }
-
-    // -------------------------------------
-    // L3, v6
-    // -------------------------------------
-
-
-    action valid_ipv6_pkt() {
-        // Set the common IP lookup fields
-    }
-
-    table validate_ipv6 {
-        key = {
-            hdr.ipv6.version : ternary;
-            hdr.ipv6.hop_limit : ternary;
-        }
-
-        actions = {
-            valid_ipv6_pkt;
-            malformed_pkt;
-        }
-        const entries = {
-            (0 &&& 0, 0) : malformed_pkt(SWITCH_DROP_REASON_IP_IHL_INVALID);
-            (6, 0 &&& 0) : valid_ipv6_pkt();
-            (0 &&& 0, 0 &&& 0) : malformed_pkt(SWITCH_DROP_REASON_IP_VERSION_INVALID);
-        }
-    }
-
-
-    // -------------------------------------
-    // L4
-    // -------------------------------------
-
-    action set_tcp_ports() {
-    }
-
-    action set_udp_ports() {
-    }
-
-    action set_sctp_ports() {
-    }
-
-    table validate_other {
-        key = {
-            hdr.tcp.isValid() : exact;
-            hdr.udp.isValid() : exact;
-            hdr.sctp.isValid() : exact;
-        }
-
-        actions = {
-            NoAction;
-            set_tcp_ports;
-            set_udp_ports;
-            set_sctp_ports;
-        }
-
-        const default_action = NoAction;
-        const entries = {
-            (true, false, false) : set_tcp_ports();
-            (false, true, false) : set_udp_ports();
-            (false, false, true) : set_sctp_ports();
-        }
-    }
-
-    // -----------------------------
-    // TUNNEL
-    // -----------------------------
-
-    action validate_tunnel_none() {
-    }
-
-    action validate_tunnel_vlan() {
-    }
-
-    action validate_tunnel_vni() {
-    }
-
-    table validate_tunnel {
-        key = {
-            tunnel.type : ternary;
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid: ternary;
-        }
-        actions = {
-            validate_tunnel_vni;
-            validate_tunnel_vlan;
-            validate_tunnel_none;
-        }
-        const entries = {
-   // highest -> lowest priority in tcam
-            (0, true, 0): validate_tunnel_none(); // tag has priority only
-            (0, true, _): validate_tunnel_vlan(); // tag has priority and vlan
-            (_, true, _): validate_tunnel_vni();
-            (_, false, _): validate_tunnel_vni();
-            (0, false, _): validate_tunnel_none();
-        }
-
-    }
-
-    // -----------------------------
- // Apply
-    // -----------------------------
-
-    apply {
-/*
-        switch(validate_ethernet.apply().action_run) {
-            malformed_pkt : {}
-            default : {
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-#ifdef IPV6_TUNNEL_ENABLE
-                else if (hdr.ipv6.isValid()) {
-					if(test == true) {
-                        validate_ipv6.apply();
-					}
-                }
-#endif
-
-                validate_other.apply();
-
-  				validate_tunnel.apply();
-            }
-        }
-*/
-    validate_ethernet.apply();
-
-                if (hdr.ipv4.isValid()) {
-                    validate_ipv4.apply();
-                }
-//#ifdef IPV6_TUNNEL_ENABLE
-
-               else if (hdr.ipv6.isValid()) {
-     if(test == true) {
-                        validate_ipv6.apply();
-     }
-                }
-
-
-                validate_other.apply();
-
-      validate_tunnel.apply();
-    }
-}
-
-// ============================================================================
-// Parser Validation
-// ============================================================================
-
-// From tofino2.p4:  todo: are these mutually exclusive?
-// ------------------------------------------------------
-// typedef error ParserError_t;
-// const bit<16> PARSER_ERROR_OK            = 16w0x0000;
-// const bit<16> PARSER_ERROR_NO_TCAM       = 16w0x0001;
-// const bit<16> PARSER_ERROR_PARTIAL_HDR   = 16w0x0002;
-// const bit<16> PARSER_ERROR_CTR_RANGE     = 16w0x0004;
-// const bit<16> PARSER_ERROR_TIMEOUT_USER  = 16w0x0008;
-// const bit<16> PARSER_ERROR_TIMEOUT_HW    = 16w0x0010;
-// const bit<16> PARSER_ERROR_SRC_EXT       = 16w0x0020;
-// const bit<16> PARSER_ERROR_PHV_OWNER     = 16w0x0080;
-// const bit<16> PARSER_ERROR_MULTIWRITE    = 16w0x0100;
-// const bit<16> PARSER_ERROR_ARAM_MBE      = 16w0x0400;
-// const bit<16> PARSER_ERROR_FCS           = 16w0x0800;
-// const bit<16> PARSER_ERROR_CSUM_MBE      = 16w0x1000;
-# 49 "npb.p4" 2
+//#include "validation.p4"
 # 1 "rewrite.p4" 1
 
 /*******************************************************************************
@@ -7032,19 +6350,16 @@ control IngressTunnelRMAC(
 
 control IngressTunnel(
  inout switch_ingress_metadata_t ig_md,
- inout bool ig_md_flags_ipv4_checksum_err,
  inout switch_header_transport_t hdr_0,
  inout switch_lookup_fields_t lkp_0,
  inout switch_tunnel_metadata_t tunnel_0,
- inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr, // extreme added
- out bool hit
+ inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr // extreme added
 ) (
  switch_uint32_t ipv4_src_vtep_table_size=1024,
  switch_uint32_t ipv6_src_vtep_table_size=1024,
  switch_uint32_t ipv4_dst_vtep_table_size=1024,
  switch_uint32_t ipv6_dst_vtep_table_size=1024
 ) {
-
  DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_src_vtep;
  DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats_dst_vtep;
 
@@ -7059,13 +6374,13 @@ control IngressTunnel(
  // Derek note: These tables are unused in latest switch.p4 code from barefoot
 
  action src_vtep_hit(
-  switch_port_lag_index_t port_lag_index,
+//		switch_port_lag_index_t port_lag_index,
   bit<16> sap,
   bit<12> vpn
  ) {
   stats_src_vtep.count();
 
-  ig_md.port_lag_index = port_lag_index;
+//		ig_md.port_lag_index    = port_lag_index;
   hdr_0.nsh_type1.sap = (bit<16>)sap;
   hdr_0.nsh_type1.vpn = (bit<16>)vpn;
  }
@@ -7105,7 +6420,7 @@ control IngressTunnel(
  // -------------------------------------
  // Table: IPv6 Src VTEP
  // -------------------------------------
-# 226 "tunnel.p4"
+# 223 "tunnel.p4"
  // -------------------------------------
  // Table: IPv4 Dst VTEP
  // -------------------------------------
@@ -7118,10 +6433,10 @@ control IngressTunnel(
   bool drop
 
 
-
-
-
-
+  ,
+//		switch_port_lag_index_t port_lag_index,
+  bit<16> sap,
+  bit<12> vpn
 
  ) {
   stats_dst_vtep.count();
@@ -7132,9 +6447,9 @@ control IngressTunnel(
   drop_ = drop;
 
 
-
-
-
+//		ig_md.port_lag_index    = port_lag_index;
+  hdr_0.nsh_type1.sap = (bit<16>)sap;
+  hdr_0.nsh_type1.vpn = (bit<16>)vpn;
 
  }
 
@@ -7156,7 +6471,17 @@ control IngressTunnel(
 
  table dst_vtep {
   key = {
-# 287 "tunnel.p4"
+
+
+
+
+
+   hdr_0.ipv4.src_addr : ternary @name("src_addr");
+
+
+
+
+
    hdr_0.ipv4.dst_addr : ternary @name("dst_addr");
 
 
@@ -7178,7 +6503,7 @@ control IngressTunnel(
  // -------------------------------------
  // Table: IPv6 Dst VTEP
  // -------------------------------------
-# 384 "tunnel.p4"
+# 381 "tunnel.p4"
  // -------------------------------------
  // Table: VNI to BD
  // -------------------------------------
@@ -7231,7 +6556,7 @@ control IngressTunnel(
     if (hdr_0.ipv4.isValid()) {
 //				if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV4) {
 
-     hit = src_vtep.apply().hit;
+
 
      switch(dst_vtep.apply().action_run) {
 //						dst_vtep_tunid_hit : {
@@ -7241,9 +6566,7 @@ control IngressTunnel(
       dst_vtep_hit : {
       }
      }
-# 463 "tunnel.p4"
-    } else {
-     hit = false;
+# 460 "tunnel.p4"
     }
 
 //			}
@@ -7261,7 +6584,7 @@ control IngressTunnel(
 }
 
 //-----------------------------------------------------------------------------
-// Ingress Tunnel Decap: Network (does not alter packet!)
+// Ingress Tunnel Decap: Network SAP (does not alter packet!)
 //-----------------------------------------------------------------------------
 
 control IngressTunnelNetwork(
@@ -7338,7 +6661,7 @@ control IngressTunnelNetwork(
 }
 
 //-----------------------------------------------------------------------------
-// Ingress Tunnel Decap: Outer (does not alter packet!)
+// Ingress Tunnel Decap: Outer SAP (does not alter packet!)
 //-----------------------------------------------------------------------------
 
 control IngressTunnelOuter(
@@ -7488,33 +6811,35 @@ control IngressTunnelOuter(
    sap_tcam.apply();
 //		}
 
-  if(terminate_ == true) {
-   ig_md.tunnel_1.terminate = true;
-   if(hdr_0.nsh_type1.scope == 1) {
-    ig_md.tunnel_2.terminate = true;
-   }
-  }
-
-  if(scope_ == true) {
-   if(hdr_0.nsh_type1.scope == 0) {
-
-    Scoper.apply(
-     lkp_2,
-     ig_md.drop_reason_2,
-
-     ig_md.lkp_1
-    );
-# 734 "tunnel.p4"
+  if(lkp.next_lyr_valid == true) {
+   if(terminate_ == true) {
+    ig_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     ig_md.tunnel_2.terminate = true;
+    }
    }
 
-//			scope_inc.apply();
-   hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   if(scope_ == true) {
+    if(hdr_0.nsh_type1.scope == 0) {
+
+     Scoper.apply(
+      lkp_2,
+//						ig_md.drop_reason_2,
+
+      lkp
+     );
+# 730 "tunnel.p4"
+    }
+
+//				scope_inc.apply();
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   }
   }
  }
 }
 
 //-----------------------------------------------------------------------------
-// Ingress Tunnel Decap: Inner (does not alter packet!)
+// Ingress Tunnel Decap: Inner SAP (does not alter packet!)
 //-----------------------------------------------------------------------------
 
 control IngressTunnelInner(
@@ -7654,27 +6979,29 @@ control IngressTunnelInner(
    sap_tcam.apply();
   }
 
-  if(terminate_ == true) {
-   ig_md.tunnel_1.terminate = true;
-   if(hdr_0.nsh_type1.scope == 1) {
-    ig_md.tunnel_2.terminate = true;
-   }
-  }
-
-  if(scope_ == true) {
-   if(hdr_0.nsh_type1.scope == 0) {
-
-    Scoper.apply(
-     lkp_2,
-     ig_md.drop_reason_2,
-
-     ig_md.lkp_1
-    );
-# 908 "tunnel.p4"
+  if(lkp.next_lyr_valid == true) {
+   if(terminate_ == true) {
+    ig_md.tunnel_1.terminate = true;
+    if(hdr_0.nsh_type1.scope == 1) {
+     ig_md.tunnel_2.terminate = true;
+    }
    }
 
-//			scope_inc.apply();
-   hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   if(scope_ == true) {
+    if(hdr_0.nsh_type1.scope == 0) {
+
+     Scoper.apply(
+      lkp_2,
+//						ig_md.drop_reason_2,
+
+      lkp
+     );
+# 906 "tunnel.p4"
+    }
+
+//				scope_inc.apply();
+    hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+   }
   }
  }
 }
@@ -7843,11 +7170,8 @@ control TunnelDecapOuter(
   if(tunnel_1.terminate) {
    // ----- l2 -----
 
-   // keep my l2 when mine is valid and the next layer's isn't -- except when the next layer is being terminated and the next-next layer's is
-   if(hdr_1.ethernet.isValid() && !hdr_2.ethernet.isValid() && !(tunnel_2.terminate && hdr_3.ethernet.isValid())) {
-    // keep l2
-   } else {
-    // remove l2
+   // only remove l2 when the next layer's is valid
+   if(hdr_2.ethernet.isValid() || (tunnel_2.terminate && hdr_3.ethernet.isValid())) {
     hdr_1.ethernet.setInvalid();
 
 
@@ -8000,11 +7324,8 @@ control TunnelDecapInner(
   if(tunnel_2.terminate) {
    // ----- l2 -----
 
-   // keep my l2 when mine is valid and the next layer's isn't
-   if(hdr_2.ethernet.isValid() && !hdr_3.ethernet.isValid()) {
-    // keep l2
-   } else {
-    // remove l2
+   // only remove l2 when the next layer's is valid
+   if(hdr_3.ethernet.isValid()) {
     hdr_2.ethernet.setInvalid();
     hdr_2.vlan_tag[0].setInvalid(); // extreme added
    }
@@ -8128,7 +7449,7 @@ control TunnelDecapFixEthertype(
   hdr_2.ethernet.setInvalid();
   hdr_2.vlan_tag[0].setInvalid(); // extreme added
  }
-# 1499 "tunnel.p4"
+# 1492 "tunnel.p4"
  // -------------------------------------
  // Apply
  // -------------------------------------
@@ -8277,14 +7598,14 @@ control TunnelRewrite(
  action rewrite_ipv4_dst(ipv4_addr_t dst_addr) {
   hdr_0.ipv4.dst_addr = dst_addr;
  }
-# 1656 "tunnel.p4"
+# 1649 "tunnel.p4"
  table ipv4_dst_addr_rewrite {
   key = { tunnel.index : exact; }
   actions = { rewrite_ipv4_dst; }
 //		const default_action = rewrite_ipv4_dst(0); // extreme modified!
   size = ipv4_dst_addr_rewrite_table_size;
  }
-# 1673 "tunnel.p4"
+# 1666 "tunnel.p4"
  // -------------------------------------
  // Table: SMAC Rewrite
  // -------------------------------------
@@ -8327,7 +7648,7 @@ control TunnelRewrite(
    if (hdr_0.ipv4.isValid()) {
     ipv4_dst_addr_rewrite.apply();
     }
-# 1724 "tunnel.p4"
+# 1717 "tunnel.p4"
   }
 
 
@@ -8413,7 +7734,7 @@ control TunnelEncap(
  }
 
  // --------------------------------
-# 1822 "tunnel.p4"
+# 1815 "tunnel.p4"
  // --------------------------------
 
  table encap_outer {
@@ -8497,14 +7818,15 @@ control TunnelEncap(
 
  }
 
- action add_l2_header() {
+ action add_l2_header(bit<16> ethertype) {
   hdr_0.ethernet.setValid();
+  hdr_0.ethernet.ether_type = ethertype;
  }
 
  // -------------------------------------
 
  action add_erspan_header_type2(switch_mirror_session_t session_id) {
-# 1921 "tunnel.p4"
+# 1915 "tunnel.p4"
  }
 
  // action add_erspan_header(bit<32> timestamp, switch_mirror_session_t session_id) {
@@ -8518,14 +7840,14 @@ control TunnelEncap(
 
  // -------------------------------------
 
- action add_ipv4_header(bit<8> proto) {
+ action add_ipv4_header(bit<8> proto, bit<3> flags) {
 
   hdr_0.ipv4.setValid();
   hdr_0.ipv4.version = 4w4;
   hdr_0.ipv4.ihl = 4w5;
   // hdr_0.ipv4.total_len = 0;
   hdr_0.ipv4.identification = 0;
-  hdr_0.ipv4.flags = 0;
+  hdr_0.ipv4.flags = flags; // derek: was 0 originally, but request came in to set 'don't frag' bit
   hdr_0.ipv4.frag_offset = 0;
   hdr_0.ipv4.protocol = proto;
   // hdr_0.ipv4.src_addr = 0;
@@ -8541,7 +7863,7 @@ control TunnelEncap(
  }
 
  action add_ipv6_header(bit<8> proto) {
-# 1973 "tunnel.p4"
+# 1967 "tunnel.p4"
  }
 
  //-----------------------------------------------------------------------------
@@ -8554,9 +7876,8 @@ control TunnelEncap(
 
  action rewrite_ipv4_gre() {
 
-  add_l2_header();
   // ----- l3 -----
-  add_ipv4_header(47);
+  add_ipv4_header(47, 2);
   // Total length = packet length + 24
   //   IPv4 (20) + GRE (4)
   hdr_0.ipv4.total_len = payload_len + 16w24;
@@ -8565,7 +7886,7 @@ control TunnelEncap(
   add_gre_header(0x0800, 0, 0);
 
   // ----- l2 -----
-  hdr_0.ethernet.ether_type = 0x0800;
+  add_l2_header(0x0800);
 
   hdr_1.ethernet.setInvalid();
   hdr_1.vlan_tag[0].setInvalid();
@@ -8574,7 +7895,7 @@ control TunnelEncap(
  }
 
  action rewrite_ipv4_erspan(switch_mirror_session_t session_id) {
-# 2021 "tunnel.p4"
+# 2013 "tunnel.p4"
  }
 
  // =====================================
@@ -8582,11 +7903,10 @@ control TunnelEncap(
  // =====================================
 
  action rewrite_ipv6_gre() {
-# 2047 "tunnel.p4"
+# 2038 "tunnel.p4"
  }
 /*
 	action rewrite_ipv6_erspan(switch_mirror_session_t session_id) {
-		add_l2_header();
 		// ----- l3 -----
 //		hdr_0.inner_ethernet = hdr_0.ethernet;
 		add_ipv6_header(IP_PROTOCOLS_GRE);
@@ -8600,7 +7920,7 @@ control TunnelEncap(
 		add_erspan_header_type2(session_id);
 
 		// ----- l2 -----
-		hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
+		add_l2_header(ETHERTYPE_IPV6);
 	}
 */
  // -------------------------------------
@@ -8608,8 +7928,7 @@ control TunnelEncap(
  // -------------------------------------
 
  action rewrite_mac_in_mac() {
-  add_l2_header();
-  hdr_0.ethernet.ether_type = 0x894F;
+  add_l2_header(0x894F);
  }
 
  // -------------------------------------
@@ -8626,24 +7945,10 @@ control TunnelEncap(
    rewrite_ipv4_gre; // extreme added
    rewrite_ipv6_gre; // extreme added
    rewrite_ipv4_erspan; // extreme added
-//			rewrite_ipv6_erspan;  // extreme added
+//			rewrite_ipv6_erspan;          // extreme added
   }
 
   const default_action = NoAction;
-
-  // ---------------------------------
-  // Extreme Networks - Added
-  // ---------------------------------
-  /*
-		// Note that this table should just be programmed with the
-		// following constants, but the language doesn't seem to allow it....
-		const entries = {
-			(SWITCH_TUNNEL_TYPE_NSH)      = rewrite_mac_in_mac();  // extreme added
-			(SWITCH_TUNNEL_TYPE_GRE)      = rewrite_ipv4_gre();    // extreme added
-			(SWITCH_TUNNEL_TYPE_ERSPAN)   = rewrite_ipv4_erspan(); // extreme added
-		}
-		*/
-  // ---------------------------------
  }
 
  //=============================================================================
@@ -8683,10 +7988,6 @@ control MulticastReplication (
 ) (
  switch_uint32_t table_size = NPB_ING_SF_1_MULTICAST_RID_TABLE_SIZE
 ) {
-
- // =========================================================================
- // Notes
- // =========================================================================
 
  // =========================================================================
  // Table #1: 
@@ -8755,128 +8056,254 @@ control MulticastReplication (
  }
 }
 # 52 "npb.p4" 2
-# 1 "copp.p4" 1
+# 1 "meter.p4" 1
+/*******************************************************************************
+ * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
+ *
+ * Copyright (c) 2015-2019 Barefoot Networks, Inc.
+
+ * All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains the property of
+ * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+ * technical concepts contained herein are proprietary to Barefoot Networks,
+ * Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+ * process, and are protected by trade secret or copyright law.
+ * Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from
+ * Barefoot Networks, Inc.
+ *
+ * No warranty, explicit or implicit is provided, unless granted under a
+ * written agreement with Barefoot Networks, Inc.
+ *
+ ******************************************************************************/
 
 
 
-control IngressCopp (
- in bool copp_enable,
- in switch_copp_meter_id_t copp_meter_id,
 
- inout switch_ingress_metadata_t ig_md,
- inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
-) (
-) {
+# 1 "acl.p4" 1
+/*******************************************************************************
+ * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
+ *
+ * Copyright (c) 2015-2019 Barefoot Networks, Inc.
 
+ * All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains the property of
+ * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+ * technical concepts contained herein are proprietary to Barefoot Networks,
+ * Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+ * process, and are protected by trade secret or copyright law.
+ * Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from
+ * Barefoot Networks, Inc.
+ *
+ * No warranty, explicit or implicit is provided, unless granted under a
+ * written agreement with Barefoot Networks, Inc.
+ *
+ ******************************************************************************/
+# 27 "meter.p4" 2
+/*
+//-------------------------------------------------------------------------------------------------
+// Storm Control
+//
+// Monitors incoming traffic and prevents the excessive traffic on a particular interface by
+// dropping the traffic. Each port has a single storm control levels for all types of traffic
+// (broadcast, multicast, and unicast).
+//
+// @param ig_md : Ingress metadata fields
+// @param pkt_type : One of Unicast, Multicast, or Broadcast packet types.
+// @param flag : Indicating whether the packet should get dropped or not.
+// @param table_size : Size of the storm control table [per pipe]
+// @param meter_size : Size of storm control meters [global pool]
+// Stats table size must be 512 per pipe - each port with 6 stat entries [2 colors per pkt-type]
+//-------------------------------------------------------------------------------------------------
+control StormControl(inout switch_ingress_metadata_t ig_md,
+                     in switch_pkt_type_t pkt_type,
+                     out bool flag)(
+                     switch_uint32_t table_size=256,
+                     switch_uint32_t meter_size=1024) {
+    DirectCounter<bit<switch_counter_width>>(CounterType_t.PACKETS) storm_control_stats;
+    Meter<bit<16>>(meter_size, MeterType_t.PACKETS) meter;
 
+    action count() {
+        storm_control_stats.count();
+        flag = false;
+    }
 
- Meter<bit<8>>(1 << 8, MeterType_t.PACKETS) copp_meter;
- DirectCounter<bit<32>>(CounterType_t.PACKETS) copp_stats;
+    action drop_and_count() {
+        storm_control_stats.count();
+        flag = true;
+    }
 
- //-------------------------------------------------------------
+    table stats {
+        key = {
+            ig_md.qos.storm_control_color: exact;
+            pkt_type : ternary;
+            ig_md.port: exact;
+            ig_md.flags.dmac_miss : ternary;
+        }
 
- action copp_drop() {
-  ig_intr_md_for_tm.copy_to_cpu = 1w0;
-  copp_stats.count();
- }
+        actions = {
+            @defaultonly NoAction;
+            count;
+            drop_and_count;
+        }
 
- action copp_permit() {
-  copp_stats.count();
- }
+        const default_action = NoAction;
+        size = table_size*2;
+        counters = storm_control_stats;
+    }
 
- table copp {
-  key = {
-   ig_intr_md_for_tm.packet_color : ternary;
-   copp_meter_id : ternary @name("copp_meter_id");
-  }
+    action set_meter(bit<16> index) {
+        ig_md.qos.storm_control_color = (bit<2>) meter.execute(index);
+    }
 
-  actions = {
-   copp_permit;
-   copp_drop;
-  }
+    table storm_control {
+        key =  {
+            ig_md.port : exact;
+            pkt_type : ternary;
+            ig_md.flags.dmac_miss : ternary;
+        }
 
-  const default_action = copp_permit;
-  size = (1 << 8 + 1);
-  counters = copp_stats;
- }
+        actions = {
+            @defaultonly NoAction;
+            set_meter;
+        }
 
+        const default_action = NoAction;
+        size = table_size;
+    }
 
+    apply {
+#ifdef STORM_CONTROL_ENABLE
+        if (!INGRESS_BYPASS(STORM_CONTROL))
+            storm_control.apply();
 
- //-------------------------------------------------------------
+        if (!INGRESS_BYPASS(STORM_CONTROL))
+            stats.apply();
+#endif
+    }
+}
+*/
+//-------------------------------------------------------------------------------------------------
+// Ingress Mirror Meter
+//-------------------------------------------------------------------------------------------------
+control IngressMirrorMeter(inout switch_ingress_metadata_t ig_md)(
+                     switch_uint32_t table_size=256) {
+    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+    Meter<bit<9>>(table_size, MeterType_t.PACKETS) meter;
+    switch_pkt_color_t color;
 
- apply {
+    action mirror_and_count() {
+        stats.count();
+    }
 
+    action no_mirror_and_count() {
+        stats.count();
+        ig_md.mirror.type = 0;
+    }
 
-  if(copp_enable == true) {
-   ig_intr_md_for_tm.packet_color = (bit<2>) copp_meter.execute(copp_meter_id);
-   copp.apply();
-  }
+    table meter_action {
+        key = {
+            color: exact;
+            ig_md.mirror.meter_index: exact;
+        }
 
+        actions = {
+            @defaultonly NoAction;
+            mirror_and_count;
+            no_mirror_and_count;
+        }
 
- }
+        const default_action = NoAction;
+        size = table_size*2;
+        counters = stats;
+    }
 
+    action set_meter(bit<9> index) {
+        color = (bit<2>) meter.execute(index);
+    }
+
+    table meter_index {
+        key = {
+            ig_md.mirror.meter_index : exact;
+        }
+
+        actions = {
+            @defaultonly NoAction;
+            set_meter;
+        }
+
+        const default_action = NoAction;
+        size = table_size;
+    }
+
+    apply {
+            meter_index.apply();
+            meter_action.apply();
+    }
 }
 
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+// Egress Mirror Meter
+//-------------------------------------------------------------------------------------------------
+control EgressMirrorMeter(inout switch_egress_metadata_t eg_md)(
+                     switch_uint32_t table_size=256) {
+    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) stats;
+    Meter<bit<9>>(table_size, MeterType_t.PACKETS) meter;
+    switch_pkt_color_t color;
 
-control EgressCopp (
- in bool copp_enable,
- in switch_copp_meter_id_t copp_meter_id,
+    action mirror_and_count() {
+        stats.count();
+    }
 
- inout switch_egress_metadata_t eg_md,
- inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr
-) (
-) {
+    action no_mirror_and_count() {
+        stats.count();
+        eg_md.mirror.type = 0;
+    }
 
+    table meter_action {
+        key = {
+            color: exact;
+            eg_md.mirror.meter_index: exact;
+        }
 
+        actions = {
+            @defaultonly NoAction;
+            mirror_and_count;
+            no_mirror_and_count;
+        }
 
- Meter<bit<8>>(1 << 8, MeterType_t.PACKETS) copp_meter;
- DirectCounter<bit<32>>(CounterType_t.PACKETS) copp_stats;
- switch_pkt_color_t copp_color;
+        const default_action = NoAction;
+        size = table_size*2;
+        counters = stats;
+    }
 
- //-------------------------------------------------------------
+    action set_meter(bit<9> index) {
+        color = (bit<2>) meter.execute(index);
+    }
 
- action copp_drop() {
-  eg_intr_md_for_dprsr.mirror_type = 0;
-  copp_stats.count();
- }
+    table meter_index {
+        key = {
+            eg_md.mirror.meter_index : exact;
+        }
 
- action copp_permit() {
-  copp_stats.count();
- }
+        actions = {
+            @defaultonly NoAction;
+            set_meter;
+        }
 
- table copp {
-  key = {
-   copp_color : exact;
-   copp_meter_id : exact;
-  }
+        const default_action = NoAction;
+        size = table_size;
+    }
 
-  actions = {
-   copp_permit;
-   copp_drop;
-  }
-
-  const default_action = copp_permit;
-  size = (1 << 8 + 1);
-  counters = copp_stats;
- }
-
-
-
- //-------------------------------------------------------------
-
- apply {
-
-
-  if(copp_enable == true) {
-   copp_color = (bit<2>) copp_meter.execute(copp_meter_id);
-   copp.apply();
-  }
-
-
- }
+    apply {
+            meter_index.apply();
+            meter_action.apply();
+    }
 }
 # 53 "npb.p4" 2
 # 1 "dtel.p4" 1
@@ -9687,8 +9114,10 @@ parser NpbIngressParser(
 
     //value_set<bit<32>>(20) my_mac_lo;
     //value_set<bit<16>>(20) my_mac_hi;
-    value_set<bit<32>>(8) my_mac_lo;
-    value_set<bit<16>>(8) my_mac_hi;
+    //value_set<bit<32>>(8) my_mac_lo;
+    //value_set<bit<16>>(8) my_mac_hi;
+    value_set<bit<32>>(1) my_mac_lo;
+    value_set<bit<16>>(1) my_mac_hi;
 
  //bit<8>  protocol_outer;
  //bit<8>  protocol_inner;
@@ -9696,16 +9125,8 @@ parser NpbIngressParser(
     state start {
         pkt.extract(ig_intr_md);
         ig_md.port = ig_intr_md.ingress_port;
-//      ig_md.timestamp      = ig_intr_md.ingress_mac_tstamp;
-
-        hdr.transport.nsh_type1.timestamp = ig_intr_md.ingress_mac_tstamp[31:0];
-
-
-
+        ig_md.timestamp = ig_intr_md.ingress_mac_tstamp;
         ig_md.flags.rmac_hit = false;
-
-
-
 
         // Check for resubmit flag if packet is resubmitted.
         // transition select(ig_intr_md.resubmit_flag) {
@@ -9719,7 +9140,7 @@ parser NpbIngressParser(
         ig_md.lkp_1.tunnel_id = 0;
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
         ig_md.lkp_2.tunnel_id = 0;
-# 76 "npb_ing_parser.p4"
+# 68 "npb_ing_parser.p4"
         // initialize lookup struct to zeros
         ig_md.lkp_1.mac_src_addr = 0;
         ig_md.lkp_1.mac_dst_addr = 0;
@@ -9737,8 +9158,6 @@ parser NpbIngressParser(
         ig_md.lkp_1.tcp_flags = 0;
         ig_md.lkp_1.l4_src_port = 0;
         ig_md.lkp_1.l4_dst_port = 0;
-        //ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_NONE; // do this always (above)
-        //ig_md.lkp_1.tunnel_id = 0;                         // do this always (above)
         ig_md.lkp_1.drop_reason = 0;
 
 
@@ -9761,8 +9180,6 @@ parser NpbIngressParser(
         ig_md.lkp_2.tcp_flags = 0;
         ig_md.lkp_2.l4_src_port = 0;
         ig_md.lkp_2.l4_dst_port = 0;
-        //ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_NONE; // do this always (above)
-        //ig_md.lkp_2.tunnel_id = 0;                         // do this always (above)
         ig_md.lkp_2.drop_reason = 0;
 
 
@@ -9787,9 +9204,10 @@ parser NpbIngressParser(
 
     state parse_port_metadata {
         // Parse port metadata produced by ibuf
-        switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-        ig_md.port_lag_index = port_md.port_lag_index;
-  ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+//      switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
+//      ig_md.port_lag_index = port_md.port_lag_index;
+//		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+  pkt.advance(PORT_METADATA_SIZE);
         transition check_from_cpu;
     }
 
@@ -9810,7 +9228,7 @@ parser NpbIngressParser(
             default: check_my_mac_lo;
         }
     }
-# 174 "npb_ing_parser.p4"
+# 163 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // My-MAC Check
@@ -9868,7 +9286,7 @@ parser NpbIngressParser(
     state parse_transport_ethernet {
         ig_md.flags.rmac_hit = true;
         pkt.extract(hdr.transport.ethernet);
-# 239 "npb_ing_parser.p4"
+# 228 "npb_ing_parser.p4"
         // populate for L3-tunnel case (where there's no L2 present)
         ig_md.lkp_1.mac_src_addr = hdr.transport.ethernet.src_addr;
         ig_md.lkp_1.mac_dst_addr = hdr.transport.ethernet.dst_addr;
@@ -9892,7 +9310,7 @@ parser NpbIngressParser(
 
 
 
-           default: parse_udf;
+           default: accept;
         }
     }
 
@@ -9911,10 +9329,9 @@ parser NpbIngressParser(
 
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
+  ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
   ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
-
-  hdr.transport.ethernet.ether_type = hdr.cpu.ether_type; // done in port.p4 for now (see bf-case 10933)
-
+  hdr.transport.ethernet.ether_type = hdr.cpu.ether_type;
 // #ifdef PTP_ENABLE
 //         ig_md.flags.capture_ts = (bool) hdr.cpu.capture_ts;  // todo
 // #endif // PTP_ENABLE
@@ -9949,7 +9366,7 @@ parser NpbIngressParser(
 
 
 
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -9958,7 +9375,7 @@ parser NpbIngressParser(
     state parse_transport_vlan {
 
      pkt.extract(hdr.transport.vlan_tag[0]);
-# 341 "npb_ing_parser.p4"
+# 329 "npb_ing_parser.p4"
 // populate for L3-tunnel case (where there's no L2 present)
 
         ig_md.lkp_1.pcp = hdr.transport.vlan_tag[0].pcp;
@@ -9985,7 +9402,7 @@ parser NpbIngressParser(
 
 
 
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -10001,13 +9418,13 @@ parser NpbIngressParser(
 
         ipv4_checksum_transport.add(hdr.transport.ipv4);
         ig_md.flags.ipv4_checksum_err_0 = ipv4_checksum_transport.verify();
-# 395 "npb_ing_parser.p4"
+# 383 "npb_ing_parser.p4"
         transition select(hdr.transport.ipv4.protocol) {
            47: parse_transport_gre;
-           default : parse_udf;
+           default : accept;
         }
     }
-# 427 "npb_ing_parser.p4"
+# 415 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Transport
     ///////////////////////////////////////////////////////////////////////////    
@@ -10041,7 +9458,7 @@ parser NpbIngressParser(
             (0,0,0,1,0,0,0,0,0x88BE): parse_transport_erspan_t2;
           //(0,0,0,1,0,0,0,0,GRE_PROTOCOLS_ERSPAN_TYPE_3): parse_transport_erspan_t3;
 
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -10058,7 +9475,11 @@ parser NpbIngressParser(
         pkt.extract(hdr.transport.gre_sequence);
         pkt.extract(hdr.transport.erspan_type2);
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_ERSPAN;
-        ig_md.lkp_0.tunnel_id = 0; // todo: should this be populated?
+
+
+
+        ig_md.lkp_0.tunnel_id = 0;
+
         transition parse_outer_ethernet;
     }
 
@@ -10088,7 +9509,7 @@ parser NpbIngressParser(
      pkt.extract(hdr.transport.nsh_type1);
         transition select(hdr.transport.nsh_type1.next_proto) {
             0x3: parse_outer_ethernet;
-            default: parse_udf; // todo: support ipv4? ipv6?
+            default: accept; // todo: support ipv4? ipv6?
         }
     }
 
@@ -10139,10 +9560,10 @@ parser NpbIngressParser(
 
 
 
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x0800 : parse_outer_ipv4;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -10154,12 +9575,14 @@ parser NpbIngressParser(
 
         pkt.extract(hdr.cpu);
 
+
+  ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
+
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
+  ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
   ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
-
-  hdr.outer.ethernet.ether_type = hdr.cpu.ether_type; // done in port.p4 for now (see bf-case 10933)
-
+  hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;
 // #ifdef PTP_ENABLE
 //         ig_md.flags.capture_ts = (bool) hdr.cpu.capture_ts;  // todo
 // #endif // PTP_ENABLE
@@ -10195,10 +9618,10 @@ parser NpbIngressParser(
 
 
 
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x0800 : parse_outer_ipv4;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -10224,9 +9647,9 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -10251,9 +9674,9 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -10291,9 +9714,9 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -10315,23 +9738,23 @@ parser NpbIngressParser(
 
 
             0x0800 : parse_outer_ipv4;
-            0x0806 : parse_outer_arp;
+            //ETHERTYPE_ARP  : parse_outer_arp;
             0x86dd : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Layer 2.5 - Outer
-    ///////////////////////////////////////////////////////////////////////////
-
-    state parse_outer_arp {
-        // pkt.extract(hdr.outer.arp);
-        // transition accept;
-        transition parse_udf;
-
-    }
+    // ///////////////////////////////////////////////////////////////////////////
+    // // Layer 2.5 - Outer
+    // ///////////////////////////////////////////////////////////////////////////
+    // 
+    // state parse_outer_arp {
+    //     // pkt.extract(hdr.outer.arp);
+    //     // transition accept;
+    //     transition accept;
+    // 
+    // }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -10355,21 +9778,22 @@ parser NpbIngressParser(
 //         ipv4_checksum_outer.add(hdr.outer.ipv4);
 //         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
 //             (5, 0): parse_outer_ipv4_no_options_frags;
-//             default : parse_udf;
+//             default : accept;
 //         }
 //     }
 // 
 //     state parse_outer_ipv4_no_options_frags {
 //         ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
 //         transition select(hdr.outer.ipv4.protocol) {
-//             IP_PROTOCOLS_ICMP: parse_outer_icmp_igmp_overload;
-//             IP_PROTOCOLS_IGMP: parse_outer_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMP: parse_outer_icmp_igmp_overload;
+//             //IP_PROTOCOLS_IGMP: parse_outer_icmp_igmp_overload;
 //             default: branch_outer_l3_protocol;
 //         }
 //     }
 
     state parse_outer_ipv4 {
         pkt.extract(hdr.outer.ipv4);
+
 
         // todo: should the lkp struct be set in state parse_outer_ipv4_no_options_frags instead?
         ig_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
@@ -10384,23 +9808,23 @@ parser NpbIngressParser(
         ipv4_checksum_outer.add(hdr.outer.ipv4);
         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
             (5, 0): parse_outer_ipv4_no_options_frags;
-            default : parse_udf;
+            default : accept;
         }
     }
 
     state parse_outer_ipv4_no_options_frags {
         ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
-        transition select(hdr.outer.ipv4.protocol) {
-            1: parse_outer_icmp_igmp_overload;
-            2: parse_outer_icmp_igmp_overload;
-            4: parse_outer_ipinip_set_tunnel_type;
-            41: parse_outer_ipv6inip_set_tunnel_type;
-            17: parse_outer_udp;
-            6: parse_outer_tcp;
-            0x84: parse_outer_sctp;
-            47: parse_outer_gre;
-            0x32: parse_outer_esp_overload;
-            default: parse_udf;
+        transition select(hdr.outer.ipv4.protocol, hdr.outer.ipv4.total_len) {
+            (4, _ ): parse_outer_ipinip_set_tunnel_type;
+            (41, _ ): parse_outer_ipv6inip_set_tunnel_type;
+            (47, _ ): parse_outer_gre;
+# 816 "npb_ing_parser.p4"
+            (17, _ ): parse_outer_udp_noudf;
+            (6, _ ): parse_outer_tcp_noudf;
+            (0x84, _ ): parse_outer_sctp_noudf;
+
+
+            default: accept;
         }
     }
 
@@ -10418,7 +9842,7 @@ parser NpbIngressParser(
 //         ig_md.lkp_1.ip_len        = hdr.outer.ipv6.payload_len;
 // #endif // INGRESS_PARSER_POPULATES_LKP_1
 //         transition select(hdr.outer.ipv6.next_hdr) {
-//             IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
 //             default: branch_outer_l3_protocol;
 //         }
 // #else
@@ -10431,6 +9855,7 @@ parser NpbIngressParser(
 
         pkt.extract(hdr.outer.ipv6);
 
+
         ig_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_1.ip_proto = hdr.outer.ipv6.next_hdr;
         //ig_md.lkp_1.ip_tos        = hdr.outer.ipv6.tos; // not byte-aligned so set in mau
@@ -10438,16 +9863,17 @@ parser NpbIngressParser(
         ig_md.lkp_1.ip_dst_addr = hdr.outer.ipv6.dst_addr;
         ig_md.lkp_1.ip_len = hdr.outer.ipv6.payload_len;
 
-        transition select(hdr.outer.ipv6.next_hdr) {
-            58: parse_outer_icmp_igmp_overload;
-            4: parse_outer_ipinip_set_tunnel_type;
-            41: parse_outer_ipv6inip_set_tunnel_type;
-            17: parse_outer_udp;
-            6: parse_outer_tcp;
-            0x84: parse_outer_sctp;
-            47: parse_outer_gre;
-            0x32: parse_outer_esp_overload;
-            default: parse_udf;
+        transition select(hdr.outer.ipv6.next_hdr, hdr.outer.ipv6.payload_len) {
+            //IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
+            (4, _ ): parse_outer_ipinip_set_tunnel_type;
+            (41, _ ): parse_outer_ipv6inip_set_tunnel_type;
+            (47, _ ): parse_outer_gre;
+# 873 "npb_ing_parser.p4"
+            (17, _ ): parse_outer_udp_noudf;
+            (6, _ ): parse_outer_tcp_noudf;
+            (0x84, _ ): parse_outer_sctp_noudf;
+
+            default: accept;
         }
 
 
@@ -10464,20 +9890,10 @@ parser NpbIngressParser(
     //         IP_PROTOCOLS_TCP: parse_outer_tcp;
     //         IP_PROTOCOLS_SCTP: parse_outer_sctp;
     //         IP_PROTOCOLS_GRE: parse_outer_gre;
-    //         IP_PROTOCOLS_ESP: parse_outer_esp_overload;
-    //         default: parse_udf;
+    //         //IP_PROTOCOLS_ESP: parse_outer_esp_overload;
+    //         default: accept;
     //    }
     // }
-
-
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
-    state parse_outer_icmp_igmp_overload {
-
-
-
-        transition parse_udf;
-    }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -10488,7 +9904,7 @@ parser NpbIngressParser(
     // User Datagram Protocol (UDP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_udp {
+    state parse_outer_udp_noudf {
         pkt.extract(hdr.outer.udp);
 
 
@@ -10496,7 +9912,9 @@ parser NpbIngressParser(
         ig_md.lkp_1.l4_dst_port = hdr.outer.udp.dst_port;
 
 
-        transition select(hdr.outer.udp.src_port, hdr.outer.udp.dst_port) {
+        transition select(
+            hdr.outer.udp.src_port,
+            hdr.outer.udp.dst_port) {
 
 
             (_, 4789): parse_outer_vxlan;
@@ -10507,41 +9925,38 @@ parser NpbIngressParser(
             (2123, _): parse_outer_gtp_c;
             (_, 2152): parse_outer_gtp_u;
             (2152, _): parse_outer_gtp_u;
-            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_outer_gtp_c;
-            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_outer_gtp_u;            
 
-            default : parse_udf;
+            default : accept;
         }
     }
-
+# 964 "npb_ing_parser.p4"
     //-------------------------------------------------------------------------
     // Transmission Control Protocol (TCP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_tcp {
+    state parse_outer_tcp_noudf {
         pkt.extract(hdr.outer.tcp);
 
         ig_md.lkp_1.l4_src_port = hdr.outer.tcp.src_port;
         ig_md.lkp_1.l4_dst_port = hdr.outer.tcp.dst_port;
         ig_md.lkp_1.tcp_flags = hdr.outer.tcp.flags;
 
-        transition parse_udf;
+        transition accept;
     }
-
+# 991 "npb_ing_parser.p4"
     //-------------------------------------------------------------------------
     // Stream Control Transmission Protocol (SCTP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_sctp {
+    state parse_outer_sctp_noudf {
         pkt.extract(hdr.outer.sctp);
 
         ig_md.lkp_1.l4_src_port = hdr.outer.sctp.src_port;
         ig_md.lkp_1.l4_dst_port = hdr.outer.sctp.dst_port;
 
-        transition parse_udf;
+        transition accept;
     }
-
-
+# 1017 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////////
     // Layer X - Outer
     ///////////////////////////////////////////////////////////////////////////////
@@ -10549,7 +9964,7 @@ parser NpbIngressParser(
     //-------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
     //-------------------------------------------------------------------------
-# 1005 "npb_ing_parser.p4"
+# 1061 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
@@ -10612,6 +10027,33 @@ parser NpbIngressParser(
     //-------------------------------------------------------------------------
 
     state parse_outer_gre {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_outer_gre_qualified;
+            (1,0,0,0,0,0,0,0): parse_outer_gre_qualified;
+            (0,0,1,0,0,0,0,0): parse_outer_gre_qualified;
+            (0,0,0,1,0,0,0,0): parse_outer_gre_qualified;
+            default: accept;
+        }
+    }
+
+    state parse_outer_gre_qualified {
         pkt.extract(hdr.outer.gre);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         ig_md.lkp_1.tunnel_id = 0;
@@ -10622,30 +10064,26 @@ parser NpbIngressParser(
 
         transition select(
             hdr.outer.gre.C,
-            hdr.outer.gre.R,
             hdr.outer.gre.K,
             hdr.outer.gre.S,
-            hdr.outer.gre.s,
-            hdr.outer.gre.recurse,
-            hdr.outer.gre.flags,
-            hdr.outer.gre.version,
             hdr.outer.gre.proto) {
 
-          // C R K S s r f v
+          // C K S
 
-            (0,0,1,0,0,0,0,0,0x6558): parse_outer_nvgre;
+            (0,1,0,0x6558): parse_outer_nvgre;
 
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_ipv6;
+            (0,0,0,0x0800): parse_inner_ipv4;
+            (0,0,0,0x86dd): parse_inner_ipv6;
 
 
 
-            (1,0,0,0,0,0,0,0,_): parse_outer_gre_optional;
-            (0,0,1,0,0,0,0,0,_): parse_outer_gre_optional;
-            (0,0,0,1,0,0,0,0,_): parse_outer_gre_optional;
-            default: parse_udf;
+            (1,0,0,_): parse_outer_gre_optional;
+            (0,1,0,_): parse_outer_gre_optional;
+            (0,0,1,_): parse_outer_gre_optional;
+            default: accept;
         }
     }
+
 
     state parse_outer_gre_optional {
         pkt.extract(hdr.outer.gre_optional);
@@ -10656,14 +10094,14 @@ parser NpbIngressParser(
 
 
 
-            default: parse_udf;
+            default: accept;
         }
     }
 
 
 
     //-------------------------------------------------------------------------
-    // Network Virtualization using GRE (NVGRE) - Outer
+    // Network Virtualization using GRE (NVGRE) - (aka: L2 GRE) - Outer
     //-------------------------------------------------------------------------
 
     state parse_outer_nvgre {
@@ -10684,13 +10122,13 @@ parser NpbIngressParser(
     // Encapsulating Security Payload (ESP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_esp_overload {
-
-
-
-
-        transition parse_udf;
-    }
+//     state parse_outer_esp_overload {
+// #if defined(PARSER_L4_PORT_OVERLOAD) && defined(INGRESS_PARSER_POPULATES_LKP_1)
+//         ig_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//         ig_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif
+//         transition accept;
+//     }
 
 
     //-------------------------------------------------------------------------
@@ -10702,27 +10140,32 @@ parser NpbIngressParser(
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_outer_gtp_c {
+
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_outer_gtp_c;
-            default: parse_udf;
+            (2, 1): parse_outer_gtp_c_qualified;
+            default: accept;
         }
     }
 
-    state extract_outer_gtp_c {
+    state parse_outer_gtp_c_qualified {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
 
 
 
 
-     transition parse_udf;
+     transition accept;
     }
 
     // GTP-U
@@ -10732,6 +10175,12 @@ parser NpbIngressParser(
 
     state parse_outer_gtp_u {
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+
+
         transition select(
             snoop_gtp_v1_base.version,
             snoop_gtp_v1_base.PT,
@@ -10739,13 +10188,13 @@ parser NpbIngressParser(
             snoop_gtp_v1_base.S,
             snoop_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_outer_gtp_u;
-            (1, 1, 0, 1, 0): extract_outer_gtp_u_with_optional;
-            default: parse_udf;
+            (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified;
+            (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional;
+            default: accept;
         }
     }
 
-    state extract_outer_gtp_u {
+    state parse_outer_gtp_u_qualified {
         pkt.extract(hdr.outer.gtp_v1_base);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_1.tunnel_id = hdr.outer.gtp_v1_base.teid;
@@ -10756,11 +10205,11 @@ parser NpbIngressParser(
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_ipv4;
             6: parse_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
-    state extract_outer_gtp_u_with_optional {
+    state parse_outer_gtp_u_with_optional {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -10774,7 +10223,7 @@ parser NpbIngressParser(
             pkt.lookahead<bit<4>>()) {
             (0, 4): parse_inner_ipv4;
             (0, 6): parse_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -10803,16 +10252,15 @@ parser NpbIngressParser(
 
 
         transition select(hdr.inner.ethernet.ether_type) {
-            0x0806: parse_inner_arp;
+            //ETHERTYPE_ARP:  parse_inner_arp;
             0x8100: parse_inner_vlan;
             0x0800: parse_inner_ipv4;
             0x86dd: parse_inner_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
     state parse_inner_vlan {
-
         pkt.extract(hdr.inner.vlan_tag[0]);
 
 
@@ -10828,23 +10276,23 @@ parser NpbIngressParser(
 
 
         transition select(hdr.inner.vlan_tag[0].ether_type) {
-            0x0806: parse_inner_arp;
+            //ETHERTYPE_ARP:  parse_inner_arp;
             0x0800: parse_inner_ipv4;
             0x86dd: parse_inner_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Layer 2.5 - Inner
-    ///////////////////////////////////////////////////////////////////////////
-
-    state parse_inner_arp {
-        // pkt.extract(hdr.inner.arp);
-        // transition accept;
-        transition parse_udf;
-    }
+    // ///////////////////////////////////////////////////////////////////////////
+    // // Layer 2.5 - Inner
+    // ///////////////////////////////////////////////////////////////////////////
+    // 
+    // state parse_inner_arp {
+    //     // pkt.extract(hdr.inner.arp);
+    //     // transition accept;
+    //     transition accept;
+    // }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -10876,15 +10324,15 @@ parser NpbIngressParser(
 //             hdr.inner.ipv4.ihl,
 //             hdr.inner.ipv4.frag_offset) {
 //             (5, 0): parse_inner_ipv4_no_options_frags;
-//             default: parse_udf;
+//             default: accept;
 //         }
 //     }
 // 
 //     state parse_inner_ipv4_no_options_frags {
 //         ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
 //         transition select(hdr.inner.ipv4.protocol) {
-//             IP_PROTOCOLS_ICMP: parse_inner_icmp_igmp_overload;
-//             IP_PROTOCOLS_IGMP: parse_inner_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMP: parse_inner_icmp_igmp_overload;
+//             //IP_PROTOCOLS_IGMP: parse_inner_icmp_igmp_overload;
 //             default: branch_inner_l3_protocol;
 //         }
 //     }
@@ -10913,25 +10361,23 @@ parser NpbIngressParser(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset) {
             (5, 0): parse_inner_ipv4_no_options_frags;
-            default: parse_udf;
+            default: accept;
         }
     }
 
     state parse_inner_ipv4_no_options_frags {
         ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
-        transition select(hdr.inner.ipv4.protocol) {
-            1: parse_inner_icmp_igmp_overload;
-            2: parse_inner_icmp_igmp_overload;
-            17: parse_inner_udp;
-            6: parse_inner_tcp;
-            0x84: parse_inner_sctp;
+        transition select(hdr.inner.ipv4.protocol, hdr.inner.ipv4.total_len) {
+            (4, _): parse_inner_ipinip_set_tunnel_type;
+            (41, _): parse_inner_ipv6inip_set_tunnel_type;
 
-            47: parse_inner_gre;
+            (47, _): parse_inner_gre;
+# 1478 "npb_ing_parser.p4"
+            (17, _ ): parse_inner_udp_noudf;
+            (6, _ ): parse_inner_tcp_noudf;
+            (0x84, _ ): parse_inner_sctp_noudf;
 
-            0x32: parse_inner_esp_overload;
-            4: parse_inner_ipinip_set_tunnel_type;
-            41: parse_inner_ipv6inip_set_tunnel_type;
-            default : parse_udf;
+            default: accept;
         }
     }
 
@@ -10955,7 +10401,7 @@ parser NpbIngressParser(
 // #endif // INGRESS_PARSER_POPULATES_LKP_2        
 // 
 //         transition select(hdr.inner.ipv6.next_hdr) {
-//             IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload;
+//             //IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload;
 //             default: branch_inner_l3_protocol;
 //         }
 // #else
@@ -10979,18 +10425,17 @@ parser NpbIngressParser(
         ig_md.lkp_2.ip_len = hdr.inner.ipv6.payload_len;
 
 
-        transition select(hdr.inner.ipv6.next_hdr) {
-            58: parse_inner_icmp_igmp_overload;
-            17: parse_inner_udp;
-            6: parse_inner_tcp;
-            0x84: parse_inner_sctp;
+        transition select(hdr.inner.ipv6.next_hdr, hdr.inner.ipv6.payload_len) {
+            (4, _): parse_inner_ipinip_set_tunnel_type;
+            (41, _): parse_inner_ipv6inip_set_tunnel_type;
 
-            47: parse_inner_gre;
+            (47, _): parse_inner_gre;
+# 1545 "npb_ing_parser.p4"
+            (17, _ ): parse_inner_udp_noudf;
+            (6, _ ): parse_inner_tcp_noudf;
+            (0x84, _ ): parse_inner_sctp_noudf;
 
-            0x32: parse_inner_esp_overload;
-            4: parse_inner_ipinip_set_tunnel_type;
-            41: parse_inner_ipv6inip_set_tunnel_type;
-            default : parse_udf;
+            default: accept;
         }
 
 
@@ -11007,66 +10452,70 @@ parser NpbIngressParser(
 // #ifdef INNER_GRE_ENABLE
 //             IP_PROTOCOLS_GRE: parse_inner_gre;
 // #endif // INNER_GRE_ENABLE
-//             IP_PROTOCOLS_ESP: parse_inner_esp_overload;
+//             //IP_PROTOCOLS_ESP: parse_inner_esp_overload;
 //             IP_PROTOCOLS_IPV4: parse_inner_ipinip_set_tunnel_type;
 //             IP_PROTOCOLS_IPV6: parse_inner_ipv6inip_set_tunnel_type;
-//             default : parse_udf;
+//             default : accept;
 //        }
 //     }    
 
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.     
-    state parse_inner_icmp_igmp_overload {
-
-
-
-        transition parse_udf;
-    }
 
 
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
     ///////////////////////////////////////////////////////////////////////////
 
-    state parse_inner_udp {
+    //-------------------------------------------------------------------------
+    // User Datagram Protocol (UDP) - Inner
+    //-------------------------------------------------------------------------
+
+    state parse_inner_udp_noudf {
         pkt.extract(hdr.inner.udp);
 
         ig_md.lkp_2.l4_src_port = hdr.inner.udp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.udp.dst_port;
 
-        transition select(hdr.inner.udp.src_port, hdr.inner.udp.dst_port) {
+        transition select(
+            hdr.inner.udp.src_port,
+            hdr.inner.udp.dst_port) {
+
 
             (_, 2123): parse_inner_gtp_c;
             (2123, _): parse_inner_gtp_c;
             (_, 2152): parse_inner_gtp_u;
             (2152, _): parse_inner_gtp_u;
-            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_inner_gtp_c;
-            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_inner_gtp_u;            
 
-            default: parse_udf;
+            default: accept;
         }
     }
+# 1627 "npb_ing_parser.p4"
+    //-------------------------------------------------------------------------
+    // Transmission Control Protocol (TCP) - Inner
+    //-------------------------------------------------------------------------
 
-    state parse_inner_tcp {
+    state parse_inner_tcp_noudf {
         pkt.extract(hdr.inner.tcp);
 
         ig_md.lkp_2.l4_src_port = hdr.inner.tcp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.tcp.dst_port;
         ig_md.lkp_2.tcp_flags = hdr.inner.tcp.flags;
 
-        transition parse_udf;
+        transition accept;
     }
+# 1655 "npb_ing_parser.p4"
+    //-------------------------------------------------------------------------
+    // Stream Control Transmission Protocol (SCTP) - Inner
+    //-------------------------------------------------------------------------
 
-    state parse_inner_sctp {
+    state parse_inner_sctp_noudf {
         pkt.extract(hdr.inner.sctp);
 
         ig_md.lkp_2.l4_src_port = hdr.inner.sctp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.sctp.dst_port;
 
-        transition parse_udf;
+        transition accept;
     }
-
-
+# 1682 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Inner
     ///////////////////////////////////////////////////////////////////////////
@@ -11101,13 +10550,13 @@ parser NpbIngressParser(
     // Encapsulating Security Payload (ESP) - Inner
     //-------------------------------------------------------------------------
 
-    state parse_inner_esp_overload {
-
-
-
-
-        transition parse_udf;
-    }
+//     state parse_inner_esp_overload {
+// #if defined(PARSER_L4_PORT_OVERLOAD) && defined(INGRESS_PARSER_POPULATES_LKP_2)
+//         ig_md.lkp_2.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//         ig_md.lkp_2.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif
+//         transition accept;
+//     }    
 
 
     //-------------------------------------------------------------------------
@@ -11117,28 +10566,45 @@ parser NpbIngressParser(
 
 
     state parse_inner_gre {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_inner_gre_qualified;
+            (1,0,0,0,0,0,0,0): parse_inner_gre_qualified;
+            (0,0,1,0,0,0,0,0): parse_inner_gre_qualified;
+            (0,0,0,1,0,0,0,0): parse_inner_gre_qualified;
+            default: accept;
+        }
+    }
+
+    state parse_inner_gre_qualified {
         pkt.extract(hdr.inner.gre);
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         ig_md.lkp_2.tunnel_id = 0;
 
         transition select(
             hdr.inner.gre.C,
-            hdr.inner.gre.R,
             hdr.inner.gre.K,
             hdr.inner.gre.S,
-            hdr.inner.gre.s,
-            hdr.inner.gre.recurse,
-            hdr.inner.gre.flags,
-            hdr.inner.gre.version,
             hdr.inner.gre.proto) {
 
-          // C R K S s r f v
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_inner_ipv6;
-            (1,0,0,0,0,0,0,0,_ ): parse_inner_gre_optional;
-            (0,0,1,0,0,0,0,0,_ ): parse_inner_gre_optional;
-            (0,0,0,1,0,0,0,0,_ ): parse_inner_gre_optional;
-            default: parse_udf;
+            (0,0,0,0x0800): parse_inner_inner_ipv4;
+            (0,0,0,0x86dd): parse_inner_inner_ipv6;
+            (1,0,0,_): parse_inner_gre_optional;
+            (0,1,0,_): parse_inner_gre_optional;
+            (0,0,1,_): parse_inner_gre_optional;
+            default: accept;
         }
     }
 
@@ -11147,7 +10613,7 @@ parser NpbIngressParser(
         transition select(hdr.inner.gre.proto) {
             0x0800: parse_inner_inner_ipv4;
             0x86dd: parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -11157,14 +10623,13 @@ parser NpbIngressParser(
 
 
     //-------------------------------------------------------------------------
-    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Outer
+    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Inner
     //-------------------------------------------------------------------------
     // Based on pseudo code from Glenn (see email from 03/11/2019):
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_inner_gtp_c {
         //gtp_v2_base_h snoop_inner_gtp_v2_base = pkt.lookahead<gtp_v2_base_h>();
@@ -11172,23 +10637,25 @@ parser NpbIngressParser(
         //    snoop_inner_gtp_v2_base.version,
         //    snoop_inner_gtp_v2_base.T) {
 
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_inner_gtp_c;
-            default: parse_udf;
+            (2, 1): parse_inner_gtp_c_qualified;
+            default: accept;
         }
     }
 
-    state extract_inner_gtp_c {
+    state parse_inner_gtp_c_qualified {
         //pkt.extract(hdr.inner.gtp_v2_base);
         //ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         //ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v2_base.teid;
 
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_2.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
-        transition parse_udf;
+        transition accept;
     }
 
     // GTP-U
@@ -11198,6 +10665,8 @@ parser NpbIngressParser(
 
     state parse_inner_gtp_u {
         gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             snoop_inner_gtp_v1_base.version,
             snoop_inner_gtp_v1_base.PT,
@@ -11205,24 +10674,24 @@ parser NpbIngressParser(
             snoop_inner_gtp_v1_base.S,
             snoop_inner_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_inner_gtp_u;
-            (1, 1, 0, 1, 0): extract_inner_gtp_u_with_optional;
-            default: parse_udf;
+            (1, 1, 0, 0, 0): parse_inner_gtp_u_qualified;
+            (1, 1, 0, 1, 0): parse_inner_gtp_u_with_optional;
+            default: accept;
         }
     }
 
-    state extract_inner_gtp_u {
+    state parse_inner_gtp_u_qualified {
         pkt.extract(hdr.inner.gtp_v1_base);
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v1_base.teid;
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_inner_ipv4;
             6: parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
-    state extract_inner_gtp_u_with_optional {
+    state parse_inner_gtp_u_with_optional {
         pkt.extract(hdr.inner.gtp_v1_base);
         pkt.extract(hdr.inner.gtp_v1_optional);
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -11232,7 +10701,7 @@ parser NpbIngressParser(
             pkt.lookahead<bit<4>>()) {
             (0, 4): parse_inner_inner_ipv4;
             (0, 6): parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -11249,34 +10718,19 @@ parser NpbIngressParser(
     state parse_inner_inner_ipv4 {
   hdr.inner_inner.ipv4.setValid();
 //      ig_md.inner_inner.ipv4_isValid = true;
-  transition parse_udf;
+  transition accept;
     }
     state parse_inner_inner_ipv6 {
   hdr.inner_inner.ipv6.setValid();
 //      ig_md.inner_inner.ipv6_isValid = true;
-  transition parse_udf;
+  transition accept;
     }
 
 
     ///////////////////////////////////////////////////////////////////////////
     // UDF
     ///////////////////////////////////////////////////////////////////////////
-
-    state parse_udf {
-
-
-
-        transition extract_udf;
-    }
-
-    @dontmerge ("ingress")
-    state extract_udf {
-
-
-
-        transition accept;
-    }
-
+# 1905 "npb_ing_parser.p4"
 }
 # 56 "npb.p4" 2
 # 1 "npb_ing_set_lkp.p4" 1
@@ -11298,6 +10752,23 @@ control IngressSetLookup(
     // -----------------------------
 
     apply {
+
+  ig_md.lkp_0.next_lyr_valid = true;
+//		if((ig_md.lkp_0.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (ig_md.lkp_0.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (ig_md.lkp_0.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+//			ig_md.lkp_0.next_lyr_valid = true;
+//		}
+
+//		ig_md.lkp_1.next_lyr_valid = true;
+  if((ig_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (ig_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (ig_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+   ig_md.lkp_1.next_lyr_valid = true;
+  }
+
+//		ig_md.lkp_2.next_lyr_valid = true;
+  if((ig_md.lkp_2.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (ig_md.lkp_2.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (ig_md.lkp_2.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+   ig_md.lkp_2.next_lyr_valid = true;
+  }
+
+  // -----------------------------------------------------------------------
 
         // Override whatever the parser set "ip_type" to.  Doing so allows the
         // signal to fit when normally it doesn't.  This code should be only
@@ -11393,6 +10864,8 @@ control npb_ing_sfc_top (
  in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
  inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+) (
+ switch_uint32_t port_table_size=288
 ) {
 
 
@@ -11412,59 +10885,13 @@ control npb_ing_sfc_top (
  IngressTunnelInner(NPB_ING_SFC_TUNNEL_OUTER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: bitmask defined as follows....
- //
- //   [0:0] sf  #1: ingress basic/advanced
- //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy
-
- // =========================================================================
- // W/O NSH... Table #0: FlowType Classifier / SFC Classifier
- // =========================================================================
-/*
-#ifdef TRANSPORT_ENABLE
-  #ifdef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
-
-	action tunnel_transport_sap_hit (
-		bit<SSAP_ID_WIDTH>              sap,
-		bit<VPN_ID_WIDTH>               vpn
-	) {
-		hdr_0.nsh_type1.sap     = (16)sap;
-		hdr_0.nsh_type1.vpn     = (16)vpn;
-	}
-
-	// ---------------------------------
-
-	table tunnel_transport_sap {
-		key = {
-			hdr_0.nsh_type1.sap    : exact @name("sap");
-			tunnel_0.type          : exact @name("tunnel_type");
-			tunnel_0.id            : exact @name("tunnel_id");
-		}
-
-		actions = {
-			NoAction;
-			tunnel_transport_sap_hit;
-		}
-
-		size = NPB_ING_SFC_TUNNEL_NETWORK_SAP_TABLE_DEPTH;
-	}
-  #endif
-#endif
-*/
- // =========================================================================
- // W/  NSH... Table #0:
+ // W/  NSH... Table #0a:
  // =========================================================================
 
  action ing_sfc_sf_sel_hit(
   bit<8> si_predec
-
  ) {
   ig_md.nsh_md.si_predec = si_predec;
-
  }
 
  // ---------------------------------
@@ -11486,10 +10913,90 @@ control npb_ing_sfc_top (
   actions = {
    ing_sfc_sf_sel_hit;
    ing_sfc_sf_sel_miss;
+   NoAction;
   }
 
   const default_action = ing_sfc_sf_sel_miss;
   size = NPB_ING_SFC_SF_SEL_TABLE_DEPTH;
+ }
+
+ // =========================================================================
+ // W/  NSH... Table #0b:
+ // =========================================================================
+
+ action ing_sfc_sf_sel_nsh_xlate_hit(
+  bit<6> ttl,
+  bit<24> spi,
+  bit<8> si,
+  bit<8> si_predec
+ ) {
+  hdr_0.nsh_type1.ttl = ttl;
+  hdr_0.nsh_type1.spi = spi;
+  hdr_0.nsh_type1.si = si;
+  ig_md.nsh_md.si_predec = si_predec;
+
+  hdr_0.nsh_type1.ver = 0x2;
+ }
+
+ // ---------------------------------
+
+ action ing_sfc_sf_sel_nsh_xlate_miss(
+ ) {
+  ig_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+ }
+
+ // ---------------------------------
+
+ table ing_sfc_sf_sel_nsh_xlate {
+  key = {
+   hdr_0.nsh_type1.spi : exact @name("tool_address");
+  }
+
+  actions = {
+   ing_sfc_sf_sel_nsh_xlate_hit;
+   ing_sfc_sf_sel_nsh_xlate_miss;
+   NoAction;
+  }
+
+  const default_action = ing_sfc_sf_sel_nsh_xlate_miss;
+  size = NPB_ING_SFC_SF_SEL_NSH_XLATE_TABLE_DEPTH;
+ }
+
+ // =========================================================================
+ // W/O NSH... Table #0:
+ // =========================================================================
+
+ action set_port_properties(
+  bit<8> si_predec,
+
+  bit<16> sap,
+  bit<12> vpn,
+  bit<24> spi,
+  bit<8> si
+ ) {
+  ig_md.nsh_md.si_predec = si_predec; //  8 bits
+
+  hdr_0.nsh_type1.sap = (bit<16>)sap; // 16 bits
+  hdr_0.nsh_type1.vpn = (bit<16>)vpn; // 16 bits
+  hdr_0.nsh_type1.spi = spi; // 24 bits
+  hdr_0.nsh_type1.si = si; //  8 bits
+ }
+
+ // ---------------------------------
+
+ table port_mapping {
+  key = {
+   ig_md.port : exact @name("port");
+//			ig_md.port_lag_index : exact @name("port_lag_index");
+  }
+
+  actions = {
+   set_port_properties;
+   NoAction;
+  }
+
+  const default_action = NoAction;
+  size = port_table_size;
  }
 
  // =========================================================================
@@ -11514,101 +11021,116 @@ control npb_ing_sfc_top (
   if(hdr_0.nsh_type1.isValid()) {
 
    // -----------------------------------------------------------------
-   // Packet already has  a NSH header on it (is already classified) --> just copy it to internal NSH structure
+   // Packet does    have a NSH header on it (is already classified)
    // -----------------------------------------------------------------
 
-   // metadata
+   // ----- metadata -----
    ig_md.nsh_md.start_of_path = false;
-   ig_md.nsh_md.sfc_enable = false;
+//			ig_md.nsh_md.sfc_enable    = false;
 
-   // -----------------------------------------------------------------
+   // ----- table -----
 
-   ing_sfc_sf_sel.apply();
+   if(hdr_0.nsh_type1.ver == 2) {
+
+    ing_sfc_sf_sel.apply();
+
+   } else {
+    ing_sfc_sf_sel_nsh_xlate.apply();
+   }
+
+
+
+
 
   } else {
 
    // -----------------------------------------------------------------
-   // Packet doesn't have a NSH header on it (needs classification) --> try to classify / populate internal NSH structure
+   // Packet doesn't have a NSH header on it -- add it (needs classification)
    // -----------------------------------------------------------------
 
    // ----- metadata -----
    ig_md.nsh_md.start_of_path = true; // * see design note below
-   ig_md.nsh_md.sfc_enable = false; // * see design note below
+//			ig_md.nsh_md.sfc_enable    = false; // * see design note below
 
    // ----- header -----
-   hdr_0.nsh_type1.setValid();
 
-   // base: word 0
-   hdr_0.nsh_type1.next_proto = 0x3;
-   // (nothing to do, will be done in egress)
+   // note: according to p4 spec, initializing a header also automatically sets it valid.
+//			hdr_0.nsh_type1.setValid();
+   hdr_0.nsh_type1 = {
+    version = 0x0,
+    o = 0x0,
+    reserved = 0x0,
+    ttl = 0x3f, // 63 is the rfc's recommended default value.
+    len = 0x6, // in 4-byte words (1 + 1 + 4).
+    reserved2 = 0x0,
+    md_type = 0x1, // 0 = reserved, 1 = fixed len, 2 = variable len.
+    next_proto = 0x3, // 1 = ipv4, 2 = ipv6, 3 = ethernet, 4 = nsh, 5 = mpls.
 
-   // base: word 1
-//			hdr_0.nsh_type1.spi                          = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
-//			hdr_0.nsh_type1.si                           = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
+    spi = 0x0,
+    si = 0x0,
 
-   // ext: type 1 - word 1-3
-   hdr_0.nsh_type1.scope = 0;
-//			hdr_0.nsh_type1.sap                          = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
-//			hdr_0.nsh_type1.vpn                          = 0; // DO NOT CLEAR -- DEFAULT VALUE COMES FROM PORT TABLE
-   hdr_0.nsh_type1.sfc_data = 0;
+    ver = 0x2,
+    reserved3 = 0x0,
+    lag_hash = 0x0,
 
-//			hdr_0.nsh_type1.timestamp                    = ig_md.timestamp[31:0]; // FOR REAL DESIGN
+    vpn = 0x0,
+    sfc_data = 0x0,
+
+    reserved4 = 0x0,
+    scope = 0x0,
+    sap = 0x0,
 
 
 
 
-   // * design note: we have to ensure that all sfc tables have hits, otherwise
-   // we can end up with a partially classified packet -- which would be bad.
-   // one "cheap" (resource-wise) way of doing this is to initially set all
-   // the control signals valid, and then have any table that misses clear them....
+    timestamp = 0
+
+   };
+
+   // ----- table -----
+   port_mapping.apply();
 
    // -----------------------------------------------------------------
 
-//			if(ig_md.flags.rmac_hit == true) { // note: hit is forced "false" if there is no transport present
    if(hdr_0.ethernet.isValid()) {
 
     // ---------------------------
-    // ----- normally tapped -----
+    // ----- Normally Tapped -----
     // ---------------------------
 
-    bool hit;
+
+    tunnel_transport.apply(ig_md, hdr_0, ig_md.lkp_0, tunnel_0, ig_intr_md_for_dprsr);
 
 
-    tunnel_transport.apply(ig_md, ig_md.flags.ipv4_checksum_err_0, hdr_0, ig_md.lkp_0, tunnel_0, ig_intr_md_for_dprsr, hit);
-
-
-//				if(hit) {
-//					tunnel_transport_sap.apply();
-     tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0, tunnel_0);
-//				}
+    // -----------------------
+    // Network SAP
+    // -----------------------
+    tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0, tunnel_0);
 
 
    } else {
 
     // ----------------------------
-    // ----- optically tapped -----
+    // ----- Optically Tapped -----
     // ----------------------------
 
     // -----------------------
-    // Tunnel - Outer
+    // Outer SAP
     // -----------------------
-
 
     tunnel_outer.apply(ig_md, ig_md.lkp_1, hdr_0, ig_md.lkp_2, hdr_2, tunnel_2);
 
    }
 
    // -----------------------
-   // Tunnel - Inner
+   // Inner SAP
    // -----------------------
-
    tunnel_inner.apply(ig_md, ig_md.lkp_1, hdr_0, ig_md.lkp_2, hdr_2, tunnel_2);
 
   }
 
   // always terminate transport headers
   tunnel_0.terminate = true;
-
  }
 }
 # 2 "npb_ing_top.p4" 2
@@ -11631,14 +11153,12 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
  out bit<16> hash
 ) {
  // =========================================================================
- // Notes
- // =========================================================================
-
- // =========================================================================
  // Table #1 (main lkp struct):
  // =========================================================================
 
  bit<10> flow_class_internal = 0;
+
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
  action ing_flow_class_hit (
   bit<10> flow_class
@@ -11647,6 +11167,15 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 
   // change metadata
   flow_class_internal = flow_class;
+
+  stats.count();
+ }
+
+ // ---------------------------------
+
+ action no_action (
+ ) {
+  stats.count();
  }
 
  // ---------------------------------
@@ -11661,12 +11190,13 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
   }
 
   actions = {
-   NoAction;
+   no_action;
    ing_flow_class_hit;
   }
 
-  const default_action = NoAction;
-  size = NPB_ING_SFF_FLW_CLS_TABLE_DEPTH;
+  const default_action = no_action;
+  counters = stats;
+  size = NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH;
  }
 
  // =========================================================================
@@ -11713,7 +11243,9 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
  // =========================================================================
  // Table #1: Action Selector
  // =========================================================================
-# 116 "npb_ing_sf_npb_basic_adv_sfp_sel.p4"
+
+ DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+# 126 "npb_ing_sf_npb_basic_adv_sfp_sel.p4"
  // Use an Action Selector with the table...
     Hash<bit<16>>(
   HashAlgorithm_t.IDENTITY
@@ -11733,14 +11265,14 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 		HashAlgorithm_t.CRC32
 	) selector_hash;
 */
- ActionProfile(NPB_ING_SFF_SCHD_SELECTOR_TABLE_SIZE) schd_action_profile;
+ ActionProfile(NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE) schd_action_profile;
     ActionSelector(
   schd_action_profile,
   selector_hash,
 //		SelectorMode_t.FAIR,
   SelectorMode_t.RESILIENT,
-  NPB_ING_SFF_SCHD_MAX_MEMBERS_PER_GROUP,
-  NPB_ING_SFF_SCHD_GROUP_TABLE_SIZE
+  NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP,
+  NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE
  ) schd_selector;
 
 
@@ -11760,6 +11292,15 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 
   // change metadata
   ig_md.nsh_md.si_predec = si_predec;
+
+  stats.count();
+ }
+
+ // ---------------------------------
+
+ action no_action (
+ ) {
+  stats.count();
  }
 
  // ---------------------------------
@@ -11775,12 +11316,13 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
   }
 
   actions = {
-   NoAction;
+   no_action;
    ing_schd_hit;
   }
 
-  const default_action = NoAction;
-  size = NPB_ING_SFF_SCHD_TABLE_SIZE;
+  const default_action = no_action;
+  counters = stats;
+  size = NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE;
 
   implementation = schd_selector;
 
@@ -11806,7 +11348,7 @@ control npb_ing_sf_npb_basic_adv_top (
  inout switch_header_transport_t hdr_0,
  inout switch_header_outer_t hdr_1,
  inout switch_header_inner_t hdr_2,
-    inout udf_h hdr_udf,
+ inout udf_h hdr_udf,
 
  inout switch_ingress_metadata_t ig_md,
  in ingress_intrinsic_metadata_t ig_intr_md,
@@ -11825,45 +11367,26 @@ control npb_ing_sf_npb_basic_adv_top (
   INGRESS_L7_ACL_TABLE_SIZE
  ) acl;
 
- // temporary internal variables
-//	bit<2>  action_bitmask_internal;
-
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: egress action_bitmask defined as follows....
- //
- //   [0:0] act #1: policy
- //   [1:1] act #2: unused (was dedup)
-
- // =========================================================================
- // Table #1: Action Select
+ // Table #1: SFF Action Select
  // =========================================================================
 
  bit<8> int_ctrl_flags = 0;
 
  action ing_sf_action_sel_hit(
-//		bit<2>  action_bitmask,
 
 
 
-//      bit<3>  discard
  ) {
-//		action_bitmask_internal = action_bitmask;
 
 
 
-
-//      ig_intr_md_for_dprsr.drop_ctl = discard; // drop packet
  }
 
  // =====================================
 
  action ing_sf_action_sel_miss(
  ) {
-//		action_bitmask_internal = 0;
-//		int_ctrl_flags = 0;
  }
 
  // =====================================
@@ -11881,11 +11404,11 @@ control npb_ing_sf_npb_basic_adv_top (
   }
 
   const default_action = NoAction;
-  size = NPB_ING_SF_0_BAS_ADV_ACT_SEL_TABLE_DEPTH;
+  size = NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH;
  }
 
  // =========================================================================
- // Table #2: IP Length Range
+ // Table #2: SF IP Length Range
  // =========================================================================
 
  bit<16> ip_len = 0;
@@ -11926,7 +11449,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 
  // =========================================================================
- // Table #3: L4 Src Port Range
+ // Table #3: SF L4 Src Port Range
  // =========================================================================
 
  bit<16> l4_src_port = 0;
@@ -11967,7 +11490,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 
  // =========================================================================
- // Table #4: L4 Dst Port Range
+ // Table #4: SF L4 Dst Port Range
  // =========================================================================
 
  bit<16> l4_dst_port = 0;
@@ -12042,69 +11565,52 @@ control npb_ing_sf_npb_basic_adv_top (
    // Action(s)
    // =====================================
 
-//			if(action_bitmask_internal[0:0] == 1) {
-
-    // -------------------------------------
-    // Action #0 - Policy
-    // -------------------------------------
+   // -------------------------------------
+   // Action #0 - Policy
+   // -------------------------------------
 
 
-    ing_sf_ip_len_rng.apply();
+   ing_sf_ip_len_rng.apply();
 
 
 
 
 
-    ing_sf_l4_src_port_rng.apply();
+   ing_sf_l4_src_port_rng.apply();
 
 
 
 
 
-    ing_sf_l4_dst_port_rng.apply();
+   ing_sf_l4_dst_port_rng.apply();
 
 
 
 
 
-    acl.apply(
-     ig_md.lkp_1,
-     ig_md,
-     ig_intr_md_for_dprsr,
-     ig_intr_md_for_tm,
-     ip_len,
-     ip_len_is_rng_bitmask,
-     l4_src_port,
-     l4_src_port_is_rng_bitmask,
-     l4_dst_port,
-     l4_dst_port_is_rng_bitmask,
-     hdr_0,
-     hdr_1,
-     hdr_2,
-     hdr_udf,
-     int_ctrl_flags
-    );
-//			}
+   acl.apply(
+    ig_md.lkp_1,
+    ig_md,
+    ig_intr_md_for_dprsr,
+    ig_intr_md_for_tm,
+    ip_len,
+    ip_len_is_rng_bitmask,
+    l4_src_port,
+    l4_src_port_is_rng_bitmask,
+    l4_dst_port,
+    l4_dst_port_is_rng_bitmask,
+    hdr_0,
+    hdr_1,
+    hdr_2,
+    hdr_udf,
+    int_ctrl_flags
+   );
 
-//			if(action_bitmask_internal[1:1] == 1) {
-
-    // -------------------------------------
-    // Action #1 - Deduplication
-    // -------------------------------------
-# 309 "npb_ing_sf_npb_basic_adv_top.p4"
-//			}
-
+   // -------------------------------------
+   // Action #1 - Deduplication
+   // -------------------------------------
+# 286 "npb_ing_sf_npb_basic_adv_top.p4"
   }
-/*
-		npb_ing_sf_npb_basic_adv_sfp_sel.apply(
-			hdr_0,
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm
-		);
-*/
  }
 }
 # 3 "npb_ing_top.p4" 2
@@ -12121,30 +11627,16 @@ control npb_ing_sf_multicast_top_part1 (
  inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
 ) (
- switch_uint32_t table_size = NPB_ING_SF_1_MULTICAST_ACT_SEL_TABLE_DEPTH
+ switch_uint32_t table_size = NPB_ING_SF_1_MULTICAST_SFF_TABLE_DEPTH
 ) {
-
- // temporary internal variables
-//  bit<1> action_bitmask_internal;
-
- // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: egress action_bitmask defined as follows....
- //
- //   [0:0] act #1: multicast
 
  // =========================================================================
  // Table #1: Action Select
  // =========================================================================
 
  action ing_sf_action_sel_hit(
-//		bit<1> action_bitmask,
   switch_mgid_t mgid
  ) {
-//		action_bitmask_internal = action_bitmask;
-
   ig_md.multicast.id = mgid;
 
   ig_md.egress_port_lag_index = 0;
@@ -12154,7 +11646,6 @@ control npb_ing_sf_multicast_top_part1 (
 
  action ing_sf_action_sel_miss(
  ) {
-//		action_bitmask_internal = 0;
  }
 
  // =====================================
@@ -12186,8 +11677,6 @@ control npb_ing_sf_multicast_top_part1 (
 
   if(ing_sf_action_sel.apply().hit) {
 
-//			ig_md.nsh_md.sf1_active = true;
-
    // =====================================
    // Decrement SI
    // =====================================
@@ -12205,18 +11694,6 @@ control npb_ing_sf_multicast_top_part1 (
 
 
 
-   // =====================================
-   // Action(s)
-   // =====================================
-
-//			if(action_bitmask_internal[0:0] == 1) {
-
-    // There used to be a table here that took sfc and gave mgid.  It has been removed in the latest iteration.
-
-//			}
-
-  } else {
-//			ig_md.nsh_md.sf1_active = false;
   }
 
  }
@@ -12236,104 +11713,15 @@ control npb_egr_sf_multicast_top_part2 (
 ) {
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // =========================================================================
  // Table #1: 
  // =========================================================================
-/*
-#ifdef MULTICAST_ENABLE
-	action rid_hit_nsh(
-		switch_bd_t bd,
 
-		bit<24>               spi,
-		bit<8>                si,
-
-		switch_nexthop_t nexthop_index,
-		switch_tunnel_index_t tunnel_index,
-		switch_outer_nexthop_t outer_nexthop_index
-	) {
-		eg_md.bd = bd;
-
-		hdr_0.nsh_type1.spi     = spi;
-		hdr_0.nsh_type1.si      = si;
-
-		eg_md.nexthop = nexthop_index;
-		eg_md.tunnel_0.index = tunnel_index;
-		eg_md.outer_nexthop = outer_nexthop_index;
-	}
-
-	action rid_hit(
-		switch_bd_t bd
-	) {
-		eg_md.bd = bd;
-	}
-
-	action rid_miss() {
-	}
-
-	table rid {
-		key = {
-			replication_id : exact;
-		}
-		actions = {
-			rid_miss;
-			rid_hit;
-			rid_hit_nsh;
-		}
-
-		size = table_size;
-		const default_action = rid_miss;
-	}
-#endif
-*/
  // =========================================================================
  // Apply
  // =========================================================================
 
  apply {
 
-  // =====================================
-  // Action Lookup
-  // =====================================
-/*
-		if(eg_md.nsh_md.sf1_active == true) {
-
-			// =====================================
-			// Decrement SI
-			// =====================================
-
-			// Derek: We have moved this here, rather than at the end of the sf,
-			// in violation of RFC8300.  This is because of an issue were a sf
-			// can reclassify the packet with a new si, which would then get immediately
-			// decremented.  This means firmware would have to add 1 to the si value
-			// the really wanted.  So we move it here so that is gets decremented after
-			// the lookup that uses it, but before any actions have run....
-
-			// NOTE: THIS IS DONE IN EGRESS INSTEAD OF INGRESS, BECAUSE WE DON"T FIT OTHERWISE!
-
-#ifdef BUG_09719_WORKAROUND
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si - 1; // decrement sp_index
-#else
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si |-| 1; // decrement sp_index
-#endif
-			// =====================================
-			// Action(s)
-			// =====================================
-
-		}
-*/
-  // =====================================
-  // Replication ID Lookup
-  // =====================================
-/*
-#ifdef MULTICAST_ENABLE
-		if(replication_id != 0) {
-			rid.apply();
-		}
-#endif
-*/
  }
 }
 # 5 "npb_ing_top.p4" 2
@@ -12348,10 +11736,12 @@ control npb_ing_sff_top (
 ) {
 
  // =========================================================================
- // Table: FIB
+ // Table #1: FIB
  // =========================================================================
 
  DirectCounter<bit<32>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+
+ // =====================================
 
  action drop_pkt (
  ) {
@@ -12390,8 +11780,6 @@ control npb_ing_sff_top (
  }
 
  // =====================================
- // Table
- // =====================================
 
  table ing_sff_fib {
   key = {
@@ -12426,7 +11814,7 @@ control npb_ing_sff_top (
 
  apply {
   // -------------------------------------
-  // Perform Forwarding Lookup
+  // Forwarding Lookup
   // -------------------------------------
 
   ing_sff_fib.apply();
@@ -12477,21 +11865,12 @@ control npb_ing_top (
 ) {
 
 
-
-
-
-
  npb_ing_sf_npb_basic_adv_sfp_hash() npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1;
-
-//	npb_ing_sf_npb_basic_adv_sfp_hash() npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2;
-
 
 
  TunnelDecapTransportIngress(switch_tunnel_mode_t.PIPE) tunnel_decap_transport_ingress;
  TunnelDecapOuter(switch_tunnel_mode_t.PIPE) tunnel_decap_outer;
  TunnelDecapInner(switch_tunnel_mode_t.PIPE) tunnel_decap_inner;
-
- TunnelEncapTransportIngress(switch_tunnel_mode_t.PIPE) tunnel_encap_transport_ingress;
 
  // =========================================================================
  // Apply
@@ -12512,34 +11891,20 @@ control npb_ing_top (
   if(hdr_0.nsh_type1.scope == 0) {
 
    // do nothing
-# 71 "npb_ing_top.p4"
+# 61 "npb_ing_top.p4"
   } else {
 
    Scoper.apply(
     ig_md.lkp_2,
-    ig_md.drop_reason_2,
 
     ig_md.lkp_1
    );
-# 88 "npb_ing_top.p4"
+# 76 "npb_ing_top.p4"
   }
 
   // -----------------------------------------------------------------
   // Set Initial Scope (L7)
   // -----------------------------------------------------------------
-
-
-
-
-
-
-  // -----------------------------------------------------------------
-
-  // populate udf in lkp struct for the following cases:
-  //   scope==inner
-  //   scope==outer and no inner stack present
-  // todo: do we need to qualify this w/ hdr_udf.isValid()? (the thinking is it will just work w/o doing so)
-
 
 
 
@@ -12586,41 +11951,11 @@ control npb_ing_top (
    ig_md.nsh_md.hash_1
   );
 
+
   // -------------------------------------
-# 164 "npb_ing_top.p4"
+  //
   // -------------------------------------
-/*
-  #ifdef SF_0_ALLOW_SCOPE_CHANGES
-
-    #ifdef INGRESS_PARSER_POPULATES_LKP_2
-    #else
-		ScoperInner.apply(
-			hdr_2,
-			tunnel_2,
-			ig_md.drop_reason_2,
-
-			ig_md.lkp_2
-		);
-    #endif
-
-		npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.apply(
-			hdr_0,
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm,
-
-			ig_md.lkp_2.mac_type,
-			ig_md.lkp_2.ip_proto,
-			ig_md.lkp_2.l4_src_port,
-			ig_md.lkp_2.l4_dst_port,
-			ig_md.nsh_md.hash_2
-		);
-  #endif // SF_0_ALLOW_SCOPE_CHANGES
-*/
-
-
+# 142 "npb_ing_top.p4"
   // -------------------------------------
   // SF #0 - Policy
   // -------------------------------------
@@ -12652,7 +11987,7 @@ control npb_ing_top (
   }
 
   // -------------------------------------
-  // SFF Reframing
+  // SFF - Reframing
   // -------------------------------------
 
   // Decaps ------------------------------
@@ -12664,15 +11999,13 @@ control npb_ing_top (
   tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
   tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
   TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
-# 255 "npb_ing_top.p4"
+# 196 "npb_ing_top.p4"
   // Encaps ------------------------------
 
-  tunnel_0.encap = true;
-  tunnel_encap_transport_ingress.apply(hdr_0, tunnel_0, hdr_1);
+//		tunnel_0.encap = true;
+//		tunnel_encap_transport_ingress.apply(hdr_0, tunnel_0, hdr_1);
 
   // -------------------------------------
   // SFF
@@ -12797,18 +12130,27 @@ control IngressMirror(
     apply {
 
         if (ig_intr_md_for_dprsr.mirror_type == 1) {
-            mirror.emit<switch_port_mirror_metadata_h>(
-                ig_md.mirror.session_id,
-                {ig_md.mirror.src,
-                 ig_md.mirror.type,
+            mirror.emit<switch_port_mirror_metadata_h>(ig_md.mirror.session_id, {
+                ig_md.mirror.src,
+                ig_md.mirror.type,
+                0,
+                ig_md.port,
+                ig_md.bd,
+                0,
+
+
+
+                ig_md.port_lag_index,
+
 //               ig_md.timestamp,
                  (bit<32>)hdr.transport.nsh_type1.timestamp,
 
 
 
-                 ig_md.mirror.session_id});
+                ig_md.mirror.session_id
+            });
         } else if (ig_intr_md_for_dprsr.mirror_type == 3) {
-# 76 "npb_ing_deparser.p4"
+# 85 "npb_ing_deparser.p4"
         }
 
     }
@@ -12944,26 +12286,19 @@ parser NpbEgressParser(
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NONE; // note: inner here means "current scope - 1"
 
 
-//      eg_md.inner_inner.ethernet_isValid = false;
-//      eg_md.inner_inner.ipv4_isValid = false;
-//      eg_md.inner_inner.ipv6_isValid = false;
-
 
         switch_port_mirror_metadata_h mirror_md = pkt.lookahead<switch_port_mirror_metadata_h>();
         transition select(eg_intr_md.deflection_flag, mirror_md.src, mirror_md.type) {
-            (1, _, _ ) : parse_deflected_pkt;
+
+
+
 
             (_, SWITCH_PKT_SRC_BRIDGED, _ ) : parse_bridged_pkt;
 //          (_, _,                             SWITCH_MIRROR_TYPE_PORT             ) : parse_port_mirrored_metadata;
             (_, SWITCH_PKT_SRC_CLONED_INGRESS, 1 ) : parse_ig_port_mirrored_metadata; // derek added
             (_, SWITCH_PKT_SRC_CLONED_EGRESS, 1 ) : parse_eg_port_mirrored_metadata; // derek added
             (_, SWITCH_PKT_SRC_CLONED_EGRESS, 2 ) : parse_cpu_mirrored_metadata;
-
-            (_, SWITCH_PKT_SRC_CLONED_INGRESS, 3 ) : parse_dtel_drop_metadata_from_ingress;
-            (_, _, 3 ) : parse_dtel_drop_metadata_from_egress;
-            (_, _, 4) : parse_dtel_switch_local_metadata;
-            (_, _, 5 ) : parse_simple_mirrored_metadata;
-
+# 67 "npb_egr_parser.p4"
         }
 
 
@@ -12976,13 +12311,18 @@ parser NpbEgressParser(
 
   // ---- extract base bridged metadata -----
         eg_md.ingress_port = hdr.bridged_md.base.ingress_port;
+
+
+
         eg_md.port_lag_index = hdr.bridged_md.base.ingress_port_lag_index;
+
         eg_md.bd = hdr.bridged_md.base.ingress_bd;
         eg_md.nexthop = hdr.bridged_md.base.nexthop;
 //      eg_md.pkt_type             = hdr.bridged_md.base.pkt_type;
         eg_md.cpu_reason = hdr.bridged_md.base.cpu_reason;
 //      eg_md.ingress_timestamp    = hdr.bridged_md.base.timestamp;
         eg_md.flags.rmac_hit = hdr.bridged_md.base.rmac_hit;
+  eg_md.flags.bypass_egress = hdr.bridged_md.base.bypass_egress;
 
         eg_md.outer_nexthop = hdr.bridged_md.tunnel.outer_nexthop;
         eg_md.tunnel_0.index = hdr.bridged_md.tunnel.index;
@@ -13009,20 +12349,6 @@ parser NpbEgressParser(
 
 
 
-
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) hdr.bridged_md.base.ingress_port;
-        //hdr.cpu.port_lag_index     = (bit<16>) hdr.bridged_md.base.ingress_port_lag_index;
-        hdr.cpu.ingress_bd = (bit<16>) hdr.bridged_md.base.ingress_bd;
-        hdr.cpu.reason_code = (bit<16>) hdr.bridged_md.base.cpu_reason;
 
         // -----------------------------
         // packet will always have NSH present
@@ -13051,60 +12377,50 @@ parser NpbEgressParser(
         switch_port_mirror_metadata_h port_md;
         pkt.extract(port_md);
         pkt.extract(hdr.outer.ethernet);
-        eg_md.pkt_src = port_md.src;
-        eg_md.mirror.session_id = port_md.session_id;
-//      eg_md.ingress_timestamp = port_md.timestamp;
+        eg_md.pkt_src = port_md.src; // for cpu header
+        eg_md.bd = port_md.bd; // for cpu header (derek added)
+  eg_md.ingress_port = port_md.port; // for cpu header (derek added)
+
+
+
+        eg_md.port_lag_index = port_md.port_lag_index; // for cpu header (derek added)
+
+  eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRRROR; // for cpu header (derek added)
+        eg_md.mirror.session_id = port_md.session_id; // for ??? header
+//      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 
 
 
 
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) 0; // derek, what to set to?
-        //hdr.cpu.port_lag_index     = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.ingress_bd = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.reason_code = (bit<16>) SWITCH_CPU_REASON_IG_PORT_MIRRROR;
-// Derek: I think this is broken -- packet may have an nsh header at the start instead of an ethernet header -- code needs to look more like above "transition select"?
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
+
+
 
         transition accept;
-    }
-
-    state parse_deflected_pkt {
-# 225 "npb_egr_parser.p4"
     }
 
     state parse_eg_port_mirrored_metadata {
         switch_port_mirror_metadata_h port_md;
         pkt.extract(port_md);
         pkt.extract(hdr.outer.ethernet);
-        eg_md.pkt_src = port_md.src;
-        eg_md.mirror.session_id = port_md.session_id;
-//      eg_md.ingress_timestamp = port_md.timestamp;
+        eg_md.pkt_src = port_md.src; // for cpu header
+        eg_md.bd = port_md.bd; // for cpu header (derek added)
+  eg_md.ingress_port = port_md.port; // for cpu header (derek added)
+
+
+
+        eg_md.port_lag_index = port_md.port_lag_index; // for cpu header (derek added)
+
+  eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRRROR; // for cpu header (derek added)
+        eg_md.mirror.session_id = port_md.session_id; // for ??? header
+//      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
-# 243 "npb_egr_parser.p4"
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) 0; // derek, what to set to?
-        //hdr.cpu.port_lag_index     = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.ingress_bd = (bit<16>) 0; // derek, what to set to?
-        hdr.cpu.reason_code = (bit<16>) SWITCH_CPU_REASON_EG_PORT_MIRRROR;
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type; // derek: does this need to be done after reframings?
+
+
+
+
+
+
 
         transition accept;
     }
@@ -13113,59 +12429,26 @@ parser NpbEgressParser(
         switch_cpu_mirror_metadata_h cpu_md;
         pkt.extract(cpu_md);
         pkt.extract(hdr.outer.ethernet);
-        eg_md.pkt_src = cpu_md.src;
-        eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
+        eg_md.pkt_src = cpu_md.src; // for cpu header
         eg_md.bd = cpu_md.bd; // for cpu header
-        // eg_md.ingress_port = cpu_md.md.port; // for cpu header
-        eg_md.cpu_reason = cpu_md.reason_code; // for cpu header
-# 278 "npb_egr_parser.p4"
-        // ----- add cpu header by default -----
-        //hdr.cpu.setValid();
-        hdr.cpu.egress_queue = 0;
-        hdr.cpu.tx_bypass = 0;
-        hdr.cpu.capture_ts = 0;
-        hdr.cpu.reserved = 0;
-        // Both these line are commented out due to compiler... "error: Field is
-        // extracted in the parser into multiple containers, but the container
-        // slices after the first aren't byte aligned"
-        //hdr.cpu.ingress_port       = (bit<16>) cpu_md.port;
-        //hdr.cpu.port_lag_index     = (bit<16>) cpu_md.port_lag_index;
-        hdr.cpu.ingress_bd = (bit<16>) cpu_md.bd;
-        hdr.cpu.reason_code = (bit<16>) cpu_md.reason_code;
+        eg_md.ingress_port = cpu_md.port; // for cpu header
 
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type; // derek: does this need to be done after reframings? // derek: this line is needed in the code, but get a compiler error!
+
+
+        eg_md.port_lag_index = cpu_md.port_lag_index; // for cpu header (derek added)
+
+        eg_md.cpu_reason = cpu_md.reason_code; // for cpu header
+        eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
+
+
+
+
+
 
 
         transition accept;
     }
-
-    state parse_dtel_drop_metadata_from_egress {
-# 338 "npb_egr_parser.p4"
-        transition reject;
-
-    }
-
-    /* Separate parse state for drop metadata from ingress, in order to set
-     * hdr.outer.dtel_report.egress_port to SWITCH_PORT_INVALID */
-    state parse_dtel_drop_metadata_from_ingress {
-# 384 "npb_egr_parser.p4"
-        transition reject;
-
-    }
-
-    state parse_dtel_switch_local_metadata {
-# 436 "npb_egr_parser.p4"
-        transition reject;
-
-    }
-
-    state parse_simple_mirrored_metadata {
-# 456 "npb_egr_parser.p4"
-        transition reject;
-
-    }
-
-
+# 427 "npb_egr_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // Transport Layer 2 (L2-U)
@@ -13226,7 +12509,6 @@ parser NpbEgressParser(
 
     state parse_outer_ethernet_scope0 {
         pkt.extract(hdr.outer.ethernet);
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 
         eg_md.lkp_1.mac_src_addr = hdr.outer.ethernet.src_addr;
         eg_md.lkp_1.mac_dst_addr = hdr.outer.ethernet.dst_addr;
@@ -13345,7 +12627,6 @@ parser NpbEgressParser(
 
     state parse_outer_ethernet_scope1 {
         pkt.extract(hdr.outer.ethernet);
-        hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 
 // populate for L3-tunnel case (where there's no L2 present)
 
@@ -13430,7 +12711,7 @@ parser NpbEgressParser(
   eg_md.lkp_1.vid = hdr.outer.vlan_tag[0].vid;
 
         eg_md.lkp_1.mac_type = hdr.outer.vlan_tag[0].ether_type;
-# 733 "npb_egr_parser.p4"
+# 697 "npb_egr_parser.p4"
         transition select(hdr.outer.vlan_tag[0].ether_type) {
             0x8100 : parse_outer_vlan_1_scope1;
             0x88A8 : parse_outer_vlan_1_scope1;
@@ -13487,15 +12768,15 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_dst_addr = (bit<128>)hdr.outer.ipv4.dst_addr;
         eg_md.lkp_1.ip_len = hdr.outer.ipv4.total_len;
 
-        // Flag packet (to be sent to host) if it's a frag or has options.
 
+        // Flag packet (to be sent to host) if it's a frag or has options.
         transition select(
             hdr.outer.ipv4.ihl,
             hdr.outer.ipv4.frag_offset,
             hdr.outer.ipv4.protocol) {
 
-            (5, 0, 1): parse_outer_icmp_igmp_overload_scope0;
-            (5, 0, 2): parse_outer_icmp_igmp_overload_scope0;
+            //(5, 0, IP_PROTOCOLS_ICMP): parse_outer_icmp_igmp_overload_scope0;
+            //(5, 0, IP_PROTOCOLS_IGMP): parse_outer_icmp_igmp_overload_scope0;
             (5, 0, _): branch_outer_l3_protocol_scope0;
             default: accept;
         }
@@ -13514,10 +12795,11 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_len = hdr.outer.ipv6.payload_len;
 
 
-        transition select(hdr.outer.ipv6.next_hdr) {
-            58: parse_outer_icmp_igmp_overload_scope0;
-            default: branch_outer_l3_protocol_scope0;
-        }
+        transition branch_outer_l3_protocol_scope0;
+        // transition select(hdr.outer.ipv6.next_hdr) {
+        //     IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload_scope0;
+        //     default: branch_outer_l3_protocol_scope0;
+        // }
 
 
 
@@ -13526,13 +12808,13 @@ parser NpbEgressParser(
     // shared fanout/branch state to save tcam resource
     state branch_outer_l3_protocol_scope0 {
         transition select(protocol_outer) {
-           4: parse_outer_ipinip_set_tunnel_type_scope0;
-           41: parse_outer_ipv6inip_set_tunnel_type_scope0;
+           4: parse_outer_ipinip_set_tunnel_scope0;
+           41: parse_outer_ipv6inip_set_tunnel_scope0;
            17: parse_outer_udp_scope0;
            6: parse_outer_tcp_scope0;
            0x84: parse_outer_sctp_scope0;
            47: parse_outer_gre_scope0;
-           0x32: parse_outer_esp_overload_scope0;
+           //IP_PROTOCOLS_ESP: parse_outer_esp_overload_scope0;
            default: accept;
        }
     }
@@ -13568,8 +12850,8 @@ parser NpbEgressParser(
     // shared fanout/branch state to save tcam resource
     state branch_outer_l3_protocol_scope1 {
         transition select(protocol_outer) {
-           4: parse_outer_ipinip_set_tunnel_type_scope1;
-           41: parse_outer_ipv6inip_set_tunnel_type_scope1;
+           4: parse_outer_ipinip_set_tunnel_scope1;
+           41: parse_outer_ipv6inip_set_tunnel_scope1;
            17: parse_outer_udp_scope1;
            6: parse_outer_tcp_scope1;
            0x84: parse_outer_sctp_scope1;
@@ -13579,16 +12861,16 @@ parser NpbEgressParser(
     }
 
 
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
-    state parse_outer_icmp_igmp_overload_scope0 {
-
-
-
-
-
-        transition accept;
-    }
+//     // For ICMP and IGMP, we're not actually extracting the header;
+//     // We're simply over-loading L4-port info for policy via lookahead.    
+//     state parse_outer_icmp_igmp_overload_scope0 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
+// #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
 
@@ -13690,7 +12972,7 @@ parser NpbEgressParser(
     //-------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
     //-------------------------------------------------------------------------
-# 1051 "npb_egr_parser.p4"
+# 1016 "npb_egr_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
@@ -13723,7 +13005,7 @@ parser NpbEgressParser(
     // Internet Protocol (IP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_ipinip_set_tunnel_type_scope0 {
+    state parse_outer_ipinip_set_tunnel_scope0 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -13735,7 +13017,7 @@ parser NpbEgressParser(
 
     }
 
-    state parse_outer_ipv6inip_set_tunnel_type_scope0 {
+    state parse_outer_ipv6inip_set_tunnel_scope0 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -13748,7 +13030,7 @@ parser NpbEgressParser(
     }
 
 
-    state parse_outer_ipinip_set_tunnel_type_scope1 {
+    state parse_outer_ipinip_set_tunnel_scope1 {
 
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
         transition parse_inner_ipv4_scope1;
@@ -13757,7 +13039,7 @@ parser NpbEgressParser(
 
     }
 
-    state parse_outer_ipv6inip_set_tunnel_type_scope1 {
+    state parse_outer_ipv6inip_set_tunnel_scope1 {
 
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
         transition parse_inner_ipv6_scope1;
@@ -13773,6 +13055,56 @@ parser NpbEgressParser(
     //-------------------------------------------------------------------------
 
     state parse_outer_gre_scope0 {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+
+
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope0;
+            (1,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope0;
+            (0,0,1,0,0,0,0,0): parse_outer_gre_qualified_scope0;
+            (0,0,0,1,0,0,0,0): parse_outer_gre_qualified_scope0;
+            default: accept;
+        }
+    }
+
+    state parse_outer_gre_scope1 {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
+        transition select(
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
+
+          // C R K S s r f v
+            (0,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope1;
+            (1,0,0,0,0,0,0,0): parse_outer_gre_qualified_scope1;
+            (0,0,1,0,0,0,0,0): parse_outer_gre_qualified_scope1;
+            (0,0,0,1,0,0,0,0): parse_outer_gre_qualified_scope1;
+            default: accept;
+        }
+    }
+
+
+    state parse_outer_gre_qualified_scope0 {
         pkt.extract(hdr.outer.gre);
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
@@ -13781,58 +13113,48 @@ parser NpbEgressParser(
 
         transition select(
             hdr.outer.gre.C,
-            hdr.outer.gre.R,
             hdr.outer.gre.K,
             hdr.outer.gre.S,
-            hdr.outer.gre.s,
-            hdr.outer.gre.recurse,
-            hdr.outer.gre.flags,
-            hdr.outer.gre.version,
             hdr.outer.gre.proto) {
 
-          // C R K S s r f v
+          // C K S
 
-            (0,0,1,0,0,0,0,0,0x6558): parse_outer_nvgre_scope0;
+            (0,1,0,0x6558): parse_outer_nvgre_scope0;
 
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_ipv4_scope0;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_ipv6_scope0;
+            (0,0,0,0x0800): parse_inner_ipv4_scope0;
+            (0,0,0,0x86dd): parse_inner_ipv6_scope0;
 
 
 
-            (1,0,0,0,0,0,0,0,_): parse_outer_gre_optional_scope0;
-            (0,0,1,0,0,0,0,0,_): parse_outer_gre_optional_scope0;
-            (0,0,0,1,0,0,0,0,_): parse_outer_gre_optional_scope0;
+            (1,0,0,_): parse_outer_gre_optional_scope0;
+            (0,1,0,_): parse_outer_gre_optional_scope0;
+            (0,0,1,_): parse_outer_gre_optional_scope0;
             default: accept;
         }
     }
 
-    state parse_outer_gre_scope1 {
+    state parse_outer_gre_qualified_scope1 {
         pkt.extract(hdr.outer.gre);
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GRE; // note: inner here means "current scope - 1"
 
         transition select(
             hdr.outer.gre.C,
-            hdr.outer.gre.R,
             hdr.outer.gre.K,
             hdr.outer.gre.S,
-            hdr.outer.gre.s,
-            hdr.outer.gre.recurse,
-            hdr.outer.gre.flags,
-            hdr.outer.gre.version,
             hdr.outer.gre.proto) {
 
-          // C R K S s r f v
+          // C K S
 
-            (0,0,1,0,0,0,0,0,0x6558): parse_outer_nvgre_scope1;
+            (0,1,0,0x6558): parse_outer_nvgre_scope1;
 
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_ipv4_scope1;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_ipv6_scope1;
+            (0,0,0,0x0800): parse_inner_ipv4_scope1;
+            (0,0,0,0x86dd): parse_inner_ipv6_scope1;
 
 
 
-            (1,0,0,0,0,0,0,0,_): parse_outer_gre_optional_scope1;
-            (0,0,1,0,0,0,0,0,_): parse_outer_gre_optional_scope1;
-            (0,0,0,1,0,0,0,0,_): parse_outer_gre_optional_scope1;
+            (1,0,0,_): parse_outer_gre_optional_scope1;
+            (0,1,0,_): parse_outer_gre_optional_scope1;
+            (0,0,1,_): parse_outer_gre_optional_scope1;
             default: accept;
         }
     }
@@ -13868,7 +13190,7 @@ parser NpbEgressParser(
 
 
     //-------------------------------------------------------------------------
-    // Network Virtualization using GRE (NVGRE) - Outer
+    // Network Virtualization using GRE (NVGRE) - (aka: L2 GRE) - Outer
     //-------------------------------------------------------------------------
 
     state parse_outer_nvgre_scope0 {
@@ -13890,19 +13212,19 @@ parser NpbEgressParser(
 
 
 
-    //-------------------------------------------------------------------------
-    // Encapsulating Security Payload (ESP) - Outer
-    //-------------------------------------------------------------------------
-
-    state parse_outer_esp_overload_scope0 {
-
-
-
-
-
-
-        transition accept;
-    }
+//     //-------------------------------------------------------------------------
+//     // Encapsulating Security Payload (ESP) - Outer
+//     //-------------------------------------------------------------------------
+//     
+//     state parse_outer_esp_overload_scope0 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//          eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//          eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
     //-------------------------------------------------------------------------
@@ -13914,20 +13236,24 @@ parser NpbEgressParser(
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_outer_gtp_c_scope0 {
+
+
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_outer_gtp_c_scope0;
+            (2, 1): parse_outer_gtp_c_qualified_scope0;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_c_scope0 {
+    state parse_outer_gtp_c_qualified_scope0 {
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
@@ -13936,16 +13262,18 @@ parser NpbEgressParser(
     }
 
     state parse_outer_gtp_c_scope1 {
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_outer_gtp_c_scope1;
+            (2, 1): parse_outer_gtp_c_qualified_scope1;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_c_scope1 {
+    state parse_outer_gtp_c_qualified_scope1 {
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPC; // note: inner here means "current scope - 1"
      transition accept;
     }
@@ -13957,6 +13285,11 @@ parser NpbEgressParser(
     // Does not support parsing (TLV) extension headers
 
     state parse_outer_gtp_u_scope0 {
+
+
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
+
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
         transition select(
             snoop_gtp_v1_base.version,
@@ -13965,13 +13298,13 @@ parser NpbEgressParser(
             snoop_gtp_v1_base.S,
             snoop_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_outer_gtp_u_scope0;
-            (1, 1, 0, 1, 0): extract_outer_gtp_u_with_optional_scope0;
+            (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified_scope0;
+            (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional_qualified_scope0;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_u_scope0 {
+    state parse_outer_gtp_u_qualified_scope0 {
         pkt.extract(hdr.outer.gtp_v1_base);
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -13984,7 +13317,7 @@ parser NpbEgressParser(
         }
     }
 
-    state extract_outer_gtp_u_with_optional_scope0 {
+    state parse_outer_gtp_u_with_optional_qualified_scope0 {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
 
@@ -14003,6 +13336,8 @@ parser NpbEgressParser(
 
     state parse_outer_gtp_u_scope1 {
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
         transition select(
             snoop_gtp_v1_base.version,
             snoop_gtp_v1_base.PT,
@@ -14010,13 +13345,13 @@ parser NpbEgressParser(
             snoop_gtp_v1_base.S,
             snoop_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_outer_gtp_u_scope1;
-            (1, 1, 0, 1, 0): extract_outer_gtp_u_with_optional_scope1;
+            (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified_scope1;
+            (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional_qualified_scope1;
             default: accept;
         }
     }
 
-    state extract_outer_gtp_u_scope1 {
+    state parse_outer_gtp_u_qualified_scope1 {
         pkt.extract(hdr.outer.gtp_v1_base);
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU; // note: inner here means "current scope - 1"
         transition select(pkt.lookahead<bit<4>>()) {
@@ -14026,7 +13361,7 @@ parser NpbEgressParser(
         }
     }
 
-    state extract_outer_gtp_u_with_optional_scope1 {
+    state parse_outer_gtp_u_with_optional_qualified_scope1 {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU; // note: inner here means "current scope - 1"
@@ -14128,39 +13463,20 @@ parser NpbEgressParser(
     // Scope 0
     //-------------------------------------------------------------------------            
 
+    // For scope0 inner parsing, v4 or v6 is all that's needed downstream.
+
     state parse_inner_ipv4_scope0 {
         pkt.extract(hdr.inner.ipv4);
-        protocol_inner = hdr.inner.ipv4.protocol;
-            transition select(
-                hdr.inner.ipv4.ihl,
-                hdr.inner.ipv4.frag_offset) {
-
-           (5, 0): branch_inner_l3_protocol_scope0;
-           default : accept;
-       }
+        transition accept;
     }
 
     state parse_inner_ipv6_scope0 {
 
         pkt.extract(hdr.inner.ipv6);
-        protocol_inner = hdr.inner.ipv6.next_hdr;
-        transition branch_inner_l3_protocol_scope0;
+        transition accept;
 
 
 
-    }
-
-    state branch_inner_l3_protocol_scope0 {
-        transition select(protocol_inner) {
-           17: parse_inner_udp_scope0;
-           6: parse_inner_tcp_scope0;
-           0x84: parse_inner_sctp_scope0;
-
-           47: parse_inner_gre_scope0;
-
-           4: parse_inner_ipinip_set_tunnel_type_scope0;
-           41: parse_inner_ipv6inip_set_tunnel_type_scope0;
-        }
     }
 
 
@@ -14189,8 +13505,8 @@ parser NpbEgressParser(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset,
             hdr.inner.ipv4.protocol) {
-            (5, 0, 1): parse_inner_icmp_igmp_overload_scope1;
-            (5, 0, 2): parse_inner_icmp_igmp_overload_scope1;
+            //(5, 0, IP_PROTOCOLS_ICMP): parse_inner_icmp_igmp_overload_scope1;
+            //(5, 0, IP_PROTOCOLS_IGMP): parse_inner_icmp_igmp_overload_scope1;
             (5, 0, _): branch_inner_l3_protocol_scope1;
             default : accept;
        }
@@ -14211,10 +13527,11 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_dst_addr = hdr.inner.ipv6.dst_addr;
         eg_md.lkp_1.ip_len = hdr.inner.ipv6.payload_len;
 
-        transition select(hdr.inner.ipv6.next_hdr) {
-            58: parse_inner_icmp_igmp_overload_scope1;
-            default: branch_inner_l3_protocol_scope1;
-        }
+        transition branch_inner_l3_protocol_scope1;
+        // transition select(hdr.inner.ipv6.next_hdr) {
+        //     IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload_scope1;
+        //     default: branch_inner_l3_protocol_scope1;
+        // }
 
 
 
@@ -14228,55 +13545,26 @@ parser NpbEgressParser(
 
            47: parse_inner_gre_scope1;
 
-           0x32: parse_inner_esp_overload_scope1;
-           4: parse_inner_ipinip_set_tunnel_type_scope1;
-           41: parse_inner_ipv6inip_set_tunnel_type_scope1;
+           //IP_PROTOCOLS_ESP:  parse_inner_esp_overload_scope1;
+           4: parse_inner_ipinip_set_tunnel_scope1;
+           41: parse_inner_ipv6inip_set_tunnel_scope1;
         }
     }
 
 
-    // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
-    state parse_inner_icmp_igmp_overload_scope1 {
-
-
-
-        transition accept;
-    }
+//     // For ICMP and IGMP, we're not actually extracting the header;
+//     // We're simply over-loading L4-port info for policy via lookahead.    
+//     state parse_inner_icmp_igmp_overload_scope1 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+//         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
     ///////////////////////////////////////////////////////////////////////////
-
-    //-------------------------------------------------------------------------
-    // Scope 0
-    //-------------------------------------------------------------------------
-
-    state parse_inner_udp_scope0 {
-        pkt.extract(hdr.inner.udp);
-        transition select(hdr.inner.udp.src_port, hdr.inner.udp.dst_port) {
-
-            (_, 2123): parse_inner_gtp_c_scope0;
-            (2123, _): parse_inner_gtp_c_scope0;
-            (_, 2152): parse_inner_gtp_u_scope0;
-            (2152, _): parse_inner_gtp_u_scope0;
-            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_inner_gtp_c_scope0;
-            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_inner_gtp_u_scope0;
-
-            default: accept;
-        }
-    }
-
-    state parse_inner_tcp_scope0 {
-        pkt.extract(hdr.inner.tcp);
-        transition accept;
-    }
-
-    state parse_inner_sctp_scope0 {
-        pkt.extract(hdr.inner.sctp);
-        transition accept;
-    }
 
     //-------------------------------------------------------------------------
     // Scope 1
@@ -14323,31 +13611,11 @@ parser NpbEgressParser(
     // Tunnels - Inner
     ///////////////////////////////////////////////////////////////////////////
 
-
     //-------------------------------------------------------------------------
     // Internet Protocol (IP) - Inner
     //-------------------------------------------------------------------------
 
-    state parse_inner_ipinip_set_tunnel_type_scope0 {
-
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
-        transition parse_inner_inner_ipv4;
-
-
-
-    }
-
-    state parse_inner_ipv6inip_set_tunnel_type_scope0 {
-
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
-        transition parse_inner_inner_ipv6;
-
-
-
-    }
-
-
-    state parse_inner_ipinip_set_tunnel_type_scope1 {
+    state parse_inner_ipinip_set_tunnel_scope1 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -14359,7 +13627,7 @@ parser NpbEgressParser(
 
     }
 
-    state parse_inner_ipv6inip_set_tunnel_type_scope1 {
+    state parse_inner_ipv6inip_set_tunnel_scope1 {
 
 
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
@@ -14372,17 +13640,17 @@ parser NpbEgressParser(
     }
 
 
-    //-------------------------------------------------------------------------
-    // Encapsulating Security Payload (ESP) - Inner
-    //-------------------------------------------------------------------------
-
-    state parse_inner_esp_overload_scope1 {
-
-
-
-
-        transition accept;
-    }
+//     //-------------------------------------------------------------------------
+//     // Encapsulating Security Payload (ESP) - Inner
+//     //-------------------------------------------------------------------------
+//      
+//     state parse_inner_esp_overload_scope1 {
+// #ifdef PARSER_L4_PORT_OVERLOAD   
+//         eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
+//         eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
+// #endif // PARSER_L4_PORT_OVERLOAD
+//         transition accept;
+//     }
 
 
     //-------------------------------------------------------------------------
@@ -14391,52 +13659,45 @@ parser NpbEgressParser(
 
 
 
-    state parse_inner_gre_scope0 {
-        pkt.extract(hdr.inner.gre);
+    state parse_inner_gre_scope1 {
+        gre_h snoop_gre = pkt.lookahead<gre_h>();
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
 
         transition select(
-            hdr.inner.gre.C,
-            hdr.inner.gre.R,
-            hdr.inner.gre.K,
-            hdr.inner.gre.S,
-            hdr.inner.gre.s,
-            hdr.inner.gre.recurse,
-            hdr.inner.gre.flags,
-            hdr.inner.gre.version,
-            hdr.inner.gre.proto) {
+            snoop_gre.C,
+            snoop_gre.R,
+            snoop_gre.K,
+            snoop_gre.S,
+            snoop_gre.s,
+            snoop_gre.recurse,
+            snoop_gre.flags,
+            snoop_gre.version) {
 
           // C R K S s r f v
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_inner_ipv6;
-            (1,0,0,0,0,0,0,0,_ ): parse_inner_gre_optional;
-            (0,0,1,0,0,0,0,0,_ ): parse_inner_gre_optional;
-            (0,0,0,1,0,0,0,0,_ ): parse_inner_gre_optional;
+            (0,0,0,0,0,0,0,0): parse_inner_gre_qualified_scope1;
+            (1,0,0,0,0,0,0,0): parse_inner_gre_qualified_scope1;
+            (0,0,1,0,0,0,0,0): parse_inner_gre_qualified_scope1;
+            (0,0,0,1,0,0,0,0): parse_inner_gre_qualified_scope1;
             default: accept;
         }
     }
 
-    state parse_inner_gre_scope1 {
+    state parse_inner_gre_qualified_scope1 {
         pkt.extract(hdr.inner.gre);
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         eg_md.lkp_1.tunnel_id = 0;
 
         transition select(
             hdr.inner.gre.C,
-            hdr.inner.gre.R,
             hdr.inner.gre.K,
             hdr.inner.gre.S,
-            hdr.inner.gre.s,
-            hdr.inner.gre.recurse,
-            hdr.inner.gre.flags,
-            hdr.inner.gre.version,
             hdr.inner.gre.proto) {
 
-          // C R K S s r f v
-            (0,0,0,0,0,0,0,0,0x0800): parse_inner_inner_ipv4;
-            (0,0,0,0,0,0,0,0,0x86dd): parse_inner_inner_ipv6;
-            (1,0,0,0,0,0,0,0,_ ): parse_inner_gre_optional;
-            (0,0,1,0,0,0,0,0,_ ): parse_inner_gre_optional;
-            (0,0,0,1,0,0,0,0,_ ): parse_inner_gre_optional;
+            (0,0,0,0x0800): parse_inner_inner_ipv4;
+            (0,0,0,0x86dd): parse_inner_inner_ipv6;
+            (1,0,0,_): parse_inner_gre_optional;
+            (0,1,0,_): parse_inner_gre_optional;
+            (0,0,1,_): parse_inner_gre_optional;
             default: accept;
         }
     }
@@ -14455,41 +13716,28 @@ parser NpbEgressParser(
 
 
 
-
     //-------------------------------------------------------------------------
-    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Outer
+    // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Inner
     //-------------------------------------------------------------------------
     // Based on pseudo code from Glenn (see email from 03/11/2019):
 
     // GTP-C
     //-------------------------------------------------------------------------
-    // For GTP-C, we're not actually extracting the header;
-    // We're simply grabbing TEID for policy via lookahead, then dumping to UDF
-
-    state parse_inner_gtp_c_scope0 {
-        transition select(
-            pkt.lookahead<gtp_v2_base_h>().version,
-            pkt.lookahead<gtp_v2_base_h>().T
-        ) {
-            (2, 1): extract_inner_gtp_c_scope0;
-            default: accept;
-        }
-    }
-    state extract_inner_gtp_c_scope0 {
-     transition accept;
-    }
-
+    // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state parse_inner_gtp_c_scope1 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
-            (2, 1): extract_inner_gtp_c_scope1;
+            (2, 1): parse_inner_gtp_c_qualified_scope1;
             default: accept;
         }
     }
-    state extract_inner_gtp_c_scope1 {
+
+    state parse_inner_gtp_c_qualified_scope1 {
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
         transition accept;
@@ -14501,45 +13749,10 @@ parser NpbEgressParser(
     // Only supports optional header for sequence-number
     // Does not support parsing (TLV) extension headers
 
-    state parse_inner_gtp_u_scope0 {
-        gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
-        transition select(
-            snoop_inner_gtp_v1_base.version,
-            snoop_inner_gtp_v1_base.PT,
-            snoop_inner_gtp_v1_base.E,
-            snoop_inner_gtp_v1_base.S,
-            snoop_inner_gtp_v1_base.PN) {
-
-            (1, 1, 0, 0, 0): extract_inner_gtp_u_scope0;
-            (1, 1, 0, 1, 0): extract_inner_gtp_u_with_optional_scope0;
-            default: accept;
-        }
-    }
-
-    state extract_inner_gtp_u_scope0 {
-        pkt.extract(hdr.inner.gtp_v1_base);
-        transition select(pkt.lookahead<bit<4>>()) {
-            4: parse_inner_inner_ipv4;
-            6: parse_inner_inner_ipv6;
-            default: accept;
-        }
-    }
-
-    state extract_inner_gtp_u_with_optional_scope0 {
-        pkt.extract(hdr.inner.gtp_v1_base);
-        pkt.extract(hdr.inner.gtp_v1_optional);
-        transition select(
-            hdr.inner.gtp_v1_base.E,
-            pkt.lookahead<bit<4>>()) {
-            (0, 4): parse_inner_inner_ipv4;
-            (0, 6): parse_inner_inner_ipv6;
-            default: accept;
-        }
-    }
-
-
     state parse_inner_gtp_u_scope1 {
         gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+
         transition select(
             snoop_inner_gtp_v1_base.version,
             snoop_inner_gtp_v1_base.PT,
@@ -14547,13 +13760,13 @@ parser NpbEgressParser(
             snoop_inner_gtp_v1_base.S,
             snoop_inner_gtp_v1_base.PN) {
 
-            (1, 1, 0, 0, 0): extract_inner_gtp_u_scope1;
-            (1, 1, 0, 1, 0): extract_inner_gtp_u_with_optional_scope1;
+            (1, 1, 0, 0, 0): parse_inner_gtp_u_qualified_scope1;
+            (1, 1, 0, 1, 0): parse_inner_gtp_u_with_optional_qualified_scope1;
             default: accept;
         }
     }
 
-    state extract_inner_gtp_u_scope1 {
+    state parse_inner_gtp_u_qualified_scope1 {
         pkt.extract(hdr.inner.gtp_v1_base);
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         eg_md.lkp_1.tunnel_id = hdr.inner.gtp_v1_base.teid;
@@ -14564,7 +13777,7 @@ parser NpbEgressParser(
         }
     }
 
-    state extract_inner_gtp_u_with_optional_scope1 {
+    state parse_inner_gtp_u_with_optional_qualified_scope1 {
         pkt.extract(hdr.inner.gtp_v1_base);
         pkt.extract(hdr.inner.gtp_v1_optional);
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
@@ -14590,57 +13803,12 @@ parser NpbEgressParser(
 
     state parse_inner_inner_ipv4 {
   hdr.inner_inner.ipv4.setValid();
-//      eg_md.inner_inner.ipv4_isValid = true;
   transition accept;
     }
     state parse_inner_inner_ipv6 {
   hdr.inner_inner.ipv6.setValid();
-//      eg_md.inner_inner.ipv6_isValid = true;
   transition accept;
     }
-
-
-
-
-
-// ///////////////////////////////////////////////////////////////////////////////
-// // Transport Encaps
-// ///////////////////////////////////////////////////////////////////////////////
-// 
-// //-----------------------------------------------------------------------------
-// // Encapsulated Remote Switch Port Analyzer (ERSPAN)
-// //-----------------------------------------------------------------------------
-// 
-// state parse_erspan_t1 {
-//     pkt.extract(hdr.erspan_type1);
-//     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T1
-//     transition parse_inner_ethernet;
-// }
-// 
-// state parse_erspan_t2 {
-//     pkt.extract(hdr.erspan_type2);
-//     //verify(hdr.erspan_typeII.version == 1, error.Erspan2VersionNotOne);
-//     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T2
-//     transition parse_inner_ethernet;
-// }
-// 
-// // state parse_erspan_t3 {
-// //     pkt.extract(hdr.erspan_type3);
-// //     //verify(hdr.erspan_typeIII.version == 2, error.Erspan3VersionNotTwo);
-// //     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T3
-// //     transition select(hdr.erspan_type3.o) {
-// //         1: parse_erspan_type3_platform;
-// //         default: parse_inner_ethernet;
-// //     }
-// // }
-// // 
-// // state parse_erspan_type3_platform {
-// //     pkt.extract(hdr.erspan_platform);
-// //     transition parse_inner_ethernet;
-// // }
-// 
-// 
-
 
 }
 # 60 "npb.p4" 2
@@ -14663,6 +13831,13 @@ control EgressSetLookup(
     // -----------------------------
 
     apply {
+
+//		eg_md.lkp_1.next_lyr_valid = true;
+  if((eg_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) && (eg_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_GTPC) && (eg_md.lkp_1.tunnel_type != SWITCH_TUNNEL_TYPE_UNSUPPORTED)) {
+   eg_md.lkp_1.next_lyr_valid = true;
+  }
+
+        // -----------------------------------------------------------------------
 
         // Override whatever the parser set "ip_type" to.  Doing so allows the
         // signal to fit when normally it doesn't.  This code should be only
@@ -14714,7 +13889,7 @@ control EgressSetLookup(
 //				eg_md.lkp_1.ip_tos = hdr.inner.ipv4.tos;
 //			}
   }
-# 85 "npb_egr_set_lkp.p4"
+# 92 "npb_egr_set_lkp.p4"
     }
 }
 # 61 "npb.p4" 2
@@ -14734,17 +13909,7 @@ control npb_egr_sff_top (
 ) {
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: bitmask defined as follows....
- //
- //   [0:0] sf  #1: ingress basic/advanced
- //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
-
- // =========================================================================
- // Table
+ // Table #1: 
  // =========================================================================
 
  // RFC 8300, Page 9: Decrementing (the TTL) from an incoming value of 0 shall
@@ -14834,6 +13999,62 @@ control npb_egr_sff_top (
     }
 
  // =========================================================================
+ // Table #2: SFF
+ // =========================================================================
+
+ action drop_pkt(
+ ) {
+
+
+
+ }
+
+ // =====================================
+
+ action fwd_pkt_nsh_hdr_ver_1(
+  bit<24> tool_address
+ ) {
+  // hdr reformat to old type 1 format (slx-style)
+  hdr_0.nsh_type1.spi = tool_address;
+  hdr_0.nsh_type1.si = 0x1;
+
+  hdr_0.nsh_type1.ver = 0x1;
+  hdr_0.nsh_type1.reserved3 = 0x0; // not necessary, but allows the design to fit.
+ }
+
+ // =====================================
+
+ action fwd_pkt_nsh_hdr_ver_2(
+ ) {
+  // hdr already in new type 2 format -- nothing to do
+ }
+
+ // =====================================
+
+ table egr_sff_fib {
+  key = {
+   hdr_0.nsh_type1.spi : exact @name("spi");
+   hdr_0.nsh_type1.si : exact @name("si");
+  }
+
+  actions = {
+   drop_pkt;
+   fwd_pkt_nsh_hdr_ver_1;
+   fwd_pkt_nsh_hdr_ver_2;
+  }
+
+  // Derek: drop packet on miss...
+  //
+  // RFC 8300, Page 15: If an SFF receives a packet with an SPI and SI that
+  // do not correspond to a valid next hop in a valid SFP, that packet MUST
+  // be dropped by the SFF.
+
+//		const default_action = drop_pkt;
+  const default_action = fwd_pkt_nsh_hdr_ver_2; // for backwards compatibility with firmware
+  size = NPB_EGR_SFF_ARP_TABLE_DEPTH;
+ }
+
+ // =========================================================================
  // Apply
  // =========================================================================
 
@@ -14857,33 +14078,7 @@ control npb_egr_sff_top (
    // add new header
    // ---------------
 
-//			hdr_0.nsh_type1.setValid();
-
-   // base: word 0
-   hdr_0.nsh_type1.version = 0x0;
-   hdr_0.nsh_type1.o = 0x0;
-   hdr_0.nsh_type1.reserved = 0x0;
-   hdr_0.nsh_type1.ttl = 0x3f; // 63 is the rfc's recommended default value.
-   hdr_0.nsh_type1.len = 0x6; // in 4-byte words (1 + 1 + 4).
-   hdr_0.nsh_type1.reserved2 = 0x0;
-   hdr_0.nsh_type1.md_type = 0x1; // 0 = reserved, 1 = fixed len, 2 = variable len.
-//			hdr_0.nsh_type1.next_proto               = 0x3;  // 1 = ipv4, 2 = ipv6, 3 = ethernet, 4 = nsh, 5 = mpls.
-
-   // base: word 1
-   // (nothing to do)
-
-   // ext: type 1 - word 0-3
-   hdr_0.nsh_type1.ver = 0x2; // word 0
-   hdr_0.nsh_type1.reserved3 = 0x0; // word 0
-
-
-
-
-   hdr_0.nsh_type1.reserved4 = 0x0; // word 2
-
-
-
-
+   // (done in ingress)
 
    // ---------------
 
@@ -14947,6 +14142,8 @@ control npb_egr_sff_top (
   // Derek: The forwarding lookup would normally
   // be done here.  However, since Tofino requires the outport
   // to set in ingress, it has to be done there instead....
+
+  egr_sff_fib.apply();
 
  }
 
@@ -15439,51 +14636,27 @@ control npb_egr_sf_proxy_top (
  ) acl;
 
  // =========================================================================
- // Notes
- // =========================================================================
-
- // Note: egress action_bitmask defined as follows....
- //
- //   [0:0] act #1: policy
- //   [1:1] act #2: header strip
- //   [2:2] act #3: header edit
- //   [3:3] act #4: truncate
- //   [4:4] act #5: meter
- //   [5:5] act #6: dedup
-
- // =========================================================================
- // Table #1: Action Select
+ // Table #1: SFF Action Select
  // =========================================================================
 
  bit<8> int_ctrl_flags = 0;
 
  action egr_sf_action_sel_hit(
-//		bit<6>                                                action_bitmask,
 
 
 
   bit<16> dsap
-//		bit<NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH_POW2> action_3_meter_id,
-//		bit<8>                                                action_3_meter_overhead
-//		bit<3>                                                discard
  ) {
-//		eg_md.action_bitmask          = action_bitmask;
 
 
 
   eg_md.nsh_md.dsap = dsap;
-
-//		eg_md.action_3_meter_id       = action_3_meter_id;
-//		eg_md.action_3_meter_overhead = action_3_meter_overhead;
-
-//		eg_intr_md_for_dprsr.drop_ctl = discard; // drop packet
  }
 
  // =====================================
 
  action egr_sf_action_sel_miss(
  ) {
-//		eg_md.action_bitmask          = 0;
 //		int_ctrl_flags                = 0;
 //		eg_md.nsh_md.dsap             = 0;
  }
@@ -15503,11 +14676,11 @@ control npb_egr_sf_proxy_top (
   }
 
   const default_action = egr_sf_action_sel_miss;
-  size = NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH;
+  size = NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH;
  }
 
  // =========================================================================
- // Table #x: Ip Length Range
+ // Table #x: SF Ip Length Range
  // =========================================================================
 
  bit<16> ip_len = 0;
@@ -15548,7 +14721,7 @@ control npb_egr_sf_proxy_top (
 
 
  // =========================================================================
- // Table #2: L4 Src Port Range
+ // Table #2: SF L4 Src Port Range
  // =========================================================================
 
  bit<16> l4_src_port = 0;
@@ -15589,7 +14762,7 @@ control npb_egr_sf_proxy_top (
 
 
  // =========================================================================
- // Table #2: L4 Dst Port Range
+ // Table #2: SF L4 Dst Port Range
  // =========================================================================
 
  bit<16> l4_dst_port = 0;
@@ -15664,113 +14837,92 @@ control npb_egr_sf_proxy_top (
    // Actions(s)
    // ==================================
 
-//			if(eg_md.action_bitmask[0:0] == 1) {
-
-    // ----------------------------------
-    // Action #0 - Policy
-    // ----------------------------------
+   // ----------------------------------
+   // Action #0 - Policy
+   // ----------------------------------
 
 
-    egr_sf_ip_len_rng.apply();
+   egr_sf_ip_len_rng.apply();
 
 
 
 
 
-    egr_sf_l4_src_port_rng.apply();
+   egr_sf_l4_src_port_rng.apply();
 
 
 
 
 
-    egr_sf_l4_dst_port_rng.apply();
+   egr_sf_l4_dst_port_rng.apply();
 
 
 
 
 
-    acl.apply(
-     eg_md.lkp_1,
-     eg_md,
-     eg_intr_md_for_dprsr,
-     ip_len,
-     ip_len_is_rng_bitmask,
-     l4_src_port,
-     l4_src_port_is_rng_bitmask,
-     l4_dst_port,
-     l4_dst_port_is_rng_bitmask,
-     hdr_0,
-     hdr_1,
-     int_ctrl_flags
-    );
-//			}
+   acl.apply(
+    eg_md.lkp_1,
+    eg_md,
+    eg_intr_md_for_dprsr,
+    ip_len,
+    ip_len_is_rng_bitmask,
+    l4_src_port,
+    l4_src_port_is_rng_bitmask,
+    l4_dst_port,
+    l4_dst_port_is_rng_bitmask,
+    hdr_0,
+    hdr_1,
+    int_ctrl_flags
+   );
 
-//			if(eg_md.action_bitmask[1:1] == 1) {
+   // ----------------------------------
+   // Action #1 - Hdr Strip
+   // ----------------------------------
+   npb_egr_sf_proxy_hdr_strip.apply (
+    hdr_0,
+    hdr_1,
+    eg_md,
+    eg_intr_md,
+    eg_intr_md_from_prsr,
+    eg_intr_md_for_dprsr,
+    eg_intr_md_for_oport
+   );
 
-    // ----------------------------------
-    // Action #1 - Hdr Strip
-    // ----------------------------------
-    npb_egr_sf_proxy_hdr_strip.apply (
-     hdr_0,
-     hdr_1,
-     eg_md,
-     eg_intr_md,
-     eg_intr_md_from_prsr,
-     eg_intr_md_for_dprsr,
-     eg_intr_md_for_oport
-    );
+   // ----------------------------------
+   // Action #2 - Hdr Edit
+   // ----------------------------------
+   npb_egr_sf_proxy_hdr_edit.apply (
+    hdr_0,
+    hdr_1,
+    eg_md,
+    eg_intr_md,
+    eg_intr_md_from_prsr,
+    eg_intr_md_for_dprsr,
+    eg_intr_md_for_oport
+   );
 
-//			}
-
-//			if(eg_md.action_bitmask[2:2] == 1) {
-
-    // ----------------------------------
-    // Action #2 - Hdr Edit
-    // ----------------------------------
-    npb_egr_sf_proxy_hdr_edit.apply (
-     hdr_0,
-     hdr_1,
-     eg_md,
-     eg_intr_md,
-     eg_intr_md_from_prsr,
-     eg_intr_md_for_dprsr,
-     eg_intr_md_for_oport
-    );
-
-//			}
-
-//			if(eg_md.action_bitmask[3:3] == 1) {
 /*
-				// ----------------------------------
-				// Action #3 - Truncate
-				// ----------------------------------
-				npb_egr_sf_proxy_truncate.apply (
-					hdr_0,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
+			// ----------------------------------
+			// Action #3 - Truncate
+			// ----------------------------------
+			npb_egr_sf_proxy_truncate.apply (
+				hdr_0,
+				eg_md,
+				eg_intr_md,
+				eg_intr_md_from_prsr,
+				eg_intr_md_for_dprsr,
+				eg_intr_md_for_oport
+			);
 */
-//			}
 
-//			if(eg_md.action_bitmask[4:4] == 1) {
-
-    // ----------------------------------
-    // Action #4 - Meter
-    // ----------------------------------
-# 362 "npb_egr_sf_proxy_top.p4"
-//			}
-
-//			if(eg_md.action_bitmask[5:5] == 1) {
-
-    // ----------------------------------
-    // Action #5 - Deduplication
-    // ----------------------------------
-# 379 "npb_egr_sf_proxy_top.p4"
-//			}
-
+   // ----------------------------------
+   // Action #4 - Meter
+   // ----------------------------------
+# 324 "npb_egr_sf_proxy_top.p4"
+   // ----------------------------------
+   // Action #5 - Deduplication
+   // ----------------------------------
+# 338 "npb_egr_sf_proxy_top.p4"
   }
  }
 }
@@ -16292,23 +15444,15 @@ control npb_egr_top (
   if(hdr_0.nsh_type1.scope == 0) {
 
    // do nothing
-# 91 "npb_egr_top.p4"
-   // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-//			eg_md.lkp_1.tunnel_outer_type = SWITCH_TUNNEL_TYPE_NONE;
-//			eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NONE;
-
+# 89 "npb_egr_top.p4"
   } else {
 
    // do nothing
-# 108 "npb_egr_top.p4"
-   // outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-//			eg_md.lkp_1.tunnel_outer_type = SWITCH_TUNNEL_TYPE_NONE;
-//			eg_md.lkp_1.tunnel_inner_type = eg_md.tunnel_1.type;
-
+# 100 "npb_egr_top.p4"
   }
 
   // -------------------------------------
-  // SF(s): Part 1 --> *** before reframing ***
+  // SF #1 - Multicast
   // -------------------------------------
 
   npb_egr_sf_multicast_top_part2.apply (
@@ -16318,6 +15462,8 @@ control npb_egr_top (
    eg_md
   );
 
+  // -------------------------------------
+  // SF #2 - Policy
   // -------------------------------------
 
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SF_ACL != 0)) {
@@ -16333,33 +15479,19 @@ control npb_egr_top (
   }
 
   // -------------------------------------
-  // SFF Pkt Decap(s)
+  // SFF - Pkt Decap(s)
   // -------------------------------------
+
+  // Decaps ------------------------------
 
   tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
   tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
   TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
 
   // -------------------------------------
-  // SF(s): Part 2 --> *** after reframing ***
-  // -------------------------------------
-/*
-		npb_egr_sf_proxy_top_part2.apply (
-			hdr_0,
-			hdr_1,
-			eg_md,
-			eg_intr_md,
-			eg_intr_md_from_prsr,
-			eg_intr_md_for_dprsr,
-			eg_intr_md_for_oport
-		);
-*/
-  // -------------------------------------
-  // SFF Hdr Decap / Encap
+  // SFF - Hdr Decap / Encap
   // -------------------------------------
 
   if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SFF != 0)) {
@@ -16468,13 +15600,22 @@ control EgressMirror(
             mirror.emit<switch_port_mirror_metadata_h>(eg_md.mirror.session_id, {
                 eg_md.mirror.src,
                 eg_md.mirror.type,
+                0,
+                eg_md.ingress_port,
+                eg_md.bd,
+                0,
+
+
+
+                eg_md.port_lag_index,
+
 //              eg_md.ingress_timestamp,
                 (bit<32>)hdr.transport.nsh_type1.timestamp,
 
 
 
-                eg_md.mirror.session_id});
-
+                eg_md.mirror.session_id
+            });
 
         } else if (eg_intr_md_for_dprsr.mirror_type == 2) {
 
@@ -16485,15 +15626,20 @@ control EgressMirror(
                 eg_md.ingress_port,
                 eg_md.bd,
                 0,
+
+
+
                 eg_md.port_lag_index,
-                eg_md.cpu_reason});
+
+                eg_md.cpu_reason
+            });
 
         } else if (eg_intr_md_for_dprsr.mirror_type == 4) {
-# 90 "npb_egr_deparser.p4"
+# 104 "npb_egr_deparser.p4"
         } else if (eg_intr_md_for_dprsr.mirror_type == 3) {
-# 113 "npb_egr_deparser.p4"
+# 127 "npb_egr_deparser.p4"
         } else if (eg_intr_md_for_dprsr.mirror_type == 5) {
-# 124 "npb_egr_deparser.p4"
+# 138 "npb_egr_deparser.p4"
         }
 
     }
@@ -16567,7 +15713,7 @@ control SwitchEgressDeparser(
 
 
         pkt.emit(hdr.transport.gre);
-# 205 "npb_egr_deparser.p4"
+# 219 "npb_egr_deparser.p4"
         // ***** OUTER *****
         pkt.emit(hdr.outer.ethernet);
 
@@ -17387,6 +16533,15 @@ control IngressHdrStackCounters(
 
 
 @pa_auto_init_metadata
+@pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
+@pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
+@pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
+@pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
+@pa_atomic("egress" , "eg_md.bypass")
+@pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
+@pa_container_size("egress" , "protocol_outer_0" , 8)
+@pa_container_size("egress" , "protocol_inner_0" , 8)
+@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -17418,6 +16573,7 @@ control SwitchIngress(
  Ipv6Hash() ipv6_hash;
  NonIpHash() non_ip_hash;
 // 	IngressIpAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
+ IngressMirrorMeter() ingress_mirror_meter;
 //	IngressIpDtelSampleAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
  Nexthop(NEXTHOP_TABLE_SIZE, ECMP_GROUP_TABLE_SIZE, ECMP_SELECT_TABLE_SIZE) nexthop;
  OuterFib(OUTER_NEXTHOP_TABLE_SIZE, OUTER_ECMP_GROUP_TABLE_SIZE, OUTER_ECMP_SELECT_TABLE_SIZE) outer_fib;
@@ -17430,7 +16586,11 @@ control SwitchIngress(
 
   ig_intr_md_for_dprsr.drop_ctl = 0; // no longer present in latest switch.p4
   ig_md.multicast.id = 0; // no longer present in latest switch.p4
-# 135 "npb.p4"
+
+
+
+
+
   IngressSetLookup.apply(hdr, ig_md); // set lookup structure fields that parser couldn't
 
 
@@ -17438,7 +16598,7 @@ control SwitchIngress(
 
 
   // -----------------------------------------------------
-# 159 "npb.p4"
+# 151 "npb.p4"
   ingress_port_mapping.apply(hdr, ig_md, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
 
 //		unicast.apply(hdr.transport, ig_md);
@@ -17477,11 +16637,12 @@ control SwitchIngress(
   }
 
 
+  ingress_mirror_meter.apply(ig_md);
+
 
   // if lag hash masking enabled, move this before the hash
   nexthop.apply(ig_md);
   outer_fib.apply(ig_md);
-
 
   HashMask.apply(ig_md.lkp_1, ig_md.nsh_md.lag_hash_mask_en);
 
@@ -17492,7 +16653,7 @@ control SwitchIngress(
   } else {
    ipv6_hash.apply(ig_md.lkp_1, ig_md.hash[31:0]);
   }
-# 220 "npb.p4"
+# 213 "npb.p4"
   hdr.transport.nsh_type1.lag_hash = ig_md.hash[32 -1:32/2];
 
 
@@ -17501,8 +16662,6 @@ control SwitchIngress(
 //			lag.apply(ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
    lag.apply(ig_md, ig_md.hash[32 -1:32/2], ig_intr_md_for_tm.ucast_egress_port);
   }
-
-  IngressCopp.apply(ig_md.copp_enable, ig_md.copp_meter_id, ig_md, ig_intr_md_for_tm);
 
   // Only add bridged metadata if we are NOT bypassing egress pipeline.
   if (ig_intr_md_for_tm.bypass_egress == 1w0) {
@@ -17513,7 +16672,7 @@ control SwitchIngress(
 
 
   set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-# 251 "npb.p4"
+# 242 "npb.p4"
  }
 }
 
@@ -17534,6 +16693,7 @@ control SwitchEgress(
 
  EgressSetLookup() egress_set_lookup;
  EgressPortMapping(PORT_TABLE_SIZE) egress_port_mapping;
+ EgressMirrorMeter() egress_mirror_meter;
  VlanDecap() vlan_decap;
  Rewrite(NEXTHOP_TABLE_SIZE, BD_TABLE_SIZE) rewrite;
  TunnelEncap(switch_tunnel_mode_t.PIPE) tunnel_encap;
@@ -17556,57 +16716,60 @@ control SwitchEgress(
 
   egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 
-  multicast_replication.apply (
-   hdr.transport,
-   eg_intr_md.egress_rid,
-   eg_intr_md.egress_port,
-   eg_md
-  );
 
 
-
-
-  if((eg_md.flags.rmac_hit == false) && (eg_md.nsh_md.l2_fwd_en == true)) {
-   // do nothing (bridging the packet)
-  } else {
-
-   npb_egr_top.apply (
+  if (eg_md.flags.bypass_egress == false) {
+   multicast_replication.apply (
     hdr.transport,
-    eg_md.tunnel_0,
-    hdr.outer,
-    eg_md.tunnel_1,
-    hdr.inner,
-    eg_md.tunnel_2,
-    hdr.inner_inner,
-
-    eg_md,
-    eg_intr_md,
-    eg_intr_md_from_prsr,
-    eg_intr_md_for_dprsr,
-    eg_intr_md_for_oport
+    eg_intr_md.egress_rid,
+    eg_intr_md.egress_port,
+    eg_md
    );
 
+
+   if((eg_md.flags.rmac_hit == false) && (eg_md.nsh_md.l2_fwd_en == true)) {
+    // do nothing (bridging the packet)
+   } else {
+
+    npb_egr_top.apply (
+     hdr.transport,
+     eg_md.tunnel_0,
+     hdr.outer,
+     eg_md.tunnel_1,
+     hdr.inner,
+     eg_md.tunnel_2,
+     hdr.inner_inner,
+
+     eg_md,
+     eg_intr_md,
+     eg_intr_md_from_prsr,
+     eg_intr_md_for_dprsr,
+     eg_intr_md_for_oport
+    );
+
+   }
+
+
+   egress_mirror_meter.apply(eg_md);
+
+   // ----- nexthop               code: operates on 'outer' ----
+   rewrite.apply(hdr.outer, eg_md, eg_md.tunnel_0);
+//			npb_egr_sf_proxy_hdr_strip.apply(hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
+//			npb_egr_sf_proxy_hdr_edit.apply (hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
+
+   // ---- outer nexthop (tunnel) code: operates on 'transport' ----
+   vlan_decap.apply(hdr.transport, eg_md);
+   tunnel_encap.apply(hdr.transport, hdr.outer, eg_md, eg_md.tunnel_0);
+   tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
+   if (eg_md.tunnel_0.type != SWITCH_TUNNEL_TYPE_NONE) { // derek added this check
+    vlan_xlate.apply(hdr.transport, eg_md);
+   }
+
+
+
+
+
   }
-
-
-  // nexthop                code: operates on 'outer'
-  rewrite.apply(hdr.outer, eg_md, eg_md.tunnel_0);
-//		npb_egr_sf_proxy_hdr_strip.apply(hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
-//		npb_egr_sf_proxy_hdr_edit.apply (hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
-
-  // outer nexthop (tunnel) code: operates on 'transport'
-  vlan_decap.apply(hdr.transport, eg_md);
-  tunnel_encap.apply(hdr.transport, hdr.outer, eg_md, eg_md.tunnel_0);
-  tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
-  if (eg_md.tunnel_0.type != SWITCH_TUNNEL_TYPE_NONE) { // derek added this check
-   vlan_xlate.apply(hdr.transport, eg_md);
-  }
-
-  EgressCopp.apply(eg_md.copp_enable, eg_md.copp_meter_id, eg_md, eg_intr_md_for_dprsr);
-
-
-
-
   set_eg_intr_md(eg_md, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
 
 
