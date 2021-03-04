@@ -4,7 +4,7 @@ switch_ent_dc_general,p4-tests/p4_14/switch/p4src/switch.p4,,-DENT_DC_GENERAL_PR
 switch_dc_basic,p4-tests/p4_14/switch/p4src/switch.p4,,-DDC_BASIC_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
 # switch_msdc_ipv4,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_IPV4_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
 switch_msdc_spine_int,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_SPINE_DTEL_INT_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
-switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x0.p4,p4-tests/p4_16/switch_16/p4src/shared,-Xp4c=\"--auto-init-metadata --set-max-power 43\",tofino,p4-16,tna,skip_Glass
+switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x0.p4,p4-tests/p4_16/switch_16/p4src/shared,-Xp4c=\"--auto-init-metadata --set-max-power 45\",tofino,p4-16,tna,skip_Glass
 switch_16_x1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX1_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 51\" ,tofino,p4-16,tna,skip_Glass
 switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 50\",tofino,p4-16,tna,skip_Glass
 switch_16_x3,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x3.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX3_PROFILE -Xp4c=\"--auto-init-metadata\",tofino,p4-16,tna,skip_Glass
