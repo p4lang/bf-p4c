@@ -447,9 +447,11 @@ node ('compiler-travis') {
                 },
 
                 "Check submodule refpoints": {
-                    checkout scm
-                    sh 'git submodule update --init --recursive'
-                    sh 'scripts/check-git-submodules --skip-fetch'
+                    dir('checkRefpoints') {
+                        checkout scm
+                        sh 'git submodule update --init --recursive'
+                        sh 'scripts/check-git-submodules --skip-fetch'
+                    }
                 },
 
                 "Check copyright messages": {
