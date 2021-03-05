@@ -248,8 +248,21 @@ class ActionPhvConstraints : public Inspector {
         ordered_set<PHV::FieldSlice>
         destinations(PHV::FieldSlice src, const IR::MAU::Action* act) const;
 
-        /// @returns the actions that read @dst.
+        /// Convenience method that translates @src to a FieldSlice and passes
+        /// it to `destinations` above.
+        ordered_set<PHV::FieldSlice>
+        destinations(PHV::AllocSlice src, const IR::MAU::Action* act) const {
+            return destinations(PHV::FieldSlice(src.field(), src.field_slice()), act);
+        }
+
+        /// @returns the actions that read @src.
         ordered_set<const IR::MAU::Action*> read_in(PHV::FieldSlice src) const;
+
+        /// Convenience method that translates @src to a FieldSlice and passes
+        /// it to `read_in` above.
+        ordered_set<const IR::MAU::Action*> read_in(PHV::AllocSlice src) const {
+            return read_in(PHV::FieldSlice(src.field(), src.field_slice()));
+        }
 
         /// @returns the actions that write @dst.
         ordered_set<const IR::MAU::Action*> written_in(PHV::FieldSlice dst) const;
@@ -399,6 +412,19 @@ class ActionPhvConstraints : public Inspector {
                                         const PHV::Allocation::MutuallyLiveSlices& container_state,
                                         const IR::MAU::Action* action,
                                         PackingConstraints& copacking_constraints) const;
+
+    /** Verify whether packing the fields in \p container_state causes any read
+      * violations in \p action
+      *
+      * \param alloc the current Allocation
+      * \param container_state the proposed field packing
+      * \param action the action to evaluate
+      *
+      * \returns \c CanPackErrorCode value indicating violation type (if any)
+      */
+    CanPackErrorCode can_pack_verify_read(const PHV::Allocation& alloc,
+            PHV::Allocation::MutuallyLiveSlices container_state,
+            const IR::MAU::Action* action) const;
 
     /** Return the first allocated (in @alloc) or proposed (in @slices) source
      * of an instruction in @action that writes to @slice, if any.  There may

@@ -673,6 +673,85 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
     return rv;
 }
 
+CanPackErrorCode ActionPhvConstraints::can_pack_verify_read(
+        const PHV::Allocation &alloc,
+        PHV::Allocation::MutuallyLiveSlices container_state,
+        const IR::MAU::Action* action) const {
+    ordered_set<PHV::Container> containerList;
+    ordered_map<PHV::FieldSlice, PHV::FieldSlice> readSlices;
+    ordered_set<PHV::Container> writeContainers;
+    int stage = min_stage(action);
+    auto use = PHV::FieldUse(PHV::FieldUse::WRITE);
+
+    // Gather all containers written by any of the slices in container_state
+    //
+    // A destination field won't be checked _in this function_ if it's not placed yet.
+    // However, an unplaced destination field _will_ be checked in can_pack when they are finally
+    // placed. In that case, can_pack looks at all the writes into that container.
+    for (auto slice : container_state)
+        for (auto write : constraint_tracker.destinations(slice, action))
+            for (auto writeSlice : alloc.slices(write.field(), write.range(), stage, use))
+                if (writeSlice.container()) writeContainers.emplace(writeSlice.container());
+
+    // Walk through the destination containers one-by-one and check their validity
+    for (auto c : writeContainers) {
+        bool mocha_or_dark = c.is(PHV::Kind::mocha) || c.is(PHV::Kind::dark);
+        auto writeSlices = alloc.slices(c, stage, use);
+        size_t num_adc = 0;
+        ordered_set<PHV::Container> containerList;
+        for (auto sl : writeSlices) {
+            LOG5("\tProcessing write to " << sl.field()->name << " " << sl.field_slice() << " "
+                                          << sl.container());
+            auto reads = constraint_tracker.sources(sl, action);
+            for (auto operand : reads) {
+                if (operand.ad || operand.constant) {
+                    LOG6("\t\t\t\t" << operand << " is action data/constant source");
+                    num_adc = 1;
+                    continue;
+                }
+                const PHV::Field* fieldRead = operand.phv_used->field();
+                le_bitrange rangeRead = operand.phv_used->range();
+                ordered_set<PHV::Container> per_source_containers;
+                ordered_set<PHV::AllocSlice> per_source_slices =
+                    alloc.slices(fieldRead, rangeRead, stage, PHV::FieldUse(PHV::FieldUse::READ));
+                for (auto source : container_state) {
+                    if (source.field() == fieldRead && source.field_slice().overlaps(rangeRead) &&
+                            source.getEarliestLiveness().first < stage &&
+                            source.getLatestLiveness().first >= stage) {
+                        per_source_slices.insert(source);
+                    }
+                }
+
+                for (auto source_slice : per_source_slices) {
+                    per_source_containers.insert(source_slice.container());
+                    LOG5("\t\t\t\t\tSource slice for " << sl << " : " << source_slice); }
+
+                if (per_source_containers.size() == 0) {
+                    LOG1("\t\t\t\tSource " << *(operand.phv_used)
+                                           << " has not been allocated yet.");
+                } else {
+                    containerList.insert(per_source_containers.begin(),
+                                         per_source_containers.end());
+                }
+            }
+        }
+
+        size_t total_sources = num_adc + containerList.size();
+        if (total_sources > 2) {
+            LOG5("\t\t\t\tAction " << action->name
+                                   << " uses more than two PHV sources to write to container " << c
+                                   << ".");
+            return CanPackErrorCode::MORE_THAN_TWO_SOURCES;
+        } else if (mocha_or_dark && total_sources > 1) {
+            LOG5("\t\t\t\tAction " << action->name
+                                   << " uses more than one PHV source to write to container " << c
+                                   << ".");
+            return CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE;
+        }
+    }
+    return CanPackErrorCode::NO_ERROR;
+}
+
 boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
         const PHV::Allocation &alloc,
         const std::vector<PHV::AllocSlice>& slices,
@@ -1743,6 +1822,12 @@ CanPackReturnType ActionPhvConstraints::can_pack(
                 LOG5("\t\tAdding initialization action " << a->name << " to the set of actions.");
                 set_of_actions.insert(a); } } }
 
+    ordered_set<const IR::MAU::Action *> set_of_read_actions;
+    for (auto slice : container_state) {
+        const auto& reading_actions = constraint_tracker.read_in(slice);
+        set_of_read_actions.insert(reading_actions.begin(), reading_actions.end());
+    }
+
     // Debug info: print the names of all actions under consideration for these fields
     if (LOGGING(5)) {
         std::stringstream ss;
@@ -1882,6 +1967,14 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     }
 
     LOG1("copacking constraint " << copacking_constraints.size());
+
+    // Verify read actions
+    for (const auto* action : set_of_read_actions) {
+        LOG5("\t\t\tNeed to check container destinations now for read action " << action->name);
+        CanPackErrorCode err =
+            can_pack_verify_read(alloc, container_state, action);
+        if (err != CanPackErrorCode::NO_ERROR) return std::make_tuple(err, boost::none);
+    }
 
     LOG5("\t\t\tChecking rotational alignment");
     ordered_map<const IR::MAU::Action*, bool> hasSingleUnallocatedPHVSource;
