@@ -12,9 +12,18 @@ header data_t {
     bit<8>  b3;
 }
 
+@flexible
 header bridged_md_t {
     bit<8> bmd1;
     bit<8> bmd2;
+    bit<1> fb1;
+    bit<1> fb2;
+    bit<1> fb3;
+    bit<1> fb4;
+    bit<1> fb5;
+    bit<1> fb6;
+    bit<1> fb7;
+    bit<1> fb8;
 }
 
 struct headers {
@@ -63,7 +72,7 @@ control IngressP(
         default_action = NoAction;
     }
 
-    @adjust_byte_count(6 /* STF 4 byte trailer */)
+    // @adjust_byte_count(6 /* STF 4 byte trailer */)
     DirectCounter<bit<64>>(CounterType_t.BYTES) ICounterDirect;
 
     action update() {
@@ -106,8 +115,8 @@ control DeparserI(
         inout headers hdr,
         in metadata meta,
         in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    apply { 
-        b.emit(hdr.data); 
+    apply {
+        b.emit(hdr.data);
         b.emit(hdr.bridged_md);
     }
 }
@@ -132,7 +141,7 @@ control EgressP(
         inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
 
-    @adjust_byte_count(sizeInBytes(hdr.bridged_md) + 6 /* STF 4 byte trailer */)
+    // @adjust_byte_count(sizeInBytes(hdr.bridged_md) + 6 /* STF 4 byte trailer */)
     DirectCounter<bit<64>>(CounterType_t.BYTES) ECounterDirect;
 
     action update() {
@@ -164,7 +173,7 @@ control EgressP(
         default_action = NoAction;
     }
 
-    apply { 
+    apply {
         update_egress_counter.apply();
         update_egress_counter2.apply();
     }

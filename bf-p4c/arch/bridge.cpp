@@ -263,9 +263,10 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedH
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
     addPasses({
         new ReplaceFlexibleType(map),
-        new BFN::ResolveSizeOfOperator(),
-        new P4::ConstantFolding(&refMap, nullptr),
         new P4::ClearTypeMap(&typeMap),
+        new BFN::TypeChecking(&refMap, &typeMap, true),
+        new BFN::ResolveSizeOfOperator(),
+        new P4::ConstantFolding(&refMap, &typeMap),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
