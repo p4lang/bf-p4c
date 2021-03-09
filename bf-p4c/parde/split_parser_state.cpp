@@ -145,7 +145,7 @@ struct SliceExtracts : public ParserModifier {
 
             if (auto sliced = make_slice<IR::BFN::ExtractPhv>(extract, lo, size)) {
                 rv.push_back(sliced);
-                LOG4("  " << sliced);
+                LOG4("  PHV: " << sliced);
             }
 
             bits_allocated.setrange(lo, size);
@@ -161,14 +161,14 @@ struct SliceExtracts : public ParserModifier {
 
             if (auto sliced = make_slice<IR::BFN::ExtractClot>(extract, lo, size)) {
                 rv.push_back(sliced);
-                LOG4("  " << sliced);
+                LOG4("  CLOT: " << sliced);
             }
 
             bits_allocated.setrange(lo, size);
         }
         BUG_CHECK(bits_allocated == bitvec(range.lo, range.hi - range.lo + 1),
-                  "Extracted field %s received an incomplete allocation",
-                  field->name);
+                  "Extracted field %s (%s) received an incomplete allocation %s",
+                  field->name, bits_allocated, range);
 
         return rv;
     }

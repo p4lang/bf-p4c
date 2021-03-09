@@ -142,7 +142,7 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
                 continue;
             }
             LOG4("\t  Used in parser.");
-            livemap.addAccess(f, 0 /* stage */, READ, use_unit, false);
+            // livemap.addAccess(f, 0 /* stage */, READ, use_unit, false);
             livemap.addAccess(f, PARSER, READ, use_unit, false);
         } else if (use_unit->is<IR::BFN::Deparser>()) {
             // Ignore deparser use if field is marked as not deparsed.
@@ -184,7 +184,7 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             if (!notParsedFields.count(f) && !(f->bridged && f->gress == INGRESS)) {
                 LOG4("\t  Field defined in parser.");
                 livemap.addAccess(f, PARSER, WRITE, def_unit, false);
-                livemap.addAccess(f, 0 /* first stage */, READ, def_unit, false);
+                // livemap.addAccess(f, 0 /* first stage */, READ, def_unit, false);
                 continue;
             }
         } else if (def_unit->is<IR::BFN::Deparser>()) {
@@ -260,9 +260,27 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
         const int stage) const {
     const PHV::AllocSlice* readField = nullptr;
     const PHV::AllocSlice* writtenField = nullptr;
+    bool found_dark_slice = false;
     for (auto& sl : fields) {
+        // *ALEX* Add hack to prevent dark overlaid fields being
+        //        considered twice. This may need to be updated once
+        //        we introduce spills from dark to other containers
+        if (sl.container().is(PHV::Kind::dark)) {
+            if (found_dark_slice) {
+                LOG4("   Warning: Found more than one dark slices");
+                return boost::none;
+            }
+
+            found_dark_slice = true;
+            continue;
+        }
+
+
         if (livemap.hasAccess(sl.field(), stage, READ)) {
             if (readField != nullptr) {
+                // *ALEX* This will reject overlays with packed fields that have
+                // READs in the same stage. We should add the capability
+                // to overlay with packed fields that have smae-stage READs
                 LOG4("Slices " << readField << " and " << sl << " already read in stage " <<
                      ((stage == DEPARSER) ? "deparser" : std::to_string(stage)));
                 return boost::none;
@@ -317,20 +335,30 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
 }
 
 boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
-        const ordered_set<PHV::AllocSlice>& fields) const {
-    LOG1("Producing fields in order : " << fields);
+        const ordered_set<PHV::AllocSlice>& slices) const {
+    LOG1("Producing slices in order : " << slices);
     LOG7(livemap.printDarkLiveRanges());
     OrderedFieldSummary rv;
+
+    ordered_set<PHV::AllocSlice> ParsedOnlySlices(slices);
     const PHV::AllocSlice* lastField = nullptr;
-    for (int i = 0; i <= DEPARSER; i++) {
-        auto fieldsLiveAtStage = getFieldsLiveAtStage(fields, i);
+    for (int i = -1; i <= DEPARSER; i++) {
+        auto fieldsLiveAtStage = getFieldsLiveAtStage(slices, i);
         if (!fieldsLiveAtStage) return boost::none;
         if (fieldsLiveAtStage->first != nullptr) {
+            // Update ParsedOnlySlices
+            for (auto itr = ParsedOnlySlices.begin(); itr != ParsedOnlySlices.end();) {
+                if (itr->field()->id == fieldsLiveAtStage->first->field()->id)
+                    itr = ParsedOnlySlices.erase(itr);
+                else
+                    ++itr;
+            }
+
             auto& readAccess = livemap.at(fieldsLiveAtStage->first->field(), i, READ);
             if (lastField != fieldsLiveAtStage->first) {
                 lastField = fieldsLiveAtStage->first;
                 OrderedFieldInfo info(*lastField, std::make_pair(i, PHV::FieldUse(READ)),
-                        readAccess);
+                                      readAccess);
                 LOG5("\t\t\t Read Info: " << info);
                 rv.push_back(info);
             } else {
@@ -339,11 +367,19 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
             }
         }
         if (fieldsLiveAtStage->second != nullptr) {
+            // Update ParsedOnlySlices
+            for (auto itr = ParsedOnlySlices.begin(); itr != ParsedOnlySlices.end();) {
+                if (itr->field()->id == fieldsLiveAtStage->second->field()->id)
+                    itr = ParsedOnlySlices.erase(itr);
+                else
+                    ++itr;
+            }
+
             auto& writeAccess = livemap.at(fieldsLiveAtStage->second->field(), i, WRITE);
             if (lastField != fieldsLiveAtStage->second) {
                 lastField = fieldsLiveAtStage->second;
                 OrderedFieldInfo info(*lastField, std::make_pair(i, PHV::FieldUse(WRITE)),
-                        writeAccess);
+                                      writeAccess);
                 LOG5("\t\t\t Write Info: " << info);
                 rv.push_back(info);
             } else {
@@ -352,6 +388,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
             }
         }
     }
+
     LOG5("\tNumber of alloc slices sorted by liveness: " << rv.size());
     for (auto& info : rv) {
         std::stringstream ss;
@@ -362,8 +399,57 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
             ss << DBPrint::Brief << "(" << u->thread() << ")" << u << " ";
         LOG5(ss.str());
     }
+
     if (!validateLiveness(rv)) return boost::none;
-    return rv;
+    if (ParsedOnlySlices.size() == 0) {
+        return rv;
+    }
+
+    // Handle case of fields that have only Parser references (local parser fields)
+    // *ALEX* This should no longer be needed after p4c-1995 is merged into master
+    lastField = nullptr;
+    auto sItr = slices.end();
+    OrderedFieldSummary rv2;
+
+    auto fieldsLiveAtStage = getFieldsLiveAtStage(ParsedOnlySlices, -1);
+    if (!fieldsLiveAtStage) return boost::none;
+
+    if (fieldsLiveAtStage) {
+        if (fieldsLiveAtStage->first != nullptr) {
+            lastField = fieldsLiveAtStage->first;
+            sItr = slices.find(*(fieldsLiveAtStage->first));
+            BUG_CHECK(sItr != slices.end(), "Cannot find parsed-only slice %1%", *sItr);
+            auto& readAccess = livemap.at(sItr->field(), -1, READ);
+            OrderedFieldInfo info(*sItr, std::make_pair(-1, PHV::FieldUse(READ)), readAccess);
+            LOG5("\t\t\t Parser Read Info: " << info);
+            rv2.push_back(info);
+        }
+
+        if (fieldsLiveAtStage->second != nullptr) {
+            sItr = slices.find(*(fieldsLiveAtStage->second));
+            BUG_CHECK(sItr != slices.end(), "Cannot find parsed-only slice %1%", *sItr);
+            auto& writeAccess = livemap.at(sItr->field(), -1, WRITE);
+            if (lastField != fieldsLiveAtStage->second) {
+                lastField = fieldsLiveAtStage->second;
+                OrderedFieldInfo info(*sItr, std::make_pair(-1, PHV::FieldUse(WRITE)), writeAccess);
+                LOG5("\t\t\t Parse Write Info: " << info);
+                rv2.push_back(info);
+            } else {
+                rv2[rv2.size() - 1].addAccess(std::make_pair(-1, PHV::FieldUse(WRITE)),
+                                              writeAccess);
+                LOG5("\t\t\t Adding Parser Write Access: " << writeAccess.first);
+            }
+        }
+    }
+
+    for (auto info : rv) {
+        rv2.push_back(info);
+    }
+    LOG5("\tNumber of updated with parser-only alloc slices sorted by liveness: " << rv2.size());
+    BUG_CHECK(rv2.size() > 1, "After accounting for parsed-only fields the number of"
+              " overlaid fields is less than 2...? ");
+
+    return rv2;
 }
 
 

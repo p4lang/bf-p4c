@@ -2388,6 +2388,7 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
     LOG1("M: used in MAU");
     LOG1("R: referenced anywhere");
     LOG1("D: is deparsed");
+    LOG1("Alias source fields may have no labels");
     for (auto f : phv) {
         LOG1("(" <<
               (uses.is_used_parde(&f) ? "P" : " ") <<

@@ -232,24 +232,24 @@ void MetadataLiveRange::end_apply() {
             // live range shrinking is possible.
             if (overlaps(range1, range2)) {
                 overlay(f1->id, f2->id) = true;
-                LOG3("    (" << f1->name << ", " << f2->name);
+                LOG3("    overlay(" << f1->name << ", " << f2->name << ")");
             }
             // For pa_no_init fields, dependence distance is of little less consideration.
             if (!overlay(f1->id, f2->id)) {
                 if (noInitFields.count(f1) && noInitFields.count(f2)) {
                     if (overlaps(range1, range2, 0)) {
                         overlay(f1->id, f2->id) = true;
-                        LOG1("    (" << f1->name << ", " << f2->name);
+                        LOG1("    overlay noInit(" << f1->name << ", " << f2->name << ")");
                     }
                 } else if (noInitFields.count(f1) && !noInitFields.count(f2)) {
                     if (range2.first < range1.first && range2.second < range1.first) {
                         overlay(f1->id, f2->id) = true;
-                        LOG1("    (" << f1->name << ", " << f2->name);
+                        LOG1("    overlay noInitF1(" << f1->name << ", " << f2->name << ")");
                     }
                 } else if (noInitFields.count(f2) && !noInitFields.count(f1)) {
                     if (range1.first < range2.first && range1.second < range2.first) {
                         overlay(f1->id, f2->id) = true;
-                        LOG1("    (" << f1->name << ", " << f2->name);
+                        LOG1("    overlay noInitF2(" << f1->name << ", " << f2->name << ")");
                     }
                 }
             }

@@ -16,14 +16,18 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     in_mau = false;
     in_dep = false;
     use_i.clear();
+    use2_i.clear();
     for (auto &x : deparser_i) x.clear();
     for (auto &x : extracted_i) x.clear();
     written_i.clear();
     used_alu_i.clear();
+    written2_i.clear();
+    used_alu2_i.clear();
     return rv;
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
+    LOG5("PREORDER Parser ");
     in_mau = false;
     in_dep = false;
     thread = p->gress;
@@ -32,6 +36,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
+    LOG5("PREORDER Extract ");
     auto lval = e->dest->to<IR::BFN::FieldLVal>();
     if (!lval) return true;
     auto* f = phv.field(lval->field);
@@ -45,6 +50,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
+    LOG5("PREORDER Deparser ");
     thread = d->gress;
     in_mau = false;
     in_dep = true;
@@ -53,6 +59,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
+    LOG5("PREORDER TableSeq ");
     // FIXME -- treat GHOST thread as ingress for PHV allocation
     if ((thread = VisitingThread(this)) == GHOST)
         thread = INGRESS;
@@ -63,11 +70,13 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
+    LOG5("PREORDER Expression " << *e);
     if (auto *hr = e->to<IR::HeaderRef>()) {
         for (auto id : phv.struct_info(hr).field_ids()) {
             auto* field = phv.field(id);
             CHECK_NULL(field);
             use_i[field][in_mau].insert(StartLen(0, field->size));
+            use2_i[id][in_mau].insert(StartLen(0, field->size));
             deparser_i[thread][id] = in_dep; } }
 
     le_bitrange bits;
@@ -75,21 +84,27 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
         // Used in MAU.
         LOG5("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
         use_i[info][in_mau].insert(bits);
+        use2_i[info->id][in_mau].insert(bits);
+        LOG5("is_used_mau: " << is_used_mau(info));
 
         // Used in ALU instruction.
         if (findContext<IR::MAU::Instruction>() != nullptr) {
             LOG5("use " << info->name << " in ALU instruction");
             used_alu_i[info].insert(bits);
+            used_alu2_i[info->id].insert(bits);
         }
 
         // Used in deparser.
         LOG5("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
         deparser_i[thread][info->id] = in_dep;
 
-        if (isWrite() && in_mau)
+        if (isWrite() && in_mau) {
             written_i[info].insert(bits);
+            written2_i[info->id].insert(bits);
+        }
         return false;
     } else if (e->is<IR::Member>()) {  // prevent descent into IR::Member objects
+        LOG5("  ... member expr");
         return false;
     }
     return true;
@@ -116,15 +131,24 @@ bool Phv_Parde_Mau_Use::is_deparsed(const PHV::Field *f) const {      // use in 
 
 bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field *f) const {      // use in mau
     BUG_CHECK(f, "Null field");
-    if (!use_i.count(f)) return false;
-    return use_i.at(f).count(MAU);
+    // if (!use_i.count(f)) return false;
+    // return use_i.at(f).count(MAU);
+    // if (use_i.count(f) != use2_i.count(f->id))
+    //     LOG5("DIFF for field " << *f << " mau use=" << use_i.count(f));
+
+    if (!use2_i.count(f->id)) return false;
+    return use2_i.at(f->id).count(MAU);
 }
 
 bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field* f, le_bitrange range) const {
     BUG_CHECK(f, "Null field");
-    if (!use_i.count(f)) return false;
-    if (!use_i.at(f).count(MAU)) return false;
-    for (auto r : use_i.at(f).at(MAU)) {
+    // if (!use_i.count(f)) return false;
+    // if (!use_i.at(f).count(MAU)) return false;
+    // if (use_i.count(f) != use2_i.count(f->id))
+    //     LOG5("DIFF for field " << *f << " mau use=" << use_i.count(f));
+    if (!use2_i.count(f->id)) return false;
+    if (!use2_i.at(f->id).count(MAU)) return false;
+    for (auto r : use2_i.at(f->id).at(MAU)) {
         if (range.overlaps(r))
             return true;
     }
@@ -133,21 +157,21 @@ bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field* f, le_bitrange range) cons
 
 bool Phv_Parde_Mau_Use::is_used_alu(const PHV::Field *f) const {      // use in alu
     BUG_CHECK(f, "Null field");
-    return used_alu_i.count(f);
+    return used_alu2_i.count(f->id);
 }
 
 bool Phv_Parde_Mau_Use::is_written_mau(const PHV::Field *f) const {
     BUG_CHECK(f, "Null field");
-    return written_i.count(f);;
+    return written2_i.count(f->id);;
 }
 
 bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in parser/deparser
     BUG_CHECK(f, "Null field");
     bool use_i_pd;
-    if (!use_i.count(f))
+    if (!use2_i.count(f->id))
         use_i_pd = false;
     else
-        use_i_pd = use_i.at(f).count(PARDE);
+        use_i_pd = use2_i.at(f->id).count(PARDE);
     bool use_pd = use_i_pd || extracted_i[f->gress][f->id];
     return use_pd;
 }
@@ -179,6 +203,7 @@ bool Phv_Parde_Mau_Use::is_extracted_from_constant(const PHV::Field *f,
 //***********************************************************************************
 
 bool PhvUse::preorder(const IR::BFN::Deparser *d) {
+    LOG5("PREORDER Deparser PhvUse");
     thread = d->gress;
     in_dep = true;
     in_mau = false;
@@ -194,23 +219,31 @@ bool PhvUse::preorder(const IR::BFN::Deparser *d) {
 }
 
 bool PhvUse::preorder(const IR::BFN::DeparserParameter*) {
+    LOG5("PREORDER DeparserParameter PhvUse");
     // Treat fields which are used to set intrinsic deparser parameters as if
     // they're used in the MAU, because they can't go in TPHV or CLOT.
     in_mau = true;
+    LOG5("\t\t Turn on MAU for DeparserParameter");
     return true;
 }
 
 void PhvUse::postorder(const IR::BFN::DeparserParameter*) {
+    LOG5("POSTORDER Deparser PhvUse");
     in_mau = false;
+    LOG5("\t\t Turn off MAU for DeparserParameter");
 }
 
 bool PhvUse::preorder(const IR::BFN::Digest*) {
+    LOG5("PREORDER Digest PhvUse");
     // Treat fields which are used in digests as if they're used in the MAU,
     // because they can't go in TPHV or CLOT.
     in_mau = true;
+    LOG5("\t\t Turn on MAU for Digest");
     return true;
 }
 
 void PhvUse::postorder(const IR::BFN::Digest*) {
+    LOG5("POSTORDER Digest PhvUse");
     in_mau = false;
+    LOG5("\t\t Turn off MAU for Digest");
 }
