@@ -6,6 +6,7 @@
 #include <stack>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "ir/ir.h"
 #include "simple_power_graph.h"
@@ -31,28 +32,25 @@ bool Edge::is_equivalent(const Edge* other) const {
 }
 
 cstring Edge::get_edge_color() const {
+  constexpr std::array<const char*, 8> LUT = {
+    "red", "blue", "green", "orange", "purple", "yellow", "brown", "cyan"
+  };
   if (child_nodes_.size() > 1) {
-    std::vector<std::string> lut;
-    lut.push_back("red");
-    lut.push_back("blue");
-    lut.push_back("green");
-    lut.push_back("orange");
-    lut.push_back("purple");
-    lut.push_back("yellow");
-    lut.push_back("brown");
-    lut.push_back("cyan");
-    return lut.at(id_ % lut.size()); }
+    return LUT.at(id_ % LUT.size());
+  }
   return "black";
 }
 
 void Node::create_and_add_edge(cstring edge_name, std::vector<Node*>& child_nodes) {
-  LOG4("create_and_add_edge:");
-  LOG4("   edge_name " << edge_name);
-  LOG4("   child_nodes: " << child_nodes.size());
-  for (auto c : child_nodes) {
-    if (c)
-      LOG4("     " << c->unique_id_);
+  if (LOGGING(4)) {
+    LOG4("create_and_add_edge:");
+    LOG4("   edge_name " << edge_name);
+    LOG4("   child_nodes: " << child_nodes.size());
+    for (auto c : child_nodes) {
+        LOG4("     " << c->unique_id_);
+    }
   }
+
   Edge* e = new Edge(out_edges_.size(), edge_name, child_nodes);
   add_edge(e);
 }
