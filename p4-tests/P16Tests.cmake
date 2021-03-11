@@ -1,3 +1,11 @@
+# XFAILS: tests that *temporarily* fail
+# =====================================
+#
+# Xfails are _temporary_ failures: the tests should work but we haven't fixed
+# the compiler yet.
+#
+# Tests that are _always_ expected to fail should be placed in an 'errors'
+# directory, e.g., p4-tests/p4_16/errors/
 
 # FIXME -- mostly missing header files -- utils.h, trivial_parser.h, etc
 # FIXME -- need to add explicit -I args to the tests?
@@ -22,7 +30,6 @@ set (P4_XFAIL_TESTS
   extensions/p4_tests/p4_16/compile_only/serializer-struct.p4
   extensions/p4_tests/p4_16/compile_only/simple_32q.p4
   extensions/p4_tests/p4_16/stf/stateful5-psa.p4
-  extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
   extensions/p4_tests/p4_16/compile_only/test_compiler_macro_defs.p4
   extensions/p4_tests/p4_16/compile_only/test_config_18_meter_color.p4
   extensions/p4_tests/p4_16/ptf/hash_concat.p4
@@ -85,7 +92,6 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/compile_only/p4c-1858_neg.p4
   extensions/p4_tests/p4_16/compile_only/next_table_issue1.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1411.p4
-  extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2173.p4
   extensions/p4_tests/p4_16/compile_only/checksum_neg_test4.p4
   extensions/p4_tests/p4_16/compile_only/brig-neg-1259.p4

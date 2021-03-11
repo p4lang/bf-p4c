@@ -1,3 +1,13 @@
+# XFAILS: tests that *temporarily* fail
+# =====================================
+#
+# Xfails are _temporary_ failures: the tests should work but we haven't fixed
+# the compiler yet.
+#
+# Tests that are _always_ expected to fail should be placed in an 'errors'
+# directory, e.g., p4-tests/p4_16/errors/
+
+
 set (JBAY_XFAIL_TESTS
   # this is intentionally empty because xfails should be added with a reason.
   # look for the failure message in this file and add to an existing ticket
@@ -264,13 +274,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
 
-# Negative test. Directly attached resources (other than action data)
-# are not allowed for ATCAM tables.
-p4c_add_xfail_reason("tofino2"
-  "error.*The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported.*"
-  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
-)
-
 # Expected failure
 p4c_add_xfail_reason("tofino2"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
@@ -414,12 +417,6 @@ p4c_add_xfail_reason("tofino2"
 #   # P4C-3091
 #   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_4.p4
 # )
-
-# P4C-2836
-p4c_add_xfail_reason("tofino2"
-  "error: Some fields cannot be allocated because of unsatisfiable constraints."
-  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
-)
 
 # P4C-2886
 p4c_add_xfail_reason("tofino2"

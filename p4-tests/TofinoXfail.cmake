@@ -1,3 +1,13 @@
+# XFAILS: tests that *temporarily* fail
+# =====================================
+#
+# Xfails are _temporary_ failures: the tests should work but we haven't fixed
+# the compiler yet.
+#
+# Tests that are _always_ expected to fail should be placed in an 'errors'
+# directory, e.g., p4-tests/p4_16/errors/
+#
+#
 # Some of these failures are still P4 v1.0 front-end bugs.
 # Others are due to non-standard extensions to P4:
 # The *meter* tests use direct meters and execute_meter calls with 4 arguments (not in spec)
@@ -177,7 +187,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2257.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2378.p4
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
@@ -246,12 +255,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unimplemented .*: Split attached table with some match and some attached in the same stage, but not all in one stage"
   ../glass/testsuite/p4_tests/fox/COMPILER-957/case6123.p4
-  extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Conflicting alloc in the action data xbar between .*"
-  ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -425,7 +428,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "condition too complex"
-  testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-corrected-bmv2.p4
   testdata/p4_16_samples/psa-i2e-cloning-basic-bmv2.p4
 )
@@ -684,12 +686,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unable to reference global instance .* from non-control block"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/popularity_0.p4
-)
-
-# P4C-1650
-p4c_add_xfail_reason("tofino"
-  "Table .* has a metadata dependency, but doesn't appear in the TableGraph?"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/metadata_dependency.p4
 )
 
 # expected failure -- rng must be on hit path
@@ -1015,12 +1011,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/noviflow/COMPILER-1175/comp_1175.p4
   )
 
-# P4C-1385
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: No object named .*CloneType.E2E"
-  ../glass/testsuite/p4_tests/mau/test_config_183_sample_e2e.p4
-  )
-
 # P4C-1386
 p4c_add_xfail_reason("tofino"
   "The initial offset for a hash calculation function has to be zero"
@@ -1190,12 +1180,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-814/comp_814.p4
   ../glass/testsuite/p4_tests/mau/DRV-1081/switch_drv_1081.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-777/switch_comp_777.p4
-  )
-
-# P4C-1404
-p4c_add_xfail_reason("tofino"
-  "Different POV bit found"
-  ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   )
 
 # P4C doesn't support use_container_valid pragma?
@@ -1899,13 +1883,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/predication_issue.p4
   testdata/p4_16_samples/issue2345-1.p4
   testdata/p4_16_samples/issue2345-with_nested_if.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  ".*error:.*Conditions in an action must be simple comparisons of an action data parameter.*"
-  testdata/p4_16_samples/hdr_stacks2345.p4
-  testdata/p4_16_samples/xor_test.p4
-  testdata/p4_16_samples/issue2345.p4
 )
 
 # p4c 84467391

@@ -1,3 +1,12 @@
+# XFAILS: tests that *temporarily* fail
+# =====================================
+#
+# Xfails are _temporary_ failures: the tests should work but we haven't fixed
+# the compiler yet.
+#
+# Tests that are _always_ expected to fail should be placed in an 'errors'
+# directory, e.g., p4-tests/p4_16/errors/
+
 set (CLOUDBREAK_XFAIL_TESTS
   # this is intentionally empty because xfails should be added with a reason.
   # look for the failure message in this file and add to an existing ticket
@@ -5,13 +14,6 @@ set (CLOUDBREAK_XFAIL_TESTS
   )
 
 ## Initial failures copied from JBayXFail.cmake
-
-# Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
-# implementation
-p4c_add_xfail_reason("tofino3"
-  "Error when creating clone session in target"
-  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
-  )
 
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
@@ -187,14 +189,6 @@ p4c_add_xfail_reason("tofino3"
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)
 
-p4c_add_xfail_reason("tofino3"
-  "AssertionError: Expected packet was not received on device .*, port .*"
-  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-  extensions/p4_tests/p4_14/ptf/easy_no_match.p4
-  #tor.p4
-  #extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
-)
-
 # P4C-1228
 #p4c_add_xfail_reason("tofino3"
 #  "OSError: .* No such file or directory"
@@ -250,13 +244,6 @@ p4c_add_xfail_reason("tofino3"
   "Varbit field size expression evaluates to non byte-aligned value"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
-
-# Negative test. Directly attached resources (other than action data)
-# are not allowed for ATCAM tables.
-p4c_add_xfail_reason("tofino3"
-  "error.*The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported.*"
-  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
-)
 
 # Expected failure
 p4c_add_xfail_reason("tofino3"

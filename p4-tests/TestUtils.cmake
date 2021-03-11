@@ -8,6 +8,15 @@ macro(p4c_add_xfail_reason tag reason)
     list (FIND ${__upperTag}_MUST_PASS_TESTS ${test} __isMustPass)
     if (${__isMustPass} EQUAL -1) # not a mandatory pass test
       p4c_test_set_name(__testname ${tag} ${test})
+
+      # Verify that we haven't already set WILL_FAIL or PASS_REGULAR_EXPRESSION properties
+      get_property(__propWillFail TEST ${__testname} PROPERTY WILL_FAIL)
+      get_property(__propPassRegex TEST ${__testname} PROPERTY PASS_REGULAR_EXPRESSION)
+      if ( NOT ("${__propWillFail}" STREQUAL "") OR NOT ("${__propWillFail}" STREQUAL ""))
+        message(SEND_ERROR "Invalid call to p4c_add_xfail_reason for ${__testname}: "
+          "WILL_FAIL or PASS_REGULAR_EXPRESSION properties already set")
+      endif()
+
       if ( "${reason}" STREQUAL "")
         set_tests_properties(${__testname} PROPERTIES WILL_FAIL 1)
       else ()
