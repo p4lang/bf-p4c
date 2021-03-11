@@ -5,8 +5,8 @@ Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
     profile_t rv = PassManager::init_apply(root);
     totalNumSet = 0;
     // Initialize the fieldNoPack matrix to allow all fields to be packed together
-    for (auto f1 : phv) {
-        for (auto f2 : phv) {
+    for (auto& f1 : phv) {
+        for (auto& f2 : phv) {
             // If the fields are no pack according to deparser constraints, then set that here.
             if (phv.isDeparserNoPack(&f1, &f2)) {
                 phv.addFieldNoPack(&f1, &f2);

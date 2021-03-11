@@ -2277,7 +2277,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
         << std::endl
         << std::endl;
     //
-    for (auto field : phv) {
+    for (auto& field : phv) {
          out << &field << std::endl;
     }
     return out;
@@ -2389,7 +2389,7 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
     LOG1("R: referenced anywhere");
     LOG1("D: is deparsed");
     LOG1("Alias source fields may have no labels");
-    for (auto f : phv) {
+    for (auto& f : phv) {
         LOG1("(" <<
               (uses.is_used_parde(&f) ? "P" : " ") <<
               (uses.is_used_mau(&f) ? "M" : " ") <<
@@ -2412,7 +2412,7 @@ void PhvInfo::DumpPhvFields::generate_field_histogram(gress_t gress) const {
     std::map<int, size_t> size_distribution;
     size_t total_bits = 0;
     size_t total_fields = 0;
-    for (auto field : phv) {
+    for (auto& field : phv) {
         if (field.gress == gress) {
             // Only report histogram for fields that aren't dead code eliminated
             if (uses.is_referenced(&field) || uses.is_deparsed(&field) || uses.is_used_mau(&field)

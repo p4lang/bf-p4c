@@ -419,7 +419,7 @@ void FieldDefUse::end_apply(const IR::Node *) {
     LOG2("FieldDefUse result:");
     int count = phv.num_fields();
     if (count >= 40) {
-        for (auto f : phv)
+        for (auto& f : phv)
             std::clog << code{f.id} << " " << f.name << std::endl; }
     std::clog << "  ";
     for (int i = 0; i < count; i++)
