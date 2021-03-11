@@ -109,6 +109,14 @@ struct TableFormat {
                 return rv;
             }
 
+            int entry_min_word() const {
+                return entry_info_bit_mask().min().index() / SINGLE_RAM_BITS;
+            }
+
+            int entry_max_word() const {
+                return entry_info_bit_mask().max().index() / SINGLE_RAM_BITS;
+            }
+
             bitvec overhead_mask() const {
                 return entry_info_bit_mask() - match_bit_mask();
             }
@@ -319,7 +327,7 @@ struct TableFormat {
     bool attempt_allocate_shares();
     bool allocate_shares();
     void allocate_full_fits(int width_sect);
-    void redistribute_entry_priority();
+    bool redistribute_entry_priority();
     void redistribute_next_table();
     bool build_match_group_map();
     bool build_payload_map();

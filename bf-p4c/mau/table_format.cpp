@@ -1,3 +1,4 @@
+#include "lib/dyn_vector.h"
 #include "memories.h"
 
 void ByteInfo::InterleaveInfo::dbprint(std::ostream &out) const {
@@ -12,7 +13,7 @@ void ByteInfo::dbprint(std::ostream &out) const {
     out << " il_info : { " << il_info << " }";
 }
 /**
- * For ATCAM specifically, only one result bus is alloweed per match.  This is due to the
+ * For ATCAM specifically, only one result bus is allowed per match.  This is due to the
  * priority ranking.  Each RAM can at most hold 5 entries, and those entries, numbered 0-4
  * are ranked in a priority.
  *
@@ -31,26 +32,40 @@ void ByteInfo::dbprint(std::ostream &out) const {
  * there is no overhead, the result bus is more difficult and must be wherever any entry
  * 2-4 resides.
  *
- * This matches bf-asm function 
+ * This matches bf-asm function
  */
 bitvec TableFormat::Use::no_overhead_atcam_result_bus_words() const {
     bitvec rv;
     int rb_word = -1;
-    int shared_across_boundaries = 0;
+    std::vector<int> shared_across_boundaries;
     BUG_CHECK(!match_groups.empty(), "ATCAM table has no match data?");
+    int groupNo = match_groups.size() - 1;
     for (auto it = match_groups.rbegin(); it != match_groups.rend(); it++) {
         bitvec match_mask = it->match_bit_mask();
         int min_word = match_mask.min().index() / SINGLE_RAM_BITS;
         int max_word = match_mask.max().index() / SINGLE_RAM_BITS;
+        bool shared = false;
         if (rb_word < 0)
             rb_word = min_word;
         if (min_word != max_word)
-            shared_across_boundaries++;
+            shared = true;
         else if (rb_word != min_word)
-            shared_across_boundaries++;
+            shared = true;
+        if (shared) {
+            BUG_CHECK(groupNo <= 1, "Entries other than 0 & 1 cannot be shared "
+            "across words in an ATCAM\n. Invalid shared entry : %1%", groupNo);
+            shared_across_boundaries.push_back(groupNo);
+        }
+        groupNo--;
     }
-    BUG_CHECK(shared_across_boundaries <= MAX_SHARED_GROUPS, "ATCAM table has illegitimate "
-        "format.  All words must chain to the same result bus");
+    std::ostringstream sab;
+    std::copy(shared_across_boundaries.begin(), shared_across_boundaries.end() - 1,
+            std::ostream_iterator<int>(sab, ","));
+    BUG_CHECK(shared_across_boundaries.size() <= MAX_SHARED_GROUPS,
+            "ATCAM table has illegitimate format\n. "
+            "Entries shared across word boundary exceeds max allowed (%1%)\n"
+            "Invalid Entries - %2% ",
+            MAX_SHARED_GROUPS, sab.str());
     rv.setbit(rb_word);
     return rv;
 }
@@ -517,7 +532,8 @@ bool TableFormat::find_format(Use *u) {
         return false;
     LOG3("Match and Version");
     if (layout_option.layout.atcam) {
-        redistribute_entry_priority();
+        if (!redistribute_entry_priority())
+            return false;
     }
     redistribute_next_table();
     LOG3("Build match group map");
@@ -744,8 +760,8 @@ int TableFormat::hit_actions() const {
  * Pretty standard, coordinated to the context JSON parameters:
  *     - type - The type of the field
  *     - lsb_mem_word_offset - the first bit position in the RAM word
- *     - bit_width - how many bits the field requires 
- *     - entry - the match group to be in 
+ *     - bit_width - how many bits the field requires
+ *     - entry - the match group to be in
  *     - RAM_word - the RAM in a wide match
  */
 bool TableFormat::allocate_overhead_field(type_t type, int lsb_mem_word_offset, int bit_width,
@@ -872,7 +888,7 @@ bool TableFormat::allocate_next_table() {
  *    - 6.2.10 - Selector Tables - Everything the compiler needs and then some on selectors.
  *      For wide selectors, sections 6.2.10.4 Large Selector Pools and 6.2.10.5.5 The Hash
  *      Word Selection Block are useful
- *   - 6.4.3.5.3 - Hash Distribution - Details the pathway for the hash mod calculation  
+ *   - 6.4.3.5.3 - Hash Distribution - Details the pathway for the hash mod calculation
  */
 
 /**
@@ -1179,7 +1195,7 @@ bool TableFormat::allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &all
 
 /**
  * Find the correct position for the interleaved byte of a particular entry, and allocate that
- * byte to that position. 
+ * byte to that position.
  */
 bool TableFormat::allocate_interleaved_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt) {
@@ -2155,7 +2171,7 @@ bool TableFormat::allocate_all_ternary_match() {
 /**
  * As described by section 6.4.3.1 Exact Match Physical Row Result Generation, the 5 possible
  * entries per RAM line are ranked through a priority.  For exact match, the priority does not
- * matter, but for ATCAM, the lower the priority number, the higher the prioirty ranking.
+ * matter, but for ATCAM, the lower the priority number, the higher the prioirity ranking.
  *
  * Only 2 entries can be in a different RAM than their match overhead, and those two entries
  * are the two highest priority entries.  The order in which the entries are in the match_groups
@@ -2165,28 +2181,59 @@ bool TableFormat::allocate_all_ternary_match() {
  *
  * @seealso comments on no_overhead_atcam_result_bus_words
  */
-void TableFormat::redistribute_entry_priority() {
-    safe_vector<size_t> multi_ram_entries;
-    safe_vector<size_t> single_ram_entries;
 
+bool TableFormat::redistribute_entry_priority() {
+    // This function tries to check if there exists a word such that all other
+    // words are used by no more than 2 entries. If not this will return false as
+    // an invalid entry format.
+    // If found, the entries are then sorted such that 2 entries that use either words
+    // have highest priority
+    LOG3("Redistributing priority for table : " << tbl->name);
+    // Populate no. of groups in each word
+    dyn_vector<int> groupsPerWord;
     for (size_t idx = 0; idx < use->match_groups.size(); idx++) {
-        bitvec entry_use = use->match_groups[idx].entry_info_bit_mask();
-        if ((entry_use.min().index() / SINGLE_RAM_BITS) ==
-            (entry_use.max().index() / SINGLE_RAM_BITS))
-            single_ram_entries.push_back(idx);
-        else
-            multi_ram_entries.push_back(idx);
+        auto entry = use->match_groups[idx];
+        auto wordLo = entry.entry_min_word();
+        auto wordHi = entry.entry_max_word();
+        LOG3(" Entry " << idx << " word lo: " << wordLo << ", word hi: " << wordHi);
+        // Note here we assume groups can only straddle adjacent words
+        for (int w = wordLo; w <= wordHi; w++)
+            groupsPerWord[w]++;
     }
 
+    // Assign result bus word to the one having max no of groups
+    auto result_bus_word = std::distance(groupsPerWord.begin(),
+            std::max_element(groupsPerWord.begin(), groupsPerWord.end()));
+
+    LOG5("  result_bus_word : " << result_bus_word);
+
+    // Reorder groups by adding groups not on result bus word first.
     safe_vector<Use::match_group_use> reordered_match_groups;
-    for (size_t entry : multi_ram_entries) {
-        reordered_match_groups.push_back(use->match_groups[entry]);
+    for (auto &g : use->match_groups) {
+        if (g.entry_min_word() != result_bus_word ||
+                g.entry_max_word() != result_bus_word)
+            reordered_match_groups.push_back(g);
     }
 
-    for (size_t entry : single_ram_entries) {
-        reordered_match_groups.push_back(use->match_groups[entry]);
+    // No. of groups not on the result bus cannot exceed max allowed (2)
+    if (reordered_match_groups.size() > 2) return false;
+
+    // Now add groups on the result bus
+    for (auto &g : use->match_groups) {
+        if (g.entry_min_word() == result_bus_word &&
+                g.entry_max_word() == result_bus_word)
+            reordered_match_groups.push_back(g);
+    }
+
+    LOG3("Reordered priority for table : " << tbl->name);
+    for (size_t idx = 0; idx < reordered_match_groups.size(); idx++) {
+        auto entry = reordered_match_groups[idx];
+        auto wordLo = entry.entry_min_word();
+        auto wordHi = entry.entry_max_word();
+        LOG3(" Entry " << idx << " word lo: " << wordLo << ", word hi: " << wordHi);
     }
     use->match_groups = reordered_match_groups;
+    return true;
 }
 
 /**
@@ -2527,7 +2574,7 @@ int ByteInfo::hole_size(HoleType_t hole_type, int *hole_start_pos) const {
 /**
  * Return the better hole for minimizing byte requirements for packing
  *     Least number of bytes in the il_info.byte_cycle
- *     Least number 
+ *     Least number
  */
 bool ByteInfo::better_hole_type(int hole, int comp_hole, int overhead_bits) const {
     // Return the actual hole
@@ -2640,7 +2687,7 @@ void ByteInfo::set_interleave_info(int overhead_bits) {
  * consider.
  *
  * Also the current basic assumption is that the interleaved byte both doesn't have a hole at both
- * the msb and the lsb, but that in theory could still save bits if this corner case is found 
+ * the msb and the lsb, but that in theory could still save bits if this corner case is found
  */
 bool TableFormat::interleave_match_and_overhead() {
     if (tbl->action_chain() || bits_necessary(SEL_LEN_MOD) > 0
