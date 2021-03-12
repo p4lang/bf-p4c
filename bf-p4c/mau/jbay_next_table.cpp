@@ -328,8 +328,7 @@ struct JbayNextTable::Prop::NTInfo {
 
     NTInfo(const IR::MAU::Table* tbl, std::pair<cstring, const IR::MAU::TableSeq*> seq)
             : parent(tbl), first_stage(tbl->stage()), seq_nm(seq.first), ts(seq.second) {
-        LOG1("NTP for " << tbl->name << " and sequence "
-             << seq.first << ":");
+        LOG4("NTP for " << tbl->name << " and sequence " << seq.first << ":");
         last_stage = tbl->stage();
         BUG_CHECK(first_stage >= 0, "Unplaced table %s", tbl->name);
 
@@ -384,7 +383,7 @@ bool JbayNextTable::Tag::add_use(const LBUse& lbu) {
 }
 
 JbayNextTable::profile_t JbayNextTable::Prop::init_apply(const IR::Node* root) {
-    if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
+    auto rv = MauInspector::init_apply(root);
     // Clear maps, since we have to rebuild them
     self.props.clear();
     self.stage_id.clear();
@@ -394,11 +393,7 @@ JbayNextTable::profile_t JbayNextTable::Prop::init_apply(const IR::Node* root) {
     self.al_runs.clear();
     self.max_stage = 0;
     LOG1("BEGINNING NEXT TABLE PROPAGATION");
-    return MauInspector::init_apply(root);
-}
-
-bool JbayNextTable::Prop::preorder(const IR::BFN::Pipe*) {
-    return self.rebuild;
+    return rv;
 }
 
 void JbayNextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
@@ -519,7 +514,7 @@ bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
     if (!findContext<IR::MAU::Table>())
         self.al_runs.insert(t->unique_id());
     // Add all of the table's table sequences
-    LOG1("    Prop preorder Table " << t->externalName());
+    LOG4("    Prop preorder Table " << t->externalName());
     for (auto ts : t->next) {
         std::map<int, bitvec> executed_paths;
         NTInfo nti(t, ts);
@@ -536,12 +531,11 @@ void JbayNextTable::Prop::end_apply() {
         else
             self.stage_id[i]++;  // Collected max, but need next open one
     }
-    if (!self.rebuild) return;
     LOG1("FINISHED NEXT TABLE PROPAGATION");
 }
 
 JbayNextTable::profile_t JbayNextTable::LBAlloc::init_apply(const IR::Node* root) {
-    if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
+    auto rv = MauInspector::init_apply(root);  // Early exit
     // Clear old values
     self.stage_tags.clear();
     self.lbs.clear();
@@ -562,10 +556,8 @@ JbayNextTable::profile_t JbayNextTable::LBAlloc::init_apply(const IR::Node* root
             self.lbs[src][tag].insert(get_uid(u.dest));
         }
     }
-    // FIXME: Change to Device::numLongBranchTags()
-    self.rebuild = self.stage_tags.size() >= size_t(Device::numLongBranchTags());
     LOG1("FINISHED LONG BRANCH TAG ALLOCATION");
-    return MauInspector::init_apply(root);
+    return rv;
 }
 
 int JbayNextTable::LBAlloc::alloc_lb(const LBUse& u) {
@@ -674,12 +666,14 @@ void JbayNextTable::LBAlloc::end_apply() {
 }
 
 JbayNextTable::profile_t JbayNextTable::TagReduce::init_apply(const IR::Node* root) {
-    self.num_dts = 0;
-    return MauTransform::init_apply(root);
+    auto rv = MauTransform::init_apply(root);
+    stage_dts.clear();
+    dumb_tbls.clear();
+    return rv;
 }
 
 IR::Node* JbayNextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
-    if (!self.rebuild) {  // Short circuit when we don't need dumb tables
+    if (self.stage_tags.size() <= size_t(Device::numLongBranchTags())) {
         return p;
     }
     // Try to merge tags
@@ -951,15 +945,11 @@ void JbayNextTable::TagReduce::alloc_dt_mems() {
     }
 }
 
-// FIXME: best to add a ConditionalVisitor to pass_manager.h. Ask Chris about this and see PR#3474
 JbayNextTable::JbayNextTable() {
     addPasses({ &localize_seqs,
                new Prop(*this),
                new LBAlloc(*this),
-               new TagReduce(*this),
-               &localize_seqs,
-               new Prop(*this),
-               new LBAlloc(*this)});
+               new TagReduce(*this) });
 }
 
 ordered_set<UniqueId> JbayNextTable::next_for(const IR::MAU::Table *tbl, cstring what) const {

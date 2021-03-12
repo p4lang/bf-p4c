@@ -436,7 +436,7 @@ IR::MAU::Table::IndirectAddress
 UniqueId IR::MAU::Table::pp_unique_id(const IR::MAU::AttachedMemory *at,
         bool is_gw, int stage_table, int logical_table,
         UniqueAttachedId::pre_placed_type_t ppt) const {
-    BUG_CHECK(!is_placed(), "Illegal call of the pp_unique_id function");
+    BUG_CHECK(!is_placed(), "Illegal call of the pp_unique_id function on %s", this);
 
     UniqueId rv;
     rv.name = name;

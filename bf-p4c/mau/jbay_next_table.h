@@ -13,7 +13,7 @@
  * using global_exec/local_exec instead. This pass must be run after modifications to IR graph are
  * done, otherwise its data will be invalidated.
  */
-class JbayNextTable : public PassManager, public NextTable {
+class JbayNextTable : public PassRepeated, public NextTable {
  public:
     // Map from tables->condition (tseq names)->sets of tables that need to occur next
     using next_map_t = std::map<UniqueId, std::unordered_map<cstring, std::set<UniqueId>>>;
@@ -181,7 +181,6 @@ class JbayNextTable : public PassManager, public NextTable {
         void local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
         void cross_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
         bool preorder(const IR::MAU::Table*) override;
-        bool preorder(const IR::BFN::Pipe*) override;  // Early abort
 
         profile_t init_apply(const IR::Node* root) override;
         void end_apply() override;
@@ -191,7 +190,6 @@ class JbayNextTable : public PassManager, public NextTable {
     };
 
     /*==================================Data gathered by LBAlloc==================================*/
-    bool                                         rebuild = true;  // Whether we need dumb tables
     dyn_vector<Tag>                              stage_tags;  // Track usage of tags x stages so far
     size_t                                       max_tag;  // Largest tag allocated (number of lbs)
     std::map<LBUse, int>                         use_tags;  // Map from uses to tags
