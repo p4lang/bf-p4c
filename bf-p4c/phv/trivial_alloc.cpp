@@ -62,7 +62,7 @@ void TrivialAlloc::copy_alias(const PHV::Field &from, PHV::Field &to) {
 
 void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use) {
     /* greedy allocate space for field */
-    static struct {
+    static const struct {
         PHV::Container PHV::TrivialAlloc::Regs::*   alloc;
         int                                         size;
     } alloc_types[3] = {
@@ -75,8 +75,8 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use) {
     PHV::Field *i = group.fields[0];
     unsigned group_index = 0;
     int merge_follow = group.fields.size() - 1;
-    int size = i->size;
-    int isize = i->size;
+    int size = i->size;   // total size (in bits) of the group left to allocate
+    int isize = i->size;  // bits of the current field left to allocate
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
     for (int m = 1; m <= merge_follow; ++m) {
@@ -132,7 +132,8 @@ void TrivialAlloc::postorder(const IR::BFN::Pipe *pipe) {
                 if (field.metadata) {
                     while (group.size < 8) {
                         auto* mfield = phv.field(group.back().id + 1);
-                        if (mfield->gress != group.gress || group.size + mfield->size > 8)
+                        if (!mfield || mfield->gress != group.gress ||
+                            group.size + mfield->size > 8)
                             break;
                         group.push_back(*mfield); }
                 } else if (field.size % 8U != 0 && field.offset > 0) {
