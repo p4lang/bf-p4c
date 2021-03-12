@@ -48,10 +48,8 @@ set (JBAY_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210202.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210211.p4
-  # P4C-3610
-  #extensions/p4_tests/p4_16/customer/extreme/npb-master-20210225.p4
-  # P4C-3610
-  #extensions/p4_tests/p4_16/customer/extreme/npb-master-20210301.p4
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210225.p4
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20210301.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-3455.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-3455_2.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2_lkg.p4

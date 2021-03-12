@@ -1720,6 +1720,10 @@ struct switch_port_metadata_t {
 @pa_container_size("ingress", "ig_md.mirror.src", 8)
 @pa_container_size("ingress", "ig_md.mirror.type", 8)
 //@pa_container_size("ingress", "smac_src_move", 16)
+@pa_container_type("egress", "tunnel_encap_payload_len", "dark")
+@pa_container_type("egress", "hdr.outer.ipv4.total_len", "mocha")
+@pa_container_type("ingress", "ig_md.lkp_0.tunnel_type", "mocha")
+
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 
 @pa_alias("ingress", "ig_md.multicast.id", "ig_intr_md_for_tm.mcast_grp_b")
