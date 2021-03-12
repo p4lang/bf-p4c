@@ -1295,6 +1295,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/register_read_write.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/simplify_key_elim_casts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_mutex.cpp

@@ -13,6 +13,7 @@
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "ir/ir.h"
 
 namespace BFN {
@@ -68,6 +69,9 @@ class RegisterReadWrite : public PassManager {
         };
         bool preorder(const IR::P4Action*) override;
 
+        std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
+        checkSupportedReadWriteForm(const IR::Statement *reg_stmt);
+
         IR::MethodCallExpression*
         createRegisterExecute(IR::MethodCallExpression *reg_execute,
                               const IR::Statement *reg_stmt, const IR::P4Action *act);
@@ -89,11 +93,18 @@ class RegisterReadWrite : public PassManager {
     };
 
  public:
-     RegisterReadWrite(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
-        refMap(refMap), typeMap(typeMap) {
-         passes.push_back(new CollectRegisterReadsWrites(*this));
-         passes.push_back(new AnalyzeActionWithRegisterCalls(*this));
-         passes.push_back(new UpdateRegisterActionsAndExecuteCalls(*this));
+    RegisterReadWrite(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            BFN::TypeChecking* typeChecking = nullptr) :
+                refMap(refMap), typeMap(typeMap) {
+        if (!typeChecking)
+            typeChecking = new BFN::TypeChecking(refMap, typeMap);
+        addPasses({
+            typeChecking,
+            new CollectRegisterReadsWrites(*this),
+            new AnalyzeActionWithRegisterCalls(*this),
+            new UpdateRegisterActionsAndExecuteCalls(*this),
+            new P4::ClearTypeMap(typeMap)
+        });
      }
 };
 

@@ -1,5 +1,6 @@
 #include "frontends/p4/methodInstance.h"
 #include "register_read_write.h"
+#include "bf-p4c/common/utils.h"
 
 namespace BFN {
 
@@ -33,10 +34,16 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::
                 , orig_act);
     auto reg_exec_call = self.action_register_exec_calls[orig_act];
     IR::Statement *stmt = nullptr;
-    if (assign_stmt)
-        stmt = new IR::AssignmentStatement(assign_stmt->left, reg_exec_call);
-    else
+    if (assign_stmt) {
+        if (auto *slice = assign_stmt->right->to<IR::Slice>()) {
+            stmt = new IR::AssignmentStatement(assign_stmt->left,
+                new IR::Slice(reg_exec_call, slice->e1, slice->e2));
+        } else {
+            stmt = new IR::AssignmentStatement(assign_stmt->left, reg_exec_call);
+        }
+    } else {
         stmt = new IR::MethodCallStatement(reg_exec_call);
+    }
     body->push_back(stmt);
 
     // Update action body with remaining non register read/write instructions if
@@ -72,6 +79,47 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR:
         ctrl->controlLocals.insert(ctrl->controlLocals.begin() + count, register_action);
     }
     return ctrl;
+}
+
+/**
+ * The method checks whether the form of the read/write register call is correct,
+ * i.e. has one of the forms described in the error message in this function.
+ * @param[in] reg_stmt The read/write register statement that is being checked
+ * @return A pair of 1. the read/write method call expression contained in the reg_stmt, and
+ *                   2. the left-hand side of the assignment statement of the register read method.
+ */
+std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
+RegisterReadWrite::AnalyzeActionWithRegisterCalls::checkSupportedReadWriteForm(
+        const IR::Statement *reg_stmt) {
+    const IR::MethodCallExpression *call = nullptr;
+    const IR::Expression *read_expr = nullptr;
+
+    if (auto reg_mcall_stmt = reg_stmt->to<IR::MethodCallStatement>()) {
+        // This is a call to .write or .read without assignment, so not assigning to read_expr
+        call = reg_mcall_stmt->methodCall;
+    } else if (auto reg_assign_stmt = reg_stmt->to<IR::AssignmentStatement>()) {
+        // This is a call to .read and we need to store the left-hand side of the assignment
+        if (auto *slice = reg_assign_stmt->right->to<IR::Slice>()) {
+            call = slice->e0->to<IR::MethodCallExpression>();
+        } else {
+            call = reg_assign_stmt->right->to<IR::MethodCallExpression>();
+        }
+        read_expr = reg_assign_stmt->left;
+    }
+
+    if (!call) {
+        ::fatal_error(ErrorType::ERR_UNSUPPORTED,
+                "%1%: Registers support only calls or assignments of the following forms:\n"
+                "  register.write(index, source);\n"
+                "  destination = register.read(index);\n"
+                "  destination = register.read(index)[M:N];\n"
+                "  destination = (cast)register.read(index);\n"
+                "If more complex calls or assignments are required, try to use "
+                "the RegisterAction extern.", reg_stmt);
+    }
+
+    return std::pair<const IR::MethodCallExpression * /*call*/,
+                     const IR::Expression * /*read_expr*/>(call, read_expr);
 }
 
 // REGISTER READ EXAMPLE
@@ -125,15 +173,8 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
                                         const IR::P4Action *act) {
     BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - %1%", act);
 
-    const IR::MethodCallExpression *call = nullptr;
-    if (auto reg_mcall_stmt = reg_stmt->to<IR::MethodCallStatement>())
-        call = reg_mcall_stmt->methodCall;
-    else if (auto reg_assign_stmt = reg_stmt->to<IR::AssignmentStatement>())
-        call = reg_assign_stmt->right->to<IR::MethodCallExpression>();
-
-    BUG_CHECK(call, "Invalid register call statement, must be an assignment "
-                    "or a method call - %1% in action - %2%",
-                    reg_stmt, act);
+    auto rv = checkSupportedReadWriteForm(reg_stmt);
+    auto *call = rv.first;
 
     LOG1(" MethodCallExpression: " << call);
 
@@ -204,17 +245,12 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
                                             const IR::P4Action *act) {
     BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - ", act);
 
-    const IR::MethodCallExpression *call = nullptr;
-    if (auto reg_mcall_stmt = reg_stmt->to<IR::MethodCallStatement>()) {
-        call = reg_mcall_stmt->methodCall;
-    } else if (auto reg_assign_stmt = reg_stmt->to<IR::AssignmentStatement>()) {
-        call = reg_assign_stmt->right->to<IR::MethodCallExpression>();
-        reg_info.read_expr = reg_assign_stmt->left;
+    auto rv = checkSupportedReadWriteForm(reg_stmt);
+    auto *call = rv.first;
+    if (!reg_info.read_expr) {
+        // Do not overwrite with returned nullptr if the read expression is already stored
+        reg_info.read_expr = rv.second;
     }
-
-    BUG_CHECK(call, "Invalid register call statement, must be an assignment "
-                    "or a method call - %1% in action - %2%",
-                    reg_stmt, act);
 
     LOG1(" MethodCallExpression: " << call);
 

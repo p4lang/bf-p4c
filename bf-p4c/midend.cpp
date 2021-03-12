@@ -394,7 +394,7 @@ MidEnd::MidEnd(BFN_Options& options) {
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
         new PingPongGeneration(&refMap, &typeMap),
-        new RegisterReadWrite(&refMap, &typeMap),
+        new RegisterReadWrite(&refMap, &typeMap, typeChecking),
         new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
 
         // Collects source info for logging. Call this after all transformations are complete.

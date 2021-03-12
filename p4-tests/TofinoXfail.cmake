@@ -1726,8 +1726,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2359.p4
 )
 
+# P4C-3598
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: .*Invalid register call statement"
+  "error:.*Registers support only calls or assignments of the following forms"
   testdata/p4_16_samples/psa-register-complex-bmv2.p4
 )
 
