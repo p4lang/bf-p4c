@@ -954,6 +954,14 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry")
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c_2785_sizeinbits" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.ptf")
+p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c_2785_sizeinbytes" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbytes.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbytes.ptf")
+
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3343" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf/p4c_3343.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf")
