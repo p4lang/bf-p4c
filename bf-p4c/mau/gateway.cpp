@@ -24,6 +24,8 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
     explicit operator bool() const { return rv; }
 };
 
+// FIXME -- should make this work for signed types, but big_ints don't work well
+// with 2s complement
 static big_int SliceReduce(IR::Operation::Relation *rel, big_int val) {
     if (val <= 0) return val;
     int slice = ffs(val);
@@ -188,7 +190,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
                 return new IR::Equ(MakeSlice(e->left, signbit, signbit), new IR::Constant(1));
             } else {
                 return new IR::BoolLiteral(false); } }
-        if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
+        if (!isSigned(e->left->type) && SliceReduce(e, k->value) == 1)
             return postorder(new IR::Equ(e->left, new IR::Constant(0))); }
     return e;
 }
@@ -209,7 +211,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
                 return new IR::Equ(MakeSlice(e->left, signbit, signbit), new IR::Constant(0));
             } else {
                 return new IR::BoolLiteral(true); } }
-        if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
+        if (!isSigned(e->left->type) && SliceReduce(e, k->value) == 1)
             return postorder(new IR::Neq(e->left, new IR::Constant(0))); }
     return e;
 }
@@ -795,6 +797,25 @@ bool CollectGatewayFields::compute_offsets() {
     return bits <= IXBar::get_hash_single_bits();
 }
 
+
+/** SetupRanges: convert IR::Operation::Relation expressions into IR::RangeMatch operations
+ * for encoding in a gateway DirtCAM.  A Relation just a </<=/>/>=/==/!= comparison.  TCAMs
+ * cannot match for >/< type things, so they must be converted to RangeMatch expression.
+ * ==/!= can be matched directly in the lower part of the gateway, or can be converted to
+ * RangeMatches for use in the upper part when we are using DirtCAMs.
+ *
+ * An IR::RangeMatch expression more or less directly represents a DirtCAM lookup of up to
+ * 4 bits.  As an expression, it has two operands; the left operand is of type bit<k> or
+ * int<k> while the right operand must a constant of type bit<2**k>.  The left operand is
+ * used as an index to select a single bit from the right operand constant, which will be
+ * the result of the expression (a bit<1> or bool value).  When the left operand is unsigned
+ * this is straightforward, but for a signed valuem we use two's complement, so the upper half
+ * of the bits in the constant are the bits for negative input values.
+ *
+ * Since Tofino DirtCAMs are limited to 4 bit input, we also break up wider comparisions into
+ * 4 bit chunks -- we first split off the top bits%4 bits into a small RangeMatch, then split
+ * the rest into 4 bit RangeMatches.
+ */
 class GatewayRangeMatch::SetupRanges : public Transform {
     const PhvInfo               &phv;
     const CollectGatewayFields  &fields;
@@ -806,13 +827,14 @@ class GatewayRangeMatch::SetupRanges : public Transform {
     const IR::Expression *postorder(IR::Operation::Relation *rel) override {
         le_bitrange bits;
         auto f = phv.field(rel->left, &bits);
+        bool sign = isSigned(rel->left->type);
         if (!f || !rel->right->is<IR::Constant>() || !fields.info.count({f, bits})) return rel;
         LOG3("SetupRange for " << rel);
         bool forceRange = !(rel->is<IR::Equ>() || rel->is<IR::Neq>());
         bool reverse = (rel->is<IR::Geq>() || rel->is<IR::Neq>());
         auto info = fields.info.at({f, bits});
-        long val = rel->right->to<IR::Constant>()->asUint64();
-        BUG_CHECK(!forceRange || (val & 1), "Non-canonicalized range value");
+        int64_t val = rel->right->to<IR::Constant>()->asInt64();
+        BUG_CHECK(!forceRange || sign || (val & 1), "Non-canonicalized range value");
         int base = 0;
         int orig_lo = bits.lo;
         for (auto &alloc : info.offsets) {
@@ -841,14 +863,36 @@ class GatewayRangeMatch::SetupRanges : public Transform {
         LOG5("  bits = " << bits);
         for (int lo = ((bits.hi - bits.lo) & ~3) + bits.lo; lo >= bits.lo; lo -= 4) {
             int hi = std::min(lo + 3, bits.hi);
-            unsigned data = 1U << ((val >> (lo - bits.lo)) & 0xf);
+            int size = hi - lo + 1;  // size of nibble in bits
+            unsigned mask = (1U << (1U << size)) - 1;
+            unsigned data = 1U << ((val >> (lo - bits.lo)) & ((1U << size) - 1));
+            // data is now a 1-hot bitvector for the value we're comparing against (suitable
+            // for use as the right operand of a RangeMatch
             const IR::Expression *eq, *c;
             eq = new IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
-            if (forceRange) --data;
+            if (forceRange) {
+                // doing a less-than or greater-equal comparison, so convert 'data` to have
+                // one bits in all the bits that correspind to values less than the value
+                // being matched.  For unsigned, that is easy (just subtract 1), but for
+                // signed it is more complex.
+                unsigned minval = 1;
+                if (sign) {
+                    minval = 1U << (1U << (size - 1));
+                    if (minval > data) {
+                        minval++;
+                        data += mask + 1; } }
+                data -= minval; }
+            BUG_CHECK(data <= mask, "bit snafu in RangeMatch");
             if (reverse) {
-                data ^= 0xffff;
-                if (forceRange && lo != bits.lo)
-                    data = (data << 1) & 0xffff; }
+                data ^= mask;
+                if (forceRange && lo != bits.lo) {
+                    if (sign)  {
+                        // rotate 2^size bits left by 1
+                        data = ((data << 1) | (data >> ((1 << size) - 1))) & mask;
+                        // clear the bit corresponding to most negative value
+                        data &= ~(1U << (1U << (size - 1)));
+                    } else {
+                        data = (data << 1) & mask; } } }
             c = new IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
             if (forceRange)
                 c = himatch ? new IR::LAnd(himatch, c) : c;
@@ -859,7 +903,8 @@ class GatewayRangeMatch::SetupRanges : public Transform {
                     rv = new IR::LAnd(rv, c);
             } else {
                 rv = c; }
-            himatch = himatch ? new IR::LAnd(himatch, eq) : eq; }
+            himatch = himatch ? new IR::LAnd(himatch, eq) : eq;
+            sign = false; }
         LOG3("SetupRange result: " << rv);
         return rv;
     }
