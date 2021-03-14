@@ -148,6 +148,8 @@
 
 // ----- bug fixes -----
 #define BUG_09719_WORKAROUND // saturating subtracts -- feature is broken
+#define BUG_00593008_WORKAROUND // ingress parser error
+#define BUG_00593238_WORKAROUND // egress truncation length corruption
 
 // ----- other wanted / needed features that don't fit -----
 #define CPU_TX_BYPASS_ENABLE                  // this feature currently doesn't fit
@@ -159,4 +161,7 @@
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
 #undef  MIRROR_METERS                         // this feature currently doesn't fit
-#undef  REFRAMER_SUPPORTS_OLD_SYTLE_NSH       // this feature currently doesn't fit
+#undef  LAG_TABLE_INDIRECT_COUNTERS           // this feature currently doesn't fit
+#undef  CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
+#undef  INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
+#undef  EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit

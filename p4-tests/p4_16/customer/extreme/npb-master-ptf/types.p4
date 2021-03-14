@@ -222,6 +222,7 @@ const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE       = 8w0x10;
 
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_ALL           = 8w0xff;
 #define INGRESS_BYPASS(t) (ig_md.bypass & SWITCH_INGRESS_BYPASS_##t != 0)
+//#define INGRESS_BYPASS(t) (false)
 
 typedef bit<8> switch_egress_bypass_t;
 //const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE         = 8w0x01;
@@ -234,6 +235,7 @@ const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_MTU             = 8w0x80;
 
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_ALL             = 8w0xff;
 #define EGRESS_BYPASS(t) (eg_md.bypass & SWITCH_EGRESS_BYPASS_##t != 0)
+//#define EGRESS_BYPASS(t) (false)
 
 // PKT ------------------------------------------------------------------------
 
@@ -310,14 +312,19 @@ struct switch_mirror_metadata_t {
     switch_mirror_meter_id_t meter_index;
 }
 
-header switch_port_mirror_metadata_h {
+header switch_port_mirror_metadata_h { // this is a header!
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     switch_port_padding_t _pad1;            // 7  \ 16 total
     switch_port_t port;                     // 9  /
     switch_bd_t bd;                         // 16
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+    bit<7> _pad2;                           // 7  \ 16 total
+    switch_port_t eg_port;                  // 9  /
+#else
     bit<6> _pad2;                           // 6  \ 16 total
     switch_port_lag_index_t port_lag_index; // 10 /
+#endif
     bit<32> timestamp;
 #if __TARGET_TOFINO__ == 1
     bit<6> _pad;
@@ -325,14 +332,19 @@ header switch_port_mirror_metadata_h {
     switch_mirror_session_t session_id;
 }
 
-header switch_cpu_mirror_metadata_h {
+header switch_cpu_mirror_metadata_h { // this is a header!
     switch_pkt_src_t src;                   // 8
     switch_mirror_type_t type;              // 8
     switch_port_padding_t _pad1;            // 7  \ 16 total
     switch_port_t port;                     // 9  /
     switch_bd_t bd;                         // 16
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+    bit<7> _pad2;                           // 7  \ 16 total
+    switch_port_t eg_port;                  // 9  /
+#else
     bit<6> _pad2;                           // 6  \ 16 total
     switch_port_lag_index_t port_lag_index; // 10 /
+#endif
     switch_cpu_reason_t reason_code;        // 16
 }
 
@@ -565,9 +577,6 @@ struct switch_ingress_flags_t {
 //  bool glean;
 	bool bypass_egress;
     // Add more flags here.
-#ifdef UDF_ENABLE
-    bool parse_udf_reached;
-#endif
 }
 
 struct switch_egress_flags_t {
@@ -641,7 +650,11 @@ struct switch_lookup_fields_t {
 struct switch_bridged_metadata_t {
     // user-defined metadata carried over from ingress to egress.
     switch_port_t ingress_port;
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+    switch_port_t egress_port;
+#else
     switch_port_lag_index_t ingress_port_lag_index;
+#endif
     switch_bd_t ingress_bd;
     switch_nexthop_t nexthop;
 //  switch_pkt_type_t pkt_type;
@@ -862,6 +875,9 @@ struct switch_egress_metadata_t {
 
     switch_port_lag_index_t port_lag_index;     /* egress port/lag index */
     switch_port_t port;                         /* Mutable copy of egress port */
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+    switch_port_t port_orig;                    /* Mutable copy of egress port */
+#endif
     switch_port_t ingress_port;                 /* ingress port */
     switch_bd_t bd;
     switch_nexthop_t nexthop;
@@ -899,10 +915,10 @@ struct switch_egress_metadata_t {
 //	bool copp_enable;
 //	switch_copp_meter_id_t copp_meter_id;
 
-//  bit<6>                                              action_bitmask;
-//  bit<NPB_EGR_SF_EGRESS_SFP_ACT_SEL_TABLE_DEPTH_POW2> action_3_meter_id;
-//  bit<10>                                             action_3_meter_id;
-//  bit<8>                                              action_3_meter_overhead;
+//  bit<6>                                          action_bitmask;
+//  bit<NPB_EGR_SF_EGRESS_SFP_SFF_TABLE_DEPTH_POW2> action_3_meter_id;
+//  bit<10>                                         action_3_meter_id;
+//  bit<8>                                          action_3_meter_overhead;
 
 //	switch_header_inner_inner_t inner_inner;
 }

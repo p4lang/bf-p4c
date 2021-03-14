@@ -36,8 +36,8 @@ control HashMask(
 //		if(lkp_1_hash_mask_en[0:0] == 1) { lkp_1.mac_type     = 0; }
 //		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_src_addr = 0; }
 //		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_dst_addr = 0; }
-//		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_src_addr  = 0; }
-//		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_dst_addr  = 0; }
+		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_src_addr  = 0; }
+		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_dst_addr  = 0; }
 		if(lkp_1_hash_mask_en[3:3] == 1) { lkp_1.ip_proto     = 0; }
 		if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_src_port  = 0; }
 		if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_dst_port  = 0; }
@@ -114,7 +114,11 @@ action add_bridged_md(
 	bridged_md.src = SWITCH_PKT_SRC_BRIDGED;
 	bridged_md.base = {
 		ig_md.port,
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+		ig_md.egress_port,
+#else
 		ig_md.port_lag_index,
+#endif
 		ig_md.bd,
 		ig_md.nexthop,
 //		ig_md.lkp.pkt_type,

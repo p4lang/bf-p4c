@@ -127,13 +127,13 @@ control IngressTunnel(
 	// Derek note: These tables are unused in latest switch.p4 code from barefoot
 
 	action src_vtep_hit(
-		switch_port_lag_index_t port_lag_index,
+//		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
 	) {
 		stats_src_vtep.count();
 
-		ig_md.port_lag_index    = port_lag_index;
+//		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
 	}
@@ -176,13 +176,13 @@ control IngressTunnel(
 
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 	action src_vtepv6_hit(
-		switch_port_lag_index_t port_lag_index,
+//		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
 	) {
 		stats_src_vtepv6.count();
 
-		ig_md.port_lag_index    = port_lag_index;
+//		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
 	}
@@ -233,7 +233,7 @@ control IngressTunnel(
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 		,
-		switch_port_lag_index_t port_lag_index,
+//		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
   #endif
@@ -246,7 +246,7 @@ control IngressTunnel(
 		drop_ = drop;
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-		ig_md.port_lag_index    = port_lag_index;
+//		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
   #endif
@@ -311,7 +311,7 @@ control IngressTunnel(
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 		,
-		switch_port_lag_index_t port_lag_index,
+//		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
   #endif
@@ -324,7 +324,7 @@ control IngressTunnel(
 		drop_ = drop;
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-		ig_md.port_lag_index    = port_lag_index;
+//		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
   #endif
@@ -2058,26 +2058,6 @@ control TunnelEncap(
 	// Extreme Networks - Added
 	// -------------------------------------
 
-	action rewrite_mac_in_mac_nsh_type1(
-		bit<24> tool_address
-	) {
-		add_l2_header(ETHERTYPE_NSH);
-
-		// This is a hack to support the old nsh type 1 header
-		// for slx.  It really should be done in a nsh table,
-		// as putting it here in the encap logic violates the
-		// whole "separation of concerns" principle.  However,
-		// time is tight on this program and the goal is to
-		// minimize changes, so I'm putting it here....
-		hdr_0.nsh_type1.spi = tool_address;
-		hdr_0.nsh_type1.si  = 0x1;
-#ifdef REFRAMER_SUPPORTS_OLD_SYTLE_NSH
-		hdr_0.nsh_type1.ver = 0x1;
-#endif
-	}
-
-	// -------------------------------------
-
 	action rewrite_mac_in_mac() {
 		add_l2_header(ETHERTYPE_NSH);
 	}
@@ -2092,7 +2072,6 @@ control TunnelEncap(
 		actions = {
 			NoAction;
 
-			rewrite_mac_in_mac_nsh_type1; // extreme added
 			rewrite_mac_in_mac;           // extreme added
 			rewrite_ipv4_gre;             // extreme added
 			rewrite_ipv6_gre;             // extreme added

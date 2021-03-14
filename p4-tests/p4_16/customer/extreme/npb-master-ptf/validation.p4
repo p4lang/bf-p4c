@@ -881,7 +881,7 @@ control ParserValidation(
     table handle_parser_errors {
         key = {
             //hdr.udf.isValid() : exact;
-            ig_md.flags.parse_udf_reached : exact;
+            //ig_md.flags.parse_udf_reached : exact;
             ig_intr_from_prsr.parser_err: exact;
         }
 
@@ -900,12 +900,13 @@ control ParserValidation(
             // the parser is able to roll off the end of small packets
             // when extracting the opaque UDF data. we want to make an
             // exception for this case, and not drop these frame.
-            (true, PARSER_ERROR_PARTIAL_HDR) : except();
+            //(true, PARSER_ERROR_PARTIAL_HDR) : except();
             //(false,  true, PARSER_ERROR_PARTIAL_HDR) : except();
             //(false,  1, (0x0002 & PARSER_ERROR_PARTIAL_HDR)) : except(); 
             //(false,  1, (PARSER_ERROR_PARTIAL_HDR & PARSER_ERROR_SRC_EXT)) : except();
             //(false,  1, (0xFFFF &&& PARSER_ERROR_PARTIAL_HDR)) : except(); 
             //PARSER_ERROR_PARTIAL_HDR: except(); 
+            PARSER_ERROR_PARTIAL_HDR: drop(); 
         }
     }
 

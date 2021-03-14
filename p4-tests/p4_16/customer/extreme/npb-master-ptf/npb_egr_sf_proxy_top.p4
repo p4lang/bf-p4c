@@ -28,51 +28,27 @@ control npb_egr_sf_proxy_top (
 	) acl;
 
 	// =========================================================================
-	// Notes
-	// =========================================================================
-
-	// Note: egress action_bitmask defined as follows....
-	//
-	//   [0:0] act #1: policy
-	//   [1:1] act #2: header strip
-	//   [2:2] act #3: header edit
-	//   [3:3] act #4: truncate
-	//   [4:4] act #5: meter
-	//   [5:5] act #6: dedup
-
-	// =========================================================================
-	// Table #1: Action Select
+	// Table #1: SFF Action Select
 	// =========================================================================
 
 	bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags = 0;
 
 	action egr_sf_action_sel_hit(
-//		bit<6>                                                action_bitmask,
 #ifdef SF_2_ACL_INT_CTRL_FLAGS_ENABLE
 		bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags,
 #endif
 		bit<DSAP_ID_WIDTH>                                    dsap
-//		bit<NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH_POW2> action_3_meter_id,
-//		bit<8>                                                action_3_meter_overhead
-//		bit<3>                                                discard
 	) {
-//		eg_md.action_bitmask          = action_bitmask;
 #ifdef SF_2_ACL_INT_CTRL_FLAGS_ENABLE
 		int_ctrl_flags                = int_ctrl_flags;
 #endif
 		eg_md.nsh_md.dsap             = dsap;
-
-//		eg_md.action_3_meter_id       = action_3_meter_id;
-//		eg_md.action_3_meter_overhead = action_3_meter_overhead;
-
-//		eg_intr_md_for_dprsr.drop_ctl = discard; // drop packet
 	}
 
 	// =====================================
 
 	action egr_sf_action_sel_miss(
 	) {
-//		eg_md.action_bitmask          = 0;
 //		int_ctrl_flags                = 0;
 //		eg_md.nsh_md.dsap             = 0;
 	}
@@ -92,11 +68,11 @@ control npb_egr_sf_proxy_top (
 		}
 
 		const default_action = egr_sf_action_sel_miss;
-		size = NPB_EGR_SF_2_EGRESS_SFP_ACT_SEL_TABLE_DEPTH;
+		size = NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH;
 	}
 
 	// =========================================================================
-	// Table #x: Ip Length Range
+	// Table #x: SF Ip Length Range
 	// =========================================================================
 
 	bit<SF_L3_LEN_RNG_WIDTH> ip_len = 0;
@@ -137,7 +113,7 @@ control npb_egr_sf_proxy_top (
 #endif
 
 	// =========================================================================
-	// Table #2: L4 Src Port Range
+	// Table #2: SF L4 Src Port Range
 	// =========================================================================
 
 	bit<SF_L4_SRC_RNG_WIDTH> l4_src_port = 0;
@@ -178,7 +154,7 @@ control npb_egr_sf_proxy_top (
 #endif
 
 	// =========================================================================
-	// Table #2: L4 Dst Port Range
+	// Table #2: SF L4 Dst Port Range
 	// =========================================================================
 
 	bit<SF_L4_DST_RNG_WIDTH> l4_dst_port = 0;
@@ -253,130 +229,111 @@ control npb_egr_sf_proxy_top (
 			// Actions(s)
 			// ==================================
 
-//			if(eg_md.action_bitmask[0:0] == 1) {
-
-				// ----------------------------------
-				// Action #0 - Policy
-				// ----------------------------------
+			// ----------------------------------
+			// Action #0 - Policy
+			// ----------------------------------
 
 #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
-				egr_sf_ip_len_rng.apply();
+			egr_sf_ip_len_rng.apply();
 #else
-				ip_len = eg_md.lkp_1.ip_len;
-				ip_len_is_rng_bitmask = false;
+			ip_len = eg_md.lkp_1.ip_len;
+			ip_len_is_rng_bitmask = false;
 #endif
 #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
-				egr_sf_l4_src_port_rng.apply();
+			egr_sf_l4_src_port_rng.apply();
 #else
-				l4_src_port = eg_md.lkp_1.l4_src_port;
-				l4_src_port_is_rng_bitmask = false;
+			l4_src_port = eg_md.lkp_1.l4_src_port;
+			l4_src_port_is_rng_bitmask = false;
 #endif
 #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
-				egr_sf_l4_dst_port_rng.apply();
+			egr_sf_l4_dst_port_rng.apply();
 #else
-				l4_dst_port = eg_md.lkp_1.l4_dst_port;
-				l4_dst_port_is_rng_bitmask = false;
+			l4_dst_port = eg_md.lkp_1.l4_dst_port;
+			l4_dst_port_is_rng_bitmask = false;
 #endif
 
-				acl.apply(
-					eg_md.lkp_1,
-					eg_md,
-					eg_intr_md_for_dprsr,
-					ip_len,
-					ip_len_is_rng_bitmask,
-					l4_src_port,
-					l4_src_port_is_rng_bitmask,
-					l4_dst_port,
-					l4_dst_port_is_rng_bitmask,
-					hdr_0,
-					hdr_1,
-					int_ctrl_flags
-				);
-//			}
+			acl.apply(
+				eg_md.lkp_1,
+				eg_md,
+				eg_intr_md_for_dprsr,
+				ip_len,
+				ip_len_is_rng_bitmask,
+				l4_src_port,
+				l4_src_port_is_rng_bitmask,
+				l4_dst_port,
+				l4_dst_port_is_rng_bitmask,
+				hdr_0,
+				hdr_1,
+				int_ctrl_flags
+			);
 
-//			if(eg_md.action_bitmask[1:1] == 1) {
+			// ----------------------------------
+			// Action #1 - Hdr Strip
+			// ----------------------------------
+			npb_egr_sf_proxy_hdr_strip.apply (
+				hdr_0,
+				hdr_1,
+				eg_md,
+				eg_intr_md,
+				eg_intr_md_from_prsr,
+				eg_intr_md_for_dprsr,
+				eg_intr_md_for_oport
+			);
 
-				// ----------------------------------
-				// Action #1 - Hdr Strip
-				// ----------------------------------
-				npb_egr_sf_proxy_hdr_strip.apply (
-					hdr_0,
-					hdr_1,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
+			// ----------------------------------
+			// Action #2 - Hdr Edit
+			// ----------------------------------
+			npb_egr_sf_proxy_hdr_edit.apply (
+				hdr_0,
+				hdr_1,
+				eg_md,
+				eg_intr_md,
+				eg_intr_md_from_prsr,
+				eg_intr_md_for_dprsr,
+				eg_intr_md_for_oport
+			);
 
-//			}
-
-//			if(eg_md.action_bitmask[2:2] == 1) {
-
-				// ----------------------------------
-				// Action #2 - Hdr Edit
-				// ----------------------------------
-				npb_egr_sf_proxy_hdr_edit.apply (
-					hdr_0,
-					hdr_1,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
-
-//			}
-
-//			if(eg_md.action_bitmask[3:3] == 1) {
 /*
-				// ----------------------------------
-				// Action #3 - Truncate
-				// ----------------------------------
-				npb_egr_sf_proxy_truncate.apply (
-					hdr_0,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
+			// ----------------------------------
+			// Action #3 - Truncate
+			// ----------------------------------
+			npb_egr_sf_proxy_truncate.apply (
+				hdr_0,
+				eg_md,
+				eg_intr_md,
+				eg_intr_md_from_prsr,
+				eg_intr_md_for_dprsr,
+				eg_intr_md_for_oport
+			);
 */
-//			}
 
-//			if(eg_md.action_bitmask[4:4] == 1) {
-
-				// ----------------------------------
-				// Action #4 - Meter
-				// ----------------------------------
+			// ----------------------------------
+			// Action #4 - Meter
+			// ----------------------------------
 #ifdef SF_2_METER_ENABLE
-				npb_egr_sf_proxy_meter.apply (
-					hdr_0,
-					eg_md,
-					eg_intr_md,
-					eg_intr_md_from_prsr,
-					eg_intr_md_for_dprsr,
-					eg_intr_md_for_oport
-				);
+			npb_egr_sf_proxy_meter.apply (
+				hdr_0,
+				eg_md,
+				eg_intr_md,
+				eg_intr_md_from_prsr,
+				eg_intr_md_for_dprsr,
+				eg_intr_md_for_oport
+			);
 #endif
-//			}
 
-//			if(eg_md.action_bitmask[5:5] == 1) {
-
-				// ----------------------------------
-				// Action #5 - Deduplication
-				// ----------------------------------
+			// ----------------------------------
+			// Action #5 - Deduplication
+			// ----------------------------------
 #ifdef SF_2_DEDUP_ENABLE
-				npb_egr_sf_proxy_dedup.apply (
-					eg_md.nsh_md.dedup_en,
-					eg_md.lkp_1,         // for hash
-					(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
-//					eg_md.ingress_port,  // for dedup
-					hdr_0.nsh_type1.sap, // for dedup
-					eg_intr_md_for_dprsr.drop_ctl
-				);
+			npb_egr_sf_proxy_dedup.apply (
+				eg_md.nsh_md.dedup_en,
+				eg_md.lkp_1,         // for hash
+				(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+//				eg_md.ingress_port,  // for dedup
+				hdr_0.nsh_type1.sap, // for dedup
+				eg_intr_md_for_dprsr.drop_ctl
+			);
 #endif
-//			}
 
 		}
 	}

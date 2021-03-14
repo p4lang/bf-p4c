@@ -76,7 +76,11 @@ parser NpbEgressParser(
 
 		// ---- extract base bridged metadata -----
         eg_md.ingress_port         = hdr.bridged_md.base.ingress_port;
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+        eg_md.port_orig            = hdr.bridged_md.base.egress_port;
+#else
         eg_md.port_lag_index       = hdr.bridged_md.base.ingress_port_lag_index;
+#endif
         eg_md.bd                   = hdr.bridged_md.base.ingress_bd;
         eg_md.nexthop              = hdr.bridged_md.base.nexthop;
 //      eg_md.pkt_type             = hdr.bridged_md.base.pkt_type;
@@ -141,7 +145,11 @@ parser NpbEgressParser(
         eg_md.pkt_src = port_md.src;                          // for cpu header
         eg_md.bd = port_md.bd;                                // for cpu header (derek added)
 		eg_md.ingress_port = port_md.port;                    // for cpu header (derek added)
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+        eg_md.port_orig = port_md.eg_port;                    // for cpu header (derek added)
+#else
         eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
+#endif
 		eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRRROR; // for cpu header (derek added)
         eg_md.mirror.session_id = port_md.session_id;         // for ??? header
 //      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
@@ -163,7 +171,11 @@ parser NpbEgressParser(
         eg_md.pkt_src = port_md.src;                          // for cpu header
         eg_md.bd = port_md.bd;                                // for cpu header (derek added)
 		eg_md.ingress_port = port_md.port;                    // for cpu header (derek added)
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+        eg_md.port_orig = port_md.eg_port;                    // for cpu header (derek added)
+#else
         eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
+#endif
 		eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRRROR; // for cpu header (derek added)
         eg_md.mirror.session_id = port_md.session_id;         // for ??? header
 //      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
@@ -185,7 +197,11 @@ parser NpbEgressParser(
         eg_md.pkt_src = cpu_md.src;                           // for cpu header
         eg_md.bd = cpu_md.bd;                                 // for cpu header
         eg_md.ingress_port = cpu_md.port;                     // for cpu header
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+        eg_md.port_orig = cpu_md.eg_port;                     // for cpu header (derek added)
+#else
         eg_md.port_lag_index = cpu_md.port_lag_index;         // for cpu header (derek added)
+#endif
         eg_md.cpu_reason = cpu_md.reason_code;                // for cpu header
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 #ifdef PACKET_LENGTH_ADJUSTMENT

@@ -258,18 +258,18 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 
 		try:
 
-			table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
-				)],
-				[table.make_data(
-					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-					None
-				)]
-			)
+#			table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
+#			table.entry_add(
+#				target,
+#				[table.make_key(
+#					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+#				)],
+#				[table.make_data(
+#					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+#					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+#					None
+#				)]
+#			)
 
 			########################################
 
@@ -301,9 +301,9 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 					 gc.KeyTuple('hdr.cpu.$valid',                            0)],
 				)],
 				[table.make_data(
-					[],
-#					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-#					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+#					[],
+					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
 					'SwitchIngress.ingress_port_mapping.set_port_properties'
 				)]
 			)
@@ -359,13 +359,13 @@ def npb_ing_port_del(self, target, port, port_lag_ptr):
 
 		try:
 
-			table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
-			table.entry_del(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
-				)]
-			)
+#			table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
+#			table.entry_del(
+#				target,
+#				[table.make_key(
+#					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+#				)]
+#			)
 
 			########################################
 

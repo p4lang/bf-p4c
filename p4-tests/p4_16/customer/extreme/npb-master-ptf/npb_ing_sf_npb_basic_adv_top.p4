@@ -8,7 +8,7 @@ control npb_ing_sf_npb_basic_adv_top (
 	inout switch_header_transport_t                 hdr_0,
 	inout switch_header_outer_t                     hdr_1,
 	inout switch_header_inner_t                     hdr_2,
-    inout udf_h                                     hdr_udf,
+	inout udf_h                                     hdr_udf,
 
 	inout switch_ingress_metadata_t                 ig_md,
 	in    ingress_intrinsic_metadata_t              ig_intr_md,
@@ -27,45 +27,26 @@ control npb_ing_sf_npb_basic_adv_top (
 		INGRESS_L7_ACL_TABLE_SIZE
 	) acl;
 
-	// temporary internal variables
-//	bit<2>  action_bitmask_internal;
-
 	// =========================================================================
-	// Notes
-	// =========================================================================
-
-	// Note: egress action_bitmask defined as follows....
-	//
-	//   [0:0] act #1: policy
-	//   [1:1] act #2: unused (was dedup)
-
-	// =========================================================================
-	// Table #1: Action Select
+	// Table #1: SFF Action Select
 	// =========================================================================
 
 	bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags = 0;
 
 	action ing_sf_action_sel_hit(
-//		bit<2>  action_bitmask,
 #ifdef SF_0_ACL_INT_CTRL_FLAGS_ENABLE
 		bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags
 #endif
-//      bit<3>  discard
 	) {
-//		action_bitmask_internal = action_bitmask;
 #ifdef SF_0_ACL_INT_CTRL_FLAGS_ENABLE
 		int_ctrl_flags = int_ctrl_flags;
 #endif
-
-//      ig_intr_md_for_dprsr.drop_ctl = discard; // drop packet
 	}
 
 	// =====================================
 
 	action ing_sf_action_sel_miss(
 	) {
-//		action_bitmask_internal = 0;
-//		int_ctrl_flags = 0;
 	}
 
 	// =====================================
@@ -83,11 +64,11 @@ control npb_ing_sf_npb_basic_adv_top (
 		}
 
 		const default_action = NoAction;
-		size = NPB_ING_SF_0_BAS_ADV_ACT_SEL_TABLE_DEPTH;
+		size = NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH;
 	}
 
 	// =========================================================================
-	// Table #2: IP Length Range
+	// Table #2: SF IP Length Range
 	// =========================================================================
 
 	bit<SF_L3_LEN_RNG_WIDTH> ip_len = 0;
@@ -128,7 +109,7 @@ control npb_ing_sf_npb_basic_adv_top (
 #endif
 
 	// =========================================================================
-	// Table #3: L4 Src Port Range
+	// Table #3: SF L4 Src Port Range
 	// =========================================================================
 
 	bit<SF_L4_SRC_RNG_WIDTH> l4_src_port = 0;
@@ -169,7 +150,7 @@ control npb_ing_sf_npb_basic_adv_top (
 #endif
 
 	// =========================================================================
-	// Table #4: L4 Dst Port Range
+	// Table #4: SF L4 Dst Port Range
 	// =========================================================================
 
 	bit<SF_L4_DST_RNG_WIDTH> l4_dst_port = 0;
@@ -244,80 +225,64 @@ control npb_ing_sf_npb_basic_adv_top (
 			// Action(s)
 			// =====================================
 
-//			if(action_bitmask_internal[0:0] == 1) {
-
-				// -------------------------------------
-				// Action #0 - Policy
-				// -------------------------------------
+			// -------------------------------------
+			// Action #0 - Policy
+			// -------------------------------------
 
 #ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
-				ing_sf_ip_len_rng.apply();
+			ing_sf_ip_len_rng.apply();
 #else
-				ip_len = ig_md.lkp_1.ip_len;
-				ip_len_is_rng_bitmask = false;
+			ip_len = ig_md.lkp_1.ip_len;
+			ip_len_is_rng_bitmask = false;
 #endif
 #ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
-				ing_sf_l4_src_port_rng.apply();
+			ing_sf_l4_src_port_rng.apply();
 #else
-				l4_src_port = ig_md.lkp_1.l4_src_port;
-				l4_src_port_is_rng_bitmask = false;
+			l4_src_port = ig_md.lkp_1.l4_src_port;
+			l4_src_port_is_rng_bitmask = false;
 #endif
 #ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
-				ing_sf_l4_dst_port_rng.apply();
+			ing_sf_l4_dst_port_rng.apply();
 #else
-				l4_dst_port = ig_md.lkp_1.l4_dst_port;
-				l4_dst_port_is_rng_bitmask = false;
+			l4_dst_port = ig_md.lkp_1.l4_dst_port;
+			l4_dst_port_is_rng_bitmask = false;
 #endif
 
-				acl.apply(
-					ig_md.lkp_1,
-					ig_md,
-					ig_intr_md_for_dprsr,
-					ig_intr_md_for_tm,
-					ip_len,
-					ip_len_is_rng_bitmask,
-					l4_src_port,
-					l4_src_port_is_rng_bitmask,
-					l4_dst_port,
-					l4_dst_port_is_rng_bitmask,
-					hdr_0,
-					hdr_1,
-					hdr_2,
-					hdr_udf,
-					int_ctrl_flags
-				);
-//			}
+			acl.apply(
+				ig_md.lkp_1,
+				ig_md,
+				ig_intr_md_for_dprsr,
+				ig_intr_md_for_tm,
+				ip_len,
+				ip_len_is_rng_bitmask,
+				l4_src_port,
+				l4_src_port_is_rng_bitmask,
+				l4_dst_port,
+				l4_dst_port_is_rng_bitmask,
+				hdr_0,
+				hdr_1,
+				hdr_2,
+				hdr_udf,
+				int_ctrl_flags
+			);
 
-//			if(action_bitmask_internal[1:1] == 1) {
-
-				// -------------------------------------
-				// Action #1 - Deduplication
-				// -------------------------------------
+			// -------------------------------------
+			// Action #1 - Deduplication
+			// -------------------------------------
 #ifdef SF_0_DEDUP_ENABLE
 /*
-				npb_ing_sf_npb_basic_adv_dedup.apply (
-					ig_md.nsh_md.dedup_en,
-					ig_md.lkp_1,         // for hash
-					(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
-					ig_md.nsh_md.hash_2,
-//					ig_md.port,          // for dedup
-					hdr_0.nsh_type1.sap, // for dedup
-					ig_intr_md_for_dprsr.drop_ctl
-				);
+			npb_ing_sf_npb_basic_adv_dedup.apply (
+				ig_md.nsh_md.dedup_en,
+				ig_md.lkp_1,         // for hash
+				(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+				ig_md.nsh_md.hash_2,
+//				ig_md.port,          // for dedup
+				hdr_0.nsh_type1.sap, // for dedup
+				ig_intr_md_for_dprsr.drop_ctl
+			);
 */
 #endif
-//			}
 
 		}
-/*
-		npb_ing_sf_npb_basic_adv_sfp_sel.apply(
-			hdr_0,
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm
-		);
-*/
 	}
 }

@@ -14,14 +14,12 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 	out bit<SF_HASH_WIDTH> hash
 ) {
 	// =========================================================================
-	// Notes
-	// =========================================================================
-
-	// =========================================================================
 	// Table #1 (main lkp struct):
 	// =========================================================================
 
 	bit<SF_FLOW_CLASS_WIDTH_B> flow_class_internal = 0;
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
 
 	action ing_flow_class_hit (
 		bit<SF_FLOW_CLASS_WIDTH_B>      flow_class
@@ -30,6 +28,15 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 
 		// change metadata
 		flow_class_internal = flow_class;
+
+		stats.count();
+	}
+
+	// ---------------------------------
+
+	action no_action (
+	) {
+		stats.count();
 	}
 
 	// ---------------------------------
@@ -44,12 +51,13 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 		}
 
 		actions = {
-			NoAction;
+			no_action;
 			ing_flow_class_hit;
 		}
 
-		const default_action = NoAction;
-		size = NPB_ING_SFF_FLW_CLS_TABLE_DEPTH;
+		const default_action = no_action;
+		counters = stats;
+		size = NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH;
 	}
 
 	// =========================================================================
@@ -97,6 +105,8 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 	// Table #1: Action Selector
 	// =========================================================================
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+
 #ifdef  SFF_SCHD_SIMPLE
 
 	// Use just a plain old table...
@@ -108,7 +118,7 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 	// Use an Action Profile with the table...
 
 	ActionProfile(
-		NPB_ING_SFF_SCHD_TABLE_PART2_DEPTH
+		NPB_ING_SF_0_SFP_SCHD_TABLE_PART2_DEPTH
 	) schd_selector;
 
   #else // SFF_SCHD_COMPLEX_TYPE_ACTION_SELECTOR
@@ -132,14 +142,14 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 		HashAlgorithm_t.CRC32
 	) selector_hash;
 */
-	ActionProfile(NPB_ING_SFF_SCHD_SELECTOR_TABLE_SIZE) schd_action_profile;
+	ActionProfile(NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE) schd_action_profile;
     ActionSelector(
 		schd_action_profile,
 		selector_hash,
 //		SelectorMode_t.FAIR,
 		SelectorMode_t.RESILIENT,
-		NPB_ING_SFF_SCHD_MAX_MEMBERS_PER_GROUP,
-		NPB_ING_SFF_SCHD_GROUP_TABLE_SIZE
+		NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP,
+		NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE
 	) schd_selector;
 
   #endif // SFF_SCHD_COMPLEX_TYPE_ACTION_SELECTOR
@@ -159,6 +169,15 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 
 		// change metadata
 		ig_md.nsh_md.si_predec = si_predec;
+
+		stats.count();
+	}
+
+	// ---------------------------------
+
+	action no_action (
+	) {
+		stats.count();
 	}
 
 	// ---------------------------------
@@ -174,12 +193,13 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 		}
 
 		actions = {
-			NoAction;
+			no_action;
 			ing_schd_hit;
 		}
 
-		const default_action = NoAction;
-		size = NPB_ING_SFF_SCHD_TABLE_SIZE;
+		const default_action = no_action;
+		counters = stats;
+		size = NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE;
 #ifndef SFF_SCHD_SIMPLE
 		implementation = schd_selector;
 #endif // SFF_SCHD_SIMPLE

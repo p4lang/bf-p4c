@@ -23,22 +23,13 @@ control npb_ing_top (
 	inout ingress_intrinsic_metadata_for_tm_t       ig_intr_md_for_tm
 ) {
 
-#ifdef UDF_ENABLE
-//  Scoper_l7() scoper_l7;
-#endif
-
 #ifndef SFF_SCHD_SIMPLE
 	npb_ing_sf_npb_basic_adv_sfp_hash() npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1;
-  #ifdef SF_0_ALLOW_SCOPE_CHANGES
-//	npb_ing_sf_npb_basic_adv_sfp_hash() npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2;
-  #endif
 #endif
 
 	TunnelDecapTransportIngress(switch_tunnel_mode_t.PIPE) tunnel_decap_transport_ingress;
 	TunnelDecapOuter(switch_tunnel_mode_t.PIPE) tunnel_decap_outer;
 	TunnelDecapInner(switch_tunnel_mode_t.PIPE) tunnel_decap_inner;
-
-//	TunnelEncapTransportIngress(switch_tunnel_mode_t.PIPE) tunnel_encap_transport_ingress;
 
 	// =========================================================================
 	// Apply
@@ -63,7 +54,6 @@ control npb_ing_top (
 			ScoperOuter.apply(
 				hdr_1,
 				tunnel_1,
-//				ig_md.drop_reason_1,
 
 				ig_md.lkp_1
 			);
@@ -72,7 +62,6 @@ control npb_ing_top (
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
 			Scoper.apply(
 				ig_md.lkp_2,
-//				ig_md.drop_reason_2,
 
 				ig_md.lkp_1
 			);
@@ -80,7 +69,6 @@ control npb_ing_top (
 			ScoperInner.apply(
 				hdr_2,
 				tunnel_2,
-//				ig_md.drop_reason_2,
 
 				ig_md.lkp_1
 			);
@@ -95,19 +83,6 @@ control npb_ing_top (
 		// check for parser errors
 		ParserValidation.apply(hdr_udf, ig_md, ig_intr_md_from_prsr, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
 #endif /* VALIDATION_ENABLE */
-
-		// -----------------------------------------------------------------
-
-		// populate udf in lkp struct for the following cases:
-		//   scope==inner
-		//   scope==outer and no inner stack present
-		// todo: do we need to qualify this w/ hdr_udf.isValid()? (the thinking is it will just work w/o doing so)
-
-#ifdef UDF_ENABLE
-//      if(hdr_0.nsh_type1.scope==1 || (hdr_0.nsh_type1.scope==0 && !hdr_2.ethernet.isValid())) {
-//              scoper_l7.apply(hdr_udf, ig_md.lkp);
-//      }
-#endif  /* UDF_ENABLE */
 
 		// -------------------------------------
 		// SFC
@@ -148,51 +123,21 @@ control npb_ing_top (
 			ig_md.lkp_1.l4_dst_port,
 			ig_md.nsh_md.hash_1
 		);
+#endif // SFF_SCHD_SIMPLE
 
+		// -------------------------------------
+		//
 		// -------------------------------------
 
 #ifdef SF_0_DEDUP_ENABLE
 /*
-                npb_ing_sf_npb_basic_adv_dedup_hash.apply (
-                    ig_md.lkp_1,         // for hash
-                    (bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
-					ig_md.nsh_md.hash_2
-                );
-*/
-#endif
-
-		// -------------------------------------
-/*
-  #ifdef SF_0_ALLOW_SCOPE_CHANGES
-
-    #ifdef INGRESS_PARSER_POPULATES_LKP_2
-    #else
-		ScoperInner.apply(
-			hdr_2,
-			tunnel_2,
-//			ig_md.drop_reason_2,
-
-			ig_md.lkp_2
-		);
-    #endif
-
-		npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.apply(
-			hdr_0,
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm,
-
-			ig_md.lkp_2.mac_type,
-			ig_md.lkp_2.ip_proto,
-			ig_md.lkp_2.l4_src_port,
-			ig_md.lkp_2.l4_dst_port,
+		npb_ing_sf_npb_basic_adv_dedup_hash.apply (
+			ig_md.lkp_1,         // for hash
+			(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
 			ig_md.nsh_md.hash_2
 		);
-  #endif // SF_0_ALLOW_SCOPE_CHANGES
 */
-#endif // SFF_SCHD_SIMPLE
+#endif
 
 		// -------------------------------------
 		// SF #0 - Policy
@@ -225,7 +170,7 @@ control npb_ing_top (
 		}
 
 		// -------------------------------------
-		// SFF Reframing
+		// SFF - Reframing
 		// -------------------------------------
 
 		// Decaps ------------------------------
@@ -237,15 +182,11 @@ control npb_ing_top (
 		tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 		tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
 		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
   #else
 		tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 //		tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
 		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, false,              hdr_0);

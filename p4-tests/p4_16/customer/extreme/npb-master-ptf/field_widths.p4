@@ -43,7 +43,11 @@
     #define SF_L2_EDIT_BD_PTR_WIDTH          8                                // original value: xx
     #define UDF_WIDTH                      128 // 16B
 
+  #ifdef BUG_00593008_WORKAROUND
 	#define BRIDGED_METADATA_WIDTH          43 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+  #else
+	#define BRIDGED_METADATA_WIDTH          42 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+  #endif
 
 #else // Full field widths
 
@@ -86,7 +90,11 @@
     #define SF_L2_EDIT_BD_PTR_WIDTH         16                                // original value: xx
     #define UDF_WIDTH                      256 // 32B
 
+  #ifdef BUG_00593008_WORKAROUND
 	#define BRIDGED_METADATA_WIDTH          43 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+  #else
+	#define BRIDGED_METADATA_WIDTH          42 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+  #endif
 
 #endif // FIELD_WIDTHS_REDUCED
 

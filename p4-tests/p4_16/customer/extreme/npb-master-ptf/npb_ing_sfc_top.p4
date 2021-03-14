@@ -18,6 +18,8 @@ control npb_ing_sfc_top (
 	in    ingress_intrinsic_metadata_from_parser_t  ig_intr_md_from_prsr,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
 	inout ingress_intrinsic_metadata_for_tm_t       ig_intr_md_for_tm
+) (
+	switch_uint32_t port_table_size=288
 ) {
 
 #ifdef TRANSPORT_ENABLE
@@ -37,11 +39,7 @@ control npb_ing_sfc_top (
 	IngressTunnelInner(NPB_ING_SFC_TUNNEL_OUTER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
 
 	// =========================================================================
-	// Notes
-	// =========================================================================
-
-	// =========================================================================
-	// W/  NSH... Table #0:
+	// W/  NSH... Table #0a:
 	// =========================================================================
 #ifdef SFF_PREDECREMENTED_SI_ENABLE
 	action ing_sfc_sf_sel_hit(
@@ -74,6 +72,48 @@ control npb_ing_sfc_top (
 
 		const default_action = ing_sfc_sf_sel_miss;
 		size = NPB_ING_SFC_SF_SEL_TABLE_DEPTH;
+	}
+#endif
+	// =========================================================================
+	// W/  NSH... Table #0b:
+	// =========================================================================
+#ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
+	action ing_sfc_sf_sel_nsh_xlate_hit(
+		bit<6>                     ttl,
+		bit<24>                    spi,
+		bit<8>                     si,
+		bit<8>                     si_predec
+	) {
+		hdr_0.nsh_type1.ttl     = ttl;
+		hdr_0.nsh_type1.spi     = spi;
+		hdr_0.nsh_type1.si      = si;
+		ig_md.nsh_md.si_predec  = si_predec;
+
+		hdr_0.nsh_type1.ver     = 0x2;
+	}
+
+	// ---------------------------------
+
+	action ing_sfc_sf_sel_nsh_xlate_miss(
+	) {
+		ig_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+	}
+
+	// ---------------------------------
+
+	table ing_sfc_sf_sel_nsh_xlate {
+		key = {
+			hdr_0.nsh_type1.spi : exact @name("tool_address");
+		}
+
+		actions = {
+			ing_sfc_sf_sel_nsh_xlate_hit;
+			ing_sfc_sf_sel_nsh_xlate_miss;
+			NoAction;
+		}
+
+		const default_action = ing_sfc_sf_sel_nsh_xlate_miss;
+		size = NPB_ING_SFC_SF_SEL_NSH_XLATE_TABLE_DEPTH;
 	}
 #endif
 	// =========================================================================
@@ -110,8 +150,7 @@ control npb_ing_sfc_top (
 		}
 
 		const default_action = NoAction;
-//		size = port_table_size;
-		size = 1024;
+		size = port_table_size;
 	}
 
 	// =========================================================================
@@ -144,9 +183,19 @@ control npb_ing_sfc_top (
 //			ig_md.nsh_md.sfc_enable    = false;
 
 			// ----- table -----
-#ifdef SFF_PREDECREMENTED_SI_ENABLE
+  #ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
+			if(hdr_0.nsh_type1.ver == 2) {
+    #ifdef SFF_PREDECREMENTED_SI_ENABLE
+				ing_sfc_sf_sel.apply();
+    #endif
+			} else {
+				ing_sfc_sf_sel_nsh_xlate.apply();
+			}
+  #else
+    #ifdef SFF_PREDECREMENTED_SI_ENABLE
 			ing_sfc_sf_sel.apply();
-#endif
+    #endif
+  #endif
 		} else {
 #endif // SFC_NSH_ENABLE
 			// -----------------------------------------------------------------

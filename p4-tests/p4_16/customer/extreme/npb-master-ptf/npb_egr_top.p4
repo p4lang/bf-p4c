@@ -82,15 +82,9 @@ control npb_egr_top (
 			ScoperOuter.apply(
 				hdr_1,
 				tunnel_1,
-//				eg_md.drop_reason_1,
 
 				eg_md.lkp_1
 			);
-#endif
-#ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
-			// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-//			eg_md.lkp_1.tunnel_outer_type = SWITCH_TUNNEL_TYPE_NONE;
-//			eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NONE;
 #endif
 		} else {
 #ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
@@ -99,20 +93,14 @@ control npb_egr_top (
 			ScoperInner.apply(
 				hdr_2,
 				tunnel_2,
-//				eg_md.drop_reason_2,
 
 				eg_md.lkp_1
 			);
 #endif
-#ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
-			// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-//			eg_md.lkp_1.tunnel_outer_type = SWITCH_TUNNEL_TYPE_NONE;
-//			eg_md.lkp_1.tunnel_inner_type = eg_md.tunnel_1.type;
-#endif
 		}
 
 		// -------------------------------------
-		// SF(s): Part 1 --> *** before reframing ***
+		// SF #1 - Multicast
 		// -------------------------------------
 
 		npb_egr_sf_multicast_top_part2.apply (
@@ -122,6 +110,8 @@ control npb_egr_top (
 			eg_md
 		);
 
+		// -------------------------------------
+		// SF #2 - Policy
 		// -------------------------------------
 
 		if (!EGRESS_BYPASS(SF_ACL)) {
@@ -137,7 +127,7 @@ control npb_egr_top (
 		}
 
 		// -------------------------------------
-		// SFF Pkt Decap(s)
+		// SFF - Pkt Decap(s)
 		// -------------------------------------
 
 		// Decaps ------------------------------
@@ -145,27 +135,11 @@ control npb_egr_top (
 		tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 		tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		TunnelDecapFixEthertype.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
-
 //		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
 		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
 
 		// -------------------------------------
-		// SF(s): Part 2 --> *** after reframing ***
-		// -------------------------------------
-/*
-		npb_egr_sf_proxy_top_part2.apply (
-			hdr_0,
-			hdr_1,
-			eg_md,
-			eg_intr_md,
-			eg_intr_md_from_prsr,
-			eg_intr_md_for_dprsr,
-			eg_intr_md_for_oport
-		);
-*/
-		// -------------------------------------
-		// SFF Hdr Decap / Encap
+		// SFF - Hdr Decap / Encap
 		// -------------------------------------
 
 		if (!EGRESS_BYPASS(SFF)) {

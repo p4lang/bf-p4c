@@ -75,10 +75,8 @@
 @pa_container_size("egress" , "protocol_outer_0" , 8)
 @pa_container_size("egress" , "protocol_inner_0" , 8)
 @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
-// fitting PHV
 @pa_container_type("egress", "tunnel_encap_payload_len", "dark")
 @pa_container_type("egress", "hdr.outer.ipv4.total_len", "mocha")
-@pa_container_type("ingress", "ig_md.lkp_2.tunnel_type", "normal")
 @pa_container_type("ingress", "ig_md.lkp_0.tunnel_type", "mocha")
 
 // -----------------------------------------------------------------------------
@@ -125,27 +123,9 @@ control SwitchIngress(
 		ig_intr_md_for_dprsr.drop_ctl = 0;  // no longer present in latest switch.p4
 		ig_md.multicast.id = 0;             // no longer present in latest switch.p4
 
-#if defined(PARSER_ERROR_HANDLING_ENABLE) && defined(UDF_ENABLE)
+#if defined(PARSER_ERROR_HANDLING_ENABLE)
         //ParserValidation.apply(hdr, ig_md, ig_intr_from_prsr, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-
-        // Make exception for (only) UDF partial header errors
-        if((ig_intr_from_prsr.parser_err == PARSER_ERROR_PARTIAL_HDR) && ig_md.flags.parse_udf_reached) {
-
-            ig_intr_md_for_dprsr.drop_ctl = 0;
-
-            // Current behavior is hdr.udf will be invalid on partial header errors
-            // and data extracted into hdr.udf will be zeros (or garbage). As such,
-            // we only consult the udf policy table if hdr.udf is valid. Barefoot
-            // has committed to future behavior where hdr.udf data will be accurate,
-            // even on partial header errors. In other words, the remaining payload
-            // from the packet will get extracted into hdr.udf even if it's smaller
-            // than udf.hdr's size. When we get the compiler that supports this
-            // behavior, we'll want to set hdr.udf to valid here, if the default
-            // behavior continues to invalidate hdr.udf on partial header errors.
-            // Then udf policy will be consulted for partial header errors.
-        }
-        
-#endif // if defined(PARSER_ERROR_HANDLING_ENABLE) && defined(UDF_ENABLE)
+#endif // if defined(PARSER_ERROR_HANDLING_ENABLE)
 
 		IngressSetLookup.apply(hdr, ig_md);  // set lookup structure fields that parser couldn't
 
@@ -305,6 +285,8 @@ control SwitchEgress(
 
 		egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 
+#ifndef EGR_STUBBED_OUT
+        
 		if (eg_md.flags.bypass_egress == false) {
 			multicast_replication.apply (
 				hdr.transport,
@@ -312,8 +294,6 @@ control SwitchEgress(
 				eg_intr_md.egress_port,
 				eg_md
 			);
-
-#ifndef EGR_STUBBED_OUT
 
 #ifdef BRIDGING_ENABLE
 			if((eg_md.flags.rmac_hit == false) && (eg_md.nsh_md.l2_fwd_en == true)) {

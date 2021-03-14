@@ -114,6 +114,7 @@ header ipv4_h {
     ipv4_addr_t src_addr;
     ipv4_addr_t dst_addr;
 }
+#define IP4_WIDTH_BYTES 20
 
 header ipv4_option_h {
     bit<8> type;
@@ -161,6 +162,7 @@ header udp_h {
     bit<16> len;
     bit<16> checksum;
 }
+#define UDP_WIDTH_BYTES 8
 
 header tcp_h {
     bit<16> src_port;
@@ -174,6 +176,7 @@ header tcp_h {
     bit<16> checksum;
     bit<16> urgent_ptr;
 }
+#define TCP_WIDTH_BYTES 20
 
 header sctp_h {
     bit<16> src_port;
@@ -181,6 +184,7 @@ header sctp_h {
     bit<32> verifTag;
     bit<32> checksum;
 }
+#define SCTP_WIDTH_BYTES 12
 
 
 //////////////////////////////////////////////////////////////
@@ -441,8 +445,16 @@ header gtp_v2_base_h {
 header udf_h {
     bit<UDF_WIDTH> opaque;
 }
+#define UDF_WIDTH_BYTES (UDF_WIDTH/8)
 
 
+// min ip-length in order to accomodate full UDF extraction
+#define MIN_LEN_IP4_UDP_UDF  (IP4_WIDTH_BYTES + UDP_WIDTH_BYTES  + UDF_WIDTH_BYTES)
+#define MIN_LEN_IP4_TCP_UDF  (IP4_WIDTH_BYTES + TCP_WIDTH_BYTES  + UDF_WIDTH_BYTES)
+#define MIN_LEN_IP4_SCTP_UDF (IP4_WIDTH_BYTES + SCTP_WIDTH_BYTES + UDF_WIDTH_BYTES)
+#define MIN_LEN_IP6_UDP_UDF  (                  UDP_WIDTH_BYTES  + UDF_WIDTH_BYTES)
+#define MIN_LEN_IP6_TCP_UDF  (                  TCP_WIDTH_BYTES  + UDF_WIDTH_BYTES)
+#define MIN_LEN_IP6_SCTP_UDF (                  SCTP_WIDTH_BYTES + UDF_WIDTH_BYTES)
 
 
 //////////////////////////////////////////////////////////////

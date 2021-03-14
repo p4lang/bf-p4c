@@ -45,7 +45,11 @@ control EgressMirror(
                 eg_md.ingress_port,
                 eg_md.bd,
                 0,
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+                eg_md.port,
+#else
                 eg_md.port_lag_index,
+#endif
 //              eg_md.ingress_timestamp,
                 (bit<32>)hdr.transport.nsh_type1.timestamp,
     #if __TARGET_TOFINO__ == 1
@@ -63,7 +67,11 @@ control EgressMirror(
                 eg_md.ingress_port,
                 eg_md.bd,
                 0,
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+                eg_md.port,
+#else
                 eg_md.port_lag_index,
+#endif
                 eg_md.cpu_reason
             });
   #endif

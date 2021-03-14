@@ -8,11 +8,7 @@ control npb_egr_sff_top (
 ) {
 
 	// =========================================================================
-	// Notes
-	// =========================================================================
-
-	// =========================================================================
-	// Table
+	// Table #1: 
 	// =========================================================================
 
 	// RFC 8300, Page 9: Decrementing (the TTL) from an incoming value of 0 shall
@@ -102,6 +98,62 @@ control npb_egr_sff_top (
     }
 
 	// =========================================================================
+	// Table #2: SFF
+	// =========================================================================
+#ifdef EGRESS_NSH_HDR_VER_1_SUPPORT
+	action drop_pkt(
+	) {
+  #ifndef BUG_00593238_WORKAROUND
+		eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+  #endif
+	}
+
+	// =====================================
+
+	action fwd_pkt_nsh_hdr_ver_1(
+		bit<24> tool_address
+	) {
+		// hdr reformat to old type 1 format (slx-style)
+		hdr_0.nsh_type1.spi        = tool_address;
+		hdr_0.nsh_type1.si         = 0x1;
+
+		hdr_0.nsh_type1.ver        = 0x1;
+		hdr_0.nsh_type1.reserved3  = 0x0; // not necessary, but allows the design to fit.
+	}
+
+	// =====================================
+
+	action fwd_pkt_nsh_hdr_ver_2(
+	) {
+		// hdr already in new type 2 format -- nothing to do
+	}
+
+	// =====================================
+
+	table egr_sff_fib {
+		key = {
+			hdr_0.nsh_type1.spi     : exact @name("spi");
+			hdr_0.nsh_type1.si      : exact @name("si");
+		}
+
+		actions = {
+			drop_pkt;
+			fwd_pkt_nsh_hdr_ver_1;
+			fwd_pkt_nsh_hdr_ver_2;
+		}
+
+		// Derek: drop packet on miss...
+		//
+		// RFC 8300, Page 15: If an SFF receives a packet with an SPI and SI that
+		// do not correspond to a valid next hop in a valid SFP, that packet MUST
+		// be dropped by the SFF.
+
+//		const default_action = drop_pkt;
+		const default_action = fwd_pkt_nsh_hdr_ver_2; // for backwards compatibility with firmware
+		size = NPB_EGR_SFF_ARP_TABLE_DEPTH;
+	}
+#endif
+	// =========================================================================
 	// Apply
 	// =========================================================================
 
@@ -189,7 +241,9 @@ control npb_egr_sff_top (
 		// Derek: The forwarding lookup would normally
 		// be done here.  However, since Tofino requires the outport
 		// to set in ingress, it has to be done there instead....
-
+#ifdef EGRESS_NSH_HDR_VER_1_SUPPORT
+		egr_sff_fib.apply();
+#endif
 	}
 
 }

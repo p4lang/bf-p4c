@@ -8,10 +8,12 @@ control npb_ing_sff_top (
 ) {
 
 	// =========================================================================
-	// Table: FIB
+	// Table #1: FIB
 	// =========================================================================
 
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+
+	// =====================================
 
 	action drop_pkt (
 	) {
@@ -50,8 +52,6 @@ control npb_ing_sff_top (
 	}
 
 	// =====================================
-	// Table
-	// =====================================
 
 	table ing_sff_fib {
 		key = {
@@ -86,7 +86,7 @@ control npb_ing_sff_top (
 
 	apply {
 		// -------------------------------------
-		// Perform Forwarding Lookup
+		// Forwarding Lookup
 		// -------------------------------------
 
 		ing_sff_fib.apply();

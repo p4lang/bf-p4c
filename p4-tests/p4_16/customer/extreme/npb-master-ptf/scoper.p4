@@ -26,8 +26,7 @@
 // ============================================================================
 
 control Scoper(
-		in    switch_lookup_fields_t    lkp_in,
-//		in    switch_drop_reason_t      drop_reason,
+		in    switch_lookup_fields_t lkp_in,
 
 		inout switch_lookup_fields_t lkp
 ) {
@@ -66,12 +65,14 @@ control Scoper(
 		lkp.tunnel_type         = lkp_in.tunnel_type;
 		lkp.tunnel_id           = lkp_in.tunnel_id;
 
+  #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
+		// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
 		lkp.tunnel_outer_type   = lkp_in.tunnel_outer_type; // egress only
 		lkp.tunnel_inner_type   = lkp_in.tunnel_inner_type; // egress only
+  #endif
 
 		// misc
 		lkp.next_lyr_valid      = lkp_in.next_lyr_valid;
-//		lkp.drop_reason         = lkp_in.drop_reason;
 #endif
 	}
 }

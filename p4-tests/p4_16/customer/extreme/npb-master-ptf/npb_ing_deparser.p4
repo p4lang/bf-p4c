@@ -41,41 +41,45 @@ control IngressMirror(
 #ifdef MIRROR_INGRESS_ENABLE
         if (ig_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_PORT) {
             mirror.emit<switch_port_mirror_metadata_h>(ig_md.mirror.session_id, {
-                 ig_md.mirror.src,
-                 ig_md.mirror.type,
-                 0,
-                 ig_md.port,
-                 ig_md.bd,
-                 0,
-                 ig_md.port_lag_index,
+                ig_md.mirror.src,
+                ig_md.mirror.type,
+                0,
+                ig_md.port,
+                ig_md.bd,
+                0,
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+                ig_md.egress_port,
+#else
+                ig_md.port_lag_index,
+#endif
 //               ig_md.timestamp,
                  (bit<32>)hdr.transport.nsh_type1.timestamp,
 #if __TARGET_TOFINO__ == 1
                  0,
 #endif
-                 ig_md.mirror.session_id
+                ig_md.mirror.session_id
             });
         } else if (ig_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_DTEL_DROP) {
 #ifdef DTEL_ENABLE
             mirror.emit<switch_dtel_drop_mirror_metadata_h>(ig_md.dtel.session_id, {
-                 ig_md.mirror.src,
-                 ig_md.mirror.type,
-//               ig_md.timestamp,
-                 (bit<48>)hdr.transport.nsh_type1.timestamp,
+                ig_md.mirror.src,
+                ig_md.mirror.type,
+//              ig_md.timestamp,
+                (bit<48>)hdr.transport.nsh_type1.timestamp,
 #if __TARGET_TOFINO__ == 1
-                  0,
+                0,
 #endif
-                 ig_md.dtel.session_id,
-                 ig_md.hash,
-                 ig_md.dtel.report_type,
-                 0,
-                 ig_md.port,
-                 0,
-                 ig_md.egress_port,
-                 0,
-//               ig_md.qos.qid,
-                 0,
-                 ig_md.drop_reason
+                ig_md.dtel.session_id,
+                ig_md.hash,
+                ig_md.dtel.report_type,
+                0,
+                ig_md.port,
+                0,
+                ig_md.egress_port,
+                0,
+//              ig_md.qos.qid,
+                0,
+                ig_md.drop_reason
             });
 #endif /* DTEL_ENABLE */
         }

@@ -29,7 +29,7 @@
 control PortMirror(
 		in switch_port_t port,
 		in switch_pkt_src_t src,
-		inout switch_mirror_metadata_t mirror_md
+		inout switch_mirror_metadata_t mirror_md // derek added
 ) (
 		switch_uint32_t table_size=288
 ) {
@@ -98,7 +98,9 @@ control IngressPortMapping(
 #ifdef CPU_TX_BYPASS_ENABLE
 //		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;                           // Done in parser
 //		DEREK: This next line should be deleted, but doing so causes us not to fit!?!?  ¯\_('')_/¯
-  		ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;                            // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+  #ifdef BUG_00593008_WORKAROUND
+		ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;                            // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+  #endif
 #endif
 //		hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;                             // Wants to be done in parser (see bf-case 10933)
 	}
@@ -133,11 +135,13 @@ control IngressPortMapping(
 
 	action set_port_properties(
 		// note: for regular ports, port_lag_index and l2_fwd_en come from the port_metadata table.
-		switch_yid_t exclusion_id
-//		bool l2_fwd_en
+		switch_yid_t exclusion_id,
+		switch_port_lag_index_t port_lag_index,
+		bool l2_fwd_en
 	) {
 		ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-//		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
+		ig_md.port_lag_index = port_lag_index;
+		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
 	}
 
 	// --------------------------
@@ -281,7 +285,6 @@ control IngressPortMapping(
 
 #ifdef MIRROR_INGRESS_PORT_ENABLE
 		port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror);
-//		port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror, ig_md.copp_enable, ig_md.copp_meter_id);
 #endif
 	}
 }
@@ -317,13 +320,25 @@ control LAG(
 	// Table: LAG
 	// ----------------------------------------------
 
+	bit<4> indirect_counter_index_;
+
 	DirectCounter<bit<switch_counter_width>               >(type=CounterType_t.PACKETS_AND_BYTES) stats_in;  // direct counter
-	Counter      <bit<switch_counter_width>, switch_port_t>(512, CounterType_t.PACKETS_AND_BYTES) stats_out; // indirect counter
- 
+#ifdef LAG_TABLE_INDIRECT_COUNTERS
+//	Counter      <bit<switch_counter_width>, switch_port_t>(512, CounterType_t.PACKETS_AND_BYTES) stats_out; // indirect counter
+	Counter      <bit<switch_counter_width>, bit<14>      >(16384, CounterType_t.PACKETS_AND_BYTES) stats_out; // indirect counter
+#endif
+
+#ifdef LAG_TABLE_INDIRECT_COUNTERS
+	action set_lag_port(switch_port_t port, bit<4> indirect_counter_index) {
+#else
 	action set_lag_port(switch_port_t port) {
+#endif
 		stats_in.count();
 
 		egress_port = port;
+#ifdef LAG_TABLE_INDIRECT_COUNTERS
+		indirect_counter_index_ = indirect_counter_index;
+#endif
 	}
 
 
@@ -381,7 +396,9 @@ control LAG(
                                       ig_md.lkp_1.l4_src_port});
 		lag.apply();
 
-//		stats_out.count(port);
+#ifdef LAG_TABLE_INDIRECT_COUNTERS
+		stats_out.count(ig_md.egress_port_lag_index ++ indirect_counter_index_); // {10 bits, 4 bits}
+#endif
 	}
 }
 
@@ -424,7 +441,11 @@ control EgressPortMapping(
 		// extracted in the parser into multiple containers, but the container
 		// slices after the first aren't byte aligned"
 		hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_orig;
+#else
 		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
+#endif
 		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
 		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
 		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
@@ -475,7 +496,6 @@ control EgressPortMapping(
 
 #ifdef MIRROR_EGRESS_PORT_ENABLE
 		port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror);
-//		port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror, eg_md.copp_enable, eg_md.copp_meter_id);
 #endif
 	}
 }

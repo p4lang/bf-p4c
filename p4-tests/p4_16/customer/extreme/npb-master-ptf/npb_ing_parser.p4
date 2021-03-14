@@ -28,9 +28,6 @@ parser NpbIngressParser(
         ig_md.port           = ig_intr_md.ingress_port;
         ig_md.timestamp      = ig_intr_md.ingress_mac_tstamp;
         ig_md.flags.rmac_hit = false;
-#ifdef UDF_ENABLE
-        ig_md.flags.parse_udf_reached = false;
-#endif
 
         // Check for resubmit flag if packet is resubmitted.
         // transition select(ig_intr_md.resubmit_flag) {
@@ -131,9 +128,10 @@ parser NpbIngressParser(
     
     state parse_port_metadata {
         // Parse port metadata produced by ibuf
-        switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-        ig_md.port_lag_index = port_md.port_lag_index;
-		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+//      switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
+//      ig_md.port_lag_index = port_md.port_lag_index;
+//		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+		pkt.advance(PORT_METADATA_SIZE);
         transition check_from_cpu;
     }
     
@@ -250,7 +248,7 @@ parser NpbIngressParser(
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
-           default: parse_udf;
+           default: accept;
         }
     }
         
@@ -306,7 +304,7 @@ parser NpbIngressParser(
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -354,7 +352,7 @@ parser NpbIngressParser(
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -384,7 +382,7 @@ parser NpbIngressParser(
 
         transition select(hdr.transport.ipv4.protocol) {
            IP_PROTOCOLS_GRE: parse_transport_gre;
-           default : parse_udf;
+           default : accept;
         }
     }
 
@@ -407,7 +405,7 @@ parser NpbIngressParser(
         
         transition select(hdr.transport.ipv6.next_hdr) {
             IP_PROTOCOLS_GRE: parse_transport_gre;
-            default: parse_udf;
+            default: accept;
         }
     }
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
@@ -447,7 +445,7 @@ parser NpbIngressParser(
             (0,0,0,1,0,0,0,0,GRE_PROTOCOLS_ERSPAN_TYPE_2): parse_transport_erspan_t2;
           //(0,0,0,1,0,0,0,0,GRE_PROTOCOLS_ERSPAN_TYPE_3): parse_transport_erspan_t3;
 #endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -498,7 +496,7 @@ parser NpbIngressParser(
 	    pkt.extract(hdr.transport.nsh_type1);
         transition select(hdr.transport.nsh_type1.next_proto) {
             NSH_PROTOCOLS_ETH: parse_outer_ethernet;
-            default: parse_udf;  // todo: support ipv4? ipv6?
+            default: accept;  // todo: support ipv4? ipv6?
         }
     }
 
@@ -552,7 +550,7 @@ parser NpbIngressParser(
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -610,7 +608,7 @@ parser NpbIngressParser(
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -638,7 +636,7 @@ parser NpbIngressParser(
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 #endif // ETAG_ENABLE
@@ -665,7 +663,7 @@ parser NpbIngressParser(
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 #endif // VNTAG_ENABLE
@@ -705,7 +703,7 @@ parser NpbIngressParser(
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -729,7 +727,7 @@ parser NpbIngressParser(
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
     
@@ -741,7 +739,7 @@ parser NpbIngressParser(
     // state parse_outer_arp {
     //     // pkt.extract(hdr.outer.arp);
     //     // transition accept;
-    //     transition parse_udf;
+    //     transition accept;
     // 
     // }
 
@@ -767,7 +765,7 @@ parser NpbIngressParser(
 //         ipv4_checksum_outer.add(hdr.outer.ipv4);
 //         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
 //             (5, 0): parse_outer_ipv4_no_options_frags;
-//             default : parse_udf;
+//             default : accept;
 //         }
 //     }
 // 
@@ -782,6 +780,7 @@ parser NpbIngressParser(
 
     state parse_outer_ipv4 {
         pkt.extract(hdr.outer.ipv4);
+
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
         // todo: should the lkp struct be set in state parse_outer_ipv4_no_options_frags instead?
         ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV4;
@@ -796,26 +795,33 @@ parser NpbIngressParser(
         ipv4_checksum_outer.add(hdr.outer.ipv4);
         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
             (5, 0): parse_outer_ipv4_no_options_frags;
-            default : parse_udf;
+            default : accept;
         }
     }
 
     state parse_outer_ipv4_no_options_frags {
         ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
-        transition select(hdr.outer.ipv4.protocol) {
-            //IP_PROTOCOLS_ICMP: parse_outer_icmp_igmp_overload;
-            //IP_PROTOCOLS_IGMP: parse_outer_icmp_igmp_overload;
-            IP_PROTOCOLS_IPV4: parse_outer_ipinip_set_tunnel_type;
-            IP_PROTOCOLS_IPV6: parse_outer_ipv6inip_set_tunnel_type;
-            IP_PROTOCOLS_UDP: parse_outer_udp;
-            IP_PROTOCOLS_TCP: parse_outer_tcp;
-            IP_PROTOCOLS_SCTP: parse_outer_sctp;
-            IP_PROTOCOLS_GRE: parse_outer_gre;
-            //IP_PROTOCOLS_ESP: parse_outer_esp_overload;
-            default: parse_udf;
+        transition select(hdr.outer.ipv4.protocol, hdr.outer.ipv4.total_len) {
+            (IP_PROTOCOLS_IPV4, _                                      ): parse_outer_ipinip_set_tunnel_type;
+            (IP_PROTOCOLS_IPV6, _                                      ): parse_outer_ipv6inip_set_tunnel_type;
+            (IP_PROTOCOLS_GRE,  _                                      ): parse_outer_gre;
+#ifdef UDF_ENABLE            
+            (IP_PROTOCOLS_UDP,  IP4_WIDTH_BYTES .. MIN_LEN_IP4_UDP_UDF ): parse_outer_udp_noudf;
+            (IP_PROTOCOLS_UDP,  _                                      ): parse_outer_udp_udf;
+            (IP_PROTOCOLS_TCP,  IP4_WIDTH_BYTES .. MIN_LEN_IP4_TCP_UDF ): parse_outer_tcp_noudf;
+            (IP_PROTOCOLS_TCP,  _                                      ): parse_outer_tcp_udf;
+            (IP_PROTOCOLS_SCTP, IP4_WIDTH_BYTES .. MIN_LEN_IP4_SCTP_UDF): parse_outer_sctp_noudf;
+            (IP_PROTOCOLS_SCTP, _                                      ): parse_outer_sctp_udf;
+#else
+            (IP_PROTOCOLS_UDP,  _                                      ): parse_outer_udp_noudf;
+            (IP_PROTOCOLS_TCP,  _                                      ): parse_outer_tcp_noudf;
+            (IP_PROTOCOLS_SCTP, _                                      ): parse_outer_sctp_noudf;
+#endif // UDF_ENABLE            
+
+            default: accept;
         }
     }
-
+    
     
 //     state parse_outer_ipv6 {
 // #ifdef IPV6_ENABLE
@@ -842,6 +848,7 @@ parser NpbIngressParser(
     state parse_outer_ipv6 {
 #ifdef IPV6_ENABLE
         pkt.extract(hdr.outer.ipv6);
+        
 #ifdef INGRESS_PARSER_POPULATES_LKP_1        
         ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_1.ip_proto      = hdr.outer.ipv6.next_hdr;
@@ -850,20 +857,28 @@ parser NpbIngressParser(
         ig_md.lkp_1.ip_dst_addr   = hdr.outer.ipv6.dst_addr;
         ig_md.lkp_1.ip_len        = hdr.outer.ipv6.payload_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_1
-        transition select(hdr.outer.ipv6.next_hdr) {
+        transition select(hdr.outer.ipv6.next_hdr, hdr.outer.ipv6.payload_len) {
             //IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload;
-            IP_PROTOCOLS_IPV4: parse_outer_ipinip_set_tunnel_type;
-            IP_PROTOCOLS_IPV6: parse_outer_ipv6inip_set_tunnel_type;
-            IP_PROTOCOLS_UDP: parse_outer_udp;
-            IP_PROTOCOLS_TCP: parse_outer_tcp;
-            IP_PROTOCOLS_SCTP: parse_outer_sctp;
-            IP_PROTOCOLS_GRE: parse_outer_gre;
-            //IP_PROTOCOLS_ESP: parse_outer_esp_overload;
-            default: parse_udf;
+            (IP_PROTOCOLS_IPV4, _                           ): parse_outer_ipinip_set_tunnel_type;
+            (IP_PROTOCOLS_IPV6, _                           ): parse_outer_ipv6inip_set_tunnel_type;
+            (IP_PROTOCOLS_GRE,  _                           ): parse_outer_gre;
+#ifdef UDF_ENABLE            
+            (IP_PROTOCOLS_UDP,  16w0 .. MIN_LEN_IP6_UDP_UDF ): parse_outer_udp_noudf;
+            (IP_PROTOCOLS_UDP,  _                           ): parse_outer_udp_udf;
+            (IP_PROTOCOLS_TCP,  16w0 .. MIN_LEN_IP6_TCP_UDF ): parse_outer_tcp_noudf;
+            (IP_PROTOCOLS_TCP,  _                           ): parse_outer_tcp_udf;
+            (IP_PROTOCOLS_SCTP, 16w0 .. MIN_LEN_IP6_SCTP_UDF): parse_outer_sctp_noudf;
+            (IP_PROTOCOLS_SCTP, _                           ): parse_outer_sctp_udf;
+#else
+            (IP_PROTOCOLS_UDP,  _                           ): parse_outer_udp_noudf;
+            (IP_PROTOCOLS_TCP,  _                           ): parse_outer_tcp_noudf;
+            (IP_PROTOCOLS_SCTP, _                           ): parse_outer_sctp_noudf;
+#endif // UDF_ENABLE            
+            default: accept;
         }
 #else
         transition reject;
-#endif
+#endif // IPV6_ENABLE
     }
 
     
@@ -877,19 +892,9 @@ parser NpbIngressParser(
     //         IP_PROTOCOLS_SCTP: parse_outer_sctp;
     //         IP_PROTOCOLS_GRE: parse_outer_gre;
     //         //IP_PROTOCOLS_ESP: parse_outer_esp_overload;
-    //         default: parse_udf;
+    //         default: accept;
     //    }
     // }
-
-
-//     // For ICMP and IGMP, we're not actually extracting the header;
-//     // We're simply over-loading L4-port info for policy via lookahead.    
-//     state parse_outer_icmp_igmp_overload {
-// #if defined(PARSER_L4_PORT_OVERLOAD) && defined(INGRESS_PARSER_POPULATES_LKP_1)
-//         ig_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
-// #endif
-//         transition parse_udf;
-//     }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -900,7 +905,7 @@ parser NpbIngressParser(
     // User Datagram Protocol (UDP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_udp {
+    state parse_outer_udp_noudf {
         pkt.extract(hdr.outer.udp);
         
 #ifdef INGRESS_PARSER_POPULATES_LKP_1        
@@ -908,7 +913,9 @@ parser NpbIngressParser(
         ig_md.lkp_1.l4_dst_port = hdr.outer.udp.dst_port;       
 #endif // INGRESS_PARSER_POPULATES_LKP_1
         
-        transition select(hdr.outer.udp.src_port, hdr.outer.udp.dst_port) {
+        transition select(
+            hdr.outer.udp.src_port,
+            hdr.outer.udp.dst_port) {
             
 #ifdef VXLAN_ENABLE
             (_, UDP_PORT_VXLAN): parse_outer_vxlan;
@@ -919,18 +926,57 @@ parser NpbIngressParser(
             (UDP_PORT_GTP_C, _): parse_outer_gtp_c;
             (_, UDP_PORT_GTP_U): parse_outer_gtp_u;
             (UDP_PORT_GTP_U, _): parse_outer_gtp_u;
-            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_outer_gtp_c;
-            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_outer_gtp_u;            
+#endif // GTP_ENABLE
+            default : accept;
+        }
+    }
+
+    
+#ifdef UDF_ENABLE            
+    state parse_outer_udp_udf {
+        pkt.extract(hdr.outer.udp);
+        
+#ifdef INGRESS_PARSER_POPULATES_LKP_1        
+        ig_md.lkp_1.l4_src_port = hdr.outer.udp.src_port;
+        ig_md.lkp_1.l4_dst_port = hdr.outer.udp.dst_port;       
+#endif // INGRESS_PARSER_POPULATES_LKP_1
+        
+        transition select(
+            hdr.outer.udp.src_port,
+            hdr.outer.udp.dst_port) {
+            
+#ifdef VXLAN_ENABLE
+            (_, UDP_PORT_VXLAN): parse_outer_vxlan;
+#endif // VXLAN_ENABLE
+            
+#ifdef GTP_ENABLE
+            (_, UDP_PORT_GTP_C): parse_outer_gtp_c;
+            (UDP_PORT_GTP_C, _): parse_outer_gtp_c;
+            (_, UDP_PORT_GTP_U): parse_outer_gtp_u;
+            (UDP_PORT_GTP_U, _): parse_outer_gtp_u;
 #endif // GTP_ENABLE
             default : parse_udf;
         }
     }
+#endif // UDF_ENABLE            
+
 
     //-------------------------------------------------------------------------
     // Transmission Control Protocol (TCP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_tcp {
+    state parse_outer_tcp_noudf {
+        pkt.extract(hdr.outer.tcp);
+#ifdef INGRESS_PARSER_POPULATES_LKP_1        
+        ig_md.lkp_1.l4_src_port = hdr.outer.tcp.src_port;
+        ig_md.lkp_1.l4_dst_port = hdr.outer.tcp.dst_port;
+        ig_md.lkp_1.tcp_flags   = hdr.outer.tcp.flags;
+#endif // INGRESS_PARSER_POPULATES_LKP_1
+        transition accept;
+    }
+
+#ifdef UDF_ENABLE                
+    state parse_outer_tcp_udf {
         pkt.extract(hdr.outer.tcp);
 #ifdef INGRESS_PARSER_POPULATES_LKP_1        
         ig_md.lkp_1.l4_src_port = hdr.outer.tcp.src_port;
@@ -939,12 +985,24 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
         transition parse_udf;
     }
-
+#endif // UDF_ENABLE            
+    
+    
     //-------------------------------------------------------------------------
     // Stream Control Transmission Protocol (SCTP) - Outer
     //-------------------------------------------------------------------------
 
-    state parse_outer_sctp {
+    state parse_outer_sctp_noudf {
+        pkt.extract(hdr.outer.sctp);
+#ifdef INGRESS_PARSER_POPULATES_LKP_1        
+        ig_md.lkp_1.l4_src_port = hdr.outer.sctp.src_port;
+        ig_md.lkp_1.l4_dst_port = hdr.outer.sctp.dst_port;
+#endif // INGRESS_PARSER_POPULATES_LKP_1
+        transition accept;
+    }
+
+#ifdef UDF_ENABLE            
+    state parse_outer_sctp_udf {
         pkt.extract(hdr.outer.sctp);
 #ifdef INGRESS_PARSER_POPULATES_LKP_1        
         ig_md.lkp_1.l4_src_port = hdr.outer.sctp.src_port;
@@ -952,8 +1010,10 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
         transition parse_udf;
     }
+#endif // UDF_ENABLE            
 
 
+    
     ///////////////////////////////////////////////////////////////////////////////
     // Layer X - Outer
     ///////////////////////////////////////////////////////////////////////////////
@@ -1036,7 +1096,7 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD   
         transition parse_inner_ipv4;
 #else
-        transition parse_udf;
+        transition accept;
 #endif /* IPINIP */
     }
 
@@ -1050,7 +1110,7 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD   
         transition parse_inner_ipv6;
 #else
-        transition parse_udf;
+        transition accept;
 #endif /* IPINIP */
     }
 
@@ -1082,7 +1142,7 @@ parser NpbIngressParser(
             (1,0,0,0,0,0,0,0): parse_outer_gre_qualified;
             (0,0,1,0,0,0,0,0): parse_outer_gre_qualified;
             (0,0,0,1,0,0,0,0): parse_outer_gre_qualified;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1113,7 +1173,7 @@ parser NpbIngressParser(
             (1,0,0,_): parse_outer_gre_optional;
             (0,1,0,_): parse_outer_gre_optional;
             (0,0,1,_): parse_outer_gre_optional;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1127,7 +1187,7 @@ parser NpbIngressParser(
 #ifdef MPLSoGRE_ENABLE
             ETHERTYPE_MPLS: parse_outer_mpls;
 #endif // MPLSoGRE_ENABLE            
-            default: parse_udf;
+            default: accept;
         }
     }
     
@@ -1160,7 +1220,7 @@ parser NpbIngressParser(
 //         ig_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
 //         ig_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
 // #endif
-//         transition parse_udf;
+//         transition accept;
 //     }
 
 
@@ -1187,7 +1247,7 @@ parser NpbIngressParser(
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
             (2, 1): parse_outer_gtp_c_qualified;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1198,7 +1258,7 @@ parser NpbIngressParser(
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_2.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
 #endif // INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD   
-    	transition parse_udf;
+    	transition accept;
     }
 
     // GTP-U
@@ -1223,7 +1283,7 @@ parser NpbIngressParser(
 
             (1, 1, 0, 0, 0): parse_outer_gtp_u_qualified;
             (1, 1, 0, 1, 0): parse_outer_gtp_u_with_optional;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1238,7 +1298,7 @@ parser NpbIngressParser(
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_ipv4;
             6: parse_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1256,7 +1316,7 @@ parser NpbIngressParser(
             pkt.lookahead<bit<4>>()) {
             (0, 4): parse_inner_ipv4;
             (0, 6): parse_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }    
     
@@ -1289,7 +1349,7 @@ parser NpbIngressParser(
             ETHERTYPE_VLAN: parse_inner_vlan;
             ETHERTYPE_IPV4: parse_inner_ipv4;
             ETHERTYPE_IPV6: parse_inner_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -1312,7 +1372,7 @@ parser NpbIngressParser(
             //ETHERTYPE_ARP:  parse_inner_arp;
             ETHERTYPE_IPV4: parse_inner_ipv4;
             ETHERTYPE_IPV6: parse_inner_ipv6;
-            default : parse_udf;
+            default : accept;
         }
     }
 
@@ -1324,7 +1384,7 @@ parser NpbIngressParser(
     // state parse_inner_arp {
     //     // pkt.extract(hdr.inner.arp);
     //     // transition accept;
-    //     transition parse_udf;
+    //     transition accept;
     // }
 
 
@@ -1357,7 +1417,7 @@ parser NpbIngressParser(
 //             hdr.inner.ipv4.ihl,
 //             hdr.inner.ipv4.frag_offset) {
 //             (5, 0): parse_inner_ipv4_no_options_frags;
-//             default: parse_udf;
+//             default: accept;
 //         }
 //     }
 // 
@@ -1394,29 +1454,36 @@ parser NpbIngressParser(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset) {
             (5, 0): parse_inner_ipv4_no_options_frags;
-            default: parse_udf;
+            default: accept;
         }
     }
 
     state parse_inner_ipv4_no_options_frags {
         ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
-        transition select(hdr.inner.ipv4.protocol) {
-            //IP_PROTOCOLS_ICMP: parse_inner_icmp_igmp_overload;
-            //IP_PROTOCOLS_IGMP: parse_inner_icmp_igmp_overload;
-            IP_PROTOCOLS_UDP: parse_inner_udp;
-            IP_PROTOCOLS_TCP: parse_inner_tcp;
-            IP_PROTOCOLS_SCTP: parse_inner_sctp;
+        transition select(hdr.inner.ipv4.protocol, hdr.inner.ipv4.total_len) {
+            (IP_PROTOCOLS_IPV4, _): parse_inner_ipinip_set_tunnel_type;
+            (IP_PROTOCOLS_IPV6, _): parse_inner_ipv6inip_set_tunnel_type;
 #ifdef INNER_GRE_ENABLE
-            IP_PROTOCOLS_GRE: parse_inner_gre;
+            (IP_PROTOCOLS_GRE,  _): parse_inner_gre;
 #endif // INNER_GRE_ENABLE
-            //IP_PROTOCOLS_ESP: parse_inner_esp_overload;
-            IP_PROTOCOLS_IPV4: parse_inner_ipinip_set_tunnel_type;
-            IP_PROTOCOLS_IPV6: parse_inner_ipv6inip_set_tunnel_type;
-            default : parse_udf;
+
+#ifdef UDF_ENABLE            
+            (IP_PROTOCOLS_UDP,  IP4_WIDTH_BYTES .. MIN_LEN_IP4_UDP_UDF ): parse_inner_udp_noudf;
+            (IP_PROTOCOLS_UDP,  _                                      ): parse_inner_udp_udf;
+            (IP_PROTOCOLS_TCP,  IP4_WIDTH_BYTES .. MIN_LEN_IP4_TCP_UDF ): parse_inner_tcp_noudf;
+            (IP_PROTOCOLS_TCP,  _                                      ): parse_inner_tcp_udf;
+            (IP_PROTOCOLS_SCTP, IP4_WIDTH_BYTES .. MIN_LEN_IP4_SCTP_UDF): parse_inner_sctp_noudf;
+            (IP_PROTOCOLS_SCTP, _                                      ): parse_inner_sctp_udf;
+#else
+            (IP_PROTOCOLS_UDP,  _                                      ): parse_inner_udp_noudf;
+            (IP_PROTOCOLS_TCP,  _                                      ): parse_inner_tcp_noudf;
+            (IP_PROTOCOLS_SCTP, _                                      ): parse_inner_sctp_noudf;
+#endif // UDF_ENABLE            
+            default: accept;
         }
     }
 
-    
+        
 //     state parse_inner_ipv6 {
 // #ifdef IPV6_ENABLE
 //         pkt.extract(hdr.inner.ipv6);
@@ -1447,7 +1514,7 @@ parser NpbIngressParser(
     state parse_inner_ipv6 {
 #ifdef IPV6_ENABLE
         pkt.extract(hdr.inner.ipv6);
-
+            
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
         // fixup ethertype for ip-n-ip case
         ig_md.lkp_2.mac_type      = ETHERTYPE_IPV6;
@@ -1460,25 +1527,33 @@ parser NpbIngressParser(
         ig_md.lkp_2.ip_len        = hdr.inner.ipv6.payload_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_2        
 
-        transition select(hdr.inner.ipv6.next_hdr) {
-            //IP_PROTOCOLS_ICMPV6: parse_inner_icmp_igmp_overload;
-            IP_PROTOCOLS_UDP: parse_inner_udp;
-            IP_PROTOCOLS_TCP: parse_inner_tcp;
-            IP_PROTOCOLS_SCTP: parse_inner_sctp;
+        transition select(hdr.inner.ipv6.next_hdr, hdr.inner.ipv6.payload_len) {
+            (IP_PROTOCOLS_IPV4, _): parse_inner_ipinip_set_tunnel_type;
+            (IP_PROTOCOLS_IPV6, _): parse_inner_ipv6inip_set_tunnel_type;
 #ifdef INNER_GRE_ENABLE
-            IP_PROTOCOLS_GRE: parse_inner_gre;
+            (IP_PROTOCOLS_GRE,  _): parse_inner_gre;
 #endif // INNER_GRE_ENABLE
-            //IP_PROTOCOLS_ESP: parse_inner_esp_overload;
-            IP_PROTOCOLS_IPV4: parse_inner_ipinip_set_tunnel_type;
-            IP_PROTOCOLS_IPV6: parse_inner_ipv6inip_set_tunnel_type;
-            default : parse_udf;
+
+#ifdef UDF_ENABLE            
+            (IP_PROTOCOLS_UDP,  16w0 .. MIN_LEN_IP6_UDP_UDF ): parse_inner_udp_noudf;
+            (IP_PROTOCOLS_UDP,  _                           ): parse_inner_udp_udf;
+            (IP_PROTOCOLS_TCP,  16w0 .. MIN_LEN_IP6_TCP_UDF ): parse_inner_tcp_noudf;
+            (IP_PROTOCOLS_TCP,  _                           ): parse_inner_tcp_udf;
+            (IP_PROTOCOLS_SCTP, 16w0 .. MIN_LEN_IP6_SCTP_UDF): parse_inner_sctp_noudf;
+            (IP_PROTOCOLS_SCTP, _                           ): parse_inner_sctp_udf;
+#else
+            (IP_PROTOCOLS_UDP,  _                           ): parse_inner_udp_noudf;
+            (IP_PROTOCOLS_TCP,  _                           ): parse_inner_tcp_noudf;
+            (IP_PROTOCOLS_SCTP, _                           ): parse_inner_sctp_noudf;
+#endif // UDF_ENABLE            
+            default: accept;                       
         }
 #else
         transition reject;
-#endif
+#endif // IPV6_ENABLE
     }
 
-    
+        
 //     // shared fanout/branch state to save tcam resource
 //     state branch_inner_l3_protocol {
 //         transition select(protocol_inner) {
@@ -1491,44 +1566,81 @@ parser NpbIngressParser(
 //             //IP_PROTOCOLS_ESP: parse_inner_esp_overload;
 //             IP_PROTOCOLS_IPV4: parse_inner_ipinip_set_tunnel_type;
 //             IP_PROTOCOLS_IPV6: parse_inner_ipv6inip_set_tunnel_type;
-//             default : parse_udf;
+//             default : accept;
 //        }
 //     }    
 
-//     // For ICMP and IGMP, we're not actually extracting the header;
-//     // We're simply over-loading L4-port info for policy via lookahead.     
-//     state parse_inner_icmp_igmp_overload {
-// #if defined(PARSER_L4_PORT_OVERLOAD) && defined(INGRESS_PARSER_POPULATES_LKP_2)
-//         ig_md.lkp_2.l4_src_port = pkt.lookahead<bit<16>>();
-// #endif
-//         transition parse_udf;
-//     }
 
-
+        
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
     ///////////////////////////////////////////////////////////////////////////
 
-    state parse_inner_udp {
+    //-------------------------------------------------------------------------
+    // User Datagram Protocol (UDP) - Inner
+    //-------------------------------------------------------------------------
+                                
+    state parse_inner_udp_noudf {
         pkt.extract(hdr.inner.udp);
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.l4_src_port = hdr.inner.udp.src_port;
         ig_md.lkp_2.l4_dst_port = hdr.inner.udp.dst_port;
 #endif // INGRESS_PARSER_POPULATES_LKP_2        
-        transition select(hdr.inner.udp.src_port, hdr.inner.udp.dst_port) {
+        transition select(
+            hdr.inner.udp.src_port,
+            hdr.inner.udp.dst_port) {
+                    
 #ifdef INNER_GTP_ENABLE
             (_, UDP_PORT_GTP_C): parse_inner_gtp_c;
             (UDP_PORT_GTP_C, _): parse_inner_gtp_c;
             (_, UDP_PORT_GTP_U): parse_inner_gtp_u;
             (UDP_PORT_GTP_U, _): parse_inner_gtp_u;
-            // (UDP_PORT_GTP_C, UDP_PORT_GTP_C): parse_inner_gtp_c;
-            // (UDP_PORT_GTP_U, UDP_PORT_GTP_U): parse_inner_gtp_u;            
+#endif // INNER_GTP_ENABLE
+            default: accept;
+        }
+    }
+
+
+#ifdef UDF_ENABLE            
+    state parse_inner_udp_udf {
+        pkt.extract(hdr.inner.udp);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
+        ig_md.lkp_2.l4_src_port = hdr.inner.udp.src_port;
+        ig_md.lkp_2.l4_dst_port = hdr.inner.udp.dst_port;
+#endif // INGRESS_PARSER_POPULATES_LKP_2        
+        transition select(
+            hdr.inner.udp.src_port,
+            hdr.inner.udp.dst_port) {
+                    
+#ifdef INNER_GTP_ENABLE
+            (_, UDP_PORT_GTP_C): parse_inner_gtp_c;
+            (UDP_PORT_GTP_C, _): parse_inner_gtp_c;
+            (_, UDP_PORT_GTP_U): parse_inner_gtp_u;
+            (UDP_PORT_GTP_U, _): parse_inner_gtp_u;
 #endif // INNER_GTP_ENABLE
             default: parse_udf;
         }
     }
+#endif // UDF_ENABLE            
 
-    state parse_inner_tcp {
+        
+    //-------------------------------------------------------------------------
+    // Transmission Control Protocol (TCP) - Inner
+    //-------------------------------------------------------------------------
+         
+    state parse_inner_tcp_noudf {
+        pkt.extract(hdr.inner.tcp);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
+        ig_md.lkp_2.l4_src_port = hdr.inner.tcp.src_port;
+        ig_md.lkp_2.l4_dst_port = hdr.inner.tcp.dst_port;
+        ig_md.lkp_2.tcp_flags   = hdr.inner.tcp.flags;        
+#endif // INGRESS_PARSER_POPULATES_LKP_2
+        transition accept;
+    }
+
+        
+#ifdef UDF_ENABLE            
+    state parse_inner_tcp_udf {
         pkt.extract(hdr.inner.tcp);
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.l4_src_port = hdr.inner.tcp.src_port;
@@ -1537,8 +1649,25 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_2
         transition parse_udf;
     }
+#endif // UDF_ENABLE            
+        
 
-    state parse_inner_sctp {
+    //-------------------------------------------------------------------------
+    // Stream Control Transmission Protocol (SCTP) - Inner
+    //-------------------------------------------------------------------------
+  
+    state parse_inner_sctp_noudf {
+        pkt.extract(hdr.inner.sctp);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
+        ig_md.lkp_2.l4_src_port = hdr.inner.sctp.src_port;
+        ig_md.lkp_2.l4_dst_port = hdr.inner.sctp.dst_port;
+#endif // INGRESS_PARSER_POPULATES_LKP_2
+        transition accept;
+    }    
+
+        
+#ifdef UDF_ENABLE            
+    state parse_inner_sctp_udf {
         pkt.extract(hdr.inner.sctp);
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.l4_src_port = hdr.inner.sctp.src_port;
@@ -1546,7 +1675,9 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_2
         transition parse_udf;
     }    
-
+#endif // UDF_ENABLE            
+        
+                                
 
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Inner
@@ -1563,7 +1694,7 @@ parser NpbIngressParser(
         ig_md.lkp_2.tunnel_id = 0;
         transition parse_inner_inner_ipv4;
 #else
-        transition parse_udf;
+        transition accept;
 #endif /* IPINIP */
     }
 
@@ -1573,7 +1704,7 @@ parser NpbIngressParser(
         ig_md.lkp_2.tunnel_id = 0;
         transition parse_inner_inner_ipv6;
 #else
-        transition parse_udf;
+        transition accept;
 #endif /* IPINIP */
     }
 
@@ -1587,7 +1718,7 @@ parser NpbIngressParser(
 //         ig_md.lkp_2.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
 //         ig_md.lkp_2.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
 // #endif
-//         transition parse_udf;
+//         transition accept;
 //     }    
 
 
@@ -1616,7 +1747,7 @@ parser NpbIngressParser(
             (1,0,0,0,0,0,0,0): parse_inner_gre_qualified;
             (0,0,1,0,0,0,0,0): parse_inner_gre_qualified;
             (0,0,0,1,0,0,0,0): parse_inner_gre_qualified;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1636,7 +1767,7 @@ parser NpbIngressParser(
             (1,0,0,_): parse_inner_gre_optional;
             (0,1,0,_): parse_inner_gre_optional;
             (0,0,1,_): parse_inner_gre_optional;
-            default: parse_udf;
+            default: accept;
         }
     }
                 
@@ -1645,7 +1776,7 @@ parser NpbIngressParser(
         transition select(hdr.inner.gre.proto) {
             ETHERTYPE_IPV4: parse_inner_inner_ipv4;
             ETHERTYPE_IPV6: parse_inner_inner_ipv6;                        
-            default: parse_udf;
+            default: accept;
         }
     }
    
@@ -1676,7 +1807,7 @@ parser NpbIngressParser(
             pkt.lookahead<gtp_v2_base_h>().T
         ) {
             (2, 1): parse_inner_gtp_c_qualified;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1687,7 +1818,7 @@ parser NpbIngressParser(
 
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_2.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
-        transition parse_udf;
+        transition accept;
     }
 
     // GTP-U
@@ -1708,7 +1839,7 @@ parser NpbIngressParser(
 
             (1, 1, 0, 0, 0): parse_inner_gtp_u_qualified;
             (1, 1, 0, 1, 0): parse_inner_gtp_u_with_optional;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1719,7 +1850,7 @@ parser NpbIngressParser(
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_inner_ipv4;
             6: parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }
 
@@ -1733,7 +1864,7 @@ parser NpbIngressParser(
             pkt.lookahead<bit<4>>()) {
             (0, 4): parse_inner_inner_ipv4;
             (0, 6): parse_inner_inner_ipv6;
-            default: parse_udf;
+            default: accept;
         }
     }    
     
@@ -1750,12 +1881,12 @@ parser NpbIngressParser(
     state parse_inner_inner_ipv4 {
 		hdr.inner_inner.ipv4.setValid();
 //      ig_md.inner_inner.ipv4_isValid = true;
-		transition parse_udf;
+		transition accept;
     }
     state parse_inner_inner_ipv6 {
 		hdr.inner_inner.ipv6.setValid();
 //      ig_md.inner_inner.ipv6_isValid = true;
-		transition parse_udf;
+		transition accept;
     }
     
     
@@ -1763,21 +1894,14 @@ parser NpbIngressParser(
     // UDF
     ///////////////////////////////////////////////////////////////////////////
 
+#ifdef UDF_ENABLE       
     state parse_udf {
-#ifdef UDF_ENABLE
-        ig_md.flags.parse_udf_reached = true;
-#endif  /* UDF_ENABLE */
-        transition extract_udf;
-    }
-
-    @dontmerge ("ingress")
-    state extract_udf {
-#ifdef UDF_ENABLE
         pkt.extract(hdr.udf);
-#endif  /* UDF_ENABLE */
         transition accept;
     }
-        
+#endif // UDF_ENABLE
+
+
 }
 
 #endif /* _NPB_ING_PARSER_ */
