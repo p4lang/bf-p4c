@@ -1286,6 +1286,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
     // FieldPacking that reflects its structure, with padding added where
     // necessary to reflect gaps between the fields.
     for (auto* fieldRef : fields) {
+        LOG5("Computing digest packing for field : " << fieldRef);
         PHV::FieldUse use(PHV::FieldUse::READ);
         std::vector<PHV::AllocSlice> slices = phv.get_alloc(fieldRef->field,
                 PHV::AllocContext::DEPARSER, &use);
@@ -1309,8 +1310,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
             const nw_bitrange sliceContainerRange = slice->container_slice()
                         .toOrder<Endian::Network>(slice->container().size());
 
-            // unsigned startByte = totalWidth / 8;
-            unsigned startByte = 0;
+            unsigned packStartByte = 0;
 
             // If we switched containers (or if this is the very first field),
             // appending padding equivalent to the bits at the end of the previous
@@ -1322,14 +1322,28 @@ computeControlPlaneFormat(const PhvInfo& phv,
             } else if (!last) {
                 totalWidth += sliceContainerRange.lo;
             }
-            startByte = totalWidth / 8;
+            // The actual start byte on all packings are incremented by 1 during
+            // assembly generation to factor in the select byte
+            packStartByte = totalWidth / 8;
             totalWidth += slice->width();
 
             // Place the field slice in the packing format. The field name is
             // used in assembly generation; hence, we use its external name.
-            packing->emplace_back(
-                    slice->field()->externalName(), startByte,
-                    slice->field_slice().hi % 8, slice->width(), slice->field_slice().lo);
+            auto packFieldName = slice->field()->externalName();
+            // The pack start bit refers to the start bit within the container
+            // in network order. This is the hi bit in byte of the container slice
+            //  e.g.
+            //  - W3(0..3)  # bit[3..0]: ingress::md.y2
+            // The start bit in this example is bit 3
+            auto packStartBit = slice->container_slice().hi % 8;
+            auto packWidth = slice->width();
+            auto packFieldStartBit = slice->field_slice().lo;
+            packing->emplace_back(packFieldName, packStartByte, packStartBit,
+                                                    packWidth, packFieldStartBit);
+            LOG5("  Packing digest field slice : " << *slice
+                    << " with startByte : " << packStartByte
+                    << ", startBit: " << packStartBit << ", width: " << packWidth
+                    << ", fields start bit (phv_offset) : " << packFieldStartBit);
 
             // Remember information about the container placement of the last slice
             // in network order (the first one in `slices`) so we can add any
