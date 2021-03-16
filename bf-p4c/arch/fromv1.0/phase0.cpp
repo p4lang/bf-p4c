@@ -790,8 +790,8 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
 
     // Make sure we didn't overflow.
     ERROR_CHECK(int(packing->totalWidth) == phase0Size,
-                "Exceeded port metadata field packing size, should be exactly %1% bits",
-                phase0Size);
+                "Wrong port metadata field packing size, should be exactly %1% bits, is %2% bits",
+                phase0Size, packing->totalWidth);
 
     // Use the layout to construct a type for phase 0 data.
     IR::IndexedVector<IR::StructField> *packFields = new IR::IndexedVector<IR::StructField>();
@@ -844,14 +844,15 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
 
     IR::IndexedVector<IR::StructField>* packedFields;
     int phase0Size = Device::pardeSpec().bitPhase0Size();
-    // If extern present update phase0 with extern info
-    if (phase0_calls && phase0_calls->count(origParser)) {
-        auto pmdFields = (*phase0_calls)[origParser];
+    if (phase0_calls && phase0_calls->count(origParser) > 0 &&
+        !phase0_calls->at(origParser)->fields.empty()) {
+        // If extern is present and some fields are specified, update phase0 with extern info
+        auto pmdFields = phase0_calls->at(origParser);
         hdrName = pmdFields->name.toString();
         LOG4("Pack Data into phase0: hdrName = " << hdrName << ", Size = " << phase0Size);
         packedFields = canPackDataIntoPhase0(&pmdFields->fields, phase0Size);
     } else {
-        // If no extern is specified inject phase0 in parser
+        // If no extern is present or no fields are specified, inject phase0 in parser
         auto* fields = new IR::IndexedVector<IR::StructField>();
         fields->push_back(new IR::StructField(keyName, IR::Type::Bits::get(phase0Size)));
         packedFields = canPackDataIntoPhase0(fields, phase0Size);
