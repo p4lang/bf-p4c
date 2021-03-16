@@ -12,6 +12,24 @@
 
 namespace BFN {
 
+// P4C-3520 : Certain names are reserved for BF-RT and cannot be used on
+// controls. Pass checks for control names overlapping restricted ones, append
+// to the list as required.
+class CheckReservedNames : public Inspector {
+    std::set<cstring> reservedNames = { "snapshot" };
+    bool preorder(const IR::Type_ArchBlock* b) override {
+        LOG3(" Checking block " << b);
+        auto name = b->name.toString();
+        if (reservedNames.count(name) > 0)
+            ::error("Block name in p4 cannot contain BF-RT reserved name (%s) : %s",
+                    name, b->toString());
+        return false;
+    }
+
+ public:
+    CheckReservedNames() {}
+};
+
 void generateP4Runtime(const IR::P4Program* program,
                        const BFN_Options& options) {
     // If the user didn't ask for us to generate P4Runtime, skip the analysis.
@@ -79,6 +97,7 @@ void generateP4Runtime(const IR::P4Program* program,
             return;
         }
 
+        program->apply(CheckReservedNames());
         BFRT::serializeBfRtSchema(out, p4Runtime);
     }
 }

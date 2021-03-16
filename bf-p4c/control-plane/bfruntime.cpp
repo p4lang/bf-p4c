@@ -122,10 +122,12 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED,
         BF_RT_DATA_HASH_RESULT,
 
-        BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE,
+        BF_RT_DATA_SNAPSHOT_START_STAGE,
         BF_RT_DATA_SNAPSHOT_END_STAGE,
         BF_RT_DATA_SNAPSHOT_ENABLE,
+        BF_RT_DATA_SNAPSHOT_TRIGGER_STATE,
         BF_RT_DATA_SNAPSHOT_TIMER_ENABLE,
+        BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER,
         BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS,
         BF_RT_DATA_SNAPSHOT_FIELD_INFO,
         BF_RT_DATA_SNAPSHOT_CONTROL_INFO,
@@ -133,7 +135,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_METER_ALU_INFO,
         BF_RT_DATA_SNAPSHOT_STAGE_ID,
         BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER,
-        BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER,
+        BF_RT_DATA_SNAPSHOT_INGRESS_TRIGGER_MODE,
         BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER,
         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME,
@@ -141,6 +143,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR,
         BF_RT_DATA_SNAPSHOT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_TABLE_NAME,
+        BF_RT_DATA_SNAPSHOT_METER_TABLE_NAME,
         BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
         BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE,
         BF_RT_DATA_SNAPSHOT_TABLE_HIT,
@@ -148,6 +151,10 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED,
         BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME,
         BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES,
+        BF_RT_DATA_SNAPSHOT_THREAD,
+        BF_RT_DATA_SNAPSHOT_INGRESS_CAPTURE,
+        BF_RT_DATA_SNAPSHOT_EGRESS_CAPTURE,
+        BF_RT_DATA_SNAPSHOT_GHOST_CAPTURE,
 
         BF_RT_DATA_PARSER_INSTANCE,
         BF_RT_DATA_PARSER_NAME,
@@ -209,7 +216,6 @@ class BfRtSchemaGenerator {
     void addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const;
     void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
     void addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
-    void addSnapshotLiveness(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
     void addParserChoices(Util::JsonArray* tablesJson, const ParserChoices& parserChoices) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
@@ -966,6 +972,7 @@ struct BfRtSchemaGenerator::DynHash {
 
 struct BfRtSchemaGenerator::Snapshot {
     std::string name;
+    std::string gress;
     P4Id id;
     struct Field {
         P4Id id;
@@ -973,6 +980,12 @@ struct BfRtSchemaGenerator::Snapshot {
         int32_t bitwidth;
     };
     std::vector<Field> fields;
+
+    std::string getCfgTblName() const { return name + ".cfg"; }
+
+    std::string getTrigTblName() const { return name + "." + gress + "_trigger"; }
+
+    std::string getDataTblName() const { return name + "." + gress + "_data"; }
 
     static boost::optional<Snapshot> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -982,17 +995,18 @@ struct BfRtSchemaGenerator::Snapshot {
             ::error("Extern instance %1% does not pack a Snapshot object", pre.name());
             return boost::none;
         }
-        std::string name;
+        std::string name = snapshot.pipe() + ".snapshot";
+        std::string gress;
         if (snapshot.direction() == ::barefoot::DIRECTION_INGRESS)
-          name = snapshot.pipe() + "." + "$SNAPSHOT_INGRESS";
+          gress = "ingress";
         else if (snapshot.direction() == ::barefoot::DIRECTION_EGRESS)
-          name = snapshot.pipe() + "." + "$SNAPSHOT_EGRESS";
+          gress = "egress";
         else
           BUG("Unknown direction");
         std::vector<Field> fields;
         for (const auto& f : snapshot.fields())
           fields.push_back({f.id(), f.name(), f.bitwidth()});
-        return Snapshot{name, pre.id(), std::move(fields)};
+        return Snapshot{name, gress, pre.id(), std::move(fields)};
     }
 };
 
@@ -1875,225 +1889,260 @@ BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) cons
     tablesJson->append(tableJson);
 }
 
+static Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName) {
+    for (auto *t : *tablesJson) {
+        auto *tblObj = t->to<Util::JsonObject>();
+        auto tName = tblObj->get("name")->to<Util::JsonValue>()->getString();
+        if (tName == tblName) {
+            return tblObj;
+        }
+    }
+    return nullptr;
+}
+
 void
 BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const {
-    // There cannot be more than one snapshot per stage (snapshots cannot
-    // overlap)
     auto size = Device::numStages();
-    auto* tableJson = initTableJson(snapshot.name, snapshot.id, "Snapshot", size);
 
-    auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE, "$SNAPSHOT_TRIGGER_STAGE",
-                false /* mandatory */, "Exact", makeTypeInt("uint32", 0));
-    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_END_STAGE, "$SNAPSHOT_END_STAGE",
-                false /* mandatory */, "Exact", makeTypeInt("uint32", Device::numStages() - 1));
-    for (const auto& sF : snapshot.fields) {
-        addKeyField(keyJson, sF.id, sF.name,
-                    false /* mandatory */, "Ternary", makeTypeBytes(sF.bitwidth, boost::none));
-    }
-    tableJson->emplace("key", keyJson);
+    // Snapshot Config Table
+    {
+        auto tblName = snapshot.getCfgTblName();
+        Util::JsonObject *tableJson = findJsonTable(tablesJson, tblName);
+        if (!tableJson) {
+            auto* tableJson = initTableJson(tblName,
+                    makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT),
+                    "SnapshotCfg", size);
 
-    auto* dataJson = new Util::JsonArray();
-    {
-        auto* f = makeCommonDataField(
-            BF_RT_DATA_SNAPSHOT_ENABLE, "$SNAPSHOT_ENABLE",
-            makeTypeBool(), false /* repeated */);
-        addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+            auto* keyJson = new Util::JsonArray();
+            addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "start_stage",
+                        false /* mandatory */, "Exact", makeTypeInt("uint32", 0));
+            addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_END_STAGE, "end_stage",
+                        false /* mandatory */, "Exact", makeTypeInt("uint32", size - 1));
+            tableJson->emplace("key", keyJson);
+
+            auto* dataJson = new Util::JsonArray();
+            {
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TIMER_ENABLE, "timer_enable",
+                        makeTypeBool(false), false /* repeated */);
+                addSingleton(dataJson, f, false, false);
+            }
+            {
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS,
+                        "timer_value_usecs", makeTypeInt("uint32"), false /* repeated */);
+                addSingleton(dataJson, f, false, false);
+            }
+            {
+                std::vector<cstring> choices =  {"INGRESS", "GHOST", "INGRESS_GHOST", "ANY"};
+                cstring defaultChoice = "INGRESS";
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_INGRESS_TRIGGER_MODE,
+                        "ingress_trigger_mode", makeTypeEnum(choices, defaultChoice),
+                        false /* repeated */);
+                addSingleton(dataJson, f, false, false);
+            }
+            {
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_THREAD, "thread",
+                        makeTypeEnum({"INGRESS", "EGRESS", "ALL"}), false /* repeated */);
+                addSingleton(dataJson, f, true, false);
+            }
+            {
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_INGRESS_CAPTURE,
+                        "ingress_capture", makeTypeInt("uint32"), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_EGRESS_CAPTURE,
+                        "egress_capture", makeTypeInt("uint32"), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_GHOST_CAPTURE,
+                        "ghost_capture", makeTypeInt("uint32"), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            tableJson->emplace("data", dataJson);
+
+            tableJson->emplace("supported_operations", new Util::JsonArray());
+            tableJson->emplace("attributes", new Util::JsonArray());
+
+            tablesJson->append(tableJson);
+        }
     }
+
+    // Snapshot Trigger Table (ingress / egress)
     {
-        auto* f = makeCommonDataField(
-            BF_RT_DATA_SNAPSHOT_TIMER_ENABLE, "$SNAPSHOT_TIMER_ENABLE",
-            makeTypeBool(false), false /* repeated */);
-        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
-    }
-    {
-        auto* f = makeCommonDataField(
-            BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS, "$SNAPSHOT_TIMER_VALUE_USECS",
-            makeTypeInt("uint32"), false /* repeated */);
-        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
-    }
-    {  // PHVs
-        auto* containerItemsJson = new Util::JsonArray();
+        auto tblName = snapshot.getTrigTblName();
+        auto tableId = makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_TRIGGER);
+        auto* tableJson = initTableJson(tblName, tableId, "SnapshotTrigger", size);
+
+        auto* keyJson = new Util::JsonArray();
+        addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "stage",
+                    true /* mandatory */, "Exact", makeTypeInt("uint32", 0));
+        tableJson->emplace("key", keyJson);
+
+        auto* dataJson = new Util::JsonArray();
         {
-            auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_STAGE_ID, "$SNAPSHOT_STAGE_ID",
-                makeTypeInt("uint32"), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
+            auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_ENABLE, "enable",
+                    makeTypeBool(false), false /* repeated */);
+            addSingleton(dataJson, f, false, false);
+        }
+        {
+            auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TRIGGER_STATE, "trigger_state",
+                makeTypeEnum({"PASSIVE", "ARMED", "FULL"}, boost::none), true /* repeated */);
+            addROSingleton(dataJson, f);
         }
         for (const auto& sF : snapshot.fields) {
-            auto* f = makeCommonDataField(
-                sF.id, sF.name, makeTypeBytes(sF.bitwidth, boost::none), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
+            {
+                auto* f = makeCommonDataField(sF.id, "trig." + sF.name,
+                    makeTypeBytes(sF.bitwidth, boost::none), false /* repeated */);
+                addSingleton(dataJson, f, false, false);
+            }
+            {
+                auto *f = makeCommonDataField(sF.id + 0x8000, "trig." + sF.name + "_mask",
+                    makeTypeBytes(sF.bitwidth, boost::none), false /* repeated */);
+                addSingleton(dataJson, f, false, false);
+            }
         }
-        auto* containerJson = makeContainerDataField(
-            BF_RT_DATA_SNAPSHOT_FIELD_INFO, "$SNAPSHOT_FIELD_INFO",
-            containerItemsJson, true /* repeated */);
-        addROSingleton(dataJson, containerJson);
+        tableJson->emplace("data", dataJson);
+
+        tableJson->emplace("supported_operations", new Util::JsonArray());
+        tableJson->emplace("attributes", new Util::JsonArray());
+
+        tablesJson->append(tableJson);
+
+        // Add trigger table id to config table
+        if (auto *snapCfgTable = findJsonTable(tablesJson, snapshot.getCfgTblName())) {
+            addToDependsOn(snapCfgTable, tableId);
+        }
     }
-    {  // control information
-        auto* containerItemsJson = new Util::JsonArray();
+
+    // Snapshot Data Table
+    {
+        auto tblName = snapshot.getDataTblName();
+        Util::JsonArray* dataJson = nullptr;
+        auto *tableJson = initTableJson(tblName,
+            makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_DATA),
+            "SnapshotData", size);
+
+        auto* keyJson = new Util::JsonArray();
+        addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "stage",
+                    true /* mandatory */, "Exact", makeTypeInt("uint32", 0));
+        tableJson->emplace("key", keyJson);
+
+        dataJson = new Util::JsonArray();
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_STAGE_ID, "$SNAPSHOT_STAGE_ID",
-                makeTypeInt("uint32"), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
+                BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER, "prev_stage_trigger",
+                makeTypeBool(false), false /* repeated */);
+            addROSingleton(dataJson, f);
         }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER, "$SNAPSHOT_PREV_STAGE_TRIGGER",
-                makeTypeBool(), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
+                BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER, "timer_trigger",
+                makeTypeBool(false), false /* repeated */);
+            addROSingleton(dataJson, f);
         }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER, "$SNAPSHOT_TIMER_TRIGGER",
-                makeTypeBool(), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
+                BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER, "local_stage_trigger",
+                makeTypeBool(false), false /* repeated */);
+            addROSingleton(dataJson, f);
         }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER, "$SNAPSHOT_LOCAL_STAGE_TRIGGER",
-                makeTypeBool(), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
-        }
-        // TODO(antonin): SNAPSHOT_NEXT_TABLE_ID is temporarily disabled until
-        // support can be added to the BF-RT implementation in the drivers.
-        // {
-        //     auto* f = makeCommonDataField(
-        //         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID, "$SNAPSHOT_NEXT_TABLE_ID",
-        //         makeTypeInt("uint32"), false /* repeated */);
-        //     addROSingleton(containerItemsJson, f);
-        // }
-        {
-            auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME, "$SNAPSHOT_NEXT_TABLE_NAME",
+                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME, "next_table_name",
                 makeTypeString(), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
+            addROSingleton(dataJson, f);
+        }
+
+        {  // table ALU information
+            auto* tableContainerItemsJson = new Util::JsonArray();
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "table_name",
+                    makeTypeString(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE, "match_hit_handle",
+                    makeTypeInt("uint32"), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_HIT, "table_hit",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED, "table_inhibited",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED, "table_executed",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(tableContainerItemsJson, f);
+            }
+            auto* tableContainerJson = makeContainerDataField(
+                BF_RT_DATA_SNAPSHOT_TABLE_INFO, "table_info",
+                tableContainerItemsJson, true /* repeated */);
+
+            addROSingleton(dataJson, tableContainerJson);
         }
         if (Device::currentDevice() == Device::JBAY) {
             // TODO(antonin): This is likely not appropriate / sufficient for
             // MPR. Maybe this should be a repeated field of table ids / names
             // instead...
-            auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID, "$SNAPSHOT_MPR_NEXT_TABLE_ID",
-                makeTypeInt("uint32"), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
-        }
-        if (Device::currentDevice() == Device::JBAY) {
-            auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR, "$SNAPSHOT_DEPARSER_ERROR",
-                makeTypeBool(), false /* repeated */);
-            addROSingleton(containerItemsJson, f);
-        }
-        if (Device::currentDevice() == Device::JBAY) {  // meter ALU information
-            auto* meterContainerItemsJson = new Util::JsonArray();
-            // TODO(antonin): same as above, can be added back later
-            // {
-            //     auto* f = makeCommonDataField(
-            //         BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
-            //         makeTypeInt("uint32"), false /* repeated */);
-            //     addROSingleton(meterContainerItemsJson, f);
-            // }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "$SNAPSHOT_TABLE_NAME",
+                    BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID, "mpr_next_table_id",
+                    makeTypeInt("uint32"), false /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR, "deparser_error",
+                    makeTypeBool(), false /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            // meter ALU information
+            auto* meterContainerItemsJson = new Util::JsonArray();
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_METER_TABLE_NAME, "table_name",
                     makeTypeString(), false /* repeated */);
                 addROSingleton(meterContainerItemsJson, f);
             }
             {
                 auto* f = makeCommonDataField(
                     BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
-                    "$SNAPSHOT_METER_ALU_OPERATION_TYPE",
+                    "meter_alu_operation_type",
                     makeTypeString(), false /* repeated */);
                 addROSingleton(meterContainerItemsJson, f);
             }
             auto* meterContainerJson = makeContainerDataField(
-                BF_RT_DATA_SNAPSHOT_METER_ALU_INFO, "$SNAPSHOT_METER_ALU_INFO",
+                BF_RT_DATA_SNAPSHOT_METER_ALU_INFO, "meter_alu_info",
                 meterContainerItemsJson, true /* repeated */);
-            addROSingleton(containerItemsJson, meterContainerJson);
+            addROSingleton(dataJson, meterContainerJson);
         }
-        {  // table ALU information
-            auto* tableContainerItemsJson = new Util::JsonArray();
-            // TODO(antonin): same as above, can be added back later
-            // {
-            //     auto* f = makeCommonDataField(
-            //         BF_RT_DATA_SNAPSHOT_TABLE_ID, "$SNAPSHOT_TABLE_ID",
-            //         makeTypeInt("uint32"), false /* repeated */);
-            //     addROSingleton(tableContainerItemsJson, f);
-            // }
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "$SNAPSHOT_TABLE_NAME",
-                    makeTypeString(), false /* repeated */);
-                addROSingleton(tableContainerItemsJson, f);
-            }
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE, "$SNAPSHOT_MATCH_HIT_HANDLE",
-                    makeTypeInt("uint32"), false /* repeated */);
-                addROSingleton(tableContainerItemsJson, f);
-            }
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_HIT, "$SNAPSHOT_TABLE_HIT",
-                    makeTypeBool(), false /* repeated */);
-                addROSingleton(tableContainerItemsJson, f);
-            }
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED, "$SNAPSHOT_TABLE_INHIBITED",
-                    makeTypeBool(), false /* repeated */);
-                addROSingleton(tableContainerItemsJson, f);
-            }
-            {
-                auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED, "$SNAPSHOT_TABLE_EXECUTED",
-                    makeTypeBool(), false /* repeated */);
-                addROSingleton(tableContainerItemsJson, f);
-            }
-            auto* tableContainerJson = makeContainerDataField(
-                BF_RT_DATA_SNAPSHOT_TABLE_INFO, "$SNAPSHOT_TABLE_INFO",
-                tableContainerItemsJson, true /* repeated */);
-            addROSingleton(containerItemsJson, tableContainerJson);
+
+        for (const auto& sF : snapshot.fields) {
+            auto* f = makeCommonDataField(
+                sF.id, sF.name, makeTypeBytes(sF.bitwidth, boost::none),
+                false /* repeated */);
+            addROSingleton(dataJson, f);
         }
-        auto* containerJson = makeContainerDataField(
-            BF_RT_DATA_SNAPSHOT_CONTROL_INFO, "$SNAPSHOT_CONTROL_INFO",
-            containerItemsJson, true /* repeated */);
-        addROSingleton(dataJson, containerJson);
+
+        tableJson->emplace("data", dataJson);
+
+        tableJson->emplace("supported_operations", new Util::JsonArray());
+        tableJson->emplace("attributes", new Util::JsonArray());
+
+        tablesJson->append(tableJson);
     }
-    tableJson->emplace("data", dataJson);
-
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
-
-    tablesJson->append(tableJson);
-}
-
-void
-BfRtSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
-                                         const Snapshot& snapshot) const {
-    auto* tableJson = initTableJson(
-        snapshot.name + "_LIVENESS", makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_LIVENESS),
-        "SnapshotLiveness", 0 /* size, read-only table */);
-
-    auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME, "$SNAPSHOT_LIVENESS_FIELD_NAME",
-                true /* mandatory */, "Exact", makeTypeString());
-    tableJson->emplace("key", keyJson);
-
-    auto* dataJson = new Util::JsonArray();
-    {
-        auto* f = makeCommonDataField(
-            BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES, "$SNAPSHOT_LIVENESS_VALID_STAGES",
-            makeTypeInt("uint32"), true /* repeated */);
-        addROSingleton(dataJson, f);
-    }
-    tableJson->emplace("data", dataJson);
-
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
-
-    tablesJson->append(tableJson);
 }
 
 void
@@ -2486,7 +2535,6 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 auto snapshot = Snapshot::fromTofino(externInstance);
                 if (snapshot != boost::none) {
                     addSnapshot(tablesJson, *snapshot);
-                    addSnapshotLiveness(tablesJson, *snapshot);
                 }
             }
         } else if (externTypeId == ::barefoot::P4Ids::HASH) {

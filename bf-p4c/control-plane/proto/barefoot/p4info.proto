@@ -6,31 +6,33 @@ package barefoot;
 
 message P4Ids {
   enum Prefix {
-    UNSPECIFIED         = 0;
-    ACTION_PROFILE      = 0x81;
-    ACTION_SELECTOR     = 0x82;
-    COUNTER             = 0x83;
-    DIRECT_COUNTER      = 0x84;
-    METER               = 0x85;
-    DIRECT_METER        = 0x86;
-    WRED                = 0x87;
-    DIRECT_WRED         = 0x88;
-    LPF                 = 0x89;
-    DIRECT_LPF          = 0x8A;
-    REGISTER            = 0x8B;
-    DIRECT_REGISTER     = 0x8C;
-    REGISTER_PARAM      = 0x8D;
-    DIGEST              = 0x8E;
-    HASH                = 0x8F;
-    PORT_METADATA       = 0x90;
-    SNAPSHOT            = 0x91;
-    SNAPSHOT_LIVENESS   = 0x92;  // reserved for BFRT
-    HASH_CONFIGURE      = 0x93;
-    HASH_COMPUTE        = 0x94;  // reserved for BFRT
-    HASH_ALGORITHM      = 0x95;  // reserved for BFRT
-    PARSER_CHOICES      = 0x96;
+    UNSPECIFIED                 = 0;
+    ACTION_PROFILE              = 0x81;
+    ACTION_SELECTOR             = 0x82;
+    COUNTER                     = 0x83;
+    DIRECT_COUNTER              = 0x84;
+    METER                       = 0x85;
+    DIRECT_METER                = 0x86;
+    WRED                        = 0x87;
+    DIRECT_WRED                 = 0x88;
+    LPF                         = 0x89;
+    DIRECT_LPF                  = 0x8A;
+    REGISTER                    = 0x8B;
+    DIRECT_REGISTER             = 0x8C;
+    REGISTER_PARAM              = 0x8D;
+    DIGEST                      = 0x8E;
+    HASH                        = 0x8F;
+    PORT_METADATA               = 0x90;
+    SNAPSHOT                    = 0x91;
+    SNAPSHOT_TRIGGER            = 0x92;
+    SNAPSHOT_DATA               = 0x93;
+    SNAPSHOT_LIVENESS           = 0x94;  // reserved for BFRT
+    HASH_CONFIGURE              = 0x95;
+    HASH_COMPUTE                = 0x96;  // reserved for BFRT
+    HASH_ALGORITHM              = 0x97;  // reserved for BFRT
+    PARSER_CHOICES              = 0x98;
     // Temporary, see ValueSet message definition below
-    VALUE_SET           = 0xfe;
+    VALUE_SET                   = 0xfe;
   }
 }
 

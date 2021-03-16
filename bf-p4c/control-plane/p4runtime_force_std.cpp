@@ -52,6 +52,8 @@ class P4RuntimeStdConverter {
           ::barefoot::P4Ids::REGISTER_PARAM,
           ::barefoot::P4Ids::PORT_METADATA,
           ::barefoot::P4Ids::SNAPSHOT,
+          ::barefoot::P4Ids::SNAPSHOT_TRIGGER,
+          ::barefoot::P4Ids::SNAPSHOT_DATA,
           ::barefoot::P4Ids::SNAPSHOT_LIVENESS,
         };
 
