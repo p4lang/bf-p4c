@@ -17,6 +17,7 @@ def writeblock_to_file(filename, fileblock):
             fwrite.write(fileblock)
 
 def get_test_list(tests_csv, out_dir, ts):
+    errorCount = 0
     try:
         tests = []
         # p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
@@ -28,6 +29,9 @@ def get_test_list(tests_csv, out_dir, ts):
                     mTest = config.Test()
                     mTest.p4 = row['p4']
                     mTest.p4_path = os.path.join(config.BF_P4C_PATH, row['p4_path'])
+                    if not os.path.exists(mTest.p4_path):
+                        print("Can't find file: " + mTest.p4_path)
+                        errorCount += 1
                     if len(row['include_path']) > 0:
                         mTest.include_path = os.path.join(config.BF_P4C_PATH, row['include_path'])
                     mTest.p4_opts = row['p4_opts']
@@ -36,8 +40,10 @@ def get_test_list(tests_csv, out_dir, ts):
                     mTest.arch = row['arch']
                     mTest.skip_opt = row['skip_opt']
                     mTest.timestamp = ts
-                    mTest.out_path =  os.path.join(out_dir, mTest.p4, mTest.timestamp) 
+                    mTest.out_path =  os.path.join(out_dir, mTest.p4, mTest.timestamp)
                     tests.append(mTest)
+        if errorCount > 0:
+            raise Exception("Fatal error(s) encountered, exiting!")
         return tests
     except Exception as e:
         print e
@@ -65,7 +71,7 @@ def prep_test_line(mTest, p4c):
         test_line += '"--target ' + mTest.target + '", '
         test_line += '"--std ' + mTest.language + '", '
         test_line += '"--arch ' + mTest.arch + '", '
-    # Add filename and output directory 
+    # Add filename and output directory
     extra_args = ['"' + os.path.join(mTest.p4_path) + '"', \
         '"-o"', \
         '"' + os.path.join(mTest.out_path, p4c.name) + '"']
@@ -173,7 +179,7 @@ def main():
     args = parser.parse_args()
     if args.process_metrics:
         config.COMMIT_SHA = args.commit_sha
- 
+
     # Setting timestamp for this run
     ts = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
@@ -193,9 +199,9 @@ def main():
     remove_empty_directories(tests)
     if args.process_metrics:
         metrics_db = database.metricstable()
-        result = process_metrics(tests, metrics_db, args.out_dir, ts, args.update_metrics, p4c_failed)   
+        result = process_metrics(tests, metrics_db, args.out_dir, ts, args.update_metrics, p4c_failed)
         if result < 0:
-            sys.exit(1) 
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

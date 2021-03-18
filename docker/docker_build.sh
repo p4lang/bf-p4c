@@ -337,7 +337,7 @@ fi
 # Generate reference outputs for p4i if desired.
 WORKDIR "${BF_P4C_COMPILERS}/scripts/gen_reference_outputs"
 if [[ "${GEN_REF_OUTPUTS}" = "true" ]] ; then
-  python -u gen_ref_outputs.py || true  # Allow this to fail.
+  python -u gen_ref_outputs.py
 fi
 
 if [[ "${BUILD_FOR}" == "jarvis" ]] ; then

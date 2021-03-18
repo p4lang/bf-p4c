@@ -162,11 +162,9 @@ class GenerateOutputs : public PassManager {
             // \TODO: how much info do we need from context.json in
             // the case of a failed compilation?
             outputContext();
-            // and output the manifest if it failed, since we're not going to have the chance
-            // again. However, for successful compilation, GenerateOutputs gets called for every
-            // pipe, and thus we don't want to output the manifest here.
+            // Set failure flag for manifest. It will be generated at the end of the main
+            // during cleanup.
             manifest.setSuccess(_success);
-            manifest.serialize();
         }
     }
 
@@ -238,6 +236,18 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 #endif  // BFP4C_CATCH_EXCEPTIONS
 }
 
+/**
+ *  Throw this class in main instead of returning an error code (with
+ *  the exception of INVOCATION_ERROR).
+ *  It will ensure that all control paths end up in the final catch
+ *  clause and manifest.json is outputted at all times.
+ */
+class ExitCode : std::runtime_error {
+ public:
+    unsigned code;
+    explicit ExitCode(unsigned code) : std::runtime_error(""), code(code) {}
+};
+
 int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
@@ -282,6 +292,7 @@ int main(int ac, char **av) {
         Logging::Manifest::getManifest().setEventLog("events.json");
     }
 
+    try {  // Top level try-catch for exit codes
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
@@ -290,17 +301,17 @@ int main(int ac, char **av) {
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.
     if (!program || ::errorCount() > 0)
-        return PROGRAM_ERROR;
+        throw ExitCode(PROGRAM_ERROR);
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
     if (!options.prettyPrintFile.isNullOrEmpty())
-        return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
+        throw ExitCode(::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS);
 
     log_dump(program, "Initial program");
 
     BFN::generateP4Runtime(program, options);
     if (::errorCount() > 0)
-        return PROGRAM_ERROR;
+        throw ExitCode(PROGRAM_ERROR);
 
     auto hook = options.getDebugHook();
     BFN::MidEnd midend(options);
@@ -310,13 +321,13 @@ int main(int ac, char **av) {
     // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
     if (!program)
-        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+        throw ExitCode(PROGRAM_ERROR);  // still did not reach the backend for fitting issues
     log_dump(program, "After midend");
     if (::errorCount() > 0)
-        return PROGRAM_ERROR;
+        throw ExitCode(PROGRAM_ERROR);
 
     if (::errorCount() > 0)
-        return PROGRAM_ERROR;
+        throw ExitCode(PROGRAM_ERROR);
 
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
@@ -327,7 +338,7 @@ int main(int ac, char **av) {
 
     program->apply(bridgePacking);
     if (!program)
-        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+        throw ExitCode(PROGRAM_ERROR);  // still did not reach the backend for fitting issues
 
     BFN::SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
     substitute.addDebugHook(hook, true);
@@ -336,10 +347,10 @@ int main(int ac, char **av) {
     program = program->apply(substitute);
     log_dump(program, "After flexiblePacking");
     if (!program)
-        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+        throw ExitCode(PROGRAM_ERROR);  // still did not reach the backend for fitting issues
 
     if (!substitute.getToplevelBlock())
-        return PROGRAM_ERROR;
+        throw ExitCode(PROGRAM_ERROR);
 
     if (options.debugInfo) {
         program->apply(SourceInfoLogging(BFNContext::get().getOutputDirectory().c_str(),
@@ -403,11 +414,11 @@ int main(int ac, char **av) {
 
     // and output the manifest. This gets called for successful compilation.
     manifest.setSuccess(::errorCount() == 0);
-    manifest.serialize();
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;
-    return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
+    if (::errorCount() > 0)
+        throw ExitCode(COMPILER_ERROR);
 
 #if BFP4C_CATCH_EXCEPTIONS
     // catch all exceptions here
@@ -422,22 +433,31 @@ int main(int ac, char **av) {
             std::cerr << e.what() << std::endl;
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
               << std::endl;
-        return INTERNAL_COMPILER_ERROR;
+        throw ExitCode(INTERNAL_COMPILER_ERROR);
     } catch (const Util::CompilerUnimplemented &e) {
         std::cerr << e.what() << std::endl;
-        return COMPILER_ERROR;
+        throw ExitCode(COMPILER_ERROR);
     } catch (const Util::CompilationError &e) {
         std::cerr << e.what() << std::endl;
-        return PROGRAM_ERROR;
+        throw ExitCode(PROGRAM_ERROR);
 #if BAREFOOT_INTERNAL
     } catch (const std::exception &e) {
         std::cerr << "Internal compiler error: " << e.what() << std::endl;
-        return INTERNAL_COMPILER_ERROR;
+        throw ExitCode(INTERNAL_COMPILER_ERROR);
 #endif
+    } catch (ExitCode &e) {
+        throw;
     } catch (...) {
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
                   << std::endl;
-        return INTERNAL_COMPILER_ERROR;
+        throw ExitCode(INTERNAL_COMPILER_ERROR);
     }
 #endif  // BFP4C_CATCH_EXCEPTIONS
+    } catch (ExitCode &e) {
+        Logging::Manifest::getManifest().serialize();
+        return e.code;
+    }
+
+    Logging::Manifest::getManifest().serialize();
+    return 0;
 }
