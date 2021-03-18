@@ -508,12 +508,6 @@ p4c_add_xfail_reason("tofino2"
    p4c-3379
 )
 
-# DRV-4430
-p4c_add_xfail_reason("tofino2"
-   "Expected packet was not received on device 0, port"
-   extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
-)
-
 # DRV-4433
 p4c_add_xfail_reason("tofino2"
    "Unexpected port .*"
