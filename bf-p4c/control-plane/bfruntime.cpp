@@ -121,6 +121,9 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_HASH_ALGORITHM_PRE_DEFINED,
         BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED,
         BF_RT_DATA_HASH_RESULT,
+        BF_RT_DATA_HASH_CONFIGURE_START_BIT,
+        BF_RT_DATA_HASH_CONFIGURE_LENGTH,
+        BF_RT_DATA_HASH_CONFIGURE_ORDER,
 
         BF_RT_DATA_SNAPSHOT_START_STAGE,
         BF_RT_DATA_SNAPSHOT_END_STAGE,
@@ -937,7 +940,7 @@ struct BfRtSchemaGenerator::DynHash {
     const std::string getAlgorithmTableName() const {
         return name + ".algorithm"; }
     const std::string getConfigTableName() const {
-        return name + ".$CONFIGURE"; }
+        return name + ".configure"; }
     const std::string getComputeTableName() const {
         return name + ".$COMPUTE"; }
 
@@ -1621,28 +1624,40 @@ BfRtSchemaGenerator::addDynHash(Util::JsonArray* tablesJson,
 void
 BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
-    // Add <hash>.$CONFIGURE Table
-    auto* tableJson = initTableJson(
-        dynHash.getConfigTableName(), dynHash.cfgId, "DynHashConfigure",
-        1 /* size */, dynHash.annotations);
+    // Add <hash>.configure Table
+    auto* tableJson = initTableJson(dynHash.getConfigTableName(), dynHash.cfgId,
+            "DynHashConfigure", 1 /* size */, dynHash.annotations);
 
     tableJson->emplace("key", new Util::JsonArray());  // empty key for configure table
 
     auto* dataJson = new Util::JsonArray();
     auto parser = TypeSpecParser::make(
-        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &dynHash.hashFieldNames,
-        "", ".$PRIORITY");
-    for (const auto &f : parser) {
-        auto* fJson = makeCommonDataField(
-            f.id, f.name, makeTypeInt("uint32", 0 /* default */), false /* repeated */);
+        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &dynHash.hashFieldNames, "", "");
+    for (const auto &field : parser) {
+        auto* containerItemsJson = new Util::JsonArray();
+        {
+            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_START_BIT, "start_bit",
+                makeTypeInt("uint64", 0), false /* repeated */);
+            addSingleton(containerItemsJson, f, false /* mandatory */, false /* read-only */);
+        }
+        {
+            auto fLength = field.type->get("width")->to<Util::JsonValue>()->getInt();
+            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_LENGTH, "length",
+                makeTypeInt("uint64", fLength), false /* repeated */);
+            addSingleton(containerItemsJson, f, false /* mandatory */, false /* read-only */);
+        }
+        {
+            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_ORDER, "order",
+                makeTypeInt("uint64"), false /* repeated */);
+            addSingleton(containerItemsJson, f, true /* mandatory */, false /* read-only */);
+        }
+        auto* fJson = makeContainerDataField(field.id, field.name,
+                containerItemsJson, true /* repeated */);
         addSingleton(dataJson, fJson, false /* mandatory */, false /* read-only */);
     }
     tableJson->emplace("data", dataJson);
     tableJson->emplace("supported_operations", new Util::JsonArray());
-
-    auto* attributes = new Util::JsonArray();
-    attributes->append("DynamicHashing");
-    tableJson->emplace("attributes", attributes);
+    tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
 }

@@ -447,7 +447,7 @@ function install_protobuf() {
     echo "Checking for and installing protobuf"
     if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
         if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
-            rc=$($SUDO apt-get install -y protobuf-dev=3.2.0 grpc-dev=1.3.2)
+            rc=$($SUDO apt-get install -y protobuf-dev=3.6.1 grpc-dev=1.17.0)
             if [ $? == 0 ]; then
                 $SUDO pip install protobuf grpcio || die "Failed to install python grpc packages"
                 return

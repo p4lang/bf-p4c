@@ -219,8 +219,7 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
         fle = new IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
         fle->rotateable = true;
         fle->permutable = true;
-        // Arbitrary name, added previously, not to break APIs.  Happy to change
-        hash_name += ".$CONFIGURE";
+        hash_name += ".configure";
     }
 
     check_for_symmetric(decl, fle, algorithm, &fle->symmetric_keys);
