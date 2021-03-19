@@ -5,6 +5,7 @@
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parser_info.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 namespace Parser {
 

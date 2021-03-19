@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_REWRITE_PARSER_LOCALS_H_
 #define EXTENSIONS_BF_P4C_PARDE_REWRITE_PARSER_LOCALS_H_
 #include "collect_parser_usedef.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 
 class GetSelectFieldInfo : public Inspector {
