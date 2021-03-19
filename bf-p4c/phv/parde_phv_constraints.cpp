@@ -147,6 +147,7 @@ Visitor::profile_t TofinoParserConstantExtract::init_apply(const IR::Node* root)
 bool TofinoParserConstantExtract::preorder(const IR::BFN::Extract* e) {
     // The hardware constraints on extracting constants is not applicable to JBay.
     if (Device::currentDevice() != Device::TOFINO) return true;
+    if (e->dest->is<IR::BFN::MatchLVal>()) return true;
     if (!e->dest) BUG("No destination for parser extract?");
     PHV::Field* field = phv.field(e->dest->field);
     if (!field) BUG("No field corresponding to parser extract destination?");

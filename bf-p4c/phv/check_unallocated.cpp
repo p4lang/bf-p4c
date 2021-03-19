@@ -28,6 +28,7 @@ void CheckForUnallocatedTemps::collect_unallocated_fields() {
 
         // XXX(hanw): padding does not need phv allocation
         if (field.is_ignore_alloc()) continue;
+        if (field.is_avoid_alloc()) continue;
 
         // If this field is an alias source, then we need to check the allocation of the alias
         // destination too. If that destination is allocated to CLOTs, we will not find an

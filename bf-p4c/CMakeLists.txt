@@ -427,6 +427,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/infer_payload_offset.cpp
+  parde/rewrite_parser_locals.cpp
   parde/split_parser_state.cpp
   parde/clot/allocate_clot.cpp
   parde/clot/clot_candidate.cpp
@@ -467,6 +468,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/parde_utils.h
   parde/parser_info.h
   parde/resolve_negative_extract.h
+  parde/rewrite_parser_locals.h
   parde/split_parser_state.h
   parde/clot/allocate_clot.h
   parde/clot/clot_candidate.h

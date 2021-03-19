@@ -105,6 +105,10 @@ class FieldLVal : ParserLVal {
     dbprint { out << field; }
 }
 
+class MatchLVal : ParserLVal {
+    dbprint { out << field; }
+}
+
 /// Parser write dest that will be backed by non-PHV container.
 class ChecksumLVal : FieldLVal {
     dbprint { out << "checksummed " << field; }

@@ -1389,6 +1389,12 @@ class CollectPhvFields : public Inspector {
 
     bool preorder(const IR::TempVar* tv) override {
         phv.addTempVar(tv, getGress());
+
+        if (auto match = findContext<IR::BFN::MatchLVal>()) {
+            PHV::Field* f = phv.field(tv);
+            BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
+            f->set_avoid_alloc(true);
+        }
         // bridged_metadata_indicator must be placed in 8-bit container
         if (tv->name.endsWith(BFN::BRIDGED_MD_INDICATOR)) {
             PHV::Field* f = phv.field(tv);
@@ -1477,7 +1483,6 @@ struct ComputeFieldAlignments : public Inspector {
         // Only extracts from the input buffer introduce alignment constraints.
         auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
         if (!bufferSource) return false;
-
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();
         if (!lval) return false;
 

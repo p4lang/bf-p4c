@@ -944,7 +944,7 @@ struct RewriteParserStatements : public Transform {
 
         auto* extractValidBit = new IR::BFN::Extract(srcInfo, validBit,
                         new IR::BFN::ConstantRVal(type, 1));
-
+        LOG5("add extract: " << extractValidBit);
         rv->push_back(extractValidBit);
         return rv;
     }
@@ -1358,7 +1358,6 @@ struct RewriteParserStatements : public Transform {
 
         auto lhs = s->left;
         auto rhs = s->right;
-
         // no bits are lost by throwing away IR::BFN::ReinterpretCast.
         if (rhs->is<IR::BFN::ReinterpretCast>())
             rhs = rhs->to<IR::BFN::ReinterpretCast>()->expr;
@@ -1391,8 +1390,9 @@ struct RewriteParserStatements : public Transform {
         }
 
         if (auto rval = resolveLookahead(typeMap, rhs, currentBit)) {
-            auto extract = new IR::BFN::Extract(s->srcInfo, lhs, rval);
-            return extract;
+            auto e = new IR::BFN::Extract(s->srcInfo, lhs, rval);
+            LOG5("add extract: " << e);
+            return e;
         }
 
         if (auto mem = lhs->to<IR::Member>()) {
@@ -1404,24 +1404,33 @@ struct RewriteParserStatements : public Transform {
             auto* rhsConst = rhs->to<IR::Constant>();
             if (!rhsConst)  // boolean
                 rhsConst = new IR::Constant(rhs->to<IR::BoolLiteral>()->value ? 1 : 0);
-            return new IR::BFN::Extract(s->srcInfo, s->left,
+            auto extract = new IR::BFN::Extract(s->srcInfo, s->left,
                      new IR::BFN::ConstantRVal(rhsConst->type,
                              rhsConst->value));
+            LOG5("add extract: " << extract);
+            return extract;
         }
 
         // Allow slices if we'd allow the expression being sliced.
         if (auto* slice = rhs->to<IR::Slice>()) {
-            if (canEvaluateInParser(slice->e0))
-                return new IR::BFN::Extract(s->srcInfo, lhs,
+            if (canEvaluateInParser(slice->e0)) {
+                auto e = new IR::BFN::Extract(s->srcInfo, lhs,
                                             new IR::BFN::SavedRVal(rhs));
+                LOG5("add extract: " << e);
+                return e;
+            }
         }
 
         // a = a | b
         if (auto bor = rhs->to<IR::BOr>()) {
             if (bor->left->equiv(*lhs)) {
-                return createBitwiseOrExtract(lhs, bor->right, s->srcInfo);
+                auto e = createBitwiseOrExtract(lhs, bor->right, s->srcInfo);
+                LOG5("add extract: " << e);
+                return e;
             } else if (bor->right->equiv(*lhs)) {
-                return createBitwiseOrExtract(lhs, bor->left, s->srcInfo);
+                auto e = createBitwiseOrExtract(lhs, bor->left, s->srcInfo);
+                LOG5("add extract: " << e);
+                return e;
             }
         }
 
@@ -1430,8 +1439,10 @@ struct RewriteParserStatements : public Transform {
             return nullptr;
         }
 
-        return new IR::BFN::Extract(s->srcInfo, s->left,
+        auto a = new IR::BFN::Extract(s->srcInfo, s->left,
                                     new IR::BFN::SavedRVal(rhs));
+        LOG5("add extract: " << a);
+        return a;
     }
 
     const IR::Expression* preorder(IR::Statement* s) override {

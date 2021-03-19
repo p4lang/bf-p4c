@@ -380,6 +380,9 @@ class Field : public LiftLess<Field> {
     /// MAU operations performed on this field.
     safe_vector<FieldOperation> operations_i;
 
+    // Do not allocate this field in phv or clots. Use for local parser variables.
+    bool            avoid_alloc_i = false;
+
     /// Maps slices of @this field to PHV containers.  Sorted by field MSB
     /// first.
     safe_vector<PHV::AllocSlice> alloc_slice_i;
@@ -402,6 +405,9 @@ class Field : public LiftLess<Field> {
 
     bool is_ignore_alloc() const                           { return ignore_alloc_i; }
     void set_ignore_alloc(bool b)                          { ignore_alloc_i = b; }
+
+    bool is_avoid_alloc() const                            { return avoid_alloc_i; }
+    void set_avoid_alloc(bool a)                           { avoid_alloc_i = a; }
 
     bool is_padding() const                                { return padding; }
     void set_padding(bool p)                               { padding = p; }

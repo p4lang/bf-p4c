@@ -74,6 +74,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
+        if (field.is_avoid_alloc()) {
+            continue;
+        }
+
         if (field.privatized() && (field.is_unallocated() && no_clots_allocated)) {
             boost::optional<cstring> privatizedFieldName = field.getPHVPrivateFieldName();
             if (!privatizedFieldName)
@@ -84,7 +88,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         } else {
             // XXX(hanw): paddings do not require phv allocation.
-            ERROR_CHECK(!field.is_unallocated() || !no_clots_allocated || field.is_ignore_alloc(),
+            ERROR_CHECK(!field.is_unallocated() || !no_clots_allocated ||
+                        field.is_ignore_alloc() || field.is_avoid_alloc(),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
         }

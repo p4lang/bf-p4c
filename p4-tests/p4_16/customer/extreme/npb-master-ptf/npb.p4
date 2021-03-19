@@ -76,8 +76,6 @@
 @pa_container_size("egress" , "protocol_inner_0" , 8)
 @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 @pa_container_type("egress", "tunnel_encap_payload_len", "dark")
-@pa_container_type("egress", "hdr.outer.ipv4.total_len", "mocha")
-@pa_container_type("ingress", "ig_md.lkp_0.tunnel_type", "mocha")
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------

@@ -57,19 +57,21 @@ void Clustering::FindComplexValidityBits::end_apply() {
 }
 
 std::vector<PHV::FieldSlice> Clustering::slices(const PHV::Field* field, le_bitrange range) const {
+    std::vector<PHV::FieldSlice> rv;
+    if (field->is_avoid_alloc()) return rv;
     BUG_CHECK(fields_to_slices_i.find(field) != fields_to_slices_i.end(),
               "Clustering::slices: field not found: %1%", cstring::to_cstring(field));
 
-    std::vector<PHV::FieldSlice> rv;
     for (auto& slice : fields_to_slices_i.at(field))
         if (slice.range().overlaps(range)) rv.push_back(slice);
     return rv;
 }
 
 bool Clustering::MakeSlices::updateSlices(const PHV::Field* field, le_bitrange range) {
+    bool changed = false;
+    if (field->is_avoid_alloc()) return changed;
     BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
               "Field not in fields_to_slices_i: %1%", cstring::to_cstring(field));
-    bool changed = false;
     auto& slices = self.fields_to_slices_i.at(field);
     // Find the slice that contains the low bit of this new range, and split it
     // if necessary.  Repeat for the high bit.
@@ -106,6 +108,9 @@ Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node* root) {
     equivalences_i.clear();
     // Wrap each field in a slice.
     for (auto& f : phv_i) {
+        if (f.is_avoid_alloc()) {
+            continue;
+        }
         if (pa_sizes_i.is_specified(&f)) {
             auto layout = pa_sizes_i.field_to_layout().at(&f);
             int offset = 0;

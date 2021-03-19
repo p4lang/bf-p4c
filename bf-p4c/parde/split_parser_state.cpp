@@ -137,8 +137,9 @@ struct SliceExtracts : public ParserModifier {
         // Keeps track of which bits have been allocated, for sanity checking.
         bitvec bits_allocated;
         PHV::FieldUse use(PHV::FieldUse::WRITE);
-
         // Slice according to the field's PHV allocation.
+        le_bitrange range;
+        auto field = phv.field(extract->dest->field, &range);
         for (auto slice : phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use)) {
             auto lo = slice.field_slice().lo;
             auto size = slice.width();
@@ -152,8 +153,6 @@ struct SliceExtracts : public ParserModifier {
         }
 
         // Slice according to the field's CLOT allocation.
-        le_bitrange range;
-        auto field = phv.field(extract->dest->field, &range);
         for (auto kv : *clot.slice_clots(field)) {
             auto slice = kv.first;
             auto lo = slice->range().lo;
@@ -178,9 +177,11 @@ struct SliceExtracts : public ParserModifier {
 
         for (auto stmt : state->statements) {
             if (auto extract = stmt->to<IR::BFN::Extract>()) {
-                auto sliced = slice_extract(extract);
-                new_statements.insert(new_statements.end(), sliced.begin(), sliced.end());
-                continue;
+                if (!extract->dest->is<IR::BFN::MatchLVal>()) {
+                    auto sliced = slice_extract(extract);
+                    new_statements.insert(new_statements.end(), sliced.begin(), sliced.end());
+                    continue;
+                }
             }
 
             new_statements.push_back(stmt);
@@ -213,24 +214,28 @@ struct AllocateParserState : public ParserTransform {
 
         void sort_state_primitives() {
             for (auto p : state->statements) {
-                if (auto e = p->to<IR::BFN::ExtractPhv>())
+                if (auto e = p->to<IR::BFN::ExtractPhv>()) {
                     phv_extracts.push_back(e);
-                else if (auto e = p->to<IR::BFN::ExtractClot>())
+                } else if (auto e = p->to<IR::BFN::ExtractClot>()) {
                     clot_extracts.push_back(e);
-                else if (auto c = p->to<IR::BFN::ParserChecksumPrimitive>())
+                } else if (auto c = p->to<IR::BFN::ParserChecksumPrimitive>()) {
                     checksums.push_back(c);
-                else if (auto pc = p->to<IR::BFN::ParserCounterPrimitive>())
+                } else if (auto pc = p->to<IR::BFN::ParserCounterPrimitive>()) {
                     counters.push_back(pc);
-                else if (auto e = p->to<IR::BFN::Extract>())
-                    BUG("Unexpected extract encountered during state-splitting: %1%", e);
-                else
+                } else if (auto e = p->to<IR::BFN::Extract>()) {
+                    if (e->dest->is<IR::BFN::MatchLVal>()) {
+                        others.push_back(e);
+                    } else {
+                        BUG("Unexpected extract encountered during state-splitting: %1%", e);
+                    }
+                } else {
                     others.push_back(p);
+                }
             }
         }
 
         struct OutOfBuffer : Inspector {
             bool lo = false, hi = false;
-
             bool preorder(const IR::BFN::PacketRVal* rval) override {
                 auto max = Device::pardeSpec().byteInputBufferSize() * 8;
                 hi |= rval->range.hi >= max;

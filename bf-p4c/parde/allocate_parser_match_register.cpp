@@ -1284,7 +1284,10 @@ can_remove(const IR::BFN::ParserState* state) {
 // After match register allocation, if the start state is empty and its
 // transition to the next state contains no writes to the match register,
 // we can safely remove this empty state.
-struct RemoveEmptyStartState : public ParserTransform {
+// Also, since extracts with MatchLVal type destination only exists to
+// provide information for allocating parser match registers, they are no
+// longer needed and can be deleted.
+struct RemoveEmptyStartStateAndMatchExtract : public ParserTransform {
     IR::BFN::Parser* preorder(IR::BFN::Parser* parser) {
         if (parser->start) {
             if (auto next = can_remove(parser->start)) {
@@ -1294,6 +1297,14 @@ struct RemoveEmptyStartState : public ParserTransform {
         }
 
         return parser;
+    }
+
+    IR::BFN::Extract* preorder(IR::BFN::Extract* extract) {
+        if (extract->dest->is<IR::BFN::MatchLVal>()) {
+            LOG5("Removed match value extract " << extract);
+            return nullptr;
+        }
+        return extract;
     }
 };
 
@@ -1328,7 +1339,7 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
         allocator,
         new InsertSaveAndSelect(allocator->result),
         new AdjustMatchValue,
-        new RemoveEmptyStartState,
+        new RemoveEmptyStartStateAndMatchExtract,
         new RemoveEmptyStallState,
         LOGGING(4) ? new DumpParser("after_parser_match_alloc") : nullptr
     });
