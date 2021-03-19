@@ -476,7 +476,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "In table table .*, the number of bits required to go through the immediate pathway 48 .* is greater than the available bits 32, and can not be allocated"
+  "The stage specified for table .* is .*, but we could not place it until stage .*"
   # P4C-3093
   extensions/p4_tests/p4_16/jbay/ghost3.p4
 )

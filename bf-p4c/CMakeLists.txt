@@ -141,6 +141,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/copy_block_pragmas.cpp
   midend/copy_header.cpp
   midend/elim_cast.cpp
+  midend/fold_constant_hashes.cpp
   midend/desugar_varbit_extract.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
@@ -168,6 +169,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/copy_block_pragmas.h
   midend/copy_header.h
   midend/elim_cast.h
+  midend/fold_constant_hashes.h
   midend/desugar_varbit_extract.h
   midend/normalize_params.h
   midend/param_binding.h
@@ -1277,6 +1279,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/event_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp

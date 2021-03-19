@@ -49,6 +49,7 @@
 #include "bf-p4c/midend/copy_block_pragmas.h"
 #include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/elim_cast.h"
+#include "bf-p4c/midend/fold_constant_hashes.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/ping_pong_generation.h"
@@ -396,6 +397,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new PingPongGeneration(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap, typeChecking),
         new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
+        new BFN::FoldConstantHashes(&refMap, &typeMap, typeChecking),
 
         // Collects source info for logging. Call this after all transformations are complete.
         sourceInfoLogging,
