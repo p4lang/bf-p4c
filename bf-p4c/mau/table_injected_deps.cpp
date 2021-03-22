@@ -28,9 +28,10 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
                     "Cannot resolve Injected Control Edge Type");
 
             auto edge_pair = dg.add_edge(parent, child, edge_label);
+            if (!edge_pair.first) continue;
             LOG3("Injecting CONTROL edge between " << parent->name << " --> " << child->name);
 
-            dg.ctrl_annotations[edge_pair.first] = ctrl_annot;  // Save annotation
+            dg.ctrl_annotations[*edge_pair.first] = ctrl_annot;  // Save annotation
         }
     }
 
@@ -221,11 +222,12 @@ void InjectMetadataControlDependencies::end_apply() {
                 "overlap", first_table, second_table);
             auto edge_pair = dg.add_edge(name_to_table.at(first_table),
                     name_to_table.at(second_table), DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+            if (!edge_pair.first) continue;
             auto tpair = std::make_pair(first_table, second_table);
             auto mdDepFields = phv.getMetadataDepFields();
             if (mdDepFields.count(tpair)) {
                 auto mdDepField = mdDepFields.at(tpair);
-                dg.data_annotations_metadata.emplace(edge_pair.first, mdDepField);
+                dg.data_annotations_metadata.emplace(*edge_pair.first, mdDepField);
             }
             LOG5("  Injecting ANTI dep between " << first_table << " and " << second_table
                  << " due to metadata initializaation");
@@ -293,7 +295,8 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
                     // predecessor.
                     for (auto leaf : cntp.next_table_leaves.at(sibling)) {
                         auto edge_pair = dg.add_edge(leaf, curTable, DependencyGraph::ANTI_EXIT);
-                        dg.data_annotations_exit.emplace(edge_pair.first,
+                        if (!edge_pair.first) continue;
+                        dg.data_annotations_exit.emplace(*edge_pair.first,
                                                             table->get_exit_actions());
                     }
                 } else {
@@ -301,7 +304,8 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
                     // successor.
                     for (auto leaf : cntp.next_table_leaves.at(curTable)) {
                         auto edge_pair = dg.add_edge(leaf, sibling, DependencyGraph::ANTI_EXIT);
-                        dg.data_annotations_exit.emplace(edge_pair.first,
+                        if (!edge_pair.first) continue;
+                        dg.data_annotations_exit.emplace(*edge_pair.first,
                                                             table->get_exit_actions());
                     }
                 }
@@ -362,16 +366,18 @@ void InjectDarkAntiDependencies::end_apply() {
             for (auto orig_id : pair.second.first) {
                 auto curr_table = getTable(orig_id);
 
-                dg.add_edge(curr_table, curr_ar_table,
+                auto edge_pair = dg.add_edge(curr_table, curr_ar_table,
                             DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+                if (!edge_pair.first) continue;
                 LOG6("\t\tInjectDarkAntiDependence(1): " << curr_table->name << " --> " <<
                      curr_ar_table->name);
             }
 
             for (auto orig_id : pair.second.second) {
                 auto curr_table = getTable(orig_id);
-                dg.add_edge(curr_ar_table, curr_table,
+                auto edge_pair = dg.add_edge(curr_ar_table, curr_table,
                             DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+                if (!edge_pair.first) continue;
                 LOG6("\t\tInjectDarkAntiDependence(2): " << curr_ar_table->name << " --> " <<
                      curr_table->name);
             }

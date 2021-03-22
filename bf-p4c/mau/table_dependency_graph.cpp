@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include <assert.h>
 #include <boost/graph/breadth_first_search.hpp>
+#include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/lookup_edge.hpp>
 #include <boost/optional/optional_io.hpp>
 #include <algorithm>
@@ -374,7 +375,7 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
 /* Return an edge descriptor.  If bool is true, then this is a
  * newly-created edge.  If false, then the edge descriptor points to the
  * edge from src to dst with edge_label that already existed.  */
-std::pair<typename DependencyGraph::Graph::edge_descriptor, bool> DependencyGraph::add_edge(
+std::pair<typename DependencyGraph::Graph::edge_descriptor*, bool> DependencyGraph::add_edge(
     const IR::MAU::Table* src,
     const IR::MAU::Table* dst,
     DependencyGraph::dependencies_t edge_label) {
@@ -382,10 +383,20 @@ std::pair<typename DependencyGraph::Graph::edge_descriptor, bool> DependencyGrap
     src_v = add_vertex(src);
     dst_v = add_vertex(dst);
 
+    DependencyGraph::Graph::edge_descriptor* e = nullptr;
     typename Graph::out_edge_iterator out, end;
     for (boost::tie(out, end) = boost::out_edges(src_v, g); out != end; ++out) {
-        if (boost::target(*out, g) == dst_v && g[*out] == edge_label)
-            return {*out, false};
+        if (boost::target(*out, g) == dst_v && g[*out] == edge_label) {
+            e = new DependencyGraph::Graph::edge_descriptor(*out);
+            return { e, false };
+        }
+    }
+
+    // Check if back edge present
+    if (has_back_edge(src, dst)) {
+        LOG7("Cannot add edge " << src->name << " --> " << dst->name
+                << " as back-edge is present");
+        return { e, false };
     }
 
     auto maybe_new_e = boost::add_edge(src_v, dst_v, g);
@@ -394,10 +405,20 @@ std::pair<typename DependencyGraph::Graph::edge_descriptor, bool> DependencyGrap
         // Inserting edges should always create new edges.
         BUG("Boost Graph Library failed to add edge.");
     g[maybe_new_e.first] = edge_label;
+
+    // Check if the edge introduced a cycle in the graph
+    if (has_cycle()) {
+        LOG7("Cannot add edge " << src->name << " --> " << dst->name
+                << " as it introduces a cycle");
+        boost::remove_edge(maybe_new_e.first, g);
+        return { e, false };
+    }
+
     auto p = std::make_pair(dst, src);
     dependency_map.emplace(p, edge_label);
     LOG7("DST " << dst->name << " has dep " << dep_types(edge_label) << " to SRC " << src->name);
-    return {maybe_new_e.first, true};
+    e = new DependencyGraph::Graph::edge_descriptor(maybe_new_e.first);
+    return { e, true };
 }
 
 TableGraphNode DependencyGraph::create_node(const int id, const IR::MAU::Table *tbl) const {
@@ -754,12 +775,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                     new_dep = DependencyGraph::ANTI_ACTION_READ;
             }
 
-            DependencyGraph::Graph::edge_descriptor backEdge;
-            bool backEdgePresent = false;
-            auto src_v = self.dg.labelToVertex.at(table);
-            auto dst_v = self.dg.labelToVertex.at(upstream_t);
-            boost::tie(backEdge, backEdgePresent) = boost::edge(src_v, dst_v, self.dg.g);
-            if (backEdgePresent) {
+            if (self.dg.has_back_edge(upstream_t, table)) {
                 LOG7("\tCannot add edge between " << upstream_t->name
                         << " and " << table->name << " as a backedge already exists");
                 continue;
@@ -776,6 +792,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             }
 
             auto edge_pair = self.dg.add_edge(upstream_t, table, new_dep);
+            if (!edge_pair.first) continue;
             const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
             if (upstream_t_pair.second) {
                 LOG5("\tAdd " << dep_types(dep) << " dependency from " << upstream_t->name
@@ -786,8 +803,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 LOG5("\tAdd " << dep_types(dep) << " dependency from " << upstream_t->name
                         << " to " << table->name << " because of field " << field->name);
             }
-            self.dg.data_annotations[edge_pair.first][field].first.insert(upstream_t_pair.second);
-            self.dg.data_annotations[edge_pair.first][field].second.insert(action_use_context);
+            self.dg.data_annotations[*edge_pair.first][field].first.insert(upstream_t_pair.second);
+            self.dg.data_annotations[*edge_pair.first][field].second.insert(action_use_context);
         }
     }
 
@@ -1335,6 +1352,8 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
     const auto& dep_graph = local_dg ? local_dg->g : dg.g;
     auto &curr_dg = local_dg ? *local_dg : dg;
 
+    if (curr_dg.has_cycle())
+        LOG7("The graph has a cycle");
 
     auto &happens_after_work_map = curr_dg.happens_after_work_map;
     auto &happens_before_work_map = curr_dg.happens_before_work_map;
@@ -1721,9 +1740,8 @@ const IR::MAU::Table *ControlPathwaysToTable::find_dominator(const IR::MAU::Tabl
     return dom;
 }
 
-
-
 void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
+    LOG3("DepStagesThruDomFrontier postorder : " << tbl->name);
     auto &dom_frontier = ntp.control_dom_set.at(tbl);
     if (dom_frontier.size() == 1) {
         dg.stage_info[tbl].dep_stages_dom_frontier = 0;
@@ -1747,15 +1765,22 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
             auto second_tbl = dg.get_vertex(dst_v);
             if (dom_frontier.count(second_tbl) == 0)
                 continue;
+
+            if (local_dg.has_back_edge(cd_tbl, second_tbl)) {
+                LOG5("\tCannot add edge between " << cd_tbl->name
+                        << " and " << second_tbl->name << ": " << dg.g[*out]
+                        << " as a backedge already exists");
+                continue;
+            }
+            LOG5("\tAdding edge between " << cd_tbl->name << " and "
+                << second_tbl->name << " : " << dg.g[*out]);
             local_dg.add_edge(cd_tbl, second_tbl, dg.g[*out]);
         }
     }
 
-    auto ALL_EDGE_TYPES = DependencyGraph::CONTROL | DependencyGraph:: ANTI;
-
     LOG4("CALC_TOPOLOGICAL_STAGE 1");
 
-    auto topo_rst = self.calc_topological_stage(ALL_EDGE_TYPES, &local_dg);
+    auto topo_rst = self.calc_topological_stage(DependencyGraph::CONTROL_AND_ANTI, &local_dg);
 
     typename DependencyGraph::Graph::edge_iterator edges, edges_end;
     local_dg.dep_type_map.clear();
@@ -1766,6 +1791,7 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
             (local_dg.dep_type_map.at(src).count(dst) == 0)
             || local_dg.is_ctrl_edge(local_dg.dep_type_map.at(src).at(dst))
             || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONT_CONFLICT)
+
             || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_READ)
             || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_OUTPUT)
             || local_dg.is_anti_edge(local_dg.dep_type_map.at(src).at(dst))) {
@@ -1896,11 +1922,12 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
                 << pair.second << " of type " << dep_types(dg.g[pair.second]));
 
         auto edge_pair = dg.add_edge(pair.first.first, pair.first.second, dep);
-        dg.data_annotations[edge_pair.first] = dg.data_annotations[pair.second];
+        if (!edge_pair.first) continue;
+        dg.data_annotations[*edge_pair.first] = dg.data_annotations[pair.second];
 
         LOG4("CALC_TOPOLOGICAL_STAGE 3");
 
-        calc_topological_stage(DependencyGraph::ANTI | DependencyGraph::CONTROL);
+        calc_topological_stage(DependencyGraph::CONTROL_AND_ANTI);
     }
 }
 
@@ -2016,7 +2043,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // When we include control and anti dependences, what we're really computing is the
     // happens_before with respect to logical IDs, not stages. In other words, adding in control
     // dependences and anti dependences tells us the set of tables a table needs to be placed
-    // logically before to guarantee correct execution. This is a strictre requirement than without
+    // logically before to guarantee correct execution. This is a stricter requirement than without
     // control and anti dependences. If Table A has a control/anti dependence on Table B, while we
     // may be able to place Table A and Table B in the same stage, we cannot place Table A in an
     // earlier stage than Table B. To enforce this (since table placement only places one table at a
@@ -2025,8 +2052,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 
     LOG4("CALC_TOPOLOGICAL_STAGE 6");
 
-    auto topo_rst_logical = calc_topological_stage(DependencyGraph::CONTROL |
-                                                   DependencyGraph::ANTI);
+    auto topo_rst_logical = calc_topological_stage(DependencyGraph::CONTROL_AND_ANTI);
     // Log the resulting sort
     if (LOGGING(4)) {
         LOG4("Printing results of topological sorting with control and anti dependences included."
@@ -2229,8 +2255,6 @@ bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
          TableTree("ghost", pipe->ghost_thread) );
     return false;
 }
-
-
 
 FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,

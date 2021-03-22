@@ -77,6 +77,7 @@ struct DependencyGraph {
                                   | CONTROL_TABLE_MISS
                                   | CONTROL_DEFAULT_NEXT_TABLE
                                   | ANTI_NEXT_TABLE_CONTROL;
+    static const unsigned CONTROL_AND_ANTI = CONTROL | ANTI;
     typedef boost::adjacency_list<
         boost::vecS,
         boost::vecS,
@@ -140,6 +141,22 @@ struct DependencyGraph {
             BUG("table not exists in Dependency graph: %1%", cstring::to_cstring(t));
         }
     }
+
+    typedef DependencyGraph::Graph::edge_descriptor GraphEdge;
+    struct cycle_detector : public boost::dfs_visitor<> {
+        cycle_detector(DependencyGraph &dg, bool& has_cycle)
+              : _dg(dg), _has_cycle(has_cycle) { }
+
+        void back_edge(const GraphEdge e, const DependencyGraph::Graph& g) {
+            auto source = _dg.get_vertex(boost::source(e, g));
+            auto target = _dg.get_vertex(boost::target(e, g));
+            LOG6(" Found back-edge : " << source->name << " ==> " << target->name);
+            _has_cycle = true;
+        }
+     protected:
+        DependencyGraph &_dg;
+        bool& _has_cycle;
+    };
 
     // For GTests Only
  public:
@@ -300,6 +317,26 @@ struct DependencyGraph {
         return (1 + max_min_stage);
     }
 
+    // For a src -> dst edge check if back edge dst -> src exists
+    bool has_back_edge(const IR::MAU::Table *src, const IR::MAU::Table *dst) {
+       bool backEdgePresent = false;
+       DependencyGraph::Graph::edge_descriptor backEdge;
+
+       auto src_v = labelToVertex.at(dst);
+       auto dst_v = labelToVertex.at(src);
+       boost::tie(backEdge, backEdgePresent) = boost::edge(src_v, dst_v, g);
+
+       return backEdgePresent;
+    }
+
+    // Check for cycle in the graph
+    bool has_cycle() {
+        bool has_cycle = false;
+        cycle_detector vis(*this, has_cycle);
+        boost::depth_first_search(g, visitor(vis));
+        return has_cycle;
+    }
+
     /* @returns the table pointer corresponding to a vertex in the dependency graph
      */
     const IR::MAU::Table* get_vertex(typename Graph::vertex_descriptor v) const {
@@ -321,7 +358,7 @@ struct DependencyGraph {
     /* Return an edge descriptor.  If bool is true, then this is a
      * newly-created edge.  If false, then the edge descriptor points to the
      * edge from src to dst with edge_label that already existed.  */
-    std::pair<typename Graph::edge_descriptor, bool> add_edge(
+    std::pair<typename Graph::edge_descriptor*, bool> add_edge(
         const IR::MAU::Table* src,
         const IR::MAU::Table* dst,
         dependencies_t edge_label);
