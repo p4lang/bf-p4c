@@ -20,13 +20,11 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
 
     /// Fields written in the MAU pipeline. Keys are fields written in the MAU pipeline. Values are
     /// all the different slices of the fields that are written.
-    FieldToRangeMap written_i;
-    FieldIdToRangeMap written2_i;
+    FieldIdToRangeMap written_i;
 
     /// Fields used in at least one ALU instruction. Keys are fields used in an ALU instruction.
     /// Values are the slices of the fields so used.
-    FieldToRangeMap used_alu_i;
-    FieldIdToRangeMap used_alu2_i;
+    FieldIdToRangeMap used_alu_i;
 
     /// Fields extracted in the parser.
     bitvec      extracted_i[GRESS_T_COUNT];
@@ -38,12 +36,11 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     enum { PARDE = 0, MAU = 1 };
 
  public:
-    /// Represents uses of fields in MAU/PARDE. Keys of the outer maps are all the fields used in
+    /// Represents uses of fields in MAU/PARDE. Keys of the outer maps are all the field ids used in
     /// the program. The inner map represents how those fields are used. The key of the inner map
     /// represents where the use (read or write) happens in the PARDE (value 0) or MAU (value 1).
     /// The values in the inner map are the slices of the fields used in the respective units.
-    ordered_map<const PHV::Field*, ordered_map<unsigned, ordered_set<le_bitrange>>> use_i;
-    ordered_map<int, ordered_map<unsigned, ordered_set<le_bitrange>>> use2_i;
+    ordered_map<int, ordered_map<unsigned, ordered_set<le_bitrange>>> use_i;
 
     /// Fields used in the deparser.
     bitvec      deparser_i[GRESS_T_COUNT];

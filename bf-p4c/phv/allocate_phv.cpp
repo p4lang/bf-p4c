@@ -2059,6 +2059,48 @@ bool CoreAllocation::generateNewAllocSlices(
         auto dest = entry.getDestinationSlice();
         LOG5("\t\t\tAdding dest: " << dest);
         dest.setInitPrimitive(&(entry.getInitPrimitive()));
+
+        // Also update the lifetime of prior/post prims related to the source slice
+        for (auto *prim : dest.getInitPrimitive()->getARApostPrims()) {
+            bool sameEarly = (dest.getEarliestLiveness() ==
+                              prim->getDestinationSlice().getEarliestLiveness());
+            bool sameLate  = (dest.getLatestLiveness() ==
+                              prim->getDestinationSlice().getLatestLiveness());
+            BUG_CHECK(sameEarly || sameLate, "A.None of the liverange bounds is the same ...?");
+
+            if (sameEarly && !sameLate) {
+                LOG4("\t\tA.Updating latest liveness for: " << prim->getDestinationSlice());
+                LOG4("\t\t\t to " << dest.getLatestLiveness());
+                prim->setDestinationLatestLiveness(dest.getLatestLiveness());
+            }
+
+            if (!sameEarly && sameLate) {
+                LOG4("\t\tA.Updating earliest liveness for: " << prim->getDestinationSlice());
+                LOG4("\t\t\t to " << dest.getEarliestLiveness());
+                prim->setDestinationEarliestLiveness(dest.getEarliestLiveness());
+            }
+        }
+
+        for (auto *prim : dest.getInitPrimitive()->getARApriorPrims()) {
+            bool sameEarly = (dest.getEarliestLiveness() ==
+                              prim->getDestinationSlice().getEarliestLiveness());
+            bool sameLate  = (dest.getLatestLiveness() ==
+                              prim->getDestinationSlice().getLatestLiveness());
+            BUG_CHECK(sameEarly || sameLate, "B.None of the liverange bounds is the same ...?");
+
+            if (sameEarly && !sameLate) {
+                LOG4("\t\tB.Updating latest liveness for: " << prim->getDestinationSlice());
+                LOG4("\t\t\t to " << dest.getLatestLiveness());
+                prim->setDestinationLatestLiveness(dest.getLatestLiveness());
+            }
+
+            if (!sameEarly && sameLate) {
+                LOG4("\t\tB.Updating earliest liveness for: " << prim->getDestinationSlice());
+                LOG4("\t\t\t to " << dest.getEarliestLiveness());
+                prim->setDestinationEarliestLiveness(dest.getEarliestLiveness());
+            }
+        }
+
         initializedAllocSlices.push_back(dest);
     }
     std::vector<PHV::AllocSlice> rv;

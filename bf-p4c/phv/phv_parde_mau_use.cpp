@@ -16,13 +16,10 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     in_mau = false;
     in_dep = false;
     use_i.clear();
-    use2_i.clear();
     for (auto &x : deparser_i) x.clear();
     for (auto &x : extracted_i) x.clear();
     written_i.clear();
     used_alu_i.clear();
-    written2_i.clear();
-    used_alu2_i.clear();
     return rv;
 }
 
@@ -75,23 +72,20 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
         for (auto id : phv.struct_info(hr).field_ids()) {
             auto* field = phv.field(id);
             CHECK_NULL(field);
-            use_i[field][in_mau].insert(StartLen(0, field->size));
-            use2_i[id][in_mau].insert(StartLen(0, field->size));
+            use_i[id][in_mau].insert(StartLen(0, field->size));
             deparser_i[thread][id] = in_dep; } }
 
     le_bitrange bits;
     if (auto* info = phv.field(e, &bits)) {
         // Used in MAU.
         LOG5("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
-        use_i[info][in_mau].insert(bits);
-        use2_i[info->id][in_mau].insert(bits);
+        use_i[info->id][in_mau].insert(bits);
         LOG5("is_used_mau: " << is_used_mau(info));
 
         // Used in ALU instruction.
         if (findContext<IR::MAU::Instruction>() != nullptr) {
             LOG5("use " << info->name << " in ALU instruction");
-            used_alu_i[info].insert(bits);
-            used_alu2_i[info->id].insert(bits);
+            used_alu_i[info->id].insert(bits);
         }
 
         // Used in deparser.
@@ -99,8 +93,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
         deparser_i[thread][info->id] = in_dep;
 
         if (isWrite() && in_mau) {
-            written_i[info].insert(bits);
-            written2_i[info->id].insert(bits);
+            written_i[info->id].insert(bits);
         }
         return false;
     } else if (e->is<IR::Member>()) {  // prevent descent into IR::Member objects
@@ -131,24 +124,16 @@ bool Phv_Parde_Mau_Use::is_deparsed(const PHV::Field *f) const {      // use in 
 
 bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field *f) const {      // use in mau
     BUG_CHECK(f, "Null field");
-    // if (!use_i.count(f)) return false;
-    // return use_i.at(f).count(MAU);
-    // if (use_i.count(f) != use2_i.count(f->id))
-    //     LOG5("DIFF for field " << *f << " mau use=" << use_i.count(f));
 
-    if (!use2_i.count(f->id)) return false;
-    return use2_i.at(f->id).count(MAU);
+    if (!use_i.count(f->id)) return false;
+    return use_i.at(f->id).count(MAU);
 }
 
 bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field* f, le_bitrange range) const {
     BUG_CHECK(f, "Null field");
-    // if (!use_i.count(f)) return false;
-    // if (!use_i.at(f).count(MAU)) return false;
-    // if (use_i.count(f) != use2_i.count(f->id))
-    //     LOG5("DIFF for field " << *f << " mau use=" << use_i.count(f));
-    if (!use2_i.count(f->id)) return false;
-    if (!use2_i.at(f->id).count(MAU)) return false;
-    for (auto r : use2_i.at(f->id).at(MAU)) {
+    if (!use_i.count(f->id)) return false;
+    if (!use_i.at(f->id).count(MAU)) return false;
+    for (auto r : use_i.at(f->id).at(MAU)) {
         if (range.overlaps(r))
             return true;
     }
@@ -157,21 +142,21 @@ bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field* f, le_bitrange range) cons
 
 bool Phv_Parde_Mau_Use::is_used_alu(const PHV::Field *f) const {      // use in alu
     BUG_CHECK(f, "Null field");
-    return used_alu2_i.count(f->id);
+    return used_alu_i.count(f->id);
 }
 
 bool Phv_Parde_Mau_Use::is_written_mau(const PHV::Field *f) const {
     BUG_CHECK(f, "Null field");
-    return written2_i.count(f->id);;
+    return written_i.count(f->id);;
 }
 
 bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in parser/deparser
     BUG_CHECK(f, "Null field");
     bool use_i_pd;
-    if (!use2_i.count(f->id))
+    if (!use_i.count(f->id))
         use_i_pd = false;
     else
-        use_i_pd = use2_i.at(f->id).count(PARDE);
+        use_i_pd = use_i.at(f->id).count(PARDE);
     bool use_pd = use_i_pd || extracted_i[f->gress][f->id];
     return use_pd;
 }

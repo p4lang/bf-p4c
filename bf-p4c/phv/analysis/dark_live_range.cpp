@@ -142,7 +142,6 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
                 continue;
             }
             LOG4("\t  Used in parser.");
-            // livemap.addAccess(f, 0 /* stage */, READ, use_unit, false);
             livemap.addAccess(f, PARSER, READ, use_unit, false);
         } else if (use_unit->is<IR::BFN::Deparser>()) {
             // Ignore deparser use if field is marked as not deparsed.
@@ -184,7 +183,6 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             if (!notParsedFields.count(f) && !(f->bridged && f->gress == INGRESS)) {
                 LOG4("\t  Field defined in parser.");
                 livemap.addAccess(f, PARSER, WRITE, def_unit, false);
-                // livemap.addAccess(f, 0 /* first stage */, READ, def_unit, false);
                 continue;
             }
         } else if (def_unit->is<IR::BFN::Deparser>()) {
@@ -280,7 +278,7 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
             if (readField != nullptr) {
                 // *ALEX* This will reject overlays with packed fields that have
                 // READs in the same stage. We should add the capability
-                // to overlay with packed fields that have smae-stage READs
+                // to overlay with packed fields that have same-stage READs
                 LOG4("Slices " << readField << " and " << sl << " already read in stage " <<
                      ((stage == DEPARSER) ? "deparser" : std::to_string(stage)));
                 return boost::none;
@@ -858,17 +856,26 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
 
     // XXX(yumin): fix dark Init nodes: NOP should not overwrite parser read.
     // it should be fixed somewhere right above.
+    // XXX(alex): The issue is related with aliased fields for which the defuse analysis
+    //            regarding parser state references is not correct. In particular
+    //            an aliased field is reported to have implicit parser def rather explicit
+    //            ones and thus its liverange does not start from the parser.
+    //            This probably happens during the pass Alias which replaces the alias sources
+    //            with the alias destinations and screws the parser references.
+    //            So leaving this hack until Alias is fixed.
     for (auto& entry : rv) {
         if (!entry.isNOP()) continue;
+        auto *new_fld = entry.getDestinationSlice().field();
         const auto& new_earliest = entry.getDestinationSlice().getEarliestLiveness();
         if (new_earliest.first != 0) continue;
-        const auto new_slice = PHV::FieldSlice(entry.getDestinationSlice().field(),
+        const auto new_slice = PHV::FieldSlice(new_fld,
                                                entry.getDestinationSlice().field_slice());
         for (const auto& slice : fields) {
             const auto prev_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
             const auto prev_earliest = slice.getEarliestLiveness();
             if (new_slice == prev_slice && new_earliest > prev_earliest) {
                 entry.setDestinationEarliestLiveness(prev_earliest);
+                LOG5("\t Updating earliest liverange for darkinit " << entry);
             }
         }
     }

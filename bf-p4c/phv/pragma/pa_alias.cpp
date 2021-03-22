@@ -158,7 +158,7 @@ bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,
     aliasMap[mayAlias->second->name] = { mayAlias->first->name, boost::none, who };
     fieldsWithAliasing[mayAlias->second->id] = true;
     fieldsWithAliasing[mayAlias->first->id] = true;
-    LOG1("\t  " << mayAlias->second->name << " --> " << mayAlias->first->name);
+    LOG1("\t Alias (src-->dst): " << mayAlias->second->name << " --> " << mayAlias->first->name);
     return true;
 }
 
@@ -262,6 +262,9 @@ std::ostream &operator<<(std::ostream& out, const PragmaAlias::AliasDestination&
     out << dest.field;
     if (dest.range)
         out << "[" << dest.range->hi << ":" << dest.range->lo << "]";
+    out << "   " << ((dest.who == PragmaAlias::PRAGMA) ? "(from PRAGMA)" :
+                    "(from COMPILER)");
+
     return out;
 }
 
