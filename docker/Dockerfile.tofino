@@ -14,7 +14,7 @@ ARG BFN_P4C_GIT_SHA="UNKNOWN"
 # Use 'jarvis' to build a jarvis image
 #     'release' to build a release image
 #     'glass' to build a base image for glass
-ARG BUILD_FOR="tofino"
+ARG BUILD_FOR="jenkins-intermediate"
 
 # Use 'release' if you don't wish to keep the build artifacts
 ARG IMAGE_TYPE=test

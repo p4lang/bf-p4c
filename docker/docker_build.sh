@@ -21,10 +21,11 @@ BF_P4C_COMPILERS="${BFN}/bf-p4c-compilers"
 
 # List of supported build modes, selected by BUILD_FOR.
 BUILD_MODES=(
-  "glass"    # builds a glass image
-  "jarvis"   # builds a jarvis image
-  "release"  # builds a release image
-  "tofino"   # builds an image for CI
+  "glass"                  # builds a glass image
+  "jarvis"                 # builds a jarvis image
+  "jenkins-intermediate"   # builds an intermediate image for CI
+  "jenkins-final"          # finishes building an image for CI
+  "release"                # builds a release image
 )
 
 # List of supported image types, selected by IMAGE_TYPE.
@@ -38,7 +39,8 @@ IMAGE_TYPES=(
 BOOLEAN_VARS=(
   "BUILD_GLASS"                # whether to build the glass compiler
   "GEN_REF_OUTPUTS"            # whether to generate reference outputs for p4i
-  "TOFINO_P414_TEST_ARCH_TNA"  # whether to test P4-14 programs for Tofino with TNA architecture
+  "TOFINO_P414_TEST_ARCH_TNA"  # whether to test P4-14 programs for Tofino with
+                               #   TNA architecture
 )
 
 # === PACKAGE LISTS ===========================================================
@@ -161,78 +163,6 @@ function WORKDIR() {
 # Set apt to be non-interactive.
 export DEBIAN_FRONTEND=noninteractive
 
-# Clean up default instance of libboost1.58 from base Ubuntu image.
-apt-get --purge remove -y 'libboost*-dev'
-
-# Configure apt repositories and update apt.
-add-apt-repository -y ppa:ubuntu-toolchain-r/test
-add-apt-repository -y ppa:mhier/libboost-latest
-apt-get update
-
-# Install packages.
-apt-get install -y ${P4C_DEPS} ${P4C_RUNTIME_DEPS}
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 20
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 20
-
-# Install more packages.
-case "${BUILD_FOR}" in
-jarvis)
-  apt-get install -y ${DEV_PKGS}
-  ;;
-release)
-  apt-get install -y ${REL_PKGS}
-  ;;
-esac
-
-# Download, configure, build GC with large config
-WORKDIR /tmp
-{
-  curl -o gc-7.4.2.tar.gz https://hboehm.info/gc/gc_source/gc-7.4.2.tar.gz
-  tar -xvf gc-7.4.2.tar.gz
-  cd gc-7.4.2
-  ./autogen.sh && ./configure --enable-large-config --enable-cplusplus --enable-shared
-  make -$MAKEFLAGS && make install -$MAKEFLAGS
-  ldconfig
-}
-
-# Download, configure, build, and install Boost if needed.
-WORKDIR /tmp
-if [[ "${BUILD_FOR}" == "release" ]] ; then
-  BOOST='boost_1_67_0'
-  BOOST_TARBALL="${BOOST}.tar.bz2"
-  wget http://downloads.sourceforge.net/project/boost/boost/1.67.0/"${BOOST_TARBALL}"
-  tar xjf "${BOOST_TARBALL}"
-
-  cd "${BOOST}"
-  ./bootstrap.sh --prefix=/usr/local
-  ./b2 -$MAKEFLAGS --build-type=minimal variant=release
-  ./b2 install -$MAKEFLAGS --build-type=minimal variant=release
-
-  cd /tmp
-  rm -rf "${BOOST}" "${BOOST_TARBALL}"
-fi
-
-# Download and install Z3.
-WORKDIR /tmp
-{
-  Z3='z3-4.8.7-x64-ubuntu-16.04'
-  Z3_ZIP="${Z3}.zip"
-  curl -L --noproxy "*" \
-    https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3_ZIP}" -o "${Z3_ZIP}"
-  unzip "${Z3_ZIP}"
-
-  cd "${Z3}"
-  cp bin/libz3.a /usr/local/lib/
-  cp bin/libz3.so /usr/local/lib/
-  cp bin/z3 /usr/local/bin/
-  cp include/*.h /usr/local/include/
-
-  cd /tmp
-  rm -rf "${Z3}" "${Z3_ZIP}"
-}
-
 # Clear out CC and CXX.
 #   * These apparently cause pip to build its packages incorrectly: some
 #     packages (e.g., pysubnettree) use CC where they should use CXX.
@@ -241,40 +171,134 @@ WORKDIR /tmp
 #     compiler locally anyway.
 unset CC CXX
 
-# Dependencies for testing.
-apt-get install -y net-tools
-pip install --upgrade pip==20.3.3
-pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging prettytable pysubnettree ctypesgen
+# Install dependencies and configure the build environment.
+if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
+  # Clean up default instance of libboost1.58 from base Ubuntu image.
+  apt-get --purge remove -y 'libboost*-dev'
 
-# Install ply 3.9 for compatibility with p4c-tofino
-pip install ply==3.9
+  # Configure apt repositories and update apt.
+  add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  add-apt-repository -y ppa:mhier/libboost-latest
+  apt-get update
 
-# Install jsonschema 2.6 for compatibility with pyinstaller
-pip install jsonschema==2.6
+  # Install packages.
+  apt-get install -y ${P4C_DEPS} ${P4C_RUNTIME_DEPS}
+  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10
+  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 20
+  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10
+  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 20
 
-# Install python3 packages
-pip3 install --upgrade pip==20.3.3
-pip3 install ${PYTHON3_DEPS}
+  # Install more packages.
+  case "${BUILD_FOR}" in
+  jarvis)
+    apt-get install -y ${DEV_PKGS}
+    ;;
+  release)
+    apt-get install -y ${REL_PKGS}
+    ;;
+  esac
+
+  # Download, configure, build GC with large config
+  WORKDIR /tmp
+  {
+    curl -o gc-7.4.2.tar.gz https://hboehm.info/gc/gc_source/gc-7.4.2.tar.gz
+    tar -xvf gc-7.4.2.tar.gz
+    cd gc-7.4.2
+    ./autogen.sh
+    ./configure --enable-large-config --enable-cplusplus --enable-shared
+    make -$MAKEFLAGS
+    make install -$MAKEFLAGS
+    ldconfig
+  }
+
+  # Download, configure, build, and install Boost if needed.
+  WORKDIR /tmp
+  if [[ "${BUILD_FOR}" == "release" ]] ; then
+    BOOST='boost_1_67_0'
+    BOOST_TARBALL="${BOOST}.tar.bz2"
+    wget http://downloads.sourceforge.net/project/boost/boost/1.67.0/"${BOOST_TARBALL}"
+    tar xjf "${BOOST_TARBALL}"
+
+    cd "${BOOST}"
+    ./bootstrap.sh --prefix=/usr/local
+    ./b2 -$MAKEFLAGS --build-type=minimal variant=release
+    ./b2 install -$MAKEFLAGS --build-type=minimal variant=release
+
+    cd /tmp
+    rm -rf "${BOOST}" "${BOOST_TARBALL}"
+  fi
+
+  # Download and install Z3.
+  WORKDIR /tmp
+  {
+    Z3='z3-4.8.7-x64-ubuntu-16.04'
+    Z3_ZIP="${Z3}.zip"
+    curl -L --noproxy "*" -o "${Z3_ZIP}" \
+      https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3_ZIP}"
+    unzip "${Z3_ZIP}"
+
+    cd "${Z3}"
+    cp bin/libz3.a /usr/local/lib/
+    cp bin/libz3.so /usr/local/lib/
+    cp bin/z3 /usr/local/bin/
+    cp include/*.h /usr/local/include/
+
+    cd /tmp
+    rm -rf "${Z3}" "${Z3_ZIP}"
+  }
+
+  # Dependencies for testing.
+  apt-get install -y net-tools
+  pip install --upgrade pip==20.3.3
+  pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging \
+    prettytable pysubnettree ctypesgen
+
+  # Install ply 3.9 for compatibility with p4c-tofino
+  pip install ply==3.9
+
+  # Install jsonschema 2.6 for compatibility with pyinstaller
+  pip install jsonschema==2.6
+
+  # Install python3 packages
+  pip3 install --upgrade pip==20.3.3
+  pip3 install ${PYTHON3_DEPS}
+
+  # Copy scripts into ${BFN}.
+  {
+    cd "${BF_P4C_COMPILERS}"
+    cp scripts/ptf_hugepage_setup.sh \
+       docker/docker_entry_point.sh \
+       p4-tests/p4testutils/veth_setup.sh \
+       "${BFN}"
+    cd -
+  }
+
+  # Configure distcc to just use localhost for building the Docker image.
+  echo localhost > /etc/distcc/hosts
+
+  if [[ "${BUILD_FOR}" == "jenkins-intermediate" ]] ; then
+    WORKDIR "${BF_P4C_COMPILERS}"
+
+    # Set up ccache.
+    install -D -o root -g root -m 0644 \
+      docker/jenkins-ccache.conf /etc/ccache.conf
+    install -D -o root -g root -m 0644 \
+      docker/jenkins-ccache.conf /usr/local/etc/ccache.conf
+  fi
+fi  # Done installing dependencies and configuring build environment.
 
 # Configure the linker to strip symbols.
 export LDFLAGS="-Wl,-s"
 
-# Copy scripts into ${BFN}.
-{
-  cd "${BF_P4C_COMPILERS}"
-  cp scripts/ptf_hugepage_setup.sh \
-     docker/docker_entry_point.sh \
-     p4-tests/p4testutils/veth_setup.sh \
-     "${BFN}"
-  cd -
-}
-
-# Configure distcc to just use localhost for building the Docker image.
-echo localhost > /etc/distcc/hosts
+# Finish here if we're just building the intermediate image for Jenkins. The
+# "jenkins-final" build type will pick up from here.
+if [[ "${BUILD_FOR}" == "jenkins-intermediate" ]] ; then
+  exit 0
+fi
 
 # Build and install bf-p4c-compilers.
 WORKDIR "${BF_P4C_COMPILERS}"
-if [[ "${BUILD_FOR}" == "tofino" ]] ; then
+if [[ "${BUILD_FOR}" == "jenkins-final" ]] ; then
   if [[ "${IMAGE_TYPE}" == "non-unified" ]] ; then
     disable_unified="--disable-unified"
   else
@@ -314,13 +338,18 @@ fi
 # Clean up.
 WORKDIR "${BF_P4C_COMPILERS}"
 case "${BUILD_FOR}" in
-tofino|release|glass)
+jenkins-final|release|glass)
   /usr/local/bin/ccache -p --show-stats
   apt-get autoremove --purge -y
-  rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/*
+  rm -rf ~/.cache/* /var/cache/apt/* /var/lib/apt/lists/*
   rm -rf bf-asm/walle/build/*
   find . -name '*.o' -type f -delete
   find . -name '*.a' -type f -delete
+  ;;
+esac
+case "${BUILD_FOR}" in
+release|glass)
+  rm -rf ~/.ccache/*
   ;;
 esac
 
