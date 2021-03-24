@@ -294,7 +294,8 @@ int PHV::Allocation::empty_containers(PHV::Size size) const {
  */
 void PHV::Allocation::allocate(
         PHV::AllocSlice slice,
-        boost::optional<LiveRangeShrinkingMap> initNodes) {
+        boost::optional<LiveRangeShrinkingMap> initNodes,
+        bool singleGressParserGroup) {
     auto& phvSpec = Device::phvSpec();
     unsigned slice_cid = phvSpec.containerToId(slice.container());
     auto containerGress = this->gress(slice.container());
@@ -314,7 +315,8 @@ void PHV::Allocation::allocate(
     }
 
     // If the slice is extracted, check (and maybe set) the parser group gress.
-    if (uses_i->is_extracted(slice.field())) {
+    if (uses_i->is_extracted(slice.field()) ||
+        (uses_i->is_used_mau(slice.field()) && singleGressParserGroup)) {
         if (parserGroupGress) {
             BUG_CHECK(*parserGroupGress == slice.field()->gress,
                 "Trying to allocate field %1% with gress %2% to container %3% with "
@@ -328,6 +330,7 @@ void PHV::Allocation::allocate(
                         "Container %1% already has parser group gress set to %2%",
                         c, *this->parserGroupGress(c));
                 this->setParserGroupGress(c, slice.field()->gress);
+                LOG4("\t\t\t ... setting container " << c << " gress to " << slice.field()->gress);
             }
         }
     }
@@ -407,7 +410,8 @@ cstring PHV::Allocation::commit(Transaction& view) {
     for (auto kv : view.getTransactionStatus()) {
         bool c_status_chng = this->addStatus(kv.first, kv.second);
         if (c_status_chng) {
-            ss << "   " << kv.first;
+            ss << "   " << kv.first << " " << kv.second.parserGroupGress << " " <<
+                kv.second.deparserGroupGress << "\n";
         }
     }
 

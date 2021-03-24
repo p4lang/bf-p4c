@@ -17,6 +17,7 @@
 #include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "lib/error.h"
 #include "lib/log.h"
 #include "lib/ordered_map.h"
@@ -986,15 +987,18 @@ bool CoreAllocation::satisfies_constraints(
     auto parserGroupGress = alloc.parserGroupGress(c);
     bool isExtracted = uses_i.is_extracted(f);
 
-    if (isExtracted && parserGroupGress) {
-        // Check 1: all containers within parser group must have same gress assignment
-        if (*parserGroupGress != f->gress) {
+    // Check 1: all containers within parser group must have same gress assignment
+    if (parserGroupGress) {
+        if ((isExtracted || singleGressParserGroups) && (*parserGroupGress != f->gress)) {
             LOG5("        constraint: container " << c << " has parser group gress " <<
-                 *parserGroupGress << " but slice needs " << f->gress);
+                 *parserGroupGress << " but slice needs " << f->gress <<
+                 " (singleGressParserGroups = " << singleGressParserGroups << ")");
             return false;
         }
+    }
 
-        // Check 2: all constainers within parser group must have same parser write mode
+    // Check 2: all constainers within parser group must have same parser write mode
+    if (isExtracted && parserGroupGress) {
         const PhvSpec& phvSpec = Device::phvSpec();
         unsigned slice_cid = phvSpec.containerToId(slice.container());
 
@@ -1928,11 +1932,11 @@ CoreAllocation::tryAllocSliceList(
                 if (initNodes && initNodes->count(slice.field())) {
                     // For overlay enabled by live range shrinking, we also need to store
                     // initialization information as a member of the allocated slice.
-                    this_alloc.allocate(slice, initNodes);
+                    this_alloc.allocate(slice, initNodes, singleGressParserGroups);
                     LOG5("\t\tFound initialization point for metadata field " <<
                             slice.field()->name);
                 } else {
-                    this_alloc.allocate(slice); }
+                    this_alloc.allocate(slice, boost::none, singleGressParserGroups); }
             } else if (!is_referenced && !slice.field()->isGhostField()) {
                 LOG5("NOT ALLOCATING unreferenced field: " << slice); } }
 
@@ -2253,7 +2257,7 @@ bool CoreAllocation::generateNewAllocSlices(
     }
     alloc_attempt.removeAllocatedSlice(toBeRemovedFromAlloc);
     for (auto& slice : toBeAddedToAlloc) {
-        alloc_attempt.allocate(slice, boost::none);
+        alloc_attempt.allocate(slice, boost::none, singleGressParserGroups);
         LOG5("\t\t\t  Allocating slice " << slice);
     }
     PHV::Container c = origSlice.container();
@@ -2739,6 +2743,15 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     BUG_CHECK(root, "IR root is not a BFN::Pipe: %s", root_);
     Device::phvSpec().applyGlobalPragmas(root->global_pragmas);
     log_device_stats();
+
+    // Check if pragma pa_parser_group_monogress is contained in the p4 program
+    //   and set singleGressParserGroups in CoreAllocation
+    for (auto* anno : root->global_pragmas) {
+        if (anno->name.name == PragmaParserGroupMonogress::name) {
+            core_alloc_i.set_single_gress_parser_group();
+            LOG4("\tFOUND pa_parser_group_monogress pragma");
+        }
+    }
 
     int pipeId = root->id;
 
@@ -3405,7 +3418,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryDeparserZeroAlloc(
                 phv_i.addZeroContainer(slice.gress(), zero[slice.gress()]);
                 slice_list_offset += alloc_slice_width; }
             for (auto& alloc_slice : candidate_slices)
-                alloc_attempt.allocate(alloc_slice); } }
+                alloc_attempt.allocate(alloc_slice, boost::none, singleGressParserGroups); } }
     return alloc_attempt;
 }
 
@@ -4500,7 +4513,8 @@ BruteForceAllocationStrategy::allocLoop(
                 }
             }
             // must log before commit, because commit will clear this tx.
-            rst.commit(*best_alloc);
+            auto commit_str = rst.commit(*best_alloc);
+            LOG4("    Commit : " << commit_str);
             allocated.push_back(cluster_group);
         } else {
             LOG4("FAILED to allocate " << cluster_group);

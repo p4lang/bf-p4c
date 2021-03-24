@@ -396,7 +396,8 @@ class Allocation {
      */
     virtual void allocate(
             const AllocSlice slice,
-            boost::optional<LiveRangeShrinkingMap> initNodes = boost::none);
+            boost::optional<LiveRangeShrinkingMap> initNodes = boost::none,
+            bool singleGressParserGroup = false);
 
     virtual void removeAllocatedSlice(const ordered_set<PHV::AllocSlice>& slices);
 

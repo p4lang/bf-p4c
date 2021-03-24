@@ -194,6 +194,8 @@ class CoreAllocation {
 
     // Table allocation information from the previous round.
     bool disableMetadataInit;
+    // Enforce single gress parser groups
+    bool singleGressParserGroups;
 
     const MapFieldToParserStates& field_to_parser_states_i;
     const CalcParserCriticalPath& parser_critical_path_i;
@@ -242,7 +244,7 @@ class CoreAllocation {
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
           clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
           dark_init_i(dark), disableMetadataInit(alloc.disableMetadataInitialization()),
-          field_to_parser_states_i(field_to_parser_states),
+          singleGressParserGroups(false), field_to_parser_states_i(field_to_parser_states),
           parser_critical_path_i(parser_critical_path), parser_info_i(parser_info),
           strided_headers_i(strided_headers) { }
 
@@ -276,6 +278,11 @@ class CoreAllocation {
     /// XXX(cole): figure out what, if any, constraints should go here.
     static bool satisfies_constraints(const PHV::ContainerGroup& container_group,
                                       const PHV::SuperCluster& cluster_group);
+
+    // Set/Get single-gress Parser groups
+    void set_single_gress_parser_group() { singleGressParserGroups = true; }
+    bool get_single_gress_parser_group() { return singleGressParserGroups; }
+
 
     /** Try to allocate all fields in @cluster to containers in @group, using the
      * following techniques (when permissible by constraints), assuming @alloc is

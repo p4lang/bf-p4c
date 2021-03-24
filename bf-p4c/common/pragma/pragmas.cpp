@@ -111,6 +111,28 @@ const char *PragmaAutoInitMetadata::help =
     "always enabled for P4_14. Initialization of individual fields can be disabled by using the "
     "pa_no_init annotation.";
 
+const char *PragmaParserGroupMonogress::name = "pa_parser_group_monogress";
+const char *PragmaParserGroupMonogress::description =
+    "Enforce single gress in even/odd Byte Containers.";
+const char *PragmaParserGroupMonogress::help =
+    "@pragma pa_parser_group_monogress\n"
+    "+ at the beginning of the P4 source file"
+    "\n"
+    "Parser extractions are done at 16bit granularity. So even-odd Byte containers are extracted "
+    "with a single extract and comprise a \"parser group\" "
+    "Thus, it is not allowed for extracted fields of different gress to be allocated into "
+    "containers of the same parser group. "
+    "However we do allow extracted fields and non-extracted fields of different gresses to be "
+    "allocated to containers within the same parser group. If the non extracted fields need to be "
+    "zero-initialized we rely on the implicit parser initialization. "
+    "This works as long as the gress of the extracted field is executed first which results in the "
+    "implicit initialization of the non-extracted field in the neighboring container of the same "
+    "parser group. On the other hand, if the gress of the non-extracted field is executed first "
+    "the implicit zero initialization will not have taken place and the non-extracted field may "
+    "be initialized to a non-zero value. "
+    "The pa_parser_group_monogress pragma prevents extracted and non-extracted "
+    "fields of different gresses to be allocated into the same parser-group containers.";
+
 const char *PragmaCalculatedFieldUpdateLocation::name = "calculated_field_update_location";
 const char *PragmaCalculatedFieldUpdateLocation::description =
     "Specifies the pipe to update the checksum for a calculated field object.";

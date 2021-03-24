@@ -127,6 +127,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         // pa_ pragmas
         BFN_PARSE_EMPTY(PragmaAlias, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaAutoInitMetadata, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaParserGroupMonogress, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaAtomic, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerSize, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerType, PARSE_STRING_LITERAL_LIST, extPragma);
