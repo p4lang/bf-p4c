@@ -1754,7 +1754,6 @@ CoreAllocation::tryAllocSliceList(
         if (action_constraints && initActions.size() > 0 && creates_new_container_conflicts) {
             LOG5("\t\t...action constraint: creates new container conflicts for this packing."
                  " cannot pack into container " << c << canPackErrorCode);
-
             continue;
         }
 

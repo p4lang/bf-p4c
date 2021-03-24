@@ -74,7 +74,18 @@ class ActionPhvConstraints : public Inspector {
 
     bool prelim_constraints_ok = true;
 
-    using ClassifiedSources = ordered_map<size_t, ordered_set<PHV::AllocSlice>>;
+    struct ClassifiedSource {
+        bool exist = false;
+        PHV::Container container;
+        ordered_set<PHV::AllocSlice> slices = {};
+        bool aligned = true;
+        int offset = 0;
+    };
+    friend std::ostream
+    &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src);
+
+    using ClassifiedSources = std::array<ClassifiedSource, 2>;
+
     using PackingConstraints = ordered_map<const IR::MAU::Action*, UnionFind<PHV::FieldSlice>>;
     /// Defines a struct for returning number of containers.
     struct NumContainers {
@@ -98,12 +109,14 @@ class ActionPhvConstraints : public Inspector {
     // struct?
     struct OperandInfo {
         int unique_action_id;
-        enum field_read_flags_t { MOVE = 1,
-                                  BITWISE = (1 << 1),
-                                  WHOLE_CONTAINER = (1 << 2),
-                                  ANOTHER_OPERAND = (1 << 3),
-                                  MIXED = (1 << 4),
-                                  WHOLE_CONTAINER_SAME_FIELD = (1 << 5) };
+        enum field_read_flags_t {
+            MOVE = 1,
+            BITWISE = (1 << 1),
+            WHOLE_CONTAINER = (1 << 2),
+            ANOTHER_OPERAND = (1 << 3),
+            MIXED = (1 << 4),
+            WHOLE_CONTAINER_SAME_FIELD = (1 << 5)
+        };
         uint8_t flags = 0;
 
         // An operand is either action data (ad), a constant (constant), or
@@ -312,7 +325,7 @@ class ActionPhvConstraints : public Inspector {
          */
         ordered_set<int> source_alignment(PHV::AllocSlice dst, PHV::FieldSlice src) const;
 
-        boost::optional<int> can_be_both_sources(std::vector<PHV::AllocSlice> &slices,
+        boost::optional<int> can_be_both_sources(const std::vector<PHV::AllocSlice> &slices,
             ordered_set<PHV::FieldSlice> &packing_slices, PHV::FieldSlice src) const;
 
         /** Print the state of the maps */
@@ -321,7 +334,7 @@ class ActionPhvConstraints : public Inspector {
         /** Debug function to print the total number of reads and writes across all actions for the
          * fields in the vector of AllocSlices represented by @slices
          */
-        void print_field_ordering(std::vector<PHV::AllocSlice>& slices) const;
+        void print_field_ordering(const std::vector<PHV::AllocSlice>& slices) const;
 
         /** @returns the stateful destinations map.
           */
@@ -333,6 +346,25 @@ class ActionPhvConstraints : public Inspector {
     };
 
     ConstraintTracker constraint_tracker;
+
+    /// a set of property of an action when phv is allocated.
+    struct ActionContainerProperty {
+        unsigned op_type;
+        NumContainers sources;
+        bool must_be_aligned;  // a phv source must be aligned
+        int num_sources;       // the number of allocated container sources.
+        int num_unallocated;   // the number of unallocated slices.
+        bool use_ad;           // true if action data is used.
+
+        /// For must_be_aligned actions only.
+        /// will only be updated when must_be_aligned is updated by bitwise_or_move constraints.
+        bool aligned_one_unallocated = false;
+        bool aligned_two_unallocated = false;
+        bool aligned_unallocated_requires_aligment = false;
+    };
+
+    using ActionPropertyMap =
+        ordered_map<const IR::MAU::Action*, ActionPhvConstraints::ActionContainerProperty>;
 
     /// Clears any state accumulated in prior invocations of this pass.
     profile_t init_apply(const IR::Node *root) override;
@@ -402,16 +434,18 @@ class ActionPhvConstraints : public Inspector {
             cstring action_name,
             std::stringstream& ss) const;
 
+
+    /// populates the UnionFind structure @copacking_constraints, used to report new packing
+    /// constraints induced by can_pack().
+
+
     /** Given the state of PHV allocation represented by @alloc and @container_state, a vector of
       * slices to be packed together and mutually live in a given container
-      * Also populates the UnionFind structure @copacking_constraints, used to report new packing
-      * constraints induced by can_pack()
       * @returns the number of container sources used in @action
       */
     NumContainers num_container_sources(const PHV::Allocation& alloc,
                                         const PHV::Allocation::MutuallyLiveSlices& container_state,
-                                        const IR::MAU::Action* action,
-                                        PackingConstraints& copacking_constraints) const;
+                                        const IR::MAU::Action* action) const;
 
     /** Verify whether packing the fields in \p container_state causes any read
       * violations in \p action
@@ -503,7 +537,7 @@ class ActionPhvConstraints : public Inspector {
     bool pack_slices_together(
         const PHV::Allocation& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        PackingConstraints& packing_constraints,
+        PackingConstraints* packing_constraints,
         const IR::MAU::Action* action,
         bool pack_unallocated_only,
         bool has_ad_source = false) const;
@@ -516,7 +550,7 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const IR::MAU::Action* action,
             const PHV::Container destination,
-            ordered_set<const IR::MAU::Action*>& unalignedSourceRequiresAlignment) const;
+            ActionContainerProperty* action_prop) const;
 
     /** Returns offset (difference between lo bits) by which slice @a differs from slice @b
       * offset = (a.lo - b.lo) % b.container().size()
@@ -526,9 +560,7 @@ class ActionPhvConstraints : public Inspector {
 
     /** Check that the bitmasks needed to realize a two source PHV instruction are valid
       */
-    bool masks_valid(
-            ordered_map<size_t, ordered_set<PHV::AllocSlice>>& sources,
-            const PHV::Container c) const;
+    bool masks_valid(const ClassifiedSources& sources) const;
 
     /** @returns true if the @container_state written to in action @act is aligned with its
       * allocated sources.
@@ -601,7 +633,7 @@ class ActionPhvConstraints : public Inspector {
     /// (xxx)Deep [Artificial Constraint]: @returns false if there is a field in @container_state
     /// written by METER_ALU, HASH_DIST, RANDOM, or METER_COLOR, and another field in
     /// @container_state is written by the same action
-    bool checkSpecialityPacking(ordered_set<const PHV::Field*>& fields) const;
+    bool check_speciality_packing(const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     /// Generates copacking and alignment requirements due to @action for the packing
     /// @container_state in container @c, where the number of PHV-backed sources are represented by
@@ -611,16 +643,13 @@ class ActionPhvConstraints : public Inspector {
     /// @phvMustBeAligned. @returns false if the packing cannot be realized and @true if the packing
     /// is possible, with the conditional constraints generated.
     bool check_and_generate_constraints_for_move_with_unallocated_sources(
-            const PHV::Allocation& alloc,
-            const IR::MAU::Action* action,
-            const PHV::Container& c,
-            const PHV::Allocation::MutuallyLiveSlices& container_state,
-            const NumContainers& sources,
-            bool has_ad_constant_sources,
-            ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
-            ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
-            PackingConstraints& copacking_constraints,
-            const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+        const PHV::Allocation& alloc,
+        const IR::MAU::Action* action,
+        const PHV::Container& c,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions,
+        ActionContainerProperty* action_props,
+        PackingConstraints* copacking_constraints) const;
 
     /// Generates conditional constraints for bitwise operations. Client for
     /// check_and_generate_constraints_for_bitwise_op_with_unallocated_sources.
@@ -628,7 +657,7 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const IR::MAU::Action* action,
             const ordered_set<PHV::FieldSlice>& sources,
-            PackingConstraints& copacking_constraints)
+            PackingConstraints* copacking_constraints)
         const;
 
     /// Generates copacking and alignment requirements due to @action for the packing
@@ -642,12 +671,89 @@ class ActionPhvConstraints : public Inspector {
             const IR::MAU::Action* action,
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const NumContainers& sources,
-            PackingConstraints& copacking_constraints)
+            PackingConstraints* copacking_constraints)
         const;
+
+    /// Perform analysis related to number of sources for every action.
+    /// This method update copack_constraints and action_props.
+    /// Brief description of how UnionFind (copack_constraints) is used here:
+    /// - The UnionFind object contains a set of sets of field slices,
+    ///   requiring that each field slice in the inner set be packed together.
+    ///
+    /// Example,
+    ///   Metadata m {a, b, c, d, ...}  // Metadata header
+    ///   Header vlan {                 // VLAN header
+    ///       bit<3> priority;
+    ///       bit<1> cfi;
+    ///       bit<12> tag; }
+    ///   Also, there are other headers m1 and m2 of type metadata m
+    ///
+    ///   Action {
+    ///       m1.a = m2.a;
+    ///       priority = m.c;
+    ///       tag = m.d; }
+    ///
+    /// In this case, if container_state is {priority, cfi} and the candidate slice (slice) is tag,
+    /// then the UnionFind structure will return {{m2.a}, {m.c, m.d}}.
+    CanPackErrorCode check_and_generate_constraints_for_bitwise_or_move(
+        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions, ActionPropertyMap* action_props,
+        PackingConstraints* copack_constraints) const;
+
+    /// Perform analysis on rotational aligment constraints.
+    CanPackErrorCode check_and_generate_rotational_alignment_constraints(
+        const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+        const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
+        ActionPropertyMap* action_props) const;
+
+    /// update @p copacking_set and req_container.
+    CanPackErrorCode check_and_generate_copack_set(
+        const PHV::Allocation& alloc, const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PackingConstraints& copack_constraints, const ActionPropertyMap& action_props,
+        ordered_map<int, ordered_set<PHV::FieldSlice>>* copacking_set,
+        ordered_map<PHV::FieldSlice, PHV::Container>* req_container) const;
+
+    /// based on copacking_set and req_container generate conditional constraints.
+    CanPackReturnType check_and_generate_conditional_constraints(
+        const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const ordered_map<int, ordered_set<PHV::FieldSlice>>& copacking_set,
+        const ordered_map<PHV::FieldSlice, PHV::Container>& req_container) const;
 
     /// @returns true if a packing violates the alignment constraints for stateful ALU destinations.
     bool stateful_destinations_constraints_violated(
             const PHV::Allocation::MutuallyLiveSlices& container_state) const;
+
+    /// @returns true if any of the destinations require a speciality read and
+    /// a bitmasked-set instruction for this packing, which violates MAU constraint.
+    bool check_speciality_read_and_bitmask(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+
+    /// @returns an error code if allocation violates any constraints by checking from
+    /// the container reading side.
+    CanPackErrorCode check_container_read(
+        const PHV::Allocation& alloc,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const;
+
+    /// Merge actions for all the candidate fields into a set, including initialization actions for
+    /// any metadata fields overlaid due to live range shrinking.
+    ordered_set<const IR::MAU::Action*> make_writing_action_set(
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+
+    /// generate action container properties for @p actions.
+    ActionPropertyMap make_action_container_properties(
+        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions, bool is_mocha_or_dark) const;
+
+    /// generate pack constraints for all @p actions.
+    PackingConstraints make_initial_copack_constraints(
+        const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     /// @returns the min_stage for the table associated with action @action.
     int min_stage(const IR::MAU::Action* action) const;
@@ -775,8 +881,8 @@ class ActionPhvConstraints : public Inspector {
      */
     CanPackReturnType can_pack(
             const PHV::Allocation& alloc,
-            std::vector<PHV::AllocSlice>& slices,
-            PHV::Allocation::MutuallyLiveSlices& original_container_state,
+            const std::vector<PHV::AllocSlice>& slices,
+            const PHV::Allocation::MutuallyLiveSlices& original_container_state,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions,
             const PHV::SuperCluster& sc) const;
 
@@ -923,5 +1029,6 @@ class ActionPhvConstraints : public Inspector {
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
+std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src);
 
 #endif  /* BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_ */
