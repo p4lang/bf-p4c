@@ -16,6 +16,11 @@ file (RELATIVE_PATH switch_p4_16_y3 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Y3})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_y3_profile" ${switch_p4_16_y3} "${testExtraArgs}" "-DY3_PROFILE -I${SWITCH_P4_16_INC} -tofino2 -Xp4c=\"--auto-init-metadata\" -arch t2na")
 
+set (SWITCH_P4_16_Z2 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_z2.p4)
+file (RELATIVE_PATH switch_p4_16_z2 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Z2})
+p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_z2_profile" ${switch_p4_16_z2} "${testExtraArgs}" "-DZ2_PROFILE -I${SWITCH_P4_16_INC} -tofino2 -Xp4c=\"--auto-init-metadata -Tstage_advance:1\" -arch t2na --num-stages-override 16")
+
 set (SWITCH_P4_16_Y1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y1.p4)
 file (RELATIVE_PATH switch_p4_16_y1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Y1})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
@@ -73,6 +78,7 @@ set_tests_properties(
 set_tests_properties("tofino2/smoketest_switch_16_compile_y1_profile" PROPERTIES TIMEOUT 1600)
 set_tests_properties("tofino2/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT 1600)
 set_tests_properties("tofino2/smoketest_switch_16_compile_y3_profile" PROPERTIES TIMEOUT 1600)
+set_tests_properties("tofino2/smoketest_switch_16_compile_z2_profile" PROPERTIES TIMEOUT 1600)
 set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1600)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y1" PROPERTIES TIMEOUT 7300)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y2" PROPERTIES TIMEOUT 7300)

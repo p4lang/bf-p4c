@@ -260,5 +260,5 @@ p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${cloudbreak_jna_tests}" 
 #set_tests_properties("tofino3/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
 #set_tests_properties("tofino3/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
 #
-#include(SwitchCloudbreak.cmake)
+include(SwitchCloudbreak.cmake)
 include(CloudbreakXfail.cmake)
