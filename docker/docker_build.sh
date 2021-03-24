@@ -310,7 +310,6 @@ if [[ "${BUILD_FOR}" == "jenkins-final" ]] ; then
     DTOFINO_P414_TEST_ARCH=
   fi
 
-  /usr/local/bin/ccache --zero-stats
   ./bootstrap_bfn_compilers.sh \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DENABLE_STF2PTF=OFF \

@@ -66,7 +66,7 @@ node ('compiler-nodes') {
                             // Try to see if the docker image is available from previous run
                             sh "docker pull barefootnetworks/bf-p4c-compilers:${image_tag}"
                         } catch (err) {
-                            // If image not available, build
+                            // Image not built yet, so let's build one.
                             sh "git submodule update --init --recursive"
 
                             // Update switch.p4-16 to the latest known working refpoint
@@ -88,42 +88,62 @@ node ('compiler-nodes') {
                             // up the build environment. The second stage does the actual build in
                             // a Docker container and cleans up.
 
-                            echo 'Building intermediate Docker image'
-                            sh """
-                                docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                                docker pull barefootnetworks/model:tofino_master
-                                docker build \
-                                    -f docker/Dockerfile.tofino \
-                                    -t bf-p4c-compilers_intermediate_${image_tag} \
-                                    --build-arg MAKEFLAGS=j16 \
-                                    --build-arg BFN_P4C_GIT_SHA=${git_sha} \
-                                    .
-                            """
+                            stage ('Build intermediate Docker image') {
+                                sh """
+                                    mkdir -p ~/.ccache_bf-p4c-compilers
+                                    docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                                    docker pull barefootnetworks/model:tofino_master
+                                    docker build \
+                                        -f docker/Dockerfile.tofino \
+                                        -t bf-p4c-compilers_intermediate_${image_tag} \
+                                        --build-arg MAKEFLAGS=j16 \
+                                        --build-arg BFN_P4C_GIT_SHA=${git_sha} \
+                                        .
+                                """
+                            }
 
-                            echo 'Building final Docker image'
-                            sh """
-                                mkdir -p ~/.ccache_bf-p4c-compilers
-                                docker run \
-                                  --name bf-p4c-compilers_build_${image_tag} \
-                                  -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                  -e MAKEFLAGS=j16 \
-                                  -e BUILD_FOR=jenkins-final \
-                                  -e IMAGE_TYPE=test \
-                                  -e BUILD_GLASS=false \
-                                  -e GEN_REF_OUTPUTS=false \
-                                  -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                  bf-p4c-compilers_intermediate_${image_tag} \
-                                    /bfn/bf-p4c-compilers/docker/docker_build.sh
-                            """
+                            parallel (
+                                'Build final Docker image': {
+                                    sh """
+                                        docker run \
+                                          --name bf-p4c-compilers_build_${image_tag} \
+                                          -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                          -e MAKEFLAGS=j16 \
+                                          -e BUILD_FOR=jenkins-final \
+                                          -e IMAGE_TYPE=test \
+                                          -e BUILD_GLASS=false \
+                                          -e GEN_REF_OUTPUTS=false \
+                                          -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                          bf-p4c-compilers_intermediate_${image_tag} \
+                                            /bfn/bf-p4c-compilers/docker/docker_build.sh
+                                    """
+                                },
 
-                            echo 'Tag and push docker image'
-                            sh """
-                                docker commit \
-                                    bf-p4c-compilers_build_${image_tag} \
-                                    barefootnetworks/bf-p4c-compilers:${image_tag}
-                                docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                                docker push barefootnetworks/bf-p4c-compilers:${image_tag}
-                            """
+                                'Test non-unified build': {
+                                    sh """
+                                        docker run --rm \
+                                          -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                          -e MAKEFLAGS=j16 \
+                                          -e BUILD_FOR=jenkins-final \
+                                          -e IMAGE_TYPE=non-unified \
+                                          -e BUILD_GLASS=false \
+                                          -e GEN_REF_OUTPUTS=false \
+                                          -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                          bf-p4c-compilers_intermediate_${image_tag} \
+                                            /bfn/bf-p4c-compilers/docker/docker_build.sh
+                                    """
+                                },
+                            )
+
+                            stage ('Tag and push docker image') {
+                                sh """
+                                    docker commit \
+                                        bf-p4c-compilers_build_${image_tag} \
+                                        barefootnetworks/bf-p4c-compilers:${image_tag}
+                                    docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                                    docker push barefootnetworks/bf-p4c-compilers:${image_tag}
+                                """
+                            }
                         }
                     }
                 }
