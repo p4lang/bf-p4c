@@ -26,6 +26,7 @@ BUILD_MODES=(
   "jenkins-intermediate"   # builds an intermediate image for CI
   "jenkins-final"          # finishes building an image for CI
   "release"                # builds a release image
+  "tofino"                 # builds an image for CI (use jenkins-* if you want to use ccache)
 )
 
 # List of supported image types, selected by IMAGE_TYPE.
@@ -298,7 +299,7 @@ fi
 
 # Build and install bf-p4c-compilers.
 WORKDIR "${BF_P4C_COMPILERS}"
-if [[ "${BUILD_FOR}" == "jenkins-final" ]] ; then
+if [[ "${BUILD_FOR}" == "jenkins-final" || "${BUILD_FOR}" == "tofino" ]] ; then
   if [[ "${IMAGE_TYPE}" == "non-unified" ]] ; then
     disable_unified="--disable-unified"
   else
@@ -337,7 +338,7 @@ fi
 # Clean up.
 WORKDIR "${BF_P4C_COMPILERS}"
 case "${BUILD_FOR}" in
-jenkins-final|release|glass)
+jenkins-final|tofino|release|glass)
   /usr/local/bin/ccache -p --show-stats
   apt-get autoremove --purge -y
   rm -rf ~/.cache/* /var/cache/apt/* /var/lib/apt/lists/*
@@ -347,7 +348,7 @@ jenkins-final|release|glass)
   ;;
 esac
 case "${BUILD_FOR}" in
-release|glass)
+tofino|release|glass)
   rm -rf ~/.ccache/*
   ;;
 esac

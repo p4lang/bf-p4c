@@ -97,6 +97,7 @@ node ('compiler-nodes') {
                                         -f docker/Dockerfile.tofino \
                                         -t bf-p4c-compilers_intermediate_${image_tag} \
                                         --build-arg MAKEFLAGS=j16 \
+                                        --build-arg BUILD_FOR=jenkins-intermediate \
                                         --build-arg BFN_P4C_GIT_SHA=${git_sha} \
                                         .
                                 """
@@ -515,4 +516,3 @@ node ('compiler-travis') {
         }
     }
 }
-
