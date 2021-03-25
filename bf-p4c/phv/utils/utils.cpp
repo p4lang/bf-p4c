@@ -429,6 +429,49 @@ cstring PHV::Allocation::commit(Transaction& view) {
     return cstring::to_cstring(ss.str());
 }
 
+PHV::Transaction* PHV::Allocation::clone(const Allocation& parent) const {
+    PHV::Transaction* rv = new PHV::Transaction(parent);
+
+    for (auto kv : container_status_i) {
+        bool new_slice = false;
+        auto parent_status = parent.getStatus(kv.first);
+        BUG_CHECK(parent_status,
+                  "Trying to get allocation status for container %1% not in Allocation",
+                  cstring::to_cstring(kv.first));
+
+        // Only clone the difference between the parent and the child
+        for (const AllocSlice &slice : kv.second.slices) {
+            if (!parent_status->slices.count(slice)) {
+                new_slice = true;
+                break;
+            }
+        }
+        if (!new_slice) {
+            for (const AllocSlice &slice : parent_status->slices) {
+                if (!kv.second.slices.count(slice)) {
+                    new_slice = true;
+                    break;
+                }
+            }
+        }
+        bool gress_assign = !(parent_status->gress == kv.second.gress &&
+                              parent_status->parserGroupGress == kv.second.parserGroupGress &&
+                              parent_status->deparserGroupGress == kv.second.deparserGroupGress);
+        if (!new_slice && !gress_assign)
+            continue;
+
+        rv->container_status_i[kv.first] = kv.second;
+    }
+
+    for (auto kv : meta_init_points_i)
+        rv->meta_init_points_i[kv.first].insert(kv.second.begin(), kv.second.end());
+
+    for (auto kv : init_writes_i)
+        rv->init_writes_i[kv.first].insert(kv.second.begin(), kv.second.end());
+
+    return rv;
+}
+
 PHV::Transaction PHV::Allocation::makeTransaction() const {
     return Transaction(*this);
 }
@@ -773,6 +816,63 @@ PHV::Allocation::slices(
         LOG5("  Found slice " << slice << " in the live range");
     }
     return rv;
+}
+
+cstring PHV::Transaction::getTransactionDiff() const {
+    std::stringstream ss;
+
+    auto parent_tr = dynamic_cast<const PHV::Transaction *>(parent_i);
+    if (!parent_tr) {
+        BUG("Expecting to compare with another Transaction");
+        ss << "Expecting to compare with another Transaction";
+        return ss.str();
+    }
+
+    for (auto kv : getTransactionStatus()) {
+        PHV::Container c = kv.first;
+
+        auto parent_status = parent_tr->getStatus(c);
+        BUG_CHECK(parent_status,
+                  "Trying to get allocation status for container %1% not in Allocation",
+                  cstring::to_cstring(c));
+        const PHV::Allocation::ContainerStatus &tr_status = kv.second;
+
+        bool cnt_header = false;
+        for (const AllocSlice &slice : tr_status.slices) {
+            if (!parent_status->slices.count(slice)) {
+                if (!cnt_header) {
+                    ss << "    Container:" << c << std::endl;
+                    cnt_header = true;
+                }
+                ss << "        ++ " << slice << std::endl;
+            }
+        }
+        for (const AllocSlice &slice : parent_status->slices) {
+            if (!tr_status.slices.count(slice)) {
+                if (!cnt_header) {
+                    ss << "    Container:" << c << std::endl;
+                    cnt_header = true;
+                }
+                ss << "        -- " << slice << std::endl;
+            }
+        }
+    }
+
+    for (auto kv : getMetaInitPoints()) {
+        ss << "    *** Initialization Points ***" << std::endl;
+        ss << "    " << kv.first << std::endl;
+        for (auto action : kv.second)
+            ss << "            |-->" << *action << std::endl;
+    }
+
+    for (auto kv : getInitWrites()) {
+        ss << "    *** Initialization Writes ***" << std::endl;
+        ss << "    " << *kv.first << std::endl;
+        for (auto field : kv.second)
+            ss << "        |-->" << *field << std::endl;
+    }
+
+    return ss.str();
 }
 
 cstring PHV::Transaction::getTransactionSummary() const {

@@ -43,7 +43,8 @@ set (P16_TNA_ARISTA_FILES
 set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2191\\.p4" "p4c-2398\\.p4" "p4c-2032\\.p4" "p4c-2030\\.p4"
     "p4c-2992\\.p4" "p4c-2410-leaf\\.p4" "p4c-2573-leaf\\.p4" "p4c-2753\\.p4"
-    "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4")
+    "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4"
+    "p4c-2534\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
@@ -67,6 +68,8 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "checksum\\.p4"
                             "header-stack-ops-bmv2\\.p4"  # times out in PHV alloc
                             "p4c-2250\\.p4"
+                            "08-FullTPHV3\\.p4"
+                            "p4c-2661\\.p4"
                             )
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
@@ -127,6 +130,10 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/ruijie/p4c-2992.
 # p4_16/customer/arista/p4c-2191.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-to 1200")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4" PROPERTIES TIMEOUT 1200)
+
+# p4_16/customer/arista/p4c-2534.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2534.p4" "-to 1200")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4" PROPERTIES TIMEOUT 1200)
 
 # Arista profiles
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4" "-to 2400")
@@ -237,6 +244,13 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/extreme/p4c-1812
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/extreme/p4c-1809-1.p4" PROPERTIES TIMEOUT 1800)
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/extreme/p4c-2313.p4" PROPERTIES TIMEOUT 1800)
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4" PROPERTIES TIMEOUT 1800)
+
+# need to increase timeout for test that fail PHV Allocation since it require a bit more time
+# to go over all the possible strategy + optimization
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${P4TESTDATA}/p4_14_samples/08-FullTPHV3.p4" "-to 1200")
+set_tests_properties("tofino/testdata/p4_14_samples/08-FullTPHV3.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4" "-to 1200")
+set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4" PROPERTIES TIMEOUT 1200)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -963,10 +977,10 @@ p4c_add_ptf_test_with_ptfdir (
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3343" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf/p4c_3343.p4"
-    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2400"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf")
 bfn_set_p4_build_flag("tofino" "p4c_3343" "-Xp4c=\"--disable-power-check\"")
-set_tests_properties("tofino/p4c_3343" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/p4c_3343" PROPERTIES TIMEOUT 2400)
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
@@ -1066,7 +1080,9 @@ set (NON_PR
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-726/comp_726.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
@@ -1084,6 +1100,8 @@ set (NON_PR
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
 )
 
 foreach(t IN LISTS NON_PR)

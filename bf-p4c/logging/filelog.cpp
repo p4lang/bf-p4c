@@ -13,6 +13,7 @@ const cstring& Logging::FileLog::name2type(cstring logName) {
         {"parser.characterize",         "parser"},
         {"parser",                      "parser"},
         {"phv_allocation",              "phv"},
+        {"phv_optimization",            "phv"},
         {"phv_incremental_allocation",  "phv"},
         {"table_",                      "mau"},
         {"pragmas",                     "phv"}

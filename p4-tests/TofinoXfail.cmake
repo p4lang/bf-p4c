@@ -844,12 +844,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Internal compiler error: Alloc2D"
-  extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
+  extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
   extensions/p4_tests/p4_16/ptf/int_transit.p4
   testdata/p4_16_samples/strength6.p4
   testdata/p4_16_samples/issue1713-bmv2.p4

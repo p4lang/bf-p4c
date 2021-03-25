@@ -415,6 +415,9 @@ class Allocation {
     /// this may add new slices but does not remove or overwrite existing slices.
     cstring commit(Transaction& view);
 
+    /// Extract the child from the parent transaction and return a cloned version of the difference.
+    Transaction* clone(const Allocation& parent) const;
+
     /// Available bits of this allocation
     struct AvailableSpot {
         PHV::Container container;
@@ -532,6 +535,9 @@ class Transaction : public Allocation {
 
     /// @returns true if this allocation owns @c.
     bool contains(PHV::Container c) const override { return parent_i->contains(c); }
+
+    /// @returns a difference between the transaction and the parent.
+    cstring getTransactionDiff() const;
 
     /// @returns a summary of status of each container allocated in this transaction.
     cstring getTransactionSummary() const;

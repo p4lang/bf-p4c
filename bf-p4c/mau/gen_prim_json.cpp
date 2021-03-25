@@ -394,6 +394,7 @@ bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
     bool alpm_preclassifier = tbl->name.endsWith("preclassifier");
 
     if (tbl->actions.empty()) return true;
+    if (tbl->always_run == IR::MAU::AlwaysRun::ACTION) return true;
 
     auto _table = new Util::JsonObject();
     auto _actions = new Util::JsonArray();

@@ -1692,9 +1692,9 @@ struct switch_port_metadata_t {
 // Ingress Metadata
 // --------------------------------------------------------------------------------
 
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
-@pa_container_type("egress", "tunnel_encap_payload_len", "dark")
+//@pa_container_size("ingress", "ig_md.mirror.src", 8)
+//@pa_container_size("ingress", "ig_md.mirror.type", 8)
+//@pa_container_type("egress", "tunnel_encap_payload_len", "dark")
 
 //@pa_container_size("ingress", "smac_src_move", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
@@ -16668,9 +16668,9 @@ control IngressHdrStackCounters(
 @pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
 @pa_atomic("egress" , "eg_md.bypass")
 @pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
-@pa_container_size("egress" , "protocol_outer_0" , 8)
-@pa_container_size("egress" , "protocol_inner_0" , 8)
-@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
+//@pa_container_size("egress" , "protocol_outer_0" , 8)
+//@pa_container_size("egress" , "protocol_inner_0" , 8)
+//@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------

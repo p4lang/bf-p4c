@@ -508,6 +508,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     boost::optional<const PHV::SuperCluster::SliceList*> get_unallocatable_list() const {
         return unallocatable_list_i;
     }
+    int getPipeId() const {return pipe_id_i;}
 
  protected:
     AllocResult
@@ -567,6 +568,13 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                                 PHV::Transaction& slicing_alloc,
                                 const AllocContext& score_ctx);
 
+    boost::optional<PHV::Transaction>
+    tryVariousSlicing(PHV::Transaction& rst,
+                      PHV::SuperCluster* cluster_group,
+                      const std::list<PHV::ContainerGroup *>& container_groups,
+                      const AllocContext& score_ctx,
+                      std::stringstream& alloc_history);
+
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
               std::list<PHV::SuperCluster*>& cluster_groups,
@@ -616,6 +624,8 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     boost::optional<const PHV::SuperCluster::SliceList*> preslice_validation(
         const std::list<PHV::SuperCluster*>& sliced,
         const std::list<PHV::ContainerGroup*>& container_groups) const;
+
+    friend class BruteForceOptimizationStrategy;
 };
 
 /** Given constraints gathered from compilation thus far, allocate fields to
