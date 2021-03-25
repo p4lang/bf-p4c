@@ -103,7 +103,7 @@ node ('compiler-nodes') {
                             }
 
                             parallel (
-                                'Build final Docker image': {
+                                'Build, tag, and push final Docker image': {
                                     sh """
                                         docker run \
                                           --name bf-p4c-compilers_build_${image_tag} \
@@ -116,6 +116,19 @@ node ('compiler-nodes') {
                                           -e TOFINO_P414_TEST_ARCH_TNA=false \
                                           bf-p4c-compilers_intermediate_${image_tag} \
                                             /bfn/bf-p4c-compilers/docker/docker_build.sh
+                                    """
+
+                                    echo 'Tag Docker image'
+                                    sh """
+                                        docker commit \
+                                            bf-p4c-compilers_build_${image_tag} \
+                                            barefootnetworks/bf-p4c-compilers:${image_tag}
+                                    """
+
+                                    echo 'Push Docker image'
+                                    sh """
+                                        docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                                        docker push barefootnetworks/bf-p4c-compilers:${image_tag}
                                     """
                                 },
 
@@ -135,14 +148,8 @@ node ('compiler-nodes') {
                                 },
                             )
 
-                            stage ('Tag and push docker image') {
-                                sh """
-                                    docker commit \
-                                        bf-p4c-compilers_build_${image_tag} \
-                                        barefootnetworks/bf-p4c-compilers:${image_tag}
-                                    docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                                    docker push barefootnetworks/bf-p4c-compilers:${image_tag}
-                                """
+                            stage ('Clean up Docker container') {
+                                sh "docker rm bf-p4c-compilers_build_${image_tag}"
                             }
                         }
                     }
