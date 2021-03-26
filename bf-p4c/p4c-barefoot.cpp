@@ -219,14 +219,14 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         maupipe = maupipe->apply(backend);
         bool mau_success = maupipe != nullptr;
         bool comp_success = (::errorCount() > 0) ? false : true;
-        GenerateOutputs as(backend, options, maupipe->id,
+        GenerateOutputs as(backend, backend.get_options(), maupipe->id,
                 backend.get_prim_json(), backend.get_json_graph(),
                 mau_success && comp_success);
         if (maupipe)
             maupipe->apply(as);
 #if BFP4C_CATCH_EXCEPTIONS
     } catch (...) {
-        GenerateOutputs as(backend, options, maupipe->id,
+        GenerateOutputs as(backend, backend.get_options(), maupipe->id,
                 backend.get_prim_json(), backend.get_json_graph(), false);
         if (maupipe)
             maupipe->apply(as);

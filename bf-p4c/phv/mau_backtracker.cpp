@@ -135,3 +135,12 @@ bool MauBacktracker::happensBefore(
 int MauBacktracker::numStages() const {
     return maxStage;
 }
+
+void MauBacktracker::clear() {
+    tables.clear();
+    prevRoundTables.clear();
+    maxStage = -1;
+    metaInitDisable = false;
+    ignorePackConflicts = false;
+    firstRoundFit = false;
+}

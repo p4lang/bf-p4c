@@ -404,8 +404,22 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     return CompileContextStack::top<BFNContext>();
 }
 
+thread_local BFN_Options* BFNContext::optionsInstance = nullptr;
+
 BFN_Options& BFNContext::options() {
-    return optionsInstance;
+    return optionsInstance ? *optionsInstance : primaryOptions;
+}
+
+void BFNContext::setBackendOptions(BFN_Options *options) {
+    BUG_CHECK(!optionsInstance || optionsInstance == &primaryOptions,
+              "Attempt to create new backend options while non-primary options are active");
+    optionsInstance = options;
+}
+
+void BFNContext::clearBackendOptions() {
+    BUG_CHECK(optionsInstance != &primaryOptions,
+        "Attempt to destroy backend options while primary options are active");
+    optionsInstance = nullptr;
 }
 
 cstring BFNContext::getOutputDirectory(const cstring &suffix, int pipe_id) {

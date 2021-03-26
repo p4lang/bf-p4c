@@ -69,6 +69,11 @@ class MauBacktracker : public Backtrack {
     /// @returns the number of stages in the table allocation
     int numStages() const;
 
+    /// Clear the MauBacktracker state.
+    /// Only use when backtracking to a point where everything should be reset.
+    /// We pass state back through this object in many cases -- don't clear in those cases.
+    void clear();
+
     /// Constructor takes mutually exclusive to be able to clear it before every PHV allocation pass
     MauBacktracker() {}
 };

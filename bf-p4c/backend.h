@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 #include "bf-p4c-options.h"
 
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/jbay_next_table.h"
@@ -24,6 +25,7 @@ struct CollectPhvLoggingInfo;
 namespace BFN {
 
 class Backend : public PassManager {
+    BFN_Options options;
     ClotInfo clot;
     PhvInfo phv;
     PhvUse uses;
@@ -55,11 +57,16 @@ class Backend : public PassManager {
 
  protected:
     profile_t init_apply(const IR::Node *root) override {
+        BFNContext::get().setBackendOptions(&options);
         PhvInfo::resetDarkSpillARA();
         return PassManager::init_apply(root); }
 
+    void end_apply() override { BFNContext::get().clearBackendOptions(); }
+
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
+
+    BFN_Options &get_options() { return options; }
 
     const PhvInfo       &get_phv()     const { return phv; }
     const ClotInfo      &get_clot()    const { return clot; }

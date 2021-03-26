@@ -333,13 +333,18 @@ bool MultipleApply::CheckTopologicalTables::preorder(const IR::MAU::TableSeq* th
     return false;
 }
 
+Visitor::profile_t MultipleApply::init_apply(const IR::Node *root) {
+    auto result = PassManager::init_apply(root);
+    longBranchDisabled = Device::numLongBranchTags() == 0 || options.disable_long_branch;
+    return result;
+}
+
 MultipleApply::MultipleApply(
     const BFN_Options& options,
     boost::optional<gress_t> gress,
     bool dedup_only,
     bool run_default_next
-) {
-    auto longBranchDisabled = Device::numLongBranchTags() == 0 || options.disable_long_branch;
+) : options(options) {
     addPasses({
         &mutex,
         dedup_only ? nullptr : new MutuallyExclusiveApplies(mutex, mutex_errors),

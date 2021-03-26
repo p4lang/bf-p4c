@@ -94,7 +94,8 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
              *n << unindent << endl); }
 }
 
-Backend::Backend(const BFN_Options& options, int pipe_id) :
+Backend::Backend(const BFN_Options& o, int pipe_id) :
+    options(o),
     clot(uses),
     uses(phv),
     defuse(phv),
@@ -129,7 +130,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new CatchBacktrack<LongBranchAllocFailed>([this] {
-            table_alloc.setDisableLongBranch();
+            options.disable_long_branch = true;
+            mau_backtracker.clear();
             table_summary.resetPlacement();
             nextTblProp.setVisitor(new DefaultNext(true));
         }),

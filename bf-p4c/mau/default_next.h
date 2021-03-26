@@ -12,7 +12,7 @@
 class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisitor {
     int id = -1;
     static int id_counter;
-    bool long_branch_disabled = false;
+    const bool& long_branch_disabled;
     std::set<cstring> *errors;
     ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> &possible_nexts;
     ordered_set<const IR::MAU::Table *>    prev_tbls;
@@ -67,7 +67,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
                     if (errors) errors->insert(prev->externalName()); } } } }
 
  public:
-    explicit DefaultNext(bool lbd, std::set<cstring> *errs = nullptr)
+    explicit DefaultNext(const bool& lbd, std::set<cstring> *errs = nullptr)
     : long_branch_disabled(lbd), errors(errs),
       possible_nexts(* new std::remove_reference<decltype(possible_nexts)>::type) {
         joinFlows = false; visitDagOnce = false; }

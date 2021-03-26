@@ -51,6 +51,11 @@ class MultipleApply : public PassManager {
     std::set<cstring> topological_errors;
     std::set<cstring> default_next_errors;
 
+    const BFN_Options& options;
+
+    /// Disable long branches
+    bool longBranchDisabled;
+
     /// Pass for computing the mutual-exclusion matrix for tables.
     TablesMutuallyExclusive mutex;
 
@@ -154,6 +159,8 @@ class MultipleApply : public PassManager {
      public:
         explicit CheckTopologicalTables(std::set<cstring>& errors) : errors(errors) {}
     };
+
+    Visitor::profile_t init_apply(const IR::Node* root) override;
 
  public:
     bool mutex_error(cstring name) {

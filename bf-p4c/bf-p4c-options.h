@@ -90,6 +90,12 @@ class BFNContext : public virtual P4CContext {
     /// @return the compiler options for this compilation context.
     BFN_Options& options();
 
+    /// Record options created in the Backend
+    void setBackendOptions(BFN_Options* options);
+
+    /// Clear the backend options
+    void clearBackendOptions();
+
     /// Return a string that represents a path to an output directory:
     /// options.outputDir + pipename + suffix
     ///
@@ -135,8 +141,12 @@ class BFNContext : public virtual P4CContext {
  private:
     bool isRecognizedDiagnostic(cstring diagnostic) final;
 
-    /// Compiler options for this compilation context.
-    BFN_Options optionsInstance;
+    /// Primary compiler options for this compilation context.
+    /// Backend options are created by cloning these options.
+    BFN_Options primaryOptions;
+
+    /// Current options instance
+    thread_local static BFN_Options* optionsInstance;
 
     /// The pipelines for this compilation: pairs of <pipe_id, pipename>
     /// These are needed for ensuring a consistent output directory

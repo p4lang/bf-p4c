@@ -401,8 +401,11 @@ TableFindInjectedDependencies
         new InjectControlDependencies(dg),
         new FindFlowGraph(fg),
         &ctrl_paths,
-        ((options && options->disable_long_branch) || !Device::hasLongBranches())
-             ? new PredicationBasedControlEdges(&dg, ctrl_paths) : nullptr,
+        new PassIf(
+            [options] {
+                return !Device::hasLongBranches() || (options && options->disable_long_branch);
+            },
+            { new PredicationBasedControlEdges(&dg, ctrl_paths) }),
         new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths),
         &cntp,
         new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths),
