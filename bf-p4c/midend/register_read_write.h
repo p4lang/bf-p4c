@@ -69,9 +69,6 @@ class RegisterReadWrite : public PassManager {
         };
         bool preorder(const IR::P4Action*) override;
 
-        std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
-        checkSupportedReadWriteForm(const IR::Statement *reg_stmt);
-
         IR::MethodCallExpression*
         createRegisterExecute(IR::MethodCallExpression *reg_execute,
                               const IR::Statement *reg_stmt, const IR::P4Action *act);
@@ -105,7 +102,11 @@ class RegisterReadWrite : public PassManager {
             new UpdateRegisterActionsAndExecuteCalls(*this),
             new P4::ClearTypeMap(typeMap)
         });
-     }
+    }
+
+    static
+    std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
+    checkSupportedReadWriteForm(const IR::Statement *reg_stmt);
 };
 
 }  // namespace BFN

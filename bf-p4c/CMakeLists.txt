@@ -161,6 +161,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
 build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MIDEND_HDRS
+  midend/action_synthesis_policy.h
   midend/annotate_with_in_hash.h
   midend/blockmap.h
   midend/check_design_pattern.h

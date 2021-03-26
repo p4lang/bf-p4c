@@ -41,6 +41,7 @@
 #include "midend/tableHit.h"
 #include "midend/validateProperties.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/midend/action_synthesis_policy.h"
 #include "bf-p4c/midend/annotate_with_in_hash.h"
 #include "bf-p4c/midend/blockmap.h"
 #include "bf-p4c/midend/check_header_alignment.h"
@@ -115,118 +116,6 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
      public:
         explicit FindStatefulEnumOutputs(EnumOn32Bits &self) : self(self) {}
     };
-};
-
-/**
-This class implements a policy suitable for the SynthesizeActions pass:
-  - do not synthesize actions for the controls whose names are in the specified set.
-    For example, we expect that the code in the deparser will not use any
-    tables or actions.
-  - do not combine statements with data dependencies (except on Hash.get) into a single action
-  - do not combine uses of externs (other than Hash) into one action
-  The hash exceptions above are because a common idiom is to use a hash function to hash some
-  data and use the result as the index into a table execute method.  We prefer keeping that in
-  one action as we can do it directly; if split it requires extra PHV (to hold the hash value)
-  and an extra stage.
-
-  It would probably be better to allow ActionSynthesis to combine stuff as much as possible and
-  later split actions that don't work in a sinlge cycle.  We don't yet have a general action
-  splitting/rewriting pass, however, and this is simpler for now.
-*/
-class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
-    P4::ReferenceMap    *refMap;
-    P4::TypeMap         *typeMap;
-    // set of controls where actions are not synthesized
-    const std::set<cstring> *skip;
-
-    bool convert(const Visitor::Context *, const IR::P4Control* control) override {
-        if (control->is<IR::BFN::TnaDeparser>()) {
-            return false;
-        }
-        for (auto c : *skip)
-            if (control->name == c)
-                return false;
-        return true;
-    }
-
-    static const IR::Type_Extern *externType(const IR::Type *type) {
-        if (auto *spec = type->to<IR::Type_SpecializedCanonical>())
-            type = spec->baseType;
-        return type->to<IR::Type_Extern>(); }
-
-    class FindPathsWritten : public Inspector, TofinoWriteContext {
-        std::set<cstring>       &writes;
-        bool preorder(const IR::PathExpression *pe) {
-            if (isWrite()) writes.insert(pe->toString());
-            return false; }
-        bool preorder(const IR::Member *m) {
-            if (isWrite()) writes.insert(m->toString());
-            return false; }
-        bool preorder(const IR::AssignmentStatement *assign) {
-            // special case -- ignore writing the result of a 'hash.get' call to a var,
-            // as we can use that directly in the same action (hash is computed in ixbar hash)
-            if (auto *mc = assign->right->to<IR::MethodCallExpression>()) {
-                if (auto *m = mc->method->to<IR::Member>()) {
-                    if (auto *et = externType(m->expr->type)) {
-                        if (et->name == "Hash" && m->member == "get") return false; } } }
-            return true; }
-
-     public:
-        explicit FindPathsWritten(std::set<cstring> &w) : writes(w) {} };
-
-    class DependsOnPaths : public Inspector {
-        ActionSynthesisPolicy   &self;
-        std::set<cstring>       &paths;
-        bool                    rv = false;
-        bool preorder(const IR::PathExpression *pe) {
-            if (paths.count(pe->toString())) rv = true;
-            return !rv; }
-        bool preorder(const IR::Member *m) {
-            if (paths.count(m->toString())) rv = true;
-            return !rv; }
-        bool preorder(const IR::Node *) { return !rv; }
-        void postorder(const IR::MethodCallExpression *mc) {
-            auto *mi = P4::MethodInstance::resolve(mc, self.refMap, self.typeMap, true);
-            if (auto *em = mi ? mi->to<P4::ExternMethod>() : nullptr) {
-                for (auto *n : em->mayCall()) {
-                    if (auto *fn = n->to<IR::Function>()) {
-                        visit(fn->body, "body");
-                    }
-                }
-            }
-        }
-
-     public:
-        explicit operator bool() { return rv; }
-        DependsOnPaths(ActionSynthesisPolicy &self, const IR::Node *n, std::set<cstring> &p)
-        : self(self), paths(p), rv(false) {
-            n->apply(*this); } };
-
-    class ReferencesExtern : public Inspector {
-        bool                    rv = false;
-        bool preorder(const IR::PathExpression *pe) {
-            if (rv) return false;
-            auto *et = externType(pe->type);
-            if (et && et->name != "Hash") {
-                rv = true; }
-            return !rv; }
-        bool preorder(const IR::Node *) { return !rv; }
-
-     public:
-        explicit operator bool() { return rv; }
-        explicit ReferencesExtern(const IR::Node *n) { n->apply(*this); } };
-
-    bool can_combine(const Visitor::Context *, const IR::BlockStatement *blk,
-                     const IR::StatOrDecl *stmt) override {
-        std::set<cstring>       writes;
-        if (ReferencesExtern(blk) && ReferencesExtern(stmt)) return false;
-        blk->apply(FindPathsWritten(writes));
-        return !DependsOnPaths(*this, stmt, writes); }
-
- public:
-    ActionSynthesisPolicy(const std::set<cstring> *skip, P4::ReferenceMap *refMap,
-                          P4::TypeMap *typeMap)
-    : refMap(refMap), typeMap(typeMap), skip(skip) { CHECK_NULL(skip); }
 };
 
 /**

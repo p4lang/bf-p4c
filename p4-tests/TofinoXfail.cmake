@@ -623,15 +623,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: .*: Duplicates declaration .*"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
-  testdata/p4_16_samples/psa-example-register2-bmv2.p4
-  testdata/p4_16_samples/psa-register-read-write-bmv2.p4
-  testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
-)
-
-p4c_add_xfail_reason("tofino"
     "error: : Currently in p4c, the table sucker_0 cannot perform a range match on key ingress::suitably.litheness as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
 )
@@ -1361,6 +1352,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/cisco/COMPILER-393/case2277.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
   extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1859,6 +1851,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Wide operations not supported in stateful alu, will only operate on bottom 32 bits"
   extensions/p4_tests/p4_16/errors/p4c-2338.p4
+  testdata/p4_16_samples/psa-register-read-write-bmv2.p4
+  testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1938,4 +1932,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Parser state .* requires fields from an earlier state which have been lost in current state's input buffer"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-low_latency.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "partly placed: table .*"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
+  testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )

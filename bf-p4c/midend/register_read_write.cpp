@@ -4,6 +4,45 @@
 
 namespace BFN {
 
+#define FATAL_ERROR_UNSUPPORTED_READ_WRITE_FORM(reg_stmt) \
+    ::fatal_error(ErrorType::ERR_UNSUPPORTED, \
+        "%1%: Registers support only calls or assignments of the following forms:\n" \
+        "  register.write(index, source);\n" \
+        "  destination = register.read(index);\n" \
+        "  destination = register.read(index)[M:N];\n" \
+        "  destination = (cast)register.read(index);\n" \
+        "If more complex calls or assignments are required, try to use " \
+        "the RegisterAction extern.", (reg_stmt))
+
+/**
+ * The method checks whether the form of the read/write register call is correct,
+ * i.e. has one of the forms described in the error message in this function.
+ * @param[in] reg_stmt The read/write register statement that is being checked
+ * @return A pair of 1. the read/write method call expression contained in the reg_stmt, and
+ *                   2. the left-hand side of the assignment statement of the register read method.
+ */
+std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
+RegisterReadWrite::checkSupportedReadWriteForm(const IR::Statement *reg_stmt) {
+    const IR::MethodCallExpression *call = nullptr;
+    const IR::Expression *read_expr = nullptr;
+
+    if (auto reg_mcall_stmt = reg_stmt->to<IR::MethodCallStatement>()) {
+        // This is a call to .write or .read without assignment, so not assigning to read_expr
+        call = reg_mcall_stmt->methodCall;
+    } else if (auto reg_assign_stmt = reg_stmt->to<IR::AssignmentStatement>()) {
+        // This is a call to .read and we need to store the left-hand side of the assignment
+        if (auto *slice = reg_assign_stmt->right->to<IR::Slice>()) {
+            call = slice->e0->to<IR::MethodCallExpression>();
+        } else {
+            call = reg_assign_stmt->right->to<IR::MethodCallExpression>();
+        }
+        read_expr = reg_assign_stmt->left;
+    }
+
+    return std::pair<const IR::MethodCallExpression * /*call*/,
+                     const IR::Expression * /*read_expr*/>(call, read_expr);
+}
+
 IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::P4Action* act) {
     LOG1(" P4 Action: " << act);
 
@@ -81,47 +120,6 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR:
     return ctrl;
 }
 
-/**
- * The method checks whether the form of the read/write register call is correct,
- * i.e. has one of the forms described in the error message in this function.
- * @param[in] reg_stmt The read/write register statement that is being checked
- * @return A pair of 1. the read/write method call expression contained in the reg_stmt, and
- *                   2. the left-hand side of the assignment statement of the register read method.
- */
-std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
-RegisterReadWrite::AnalyzeActionWithRegisterCalls::checkSupportedReadWriteForm(
-        const IR::Statement *reg_stmt) {
-    const IR::MethodCallExpression *call = nullptr;
-    const IR::Expression *read_expr = nullptr;
-
-    if (auto reg_mcall_stmt = reg_stmt->to<IR::MethodCallStatement>()) {
-        // This is a call to .write or .read without assignment, so not assigning to read_expr
-        call = reg_mcall_stmt->methodCall;
-    } else if (auto reg_assign_stmt = reg_stmt->to<IR::AssignmentStatement>()) {
-        // This is a call to .read and we need to store the left-hand side of the assignment
-        if (auto *slice = reg_assign_stmt->right->to<IR::Slice>()) {
-            call = slice->e0->to<IR::MethodCallExpression>();
-        } else {
-            call = reg_assign_stmt->right->to<IR::MethodCallExpression>();
-        }
-        read_expr = reg_assign_stmt->left;
-    }
-
-    if (!call) {
-        ::fatal_error(ErrorType::ERR_UNSUPPORTED,
-                "%1%: Registers support only calls or assignments of the following forms:\n"
-                "  register.write(index, source);\n"
-                "  destination = register.read(index);\n"
-                "  destination = register.read(index)[M:N];\n"
-                "  destination = (cast)register.read(index);\n"
-                "If more complex calls or assignments are required, try to use "
-                "the RegisterAction extern.", reg_stmt);
-    }
-
-    return std::pair<const IR::MethodCallExpression * /*call*/,
-                     const IR::Expression * /*read_expr*/>(call, read_expr);
-}
-
 // REGISTER READ EXAMPLE
 // FROM :
 //   @name(".accum") register<bit<16>, bit<10>>(32w1024) accum;
@@ -176,6 +174,10 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
     auto rv = checkSupportedReadWriteForm(reg_stmt);
     auto *call = rv.first;
 
+    if (!call) {
+        FATAL_ERROR_UNSUPPORTED_READ_WRITE_FORM(reg_stmt);
+    }
+
     LOG1(" MethodCallExpression: " << call);
 
     // Create Register Action - Add to declaration
@@ -223,7 +225,7 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
         } else {
             utype = rtype; } }
 
-    auto apply_name = reg_path->name + "_register_action";
+    auto apply_name = reg_path->name + "_" + act->name;
 
     if (!reg_execute) {
         // Create Execute Method Call Expression
@@ -247,6 +249,9 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
 
     auto rv = checkSupportedReadWriteForm(reg_stmt);
     auto *call = rv.first;
+    if (!call) {
+        FATAL_ERROR_UNSUPPORTED_READ_WRITE_FORM(reg_stmt);
+    }
     if (!reg_info.read_expr) {
         // Do not overwrite with returned nullptr if the read expression is already stored
         reg_info.read_expr = rv.second;
@@ -338,7 +343,7 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
         body->components.insert(body->components.end(), new_assign);
     }
 
-    auto apply_name = reg_path->name + "_register_action";
+    auto apply_name = reg_path->name + "_" + act->name;
     auto* externalName = new IR::StringLiteral(IR::ID("." + apply_name));
     auto *annots = new IR::Annotations();
     annots->addAnnotation(IR::ID("name"), externalName);
