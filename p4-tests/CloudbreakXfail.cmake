@@ -339,6 +339,7 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "Cannot unify type"
   extensions/p4_tests/p4_14/stf/egress_port_init.p4
+  extensions/p4_tests/p4_14/stf/p4c-3551.p4
   extensions/p4_tests/p4_16/compile_only/empty_header_stack.p4
   extensions/p4_tests/p4_16/compile_only/inline_subparser.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4

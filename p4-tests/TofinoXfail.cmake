@@ -1733,11 +1733,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_163_stateful_table_math_unit.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error: Parser state .* requires fields from an earlier state which have been lost"
-  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
-)
-
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
@@ -1928,14 +1923,9 @@ p4c_add_xfail_reason("tofino"
   p4c_3343
 )
 
-# P4C-3551
-p4c_add_xfail_reason("tofino"
-  "Parser state .* requires fields from an earlier state which have been lost in current state's input buffer"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-low_latency.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "partly placed: table .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
+
