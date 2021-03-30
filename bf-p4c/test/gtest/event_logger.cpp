@@ -96,14 +96,14 @@ TEST_F(EventLoggerTest, ExportsEventLogStart) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})"
     };
     compareFileWithExpected(load, expectedLines);
 
     EXPECT_TRUE(load.eof());
 }
 
-TEST_F(EventLoggerTest, ExportsEventParserError) {
+TEST_F(EventLoggerTest, ExportsParserError) {
     initLogger();
     EventLogger::get2().parserError("Parser error", srcInfo);
 
@@ -111,8 +111,8 @@ TEST_F(EventLoggerTest, ExportsEventParserError) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"message":"Parser error","src_info":{"column":10,"file":"file.cpp","line":1},"time":"TIMESTAMP","constraint_type":"EventParserError"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"parser_error","message":"Parser error","src_info":{"column":10,"file":"file.cpp","line":1},"time":"TIMESTAMP"})"
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -130,11 +130,11 @@ TEST_F(EventLoggerTest, ExportsEventCompilationError) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"message":"Plain error","time":"TIMESTAMP","constraint_type":"EventCompilationError"})",
-        R"({"message":"Error with only src info","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1},"constraint_type":"EventCompilationError"})",
-        R"({"message":"Error with only type","time":"TIMESTAMP","type":"type","constraint_type":"EventCompilationError"})",
-        R"({"message":"Error with type and src","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1},"type":"type","constraint_type":"EventCompilationError"})",
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"compilation_error","message":"Plain error","time":"TIMESTAMP"})",
+        R"({"event_type":"compilation_error","message":"Error with only src info","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1}})",
+        R"({"event_type":"compilation_error","message":"Error with only type","time":"TIMESTAMP","type":"type"})",
+        R"({"event_type":"compilation_error","message":"Error with type and src","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1},"type":"type"})",
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -152,11 +152,11 @@ TEST_F(EventLoggerTest, ExportsEventCompilationWarning) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"message":"Plain warning","time":"TIMESTAMP","constraint_type":"EventCompilationWarning"})",
-        R"({"message":"Warning with only src info","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1},"constraint_type":"EventCompilationWarning"})",
-        R"({"message":"Warning with only type","time":"TIMESTAMP","type":"type","constraint_type":"EventCompilationWarning"})",
-        R"({"message":"Warning with type and src","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1},"type":"type","constraint_type":"EventCompilationWarning"})",
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"compilation_warning","message":"Plain warning","time":"TIMESTAMP"})",
+        R"({"event_type":"compilation_warning","message":"Warning with only src info","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1}})",
+        R"({"event_type":"compilation_warning","message":"Warning with only type","time":"TIMESTAMP","type":"type"})",
+        R"({"event_type":"compilation_warning","message":"Warning with type and src","time":"TIMESTAMP","src_info":{"column":10,"file":"file.cpp","line":1},"type":"type"})",
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -171,8 +171,8 @@ TEST_F(EventLoggerTest, ExportsEventDebug) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"file":"file.cpp","message":"Debug","time":"TIMESTAMP","verbosity":6,"constraint_type":"EventDebug"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"debug","file":"file.cpp","message":"Debug","time":"TIMESTAMP","verbosity":6})"
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -187,8 +187,8 @@ TEST_F(EventLoggerTest, ExportsEventDecision) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"decision":"Picked decision","file":"file.cpp","message":"Description","reason":"Reason","time":"TIMESTAMP","verbosity":3,"constraint_type":"EventDecision"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"decision","decision":"Picked decision","file":"file.cpp","message":"Description","reason":"Reason","time":"TIMESTAMP","verbosity":3})"
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -207,7 +207,7 @@ TEST_F(EventLoggerTest, NoDebugOrDecisionIfVerbosityFalse) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -227,10 +227,10 @@ TEST_F(EventLoggerTest, ExportsDeduplicatedPassChange) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"manager":"mgr","passname":"pass","seq":0,"time":"TIMESTAMP","constraint_type":"EventPassChanged"})",
-        R"({"manager":"mgr","passname":"pass2","seq":1,"time":"TIMESTAMP","constraint_type":"EventPassChanged"})",
-        R"({"manager":"mgr2","passname":"pass","seq":0,"time":"TIMESTAMP","constraint_type":"EventPassChanged"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"pass_change","manager":"mgr","passname":"pass","seq":0,"time":"TIMESTAMP"})",
+        R"({"event_type":"pass_change","manager":"mgr","passname":"pass2","seq":1,"time":"TIMESTAMP"})",
+        R"({"event_type":"pass_change","manager":"mgr2","passname":"pass","seq":0,"time":"TIMESTAMP"})"
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -247,8 +247,8 @@ TEST_F(EventLoggerTest, ExportsPipeChange) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"pipe_id":1,"time":"TIMESTAMP","constraint_type":"EventPipeProcessingStarted"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"pipe_started","pipe_id":1,"time":"TIMESTAMP"})"
     };
     compareFileWithExpected(load, expectedLines);
 
@@ -266,9 +266,9 @@ TEST_F(EventLoggerTest, ExportsIterationChange) {
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"schema_version":"1.0.0","time":"TIMESTAMP","constraint_type":"EventLogStart"})",
-        R"({"num":1,"phase":"phv_allocation","time":"TIMESTAMP","constraint_type":"EventIterationChanged"})",
-        R"({"num":2,"phase":"table_placement","time":"TIMESTAMP","constraint_type":"EventIterationChanged"})"
+        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
+        R"({"event_type":"iteration_change","num":1,"phase":"phv_allocation","time":"TIMESTAMP"})",
+        R"({"event_type":"iteration_change","num":2,"phase":"table_placement","time":"TIMESTAMP"})"
     };
     compareFileWithExpected(load, expectedLines);
 

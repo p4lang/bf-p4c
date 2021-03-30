@@ -39,6 +39,29 @@ def getTitle(name):
     else:
         return name.title()
 
+# ConstDataMember is used to serialize const properties
+# This is used to implement discriminating enum
+# in a generic and simple way
+class ConstDataMember(object):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+    def jsonType(self):
+        raise TypeError("Must be implemented in derived class")
+    def serializeValue(self):
+        raise TypeError("Must be implemented in derived class")
+    def genSerializer(self, generator):
+        generator.write('writer.Key("' + self.name + '");\n')
+        generator.write('writer.' + self.jsonType() + '(' + self.serializeValue() + ');\n')
+
+
+class ConstStringDataMember(ConstDataMember):
+    def __init__(self, name, value):
+        super(ConstStringDataMember, self).__init__(name, value)
+    def jsonType(self):
+        return "String"
+    def serializeValue(self):
+        return '"' + self.value + '"'
 
 class DataMember(object):
     def __init__(self, name, typeName = None, body = None, isOptional = False):
@@ -348,7 +371,7 @@ class UnionDataMember(DataMember):
             self.dataMembers.append(getDataMember(memberName, p))
             i += 1
     def cppType(self):
-        return self.name
+        return getTitle(self.name)
     def jsonType(self):
         return self.name
     def isBasicType(self):
@@ -575,6 +598,20 @@ def getDataMembers(classBody, className):
         print(className, "dataMembers:", names)
     return dataMembers
 
+
+def getConstDataMembers(classBody, className):
+    result = []
+
+    if debug > 3: print("Collecting const data members for class", className)
+    if classBody.get('properties', False):
+        for p in sorted(classBody['properties'].keys()):
+            # Skip everything but StringDataMembers with custom format types
+            if not classBody['properties'][p].get('format', False): continue
+            obj = classBody['properties'][p]
+            if debug > 2: print(obj)
+            result.append(ConstStringDataMember(obj['format'], obj['pattern']))
+    return result
+
 def getSuperClass(generator, classBody):
     if classBody.get('allOf', False):
         scName = ref2Type(classBody['allOf'][0])[1]
@@ -626,6 +663,7 @@ class ClassGenerator:
         self.subClasses = []
         self.superClasses = []
         self.scDataMembers = []
+        self.constDataMembers = []
 
         if classBody.get('allOf', False):
             # add the cpp class name
@@ -675,6 +713,7 @@ class ClassGenerator:
 
         # retrieve the data members and list the required ones first
         self.dataMembers = getDataMembers(self.classBody, self.className)
+        self.constDataMembers = getConstDataMembers(self.classBody, self.className)
         # For inheritance, list all the data memebers upto the root
         if len(self.superClasses) > 0:
             sc = self.superClasses[0]
@@ -691,6 +730,8 @@ class ClassGenerator:
     def generate(self, indent = False):
         if indent: self.generator.incrIndent()
 
+        if self.classBody.get('event_type', False):
+            print(self.classBody.get('event_type', ''))
         if self.classBody.get('description', False):
             self.write('/// ' + self.classBody['description'] + '\n')
             # ostream.write('/// ' + str(schema_json['definitions'][d]) + '\n')
@@ -791,6 +832,8 @@ class ClassGenerator:
         self.write('virtual void serialize(Writer &writer) const' + isOverride + ' {\n')
         self.generator.incrIndent()
         self.write('writer.StartObject();\n')
+        for d in self.constDataMembers:
+            d.genSerializer(self.generator)
         if internalSerializerGenerated:
             self.write('internalSerialize(writer);\n')
         else:
@@ -880,8 +923,6 @@ class ClassGenerator:
         self.write('}\n')
 
     def serializeSuperClass(self):
-        self.write('writer.Key("constraint_type");\n')
-        self.write('writer.String("' + self.cppClassName + '");\n')
         self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
 
 class Generator:
