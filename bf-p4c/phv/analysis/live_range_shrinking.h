@@ -40,7 +40,7 @@ class FindInitializationNode : public Inspector {
     ordered_set<const IR::MAU::Action*>     doNotInitActions;
 
     /// Maximum number of stages required as per the table dependency graph (resource insensitive).
-    int maxStages;
+    int maxStages = -1;
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Table* tbl) override;

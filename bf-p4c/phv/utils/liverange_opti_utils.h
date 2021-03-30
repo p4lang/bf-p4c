@@ -64,11 +64,19 @@ canFUnitsReachGUnits(
             if (!u2->is<IR::MAU::Table>())
                 BUG("Non-parser, non-deparser, non-table defuse unit found.");
             const auto* t2 = u2->to<IR::MAU::Table>();
-            if (fg.can_reach(t1, t2)) {
-                LOG4("\t\t\t" << t1->name << " can reach " << t2->name);
-                rv.insert(std::make_pair(u1, u2));
+            // t2 cannot be nullptr due it being a bug if it is
+            // Check if t1 exists
+            if (t1 != nullptr) {
+                if (fg.can_reach(t1, t2)) {
+                    LOG4("\t\t\t" << t1->name << " can reach " << t2->name);
+                    rv.insert(std::make_pair(u1, u2));
+                } else {
+                    LOG4("\t\t\t" << t1->name << " cannot reach " << t2->name);
+                }
+            // t1 does not exist (u1 is not a table)
             } else {
-                LOG4("\t\t\t" << t1->name << " cannot reach " << t2->name);
+                LOG4("\t\t\t" << DBPrint::Brief << u1 <<
+                     "is not a table and cannot reach " << t2->name);
             }
         }
     }

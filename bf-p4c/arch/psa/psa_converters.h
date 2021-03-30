@@ -197,7 +197,8 @@ class TypeNameConverter : public Transform {
              {"PSA_MeterColor_t", std::make_pair("MeterColor_t", true)}};
 
  public:
-    explicit TypeNameConverter(ProgramStructure* structure) {
+    explicit TypeNameConverter(ProgramStructure* structure)
+        : structure(structure) {
         CHECK_NULL(structure);
     }
     const IR::Node* postorder(IR::Type_Name* node) override;

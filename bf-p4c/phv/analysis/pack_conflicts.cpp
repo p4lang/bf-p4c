@@ -61,6 +61,7 @@ bool PackConflicts::GatherWrites::preorder(const IR::BFN::Digest* digest) {
         for (auto flval1 : fieldList->sources) {
             const auto* f1 = self.phv.field(flval1->field);
             // Apply the constraint only to metadata fields.
+            if (f1 == nullptr) continue;
             if (!f1->metadata && !f1->bridged) continue;
             allDigestFields.insert(f1); }
         for (const auto* f1 : allDigestFields) {
