@@ -1108,8 +1108,10 @@ struct ElimEmptyState : public ParserTransform {
 // where we couldn't before lowering (without breaking the P4 semantic).
 struct MergeLoweredParserStates : public ParserTransform {
     const CollectLoweredParserInfo& parser_info;
+    ClotInfo &clot;
 
-    explicit MergeLoweredParserStates(const CollectLoweredParserInfo& pi) : parser_info(pi) { }
+    explicit MergeLoweredParserStates(const CollectLoweredParserInfo& pi, ClotInfo &c)
+        : parser_info(pi), clot(c) { }
 
     const IR::BFN::LoweredParserMatch*
     get_unconditional_match(const IR::BFN::LoweredParserState* state) {
@@ -1224,6 +1226,9 @@ struct MergeLoweredParserStates : public ParserTransform {
                     LOG3("merge " << match->next->name << " with "
                             << state->name << " (" << match->value << ")");
 
+                    // Clot update must run first because do_merge changes match->next
+                    if (Device::numClots() > 0 && BackendOptions().use_clot)
+                        clot.merge_parser_states(state->thread(), state->name, match->next->name);
                     do_merge(match, next);
                 }
             }
@@ -1259,7 +1264,7 @@ struct LowerParserIR : public PassManager {
             new ReplaceParserIR(*computeLoweredParserIR),
             LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
             lower_parser_info,
-            new MergeLoweredParserStates(*lower_parser_info),
+            new MergeLoweredParserStates(*lower_parser_info, clotInfo),
             LOGGING(4) ? new DumpParser("final_llir_parser") : nullptr
         });
     }

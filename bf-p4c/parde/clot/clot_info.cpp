@@ -36,35 +36,39 @@ boost::optional<unsigned> ClotInfo::offset(const IR::BFN::ParserState* state,
     return boost::optional<unsigned>{};
 }
 
+cstring ClotInfo::sanitize_state_name(cstring state_name, gress_t gress) const {
+    // To have a stable lookup, we require state_name to be always prepended
+    // by a gress
+
+    std::stringstream ss;
+    ss << gress;
+
+    // It is likely the state name is that of a split state,
+    // e.g. Original state = ingress::stateA
+    //      Split state = ingress::stateA.$common.0
+    // The parser_state_to_clots_ map is created before splitting and
+    // carries the original state name. We regenerate the original state
+    // name by stripping out the split name addition ".$common.0"
+
+    std::string st(state_name.c_str());
+    auto pos = st.find(".$");
+
+    return (!state_name.startsWith(ss.str())  // if not prefixed with gress
+        ? (ss.str() + "::") : "") + st.substr(0, pos);  // add the prefix, cut generated appendix
+}
+
 const Clot* ClotInfo::parser_state_to_clot(const IR::BFN::LoweredParserState *state,
                                            unsigned tag) const {
-    auto state_name = state->name;
+    auto state_name = sanitize_state_name(state->name, state->thread());
     auto& parser_state_to_clots = this->parser_state_to_clots(state->thread());
-    if (!parser_state_to_clots.count(state_name)) {
-        // Prefix gress to generate full state name
-        if (state->thread() == INGRESS)
-            state_name = "ingress::" + state_name;
-        else if (state->thread() == EGRESS)
-            state_name = "egress::" + state_name;
-    }
-    if (!parser_state_to_clots.count(state_name)) {
-        // It is likely the state name is that of a split state,
-        // e.g. Original state = ingress::stateA
-        //      Split state = ingress::stateA.$common.0
-        // The parser_state_to_clots_ map is created before splitting and
-        // carries the original state name. We regenerate the original state
-        // name by stripping out the split name addition ".$common.0"
-        std::string st(state_name.c_str());
-        auto pos = st.find(".$");
-        if (pos != std::string::npos)
-            state_name = st.substr(0, pos);
-    }
+
     if (parser_state_to_clots.count(state_name)) {
         auto& clots = parser_state_to_clots.at(state_name);
         auto it = std::find_if(clots.begin(), clots.end(), [&](const Clot* sclot) {
             return (sclot->tag == tag); });
         if (it != clots.end()) return *it;
     }
+
     return nullptr;
 }
 
@@ -134,6 +138,23 @@ std::map<int, const PHV::Field*> ClotInfo::get_csum_fields(const Clot* clot) con
     return csum_fields;
 }
 
+void ClotInfo::merge_parser_states(gress_t gress, cstring dst_state_name, cstring src_state_name) {
+    auto src_name = sanitize_state_name(src_state_name, gress);
+    auto dst_name = sanitize_state_name(dst_state_name, gress);
+
+    auto& state_to_clot = parser_state_to_clots(gress);
+    if (!state_to_clot.count(src_name)) return;  // No clot extracts here
+
+    // Bind clots from src to dst
+    // dst might not even exist, but this will create appropriate record
+    auto& src_clots = state_to_clot.at(src_name);
+    for (auto *c : src_clots) {
+        parser_state_to_clots(gress)[dst_name].insert(c);
+        clot_to_parser_states_[c].first = gress;
+        clot_to_parser_states_[c].second.insert(dst_name);
+    }
+}
+
 void ClotInfo::add_field(const PHV::Field* f, const IR::BFN::ParserRVal* source,
                          const IR::BFN::ParserState* state) {
     LOG4("adding " << f->name << " to " << state->name << " (source " << source << ")");
@@ -198,8 +219,9 @@ void ClotInfo::add_clot(Clot* clot, ordered_set<const IR::BFN::ParserState*> sta
 
     std::set<cstring> state_names;
     for (auto* state : states) {
-        state_names.insert(state->name);
-        parser_state_to_clots_[clot->gress][state->name].insert(clot);
+        auto state_name = sanitize_state_name(state->name, state->thread());
+        state_names.insert(state_name);
+        parser_state_to_clots_[clot->gress][state_name].insert(clot);
     }
 
     clot_to_parser_states_[clot] = {clot->gress, state_names};

@@ -785,7 +785,7 @@ struct DuplicateStates : public ParserTransform {
     IR::BFN::ParserState* get_new_state(const IR::BFN::ParserState* state,
                                          cstring decl) {
         auto new_state = new IR::BFN::ParserState(state->p4State,
-                                                  state->name + "$duplicate_" + decl,
+                                                  state->name + ".$duplicate_" + decl,
                                                   state->gress);
         auto new_statements = new IR::Vector<IR::BFN::ParserPrimitive>();
         for (auto statement : state->statements) {

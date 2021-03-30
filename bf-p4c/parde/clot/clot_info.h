@@ -54,6 +54,8 @@ class ClotInfo {
     std::map<const Clot*,
              std::pair<gress_t, std::set<cstring>>,
              Clot::Less> clot_to_parser_states_;
+    /// Maps states in gress to set of extracted Clots
+    /// When looking up in the inner map, do use sanitize_state_name on the lookup key
     std::map<gress_t, std::map<cstring, std::set<const Clot*>>> parser_state_to_clots_;
 
     std::map<const IR::BFN::ParserState*,
@@ -88,6 +90,14 @@ class ClotInfo {
     /// The bit offset of a given field for a given parser state.
     boost::optional<unsigned> offset(const IR::BFN::ParserState* state,
                                      const PHV::Field* field) const;
+
+    /// Sanitizes state name before lookup in the parser_state_to_clots_
+    ///
+    /// If state name is not prefixed with gress, then it will be prefixed
+    /// If a state is compiler generated auxiliary state (thus containing
+    /// '.$' substring), then the generated appendix is stripped to
+    /// regenerate original state name.
+    cstring sanitize_state_name(cstring state_name, gress_t gress) const;
 
  public:
     CollectParserInfo parserInfo;
@@ -128,6 +138,14 @@ class ClotInfo {
              std::vector<const IR::BFN::EmitChecksum*>>& clot_to_emit_checksum() const {
         return clot_to_emit_checksum_;
     }
+
+    /// If gress::src_state_name state has CLOT extracts, then add them as gress::dst_state_name
+    /// extracts as well.
+    ///
+    /// This is because MergeLoweredParserStates merges LoweredParser states, their CLOT extracts
+    /// need to be merged accordingly so ClotResourcesLogging has correct information
+    /// for logging.
+    void merge_parser_states(gress_t gress, cstring dst_state_name, cstring src_state_name);
 
  private:
     void add_field(const PHV::Field* f, const IR::BFN::ParserRVal* source,

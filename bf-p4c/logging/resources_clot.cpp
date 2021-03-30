@@ -1,3 +1,4 @@
+#include <numeric>
 #include "bf-p4c/common/asm_output.h"  // canon_name
 #include "bf-p4c/parde/clot/clot_info.h"  // ClotInfo
 #include "bf-p4c/device.h"
@@ -22,10 +23,6 @@ bool ClotResourcesLogging::preorder(const IR::BFN::LoweredParserState* state) {
 
     for (const auto* match : state->transitions) {
         collectClotUsages(match, state, parserIR->gress);
-        // A parser state can have multiple extracts, but the clot
-        // information is duplicated across all of them. Hence, we only
-        // check the first extract to gather all clot info for this state.
-        break;
     }
 
     return true;
@@ -87,10 +84,28 @@ void ClotResourcesLogging::collectExtractClotInfo(const IR::BFN::LoweredExtractC
     const bool hasChecksum = clotTagToChecksumUnit.count(tag) > 0;
     const auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>();
     const auto bytes = source->range;
-    const auto length = bytes.hi - bytes.lo + 1;
+    const auto currentExtractLength = bytes.size();
     const auto offset = bytes.lo;
     const std::string issueState = state->name.c_str();
     const Clot *clot = clotInfo.parser_state_to_clot(state, tag);
+    BUG_CHECK(clot, "No fields extracted to this tag %1%", tag);
+
+    // Aggregate lengths of extracted fields in bytes
+    const auto length = std::accumulate(clot->all_slices().begin(),
+                                        clot->all_slices().end(), 0,
+                                        [] (int r, const PHV::FieldSlice *const s) -> int {
+                                            return r + s->size(); }) / 8;
+    const bool spilledExtraction = length > currentExtractLength;
+
+    if (spilledExtraction) {
+        LOG6("Spilled CLOT extraction detected for " << gress << "::CLOT" << tag);
+        LOG6("  State extracts: " << currentExtractLength << "B, total length: " << length << "B");
+        LOG7("  Fields extracted:");
+        for (auto *s : clot->all_slices()) {
+            LOG7("    " << *s);
+        }
+        // We might want to log extra info about spilled CLOTs in the future
+    }
 
     /*
      Loop over all usages for this particular CLOT tag
@@ -113,7 +128,7 @@ void ClotResourcesLogging::collectExtractClotInfo(const IR::BFN::LoweredExtractC
 
     usages.push_back(newUsage);
     usages.back()->append_issue_states(issueState);
-    LOG6("Adding new ClotUsage for gress " << gress << " and CLOT tag " << tag);
+    LOG6("Adding new ClotUsage for " << gress << "::CLOT" << tag);
 }
 
 void ClotResourcesLogging::logClotUsages() {
