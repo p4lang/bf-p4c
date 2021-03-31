@@ -810,12 +810,12 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
 
     unsigned total_unused_fields_in_clots = 0;
     unsigned total_unused_bits_in_clots = 0;
-    unsigned total_bits = 0;
 
     std::set<int> unaligned_clots;
 
     out << std::endl;
     for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+        unsigned total_bits = 0;
         out << "CLOT Allocation (" << toString(gress) << "):" << std::endl;
         TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
                               TablePrinter::Align::CENTER);
