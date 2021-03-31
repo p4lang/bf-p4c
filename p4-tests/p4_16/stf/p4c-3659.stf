@@ -1,0 +1,13 @@
+# Packets should be dropped if the parser source address is 0 in the
+# parse_ipv4_no_options state when processing TCP packets. This is because a
+# source extract error will occur when buf_req = 0 since a checksum calculation
+# occurs at the same time and the final extractor is enabled to pad the
+# extractions correctly.
+
+
+add tcp_proc 0 hdr.ipv4.protocol:0x06 tcp_swap_ports()
+
+#        Eth                              IPv4                                                              TCP
+#        DA           SA           type   V-IHL DSCP len  ID   F+FragOff TTL proto csum src      dst        src  dst  seq      ack      flag win  csum urg
+packet 0 010101010101 020202020202 0800   45    00   0000 0000 0000      00  06    39a5 c0a80001 c0a80002   0001 0002 00000000 00000000 0000 0000 0000 0000
+expect 0 010101010101 020202020202 0800   45    00   0000 0000 0000      00  06    39a5 c0a80001 c0a80002   0002 0001 00000000 00000000 0000 0000 0000 0000

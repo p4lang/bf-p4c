@@ -237,6 +237,10 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
 
     auto id = dest->reg.parser_id();
     *map[slot.idx].dst = id;
+    // P4C-3659: The source address is checked for source extract errors whenever the dest
+    // is not 511. To prevent errors when buf_req = 0 (corresponding to states with no extracts),
+    // point the source to the version area of the source range which is always valid.
+    *map[slot.idx].src = PARSER_SRC_MAX_IDX - (dest->reg.size / 8) + 1;
     used |= slot.usemask;
 
     pa->phv_allow_bitwise_or[id] = 1;
