@@ -198,6 +198,11 @@ p4c_add_ptf_test_with_ptfdir (
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3033")
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c-3614" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614/npb/npb.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3614")
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3171" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3171/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1200"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3171")

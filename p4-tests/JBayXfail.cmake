@@ -47,6 +47,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
+
     )
 
   p4c_add_xfail_reason("tofino2"
@@ -494,3 +495,9 @@ p4c_add_xfail_reason("tofino2"
    "Unexpected port .*"
    p4_16_programs_tna_multicast
 )
+
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: Expected packet was not received on device .*, port .*"
+  p4c-3614
+)
+

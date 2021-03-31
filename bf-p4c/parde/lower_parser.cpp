@@ -2088,10 +2088,16 @@ class ComputeMultiWriteContainers : public ParserModifier {
 
         for (auto e : match->extracts) {
             if (auto extract = e->to<IR::BFN::LoweredExtractPhv>()) {
-                if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
+                if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
                     clear_on_write[extract->dest->container].insert(orig);
-                else
+                } else {
+                    // Two extraction in the same transition, container should be bitwise or
+                    if (bitwise_or.count(extract->dest->container) &&
+                        bitwise_or[extract->dest->container].count(orig)) {
+                        bitwise_or_containers.insert(extract->dest->container);
+                    }
                     bitwise_or[extract->dest->container].insert(orig);
+                }
             }
         }
 
@@ -2105,6 +2111,7 @@ class ComputeMultiWriteContainers : public ParserModifier {
 
     bool preorder(IR::BFN::LoweredParser*) override {
         bitwise_or = clear_on_write = {};
+        clear_on_write_containers = bitwise_or_containers = {};
         return true;
     }
 
@@ -2123,15 +2130,12 @@ class ComputeMultiWriteContainers : public ParserModifier {
         return false;
     }
 
-    std::set<PHV::Container>
-    detect_multi_writes(const IR::BFN::LoweredParser* parser,
+    void detect_multi_writes(const IR::BFN::LoweredParser* parser,
             const std::map<PHV::Container, std::set<const IR::BFN::LoweredParserMatch*>>& writes,
-            const char* which) {
-        std::set<PHV::Container> results;
-
+            std::set<PHV::Container>& write_containers, const char* which) {
         for (auto w : writes) {
             if (has_non_mutex_writes(parser, w.second)) {
-                results.insert(w.first);
+                write_containers.insert(w.first);
                 LOG4("mark " << w.first << " as " << which);
             } else if (Device::currentDevice() != Device::TOFINO) {
                 // In Jbay, even and odd pair of 8-bit containers share extractor in the parser.
@@ -2151,8 +2155,8 @@ class ComputeMultiWriteContainers : public ParserModifier {
                         }
 
                         if (has_even_odd_pair) {
-                            results.insert(w.first);
-                            results.insert(other);
+                            write_containers.insert(w.first);
+                            write_containers.insert(other);
                             LOG4("mark " << w.first << " and " << other << " as "
                                          << which << " (even-and-odd pair)");
                         }
@@ -2160,17 +2164,13 @@ class ComputeMultiWriteContainers : public ParserModifier {
                 }
             }
         }
-
-        return results;
     }
 
     void postorder(IR::BFN::LoweredParser* parser) override {
         auto orig = getOriginal<IR::BFN::LoweredParser>();
 
-        auto bitwise_or_containers = detect_multi_writes(orig, bitwise_or, "bitwise-or");
-
-        auto clear_on_write_containers =
-            detect_multi_writes(orig, clear_on_write, "clear-on-write");
+        detect_multi_writes(orig, bitwise_or, bitwise_or_containers, "bitwise-or");
+        detect_multi_writes(orig, clear_on_write, clear_on_write_containers, "clear-on-write");
 
         for (const auto& f : phv) {
             if (f.gress != parser->gress) continue;
@@ -2198,6 +2198,7 @@ class ComputeMultiWriteContainers : public ParserModifier {
 
     std::map<PHV::Container,
              std::set<const IR::BFN::LoweredParserMatch*>> bitwise_or, clear_on_write;
+    std::set<PHV::Container> bitwise_or_containers, clear_on_write_containers;
 };
 
 // If a container that participates in ternary match is invalid, model(HW)

@@ -1,0 +1,33 @@
+mirror_md.src        = SWITCH_PKT_SRC_BRIDGED        or
+                       SWITCH_PKT_SRC_CLONED_INGRESS or
+                       SWITCH_PKT_SRC_CLONED_EGRESS
+
+mirror_md.type       = SWITCH_MIRROR_TYPE_PORT or
+                       SWITCH_MIRROR_TYPE_CPU
+
+mirror_md.session_id = user defined (ingress/egress port mirroring) or
+                       SWITCH_MIRROR_SESSION_CPU (acl.p4, has value of 250)
+
+-----------------------
+
+cpu_reason           = user defined (acl tables)         or (can set anywhere)
+                       SWITCH_CPU_REASON_IG_PORT_MIRRROR or (must set in egr parser)
+                       SWITCH_CPU_REASON_EG_PORT_MIRRROR or (can set anywhere)
+
+-----------------------
+
+Other signals....
+
+	ig_intr_md_for_dprsr.mirror_type
+	eg_intr_md_for_dprsr.mirror_type
+
+FOR INGRESS: In types.p4:
+
+	types.p4:@pa_alias("ingress", "ig_intr_md_for_dprsr.mirror_type", "ig_md.mirror.type")
+
+FOR EGRESS: In util.p4:
+
+	eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_CPU; (acl.p4 -- should not be needed!!!)
+
+	eg_intr_md_for_dprsr.mirror_type = (bit<4>) eg_md.mirror.type;
+	eg_intr_md_for_dprsr.mirror_io_select = 1;
