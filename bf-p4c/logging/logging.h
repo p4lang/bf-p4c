@@ -3,19 +3,14 @@
 
 #include <string.h>
 #include <time.h>
-#include <rapidjson/document.h>
-#include <rapidjson/prettywriter.h>
 #include <cstdarg>
 #include <fstream>
 
+#include "rapidjson_adapter.h"
 #include "bf-p4c/common/run_id.h"
 #include "lib/exceptions.h"
 
 namespace Logging {
-
-using Writer = rapidjson::Writer<rapidjson::StringBuffer>;
-using PrettyWriter = rapidjson::PrettyWriter<rapidjson::StringBuffer>;
-
 /// Define the levels of logging. All messages above the set level for logger are logged.
 enum LogLevel_t { LOG, DEBUG, INFO, WARNING, ERROR, CRITICAL };
 
@@ -38,8 +33,8 @@ class Logger : public rapidjson::Document {
     virtual void serialize(Writer &) const = 0;
     virtual void log() {
         rapidjson::StringBuffer sb;
-        PrettyWriter writer(sb);
-        serialize(writer);
+        PrettyWriterAdapter writerAdapter(sb);
+        serialize(writerAdapter);
         _logFile << sb.GetString();
         _logFile.flush();
     }

@@ -11,7 +11,6 @@
 #error "event_logger.cpp: EVENT_LOG_SCHEMA_VERSION is not defined!"
 #endif
 
-using Writer = rapidjson::Writer<rapidjson::StringBuffer>;
 using Schema = Logging::Event_Log_Schema_Logger;
 
 /**
@@ -25,7 +24,7 @@ class EventBaseWrapper {
  public:
     explicit EventBaseWrapper(Schema::Event_Base *base) : obj(base) {}
 
-    void serialize(Writer &writer) const {
+    void serialize(Logging::Writer &writer) const {
         obj->serialize(writer);
     }
 };
@@ -67,8 +66,8 @@ bool EventLogger::isVerbosityAtLeast(unsigned level, const std::string &file) co
 
 inline void EventLogger::logSink(const EventBaseWrapper &obj) {
     rapidjson::StringBuffer sb;
-    Writer writer(sb);
-    obj.serialize(writer);
+    Logging::PlainWriterAdapter writerAdapter(sb);
+    obj.serialize(writerAdapter);
 
     // Actual logging sink
     spdlog::error(sb.GetString());
