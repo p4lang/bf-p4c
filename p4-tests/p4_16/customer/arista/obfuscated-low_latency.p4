@@ -1,5 +1,5 @@
-// /usr/bin/p4c-stable/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-stable/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--disable-power-check --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.2.1-pr.3 (SHA: c3a6e48)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
+// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -180,17 +180,17 @@ header Lacona {
     bit<4>  Buckeye;
     bit<12> Topanga;
     bit<2>  Spearman;
-    bit<2>  Allison;
+    bit<2>  Earlham;
     bit<12> Chevak;
     bit<8>  Mendocino;
     bit<2>  Eldred;
     bit<3>  Chloride;
     bit<1>  Garibaldi;
     bit<1>  Weinert;
-    bit<1>  Cornell;
-    bit<4>  Noyes;
+    bit<1>  Lewellen;
+    bit<4>  Absecon;
     bit<12> Helton;
-    bit<16> Grannis;
+    bit<16> Brodnax;
     bit<16> Basic;
 }
 
@@ -503,7 +503,6 @@ struct Manilla {
     bit<1>  Orrick;
     bit<12> Ipava;
     bit<20> McCammon;
-    bit<6>  Lapoint;
     bit<16> Wamego;
     bit<16> Brainard;
     bit<3>  Fristoe;
@@ -856,35 +855,31 @@ parser Picabo(packet_in Circle, out Udall Jayton, out Wildorado Millstone, out i
         Circle.extract<Lacona>(Jayton.Aniak);
         transition accept;
     }
-    state SanRemo {
-        Millstone.Ocracoke.Higginson = Millstone.Livonia.LaLuz;
-        Millstone.BealCity.Ipava = Millstone.Livonia.LaLuz;
-        transition Thawville;
-    }
     state Basco {
         Circle.extract<Ledoux>(Jayton.Lindsborg[0]);
-        Circle.extract<Linden>(Jayton.Magasco);
-        Millstone.Ocracoke.Basic = Jayton.Magasco.Basic;
         Millstone.Ocracoke.Higginson = Jayton.Lindsborg[0].Findlay;
         Millstone.BealCity.Ipava = Jayton.Lindsborg[0].Findlay;
-        transition select(Jayton.Magasco.Basic) {
-            16w0x800: Gamaliel;
-            16w0x806: Orting;
-            default: accept;
-        }
+        transition Armagh;
     }
-    state Armagh {
+    state Bowers {
         Circle.extract<StarLake>(Jayton.Nevis);
         Millstone.Ocracoke.Connell = Jayton.Nevis.Connell;
         Millstone.Ocracoke.Cisco = Jayton.Nevis.Cisco;
         Millstone.BealCity.Rains = Jayton.Nevis.Rains;
         Millstone.BealCity.SoapLake = Jayton.Nevis.SoapLake;
-        transition select((Circle.lookahead<bit<16>>())[15:0]) {
-            16w0x8100: Basco;
-            default: SanRemo;
-        }
+        transition Basco;
     }
-    state Thawville {
+    state Skene {
+        Circle.extract<StarLake>(Jayton.Nevis);
+        Millstone.Ocracoke.Connell = Jayton.Nevis.Connell;
+        Millstone.Ocracoke.Cisco = Jayton.Nevis.Cisco;
+        Millstone.BealCity.Rains = Jayton.Nevis.Rains;
+        Millstone.BealCity.SoapLake = Jayton.Nevis.SoapLake;
+        Millstone.Ocracoke.Higginson = Millstone.Livonia.LaLuz;
+        Millstone.BealCity.Ipava = Millstone.Livonia.LaLuz;
+        transition Armagh;
+    }
+    state Armagh {
         Circle.extract<Linden>(Jayton.Magasco);
         Millstone.Ocracoke.Basic = Jayton.Magasco.Basic;
         transition select(Jayton.Magasco.Basic) {
@@ -914,7 +909,10 @@ parser Picabo(packet_in Circle, out Udall Jayton, out Wildorado Millstone, out i
         Millstone.Livonia.Townville = Humeston.Townville;
         Millstone.Livonia.Hueytown = Humeston.Hueytown;
         Millstone.Livonia.Monahans = Humeston.Wyndmoor;
-        transition Armagh;
+        transition select((Circle.lookahead<bit<112>>())[15:0]) {
+            16w0x8100: Bowers;
+            default: Skene;
+        }
     }
 }
 
@@ -939,7 +937,7 @@ control Tabler(inout Udall Jayton, inout Wildorado Millstone, in ingress_intrins
         Millstone.Ocracoke.Westhoff = Pinetop;
         Millstone.Ocracoke.Havana = Garrison;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Milano") table Milano {
+    @disable_atomic_modify(1) @name(".Milano") table Milano {
         actions = {
             Moultrie();
         }
@@ -1040,7 +1038,6 @@ control Peoria(inout Udall Jayton, inout Wildorado Millstone, in ingress_intrins
         }
         key = {
             Millstone.BealCity.McCammon: ternary @name("BealCity.McCammon") ;
-            Millstone.Yerington.Blencoe: selector @name("Yerington.Blencoe") ;
             Millstone.Goodwin.Norma    : selector @name("Goodwin.Norma") ;
         }
         default_action = Sedan();
@@ -1635,11 +1632,11 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
     }
     @name(".Pacifica.Fabens") Hash<bit<16>>(HashAlgorithm_t.CRC16) Pacifica;
     @name(".Judson") action Judson() {
-        Millstone.Goodwin.Norma = Pacifica.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Jayton.Nevis.Rains, Jayton.Nevis.SoapLake, Jayton.Nevis.Connell, Jayton.Nevis.Cisco, Millstone.Ocracoke.Basic });
+        Millstone.Goodwin.Norma = Pacifica.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Jayton.Nevis.Rains, Jayton.Nevis.SoapLake, Jayton.Nevis.Connell, Jayton.Nevis.Cisco, Millstone.Ocracoke.Basic, Millstone.Yerington.Blencoe });
     }
     @name(".Mogadore.Quebrada") Hash<bit<16>>(HashAlgorithm_t.CRC16) Mogadore;
     @name(".Westview") action Westview() {
-        Millstone.Goodwin.Norma = Mogadore.get<tuple<bit<8>, bit<32>, bit<32>>>({ Jayton.Twain.Norcatur, Jayton.Twain.Petrey, Jayton.Twain.Armona });
+        Millstone.Goodwin.Norma = Mogadore.get<tuple<bit<8>, bit<32>, bit<32>, bit<9>>>({ Jayton.Twain.Norcatur, Jayton.Twain.Petrey, Jayton.Twain.Armona, Millstone.Yerington.Blencoe });
     }
     @name(".Pimento") action Pimento() {
         Millstone.Goodwin.Norma = Millstone.Toluca.McAllen;
@@ -1753,10 +1750,10 @@ control FairOaks(inout Udall Jayton, inout Wildorado Millstone, in egress_intrin
         Jayton.Aniak.Garibaldi = (bit<1>)1w0;
         Jayton.Aniak.Mendocino = Millstone.BealCity.Mendocino;
         Jayton.Aniak.Chevak = Millstone.Ocracoke.Higginson;
-        Jayton.Aniak.Allison = 2w0;
-        Jayton.Aniak.Noyes = 4w0;
+        Jayton.Aniak.Earlham = 2w0;
+        Jayton.Aniak.Absecon = 4w0;
         Jayton.Aniak.Helton = Millstone.Ocracoke.Fairmount;
-        Jayton.Aniak.Grannis = 16w0;
+        Jayton.Aniak.Brodnax = 16w0;
         Jayton.Aniak.Basic = 16w0xc000;
     }
     @disable_atomic_modify(1) @stage(6) @name(".Oconee") table Oconee {

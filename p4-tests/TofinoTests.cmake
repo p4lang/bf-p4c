@@ -26,6 +26,7 @@ set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_TNA_ARISTA_FILES
   "obfuscated-baremetal.p4"
   "obfuscated-default.p4"
+  "obfuscated-greent.p4"
   "obfuscated-firewall.p4"
   "obfuscated-l2subintf.p4"
   "obfuscated-low_latency.p4"

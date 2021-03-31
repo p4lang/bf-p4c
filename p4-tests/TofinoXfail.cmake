@@ -1929,3 +1929,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
 
+# P4C-3666
+p4c_add_xfail_reason("tofino"
+  "tofino supports up to 12 stages, using .*"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-baremetal.p4
+)
+
+# P4C-3667
+p4c_add_xfail_reason("tofino"
+  "tofino supports up to 12 stages, using .*"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
+)
+
