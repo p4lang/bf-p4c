@@ -1029,6 +1029,7 @@ void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_jso
         for (int i = 0; i < 4; i++)
             regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
 
+        regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max = get_prsr_max_dph();
         regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj;
     }
 

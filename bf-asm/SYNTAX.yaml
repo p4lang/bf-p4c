@@ -119,6 +119,8 @@ parser [<thread>] [<port_use>, ...]:
                     # saved into the scratch pad registers
                 shift: <constant>
                     # number of bytes to shift out
+                intr_md: <constant>
+                    # number of bits of intrinsic metadata being shifted out
                 [rotate] <constant> : [offset] <phv_location>
                 [rotate] <range> : [offset] <phv_location>
                     # write the specifed byte (or range) to named phv slot

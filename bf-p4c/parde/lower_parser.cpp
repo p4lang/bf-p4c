@@ -605,6 +605,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
  private:
     bool preorder(const IR::Type_Header* type) override {
+        LOG1("ComputeLoweredParserIR preorder on Header : " << type);
         if (type->name == "egress_intrinsic_metadata_t") {
             static std::vector<std::pair<std::string, unsigned>> eg_intr_md = {
                 {"enq_qdepth", 3},

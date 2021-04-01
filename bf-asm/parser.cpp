@@ -323,8 +323,7 @@ void Parser::process() {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (states.empty()) continue;
         if (start_state[0].lineno < 0) {
-            State *start = states.at("start");
-            if (!start) start = states.at("START");
+            State *start = get_start_state();
             if (!start) {
                 error(lineno, "No %sgress parser start state", gress ? "e" : "in");
                 continue;
@@ -391,6 +390,38 @@ void Parser::process() {
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
+}
+
+int Parser::get_prsr_max_dph() {
+    int prsr_dph_max = 0;
+    std::function<void(const State*, int)> traverse_state;
+    std::set<const State*> visited;
+    traverse_state = [&traverse_state, &prsr_dph_max, &visited](const State *s, int bits_shifted) {
+        if (!s) return;
+        if (visited.count(s)) return;
+        visited.insert(s);
+        for (const auto *m : s->match) {
+            auto local_bits_shifted = bits_shifted + (m->shift * 8) - m->intr_md_bits;
+            std::string next_name = m->next ? m->next->name : std::string("END");
+            LOG5(" State : " << s->name << " --> " << m->match << " --> "
+                    << next_name << " | Bits: " << bits_shifted
+                    << ", shift : " << m->shift * 8 << ", intr_md_bits : " << m->intr_md_bits
+                    << ", Total Bits : " << local_bits_shifted);
+            if (m->next) {
+                for (auto n : m->next.ptr)
+                    traverse_state(n, local_bits_shifted);
+            } else {
+                prsr_dph_max = std::max(prsr_dph_max, local_bits_shifted);
+            }
+        }
+    };
+    traverse_state(get_start_state(), 0);
+    prsr_dph_max = (prsr_dph_max + 8) - (prsr_dph_max % 8);
+    prsr_dph_max /= 8;
+    prsr_dph_max = (prsr_dph_max + 16) - (prsr_dph_max % 16);
+    prsr_dph_max /= 16;
+
+    return prsr_dph_max;
 }
 
 void Parser::output_default_ports(json::vector& vec, bitvec port_use) {
@@ -1071,6 +1102,10 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if ((shift = kv.value.i) < 0 || shift > PARSER_INPUT_BUFFER_SIZE)
                 error(kv.value.lineno, "shift value %d out of range", shift);
+        } else if (kv.key == "intr_md") {
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            if ((intr_md_bits = kv.value.i) < 0)
+                error(kv.value.lineno, "intr_md value %d is -ve", intr_md_bits);
         } else if (kv.key == "offset_inc") {
             if (offset_inc)
                 error(kv.key.lineno, "Multiple offset_inc settings in match");

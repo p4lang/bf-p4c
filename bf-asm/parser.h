@@ -127,6 +127,7 @@ class Parser {
             int         value_set_handle = -1;
             int         offset_inc = 0, shift = 0, buf_req = -1;
             bool        offset_rst = false;
+            int         intr_md_bits = 0;
 
             int ctr_imm_amt = 0, ctr_ld_src = 0, ctr_load = 0;
             bool ctr_stack_push = false, ctr_stack_upd_w_top = false, ctr_stack_pop = false;
@@ -343,6 +344,18 @@ class Parser {
     }
 
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
+
+    State* get_start_state() {
+        std::vector<std::string> startNames = {
+            "start", "START", "$entry_point.start",
+            "$entry_point" };
+        for (auto n : startNames) {
+            if (states.count(n)) return states.at(n);
+        }
+        return nullptr;
+    }
+
+    int get_prsr_max_dph();
 
  private:
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);

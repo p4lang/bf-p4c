@@ -32,8 +32,8 @@ namespace {
 static int pvs_handle = 512;
 static std::map<cstring, int> pvs_handles;
 struct ParserAsmSerializer : public ParserInspector {
-    explicit ParserAsmSerializer(std::ostream& out)
-       : out(out) {
+    explicit ParserAsmSerializer(std::ostream& out, const PhvInfo &phv)
+       : out(out), phv(phv) {
         is_v1Model = (BackendOptions().arch == "v1model"); }
 
  private:
@@ -196,12 +196,12 @@ struct ParserAsmSerializer : public ParserInspector {
         }
 
         for (auto* match : state->transitions)
-            outputMatch(match);
+            outputMatch(match, state->thread());
 
         return true;
     }
 
-    void outputMatch(const IR::BFN::LoweredParserMatch* match) {
+    void outputMatch(const IR::BFN::LoweredParserMatch* match, gress_t gress) {
         AutoIndent indentMatchPattern(indent);
 
         if (auto* const_val = match->value->to<IR::BFN::ParserConstMatchValue>()) {
@@ -236,14 +236,18 @@ struct ParserAsmSerializer : public ParserInspector {
         for (auto* cntr : match->counters)
             outputCounter(cntr);
 
+        int intrinsic_width = 0;
         for (auto* stmt : match->extracts) {
             if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
-                outputExtractPhv(extract);
+                outputExtractPhv(extract, intrinsic_width);
             else if (auto* extract = stmt->to<IR::BFN::LoweredExtractClot>())
                 outputExtractClot(extract);
             else
                 BUG("unknown lowered parser primitive type");
         }
+
+        if (intrinsic_width > 0 && gress == EGRESS)
+            out << indent << "intr_md: " << intrinsic_width << std::endl;
 
         if (!match->saves.empty())
             outputSave(match->saves);
@@ -297,11 +301,14 @@ struct ParserAsmSerializer : public ParserInspector {
         out << " ]" << std::endl;
     }
 
-    void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract) {
+    void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract, int &intrinsic_width) {
         // Generate the assembly that actually implements the extract.
         if (auto* source = extract->source->to<IR::BFN::LoweredInputBufferRVal>()) {
             auto bytes = source->range;
             out << indent << Range(bytes.lo, bytes.hi) << ": " << extract->dest;
+            for (auto sl : phv.get_slices_in_container(extract->dest->container)) {
+                if (sl.field()->is_intrinsic()) intrinsic_width += sl.width();
+            }
         } else if (auto* source = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
             out << indent << extract->dest << ": " << source->constant;
         } else {
@@ -440,12 +447,14 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     std::ostream& out;
+    const PhvInfo &phv;
     indent_t indent;
 };
 
 }  // namespace
 
-ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, gress_t gress) {
+ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, gress_t gress)
+    : phv(phv) {
     BUG_CHECK(pipe->thread[gress].parsers.size() != 0, "No parser?");
     for (auto parser : pipe->thread[gress].parsers) {
         auto lowered_parser = parser->to<IR::BFN::LoweredParser>();
@@ -455,7 +464,7 @@ ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, gress_t gress) {
 }
 
 std::ostream& operator<<(std::ostream& out, const ParserAsmOutput& parserOut) {
-    ParserAsmSerializer serializer(out);
+    ParserAsmSerializer serializer(out, parserOut.phv);
     for (auto p : parserOut.parsers) {
         LOG1("write asm for " << p);
         p->apply(serializer);

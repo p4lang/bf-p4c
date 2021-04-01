@@ -100,11 +100,11 @@ class AsmOutput : public Inspector {
             if (::errorCount() == 0) {
                 out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
                                     pipe->ghost_thread != nullptr)
-                    << ParserAsmOutput(pipe, INGRESS)
+                    << ParserAsmOutput(pipe, phv, INGRESS)
                     << DeparserAsmOutput(pipe, phv, clot, INGRESS);
                 if (pipe->ghost_thread != nullptr)
                     out << "parser ghost: " << ghostPhvContainer() << std::endl;
-                out << ParserAsmOutput(pipe, EGRESS)
+                out << ParserAsmOutput(pipe, phv, EGRESS)
                     << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                     << mauasm << std::endl
                     << flex->asm_output() << std::endl;

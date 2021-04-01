@@ -161,6 +161,8 @@ std::ostream &operator<<(std::ostream &out, match_t m) {
         out << "0o";
     else if ((shift = chkmask(m, (bits = 1))) >= 0)
         out << "0b";
+    else if ((shift = chkmask(m, (bits = 0))) == 0)
+        out << "0b*";
     else
         assert(0);
     uint64_t mask = bitMask(bits) << shift;
