@@ -597,6 +597,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
     std::map<const IR::BFN::ParserState*,
              const IR::BFN::LoweredParserState*> loweredStates;
+    std::set<const IR::BFN::LoweredParserState*> dontMergeStates;
 
     const IR::BFN::ContainerRef* igParserError = nullptr;
     const IR::BFN::ContainerRef* egParserError = nullptr;
@@ -604,6 +605,11 @@ struct ComputeLoweredParserIR : public ParserInspector {
     unsigned egressMetaSize = 0;  // in byte
 
  private:
+    profile_t init_apply(const IR::Node *node) override {
+        dontMergeStates.clear();
+        return Inspector::init_apply(node);
+    }
+
     bool preorder(const IR::Type_Header* type) override {
         LOG1("ComputeLoweredParserIR preorder on Header : " << type);
         if (type->name == "egress_intrinsic_metadata_t") {
@@ -940,6 +946,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // so that we can link its predecessors to it. (Which, transitively,
         // will eventually stitch the entire graph of lowered states together.)
         loweredStates[state] = loweredState;
+        if (state->dontMerge) {
+            dontMergeStates.insert(loweredState);
+        }
     }
 
     void end_apply() override {
@@ -1111,10 +1120,13 @@ struct ElimEmptyState : public ParserTransform {
 // where we couldn't before lowering (without breaking the P4 semantic).
 struct MergeLoweredParserStates : public ParserTransform {
     const CollectLoweredParserInfo& parser_info;
+    const ComputeLoweredParserIR& computed;
     ClotInfo &clot;
 
-    explicit MergeLoweredParserStates(const CollectLoweredParserInfo& pi, ClotInfo &c)
-        : parser_info(pi), clot(c) { }
+    explicit MergeLoweredParserStates(const CollectLoweredParserInfo& pi,
+                                      const ComputeLoweredParserIR& computed,
+                                      ClotInfo &c)
+        : parser_info(pi), computed(computed), clot(c) { }
 
     const IR::BFN::LoweredParserMatch*
     get_unconditional_match(const IR::BFN::LoweredParserState* state) {
@@ -1139,6 +1151,9 @@ struct MergeLoweredParserStates : public ParserTransform {
 
     bool can_merge(const IR::BFN::LoweredParserMatch* a, const IR::BFN::LoweredParserMatch* b) {
         if (a->hdrLenIncFinalAmt || b->hdrLenIncFinalAmt)
+            return false;
+
+        if (computed.dontMergeStates.count(a->next) || computed.dontMergeStates.count(b->next))
             return false;
 
         if (a->priority && b->priority)
@@ -1221,8 +1236,10 @@ struct MergeLoweredParserStates : public ParserTransform {
     }
 
     IR::Node* preorder(IR::BFN::LoweredParserMatch* match) override {
-        auto state = findContext<IR::BFN::LoweredParserState>();
-
+        auto state = findOrigCtxt<IR::BFN::LoweredParserState>();
+        if (computed.dontMergeStates.count(state)) {
+            return match;
+        }
         if (match->next && !match->next->name.find("$") && !is_loopback_state(match->next->name)) {
             if (auto next = get_unconditional_match(match->next)) {
                 if (can_merge(match, next)) {
@@ -1267,7 +1284,7 @@ struct LowerParserIR : public PassManager {
             new ReplaceParserIR(*computeLoweredParserIR),
             LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
             lower_parser_info,
-            new MergeLoweredParserStates(*lower_parser_info, clotInfo),
+            new MergeLoweredParserStates(*lower_parser_info, *computeLoweredParserIR, clotInfo),
             LOGGING(4) ? new DumpParser("final_llir_parser") : nullptr
         });
     }
