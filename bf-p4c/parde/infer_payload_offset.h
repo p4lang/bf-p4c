@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/parde/parde_visitor.h"
-
+#include "bf-p4c/parde/parde_utils.h"
 /*
 
   In JBay, parser has new feature of stopping the header length counter in any

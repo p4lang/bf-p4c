@@ -1064,6 +1064,8 @@ struct ElimEmptyState : public ParserTransform {
         if (state->name.endsWith("$ctr_stall"))  // compiler generated stall
             return false;
 
+        if (state->name.endsWith("$hdr_len_stop_stall"))  // compiler generated stall
+            return false;
         auto parser = findOrigCtxt<IR::BFN::Parser>();
         // do not merge loopback state for now, need to maitain loopback pointer TODO
         // p4-tests/p4_16/compile_only/p4c-2153.p4
@@ -1135,7 +1137,7 @@ struct MergeLoweredParserStates : public ParserTransform {
     };
 
     bool can_merge(const IR::BFN::LoweredParserMatch* a, const IR::BFN::LoweredParserMatch* b) {
-        if (a->hdrLenIncFinalAmt && b->hdrLenIncFinalAmt)
+        if (a->hdrLenIncFinalAmt || b->hdrLenIncFinalAmt)
             return false;
 
         if (a->priority && b->priority)

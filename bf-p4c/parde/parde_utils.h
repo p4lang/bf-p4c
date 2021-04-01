@@ -3,22 +3,32 @@
 
 #include "bf-p4c/device.h"
 
+
+static const IR::BFN::PacketRVal* get_packet_range(const IR::BFN::ParserPrimitive* p) {
+    if (auto e = p->to<IR::BFN::Extract>()) {
+        if (auto range = e->source->to<IR::BFN::PacketRVal>()) {
+            return range;
+        } else {
+            return nullptr;
+        }
+    } else if (auto c = p->to<IR::BFN::ChecksumResidualDeposit>()) {
+        return c->header_end_byte;
+    } else if (auto c = p->to<IR::BFN::ChecksumSubtract>()) {
+        return c->source;
+    } else if (auto c = p->to<IR::BFN::ChecksumAdd>()) {
+        return c->source;
+    }
+    return nullptr;
+}
+
 struct SortExtracts {
     explicit SortExtracts(IR::BFN::ParserState* state) {
         std::stable_sort(state->statements.begin(), state->statements.end(),
             [&] (const IR::BFN::ParserPrimitive* a,
                  const IR::BFN::ParserPrimitive* b) {
-                auto ea = a->to<IR::BFN::Extract>();
-                auto eb = b->to<IR::BFN::Extract>();
-
-                if (ea && eb) {
-                    auto va = ea->source->to<IR::BFN::PacketRVal>();
-                    auto vb = eb->source->to<IR::BFN::PacketRVal>();
-
-                    return (va && vb) ? (va->range < vb->range) : !!va;
-                }
-
-                return !!ea;
+                auto va = get_packet_range(a);
+                auto vb = get_packet_range(b);
+                return (va && vb) ? (va->range < vb->range) : !!va;
             });
 
         if (LOGGING(5)) {

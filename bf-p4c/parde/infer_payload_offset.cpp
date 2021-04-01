@@ -1,7 +1,7 @@
 #include "infer_payload_offset.h"
 
 #include <boost/range/adaptor/reversed.hpp>
-
+#include "bf-p4c/device.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parser_info.h"
@@ -410,6 +410,20 @@ class InsertFrontierStates : public ParserTransform {
 };
 
 class RewriteParde : public PardeTransform {
+    // Determines the exact location to add hdr_len_inc_stop statement
+    IR::Vector<IR::BFN::ParserPrimitive>::iterator
+    find_vector_position_for_stopper(const IR::BFN::PacketRVal* rval,
+                                     IR::Vector<IR::BFN::ParserPrimitive>& rv) {
+        for (auto it = rv.begin(); it != rv.end(); it++) {
+            if (auto source = get_packet_range(*it)) {
+                if (!source->range.overlaps(rval->range)) {
+                    return it;
+                }
+            }
+        }
+        return rv.begin();
+    }
+
     void insert_hdr_len_inc_stop(IR::BFN::ParserState* state) {
         IR::Vector<IR::BFN::ParserPrimitive> rv;
 
@@ -424,11 +438,13 @@ class RewriteParde : public PardeTransform {
                     if (!inserted && (is_mutable_field(defuse, f) ||
                         checksumDest.is_checksum_dest(f))) {
                         auto stopper = new IR::BFN::HdrLenIncStop(rval);
-                        rv.insert(rv.begin(), stopper);
+                        auto it = find_vector_position_for_stopper(rval, rv);
+                        rv.insert(it, stopper);
                         rv.insert(rv.begin(), extract);
                         inserted = true;
 
                         LOG4("inserted " << stopper << " in " << state->name);
+                        state_to_hdr_len_inc_stop[state->name] = stopper;
                         continue;
                     }
                 }
@@ -436,12 +452,10 @@ class RewriteParde : public PardeTransform {
 
             rv.insert(rv.begin(), stmt);
         }
-
         // state has no write-able fields, insert stopper at the beginning
         if (!inserted) {
             auto stopper = new IR::BFN::HdrLenIncStop(
                     new IR::BFN::PacketRVal(nw_bitrange(0, 0)));
-
             rv.insert(rv.begin(), stopper);
 
             LOG4("insert hdr_len_inc_stop (null-extract) in " << state->name);
@@ -450,46 +464,88 @@ class RewriteParde : public PardeTransform {
         state->statements = rv;
     }
 
-    void elim_extracts_of_unused_field(IR::BFN::ParserState* state) {
+    void elim_unused_field_in_frontier(IR::BFN::ParserState* state) {
         IR::Vector<IR::BFN::ParserPrimitive> rv;
 
         bool seen_hdr_len_inc_stop = false;
-        const PHV::Field* field = nullptr;
-
         // assumes primitives have been sorted by packet rval
-        for (auto stmt : boost::adaptors::reverse(state->statements)) {
+        for (auto stmt : state->statements) {
             auto stopper = stmt->to<IR::BFN::HdrLenIncStop>();
             auto extract = stmt->to<IR::BFN::Extract>();
+            const PHV::Field* field = nullptr;
             if (extract) {
                 field = phv.field(extract->dest->field);
             }
-            if (stopper)
-                seen_hdr_len_inc_stop = true;
 
+            if (stopper) {
+                seen_hdr_len_inc_stop = true;
+                state_to_hdr_len_inc_stop[state->name] = stopper;
+
+                // Needed for cloudbreak
+                // If the current state does not end by shift equal to final header length
+                // amount, then collect all statements that fall after the stopper
+
+                if (Device::currentDevice() == Device::CLOUDBREAK) {
+                    auto transition = *(state->transitions).begin();
+                    auto stopper_range = stopper->source->range.toUnit<RangeUnit::Byte>();
+                    unsigned final_hdr_count = stopper_range.hi ? stopper_range.hi + 1 : 0;
+
+                    // No need for dontMerge if parsing ends at this state.
+                    if (state->transitions.size() != 1 || !transition->next)
+                        state->dontMerge = true;
+                    if (transition->shift != final_hdr_count) {
+                         orig_state_to_new_state_stmts[state->name] = {};
+                    }
+                }
+                rv.push_back(stmt);
+                continue;
+            }
             if (seen_hdr_len_inc_stop) {
+                // Statements below hdr_len_inc_stop
+                if (!extract || !field->deparsed() ||
+                    uses.is_used_mau(field) || field->is_checksummed()) {
+                    if (orig_state_to_new_state_stmts.count(state->name)) {
+                        orig_state_to_new_state_stmts[state->name].push_back(stmt);
+                    } else {
+                        rv.push_back(stmt);
+                    }
+                } else {
+                    LOG4("elim " << stmt << " in " << state->name);
+                }
+                if (field && !fields_above_frontier.count(field)) {
+                    fields_below_frontier.insert(field);
+                }
+            } else {
+                // Statements above hdr_len_inc_stop
                 rv.push_back(stmt);
                 if (field) {
                    fields_above_frontier.insert(field);
                 }
-                continue;
             }
+        }
+        state->statements = rv;
+    }
 
-            if (!extract) {
-                rv.insert(rv.begin(), stmt);
-                continue;
+    void elim_unused_fields_below_frontier(IR::BFN::ParserState* state) {
+        IR::Vector<IR::BFN::ParserPrimitive> rv;
+
+        // assumes primitives have been sorted by packet rval
+        for (auto stmt : state->statements) {
+            auto extract = stmt->to<IR::BFN::Extract>();
+            const PHV::Field* field = nullptr;
+            if (extract) {
+                field = phv.field(extract->dest->field);
             }
-
-            if (!field->deparsed() ||
+            if (!extract || !field->deparsed() ||
                 uses.is_used_mau(field) || field->is_checksummed()) {
-                rv.insert(rv.begin(), stmt);
+                rv.push_back(stmt);
             } else {
                 LOG4("elim " << stmt << " in " << state->name);
             }
-            if (!stopper && !fields_above_frontier.count(field)) {
+            if (field && !fields_above_frontier.count(field)) {
                 fields_below_frontier.insert(field);
             }
         }
-
         state->statements = rv;
     }
 
@@ -547,7 +603,7 @@ class RewriteParde : public PardeTransform {
         } else if (is_below_frontier(orig_parser, orig_state)) {
             rv = state->clone();
             SortExtracts sort(rv);
-            elim_extracts_of_unused_field(rv);
+            elim_unused_fields_below_frontier(rv);
         } else {
             auto& front = parser_to_frontier_states.at(orig_parser->gress);
             BUG_CHECK(front.count(orig_state),
@@ -556,7 +612,7 @@ class RewriteParde : public PardeTransform {
             rv = state->clone();
             SortExtracts sort(rv);
             insert_hdr_len_inc_stop(rv);
-            elim_extracts_of_unused_field(rv);
+            elim_unused_field_in_frontier(rv);
         }
 
         return rv;
@@ -565,16 +621,12 @@ class RewriteParde : public PardeTransform {
     IR::Node* preorder(IR::BFN::EmitField* emit) override {
         prune();
 
-        IR::BFN::Emit* rv = nullptr;
-
         auto f = phv.field(emit->source->field);
-        if (!fields_below_frontier.count(f))
-            rv = emit;
-
-        if (!rv)
+        if (fields_below_frontier.count(f)) {
             LOG4("elim " << emit << " (below parsing frontier)");
-
-        return rv;
+            return nullptr;
+        }
+        return emit;
     }
 
     struct MapNameToState : Inspector {
@@ -590,6 +642,8 @@ class RewriteParde : public PardeTransform {
     };
 
     profile_t init_apply(const IR::Node* root) override {
+        state_to_hdr_len_inc_stop.clear();
+        orig_state_to_new_state_stmts.clear();
         root->apply(MapNameToState(name_to_state));
 
         for (auto& kv : frontier.parser_to_frontier_state_names) {
@@ -622,7 +676,6 @@ class RewriteParde : public PardeTransform {
     std::set<const PHV::Field*> fields_above_frontier;
     std::set<const PHV::Field*> fields_below_frontier;
 
-
     const IR::BFN::Parser* orig_parser = nullptr;
 
 
@@ -634,6 +687,16 @@ class RewriteParde : public PardeTransform {
     const GetAllChecksumDest& checksumDest;
 
  public:
+    // Maps state name to hdr_len_inc_stop statement
+    std::map<cstring, const IR::BFN::HdrLenIncStop*> state_to_hdr_len_inc_stop;
+
+    // For cloudbreak, a new state needs to be added after the state with hdr_len_inc_stop
+    // This map contains the info needed
+    // Key : State name with hdr_len_inc_stop
+    // Value : statements for new state
+    std::map <cstring,
+        IR::Vector<IR::BFN::ParserPrimitive>> orig_state_to_new_state_stmts;
+
     RewriteParde(const PhvInfo& phv, const PhvUse& uses,
                  const FieldDefUse& defuse,
                  const CollectParserInfo& parserInfo,
@@ -643,6 +706,64 @@ class RewriteParde : public PardeTransform {
         parserInfo(parserInfo), frontier(frontier), checksumDest(checksumDest) { }
 };
 
+
+
+class InsertStallState : public ParserTransform {
+ public:
+    const RewriteParde& rewriteParde;
+    explicit InsertStallState(const RewriteParde& rewriteParde) : rewriteParde(rewriteParde) { }
+// For Cloudbreak, the hdr_len count stops after the shift_amt is applied in the state
+// where the hdr_len_inc_stop flag is set. Compare this with JBay where there's an explicit
+// hdr_len_inc_final_amt value."
+// So we change the current state to end at the point when hdr_len count stops
+// To add this feature, the following is done to the current state (current state sets
+// hdr_len_inc_stop flag)
+//  - change the shift of the state containing hdr_len_inc_stop equal to
+//    final hdr len count
+//  - Make a unconditional transition to a new state that will contain all the statements
+//    that occurs after the hdr_len_inc_stop statement in the current state
+//  - Give remaining shift to the new state and add current state's original transition to
+//    new state
+//  - Set current state as dont merge. (This is because we want the current state to end
+//    exactly at the point we set it here. Merging of that state can change it)
+
+    IR::Node* preorder(IR::BFN::ParserState* state) override {
+        if (rewriteParde.orig_state_to_new_state_stmts.count(state->name)) {
+            BUG_CHECK(rewriteParde.state_to_hdr_len_inc_stop.count(state->name),
+                "%1% does not contains hdr_len_inc_stop? " , state->name);
+            auto stopper = rewriteParde.state_to_hdr_len_inc_stop.at(state->name);
+            auto stopper_range = stopper->source->range.toUnit<RangeUnit::Byte>();
+            // Get final header amt
+            unsigned hdr_stop = stopper_range.hi ? stopper_range.hi + 1 : 0;
+            auto transition = *(state->transitions).begin();
+            //  make a new state
+
+            unsigned  new_shift = transition->shift - hdr_stop;
+            cstring new_state_name = state->name + ".$hdr_len_stop_stall";
+            auto new_state = new IR::BFN::ParserState(state->p4State, new_state_name, state->gress);
+            auto orig_state_new_transition = new IR::BFN::Transition(match_t(),
+                                             hdr_stop, new_state);
+
+            auto statements = rewriteParde.orig_state_to_new_state_stmts.at(state->name);
+            statements = *statements.apply(ShiftPacketRVal(hdr_stop*8, true));
+            IR::Vector<IR::BFN::Transition> transitions;
+            IR::Vector<IR::BFN::Select> selects;
+
+            for (auto orig_transition : state->transitions) {
+                auto t = new IR::BFN::Transition(orig_transition->value, new_shift,
+                                                 orig_transition->next);
+                transitions.push_back(t);
+            }
+            new_state->transitions = transitions;
+            new_state->selects = *(state->selects).apply(ShiftPacketRVal(hdr_stop*8, true));
+            new_state->statements = statements;
+            state->transitions = {orig_state_new_transition};
+            LOG3("Adding " << new_state->name);
+        }
+        return state;
+    }
+};
+
 InferPayloadOffset::InferPayloadOffset(const PhvInfo& phv,
                                        const FieldDefUse& defuse) {
     auto uses = new PhvUse(phv);
@@ -650,6 +771,8 @@ InferPayloadOffset::InferPayloadOffset(const PhvInfo& phv,
     auto parserInfo = new CollectParserInfo;
     auto findFrontier = new FindParsingFrontier(phv, defuse, *parserInfo, *checksumDest);
     auto insertFrontier = new InsertFrontierStates(*findFrontier);
+    auto rewriteParde = new RewriteParde(phv, *uses, defuse, *parserInfo,
+                                         *insertFrontier, *checksumDest);
 
     addPasses({
         LOGGING(4) ? new DumpParser("before_infer_payload_offset") : nullptr,
@@ -661,7 +784,8 @@ InferPayloadOffset::InferPayloadOffset(const PhvInfo& phv,
                                     findFrontier->color_groups) : nullptr,
         insertFrontier,
         parserInfo,
-        new RewriteParde(phv, *uses, defuse, *parserInfo, *insertFrontier, *checksumDest),
+        rewriteParde,
+        new InsertStallState(*rewriteParde),
         LOGGING(4) ? new DumpParser("after_infer_payload_offset") : nullptr,
     });
 }

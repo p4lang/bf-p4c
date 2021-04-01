@@ -192,7 +192,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new RewriteParserMatchDefs(phv),
         new ResolveNegativeExtract,
         new CollectPhvInfo(phv),
-        (Device::currentDevice() == Device::JBAY && options.infer_payload_offset) ?
+        (Device::currentDevice() != Device::TOFINO && options.infer_payload_offset) ?
             new InferPayloadOffset(phv, defuse) : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
