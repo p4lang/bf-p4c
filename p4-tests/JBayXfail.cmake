@@ -501,3 +501,7 @@ p4c_add_xfail_reason("tofino2"
   p4c-3614
 )
 
+p4c_add_xfail_reason("tofino2"
+   "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*"
+   extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
+)

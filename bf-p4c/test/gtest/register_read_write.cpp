@@ -27,7 +27,11 @@ auto defs = R"(
     struct headers_t { }
     struct local_metadata_t { bit<5> result_5b; bit<16> result_16b; bit<32> result_32b; })";
 
-#define RUN_CHECK(pass, input, expected) do { \
+auto defs2 = R"(
+    struct headers_t { }
+    struct local_metadata_t { bit<32> result1; bit<32> result2; bit<32> result3; })";
+
+#define RUN_CHECK(defs, pass, input, expected) do { \
     auto blk = TestCode(TestCode::Hdr::Tofino1arch, \
         TestCode::tofino_shell(), \
         {defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
@@ -94,7 +98,7 @@ TEST(RegisterReadWrite, ReadSlice) {
             "reg_16b_action();",
         "}"
     };
-    RUN_CHECK(setup_passes(), input, expected);
+    RUN_CHECK(defs, setup_passes(), input, expected);
 }
 
 TEST(RegisterReadWrite, ReadDowncast) {
@@ -123,7 +127,7 @@ TEST(RegisterReadWrite, ReadDowncast) {
             "reg_16b_action();",
         "}"
     };
-    RUN_CHECK(setup_passes(), input, expected);
+    RUN_CHECK(defs, setup_passes(), input, expected);
 }
 
 TEST(RegisterReadWrite, ReadUpcast) {
@@ -157,7 +161,274 @@ TEST(RegisterReadWrite, ReadUpcast) {
             "reg_16b_action();",
         "}"
     };
-    RUN_CHECK(setup_passes(), input, expected);
+    RUN_CHECK(defs, setup_passes(), input, expected);
+}
+
+TEST(RegisterReadWrite, ReadRead) {
+    auto input = R"(
+        Register<bit<32>, PortId_t>(1024) reg_32b;
+        action test_action_1() {
+            ig_md.result1 = reg_32b.read(ig_intr_md.ingress_port);
+        }
+        action test_action_2() {
+            ig_md.result2 = reg_32b.read(ig_intr_md.ingress_port);
+        }
+        table test_table {
+            key = {
+                ig_intr_md.ingress_port : exact;
+            }
+            actions = { test_action_1; test_action_2; }
+        }
+        apply {
+            test_table.apply();
+        }
+    )";
+    Match::CheckList expected {
+        "action NoAction_0() { }",
+        "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_2 = {",
+            "void apply(inout bit<32> value, out bit<32> rv) {",
+                "bit<32> in_value;",
+                "in_value = value;",
+                "rv = in_value;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_1 = {",
+            "void apply(inout bit<32> value, out bit<32> rv) {",
+                "bit<32> in_value;",
+                "in_value = value;",
+                "rv = in_value;",
+            "}",
+        "};",
+        "action test_action_1() {",
+            "ig_md.result1 = reg_32b_0_test_action_1.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_2() {",
+            "ig_md.result2 = reg_32b_0_test_action_2.execute(ig_intr_md.ingress_port);",
+        "}",
+        "table test_table_0 {",
+            "key = {",
+                " ig_intr_md.ingress_port: exact ; ",
+            "}",
+            "actions = { test_action_1(); test_action_2(); NoAction_0(); } ",
+            "default_action = NoAction_0(); "
+        "}",
+        "apply {",
+            "test_table_0.apply();",
+        "}"
+    };
+    RUN_CHECK(defs2, setup_passes(), input, expected);
+}
+
+TEST(RegisterReadWrite, ReadWrite) {
+    auto input = R"(
+        Register<bit<32>, PortId_t>(1024) reg_32b;
+        action test_action_1() {
+            ig_md.result1 = reg_32b.read(ig_intr_md.ingress_port);
+        }
+        action test_action_2() {
+            reg_32b.write(ig_intr_md.ingress_port, 42);
+        }
+        table test_table {
+            key = {
+                ig_intr_md.ingress_port : exact;
+            }
+            actions = { test_action_1; test_action_2; }
+        }
+        apply {
+            test_table.apply();
+        }
+    )";
+    Match::CheckList expected {
+        "action NoAction_0() { }",
+        "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_2 = {",
+            "void apply(inout bit<32> value) {",
+                "value = 32w42;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_1 = {",
+            "void apply(inout bit<32> value, out bit<32> rv) {",
+                "bit<32> in_value;",
+                "in_value = value;",
+                "rv = in_value;",
+            "}",
+        "};",
+        "action test_action_1() {",
+            "ig_md.result1 = reg_32b_0_test_action_1.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_2() {",
+            "reg_32b_0_test_action_2.execute(ig_intr_md.ingress_port);",
+        "}",
+        "table test_table_0 {",
+            "key = {",
+                " ig_intr_md.ingress_port: exact ; ",
+            "}",
+            "actions = { test_action_1(); test_action_2(); NoAction_0(); } ",
+            "default_action = NoAction_0(); "
+        "}",
+        "apply {",
+            "test_table_0.apply();",
+        "}"
+    };
+    RUN_CHECK(defs2, setup_passes(), input, expected);
+}
+
+TEST(RegisterReadWrite, WriteWrite) {
+    auto input = R"(
+        Register<bit<32>, PortId_t>(1024) reg_32b;
+        action test_action_1() {
+            reg_32b.write(ig_intr_md.ingress_port, 41);
+        }
+        action test_action_2() {
+            reg_32b.write(ig_intr_md.ingress_port, 42);
+        }
+        table test_table {
+            key = {
+                ig_intr_md.ingress_port : exact;
+            }
+            actions = { test_action_1; test_action_2; }
+        }
+        apply {
+            test_table.apply();
+        }
+    )";
+    Match::CheckList expected {
+        "action NoAction_0() { }",
+        "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_2 = {",
+            "void apply(inout bit<32> value) {",
+                "value = 32w42;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_1 = {",
+            "void apply(inout bit<32> value) {",
+                "value = 32w41;",
+            "}",
+        "};",
+        "action test_action_1() {",
+            "reg_32b_0_test_action_1.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_2() {",
+            "reg_32b_0_test_action_2.execute(ig_intr_md.ingress_port);",
+        "}",
+        "table test_table_0 {",
+            "key = {",
+                " ig_intr_md.ingress_port: exact ; ",
+            "}",
+            "actions = { test_action_1(); test_action_2(); NoAction_0(); } ",
+            "default_action = NoAction_0(); "
+        "}",
+        "apply {",
+            "test_table_0.apply();",
+        "}"
+    };
+    RUN_CHECK(defs2, setup_passes(), input, expected);
+}
+
+TEST(RegisterReadWrite, Read3Write2) {
+    auto input = R"(
+        Register<bit<32>, PortId_t>(1024) reg_32b;
+        action test_action_0() {
+            reg_32b.write(ig_intr_md.ingress_port, 41);
+        }
+        action test_action_1() {
+            reg_32b.write(ig_intr_md.ingress_port, 42);
+        }
+        action test_action_2() {
+            ig_md.result1 = reg_32b.read(ig_intr_md.ingress_port);
+        }
+        action test_action_3() {
+            ig_md.result2 = reg_32b.read(ig_intr_md.ingress_port);
+        }
+        action test_action_4() {
+            ig_md.result3 = reg_32b.read(ig_intr_md.ingress_port);
+        }
+        table test_table {
+            key = {
+                ig_intr_md.ingress_port : exact;
+            }
+            actions = { test_action_0; test_action_1; test_action_2; test_action_3; test_action_4; }
+        }
+        apply {
+            test_table.apply();
+        }
+    )";
+    Match::CheckList expected {
+        "action NoAction_0() { }",
+        "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_4 = {",
+            "void apply(inout bit<32> value, out bit<32> rv) {",
+                "bit<32> in_value;",
+                "in_value = value;",
+                "rv = in_value;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_3 = {",
+            "void apply(inout bit<32> value, out bit<32> rv) {",
+                "bit<32> in_value;",
+                "in_value = value;",
+                "rv = in_value;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_2 = {",
+            "void apply(inout bit<32> value, out bit<32> rv) {",
+                "bit<32> in_value;",
+                "in_value = value;",
+                "rv = in_value;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_1 = {",
+            "void apply(inout bit<32> value) {",
+                "value = 32w42;",
+            "}",
+        "};",
+        "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
+        "reg_32b_0_test_action_0 = {",
+            "void apply(inout bit<32> value) {",
+                "value = 32w41;",
+            "}",
+        "};",
+        "action test_action_0() {",
+            "reg_32b_0_test_action_0.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_1() {",
+            "reg_32b_0_test_action_1.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_2() {",
+            "ig_md.result1 = reg_32b_0_test_action_2.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_3() {",
+            "ig_md.result2 = reg_32b_0_test_action_3.execute(ig_intr_md.ingress_port);",
+        "}",
+        "action test_action_4() {",
+            "ig_md.result3 = reg_32b_0_test_action_4.execute(ig_intr_md.ingress_port);",
+        "}",
+        "table test_table_0 {",
+            "key = {",
+                " ig_intr_md.ingress_port: exact ; ",
+            "}",
+            "actions = { ",
+                "test_action_0(); test_action_1(); test_action_2(); ",
+                "test_action_3(); test_action_4(); NoAction_0(); "
+            "} ",
+            "default_action = NoAction_0(); "
+        "}",
+        "apply {",
+            "test_table_0.apply();",
+        "}"
+    };
+    RUN_CHECK(defs2, setup_passes(), input, expected);
 }
 
 TEST(RegisterReadWrite, ApplyBlockWriteAfterRead) {
@@ -185,7 +456,7 @@ TEST(RegisterReadWrite, ApplyBlockWriteAfterRead) {
             "`\\1`();",
         "}"
     };
-    RUN_CHECK(setup_passes(), input, expected);
+    RUN_CHECK(defs, setup_passes(), input, expected);
 }
 
 }  // namespace Test

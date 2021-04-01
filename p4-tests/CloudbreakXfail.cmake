@@ -487,3 +487,8 @@ p4c_add_xfail_reason("tofino3"
   "1 expected packet on port 0 not seen"
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
 )
+
+p4c_add_xfail_reason("tofino3"
+   "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*"
+   extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
+)
