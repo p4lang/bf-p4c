@@ -484,7 +484,7 @@ class RewriteParde : public PardeTransform {
                 // Needed for cloudbreak
                 // If the current state does not end by shift equal to final header length
                 // amount, then collect all statements that fall after the stopper
-
+                #if HAVE_CLOUDBREAK
                 if (Device::currentDevice() == Device::CLOUDBREAK) {
                     auto transition = *(state->transitions).begin();
                     auto stopper_range = stopper->source->range.toUnit<RangeUnit::Byte>();
@@ -497,6 +497,7 @@ class RewriteParde : public PardeTransform {
                          orig_state_to_new_state_stmts[state->name] = {};
                     }
                 }
+                #endif  // HAVE_CLOUDBREAK
                 rv.push_back(stmt);
                 continue;
             }
