@@ -130,7 +130,7 @@ action add_bridged_md(
 
 	bridged_md.nsh = {
 		// nsh metadata
-		ig_md.nsh_md.start_of_path,
+//		ig_md.nsh_md.start_of_path,
 		ig_md.nsh_md.end_of_path,
 		ig_md.nsh_md.l2_fwd_en,
 //		ig_md.nsh_md.sf1_active,

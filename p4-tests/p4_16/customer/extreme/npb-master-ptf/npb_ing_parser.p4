@@ -27,7 +27,7 @@ parser NpbIngressParser(
         pkt.extract(ig_intr_md);
         ig_md.port           = ig_intr_md.ingress_port;
         ig_md.timestamp      = ig_intr_md.ingress_mac_tstamp;
-        ig_md.flags.rmac_hit = false;
+//      ig_md.flags.rmac_hit = false;
 
         // Check for resubmit flag if packet is resubmitted.
         // transition select(ig_intr_md.resubmit_flag) {
@@ -35,15 +35,28 @@ parser NpbIngressParser(
         //     0 : parse_port_metadata;
         // }
 
+/*
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
         ig_md.lkp_0.tunnel_id = 0;
+*/
+/*
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
-        ig_md.lkp_1.tunnel_id = 0;
+*/
+        ig_md.lkp_1.tunnel_id = 0; // Derek: for some reason we don't fit unless this is here.
+/*
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
         ig_md.lkp_2.tunnel_id = 0;
+*/
+
+#ifdef PROFILE_BETA
+        ig_md.tunnel_0.terminate = false;
+        ig_md.tunnel_1.terminate = false;
+        ig_md.tunnel_2.terminate = false;
+#endif
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
         // initialize lookup struct to zeros
+/*
         ig_md.lkp_0.mac_src_addr = 0;
         ig_md.lkp_0.mac_dst_addr = 0;
         ig_md.lkp_0.mac_type = 0;
@@ -61,11 +74,12 @@ parser NpbIngressParser(
         ig_md.lkp_0.l4_src_port = 0;
         ig_md.lkp_0.l4_dst_port = 0;
         ig_md.lkp_0.drop_reason = 0;
+*/
 #endif // INGRESS_PARSER_POPULATES_LKP_0
 
-        
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
         // initialize lookup struct to zeros
+/*
         ig_md.lkp_1.mac_src_addr = 0;
         ig_md.lkp_1.mac_dst_addr = 0;
         ig_md.lkp_1.mac_type = 0;
@@ -83,11 +97,12 @@ parser NpbIngressParser(
         ig_md.lkp_1.l4_src_port = 0;
         ig_md.lkp_1.l4_dst_port = 0;
         ig_md.lkp_1.drop_reason = 0;
+*/
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
-        
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
         // initialize lookup struct (2) to zeros
+/*        
         ig_md.lkp_2.mac_src_addr = 0;
         ig_md.lkp_2.mac_dst_addr = 0;
         ig_md.lkp_2.mac_type = 0;
@@ -105,6 +120,7 @@ parser NpbIngressParser(
         ig_md.lkp_2.l4_src_port = 0;
         ig_md.lkp_2.l4_dst_port = 0;
         ig_md.lkp_2.drop_reason = 0;
+*/
 #endif // INGRESS_PARSER_POPULATES_LKP_2
 
 //      ig_md.inner_inner.ethernet_isValid = false;
@@ -128,10 +144,13 @@ parser NpbIngressParser(
     
     state parse_port_metadata {
         // Parse port metadata produced by ibuf
-//      switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-//      ig_md.port_lag_index = port_md.port_lag_index;
-//		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+#ifdef PROFILE_BETA
+        switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
+        ig_md.port_lag_index = port_md.port_lag_index;
+		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+#else
 		pkt.advance(PORT_METADATA_SIZE);
+#endif
         transition check_from_cpu;
     }
     
@@ -371,7 +390,7 @@ parser NpbIngressParser(
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
         // todo: should the lkp struct be set in state parse_transport_ipv4_no_options_frags instead?
-        ig_md.lkp_0.ip_type       = SWITCH_IP_TYPE_IPV4;
+//      ig_md.lkp_0.ip_type       = SWITCH_IP_TYPE_IPV4;
         ig_md.lkp_0.ip_proto      = hdr.transport.ipv4.protocol;
         ig_md.lkp.ip_tos          = hdr.transport.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_0.ip_flags      = hdr.transport.ipv4.flags;
@@ -395,7 +414,7 @@ parser NpbIngressParser(
         pkt.extract(hdr.transport.ipv6);
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
-        ig_md.lkp_0.ip_type       = SWITCH_IP_TYPE_IPV6;
+//      ig_md.lkp_0.ip_type       = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_0.ip_proto      = hdr.transport.ipv6.next_hdr;
         //ig_md.lkp_0.ip_tos        = hdr.transport.ipv6.tos; // not byte-aligned so set in mau
         ig_md.lkp_0.ip_src_addr   = hdr.transport.ipv6.src_addr;
@@ -541,12 +560,11 @@ parser NpbIngressParser(
 #ifdef VNTAG_ENABLE
             ETHERTYPE_VN : parse_outer_vn;
 #endif // VNTAG_ENABLE
-
             ETHERTYPE_VLAN : parse_outer_vlan_0;
             ETHERTYPE_QINQ : parse_outer_vlan_0;
-#ifdef MPLS_ENABLE
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls;
-#endif // MPLS_ENABLE
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
@@ -602,9 +620,9 @@ parser NpbIngressParser(
 
             ETHERTYPE_VLAN : parse_outer_vlan_0;
             ETHERTYPE_QINQ : parse_outer_vlan_0;
-#ifdef MPLS_ENABLE
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls;
-#endif // MPLS_ENABLE
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
@@ -630,9 +648,9 @@ parser NpbIngressParser(
         transition select(hdr.outer.e_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_0;
             ETHERTYPE_QINQ : parse_outer_vlan_0;
-#ifdef MPLS_ENABLE
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls;
-#endif // MPLS_ENABLE
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
@@ -657,9 +675,9 @@ parser NpbIngressParser(
         transition select(hdr.outer.vn_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_0;
             ETHERTYPE_QINQ : parse_outer_vlan_0;
-#ifdef MPLS_ENABLE
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls;
-#endif // MPLS_ENABLE
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
@@ -697,9 +715,9 @@ parser NpbIngressParser(
         transition select(hdr.outer.vlan_tag[0].ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_1;
             ETHERTYPE_QINQ : parse_outer_vlan_1;
-#ifdef MPLS_ENABLE
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls;
-#endif
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
@@ -721,9 +739,9 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.outer.vlan_tag[1].ether_type) {
-#ifdef MPLS_ENABLE
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls;
-#endif
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_IPV4 : parse_outer_ipv4;
             //ETHERTYPE_ARP  : parse_outer_arp;
             ETHERTYPE_IPV6 : parse_outer_ipv6;
@@ -783,7 +801,7 @@ parser NpbIngressParser(
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
         // todo: should the lkp struct be set in state parse_outer_ipv4_no_options_frags instead?
-        ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV4;
+//      ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV4;
         ig_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
         ig_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_1.ip_flags      = hdr.outer.ipv4.flags;
@@ -850,7 +868,7 @@ parser NpbIngressParser(
         pkt.extract(hdr.outer.ipv6);
         
 #ifdef INGRESS_PARSER_POPULATES_LKP_1        
-        ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV6;
+//      ig_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_1.ip_proto      = hdr.outer.ipv6.next_hdr;
         //ig_md.lkp_1.ip_tos        = hdr.outer.ipv6.tos; // not byte-aligned so set in mau
         ig_md.lkp_1.ip_src_addr   = hdr.outer.ipv6.src_addr;
@@ -1021,25 +1039,51 @@ parser NpbIngressParser(
     //-------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
     //-------------------------------------------------------------------------
-        
-#if defined(MPLS_ENABLE) || defined(MPLSoGRE_ENABLE)
+    // Due to chip resource constraints, we're only supporting MPLS segment
+    // routing or MPLS L2/L3VPN (not both). Valid combinations are as follows:
+    //
+    //  MPLS_SR_ENABLE  MPLS_L2VPN_ENABLE  MPLS_L3VPN_ENABLE
+    //  -----------------------------------------------------
+    //  #undef          #undef             #undef
+    //  #define         #undef             #undef
+    //  #undef          #undef             #define
+    //  #undef          #define            #undef
+    //  #undef          #define            #define
+    //
+    // For all MPLS enabled combinations above, the user can add MPLS-over-GRE
+    // support via the following feature #define: MPLSoGRE_ENABLE
+
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
 
     // Set tunnel info for outermost label only
     state parse_outer_mpls {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
         // error: Inferred incompatible container alignments for field
         // ingress::ig_md.lkp_1.tunnel_id: alignment = 0 != alignment = 4 (little endian)       
         // ig_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)pkt.lookahead<mpls_h>().label;
-        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
 #ifdef INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        //ig_md.lkp_2.tunnel_id = (bit<switch_tunnel_id_width>)pkt.lookahead<mpls_h>().label;
         ig_md.lkp_2.tunnel_id = pkt.lookahead<bit<32>>();
 #endif // INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD   
         transition extract_outer_mpls;
     }
+
+
+#ifdef MPLS_SR_ENABLE
     
     state extract_outer_mpls {
-    //state parse_outer_mpls {
+    	pkt.extract(hdr.outer.mpls.next);
+        transition select(hdr.outer.mpls.last.bos) {
+            0: parse_outer_mpls;
+            1: parse_inner_ethernet;
+        }
+    }
+
+#elif defined(MPLS_L2VPN_ENABLE) && defined(MPLS_L3VPN_ENABLE)
+
+    state extract_outer_mpls {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
             (0, _): parse_outer_mpls;
@@ -1047,14 +1091,42 @@ parser NpbIngressParser(
             (1, 6): parse_inner_ipv6;
             default: parse_outer_eompls;
         }
-    }
+    }    
     
     state parse_outer_eompls {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition  parse_inner_ethernet;
     }
+    
+#elif defined(MPLS_L2VPN_ENABLE)
 
-#endif  // defined(MPLS_ENABLE) || defined(MPLSoGRE_ENABLE)
+    state extract_outer_mpls {
+    	pkt.extract(hdr.outer.mpls.next);
+        transition select(hdr.outer.mpls.last.bos) {
+            0: parse_outer_mpls;
+            1: parse_outer_eompls;
+        }
+    }
+
+    state parse_outer_eompls {
+        pkt.extract(hdr.outer.mpls_pw_cw); 
+        transition  parse_inner_ethernet;
+    }    
+    
+#elif defined(MPLS_L3VPN_ENABLE)
+    
+    state extract_outer_mpls {
+    	pkt.extract(hdr.outer.mpls.next);
+        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_mpls;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): parse_inner_ipv6;
+            default: accept; // todo: unexpected - flag this as error?
+        }
+    }    
+
+#endif // MPLS_SR_ENABLE
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
 
 
 
@@ -1439,7 +1511,7 @@ parser NpbIngressParser(
         // fixup ethertype for ip-n-ip case
         ig_md.lkp_2.mac_type      = ETHERTYPE_IPV4;
 
-        ig_md.lkp_2.ip_type       = SWITCH_IP_TYPE_IPV4;
+//      ig_md.lkp_2.ip_type       = SWITCH_IP_TYPE_IPV4;
         ig_md.lkp_2.ip_proto      = hdr.inner.ipv4.protocol;
         ig_md.lkp_2.ip_tos        = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_2.ip_flags      = hdr.inner.ipv4.flags;
@@ -1519,7 +1591,7 @@ parser NpbIngressParser(
         // fixup ethertype for ip-n-ip case
         ig_md.lkp_2.mac_type      = ETHERTYPE_IPV6;
         
-        ig_md.lkp_2.ip_type       = SWITCH_IP_TYPE_IPV6;
+//      ig_md.lkp_2.ip_type       = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_2.ip_proto      = hdr.inner.ipv6.next_hdr;
         //ig_md.lkp_2.ip_tos        = hdr.inner.ipv6.tos; // not byte-aligned so set in mau
         ig_md.lkp_2.ip_src_addr   = hdr.inner.ipv6.src_addr;

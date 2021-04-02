@@ -301,10 +301,10 @@ const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH   = 128;
 
 // sf #0 - sfp select
 const bit<32> NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH                 = 128;
-const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE                     = 64;
-const bit<32> NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE               = 32;
-const bit<32> NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP          = 32;
-const bit<32> NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE            = 1024; // 32 * 32
+const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE                     = 128;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE               = 128;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP          = 128;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE            = 16384; // 128 * 128
 
 // sff -- forwards the packets to the sf's, then forwards to the packet along the chain.
 const bit<32> NPB_ING_SFF_ARP_TABLE_DEPTH                          = 8192;

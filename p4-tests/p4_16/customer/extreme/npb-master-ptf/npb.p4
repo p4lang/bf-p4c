@@ -32,9 +32,13 @@
 #else
   #ifdef PROFILE_EGRESS_TRANSPORT
     #include "features_t2_egress_transport.p4"
-  #else
-    #include "features_t2.p4"
-  #endif
+  #else //PROFILE_EGRESS_TRANSPORT
+    #ifdef PROFILE_BETA
+      #include "features_t2_beta.p4"
+    #else // PROFILE_BETA
+      #include "features_t2.p4"
+    #endif // PROFILE_BETA
+  #endif //PROFILE_EGRESS_TRANSPORT
 #endif
 #include "field_widths.p4"
 #include "table_sizes.p4"
@@ -47,7 +51,11 @@
 #include "port.p4"
 //#include "validation.p4"
 #include "rewrite.p4"
-#include "tunnel.p4"
+#ifdef PROFILE_BETA
+  #include "tunnel_beta.p4"
+#else
+  #include "tunnel.p4"
+#endif
 #include "multicast.p4"
 #include "meter.p4"
 #include "dtel.p4"
@@ -65,17 +73,34 @@
   #include "npb_ing_hdr_stack_counters.p4"
 #endif
 
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+
+// List pragmas here that are needed to function properly
 @pa_auto_init_metadata
 @pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
 @pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
-@pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
-@pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
-@pa_atomic("egress" , "eg_md.bypass")
-@pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
-@pa_container_size("egress" , "protocol_outer_0" , 8)
-@pa_container_size("egress" , "protocol_inner_0" , 8)
-@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
-@pa_container_type("egress", "tunnel_encap_payload_len", "dark")
+
+// Add pragmas to pragmas.p4 that are needed to fit design
+#include "pragmas.p4"
+
+// @pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
+// @pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
+// @pa_atomic("egress" , "eg_md.bypass")
+// @pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
+// @pa_container_size("egress" , "protocol_outer_0" , 8)
+// @pa_container_size("egress" , "protocol_inner_0" , 8)
+// @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
+
+#ifdef PROFILE_BETA
+@pa_no_init("ingress", "ig_intr_md_for_tm.bypass_egress")  // reset in port.p4
+@pa_no_init("egress",  "eg_md.tunnel_1.terminate")         // reset in npb_egr_parser.p4
+@pa_no_init("egress",  "eg_md.lkp_1.next_lyr_valid")       // reset in npb_egr_set_lkp.p4
+@pa_no_init("egress",  "eg_intr_md_for_dprsr.mirror_type") // reset in this file (below)
+@pa_no_init("ingress", "ig_md.tunnel_2.terminate")         // reset in npb_ing_parser.p4
+//@pa_no_init("ingress", "ig_md.mirror.src")                 // reset in this file (below)
+#endif // PROFILE_BETA
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -120,6 +145,9 @@ control SwitchIngress(
 
 		ig_intr_md_for_dprsr.drop_ctl = 0;  // no longer present in latest switch.p4
 		ig_md.multicast.id = 0;             // no longer present in latest switch.p4
+#ifdef PROFILE_BETA
+//		ig_md.mirror.src = SWITCH_PKT_SRC_BRIDGED; // for barefoot reset bug
+#endif
 
 #if defined(PARSER_ERROR_HANDLING_ENABLE)
         //ParserValidation.apply(hdr, ig_md, ig_intr_from_prsr, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
@@ -260,6 +288,7 @@ control SwitchEgress(
 
 	EgressSetLookup() egress_set_lookup;
 	EgressPortMapping(PORT_TABLE_SIZE) egress_port_mapping;
+	EgressPortMapping2(PORT_TABLE_SIZE) egress_port_mapping2;
 	EgressMirrorMeter() egress_mirror_meter;
 	VlanDecap() vlan_decap;
 	Rewrite(NEXTHOP_TABLE_SIZE, BD_TABLE_SIZE) rewrite;
@@ -278,6 +307,9 @@ control SwitchEgress(
 
 //		eg_intr_md_for_dprsr.drop_ctl = 0;
 		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
+#ifdef PROFILE_BETA
+		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_INVALID;// for barefoot reset bug
+#endif
 
 		egress_set_lookup.apply(hdr, eg_md);  // set lookup structure fields that parser couldn't
 
@@ -326,7 +358,7 @@ control SwitchEgress(
 
 			// ---- outer nexthop (tunnel) code: operates on 'transport' ----
 			vlan_decap.apply(hdr.transport, eg_md);
-			tunnel_encap.apply(hdr.transport, hdr.outer, eg_md, eg_md.tunnel_0);
+			tunnel_encap.apply(hdr.transport, hdr.outer, hdr.inner, hdr.inner_inner, eg_md, eg_md.tunnel_0, eg_md.tunnel_1, eg_md.tunnel_2);
 			tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
 			if (eg_md.tunnel_0.type != SWITCH_TUNNEL_TYPE_NONE) { // derek added this check
 				vlan_xlate.apply(hdr.transport, eg_md);
@@ -337,6 +369,8 @@ control SwitchEgress(
 			dtel_config.apply(hdr.outer, hdr.transport.nsh_type1.timestamp, eg_md, eg_intr_md_for_dprsr);
 #endif
 		}
+		egress_port_mapping2.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
+
 		set_eg_intr_md(eg_md, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
 
 #endif  /* EGR_STUBBED_OUT */

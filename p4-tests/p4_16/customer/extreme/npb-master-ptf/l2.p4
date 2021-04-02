@@ -49,8 +49,12 @@ control DMAC(
 
 	//-------------------------------------------------------------
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 	action dmac_miss(//bool copp_enable, switch_copp_meter_id_t copp_meter_id
 	) {
+		stats.count();
+
 		ig_md.egress_port_lag_index = SWITCH_FLOOD;
 //		ig_md.flags.dmac_miss = true;
 
@@ -60,6 +64,8 @@ control DMAC(
 
 	action dmac_hit(switch_port_lag_index_t port_lag_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
 	) {
+		stats.count();
+
 		ig_md.egress_port_lag_index = port_lag_index;
 
 //		copp_enable_ = copp_enable;
@@ -68,6 +74,8 @@ control DMAC(
 
 	action dmac_multicast(switch_mgid_t index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
 	) {
+		stats.count();
+
 		ig_md.multicast.id = index;
 		ig_md.egress_port_lag_index = 0; // derek added
 
@@ -77,6 +85,8 @@ control DMAC(
 
 	action dmac_redirect(switch_nexthop_t nexthop_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
 	) {
+		stats.count();
+
 		ig_md.nexthop = nexthop_index;
 
 //		copp_enable_ = copp_enable;
@@ -99,6 +109,7 @@ control DMAC(
 //		const default_action = dmac_miss(false, 0);
 		const default_action = dmac_miss;
 		size = table_size;
+		counters = stats;
 	}
 
 	//-------------------------------------------------------------
@@ -185,23 +196,31 @@ control EgressBd(
 		counters = stats;
 	}
 */
+	DirectCounter<bit<switch_counter_width>>(CounterType_t.PACKETS_AND_BYTES) stats;
+
 	action set_bd_properties(
 		switch_smac_index_t smac_index
 	) {
+		stats.count();
 
 		smac_idx = smac_index;
 
 	}
 
+	action no_action() {
+		stats.count();
+	}
+
 	table bd_mapping {
 		key = { bd : exact; }
 		actions = {
-			NoAction;
+			no_action;
 			set_bd_properties;
 		}
 
-		const default_action = NoAction;
+		const default_action = no_action;
 		size = table_size;
+		counters = stats;
 	}
 
 	apply {

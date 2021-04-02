@@ -232,9 +232,9 @@ p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3479")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-master-ptf" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/npb.p4"
-    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1400"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/tests")
-set_tests_properties("tofino2/npb-master-ptf" PROPERTIES TIMEOUT 1400)
+set_tests_properties("tofino2/npb-master-ptf" PROPERTIES TIMEOUT 2400)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3484" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3484/npb.p4"

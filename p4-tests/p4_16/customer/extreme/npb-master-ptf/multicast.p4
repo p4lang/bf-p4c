@@ -18,6 +18,8 @@ control MulticastReplication (
 	// Table #1: 
 	// =========================================================================
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 #ifdef MULTICAST_ENABLE
 	action rid_hit_unique_copies(
 		switch_bd_t            bd,
@@ -29,6 +31,8 @@ control MulticastReplication (
 		switch_tunnel_index_t  tunnel_index,
 		switch_outer_nexthop_t outer_nexthop_index
 	) {
+		stats.count();
+
 		eg_md.bd             = bd;
 
 		hdr_0.nsh_type1.spi  = spi;
@@ -42,10 +46,14 @@ control MulticastReplication (
 	action rid_hit_identical_copies(
 		switch_bd_t            bd
 	) {
+		stats.count();
+
 		eg_md.bd             = bd;
 	}
 
 	action rid_miss() {
+		stats.count();
+
 	}
 
 	table rid {
@@ -60,6 +68,7 @@ control MulticastReplication (
 
 		size = table_size;
 		const default_action = rid_miss;
+		counters = stats;
 	}
 #endif
 

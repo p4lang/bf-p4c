@@ -71,6 +71,7 @@
 #define GRE_PROTOCOLS_ERSPAN_TYPE_3 0x22EB
 #define GRE_PROTOCOLS_NVGRE         0x6558  // transparent enet bridging (L2 GRE)
 #define GRE_PROTOCOLS_IP            0x0800
+#define GRE_PROTOCOLS_IPV6          0x86DD
 #define GRE_PROTOCOLS_ERSPAN_TYPE_2 0x88BE
 #define GRE_FLAGS_PROTOCOL_NVGRE    0x20006558
 
@@ -527,7 +528,7 @@ struct switch_bridged_metadata_dtel_extension_t {
 //-----------------------------------------------------------------------------
 
 struct nsh_metadata_t {
-    bool                            start_of_path;          // ingress / egress
+//  bool                            start_of_path;          // ingress / egress
     bool                            end_of_path;            // ingress / egress
     bool                            truncate_enable;        // ingress / egress
     bit<14>                         truncate_len;           // ingress / egress
@@ -705,7 +706,7 @@ struct switch_bridged_metadata_nsh_extension_t {
     // ---------------
     // nsh meta data
     // ---------------
-    bool                            nsh_md_start_of_path;
+//  bool                            nsh_md_start_of_path;
     bool                            nsh_md_end_of_path;
     bool                            nsh_md_l2_fwd_en;
 //  bool                            nsh_md_sf1_active;
@@ -771,10 +772,12 @@ header switch_bridged_metadata_h {
 // --------------------------------------------------------------------------------
 
 struct switch_port_metadata_t {
+#ifdef PROFILE_BETA
     switch_port_lag_index_t         port_lag_index;
 //  switch_ifindex_t                ifindex;
-
 	bit<1>                          l2_fwd_en;
+#else
+#endif
 
 #if __TARGET_TOFINO__ == 2
 /*
@@ -976,10 +979,12 @@ struct switch_header_outer_t {
     vn_tag_h vn_tag;
 #endif // VNTAG_ENABLE
     vlan_tag_h[VLAN_DEPTH] vlan_tag;
-#if defined(MPLS_ENABLE) || defined(MPLSoGRE_ENABLE)
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
     mpls_h[MPLS_DEPTH] mpls;
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+#ifdef MPLS_L2VPN_ENABLE
     mpls_pw_cw_h mpls_pw_cw;    
-#endif
+#endif // MPLS_L2VPN_ENABLE
     ipv4_h ipv4;
 #ifdef IPV6_ENABLE
     ipv6_h ipv6;
@@ -1047,9 +1052,9 @@ struct switch_header_inner_t {
 // -----------------------------------------------------------------------------
 
 struct switch_header_inner_inner_t {
-	dummy_h ethernet;
-	dummy_h ipv4;
-	dummy_h ipv6;
+	dummy_ethernet_h ethernet;
+	dummy_ipv4_h ipv4;
+	dummy_ipv6_h ipv6;
 }
 
 // -----------------------------------------------------------------------------

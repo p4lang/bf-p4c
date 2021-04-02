@@ -16,9 +16,13 @@ control npb_ing_sf_multicast_top_part1 (
 	// Table #1: Action Select
 	// =========================================================================
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 	action ing_sf_action_sel_hit(
 		switch_mgid_t mgid
 	) {
+		stats.count();
+
 		ig_md.multicast.id = mgid;
 
 		ig_md.egress_port_lag_index = 0;
@@ -28,6 +32,8 @@ control npb_ing_sf_multicast_top_part1 (
 
 	action ing_sf_action_sel_miss(
 	) {
+		stats.count();
+
 	}
 
 	// =====================================
@@ -45,6 +51,7 @@ control npb_ing_sf_multicast_top_part1 (
 
 		size = table_size;
 		const default_action = ing_sf_action_sel_miss;
+		counters = stats;
 	}
 
 	// =========================================================================

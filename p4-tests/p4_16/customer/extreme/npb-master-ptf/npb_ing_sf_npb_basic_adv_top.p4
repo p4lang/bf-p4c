@@ -31,6 +31,8 @@ control npb_ing_sf_npb_basic_adv_top (
 	// Table #1: SFF Action Select
 	// =========================================================================
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 	bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags = 0;
 
 	action ing_sf_action_sel_hit(
@@ -38,6 +40,8 @@ control npb_ing_sf_npb_basic_adv_top (
 		bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags
 #endif
 	) {
+		stats.count();
+
 #ifdef SF_0_ACL_INT_CTRL_FLAGS_ENABLE
 		int_ctrl_flags = int_ctrl_flags;
 #endif
@@ -47,6 +51,8 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	action ing_sf_action_sel_miss(
 	) {
+		stats.count();
+
 	}
 
 	// =====================================
@@ -58,18 +64,20 @@ control npb_ing_sf_npb_basic_adv_top (
 		}
 
 		actions = {
-			NoAction;
 			ing_sf_action_sel_hit;
 			ing_sf_action_sel_miss;
 		}
 
-		const default_action = NoAction;
+		const default_action = ing_sf_action_sel_miss;
 		size = NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH;
+		counters = stats;
 	}
 
 	// =========================================================================
 	// Table #2: SF IP Length Range
 	// =========================================================================
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ip_len;  // direct counter
 
 	bit<SF_L3_LEN_RNG_WIDTH> ip_len = 0;
 	bool                     ip_len_is_rng_bitmask = false;
@@ -78,6 +86,8 @@ control npb_ing_sf_npb_basic_adv_top (
 	action ing_sf_ip_len_rng_hit(
 		bit<SF_L3_LEN_RNG_WIDTH> rng_bitmask
 	) {
+		stats_ip_len.count();
+
 		ip_len = rng_bitmask;
 		ip_len_is_rng_bitmask = true;
 	}
@@ -86,8 +96,17 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	action ing_sf_ip_len_rng_miss(
 	) {
+		stats_ip_len.count();
+
 		ip_len = ig_md.lkp_1.ip_len;
 		ip_len_is_rng_bitmask = false;
+	}
+
+	// =====================================
+
+	action no_action_ip_len_rng(
+	) {
+		stats_ip_len.count();
 	}
 
 	// =====================================
@@ -98,19 +117,23 @@ control npb_ing_sf_npb_basic_adv_top (
 		}
 
 		actions = {
-			NoAction;
+//			NoAction;
+			no_action_ip_len_rng;
 			ing_sf_ip_len_rng_hit;
 			ing_sf_ip_len_rng_miss;
 		}
 
 		const default_action = ing_sf_ip_len_rng_miss;
 		size = NPB_ING_SF_0_BAS_ADV_POLICY_L3_LEN_RNG_TABLE_DEPTH;
+		counters = stats_ip_len;
 	}
 #endif
 
 	// =========================================================================
 	// Table #3: SF L4 Src Port Range
 	// =========================================================================
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_l4_src_port;  // direct counter
 
 	bit<SF_L4_SRC_RNG_WIDTH> l4_src_port = 0;
 	bool                     l4_src_port_is_rng_bitmask = false;
@@ -119,6 +142,8 @@ control npb_ing_sf_npb_basic_adv_top (
 	action ing_sf_l4_src_port_rng_hit(
 		bit<SF_L4_SRC_RNG_WIDTH> rng_bitmask
 	) {
+		stats_l4_src_port.count();
+
 		l4_src_port = rng_bitmask;
 		l4_src_port_is_rng_bitmask = true;
 	}
@@ -127,8 +152,17 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	action ing_sf_l4_src_port_rng_miss(
 	) {
+		stats_l4_src_port.count();
+
 		l4_src_port = ig_md.lkp_1.l4_src_port;
 		l4_src_port_is_rng_bitmask = false;
+	}
+
+	// =====================================
+
+	action no_action_l4_src_port_rng(
+	) {
+		stats_l4_src_port.count();
 	}
 
 	// =====================================
@@ -139,19 +173,23 @@ control npb_ing_sf_npb_basic_adv_top (
 		}
 
 		actions = {
-			NoAction;
+//			NoAction;
+			no_action_l4_src_port_rng;
 			ing_sf_l4_src_port_rng_hit;
 			ing_sf_l4_src_port_rng_miss;
 		}
 
 		const default_action = ing_sf_l4_src_port_rng_miss;
 		size = NPB_ING_SF_0_BAS_ADV_POLICY_L4_SRC_RNG_TABLE_DEPTH;
+		counters = stats_l4_src_port;
 	}
 #endif
 
 	// =========================================================================
 	// Table #4: SF L4 Dst Port Range
 	// =========================================================================
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_l4_dst_port;  // direct counter
 
 	bit<SF_L4_DST_RNG_WIDTH> l4_dst_port = 0;
 	bool                     l4_dst_port_is_rng_bitmask = false;
@@ -160,6 +198,8 @@ control npb_ing_sf_npb_basic_adv_top (
 	action ing_sf_l4_dst_port_rng_hit(
 		bit<SF_L4_DST_RNG_WIDTH> rng_bitmask
 	) {
+		stats_l4_dst_port.count();
+
 		l4_dst_port = rng_bitmask;
 		l4_dst_port_is_rng_bitmask = true;
 	}
@@ -168,8 +208,17 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	action ing_sf_l4_dst_port_rng_miss(
 	) {
+		stats_l4_dst_port.count();
+
 		l4_dst_port = ig_md.lkp_1.l4_dst_port;
 		l4_dst_port_is_rng_bitmask = false;
+	}
+
+	// =====================================
+
+	action no_action_l4_dst_port_rng(
+	) {
+		stats_l4_dst_port.count();
 	}
 
 	// =====================================
@@ -180,13 +229,15 @@ control npb_ing_sf_npb_basic_adv_top (
 		}
 
 		actions = {
-			NoAction;
+//			NoAction;
+			no_action_l4_dst_port_rng;
 			ing_sf_l4_dst_port_rng_hit;
 			ing_sf_l4_dst_port_rng_miss;
 		}
 
 		const default_action = ing_sf_l4_dst_port_rng_miss;
 		size = NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH;
+		counters = stats_l4_dst_port;
 	}
 #endif
 

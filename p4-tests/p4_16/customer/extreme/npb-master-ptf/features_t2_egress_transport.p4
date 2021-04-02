@@ -42,8 +42,10 @@
 #define NVGRE_ENABLE
 #define GRE_ENABLE
 #define GTP_ENABLE
-#undef  MPLS_ENABLE
-#undef  MPLSoGRE_ENABLE
+#undef  MPLS_SR_ENABLE     // Choose just one of either SR or L2/L3VPN MPLS (not both)
+#undef  MPLS_L2VPN_ENABLE  // L2VPN and L3VPN MPLS can be enabled together.
+#undef  MPLS_L3VPN_ENABLE  // But neither can be enabled if SR MPLS is enabled
+#undef  MPLSoGRE_ENABLE    // Add MPLS-over-GRE support to MPLS mode(s) selected above
 
 // ----- applies to: inner -----
 #define INNER_GRE_ENABLE
@@ -165,3 +167,4 @@
 #undef  CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
 #undef  INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
 #undef  EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit
+#undef  SPLIT_EG_PORT_TABLE_ENABLE            // helps with fitting, splits the egress port table into two.

@@ -88,6 +88,8 @@ control IngressPortMapping(
 	// Table: Port Mapping
 	// ----------------------------------------------
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 	// Helper action:
 
 	action terminate_cpu_packet() {
@@ -118,6 +120,8 @@ control IngressPortMapping(
 		bool l2_fwd_en
 	) {
 #ifdef CPU_ENABLE
+		stats.count();
+
 		ig_md.port_lag_index = port_lag_index;
 //		ig_md.port_lag_label = port_lag_label;
 //		ig_md.qos.trust_mode = trust_mode;
@@ -135,13 +139,25 @@ control IngressPortMapping(
 
 	action set_port_properties(
 		// note: for regular ports, port_lag_index and l2_fwd_en come from the port_metadata table.
-		switch_yid_t exclusion_id,
+		switch_yid_t exclusion_id
+#ifdef PROFILE_BETA
+#else
+		,
 		switch_port_lag_index_t port_lag_index,
 		bool l2_fwd_en
+#endif
 	) {
+		stats.count();
+
 		ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
+#ifdef PROFILE_BETA
+#else
 		ig_md.port_lag_index = port_lag_index;
 		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
+#endif
+#ifdef PROFILE_BETA
+		ig_intr_md_for_tm.bypass_egress = 0;
+#endif
 	}
 
 	// --------------------------
@@ -161,6 +177,7 @@ control IngressPortMapping(
 		}
 
 		size = port_table_size * 2;
+		counters = stats;
 	}
 
 	// ----------------------------------------------
@@ -422,6 +439,8 @@ control EgressPortMapping(
 	// Table: Port Mapping
 	// ----------------------------------------------
 
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 	action cpu_rewrite() {
 		// ----- add fabric header -----
 #ifdef CPU_FABRIC_HEADER_ENABLE
@@ -447,18 +466,23 @@ control EgressPortMapping(
 		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
 #endif
 		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
+#ifdef SPLIT_EG_PORT_TABLE_ENABLE
+#else
 		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
 		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
-#ifdef CPU_FABRIC_HEADER_ENABLE
+  #ifdef CPU_FABRIC_HEADER_ENABLE
 		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN;
-#else
+  #else
 		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN2;
+  #endif
 #endif
 	}
 
 	action port_normal(
 		switch_port_lag_index_t port_lag_index
 	) {
+		stats.count();
+
 		eg_md.port_lag_index = port_lag_index;
 	}
 
@@ -466,6 +490,8 @@ control EgressPortMapping(
 		switch_port_lag_index_t port_lag_index,
 		switch_meter_index_t meter_index
 	) {
+		stats.count();
+
 #ifdef CPU_ENABLE
 		cpu_rewrite();
   #if defined(EGRESS_PORT_METER_ENABLE)
@@ -485,6 +511,7 @@ control EgressPortMapping(
 		}
 
 		size = table_size;
+		counters = stats;
 	}
 
 	// ----------------------------------------------
@@ -496,6 +523,73 @@ control EgressPortMapping(
 
 #ifdef MIRROR_EGRESS_PORT_ENABLE
 		port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror);
+#endif
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Egress Port Mapping
+//-----------------------------------------------------------------------------
+
+control EgressPortMapping2(
+	inout switch_header_t hdr,
+	inout switch_egress_metadata_t eg_md,
+	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+	in switch_port_t port
+) (
+	switch_uint32_t table_size=288
+) {
+	// ----------------------------------------------
+	// Table: Port Mapping
+	// ----------------------------------------------
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
+	action cpu_rewrite() {
+		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
+		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
+#ifdef CPU_FABRIC_HEADER_ENABLE
+		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN;
+#else
+		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN2;
+#endif
+	}
+
+	action port_normal(
+	) {
+		stats.count();
+	}
+
+	action port_cpu(
+	) {
+#ifdef CPU_ENABLE
+		stats.count();
+
+		cpu_rewrite();
+#endif // CPU_ENABLE
+	}
+
+	table port_mapping {
+		key = {
+			port : exact;
+		}
+
+		actions = {
+			port_normal;
+			port_cpu;
+		}
+
+		size = table_size;
+		counters = stats;
+	}
+
+	// ----------------------------------------------
+	// Apply
+	// ----------------------------------------------
+
+	apply {
+#ifdef SPLIT_EG_PORT_TABLE_ENABLE
+		port_mapping.apply();
 #endif
 	}
 }

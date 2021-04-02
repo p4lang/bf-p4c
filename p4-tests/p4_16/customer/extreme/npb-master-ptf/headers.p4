@@ -116,6 +116,9 @@ header ipv4_h {
 }
 #define IP4_WIDTH_BYTES 20
 
+
+
+
 header ipv4_option_h {
     bit<8> type;
     bit<8> length;
@@ -132,11 +135,28 @@ header ipv4_option_h {
       bit<8> hop_limit;
       ipv6_addr_t src_addr;
       ipv6_addr_t dst_addr;
-}
+  }
+
+  header ipv6_truncated_h {
+      bit<4> version;
+      bit<8> tos;
+      bit<20> flow_label;
+      bit<16> payload_len;
+  }
+
+
 #endif  /* IPV6_ENABLE */
 
-header dummy_h {
+header dummy_ethernet_h {
       bit<8> unused;
+}
+
+header dummy_ipv4_h {
+    bit<16> total_len;
+}
+
+header dummy_ipv6_h {
+      bit<16> payload_len;
 }
 
 

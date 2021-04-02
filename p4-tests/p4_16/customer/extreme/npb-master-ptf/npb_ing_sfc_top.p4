@@ -41,10 +41,15 @@ control npb_ing_sfc_top (
 	// =========================================================================
 	// W/  NSH... Table #0a:
 	// =========================================================================
+
 #ifdef SFF_PREDECREMENTED_SI_ENABLE
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 	action ing_sfc_sf_sel_hit(
 		bit<8>                     si_predec
 	) {
+		stats.count();
+
 		ig_md.nsh_md.si_predec  = si_predec;
 	}
 
@@ -52,6 +57,8 @@ control npb_ing_sfc_top (
 
 	action ing_sfc_sf_sel_miss(
 	) {
+		stats.count();
+
 //		ig_md.nsh_md.si_predec  = 0;
 		ig_md.nsh_md.si_predec  = hdr_0.nsh_type1.si;
 	}
@@ -67,23 +74,27 @@ control npb_ing_sfc_top (
 		actions = {
 			ing_sfc_sf_sel_hit;
 			ing_sfc_sf_sel_miss;
-			NoAction;
 		}
 
 		const default_action = ing_sfc_sf_sel_miss;
 		size = NPB_ING_SFC_SF_SEL_TABLE_DEPTH;
+		counters = stats;
 	}
 #endif
 	// =========================================================================
 	// W/  NSH... Table #0b:
 	// =========================================================================
 #ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_nsh_xlate;  // direct counter
+
 	action ing_sfc_sf_sel_nsh_xlate_hit(
 		bit<6>                     ttl,
 		bit<24>                    spi,
 		bit<8>                     si,
 		bit<8>                     si_predec
 	) {
+		stats_nsh_xlate.count();
+
 		hdr_0.nsh_type1.ttl     = ttl;
 		hdr_0.nsh_type1.spi     = spi;
 		hdr_0.nsh_type1.si      = si;
@@ -96,6 +107,8 @@ control npb_ing_sfc_top (
 
 	action ing_sfc_sf_sel_nsh_xlate_miss(
 	) {
+		stats_nsh_xlate.count();
+
 		ig_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
 	}
 
@@ -109,16 +122,18 @@ control npb_ing_sfc_top (
 		actions = {
 			ing_sfc_sf_sel_nsh_xlate_hit;
 			ing_sfc_sf_sel_nsh_xlate_miss;
-			NoAction;
 		}
 
 		const default_action = ing_sfc_sf_sel_nsh_xlate_miss;
 		size = NPB_ING_SFC_SF_SEL_NSH_XLATE_TABLE_DEPTH;
+		counters = stats_nsh_xlate;
 	}
 #endif
 	// =========================================================================
 	// W/O NSH... Table #0:
 	// =========================================================================
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_port_mapping;  // direct counter
 
 	action set_port_properties(
 		bit<8>                          si_predec,
@@ -128,12 +143,22 @@ control npb_ing_sfc_top (
 		bit<24>                         spi,
 		bit<8>                          si
 	) {
+		stats_port_mapping.count();
+
 		ig_md.nsh_md.si_predec    = si_predec;    //  8 bits
 
 		hdr_0.nsh_type1.sap        = (bit<16>)sap; // 16 bits
 		hdr_0.nsh_type1.vpn        = (bit<16>)vpn; // 16 bits
 		hdr_0.nsh_type1.spi        = spi;          // 24 bits
 		hdr_0.nsh_type1.si         = si;           //  8 bits
+	}
+
+	// ---------------------------------
+
+	action no_action(
+	) {
+		stats_port_mapping.count();
+
 	}
 
 	// ---------------------------------
@@ -145,12 +170,13 @@ control npb_ing_sfc_top (
 		}
 
 		actions = {
+			no_action;
 			set_port_properties;
-			NoAction;
 		}
 
-		const default_action = NoAction;
+		const default_action = no_action;
 		size = port_table_size;
+		counters = stats_port_mapping;
 	}
 
 	// =========================================================================
@@ -179,7 +205,7 @@ control npb_ing_sfc_top (
 			// -----------------------------------------------------------------
 
 			// ----- metadata -----
-			ig_md.nsh_md.start_of_path = false;
+//			ig_md.nsh_md.start_of_path = false;
 //			ig_md.nsh_md.sfc_enable    = false;
 
 			// ----- table -----
@@ -203,7 +229,7 @@ control npb_ing_sfc_top (
 			// -----------------------------------------------------------------
 
 			// ----- metadata -----
-			ig_md.nsh_md.start_of_path = true;  // * see design note below
+//			ig_md.nsh_md.start_of_path = true;  // * see design note below
 //			ig_md.nsh_md.sfc_enable    = false; // * see design note below
 
 			// ----- header -----
@@ -214,7 +240,7 @@ control npb_ing_sfc_top (
 				version    = 0x0,
 				o          = 0x0,
 				reserved   = 0x0,
-				ttl        = 0x3f, // 63 is the rfc's recommended default value.
+				ttl        = 0x00, // 63 is the rfc's recommended default value (0 will get dec'ed to 63).
 				len        = 0x6,  // in 4-byte words (1 + 1 + 4).
 				reserved2  = 0x0,
 				md_type    = 0x1,  // 0 = reserved, 1 = fixed len, 2 = variable len.
@@ -231,7 +257,7 @@ control npb_ing_sfc_top (
 				sfc_data   = 0x0,
 
 				reserved4  = 0x0,
-				scope      = 0x0, 
+				scope      = 0x0,
 				sap        = 0x0,
 
 #ifdef SFC_TIMESTAMP_ENABLE

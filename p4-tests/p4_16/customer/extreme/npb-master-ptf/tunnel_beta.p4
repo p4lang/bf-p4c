@@ -127,13 +127,13 @@ control IngressTunnel(
 	// Derek note: These tables are unused in latest switch.p4 code from barefoot
 
 	action src_vtep_hit(
-//		switch_port_lag_index_t port_lag_index,
+		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
 	) {
 		stats_src_vtep.count();
 
-//		ig_md.port_lag_index    = port_lag_index;
+		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
 	}
@@ -176,13 +176,13 @@ control IngressTunnel(
 
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 	action src_vtepv6_hit(
-//		switch_port_lag_index_t port_lag_index,
+		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
 	) {
 		stats_src_vtepv6.count();
 
-//		ig_md.port_lag_index    = port_lag_index;
+		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
 	}
@@ -233,7 +233,7 @@ control IngressTunnel(
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 		,
-//		switch_port_lag_index_t port_lag_index,
+		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
   #endif
@@ -246,7 +246,7 @@ control IngressTunnel(
 		drop_ = drop;
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-//		ig_md.port_lag_index    = port_lag_index;
+		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
   #endif
@@ -311,7 +311,7 @@ control IngressTunnel(
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 		,
-//		switch_port_lag_index_t port_lag_index,
+		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
   #endif
@@ -324,7 +324,7 @@ control IngressTunnel(
 		drop_ = drop;
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-//		ig_md.port_lag_index    = port_lag_index;
+		ig_md.port_lag_index    = port_lag_index;
 		hdr_0.nsh_type1.sap     = (bit<16>)sap;
 		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
   #endif
@@ -1805,7 +1805,6 @@ control TunnelEncap(
 
 	bit<16> payload_len;
 	bit<16> gre_proto;
-	bit<2> lyr;
 
 	//=============================================================================
 	// Table #0: VRF to VNI Mapping
@@ -1830,79 +1829,50 @@ control TunnelEncap(
 	// Table #1: Copy L3/4 Outer -> Inner
 	//=============================================================================
 
-	action rewrite_inner_ipv4_hdr1() {
+	action rewrite_inner_ipv4_lkp1() {
 		payload_len = hdr_1.ipv4.total_len;
 		gre_proto = GRE_PROTOCOLS_IP;
-		lyr = 1;
-	}
-
-	action rewrite_inner_ipv4_hdr2() {
-		payload_len = hdr_2.ipv4.total_len;
-		gre_proto = GRE_PROTOCOLS_IP;
-		lyr = 2;
-	}
-
-	action rewrite_inner_ipv4_hdr3() {
-		payload_len = hdr_3.ipv4.total_len;
-		gre_proto = GRE_PROTOCOLS_IP;
-		lyr = 3;
 	}
 
 	// --------------------------------
-#ifdef IPV6_ENABLE
-	action rewrite_inner_ipv6_hdr1() {
-//		payload_len = hdr_1.ipv6.payload_len + 16w40;
-		payload_len = hdr_1.ipv6.payload_len;
+#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
+	action rewrite_inner_ipv6_lkp1() {
+		payload_len = hdr_1.ipv6.payload_len + 16w40;
 		gre_proto = GRE_PROTOCOLS_IPV6;
-		lyr = 1;
 	}
 
-	action rewrite_inner_ipv6_hdr2() {
-//		payload_len = hdr_2.ipv6.payload_len + 16w40;
-		payload_len = hdr_2.ipv6.payload_len;
-		gre_proto = GRE_PROTOCOLS_IPV6;
-		lyr = 2;
-	}
-
-	action rewrite_inner_ipv6_hdr3() {
-//		payload_len = hdr_3.ipv6.payload_len + 16w40;
-		payload_len = hdr_3.ipv6.payload_len;
-		gre_proto = GRE_PROTOCOLS_IPV6;
-		lyr = 3;
-	}
-#endif
+#endif  /* GRE_TRANSPORT_EGRESS_ENABLE_V6 */
 	// --------------------------------
 
 	table encap_outer {
 		key = {
-			tunnel_1.terminate : exact;
-			tunnel_2.terminate : exact;
-
-			hdr_1.ipv4.isValid() : ternary;
-			hdr_2.ipv4.isValid() : ternary;
-			hdr_3.ipv4.isValid() : ternary;
+			hdr_1.ipv4.isValid() : exact;
+#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
+			hdr_1.ipv6.isValid() : exact;
+#endif  /* GRE_TRANSPORT_EGRESS_ENABLE_V6 */
+			hdr_1.udp.isValid() : exact;
+			// hdr_1.tcp.isValid() : exact;
 		}
 
 		actions = {
-			rewrite_inner_ipv4_hdr1;
-			rewrite_inner_ipv4_hdr2;
-			rewrite_inner_ipv4_hdr3;
-#ifdef IPV6_ENABLE
-			rewrite_inner_ipv6_hdr1;
-			rewrite_inner_ipv6_hdr2;
-			rewrite_inner_ipv6_hdr3;
-#endif
+			rewrite_inner_ipv4_lkp1;
+//			rewrite_inner_ipv4_unknown;
+#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
+			rewrite_inner_ipv6_lkp1;
+//			rewrite_inner_ipv6_unknown;
+#endif  /* GRE_TRANSPORT_EGRESS_ENABLE_V6 */
 		}
 
 		const entries = {
-			(false, false, true,  _,     _    ) : rewrite_inner_ipv4_hdr1(); // outer v4
-			(true,  false, _,     true,  _    ) : rewrite_inner_ipv4_hdr2(); // inner v4
-			(true,  true,  _,     _,     true ) : rewrite_inner_ipv4_hdr3(); // inner-inner v4
-#ifdef IPV6_ENABLE
-			(false, false, false, _,     _    ) : rewrite_inner_ipv6_hdr1(); // outer v6
-			(true,  false, _,     false, _    ) : rewrite_inner_ipv6_hdr2(); // inner v6
-			(true,  true,  _,     _,     false) : rewrite_inner_ipv6_hdr3(); // inner-inner v6
-#endif
+#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
+			(true,  false, false) : rewrite_inner_ipv4_lkp1();
+			(false, true,  false) : rewrite_inner_ipv6_lkp1();
+			(true,  false, true ) : rewrite_inner_ipv4_lkp1();
+			(false, true,  true ) : rewrite_inner_ipv6_lkp1();
+#else
+			(true,         false) : rewrite_inner_ipv4_lkp1();
+			(true,         true ) : rewrite_inner_ipv4_lkp1();
+#endif  /* GRE_TRANSPORT_EGRESS_ENABLE_V6 */
 		}
 	}
 
@@ -2049,6 +2019,27 @@ control TunnelEncap(
 
 		// ----- tunnel -----
 		add_gre_header(gre_proto, 0, 0);
+
+		hdr_1.ethernet.setInvalid();
+		hdr_1.e_tag.setInvalid();
+		hdr_1.vn_tag.setInvalid();
+		hdr_1.vlan_tag[0].setInvalid();
+		hdr_1.vlan_tag[1].setInvalid();
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+		hdr_1.mpls[0].setInvalid();
+  #if MPLS_DEPTH > 1
+		hdr_1.mpls[1].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 2
+		hdr_1.mpls[2].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 3
+		hdr_1.mpls[3].setInvalid();
+  #endif
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+#ifdef MPLS_L2VPN_ENABLE
+		hdr_1.mpls_pw_cw.setInvaid();
+#endif // MPLS_L2VPN_ENABLE
 #endif
 	}
 
@@ -2092,6 +2083,27 @@ control TunnelEncap(
 
 		// ----- tunnel -----
 		add_gre_header(gre_proto, 0, 0);
+
+		hdr_1.ethernet.setInvalid();
+		hdr_1.e_tag.setInvalid();
+		hdr_1.vn_tag.setInvalid();
+		hdr_1.vlan_tag[0].setInvalid();
+		hdr_1.vlan_tag[1].setInvalid();
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+		hdr_1.mpls[0].setInvalid();
+  #if MPLS_DEPTH > 1
+		hdr_1.mpls[1].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 2
+		hdr_1.mpls[2].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 3
+		hdr_1.mpls[3].setInvalid();
+  #endif
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+#ifdef MPLS_L2VPN_ENABLE
+		hdr_1.mpls_pw_cw.setInvaid();
+#endif // MPLS_L2VPN_ENABLE
 #endif
 	}
 /*
@@ -2100,7 +2112,6 @@ control TunnelEncap(
 
 		// ----- l2 -----
 		add_l2_header(ETHERTYPE_IPV6);
-
 		// ----- l3 -----
 //		hdr_0.inner_ethernet = hdr_0.ethernet;
 		add_ipv6_header(IP_PROTOCOLS_GRE);
@@ -2164,86 +2175,10 @@ control TunnelEncap(
 
 		if (tunnel_0.type != SWITCH_TUNNEL_TYPE_NONE) {
 			// Copy L3/L4 header into inner headers.
-			encap_outer.apply(); // derek: this no longer copies anything -- it just gets some lengths needed for the next table actions
-
-			if(gre_proto == GRE_PROTOCOLS_IPV6) {
-				payload_len = payload_len + 16w40; // for ipv6, need to add hdr size to payload len
-			}
+			encap_outer.apply();
 
 			// Add outer L3/L4/Tunnel headers.
-//			tunnel.apply();
-			switch(tunnel.apply().action_run) {
-				rewrite_ipv4_gre: {
-					// ----- tunnel -----
-					// this is organized from highest priority to lowest priority
-					if(lyr == 3) {
-						// invalidate l2
-					} else if(lyr == 2) {
-						// invalidate l2
-						hdr_2.ethernet.setInvalid();
-						hdr_2.vlan_tag[0].setInvalid();
-					} else {
-						// invalidate l2
-						hdr_1.ethernet.setInvalid();
-						hdr_1.e_tag.setInvalid();
-						hdr_1.vn_tag.setInvalid();
-						hdr_1.vlan_tag[0].setInvalid();
-						hdr_1.vlan_tag[1].setInvalid();
-#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-						hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-						hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-						hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-						hdr_1.mpls[3].setInvalid();
-  #endif
-#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-#ifdef MPLS_L2VPN_ENABLE
-						hdr_1.mpls_pw_cw.setInvaid();
-#endif // MPLS_L2VPN_ENABLE
-					}
-				}
-				rewrite_ipv6_gre: {
-#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
-					// ----- tunnel -----
-					// this is organized from highest priority to lowest priority
-					if(lyr == 3) {
-						// invalidate l2
-					} else if(lyr == 2) {
-						// invalidate l2
-						hdr_2.ethernet.setInvalid();
-						hdr_2.vlan_tag[0].setInvalid();
-					} else {
-						// invalidate l2
-						hdr_1.ethernet.setInvalid();
-						hdr_1.e_tag.setInvalid();
-						hdr_1.vn_tag.setInvalid();
-						hdr_1.vlan_tag[0].setInvalid();
-						hdr_1.vlan_tag[1].setInvalid();
-#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-						hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-						hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-						hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-						hdr_1.mpls[3].setInvalid();
-  #endif
-#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-#ifdef MPLS_L2VPN_ENABLE
-						hdr_1.mpls_pw_cw.setInvaid();
-#endif // MPLS_L2VPN_ENABLE
-					}
-#endif
-				}
-				default: {
-				}
-			}
+			tunnel.apply();
 		}
 #endif /* TUNNEL_ENABLE */
 	}

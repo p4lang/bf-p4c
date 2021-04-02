@@ -859,6 +859,10 @@ control IngressAcl(
 		ig_md.nsh_md.dedup_en        = false;
 		ig_md.nsh_md.sfc_enable      = false;
 
+#ifdef PROFILE_BETA
+		ig_intr_md_for_tm.copy_to_cpu = 0;
+#endif
+
 		// --------------
 		// tables
 		// --------------
@@ -1042,6 +1046,10 @@ control IngressAcl(
 		if(ig_md.nsh_md.truncate_enable) {
 #if __TARGET_TOFINO__ == 2
 			ig_intr_md_for_dprsr.mtu_trunc_len = ig_md.nsh_md.truncate_len + BRIDGED_METADATA_WIDTH;
+  #ifdef PROFILE_BETA
+		} else {
+			ig_intr_md_for_dprsr.mtu_trunc_len = 0x3fff;
+  #endif
 #endif
 		}
 
@@ -1135,7 +1143,8 @@ control EgressMacAcl(
 			hit();
 		}
 
-		const default_action = no_action;
+		const default_action = hit(false, false, false, false, false, 0, false, 0, false, false, false, false, false, 0, 0, 0);
+		//const default_action = no_action;
 		counters = stats;
 		size = table_size;
 	}
@@ -1246,6 +1255,7 @@ control EgressIpAcl(
 		acl.apply();
 	}
 }
+
 //-----------------------------------------------------------------------------
 // IPv4 ACL
 //-----------------------------------------------------------------------------
@@ -1706,6 +1716,40 @@ control EgressAcl(
 			}
 		}
 */
+
+#ifdef PROFILE_BETA
+
+		if(((eg_md.nsh_md.terminate_inner == true) && (hdr_0.nsh_type1.scope == 1)) || ((lkp.next_lyr_valid == true) && (terminate == true))) {
+			eg_md.tunnel_1.terminate           = true;
+		} else {
+			eg_md.tunnel_1.terminate           = false;
+		}
+
+		if(lkp.next_lyr_valid == true) {
+			// ----- terminate -----
+
+			if(terminate == true) { 
+//				eg_md.tunnel_1.terminate           = true;
+				if(hdr_0.nsh_type1.scope == 1) {
+					eg_md.tunnel_2.terminate           = true;
+				}
+
+			}
+
+			// ----- scope -----
+
+			// since we don't have an explicit 'scope' signal in egress acl, use 'terminate':
+			if(terminate == true) { 
+
+				// note: don't need to advance the data here, as nobody else looks at it after this.
+
+				hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+//				scope_inc.apply();
+			}
+		}
+
+#else
+
 		if((eg_md.nsh_md.terminate_inner == true)) {
 			// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
 			if(hdr_0.nsh_type1.scope == 1) {
@@ -1737,11 +1781,17 @@ control EgressAcl(
 			}
 		}
 
+#endif
+
 		// ----- truncate -----
 
 		if(eg_md.nsh_md.truncate_enable) {
 #if __TARGET_TOFINO__ == 2
 			eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len;
+  #ifdef PROFILE_BETA
+		} else {
+			eg_intr_md_for_dprsr.mtu_trunc_len = 0x3fff;
+  #endif
 #endif
 		}
 

@@ -158,7 +158,7 @@ def cpu_port_add(self, target):
 			)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 0.")
 
 def cpu_port_del(self, target):
 	try:
@@ -180,7 +180,7 @@ def cpu_port_del(self, target):
 			)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 0.")
 
 ########################################
 
@@ -218,7 +218,7 @@ def npb_tunnel_rmac_add(self, target, dst_addr):
 			)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 1.")
 
 def npb_tunnel_rmac_del(self, target, dst_addr):
 	try:
@@ -248,7 +248,7 @@ def npb_tunnel_rmac_del(self, target, dst_addr):
 			)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 1.")
 
 ########################################
 
@@ -258,18 +258,83 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 
 		try:
 
-#			table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
-#			table.entry_add(
-#				target,
-#				[table.make_key(
-#					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
-#				)],
-#				[table.make_data(
-#					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-#					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-#					None
-#				)]
-#			)
+			if(PROFILE_BETA == True):
+
+				table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
+				table.entry_add(
+					target,
+					[table.make_key(
+					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+					)],
+					[table.make_data(
+						[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+						None
+					)]
+				)
+
+				########################################
+
+				# insert both versions (cpu and non-cpu):
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+					)],
+					[table.make_data(
+						[],
+						'SwitchIngress.ingress_port_mapping.set_port_properties'
+					)]
+				)
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+					)],
+					[table.make_data(
+						[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+						'SwitchIngress.ingress_port_mapping.set_cpu_port_properties'
+					)]
+				)
+
+			else:
+
+				# insert both versions (cpu and non-cpu):
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+					)],
+					[table.make_data(
+						[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+						'SwitchIngress.ingress_port_mapping.set_port_properties'
+					)]
+				)
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+					)],
+					[table.make_data(
+						[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+						'SwitchIngress.ingress_port_mapping.set_cpu_port_properties'
+					)]
+				)
 
 			########################################
 
@@ -289,45 +354,8 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 				)]
 			)
 
-			########################################
-
-			# insert both versions (nsh and non-nsh):
-
-			table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('ig_md.port',                                port[i]),
-					 gc.KeyTuple('hdr.cpu.$valid',                            0)],
-				)],
-				[table.make_data(
-#					[],
-					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-					'SwitchIngress.ingress_port_mapping.set_port_properties'
-				)]
-			)
-
-			########################################
-
-			# insert both versions (cpu and non-cpu):
-
-			table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('ig_md.port',                                port[i]),
-					 gc.KeyTuple('hdr.cpu.$valid',                            1)],
-				)],
-				[table.make_data(
-					[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-					 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-					'SwitchIngress.ingress_port_mapping.set_cpu_port_properties'
-				)]
-			)
-
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2.")
 
 	########################################
 
@@ -351,7 +379,7 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2.")
 
 def npb_ing_port_del(self, target, port, port_lag_ptr):
 
@@ -359,13 +387,59 @@ def npb_ing_port_del(self, target, port, port_lag_ptr):
 
 		try:
 
-#			table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
-#			table.entry_del(
-#				target,
-#				[table.make_key(
-#					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
-#				)]
-#			)
+			if(PROFILE_BETA == True):
+
+				table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+					)]
+				)
+
+				########################################
+
+				# delete both versions (cpu and non-cpu):
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+					)]
+				)
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+					)]
+				)
+
+			else:
+
+				# delete both versions (cpu and non-cpu):
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+					)]
+				)
+
+				table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('ig_md.port',                                port[i]),
+						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+					)]
+				)
 
 			########################################
 
@@ -385,34 +459,8 @@ def npb_ing_port_del(self, target, port, port_lag_ptr):
 				)]
 			)
 
-			########################################
-
-			# delete both versions (nsh and non-nsh):
-
-			table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
-			table.entry_del(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('ig_md.port',                                port[i]),
-					 gc.KeyTuple('hdr.cpu.$valid',                            0)],
-				)]
-			)
-
-			########################################
-
-			# delete both versions (nsh and non-nsh):
-
-			table = self.bfrt_info.table_get('SwitchIngress.ingress_port_mapping.port_mapping')
-			table.entry_del(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('ig_md.port',                                port[i]),
-					 gc.KeyTuple('hdr.cpu.$valid',                            1)],
-				)]
-			)
-
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2.")
 
 	########################################
 
@@ -428,7 +476,7 @@ def npb_ing_port_del(self, target, port, port_lag_ptr):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2.")
 
 ########################################
 
@@ -476,7 +524,7 @@ def npb_port_vlan_to_bd_add(self, target, port_lag_index, vid_valid, vid_valid_m
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 3.")
 
 		try:
 			# top
@@ -497,7 +545,7 @@ def npb_port_vlan_to_bd_add(self, target, port_lag_index, vid_valid, vid_valid_m
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 3.")
 
 def npb_port_vlan_to_bd_del(self, target, port_lag_index, vid_valid, vid_valid_mask, vid, vid_mask, member_ptr):
 
@@ -516,7 +564,7 @@ def npb_port_vlan_to_bd_del(self, target, port_lag_index, vid_valid, vid_valid_m
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 4.")
 
 		try:
 			# bottom
@@ -529,7 +577,7 @@ def npb_port_vlan_to_bd_del(self, target, port_lag_index, vid_valid, vid_valid_m
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 4.")
 
 ########################################
 
@@ -551,7 +599,7 @@ def npb_vlan_to_bd_add(self, target, vid, member_ptr, bd):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 5.")
 
 		try:
 			# top
@@ -569,7 +617,7 @@ def npb_vlan_to_bd_add(self, target, vid, member_ptr, bd):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 5.")
 
 def npb_vlan_to_bd_del(self, target, vid, member_ptr):
 
@@ -585,7 +633,7 @@ def npb_vlan_to_bd_del(self, target, vid, member_ptr):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 6.")
 
 		try:
 			# bottom
@@ -598,7 +646,7 @@ def npb_vlan_to_bd_del(self, target, vid, member_ptr):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 6.")
 
 ########################################
 
@@ -908,7 +956,7 @@ def npb_npb_sf0_action_sel_add(self, target, spi, si, bitmask):
 			)]
 		)
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 7.")
 
 def npb_npb_sf0_action_sel_del(self, target, spi, si):
 	try:
@@ -922,7 +970,7 @@ def npb_npb_sf0_action_sel_del(self, target, spi, si):
 			)],
 		)
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 7.")
 
 ########################################
 
@@ -1441,7 +1489,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_add(self, target, vpn, flowclass):
 #			)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 8.")
 
 def npb_npb_sf0_policy_sfp_sel_hash_del(self, target, vpn):
 	try:
@@ -1464,7 +1512,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_del(self, target, vpn):
 #			)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 8.")
 
 ########################################
 
@@ -1514,7 +1562,7 @@ def npb_npb_sf0_policy_sfp_sel_single_add(self, target, sfc, sfc_member_ptr, spi
 				)
 
 			except:
-				print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+				print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 9.")
 
 def npb_npb_sf0_policy_sfp_sel_single_del(self, target, sfc, sfc_member_ptr):
 		if(SFF_SCHD_SIMPLE == True):
@@ -1535,7 +1583,7 @@ def npb_npb_sf0_policy_sfp_sel_single_del(self, target, sfc, sfc_member_ptr):
 				)
 
 			except:
-				print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+				print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 9.")
 
 			# bottom
 #			table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector')
@@ -1682,7 +1730,7 @@ def npb_npb_sff_fib_add(self, target, spi, si, nexthop_ptr, end_of_chain):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 10.")
 
 def npb_npb_sff_fib_del(self, target, spi, si):
 
@@ -1698,7 +1746,7 @@ def npb_npb_sff_fib_del(self, target, spi, si):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 10.")
 
 ########################################
 
@@ -1766,7 +1814,7 @@ def npb_nexthop_add(self, target, nexthop_ptr, bd, port_lag_ptr):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 11.")
 
 def npb_nexthop_tunnel_encap_add(self, target, nexthop_ptr, bd, tunnel_ptr, tun_type):
 
@@ -1802,7 +1850,7 @@ def npb_nexthop_tunnel_encap_add(self, target, nexthop_ptr, bd, tunnel_ptr, tun_
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 11.")
 
 def npb_nexthop_del(self, target, nexthop_ptr):
 
@@ -1829,7 +1877,7 @@ def npb_nexthop_del(self, target, nexthop_ptr):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 11.")
 
 ########################################
 
@@ -1900,7 +1948,7 @@ def npb_lag_single_add(self, target, port_lag_ptr, port_lag_member_ptr, port):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12.")
 
 def npb_lag_single_del(self, target, port_lag_ptr, port_lag_member_ptr):
 
@@ -1926,7 +1974,7 @@ def npb_lag_single_del(self, target, port_lag_ptr, port_lag_member_ptr):
 			)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12.")
 
 ########################################
 
@@ -2167,8 +2215,21 @@ def npb_egr_port_add(self, target, port, port_lag_ptr):
 				)]
 			)
 
+			if(SPLIT_EG_PORT_TBL == True):
+				table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping2.port_mapping')
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('port',                                      port[i])],
+					)],
+					[table.make_data(
+						[],
+						'SwitchEgress.egress_port_mapping2.port_normal'
+					)]
+				)
+
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 13.")
 
 def npb_egr_port_cpu_add(self, target, port, port_lag_ptr):
 
@@ -2188,8 +2249,21 @@ def npb_egr_port_cpu_add(self, target, port, port_lag_ptr):
 				)]
 			)
 
+			if(SPLIT_EG_PORT_TBL == True):
+				table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping2.port_mapping')
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('port',                                      port[i])],
+					)],
+					[table.make_data(
+						[],
+						'SwitchEgress.egress_port_mapping2.port_cpu'
+					)]
+				)
+
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 13.")
 
 def npb_egr_port_del(self, target, port):
 
@@ -2205,8 +2279,17 @@ def npb_egr_port_del(self, target, port):
 				)]
 			)
 
+			if(SPLIT_EG_PORT_TBL == True):
+				table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping2.port_mapping')
+				table.entry_del(
+					target,
+					[table.make_key(
+					[gc.KeyTuple('port',                                      port[i])],
+					)]
+				)
+
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 13.")
 
 ########################################
 
@@ -2280,7 +2363,7 @@ def npb_npb_sf2_action_sel_add(self, target, spi, si, bitmask, dsap):
 			)]
 		)
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 14.")
 
 def npb_npb_sf2_action_sel_del(self, target, spi, si):
 	try:
@@ -2294,7 +2377,7 @@ def npb_npb_sf2_action_sel_del(self, target, spi, si):
 			)],
 		)
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 14.")
 
 ########################################
 
@@ -2830,7 +2913,7 @@ def npb_tunnel_encap_add(self, target):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 15.")
 
 def npb_tunnel_encap_del(self, target):
 	try:
@@ -2868,7 +2951,7 @@ def npb_tunnel_encap_del(self, target):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 15.")
 
 ########################################
 
@@ -2889,7 +2972,7 @@ def npb_tunnel_encap_nexthop_rewrite_add(self, target, outer_nexthop_ptr, bd, dm
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 16.")
 
 def npb_tunnel_encap_nexthop_rewrite_del(self, target, outer_nexthop_ptr):
 	try:
@@ -2903,7 +2986,7 @@ def npb_tunnel_encap_nexthop_rewrite_del(self, target, outer_nexthop_ptr):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 16.")
 
 ########################################
 
@@ -2923,7 +3006,7 @@ def npb_tunnel_encap_bd_mapping_add(self, target, bd, smac_ptr):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 17.")
 
 def npb_tunnel_encap_bd_mapping_del(self, target, bd):
 	try:
@@ -2937,7 +3020,7 @@ def npb_tunnel_encap_bd_mapping_del(self, target, bd):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 17.")
 
 ########################################
 
@@ -3061,7 +3144,7 @@ def npb_tunnel_encap_smac_rewrite_add(self, target, smac_ptr, smac):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 18.")
 
 def npb_tunnel_encap_smac_rewrite_del(self, target, smac_ptr):
 	try:
@@ -3075,7 +3158,7 @@ def npb_tunnel_encap_smac_rewrite_del(self, target, smac_ptr):
 		)
 
 	except:
-		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
+		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 18.")
 
 ########################################
 

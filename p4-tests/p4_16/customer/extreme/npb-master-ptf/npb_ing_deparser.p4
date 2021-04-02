@@ -119,10 +119,12 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.outer.vn_tag);
 #endif // VNTAG_ENABLE
         pkt.emit(hdr.outer.vlan_tag);
-#if defined(MPLS_ENABLE) || defined(MPLSoGRE_ENABLE)
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
         pkt.emit(hdr.outer.mpls);
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+#ifdef MPLS_L2VPN_ENABLE
         pkt.emit(hdr.outer.mpls_pw_cw);
-#endif // defined(MPLS_ENABLE) || defined(MPLSoGRE_ENABLE)
+#endif // MPLS_L2VPN_ENABLE
         pkt.emit(hdr.outer.ipv4);
 #ifdef IPV6_ENABLE
         pkt.emit(hdr.outer.ipv6);

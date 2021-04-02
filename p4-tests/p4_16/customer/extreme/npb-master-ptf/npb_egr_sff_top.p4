@@ -100,9 +100,14 @@ control npb_egr_sff_top (
 	// =========================================================================
 	// Table #2: SFF
 	// =========================================================================
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
 #ifdef EGRESS_NSH_HDR_VER_1_SUPPORT
 	action drop_pkt(
 	) {
+		stats.count();
+
   #ifndef BUG_00593238_WORKAROUND
 		eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
   #endif
@@ -113,6 +118,8 @@ control npb_egr_sff_top (
 	action fwd_pkt_nsh_hdr_ver_1(
 		bit<24> tool_address
 	) {
+		stats.count();
+
 		// hdr reformat to old type 1 format (slx-style)
 		hdr_0.nsh_type1.spi        = tool_address;
 		hdr_0.nsh_type1.si         = 0x1;
@@ -125,6 +132,8 @@ control npb_egr_sff_top (
 
 	action fwd_pkt_nsh_hdr_ver_2(
 	) {
+		stats.count();
+
 		// hdr already in new type 2 format -- nothing to do
 	}
 
@@ -151,6 +160,7 @@ control npb_egr_sff_top (
 //		const default_action = drop_pkt;
 		const default_action = fwd_pkt_nsh_hdr_ver_2; // for backwards compatibility with firmware
 		size = NPB_EGR_SFF_ARP_TABLE_DEPTH;
+		counters = stats;
 	}
 #endif
 	// =========================================================================
@@ -170,7 +180,7 @@ control npb_egr_sff_top (
 		// RFC 8300, Page 12: "an SFF that is not the terminal SFF for an SFP
 		// will discard any NSH packet with an SI of 0, as there will be no
 		// valid next SF information."
-
+/*
 		if(eg_md.nsh_md.start_of_path == true) {
 
 			// ---------------
@@ -230,6 +240,29 @@ control npb_egr_sff_top (
 					eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
 				}
 
+			}
+
+		}
+*/
+
+		npb_egr_sff_dec_ttl.apply();
+
+		if(eg_md.nsh_md.end_of_path == true) {
+
+			// ---------------
+			// process end of chain
+			// ---------------
+
+			hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+
+		} else {
+
+			// ---------------
+			// process middle of chain
+			// ---------------
+
+			if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
+				eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
 			}
 
 		}
