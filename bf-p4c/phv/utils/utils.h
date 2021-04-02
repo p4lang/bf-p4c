@@ -237,7 +237,7 @@ class Allocation {
 
     /// @returns the set of actions where @slice must be initialized for overlay enabled by live
     /// range shrinking.
-    boost::optional<ordered_set<const IR::MAU::Action*>>
+    virtual boost::optional<ordered_set<const IR::MAU::Action*>>
         getInitPoints(const AllocSlice& slice) const;
 
     /// @returns number of containers owned by this allocation.
@@ -273,7 +273,7 @@ class Allocation {
 
     /// @returns false if a dark container is used for the read half cycle in between stages
     /// minStage and maxStage.
-    bool isDarkReadAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+    virtual bool isDarkReadAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
         if (!dark_containers_write_allocated_i.count(c)) return true;
         for (unsigned i = minStage; i <= maxStage; i++)
             if (dark_containers_write_allocated_i.at(c)[i])
@@ -283,7 +283,8 @@ class Allocation {
 
     /// @returns false if a dark container is used for the write half cycle in between stages
     /// minStage and maxStage.
-    bool isDarkWriteAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+    virtual bool isDarkWriteAvailable(PHV::Container c, unsigned minStage,
+                                      unsigned maxStage) const {
         if (!dark_containers_read_allocated_i.count(c)) return true;
         for (unsigned i = minStage; i <= maxStage; i++)
             if (dark_containers_read_allocated_i.at(c)[i])
@@ -474,11 +475,6 @@ class ConcreteAllocation : public Allocation {
 
     /// @returns true if this allocation owns @c.
     bool contains(PHV::Container c) const override;
-
-    /// @returns a set of actions where the slice @slice must be initialized. @returns an empty set
-    /// of actions if initialization is not required.
-    boost::optional<ordered_set<const IR::MAU::Action*>>
-        getInitPoints(const AllocSlice slice) const;
 };
 
 
@@ -544,7 +540,7 @@ class Transaction : public Allocation {
 
     /// @returns the set of actions in which @slice must be initialized for live range shrinking.
     boost::optional<ordered_set<const IR::MAU::Action*>>
-        getInitPoints(const AllocSlice& slice) const;
+        getInitPoints(const AllocSlice& slice) const override;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {
@@ -595,14 +591,16 @@ class Transaction : public Allocation {
 
     /// @returns false if a dark container is used for the read half cycle in between stages
     /// minStage and maxStage for either this transaction or its parent.
-    bool isDarkReadAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+    bool isDarkReadAvailable(PHV::Container c, unsigned minStage,
+                             unsigned maxStage) const override {
         return (Allocation::isDarkReadAvailable(c, minStage, maxStage) ||
                 parent_i->isDarkReadAvailable(c, minStage, maxStage));
     }
 
     /// @returns false if a dark container is used for the write half cycle in between stages
     /// minStage and maxStage for either this transaction or its parent.
-    bool isDarkWriteAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
+    bool isDarkWriteAvailable(PHV::Container c, unsigned minStage,
+                              unsigned maxStage) const override {
         return (Allocation::isDarkWriteAvailable(c, minStage, maxStage) ||
                 parent_i->isDarkWriteAvailable(c, minStage, maxStage));
     }

@@ -630,13 +630,7 @@ boost::optional<ordered_set<const IR::MAU::Action*>>
 PHV::Transaction::getInitPoints(const PHV::AllocSlice& slice) const {
     if (meta_init_points_i.count(slice))
         return meta_init_points_i.at(slice);
-    boost::optional<ordered_set<const IR::MAU::Action*>> initPointsInParent;
-    const Transaction* parentTransaction = dynamic_cast<const PHV::Transaction*>(parent_i);
-    if (parentTransaction)
-        initPointsInParent = parentTransaction->getInitPoints(slice);
-    else
-        initPointsInParent = parent_i->getInitPoints(slice);
-    return initPointsInParent;
+    return parent_i->getInitPoints(slice);
 }
 
 void PHV::Transaction::printMetaInitPoints() const {
@@ -650,12 +644,6 @@ void PHV::Transaction::printMetaInitPoints() const {
             LOG5("\t\t  " << kv.first << " : " << kv.second.size());
         parentTransaction = dynamic_cast<const PHV::Transaction*>(parentTransaction->parent_i);
     }
-}
-
-boost::optional<ordered_set<const IR::MAU::Action*>>
-PHV::ConcreteAllocation::getInitPoints(const PHV::AllocSlice slice) const {
-    if (!meta_init_points_i.count(slice)) return boost::none;
-    return meta_init_points_i.at(slice);
 }
 
 boost::optional<PHV::Allocation::ContainerStatus>
