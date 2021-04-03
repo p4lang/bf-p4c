@@ -375,7 +375,7 @@ node ('compiler-travis') {
                             ctest \
                                 -R '^tofino/' \
                                 -E 'smoketest|/programs|/internal_p4_14|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16_programs|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|ptf/digest.p4|digest-std-p4runtime' \
-                                -LE 'GTS_WEEKLY|NON_PR_TOFINO'
+                                -LE 'GTS_WEEKLY|NON_PR_TOFINO|p414_nightly'
                         '''
                     )
                 },
@@ -388,7 +388,8 @@ node ('compiler-travis') {
                         '''
                             ctest \
                                 -R '^tofino/(.*programs|.*internal_p4_14)' \
-                                -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw'
+                                -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw' \
+                                -LE 'p414_nightly'
                         '''
                     )
                 },

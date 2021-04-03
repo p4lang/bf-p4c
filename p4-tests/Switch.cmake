@@ -159,7 +159,8 @@ p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_msdc_wred")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_wred"
         "wred_drop")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc_MalformedPacketsTest" ${SWITCH_P4}
-   "${testExtraArgs} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+   "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_PTF_DIR}")
+p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_msdc_MalformedPacketsTest")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_msdc_MalformedPacketsTest"
         "switch_tests.MalformedPacketsTest")
 
