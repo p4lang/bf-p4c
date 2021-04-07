@@ -6153,6 +6153,7 @@ control Cruso(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsic_
         Bellmead = Valmont.get<tuple<bit<9>, bit<12>>>({ Livonia.egress_port, (bit<12>)Talco.Lawai.Grassflat });
         Talco.NantyGlo.SomesBar = Waretown.execute((bit<32>)Bellmead);
     }
+    @stage(9)
     @disable_atomic_modify(1) @name(".Stout") table Stout {
         actions = {
             Millican();

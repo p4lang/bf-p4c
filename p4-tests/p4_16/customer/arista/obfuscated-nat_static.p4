@@ -5,6 +5,8 @@
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
+@pa_container_size("egress", "Yorkshire.Ocracoke.Piqua", 16)
+@pa_container_size("ingress", "Yorkshire.Readsboro.McCaskill", 16)
 @pa_container_size("egress" , "Longwood.Aniak.Grannis" , 16)
 @pa_container_size("ingress" , "Yorkshire.Astor.Weinert" , 8)
 @pa_container_size("ingress" , "Yorkshire.Astor.Sherack" , 8)
