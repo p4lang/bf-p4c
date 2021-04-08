@@ -1933,9 +1933,3 @@ p4c_add_xfail_reason("tofino"
    "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*"
    extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
 )
-
-# P4C-3667
-p4c_add_xfail_reason("tofino"
-  "tofino supports up to 12 stages, using .*"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
-)

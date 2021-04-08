@@ -111,8 +111,6 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/arista/obfuscated-media.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-mpls_baremetal.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-nat.p4
-  # P4C-3667
-  # extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-packet_filter.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-small_scale_test.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4

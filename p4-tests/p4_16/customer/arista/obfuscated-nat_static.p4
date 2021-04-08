@@ -1834,7 +1834,7 @@ control Emden(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         Yorkshire.NantyGlo.Wilmore = Olcott;
         Yorkshire.NantyGlo.Piperton = Westoak;
     }
-    @disable_atomic_modify(1) @name(".Lefor") table Lefor {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Lefor") table Lefor {
         actions = {
             Skillman();
         }
@@ -3504,7 +3504,7 @@ control Barnsboro(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
     @name(".Wolverine") action Wolverine() {
         Yorkshire.NantyGlo.Quinhagak = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @name(".Wentworth") table Wentworth {
+    @stage(4) @disable_atomic_modify(1) @name(".Wentworth") table Wentworth {
         actions = {
             Standard();
             Wolverine();
@@ -4145,7 +4145,7 @@ control Kelliher(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     @name(".Woolwine") action Woolwine() {
         Yorkshire.Bernice.Grannis = Yorkshire.Dozier.Grannis;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Agawam") table Agawam {
+    @stage(3) @ternary(1) @disable_atomic_modify(1) @name(".Agawam") table Agawam {
         actions = {
             Hopeton();
             Bernstein();
@@ -4474,7 +4474,7 @@ control Wattsburg(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
         Yorkshire.Greenland.RedElm = Thaxton;
         Yorkshire.NantyGlo.Brinklow = DeBeque.get();
     }
-    @disable_atomic_modify(1) @name(".Plush") table Plush {
+    @stage(4) @disable_atomic_modify(1) @name(".Plush") table Plush {
         actions = {
             Latham();
             Truro();
@@ -4739,7 +4739,7 @@ control Natalbany(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
     @name(".Lauada") action Clarkdale() {
         Yorkshire.NantyGlo.Kremlin = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @name(".Talbert") table Talbert {
+    @stage(5) @disable_atomic_modify(1) @name(".Talbert") table Talbert {
         actions = {
             Lignite();
             Clarkdale();
