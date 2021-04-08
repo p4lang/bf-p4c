@@ -229,7 +229,7 @@ class CloudbreakDevice : public Device {
     CloudbreakDevice() : Device("Tofino3"), phv_(), parde_() {}
     Device::Device_t device_type() const override { return Device::CLOUDBREAK; }
     cstring get_name() const override { return "Tofino3"; }
-    int getNumPipes() const override { return 16; }
+    int getNumPipes() const override { return 8; }
     int getNumPortsPerPipe() const override { return 4; }
     int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
