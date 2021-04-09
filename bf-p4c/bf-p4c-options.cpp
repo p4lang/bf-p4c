@@ -127,6 +127,10 @@ BFN_Options::BFN_Options() {
         [this](const char *) { skip_seo = true; return true; },
         "skip frontend side-effect ordering",
         OptionFlags::Hide);
+    registerOption("--long-branch-backtrack", nullptr,
+        [this](const char *) { table_placement_long_branch_backtrack = true; return true; },
+        "backtrack in table placement when long branch pressure seems too high",
+        OptionFlags::Hide);
 #endif
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },

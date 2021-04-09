@@ -183,10 +183,13 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new CatchBacktrack<LongBranchAllocFailed>([this] {
-            options.disable_long_branch = true;
+            if (!options.table_placement_long_branch_backtrack) {
+                options.table_placement_long_branch_backtrack = true;
+            } else {
+                options.disable_long_branch = true;
+                nextTblProp.setVisitor(new DefaultNext(true)); }
             mau_backtracker.clear();
             table_summary.resetPlacement();
-            nextTblProp.setVisitor(new DefaultNext(true));
         }),
         new MultipleApply(options),
         new AddSelectorSalu,

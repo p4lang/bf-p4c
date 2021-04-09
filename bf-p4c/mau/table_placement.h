@@ -193,6 +193,8 @@ class DecidePlacement : public MauInspector {
     boost::optional<BacktrackPlacement&> find_backtrack_point(const Placed *, int, bool);
     bool is_better(const Placed *, const Placed *, TablePlacement::choice_t &);
     int get_control_anti_split_adj_score(const Placed *) const;
+    int longBranchTagsNeeded(const Placed *, const ordered_set<const GroupPlace *> &,
+                             BacktrackPlacement **);
 
     void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     bool preorder(const IR::BFN::Pipe *) override;

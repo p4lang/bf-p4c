@@ -37,6 +37,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_table_placement_backfill = false;
     bool disable_egress_latency_padding = false;
     bool table_placement_in_order = false;
+    bool table_placement_long_branch_backtrack = false;
     bool disable_gfm_parity = true;
     int relax_phv_init = 0;
     bool quick_phv_alloc = false;

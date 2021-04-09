@@ -686,6 +686,48 @@ void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPla
     }
 }
 
+/** Figure out how many long branch tags will be needed across the last stage in `done` if
+ * no more tables are placed in that stage.
+ * For each group (tableSeq) in the worklist, it will need a long branch tag iff
+ *  - it is control dependent on a table not in the last stage
+ *  - it is not completely placed
+ *  - none of its tables were placed in the last stage.  For this a split table is
+ *    considered only as being in the first stage it has match entries in.
+ * while calculating that, look for a good place to backtrack to in case we need to,
+ * storing that in *bt
+ */
+int DecidePlacement::longBranchTagsNeeded(const Placed *done,
+                                          const ordered_set<const GroupPlace *> &work,
+                                          BacktrackPlacement **bt) {
+    bitvec last_stage_tables;  // tables in the last stage of done
+    int rv = 0;
+    *bt = nullptr;
+    for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
+        if (!p->use.format_type.matchEarlierStage())
+            last_stage_tables[self.uid(p->table)] = 1;
+        if (p->gw)
+            last_stage_tables[self.uid(p->gw)] = 1; }
+    for (auto *seq : work) {
+        BUG_CHECK(done->placed.contains(seq->info.parents),
+                  "parent(s) of seq on work list not placed?");
+        if (last_stage_tables.contains(seq->info.parents)) continue;
+        if (done->placed.contains(seq->info.immed_tables)) continue;
+        if (last_stage_tables.intersects(seq->info.immed_tables)) continue;
+        if (!*bt || (**bt)->stage != done->stage) {
+            for (auto t : seq->info.immed_tables - done->placed) {
+                auto *tbl = self.tblByUid.at(t)->table;
+                if (!saved_placements.count(tbl->name)) continue;
+                auto &info = saved_placements.at(tbl->name);
+                if (info.last_pass.count(done->stage) && !info.last_pass.at(done->stage).tried) {
+                    *bt = &info.last_pass.at(done->stage);
+                    break; }
+                if (info.early.count(done->stage) && !info.early.at(done->stage).tried) {
+                    *bt = &info.early.at(done->stage);
+                    break; } } }
+        ++rv; }
+    return rv;
+}
+
 class DecidePlacement::PlacementScore {
     DecidePlacement &self;
     // This backtrack placement point to the best table allocated in the next stage which also
@@ -3552,6 +3594,25 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 if (t->stage == best->stage)
                     LOG_FEATURE("stage_advance", 2, "can't place " << t->name << " in stage " <<
                                 (t->stage-1) << " : " << t->stage_advance_log); }
+            if (self.options.table_placement_long_branch_backtrack &&
+                Device::hasLongBranches() && !self.options.disable_long_branch) {
+                // check to see if too many long branch tags are needed
+                BacktrackPlacement *bt = nullptr;
+                int need = longBranchTagsNeeded(placed, work, &bt);
+                LOG3("need " << need << " long branches over stage " << placed->stage);
+                if (need <= Device::numLongBranchTags() + placed->logical_ids_left()) {
+                    if (need > Device::numLongBranchTags())
+                        LOG3("  - " << placed->logical_ids_left() << " logical ids left");
+                } else if (!bt) {
+                    LOG3("  - no backtrack point found!");
+                } else if (backtrack_count >= MaxBacktracksPerPipe) {
+                    LOG3("  - too many backtracks!");
+                } else {
+                    LOG3("  - backtrack trying " << (*bt)->name << " in stage " << (*bt)->stage);
+                    placed = bt->reset_place_table(work);
+                    recomputePartlyPlaced(placed, partly_placed);
+                    backfill.clear();
+                    continue; } }
         }
 
         if (best->table) {
