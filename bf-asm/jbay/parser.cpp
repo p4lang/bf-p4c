@@ -151,11 +151,11 @@ template <> int Parser::State::Match::write_load_config(Target::JBay::parser_reg
             ea_row.ld_lookup_8[i] = 1;
             max_off = std::max(max_off, off);
         }
-        ea_row.sv_lookup_8[i] = (1 << i) && load.save;
+        ea_row.sv_lookup_8[i] = (load.save >> i) & 1;
     }
 
     for (int i = 0; i < 4; i++) {
-        if (load.save && (1 << i))
+        if ((load.save >> i) & 1)
             ea_row.lookup_offset_8[i] = 60 + i;
     }
     return max_off;

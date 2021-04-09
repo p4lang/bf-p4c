@@ -1,11 +1,13 @@
 /* parser template specializations for cloudbreak -- #included directly in top-level parser.cpp */
-template <> void Parser::Checksum::write_config(Target::Cloudbreak::parser_regs &regs, Parser *parser) {
-         if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+template <> void Parser::Checksum::write_config(Target::Cloudbreak::parser_regs &regs,
+        Parser *parser) {
+    if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
     else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
     else if (unit == 2) write_row_config(regs.memory[gress].po_csum_ctrl_2_row[addr]);
     else if (unit == 3) write_row_config(regs.memory[gress].po_csum_ctrl_3_row[addr]);
     else if (unit == 4) write_row_config(regs.memory[gress].po_csum_ctrl_4_row[addr]);
-    else error(lineno, "invalid unit for parser checksum");
+    else
+        error(lineno, "invalid unit for parser checksum");
 }
 
 
@@ -146,7 +148,7 @@ void Parser::Checksum::write_output_config(Target::Cloudbreak::parser_regs &regs
     void *_row, unsigned &used) const {
     if (type != 0 || !dest) return;
 
-    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
+    cloudbreak_row_output_state *row = static_cast<cloudbreak_row_output_state *>(_row);
 
     // checksum verification outputs "steal" extractors, see parser uArch (6.3.6)
     if ((++used & 0xfff) > 20)
@@ -191,13 +193,15 @@ template<> void Parser::State::Match::write_lookup_config(Target::Cloudbreak::pa
     if (state->key.ctr_zero >= 0) {
         row.w0_ctr_zero = (match.word0 >> state->key.ctr_zero) & 1;
         row.w1_ctr_zero = (match.word1 >> state->key.ctr_zero) & 1;
-    } else
+    } else {
         row.w0_ctr_zero = row.w1_ctr_zero = 1;
+    }
     if (state->key.ctr_neg >= 0) {
         row.w0_ctr_neg = (match.word0 >> state->key.ctr_neg) & 1;
         row.w1_ctr_neg = (match.word1 >> state->key.ctr_neg) & 1;
-    } else
+    } else {
         row.w0_ctr_neg = row.w1_ctr_neg = 1;
+    }
     row.w0_ver_0 = row.w1_ver_0 = 1;
     row.w0_ver_1 = row.w1_ver_1 = 1;
 }
@@ -240,17 +244,17 @@ template <> int Parser::State::Match::write_load_config(Target::Cloudbreak::pars
         if (load.data[i].byte != MatchKey::USE_SAVED) {
             int off = load.data[i].byte;
             if (off < 0 || off >= 32) {
-                error(load.lineno, "Save offset of %d in state %s out of range",
+                error(load.lineno, "Load offset of %d in state %s out of range",
                       load.data[i].byte, state->name.c_str()); }
             ea_row.lookup_offset_8[i] = off;
             ea_row.ld_lookup_8[i] = 1;
             max_off = std::max(max_off, off);
         }
-        ea_row.sv_lookup_8[i] = (1 << i) && load.save;
+        ea_row.sv_lookup_8[i] = (load.save >> i) & 1;
     }
 
     for (int i = 0; i < 4; i++) {
-        if (load.save && (1 << i))
+        if ((load.save >> i) & 1)
             ea_row.lookup_offset_8[i] = 60 + i;
     }
     return max_off;
@@ -268,7 +272,7 @@ static void write_output_slot(int lineno, cloudbreak_row_output_state *row,
 template <>
 int Parser::State::Match::Save::write_output_config(Target::Cloudbreak::parser_regs &regs,
                                                     void *_row, unsigned &used, int, int) const {
-    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
+    cloudbreak_row_output_state *row = static_cast<cloudbreak_row_output_state *>(_row);
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
     int lo = this->lo;
@@ -280,12 +284,14 @@ int Parser::State::Match::Save::write_output_config(Target::Cloudbreak::parser_r
 
     int bytemask = (mask >> 2) & 3;
     if (bytemask) {
-        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest+1, bytemask, flags & OFFSET);
+        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest+1, bytemask,
+            flags & OFFSET);
         lo += bitcount(mask & 0xc); }
 
     bytemask = mask & 3;
     if (bytemask)
-        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest, bytemask, flags & OFFSET);
+        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest, bytemask,
+            flags & OFFSET);
     return hi;
 }
 
@@ -317,7 +323,7 @@ static void write_output_const_slot(
 template <>
 void Parser::State::Match::Set::write_output_config(Target::Cloudbreak::parser_regs &regs,
                                                     void *_row, unsigned &used, int, int) const {
-    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
+    cloudbreak_row_output_state *row = static_cast<cloudbreak_row_output_state *>(_row);
 
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
@@ -364,7 +370,7 @@ template <> void *Parser::setup_phv_output_map(Target::Cloudbreak::parser_regs &
 
 template <> void Parser::mark_unused_output_map(Target::Cloudbreak::parser_regs &regs,
             void *_row, unsigned) {
-    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
+    cloudbreak_row_output_state *row = static_cast<cloudbreak_row_output_state *>(_row);
 
     ubits<5> *counts[4] = { 0,
             &row->regs->phv_ext_cnt_8_lo,
@@ -415,7 +421,7 @@ template<> void Parser::State::Match::write_counter_config(
         }
     } else if (ctr_stack_pop) {
         ea_row.ctr_op = 7;
-    } else { // add
+    } else {  // add
         ea_row.ctr_op = 3;
     }
 
@@ -439,7 +445,8 @@ template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parse
     ea_row.action_ram_en = en_gen.get_ram_enable();
 }
 
-template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
+template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json::map &ctxt_json,
+        bool single_parser) {
     if (single_parser) {
         for (auto st : all)
             st->write_config(regs, this, ctxt_json[st->gress == EGRESS ? "egress" : "ingress"]);
@@ -474,7 +481,6 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
         regs.egress.epbreg.chan5_group.chnl_ctrl.meta_opt = meta_opt;
         regs.egress.epbreg.chan6_group.chnl_ctrl.meta_opt = meta_opt;
         regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
-
     }
 
     setup_jbay_ownership(phv_use,
@@ -567,11 +573,12 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
                                             "egress");
                 regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json"));
             } else {
-                regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.%02x.cfg.json", parser_no),
-                                               "ingress");
-                regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.%02x.cfg.json", parser_no),
-                                              "egress");
-                regs.ingress.emit_json(*open_output("regs.parser.ingress.%02x.cfg.json", parser_no));
+                regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.%02x.cfg.json",
+                    parser_no), "ingress");
+                regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.%02x.cfg.json",
+                    parser_no), "egress");
+                regs.ingress.emit_json(*open_output("regs.parser.ingress.%02x.cfg.json",
+                    parser_no));
                 regs.egress.emit_json(*open_output("regs.parser.egress.%02x.cfg.json", parser_no));
                 regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"),
                                              "ingress");
@@ -582,28 +589,32 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
     /* multiple Cloudbreak parser mem blocks can respond to same address range to allow programming
      * the device with a single write operation. See: pardereg.pgstnreg.ibprsr4reg.prsr.mem_ctrl */
     if (gress == INGRESS) {
-        for (unsigned i = 0; i < TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.i_prsr_mem.size();
+        for (unsigned i = 0;
+             i < TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.i_prsr_mem.size();
              options.singlewrite ? i += 4 : i += 1) {
-            TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.i_prsr_mem[i].set("memories.parser.ingress",
-                                                                             &regs.memory[INGRESS]);
+            TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.i_prsr_mem[i].set(
+                "memories.parser.ingress", &regs.memory[INGRESS]);
         }
     }
 
     if (gress == EGRESS) {
-        for (unsigned i = 0; i < TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.e_prsr_mem.size();
+        for (unsigned i = 0;
+             i < TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.e_prsr_mem.size();
              options.singlewrite ? i += 4 : i += 1) {
-            TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.e_prsr_mem[i].set("memories.parser.egress",
-                                                                             &regs.memory[EGRESS]);
+            TopLevel::regs<Target::Cloudbreak>()->mem_pipe.parde.e_prsr_mem[i].set(
+                "memories.parser.egress", &regs.memory[EGRESS]);
         }
     }
 
     if (gress == INGRESS) {
-        for (auto &ref : TopLevel::regs<Target::Cloudbreak>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
+        for (auto &ref :
+                TopLevel::regs<Target::Cloudbreak>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
             ref.set("regs.parser.ingress", &regs.ingress);
     }
 
     if (gress == EGRESS) {
-        for (auto &ref : TopLevel::regs<Target::Cloudbreak>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)
+        for (auto &ref :
+                TopLevel::regs<Target::Cloudbreak>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)
             ref.set("regs.parser.egress", &regs.egress);
     }
     TopLevel::regs<Target::Cloudbreak>()->reg_pipe.pardereg.pgstnreg.pmergereg
@@ -611,7 +622,8 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
 }
 
 template<>
-void Parser::gen_configuration_cache(Target::Cloudbreak::parser_regs &regs, json::vector &cfg_cache) {
+void Parser::gen_configuration_cache(Target::Cloudbreak::parser_regs &regs,
+        json::vector &cfg_cache) {
     std::string reg_fqname;
     std::string reg_name;
     unsigned reg_value;

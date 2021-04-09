@@ -1140,13 +1140,13 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                 for (int i = 0; i < kv.value.vec.size; i++) {
                     if (CHECKTYPE(kv.value[i], tSTR)) {
                         if (kv.value[i] == "byte0")
-                            load.save = 1 << 0;
+                            load.save |= 1 << 0;
                         else if (kv.value[i] == "byte1")
-                            load.save = 1 << 1;
+                            load.save |= 1 << 1;
                         else if (kv.value[i] == "byte2")
-                            load.save = 1 << 2;
+                            load.save |= 1 << 2;
                         else if (kv.value[i] == "byte3")
-                            load.save = 1 << 3;
+                            load.save |= 1 << 3;
                         else
                             error(lineno, "Unexpected parser save source");
                     }
