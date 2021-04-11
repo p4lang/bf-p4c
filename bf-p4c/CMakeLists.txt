@@ -209,7 +209,6 @@ set (BF_P4C_BACKEND_CONV_HDRS
   arch/fromv1.0/programStructure.h
   arch/fromv1.0/stateful_alu.h
   arch/fromv1.0/wred.h
-  arch/tna/primitives.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_HDRS}")
 
@@ -457,7 +456,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/decaf.h
   parde/deparser_checksum_update.h
   parde/dump_parser.h
-  parde/egress_packet_length.h
   parde/extract_parser.h
   parde/extract_deparser.h
   parde/field_packing.h
@@ -482,8 +480,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/field_pov_analysis.h
   parde/clot/header_removal_analysis.h
   parde/clot/pseudoheader.h
-  parde/p4i/gen_parser_json.h
-  parde/p4i/p4i_json_types.h
   parde/reset_invalidated_checksum_headers.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")

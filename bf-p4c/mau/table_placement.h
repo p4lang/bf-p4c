@@ -158,9 +158,16 @@ class DecidePlacement : public MauInspector {
  public:
     struct GroupPlace;
     class Backfill;
-    explicit DecidePlacement(TablePlacement &s) : self(s) {}
+    class BacktrackPlacement;
+    explicit DecidePlacement(TablePlacement &s);
 
  private:
+    struct save_placement_t;
+    std::map<cstring, save_placement_t>  saved_placements;
+    void savePlacement(const TablePlacement::Placed *, ordered_set<const GroupPlace *> &);
+    void recomputePartlyPlaced(const TablePlacement::Placed *,
+                               ordered_set<const IR::MAU::Table *> &);
+
     void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     bool preorder(const IR::BFN::Pipe *) override;
     /// @returns true if all the metadata initialization induced dependencies for table @t are

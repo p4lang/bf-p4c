@@ -450,6 +450,50 @@ struct TablePlacement::Placed {
 };
 
 int TablePlacement::Placed::uid_counter = 0;
+DecidePlacement::DecidePlacement(TablePlacement &s) : self(s) {}
+
+/** encapsulates the data needed to backtrack and continue on an alternate placement path
+ * a BacktrackPlacement object can be created from any not-yet-placed Placed object
+ * and the worklist it was chosen from.  calling reset_place_table will reset and place
+ * the Placed object, updating the worklist to continue from that point,
+ */
+class DecidePlacement::BacktrackPlacement {
+    DecidePlacement &self;
+    const TablePlacement::Placed *pl;
+    ordered_set<const GroupPlace*> work;
+
+ public:
+    BacktrackPlacement(DecidePlacement &self, const TablePlacement::Placed *p,
+                       const ordered_set<const GroupPlace*> &w) : self(self), pl(p), work(w) {}
+    BacktrackPlacement &operator=(const BacktrackPlacement &a) {
+        BUG_CHECK(&self == &a.self, " inconsistent backtracking assignment");
+        pl = a.pl;
+        work = a.work;
+        return *this; }
+    const TablePlacement::Placed *operator->() const { return pl; }
+
+    const TablePlacement::Placed *reset_place_table(ordered_set<const GroupPlace *> &w) {
+        w = work;
+        return self.place_table(w, pl); }
+};
+
+struct DecidePlacement::save_placement_t {
+    BacktrackPlacement  early;  // earliest stage we've foudn where table is placeable
+    BacktrackPlacement  late;   // latest placement found for table
+};
+
+void DecidePlacement::savePlacement(const TablePlacement::Placed *pl,
+                                    ordered_set<const GroupPlace *> &work) {
+    if (saved_placements.count(pl->name)) {
+        auto &info = saved_placements.at(pl->name);
+        info.late = BacktrackPlacement(*this, pl, work);
+        if (pl->stage <= info.early->stage)
+            info.early = BacktrackPlacement(*this, pl, work);
+    } else {
+        saved_placements.emplace(pl->name, save_placement_t {
+            BacktrackPlacement(*this, pl, work), BacktrackPlacement(*this, pl, work) });
+    }
+}
 
 namespace {
 class StageSummary {
@@ -494,6 +538,7 @@ class DecidePlacement::Backfill {
     void set_stage(int st) {
         if (stage != st) avail.clear();
         stage = st; }
+    void clear() { avail.clear(); }
     void add(const TablePlacement::Placed *tbl, const TablePlacement::Placed *before) {
         set_stage(before->stage);
         avail.push_back({ tbl->table, before->name }); }
@@ -2137,6 +2182,15 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
     if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
         new GroupPlace(*this, work, {}, pipe->ghost_thread); }
     self.rejected_placements.clear();
+    saved_placements.clear();
+}
+
+void DecidePlacement::recomputePartlyPlaced(const TablePlacement::Placed *done,
+                                            ordered_set<const IR::MAU::Table *> &partly_placed) {
+    partly_placed.clear();
+    for (auto *p = done; p; p = p->prev)
+        if (done->is_placed(p->table))
+            partly_placed.insert(p->table);
 }
 
 bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
@@ -2338,6 +2392,11 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 LOG3("    Keeping best " << best->name << " for reason: " << choice);
                 self.reject_placement(t, choice, best); } }
 
+        // maybe save rejected placements for later backtracking
+        for (auto t : trial)
+            if (t != best)
+                savePlacement(t, work);
+
         if (placed && best->stage > placed->stage &&
             !self.options.disable_table_placement_backfill) {
             const TablePlacement::Placed *backfilled = nullptr;
@@ -2370,6 +2429,14 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 if (t->stage == best->stage)
                     LOG_FEATURE("stage_advance", 2, "can't place " << t->name << " in stage " <<
                                 (t->stage-1) << " : " << t->stage_advance_log); } }
+        // if (there is some problem with best) {
+        //    BacktrackPlacement &bt = pick a backtrack point from saved_placements
+        //    placed = bt.reset_place_table(work);
+        //    recomputePartlyPlaced(placed, partly_placed);
+        //    backfill.clear();  // backfill will be out of date, so we will lose some
+        //              // backfilling opportunities.  Could we reconstruct them?  Or
+        //              // save them in the BacktrackPlacement?  Not clear it is worth it.
+        //    continue; }
         placed = place_table(work, best);
 
         if (!self.options.disable_table_placement_backfill) {
