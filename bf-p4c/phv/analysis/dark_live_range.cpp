@@ -626,6 +626,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 f_nodes.insert(iunit2);
             }
         }
+
         bool onlyDeparserUse = false;
         if (f_nodes.size() == 1) {
             const auto* u = *(f_nodes.begin());
@@ -775,6 +776,14 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 }
 
                 if (!goToNextDominator && doNotInitTables.count(groupDominator)) {
+                    LOG2("\t\tTable " << groupDominator->name << " requires more than one stage."
+                         " Therefore, we will not initialize at that table.");
+                    goToNextDominator = true;
+                }
+
+                // Mostly the same check as the one before except that it is based on previous
+                // Table Alloc round result.
+                if (!goToNextDominator && tableAlloc.stage(groupDominator, true).size() > 1) {
                     LOG2("\t\tTable " << groupDominator->name << " requires more than one stage."
                          " Therefore, we will not initialize at that table.");
                     goToNextDominator = true;

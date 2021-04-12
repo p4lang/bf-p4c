@@ -15,16 +15,18 @@ class FileLog;
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {
         ordered_map<cstring, ordered_set<int>> tableAlloc;
+        ordered_map<cstring, ordered_set<int>> internalTableAlloc;
         bool metaInitDisable;
         bool ignorePackConflicts;
         bool firstRoundFit;
         explicit failure(
                 ordered_map<cstring, ordered_set<int>> tables,
+                ordered_map<cstring, ordered_set<int>> internalTables,
                 bool fit,
                 bool pack = false,
                 bool meta = false)
-            : trigger(OTHER), tableAlloc(tables), metaInitDisable(meta), ignorePackConflicts(pack),
-              firstRoundFit(fit) { }
+            : trigger(OTHER), tableAlloc(tables), internalTableAlloc(internalTables),
+              metaInitDisable(meta), ignorePackConflicts(pack), firstRoundFit(fit) { }
     };
 };
 
@@ -103,6 +105,10 @@ class TableSummary: public MauInspector {
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
     ordered_map<cstring, ordered_set<int>> tableAlloc;
+    /// Map of internal table name to stage: sent with the backtracking exception to communicate
+    /// table placement constraints to PHV allocation. This mapping table have a better granularity
+    /// to properly map the stage of a match table using various internal construct.
+    ordered_map<cstring, ordered_set<int>> internalTableAlloc;
     /// Map of table name to the name of the gateway merged with it
     ordered_map<cstring, cstring> mergedGateways;
     /// Map of table pointers to the names used for communicating table placement information

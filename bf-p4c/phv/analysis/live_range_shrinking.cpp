@@ -905,6 +905,13 @@ FindInitializationNode::findInitializationNodes(
                     groupDominatorOK = false;
                 }
             }
+            // Can't use table that span on multiple stages to initialize a field. This would
+            // create incoherence in live range for those fields.
+            if (groupDominatorOK && tableAlloc.stage(groupDominator, true).size() > 1) {
+                LOG2("\t\tTable " << groupDominator->name << " requires more than one stage."
+                     " Therefore, we will not initialize at that table.");
+                groupDominatorOK = false;
+            }
             // Go to the next dominator node.
             if (!groupDominatorOK) {
                 auto newDominator = domTree.getNonGatewayImmediateDominator(groupDominator,

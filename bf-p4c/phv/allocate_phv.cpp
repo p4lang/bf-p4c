@@ -2905,7 +2905,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
             ordered_map<cstring, ordered_set<int>> tables;
             LOG1("This round of PHV Allocation did not fit. However, the first round of PHV "
                  "allocation did. Therefore, falling back onto the first round of PHV allocation.");
-            throw PHVTrigger::failure(tables, firstRoundFit, true /* ignorePackConflicts */,
+            throw PHVTrigger::failure(tables, tables, firstRoundFit, true /* ignorePackConflicts */,
                                       false /* metaInitDisable */);
         }
         bindSlices(alloc, phv_i);

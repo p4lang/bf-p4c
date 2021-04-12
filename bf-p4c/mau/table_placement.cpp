@@ -1498,13 +1498,17 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                (!(rv->use <= avail) ||
                (allocated = try_alloc_mem(rv, whole_stage)) == false)) {
             // If a table contains initialization for dark containers, it cannot be split into
-            // multiple stages.
+            // multiple stages. Ignore this limitation if the table allocation is run with ignore
+            // container conflict. For this particular case PHV will always rerun and ultimately
+            // catch this situation and avoid dark initialization on this splitted table.
             if (rv->table->has_dark_init) {
                 LOG3("    Table with dark initialization cannot be split");
-                error_message = "PHV allocation doesn't want this table split, and it's "
-                                "too big for one stage";
-                advance_to_next_stage = true;
-                break;
+                if (!ignoreContainerConflicts) {
+                    error_message = "PHV allocation doesn't want this table split, and it's "
+                                    "too big for one stage";
+                    advance_to_next_stage = true;
+                    break;
+                }
             }
             bool need_update_whole_stage = false;
             if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries,

@@ -31,6 +31,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     action_data_bus.clear();
     imems.clear();
     tableAlloc.clear();
+    internalTableAlloc.clear();
     tableNames.clear();
     mergedGateways.clear();
     maxStage = 0;
@@ -106,7 +107,9 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         maxStage = (maxStage < stage) ? stage : maxStage;
         if (max_stages[entry.second->gress] < stage)
             max_stages[entry.second->gress] = stage;
-        tableAlloc[tableNames[entry.second->name]].insert(entry.first); }
+        tableAlloc[tableNames[entry.second->name]].insert(entry.first);
+        internalTableAlloc[entry.second->name].insert(entry.first);
+    }
     // maxStage is counted from 0 to n-1
     ++maxStage;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] += 1;
@@ -127,6 +130,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
             int minStage = std::accumulate(stages.begin(), stages.end(),
                     (maxStage + 1) * NUM_LOGICAL_TABLES_PER_STAGE, min);
             tableAlloc[tableNames[entry.second]].insert(minStage);
+            internalTableAlloc[entry.second].insert(minStage);
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 
@@ -170,7 +174,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         // initialization enabled.
         if (maxStage <= deviceStages) {
             state = state == NOCC_TRY1 ? REDO_PHV1 : REDO_PHV2;
-            throw PHVTrigger::failure(tableAlloc, firstRoundFit);
+            throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
         } else {
             // If there is not table placement failure and the number of stages without container
             // conflicts are greater than the available physical stages, redo PHV allocation, while
@@ -180,8 +184,8 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
             LOG1("Invoking table placement without metadata initialization because container "
                  "conflict-free table placement required " << maxStage << " stages.");
             state = state == NOCC_TRY1 ? REDO_PHV1 : REDO_PHV2;
-            throw PHVTrigger::failure(tableAlloc, firstRoundFit, false /* ignorePackConflicts */,
-                    true /* metaInitDisable */);
+            throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit,
+                    false /* ignorePackConflicts */, true /* metaInitDisable */);
         }
 
     case REDO_PHV1:

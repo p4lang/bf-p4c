@@ -20,6 +20,11 @@ class MauBacktracker : public Backtrack {
     /// Map of table names to stage from a previous round without container conflicts.
     ordered_map<cstring, ordered_set<int>> prevRoundTables;
 
+    /// Store a map of internal table names to stage, used as reference by the second round of
+    /// PHV allocation (after a backtrack exception has been thrown by TableSummary). Only used
+    /// on stage() function with internal == true.
+    ordered_map<cstring, ordered_set<int>> internalTables;
+
     /// Store the number of stages required by table allocation
     int maxStage = -1;
 
@@ -55,8 +60,9 @@ class MauBacktracker : public Backtrack {
     /// in the tables map
     bool hasTablePlacement() const;
 
-    /// @returns the stages in which table @t was placed
-    ordered_set<int> stage(const IR::MAU::Table* t) const;
+    /// @returns the stages in which table @t was placed. Use internalTables mapping when internal
+    /// flag is set.
+    ordered_set<int> stage(const IR::MAU::Table* t, bool internal = false) const;
 
     /// @returns metaInitDisable.
     bool disableMetadataInitialization() const { return metaInitDisable; }

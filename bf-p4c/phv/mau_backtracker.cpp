@@ -28,6 +28,9 @@ bool MauBacktracker::backtrack(trigger &trig) {
                     int st = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
                     maxStage = (maxStage < st) ? st : maxStage; }
             }
+            internalTables.clear();
+            for (auto entry : t->internalTableAlloc)
+                internalTables[entry.first] = entry.second;
         }
         LOG4("Inserted tables size: " << tables.size());
         return true;
@@ -103,13 +106,20 @@ bool MauBacktracker::hasTablePlacement() const {
     return (tables.size() > 0);
 }
 
-ordered_set<int> MauBacktracker::stage(const IR::MAU::Table* t) const {
+ordered_set<int> MauBacktracker::stage(const IR::MAU::Table* t, bool internal) const {
     ordered_set<int> rs;
-    if (tables.size() == 0) return rs;
-    cstring tableName = TableSummary::getTableName(t);
-    if (!tables.count(tableName)) return rs;
-    for (auto logical_id : tables.at(tableName))
-        rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
+    if (internal) {
+        if (internalTables.size() == 0) return rs;
+        if (!internalTables.count(t->name)) return rs;
+        for (auto logical_id : internalTables.at(t->name))
+            rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
+    } else {
+        if (tables.size() == 0) return rs;
+        cstring tableName = TableSummary::getTableName(t);
+        if (!tables.count(tableName)) return rs;
+        for (auto logical_id : tables.at(tableName))
+            rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
+    }
     return rs;
 }
 
