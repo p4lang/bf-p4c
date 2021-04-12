@@ -25,6 +25,7 @@ control npb_ing_sf_multicast_top_part1 (
 
 		ig_md.multicast.id = mgid;
 
+//		ig_md.nexthop = 0; // DOES NOT FIT
 		ig_md.egress_port_lag_index = 0;
 	}
 
@@ -40,8 +41,8 @@ control npb_ing_sf_multicast_top_part1 (
 
 	table ing_sf_action_sel {
 		key = {
-			hdr_0.nsh_type1.spi : exact @name("spi");
-			hdr_0.nsh_type1.si  : exact @name("si");
+			ig_md.nsh_md.spi : exact @name("spi");
+			ig_md.nsh_md.si  : exact @name("si");
 		}
 
 		actions = {
@@ -78,9 +79,9 @@ control npb_ing_sf_multicast_top_part1 (
 			// the lookup that uses it, but before any actions have run....
 
 #ifdef BUG_09719_WORKAROUND
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si - 1; // decrement sp_index
+			ig_md.nsh_md.si = ig_md.nsh_md.si - 1; // decrement sp_index
 #else
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si |-| 1; // decrement sp_index
+			ig_md.nsh_md.si = ig_md.nsh_md.si |-| 1; // decrement sp_index
 #endif
 
 		}

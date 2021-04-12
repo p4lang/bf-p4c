@@ -22,6 +22,9 @@
 
 // List of all supported #define directives.
 
+#define PA_MONOGRESS
+#undef  PA_NO_INIT
+
 // ===== pkt header defines =================================
 
 // ----- applies to: transport -----
@@ -67,7 +70,11 @@
 #define EGRESS_PARSER_POPULATES_LKP_SCOPED
 #undef  PARSER_ERROR_HANDLING_ENABLE
 #undef  PARSER_L4_PORT_OVERLOAD
-#undef  INNER_INNER_IP_LEN_ENABLE
+#define INNER_INNER_IP_LEN_ENABLE
+
+// ----- switch: general -----
+#define SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
+#undef  SPLIT_EG_PORT_TABLE_ENABLE // helps with fitting, splits the egress port table into two.
 
 // ----- switch: mirroring -----
 #define MIRROR_INGRESS_ENABLE      // only valid if MIRROR_ENABLE is defined
@@ -79,8 +86,8 @@
 #define CPU_ENABLE
 #define CPU_ACL_INGRESS_ENABLE
 #define CPU_ACL_EGRESS_ENABLE   // only valid if MIRROR_ENABLE is defined
-#define CPU_COPP_INGRESS_ENABLE // only valid if CPU_ENABLE    is defined
-#define CPU_COPP_EGRESS_ENABLE  // only valid if CPU_ENABLE    is defined
+#undef  CPU_COPP_INGRESS_ENABLE // only valid if CPU_ENABLE    is defined
+#undef  CPU_COPP_EGRESS_ENABLE  // only valid if CPU_ENABLE    is defined
 #undef  CPU_FABRIC_HEADER_ENABLE
 #define CPU_BD_MAP_ENABLE
 
@@ -160,13 +167,12 @@
 #define CPU_IG_BYPASS_ENABLE                  // this feature currently doesn't fit
 #define MULTICAST_INGRESS_RID_ENABLE          // this feature currently doesn't fit
 #define LAG_HASH_MASKING_ENABLE               // this feature currently doesn't fit
-#define LAG_HASH_IN_NSH_HDR_ENABLE            // this feature currently doesn't fit
+#undef  LAG_HASH_IN_NSH_HDR_ENABLE            // this feature currently doesn't fit
 #define FIELD_WIDTHS_REDUCED                  // to help w/ fitting
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
-#define MIRROR_METERS                         // this feature currently doesn't fit
+#undef  MIRROR_METERS                         // this feature currently doesn't fit
 #undef  LAG_TABLE_INDIRECT_COUNTERS           // this feature currently doesn't fit
-#undef  CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
+#define CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
 #define INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
 #define EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit
-#define SPLIT_EG_PORT_TABLE_ENABLE            // helps with fitting, splits the egress port table into two.

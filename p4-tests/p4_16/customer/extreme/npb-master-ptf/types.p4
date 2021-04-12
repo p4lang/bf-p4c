@@ -129,7 +129,7 @@ typedef bit<switch_outer_nexthop_width> switch_outer_nexthop_t;
 #endif
 typedef bit<switch_hash_width> switch_hash_t;
 
-#ifndef egress_dtel_drop_report_width 
+#ifndef egress_dtel_drop_report_width
 #define egress_dtel_drop_report_width 17
 #endif
 
@@ -209,6 +209,12 @@ typedef bit<2> switch_ip_frag_t;
 const switch_ip_frag_t SWITCH_IP_FRAG_NON_FRAG = 0b00; // Not fragmented.
 const switch_ip_frag_t SWITCH_IP_FRAG_HEAD     = 0b10; // First fragment of the fragmented packets.
 const switch_ip_frag_t SWITCH_IP_FRAG_NON_HEAD = 0b11; // Fragment with non-zero offset.
+
+
+                                          // my trials with no chnage packet:        fal tru
+                                          // --------------------------------------- --- ---
+const int EGRESS_ACL_ADJUST_NORMAL = -34; // DO NOT DELETE -- FIRMWARE CONSUMES THIS 138 104
+const int EGRESS_ACL_ADJUST_DROP   =   4; // DO NOT DELETE -- FIRMWARE CONSUMES THIS 138 142
 
 // Bypass flags ---------------------------------------------------------------
 
@@ -314,8 +320,8 @@ struct switch_mirror_metadata_t {
 }
 
 header switch_port_mirror_metadata_h { // this is a header!
-    switch_pkt_src_t src;
-    switch_mirror_type_t type;
+    switch_pkt_src_t src;                   // 8
+    switch_mirror_type_t type;              // 8
     switch_port_padding_t _pad1;            // 7  \ 16 total
     switch_port_t port;                     // 9  /
     switch_bd_t bd;                         // 16
@@ -326,11 +332,18 @@ header switch_port_mirror_metadata_h { // this is a header!
     bit<6> _pad2;                           // 6  \ 16 total
     switch_port_lag_index_t port_lag_index; // 10 /
 #endif
-    bit<32> timestamp;
+/*
+#if defined(PTP_ENABLE) || defined(INT_V2)
+    bit<48> timestamp;
+#else
+    bit<32> timestamp;                      // 32
+#endif
 #if __TARGET_TOFINO__ == 1
     bit<6> _pad;
 #endif
-    switch_mirror_session_t session_id;
+    switch_mirror_session_t session_id;     // 8
+*/
+    switch_cpu_reason_t reason_code;        // 16
 }
 
 header switch_cpu_mirror_metadata_h { // this is a header!
@@ -456,7 +469,11 @@ struct switch_dtel_metadata_t {
 header switch_dtel_switch_local_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
+#if defined(PTP_ENABLE) || defined(INT_V2)
     bit<48> timestamp;
+#else
+    bit<32> timestamp;
+#endif
 #if __TARGET_TOFINO__ == 1
     bit<6> _pad;
 #endif
@@ -477,7 +494,7 @@ header switch_dtel_switch_local_mirror_metadata_h {
     bit<19> qdepth;
 #ifdef INT_V2
     bit<48> egress_timestamp;
-#else 
+#else
     bit<32> egress_timestamp;
 #endif
 }
@@ -485,7 +502,11 @@ header switch_dtel_switch_local_mirror_metadata_h {
 header switch_dtel_drop_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
+#if defined(PTP_ENABLE) || defined(INT_V2)
     bit<48> timestamp;
+#else
+    bit<32> timestamp;
+#endif
 #if __TARGET_TOFINO__ == 1
     bit<6> _pad;
 #endif
@@ -528,6 +549,15 @@ struct switch_bridged_metadata_dtel_extension_t {
 //-----------------------------------------------------------------------------
 
 struct nsh_metadata_t {
+	bit<2>                          pad;
+	bit<6>                          ttl;                    // ingress / egress hdr
+	bit<24>                         spi;                    // ingress / egress hdr
+	bit<8>                          si;                     // ingress / egress hdr
+	bit<8>                          ver;                    // ingress          hdr
+	bit<16>                         vpn;                    // ingress / egress hdr
+	bit<8>                          scope;                  // ingress / egress hdr
+	bit<16>                         sap;                    // ingress / egress hdr
+
 //  bool                            start_of_path;          // ingress / egress
     bool                            end_of_path;            // ingress / egress
     bool                            truncate_enable;        // ingress / egress
@@ -660,7 +690,12 @@ struct switch_bridged_metadata_t {
     switch_nexthop_t nexthop;
 //  switch_pkt_type_t pkt_type;
 	switch_cpu_reason_t cpu_reason;
-//  bit<48> timestamp;
+#if defined(PTP_ENABLE) || defined(INT_V2)
+    bit<48> timestamp;
+#else
+    bit<32> timestamp;
+#endif
+    bit<switch_lag_hash_width> hash;
 	bool rmac_hit;
 	bool bypass_egress;
 
@@ -772,11 +807,11 @@ header switch_bridged_metadata_h {
 // --------------------------------------------------------------------------------
 
 struct switch_port_metadata_t {
-#ifdef PROFILE_BETA
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+#else
     switch_port_lag_index_t         port_lag_index;
 //  switch_ifindex_t                ifindex;
 	bit<1>                          l2_fwd_en;
-#else
 #endif
 
 #if __TARGET_TOFINO__ == 2
@@ -824,9 +859,12 @@ struct switch_ingress_metadata_t {
 //  bool acl_redirect;
 	switch_nexthop_t unused_nexthop;
 
+#if defined(PTP_ENABLE) || defined(INT_V2)
     bit<48> timestamp;
+#else
+    bit<32> timestamp;
+#endif
     bit<switch_lag_hash_width> hash;
-//  bit<32> hash_nsh;
 
     switch_ingress_flags_t flags;
 //  switch_ingress_checks_t checks;
@@ -888,10 +926,12 @@ struct switch_egress_metadata_t {
 
 #ifdef INT_V2
     bit<48> timestamp;
+    bit<48> ingress_timestamp;
 #else
     bit<32> timestamp;
+    bit<32> ingress_timestamp;
 #endif
-//  bit<48> ingress_timestamp;
+    bit<switch_lag_hash_width> hash;
 
     switch_egress_flags_t flags;
 //  switch_egress_checks_t checks;
@@ -945,6 +985,7 @@ struct switch_header_transport_t {
     ethernet_h ethernet;
     vlan_tag_h[1] vlan_tag;
     nsh_type1_h nsh_type1;
+    nsh_type1_internal_h nsh_type1_internal;
 
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
     ipv4_h ipv4;
@@ -957,7 +998,7 @@ struct switch_header_transport_t {
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
     gre_h gre;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
-    
+
 #if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
 	gre_extension_sequence_h gre_sequence;
     erspan_type2_h erspan_type2;
@@ -983,7 +1024,7 @@ struct switch_header_outer_t {
     mpls_h[MPLS_DEPTH] mpls;
 #endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
 #ifdef MPLS_L2VPN_ENABLE
-    mpls_pw_cw_h mpls_pw_cw;    
+    mpls_pw_cw_h mpls_pw_cw;
 #endif // MPLS_L2VPN_ENABLE
     ipv4_h ipv4;
 #ifdef IPV6_ENABLE
@@ -1046,7 +1087,7 @@ struct switch_header_inner_t {
     gtp_v1_base_h gtp_v1_base;
     gtp_v1_optional_h gtp_v1_optional;
 #endif
-    
+
 }
 
 // -----------------------------------------------------------------------------
@@ -1062,13 +1103,13 @@ struct switch_header_inner_inner_t {
 struct switch_header_t {
 
     // ===========================
-    // misc 
+    // misc
     // ===========================
 
     switch_bridged_metadata_h bridged_md;
 	// switch_mirror_metadata_h mirror;
     fabric_h fabric;
-    cpu_h cpu;    
+    cpu_h cpu;
 
     // ===========================
     // transport

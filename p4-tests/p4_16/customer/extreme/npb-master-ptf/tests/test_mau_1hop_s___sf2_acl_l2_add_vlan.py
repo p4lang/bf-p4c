@@ -101,11 +101,11 @@ class test(BfRuntimeTest):
 		# Insert Table Entries
 		# -----------------------------------------------------------
 
-		npb_nsh_chain_start_add(self, self.target,
+		npb_nsh_chain_start_end_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap,
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap
 			#tunnel
-			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
+			#tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 			#egress
 		)
 
@@ -115,7 +115,7 @@ class test(BfRuntimeTest):
 
 		npb_npb_sf2_policy_l2_add    (self, self.target, dsap=dsap, l2_etype=0x0800, l2_etype_mask=0xffff, add_tag_vlan_bd=5)
 
-		npb_npb_sf2_policy_hdr_edit_add(self, self.target, bd=5, pcp=0, vid=0)
+#		npb_npb_sf2_policy_hdr_edit_add(self, self.target, bd=5, pcp=0, vid=0)
 
 		# -----------------
 
@@ -127,8 +127,8 @@ class test(BfRuntimeTest):
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
 			dmac_nsh=dmac, smac_nsh=smac, vlan_en=False, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			vlan_en_exp=True,
+			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[],
+			vlan_en_exp=False,
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
 
@@ -181,11 +181,11 @@ class test(BfRuntimeTest):
 		# Delete Table Entries
 		# -----------------------------------------------------------
 
-		npb_nsh_chain_start_del(self, self.target,
+		npb_nsh_chain_start_end_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port],
+			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port]
 			#tunnel
-			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
+			#tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
 			#egress
 		)
 
@@ -195,5 +195,5 @@ class test(BfRuntimeTest):
 
 		npb_npb_sf2_policy_l2_del(self, self.target, dsap=dsap, l2_etype=0x0800, l2_etype_mask=0xffff)
 
-		npb_npb_sf2_policy_hdr_edit_del(self, self.target, bd=5)
+#		npb_npb_sf2_policy_hdr_edit_del(self, self.target, bd=5)
 

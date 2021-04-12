@@ -59,8 +59,8 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	table ing_sf_action_sel {
 		key = {
-			hdr_0.nsh_type1.spi        : exact @name("spi");
-			hdr_0.nsh_type1.si         : exact @name("si");
+			ig_md.nsh_md.spi           : exact @name("spi");
+			ig_md.nsh_md.si            : exact @name("si");
 		}
 
 		actions = {
@@ -265,10 +265,10 @@ control npb_ing_sf_npb_basic_adv_top (
 			// the lookup that uses it, but before any actions have run....
 
 #ifdef BUG_09719_WORKAROUND
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si - 1; // decrement sp_index
+			ig_md.nsh_md.si = ig_md.nsh_md.si - 1; // decrement sp_index
 			ig_md.nsh_md.si_predec = ig_md.nsh_md.si_predec - 1; // decrement sp_index
 #else
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si |-| 1; // decrement sp_index
+			ig_md.nsh_md.si = ig_md.nsh_md.si |-| 1; // decrement sp_index
 			ig_md.nsh_md.si_predec = ig_md.nsh_md.si_predec - |1|; // decrement sp_index
 #endif
 
@@ -325,10 +325,10 @@ control npb_ing_sf_npb_basic_adv_top (
 			npb_ing_sf_npb_basic_adv_dedup.apply (
 				ig_md.nsh_md.dedup_en,
 				ig_md.lkp_1,         // for hash
-				(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+				(bit<VPN_ID_WIDTH>)ig_md.nsh_md.vpn, // for hash
 				ig_md.nsh_md.hash_2,
 //				ig_md.port,          // for dedup
-				hdr_0.nsh_type1.sap, // for dedup
+				ig_md.nsh_md.sap,    // for dedup
 				ig_intr_md_for_dprsr.drop_ctl
 			);
 */

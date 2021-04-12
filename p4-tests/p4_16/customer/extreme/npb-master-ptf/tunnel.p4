@@ -134,8 +134,8 @@ control IngressTunnel(
 		stats_src_vtep.count();
 
 //		ig_md.port_lag_index    = port_lag_index;
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 	}
 
 	// -------------------------------------
@@ -183,8 +183,8 @@ control IngressTunnel(
 		stats_src_vtepv6.count();
 
 //		ig_md.port_lag_index    = port_lag_index;
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 	}
 
 	// -------------------------------------
@@ -247,8 +247,8 @@ control IngressTunnel(
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 //		ig_md.port_lag_index    = port_lag_index;
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
   #endif
 	}
 
@@ -286,6 +286,10 @@ control IngressTunnel(
 #endif
 //			tunnel_0.type           : exact @name("tunnel_type");
 			lkp_0.tunnel_type       : exact @name("tunnel_type");
+  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+			ig_md.nsh_md.sap    : exact @name("sap");
+			lkp_0.tunnel_id        : exact @name("tunnel_id");
+  #endif
 		}
 
 		actions = {
@@ -325,8 +329,8 @@ control IngressTunnel(
 
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 //		ig_md.port_lag_index    = port_lag_index;
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
   #endif
 	}
 
@@ -364,6 +368,10 @@ control IngressTunnel(
 #endif
 //			tunnel_0.type       : exact @name("tunnel_type");
 			lkp_0.tunnel_type   : exact @name("tunnel_type");
+  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+			ig_md.nsh_md.sap    : exact @name("sap");
+			lkp_0.tunnel_id        : exact @name("tunnel_id");
+  #endif
 		}
 
 		actions = {
@@ -427,8 +435,10 @@ control IngressTunnel(
 //		switch(rmac.apply().action_run) {
 //			rmac_hit : {
   #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+    #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 				if (hdr_0.ipv4.isValid()) {
 //				if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV4) {
+    #endif
       #ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
 					src_vtep.apply();
       #endif // ifndef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
@@ -456,8 +466,8 @@ control IngressTunnel(
 						}
 					}
 
-    #endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 				}
+    #endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
   #endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
 //			}
 //		}
@@ -507,15 +517,15 @@ control IngressTunnelNetwork(
 	) {
 		stats.count();
 
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 	}
 
 	// ---------------------------------
 
 	table sap {
 		key = {
-			hdr_0.nsh_type1.sap    : exact @name("sap");
+			ig_md.nsh_md.sap    : exact @name("sap");
 
 			// tunnel
 //			tunnel_0.type          : exact @name("tunnel_type");
@@ -556,7 +566,7 @@ control IngressTunnelNetwork(
 
 control IngressTunnelOuter(
 	inout switch_ingress_metadata_t ig_md,
-	inout switch_lookup_fields_t    lkp,
+	inout switch_lookup_fields_t    lkp_1,
 	inout switch_header_transport_t hdr_0,
 
 	in    switch_lookup_fields_t    lkp_2,
@@ -589,8 +599,8 @@ control IngressTunnelOuter(
 	) {
 		stats_exm.count();
 
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
 	}
@@ -599,16 +609,16 @@ control IngressTunnelOuter(
 
 	table sap_exm {
 		key = {
-			hdr_0.nsh_type1.sap : exact @name("sap");
+			ig_md.nsh_md.sap : exact @name("sap");
 
 			// l3
-			lkp.ip_type         : exact @name("ip_type");
-			lkp.ip_src_addr     : exact @name("ip_src_addr");
-			lkp.ip_dst_addr     : exact @name("ip_dst_addr");
+			lkp_1.ip_type         : exact @name("ip_type");
+			lkp_1.ip_src_addr     : exact @name("ip_src_addr");
+			lkp_1.ip_dst_addr     : exact @name("ip_dst_addr");
 
 			// tunnel
-			lkp.tunnel_type     : exact @name("tunnel_type");
-			lkp.tunnel_id       : exact @name("tunnel_id");
+			lkp_1.tunnel_type     : exact @name("tunnel_type");
+			lkp_1.tunnel_id       : exact @name("tunnel_id");
 		}
 
 		actions = {
@@ -637,8 +647,8 @@ control IngressTunnelOuter(
 	) {
 		stats_tcam.count();
 
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
 	}
@@ -647,16 +657,16 @@ control IngressTunnelOuter(
 
 	table sap_tcam {
 		key = {
-			hdr_0.nsh_type1.sap : ternary @name("sap");
+			ig_md.nsh_md.sap : ternary @name("sap");
 
 			// l3
-			lkp.ip_type         : ternary @name("ip_type");
-			lkp.ip_src_addr     : ternary @name("ip_src_addr");
-			lkp.ip_dst_addr     : ternary @name("ip_dst_addr");
+			lkp_1.ip_type         : ternary @name("ip_type");
+			lkp_1.ip_src_addr     : ternary @name("ip_src_addr");
+			lkp_1.ip_dst_addr     : ternary @name("ip_dst_addr");
 
 			// tunnel
-			lkp.tunnel_type     : ternary @name("tunnel_type");
-			lkp.tunnel_id       : ternary @name("tunnel_id");
+			lkp_1.tunnel_type     : ternary @name("tunnel_type");
+			lkp_1.tunnel_id       : ternary @name("tunnel_id");
 		}
 
 		actions = {
@@ -674,12 +684,12 @@ control IngressTunnelOuter(
 	// -------------------------------------
 /*
 	action new_scope(bit<8> scope_new) {
-		hdr_0.nsh_type1.scope = scope_new;
+		ig_md.nsh_md.scope = scope_new;
 	}
 
 	table scope_inc {
 		key = {
-			hdr_0.nsh_type1.scope : exact;
+			ig_md.nsh_md.scope : exact;
 		}
 		actions = {
 			new_scope;
@@ -700,23 +710,23 @@ control IngressTunnelOuter(
 //		if(!sap_exm.apply().hit) {
 			sap_tcam.apply();
 //		}
-
-		if(lkp.next_lyr_valid == true) {
+/*
+		if(lkp_1.next_lyr_valid == true) {
 			if(terminate_ == true) {
 				ig_md.tunnel_1.terminate           = true;
-				if(hdr_0.nsh_type1.scope == 1) {
+				if(ig_md.nsh_md.scope == 1) {
 					ig_md.tunnel_2.terminate           = true;
 				}
 			}
 
 			if(scope_ == true) {
-				if(hdr_0.nsh_type1.scope == 0) {
+				if(ig_md.nsh_md.scope == 0) {
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
 					Scoper.apply(
 						lkp_2,
 //						ig_md.drop_reason_2,
 
-						lkp
+						lkp_1
 					);
 #else
 					ScoperInner.apply(
@@ -724,15 +734,17 @@ control IngressTunnelOuter(
 						tunnel_2,
 //						ig_md.drop_reason_2,
 
-						lkp
+						lkp_1
 					);
 #endif
 				}
 
 //				scope_inc.apply();
-				hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+				ig_md.nsh_md.scope = ig_md.nsh_md.scope + 1;
 			}
 		}
+*/
+		Scoper_ScopeAndTerm.apply(lkp_2, lkp_1, terminate_, scope_, ig_md.nsh_md.scope, ig_md.tunnel_1.terminate, ig_md.tunnel_2.terminate);
 	}
 }
 
@@ -742,7 +754,7 @@ control IngressTunnelOuter(
 
 control IngressTunnelInner(
 	inout switch_ingress_metadata_t ig_md,
-	inout switch_lookup_fields_t    lkp,
+	inout switch_lookup_fields_t    lkp_1,
 	inout switch_header_transport_t hdr_0,
 
 	in    switch_lookup_fields_t    lkp_2,
@@ -775,8 +787,8 @@ control IngressTunnelInner(
 	) {
 		stats_exm.count();
 
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
 	}
@@ -785,11 +797,11 @@ control IngressTunnelInner(
 
 	table sap_exm {
 		key = {
-			hdr_0.nsh_type1.sap : exact @name("sap");
+			ig_md.nsh_md.sap : exact @name("sap");
 
 			// tunnel
-			lkp.tunnel_type     : exact @name("tunnel_type");
-			lkp.tunnel_id       : exact @name("tunnel_id");
+			lkp_1.tunnel_type     : exact @name("tunnel_type");
+			lkp_1.tunnel_id       : exact @name("tunnel_id");
 		}
 
 		actions = {
@@ -818,8 +830,8 @@ control IngressTunnelInner(
 	) {
 		stats_tcam.count();
 
-		hdr_0.nsh_type1.sap     = (bit<16>)sap;
-		hdr_0.nsh_type1.vpn     = (bit<16>)vpn;
+		ig_md.nsh_md.sap     = (bit<16>)sap;
+		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
 	}
@@ -828,11 +840,11 @@ control IngressTunnelInner(
 
 	table sap_tcam {
 		key = {
-			hdr_0.nsh_type1.sap : ternary @name("sap");
+			ig_md.nsh_md.sap : ternary @name("sap");
 
 			// tunnel
-			lkp.tunnel_type     : ternary @name("tunnel_type");
-			lkp.tunnel_id       : ternary @name("tunnel_id");
+			lkp_1.tunnel_type     : ternary @name("tunnel_type");
+			lkp_1.tunnel_id       : ternary @name("tunnel_id");
 		}
 
 		actions = {
@@ -850,12 +862,12 @@ control IngressTunnelInner(
 	// -------------------------------------
 /*
 	action new_scope(bit<8> scope_new) {
-		hdr_0.nsh_type1.scope = scope_new;
+		ig_md.nsh_md.scope = scope_new;
 	}
 
 	table scope_inc {
 		key = {
-			hdr_0.nsh_type1.scope : exact;
+			ig_md.nsh_md.scope : exact;
 		}
 		actions = {
 			new_scope;
@@ -876,23 +888,23 @@ control IngressTunnelInner(
 		if(!sap_exm.apply().hit) {
 			sap_tcam.apply();
 		}
-
-		if(lkp.next_lyr_valid == true) {
+/*
+		if(lkp_1.next_lyr_valid == true) {
 			if(terminate_ == true) {
 				ig_md.tunnel_1.terminate           = true;
-				if(hdr_0.nsh_type1.scope == 1) {
+				if(ig_md.nsh_md.scope == 1) {
 					ig_md.tunnel_2.terminate           = true;
 				}
 			}
 
 			if(scope_ == true) {
-				if(hdr_0.nsh_type1.scope == 0) {
+				if(ig_md.nsh_md.scope == 0) {
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
 					Scoper.apply(
 						lkp_2,
 //						ig_md.drop_reason_2,
 
-						lkp
+						lkp_1
 					);
 #else
 					ScoperInner.apply(
@@ -900,20 +912,22 @@ control IngressTunnelInner(
 						tunnel_2,
 //						ig_md.drop_reason_2,
 
-						lkp
+						lkp_1
 					);
 #endif
 				}
 
 //				scope_inc.apply();
-				hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+				ig_md.nsh_md.scope = ig_md.nsh_md.scope + 1;
 			}
 		}
+*/
+		Scoper_ScopeAndTerm.apply(lkp_2, lkp_1, terminate_, scope_, ig_md.nsh_md.scope, ig_md.tunnel_1.terminate, ig_md.tunnel_2.terminate);
 	}
 }
 
 //-----------------------------------------------------------------------------
-// Tunnel Decap / Encap Transport
+// Tunnel Decap Transport
 //-----------------------------------------------------------------------------
 
 control TunnelDecapTransportIngress(
@@ -933,121 +947,51 @@ control TunnelDecapTransportIngress(
 	switch_tunnel_mode_t mode
 ) {
 	// -------------------------------------
+	// Table
+	// -------------------------------------
+
+	action decap_l234() {
+		// don't need to do anything, since we don't deparse these headers
+	}
+
+	action decap_l234_update_eth     (bit<16> new_eth) { hdr_1.ethernet.ether_type    = new_eth; hdr_1.ethernet.setValid(); decap_l234(); }
+
+	table decap {
+		key = {
+			tunnel_0.terminate       : exact;
+			hdr_1.ethernet.isValid() : exact;
+			hdr_1.ipv4.isValid()     : exact;
+		}
+
+		actions = {
+			decap_l234_update_eth;
+		}
+
+		const entries = {
+			(true, false, true ) : decap_l234_update_eth(ETHERTYPE_IPV4);
+			(true, false, false) : decap_l234_update_eth(ETHERTYPE_IPV6);
+		}
+	}
+
+	// -------------------------------------
 	// Apply
 	// -------------------------------------
 
 	apply {
-		if(tunnel_0.terminate) {
-			// ----- l2 -----
-//			// (none -- done in egress)
-//			hdr_0.ethernet.setInvalid();
-//			hdr_0.vlan_tag[0].setInvalid();
+//		decap.apply();
 
-			// ----- l3 / l4 / tunnel -----
-			// (none -- instead, we do this by simply not deparsing any transport l3 / 4 / tunnels)
-
-			// ----- fix the next layer's l2, if we had an l3 tunnel -----
+        if(tunnel_0.terminate) {
   #ifndef FIX_L3_TUN_ALL_AT_ONCE
-			if(!hdr_1.ethernet.isValid()) {
-				// Pkt doesn't have an l2 header...add one.
-				// TODO: Do we need to set da/sa?  If so, what to (perhaps copy it from the transport)?
-//				hdr_1.ethernet.dst_addr = hdr_0.ethernet.dst_addr;
-//				hdr_1.ethernet.src_addr = hdr_0.ethernet.src_addr;
-				if(hdr_1.ipv4.isValid()) {
-					hdr_1.ethernet.ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_1.ethernet.ether_type = ETHERTYPE_IPV6;
-				}
-			}
-			hdr_1.ethernet.setValid(); // always set valid (it may already be valid)
+            if(!hdr_1.ethernet.isValid()) {
+                if(hdr_1.ipv4.isValid()) {
+					decap_l234_update_eth(ETHERTYPE_IPV4);
+                } else {
+					decap_l234_update_eth(ETHERTYPE_IPV6);
+                }
+            }
   #endif
-
-/*
-			if(tunnel_1.terminate && tunnel_2.terminate) {
-
-				// get from inner-inner
-				if(hdr_0.vlan_tag[0].isValid()) {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_0.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_0.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-					}
-				} else {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_0.ethernet.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
-					}
-				}
-
-			} else if(tunnel_1.terminate) {
-
-				// get from inner
-				if(hdr_0.vlan_tag[0].isValid()) {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_0.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_0.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-					}
-				} else {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_0.ethernet.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
-					}
-				}
-
-			} else {
-
-				// get from outer
-				if(hdr_0.vlan_tag[0].isValid()) {
-					if(hdr_1.ipv4.isValid()) {
-						hdr_0.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_0.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-					}
-				} else {
-					if(hdr_1.ipv4.isValid()) {
-						hdr_0.ethernet.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_0.ethernet.ether_type = ETHERTYPE_IPV6;
-					}
-				}
-
-			}
-*/
-
 		}
 	}
-}
-
-//-----------------------------------------------------------------------------
-
-control TunnelEncapTransportIngress(
-	inout switch_header_transport_t hdr_0,
-	// ----- current header data -----
-//  inout switch_header_transport_t hdr_0,
-	in    switch_tunnel_metadata_t tunnel_0,
-	// ----- next header data -----
-	inout switch_header_outer_t hdr_1
-) (
-	switch_tunnel_mode_t mode
-) {
-
-	apply {
-/*
-		if(tunnel_0.encap) {
-			// ----- l2 -----
-			// add an ethernet header, for egress parser -- only need to set the etype (not the da/sa)....
-			hdr_0.ethernet.setValid();
-			hdr_0.ethernet.ether_type = ETHERTYPE_NSH;
-
-			// ----- l3 / l4 / tunnel -----
-			// (none -- done in egress)
-		}
-*/
-	}
-
 }
 
 //-----------------------------------------------------------------------------
@@ -1067,157 +1011,182 @@ control TunnelDecapOuter(
 	switch_tunnel_mode_t mode
 ) {
 	// -------------------------------------
+	// Table
+	// -------------------------------------
+
+	action decap_l2() {
+		// ----- l2 -----
+		hdr_1.ethernet.setInvalid();
+
+#ifdef ETAG_ENABLE
+		hdr_1.e_tag.setInvalid();
+#endif // ETAG_ENABLE
+#ifdef VNTAG_ENABLE
+		hdr_1.vn_tag.setInvalid();
+#endif // VNTAG_ENABLE
+
+		hdr_1.vlan_tag[0].setInvalid(); // extreme added
+		hdr_1.vlan_tag[1].setInvalid(); // extreme added
+	}
+
+	action decap_l34() {
+		// ----- l2.5 -----
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+		hdr_1.mpls[0].setInvalid();
+  #if MPLS_DEPTH > 1
+		hdr_1.mpls[1].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 2
+		hdr_1.mpls[2].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 3
+		hdr_1.mpls[3].setInvalid();
+  #endif
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+#ifdef MPLS_L2VPN_ENABLE
+		hdr_1.mpls_pw_cw.setInvalid();
+#endif // MPLS_L2VPN_ENABLE
+
+		// ----- l3 -----
+		hdr_1.ipv4.setInvalid();
+  #ifdef IPV6_ENABLE
+		hdr_1.ipv6.setInvalid();
+  #endif // IPV6_ENABLE
+
+		// ----- l4 -----
+		hdr_1.tcp.setInvalid();
+		hdr_1.udp.setInvalid();
+		hdr_1.sctp.setInvalid(); // extreme added
+
+		// ----- tunnel -----
+  #ifdef VXLAN_ENABLE
+		hdr_1.vxlan.setInvalid();
+  #endif // VXLAN_ENABLE
+		hdr_1.gre.setInvalid();
+		hdr_1.gre_optional.setInvalid();
+  #ifdef NVGRE_ENABLE
+		hdr_1.nvgre.setInvalid();
+  #endif // NVGRE_ENABLE
+  #ifdef GTP_ENABLE
+		hdr_1.gtp_v1_base.setInvalid(); // extreme added
+		hdr_1.gtp_v1_optional.setInvalid(); // extreme added
+  #endif // GTP_ENABLE
+	}
+
+	action decap_l_34_update_vlan1(bit<16> new_eth) { hdr_1.vlan_tag[1].ether_type = new_eth;             decap_l34(); }
+	action decap_l_34_update_vlan0(bit<16> new_eth) { hdr_1.vlan_tag[0].ether_type = new_eth;             decap_l34(); }
+	action decap_l_34_update_vn   (bit<16> new_eth) { hdr_1.vn_tag.ether_type      = new_eth;             decap_l34(); }
+	action decap_l_34_update_e    (bit<16> new_eth) { hdr_1.e_tag.ether_type       = new_eth;             decap_l34(); }
+	action decap_l_34_update_eth  (bit<16> new_eth) { hdr_1.ethernet.ether_type    = new_eth;             decap_l34(); }
+
+	action decap_l234_update_vlan1(bit<16> new_eth) { hdr_1.vlan_tag[1].ether_type = new_eth; decap_l2(); decap_l34(); }
+	action decap_l234_update_vlan0(bit<16> new_eth) { hdr_1.vlan_tag[0].ether_type = new_eth; decap_l2(); decap_l34(); }
+	action decap_l234_update_vn   (bit<16> new_eth) { hdr_1.vn_tag.ether_type      = new_eth; decap_l2(); decap_l34(); }
+	action decap_l234_update_e    (bit<16> new_eth) { hdr_1.e_tag.ether_type       = new_eth; decap_l2(); decap_l34(); }
+	action decap_l234_update_eth  (bit<16> new_eth) { hdr_1.ethernet.ether_type    = new_eth; decap_l2(); decap_l34(); }
+
+	table decap {
+		key = {
+			tunnel_1.terminate          : exact;
+
+			hdr_1.vlan_tag[1].isValid() : ternary;
+			hdr_1.vlan_tag[0].isValid() : ternary;
+			hdr_1.vn_tag.isValid()      : ternary;
+			hdr_1.e_tag.isValid()       : ternary;
+
+			tunnel_2.terminate          : exact;
+			hdr_2.ethernet.isValid()    : ternary;
+			hdr_2.ipv4.isValid()        : ternary;
+			hdr_3.ethernet.isValid()    : ternary;
+			hdr_3.ipv4.isValid()        : ternary;
+		}
+
+		actions = {
+			decap_l_34_update_vlan1;
+			decap_l_34_update_vlan0;
+			decap_l_34_update_vn;
+			decap_l_34_update_e;
+			decap_l_34_update_eth;
+
+			decap_l234_update_vlan1;
+			decap_l234_update_vlan0;
+			decap_l234_update_vn;
+			decap_l234_update_e;
+			decap_l234_update_eth;
+		}
+
+		// My original equation for when to remove the outer l2 header:
+		//
+		// only remove l2 when the next layer's is valid
+		// if(hdr_2.ethernet.isValid() || (tunnel_2.terminate && hdr_3.ethernet.isValid())) {
+		// }
+		//                                      2      1             3
+
+		const entries = {
+			(true,  true,  _,     _,     _,     false, false, true,  _,     _    ) : decap_l_34_update_vlan1(ETHERTYPE_IPV4);
+			(true,  true,  _,     _,     _,     false, false, false, _,     _    ) : decap_l_34_update_vlan1(ETHERTYPE_IPV6);
+			(true,  false, true,  _,     _,     false, false, true,  _,     _    ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
+			(true,  false, true,  _,     _,     false, false, false, _,     _    ) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, false, true,  _,     false, false, true,  _,     _    ) : decap_l_34_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, false, true,  _,     false, false, false, _,     _    ) : decap_l_34_update_vn   (ETHERTYPE_IPV6);
+			(true,  false, false, false, true,  false, false, true,  _,     _    ) : decap_l_34_update_e    (ETHERTYPE_IPV4);
+			(true,  false, false, false, true,  false, false, false, _,     _    ) : decap_l_34_update_e    (ETHERTYPE_IPV6);
+			(true,  false, false, false, false, false, false, true,  _,     _    ) : decap_l_34_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, false, false, false, false, false, false, _,     _    ) : decap_l_34_update_eth  (ETHERTYPE_IPV6);
+
+			(true,  true,  _,     _,     _,     false, true,  true,  _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
+			(true,  true,  _,     _,     _,     false, true,  false, _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
+			(true,  false, true,  _,     _,     false, true,  true,  _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  false, true,  _,     _,     false, true,  false, _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, false, true,  _,     false, true,  true,  _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, false, true,  _,     false, true,  false, _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV6);
+			(true,  false, false, false, true,  false, true,  true,  _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV4);
+			(true,  false, false, false, true,  false, true,  false, _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV6);
+			(true,  false, false, false, false, false, true,  true,  _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, false, false, false, false, true,  false, _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV6);
+
+			(true,  true,  _,     _,     _,     true,  true,  true,  _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
+			(true,  true,  _,     _,     _,     true,  true,  false, _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
+			(true,  false, true,  _,     _,     true,  true,  true,  _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  false, true,  _,     _,     true,  true,  false, _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, false, true,  _,     true,  true,  true,  _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, false, true,  _,     true,  true,  false, _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV6);
+			(true,  false, false, false, true,  true,  true,  true,  _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV4);
+			(true,  false, false, false, true,  true,  true,  false, _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV6);
+			(true,  false, false, false, false, true,  true,  true,  _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, false, false, false, true,  true,  false, _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV6);
+
+			(true,  true,  _,     _,     _,     true,  _,     _,     false, true ) : decap_l_34_update_vlan1(ETHERTYPE_IPV4);
+			(true,  true,  _,     _,     _,     true,  _,     _,     false, false) : decap_l_34_update_vlan1(ETHERTYPE_IPV6);
+			(true,  false, true,  _,     _,     true,  _,     _,     false, true ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
+			(true,  false, true,  _,     _,     true,  _,     _,     false, false) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, false, true,  _,     true,  _,     _,     false, true ) : decap_l_34_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, false, true,  _,     true,  _,     _,     false, false) : decap_l_34_update_vn   (ETHERTYPE_IPV6);
+			(true,  false, false, false, true,  true,  _,     _,     false, true ) : decap_l_34_update_e    (ETHERTYPE_IPV4);
+			(true,  false, false, false, true,  true,  _,     _,     false, false) : decap_l_34_update_e    (ETHERTYPE_IPV6);
+			(true,  false, false, false, false, true,  _,     _,     false, true ) : decap_l_34_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, false, false, false, true,  _,     _,     false, false) : decap_l_34_update_eth  (ETHERTYPE_IPV6);
+
+			(true,  true,  _,     _,     _,     true,  _,     _,     true,  true ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
+			(true,  true,  _,     _,     _,     true,  _,     _,     true,  false) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
+			(true,  false, true,  _,     _,     true,  _,     _,     true,  true ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  false, true,  _,     _,     true,  _,     _,     true,  false) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, false, true,  _,     true,  _,     _,     true,  true ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, false, true,  _,     true,  _,     _,     true,  false) : decap_l234_update_vn   (ETHERTYPE_IPV6);
+			(true,  false, false, false, true,  true,  _,     _,     true,  true ) : decap_l234_update_e    (ETHERTYPE_IPV4);
+			(true,  false, false, false, true,  true,  _,     _,     true,  false) : decap_l234_update_e    (ETHERTYPE_IPV6);
+			(true,  false, false, false, false, true,  _,     _,     true,  true ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, false, false, false, true,  _,     _,     true,  false) : decap_l234_update_eth  (ETHERTYPE_IPV6);
+		}
+	}
+
+	// -------------------------------------
 	// Apply
 	// -------------------------------------
 
 	apply {
-
 #ifdef TUNNEL_ENABLE
-		if(tunnel_1.terminate) {
-			// ----- l2 -----
-
-			// only remove l2 when the next layer's is valid
-			if(hdr_2.ethernet.isValid() || (tunnel_2.terminate && hdr_3.ethernet.isValid())) {
-				hdr_1.ethernet.setInvalid();
-
-#ifdef ETAG_ENABLE
-				hdr_1.e_tag.setInvalid();
-#endif // ETAG_ENABLE
-#ifdef VNTAG_ENABLE
-				hdr_1.vn_tag.setInvalid();
-#endif // VNTAG_ENABLE
-
-				hdr_1.vlan_tag[0].setInvalid(); // extreme added
-				hdr_1.vlan_tag[1].setInvalid(); // extreme added
-			}
-
-			// ----- l2.5 -----
-#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-			hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-			hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-			hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-			hdr_1.mpls[3].setInvalid();
-  #endif
-#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-#ifdef MPLS_L2VPN_ENABLE
-			hdr_1.mpls_pw_cw.setInvalid();
-#endif // MPLS_L2VPN_ENABLE
-
-			// ----- l3 -----
-			hdr_1.ipv4.setInvalid();
-  #ifdef IPV6_ENABLE
-			hdr_1.ipv6.setInvalid();
-  #endif // IPV6_ENABLE
-
-			// ----- l4 -----
-			hdr_1.tcp.setInvalid();
-			hdr_1.udp.setInvalid();
-			hdr_1.sctp.setInvalid(); // extreme added
-
-			// ----- tunnel -----
-  #ifdef VXLAN_ENABLE
-			hdr_1.vxlan.setInvalid();
-  #endif // VXLAN_ENABLE
-			hdr_1.gre.setInvalid();
-			hdr_1.gre_optional.setInvalid();
-  #ifdef NVGRE_ENABLE
-			hdr_1.nvgre.setInvalid();
-  #endif // NVGRE_ENABLE
-  #ifdef GTP_ENABLE
-			hdr_1.gtp_v1_base.setInvalid(); // extreme added
-			hdr_1.gtp_v1_optional.setInvalid(); // extreme added
-  #endif // GTP_ENABLE
-
-			// ----- fix outer ethertype, if we had an l3 tunnel -----
-
-  #ifndef FIX_L3_TUN_ALL_AT_ONCE
-			// this is organized from highest priority to lowest priority
-			if(tunnel_2.terminate) {
-
-				// get from inner-inner
-				if(hdr_1.vlan_tag[1].isValid()) {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_1.vlan_tag[1].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.vlan_tag[1].ether_type = ETHERTYPE_IPV6;
-					}
-				} else if(hdr_1.vlan_tag[0].isValid()) {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_1.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-					}
-    #ifdef VNTAG_ENABLE
-				} else if(hdr_1.vn_tag.isValid()) {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_1.vn_tag.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.vn_tag.ether_type = ETHERTYPE_IPV6;
-					}
-    #endif // VNTAG_ENABLE
-    #ifdef ETAG_ENABLE
-				} else if(hdr_1.e_tag.isValid()) {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_1.e_tag.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.e_tag.ether_type = ETHERTYPE_IPV6;
-					}
-    #endif // ETAG_ENABLE
-				} else {
-					if(hdr_3.ipv4.isValid()) {
-						hdr_1.ethernet.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.ethernet.ether_type = ETHERTYPE_IPV6;
-					}
-				}
-
-			} else {
-
-				// get from inner
-				if(hdr_1.vlan_tag[1].isValid()) {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_1.vlan_tag[1].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.vlan_tag[1].ether_type = ETHERTYPE_IPV6;
-					}
-				} else if(hdr_1.vlan_tag[0].isValid()) {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_1.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-					}
-    #ifdef VNTAG_ENABLE
-				} else if(hdr_1.vn_tag.isValid()) {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_1.vn_tag.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.vn_tag.ether_type = ETHERTYPE_IPV6;
-					}
-    #endif // VNTAG_ENABLE
-    #ifdef ETAG_ENABLE
-				} else if(hdr_1.e_tag.isValid()) {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_1.e_tag.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.e_tag.ether_type = ETHERTYPE_IPV6;
-					}
-    #endif // ETAG_ENABLE
-				} else {
-					if(hdr_2.ipv4.isValid()) {
-						hdr_1.ethernet.ether_type = ETHERTYPE_IPV4;
-					} else {
-						hdr_1.ethernet.ether_type = ETHERTYPE_IPV6;
-					}
-				}
-
-			}
-  #endif
-		}
+		decap.apply();
 #endif /* TUNNEL_ENABLE */
 	}
 }
@@ -1239,98 +1208,81 @@ control TunnelDecapInner(
 	switch_tunnel_mode_t mode
 ) {
 	// -------------------------------------
+	// Table
+	// -------------------------------------
+
+	action decap_l2() {
+		// ----- l2 -----
+		hdr_2.ethernet.setInvalid();
+		hdr_2.vlan_tag[0].setInvalid(); // extreme added
+	}
+
+	action decap_l34() {
+		// ----- l3 -----
+		hdr_2.ipv4.setInvalid();
+  #ifdef IPV6_ENABLE
+		hdr_2.ipv6.setInvalid();
+  #endif
+
+		// ----- l4 -----
+		hdr_2.tcp.setInvalid();
+		hdr_2.udp.setInvalid();
+		hdr_2.sctp.setInvalid(); // extreme added
+
+		// ----- tunnel -----
+  #ifdef INNER_GRE_ENABLE
+		hdr_2.gre.setInvalid();
+		hdr_2.gre_optional.setInvalid();
+  #endif
+  #ifdef INNER_GTP_ENABLE
+		hdr_2.gtp_v1_base.setInvalid(); // extreme added
+		hdr_2.gtp_v1_optional.setInvalid(); // extreme added
+  #endif
+	}
+
+	action decap_l_34_update_vlan0(bit<16> new_eth) { hdr_2.vlan_tag[0].ether_type = new_eth;             decap_l34(); }
+	action decap_l_34_update_eth  (bit<16> new_eth) { hdr_2.ethernet.ether_type    = new_eth;             decap_l34(); }
+	action decap_l234_update_vlan0(bit<16> new_eth) { hdr_2.vlan_tag[0].ether_type = new_eth; decap_l2(); decap_l34(); }
+	action decap_l234_update_eth  (bit<16> new_eth) { hdr_2.ethernet.ether_type    = new_eth; decap_l2(); decap_l34(); }
+
+	table decap {
+		key = {
+			tunnel_2.terminate          : exact;
+
+			hdr_2.vlan_tag[0].isValid() : exact;
+
+			hdr_3.ethernet.isValid()    : exact;
+			hdr_3.ipv4.isValid()        : exact;
+		}
+
+		actions = {
+			decap_l_34_update_vlan0;
+			decap_l_34_update_eth;
+
+			decap_l234_update_vlan0;
+			decap_l234_update_eth;
+		}
+
+		const entries = {
+			(true,  true,  false, true ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
+			(true,  true,  false, false) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, false, true ) : decap_l_34_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, false, false) : decap_l_34_update_eth  (ETHERTYPE_IPV6);
+
+			(true,  true,  true,  true ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  true,  true,  false) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  false, true,  true ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
+			(true,  false, true,  false) : decap_l234_update_eth  (ETHERTYPE_IPV6);
+		}
+	}
+
+	// -------------------------------------
 	// Apply
 	// -------------------------------------
 
 	apply {
 #ifdef TUNNEL_ENABLE
-		if(tunnel_2.terminate) {
-			// ----- l2 -----
-
-			// only remove l2 when the next layer's is valid
-			if(hdr_3.ethernet.isValid()) {
-				hdr_2.ethernet.setInvalid();
-				hdr_2.vlan_tag[0].setInvalid(); // extreme added
-			}
-
-			// ----- l3 -----
-			hdr_2.ipv4.setInvalid();
-  #ifdef IPV6_ENABLE
-			hdr_2.ipv6.setInvalid();
-  #endif
-
-			// ----- l4 -----
-			hdr_2.tcp.setInvalid();
-			hdr_2.udp.setInvalid();
-			hdr_2.sctp.setInvalid(); // extreme added
-
-			// ----- tunnel -----
-  #ifdef INNER_GRE_ENABLE
-			hdr_2.gre.setInvalid();
-			hdr_2.gre_optional.setInvalid();
-  #endif
-  #ifdef INNER_GTP_ENABLE
-			hdr_2.gtp_v1_base.setInvalid(); // extreme added
-			hdr_2.gtp_v1_optional.setInvalid(); // extreme added
-  #endif
-
-			// ----- fix outer ethertype, if we had an l3 tunnel -----
-
-			// this is organized from highest priority to lowest priority
-			if(hdr_2.vlan_tag[0].isValid()) {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_2.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_2.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-				}
-			} else {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_2.ethernet.ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_2.ethernet.ether_type = ETHERTYPE_IPV6;
-				}
-			}
-/*
-  #if defined(FIX_L3_TUN_LYR_BY_LYR) && !defined(FIX_L3_TUN_ALL_AT_ONCE)
-			// this is organized from highest priority to lowest priority
-			if(hdr_1.vlan_tag[1].isValid()) {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_1.vlan_tag[1].ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_1.vlan_tag[1].ether_type = ETHERTYPE_IPV6;
-				}
-			} else if(hdr_1.vlan_tag[0].isValid()) {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_1.vlan_tag[0].ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_1.vlan_tag[0].ether_type = ETHERTYPE_IPV6;
-				}
-    #ifdef VNTAG_ENABLE
-			} else if(hdr_1.vn_tag.isValid()) {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_1.vn_tag.ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_1.vn_tag.ether_type = ETHERTYPE_IPV6;
-				}
-    #endif
-    #ifdef ETAG_ENABLE
-			} else if(hdr_1.e_tag.isValid()) {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_1.e_tag.ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_1.e_tag.ether_type = ETHERTYPE_IPV6;
-				}
-    #endif
-			} else {
-				if(hdr_3.ipv4.isValid()) {
-					hdr_1.ethernet.ether_type = ETHERTYPE_IPV4;
-				} else {
-					hdr_1.ethernet.ether_type = ETHERTYPE_IPV6;
-				}
-			}
-	#endif
-*/
-		}
+		decap.apply();
 #endif /* TUNNEL_ENABLE */
 	}
 }
@@ -1338,7 +1290,7 @@ control TunnelDecapInner(
 //-----------------------------------------------------------------------------
 // Tunnel Decap Helper Function - L2 Ethertype Fix
 //-----------------------------------------------------------------------------
-
+/*
 control TunnelDecapFixEthertype(
 	// ----- current header data -----
 	inout switch_header_outer_t hdr_1,
@@ -1516,7 +1468,7 @@ control TunnelDecapFixEthertype(
   #endif
 	}
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Tunnel Decap Helper Function - Scope Decrement
 //-----------------------------------------------------------------------------
@@ -1524,18 +1476,19 @@ control TunnelDecapFixEthertype(
 control TunnelDecapScopeDecrement (
 	inout bool terminate_a,
 	inout bool terminate_b,
-	inout switch_header_transport_t hdr_0
+	inout switch_header_transport_t hdr_0,
+	inout bit<8> scope
 ) {
 
 	action new_scope(bit<8> scope_new) {
-		hdr_0.nsh_type1.scope = scope_new;
+		scope = scope_new;
 //		terminate_a = false;
 //		terminate_b = false;
 	}
 
 	table scope_dec {
 		key = {
-			hdr_0.nsh_type1.scope : exact;
+			scope : exact;
 			terminate_a : exact;
 			terminate_b : exact;
 		}
@@ -1550,18 +1503,18 @@ control TunnelDecapScopeDecrement (
 			(2, false, false) : new_scope(2);
 			(3, false, false) : new_scope(3);
 			// decrement by one
-			(0, true,  false) : new_scope(0); // this is an error condition (underflow) -- cap at 0!
+			(0, true,  false) : new_scope(0); // this is an error condition (underflow) -- cap at 0
 			(1, true,  false) : new_scope(0);
 			(2, true,  false) : new_scope(1);
 			(3, true,  false) : new_scope(2);
 			// decrement by one (these should never occur)
-			(0, false, true ) : new_scope(0); // this is an error condition (underflow) -- cap at 0!
+			(0, false, true ) : new_scope(0); // this is an error condition (underflow) -- cap at 0
 			(1, false, true ) : new_scope(0);
 			(2, false, true ) : new_scope(1);
 			(3, false, true ) : new_scope(2);
 			// decrement by two
-			(0, true,  true ) : new_scope(0); // this is an error condition (underflow) -- cap at 0!
-			(1, true,  true ) : new_scope(0); // this is an error condition (underflow) -- cap at 0!
+			(0, true,  true ) : new_scope(0); // this is an error condition (underflow) -- cap at 0
+			(1, true,  true ) : new_scope(0); // this is an error condition (underflow) -- cap at 0
 			(2, true,  true ) : new_scope(0);
 			(3, true,  true ) : new_scope(1);
 		}
@@ -1598,18 +1551,18 @@ control TunnelRewrite(
 	// Table: Nexthop Rewrite (DMAC & BD)
 	// -------------------------------------
 
-//	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_nexthop;  // direct counter
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_nexthop;  // direct counter
 
 	// Outer nexthop rewrite
 	action rewrite_tunnel(switch_bd_t bd, mac_addr_t dmac) {
-//		stats_nexthop.count();
+		stats_nexthop.count();
 
 		eg_md.bd = bd;
 		hdr_0.ethernet.dst_addr = dmac;
 	}
 
 	action no_action_nexthop() {
-//		stats_nexthop.count();
+		stats_nexthop.count();
 
 	}
 
@@ -1625,7 +1578,7 @@ control TunnelRewrite(
 
 		const default_action = no_action_nexthop;
 		size = nexthop_rewrite_table_size;
-//		counters = stats_nexthop;
+		counters = stats_nexthop;
 	}
 
 	// -------------------------------------
@@ -1805,7 +1758,6 @@ control TunnelEncap(
 
 	bit<16> payload_len;
 	bit<16> gre_proto;
-	bit<2> lyr;
 
 	//=============================================================================
 	// Table #0: VRF to VNI Mapping
@@ -1833,19 +1785,16 @@ control TunnelEncap(
 	action rewrite_inner_ipv4_hdr1() {
 		payload_len = hdr_1.ipv4.total_len;
 		gre_proto = GRE_PROTOCOLS_IP;
-		lyr = 1;
 	}
 
 	action rewrite_inner_ipv4_hdr2() {
 		payload_len = hdr_2.ipv4.total_len;
 		gre_proto = GRE_PROTOCOLS_IP;
-		lyr = 2;
 	}
 
 	action rewrite_inner_ipv4_hdr3() {
 		payload_len = hdr_3.ipv4.total_len;
 		gre_proto = GRE_PROTOCOLS_IP;
-		lyr = 3;
 	}
 
 	// --------------------------------
@@ -1854,33 +1803,32 @@ control TunnelEncap(
 //		payload_len = hdr_1.ipv6.payload_len + 16w40;
 		payload_len = hdr_1.ipv6.payload_len;
 		gre_proto = GRE_PROTOCOLS_IPV6;
-		lyr = 1;
 	}
 
 	action rewrite_inner_ipv6_hdr2() {
 //		payload_len = hdr_2.ipv6.payload_len + 16w40;
 		payload_len = hdr_2.ipv6.payload_len;
 		gre_proto = GRE_PROTOCOLS_IPV6;
-		lyr = 2;
 	}
 
 	action rewrite_inner_ipv6_hdr3() {
 //		payload_len = hdr_3.ipv6.payload_len + 16w40;
 		payload_len = hdr_3.ipv6.payload_len;
 		gre_proto = GRE_PROTOCOLS_IPV6;
-		lyr = 3;
 	}
 #endif
 	// --------------------------------
 
+	// Look for the first valid l3.
+
 	table encap_outer {
 		key = {
-			tunnel_1.terminate : exact;
-			tunnel_2.terminate : exact;
-
-			hdr_1.ipv4.isValid() : ternary;
-			hdr_2.ipv4.isValid() : ternary;
-			hdr_3.ipv4.isValid() : ternary;
+			hdr_1.ipv4.isValid() : exact;
+			hdr_1.ipv6.isValid() : exact;
+			hdr_2.ipv4.isValid() : exact;
+			hdr_2.ipv6.isValid() : exact;
+			hdr_3.ipv4.isValid() : exact;
+			hdr_3.ipv6.isValid() : exact;
 		}
 
 		actions = {
@@ -1895,13 +1843,63 @@ control TunnelEncap(
 		}
 
 		const entries = {
-			(false, false, true,  _,     _    ) : rewrite_inner_ipv4_hdr1(); // outer v4
-			(true,  false, _,     true,  _    ) : rewrite_inner_ipv4_hdr2(); // inner v4
-			(true,  true,  _,     _,     true ) : rewrite_inner_ipv4_hdr3(); // inner-inner v4
+/*
+			(true,  false, _,     _,     _,     _    ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(false, false, true,  false, _,     _    ) : rewrite_inner_ipv4_hdr2(); // inner v4       (note:           hdr_3 are don't care)
+			(false, false, false, false, true,  false) : rewrite_inner_ipv4_hdr3(); // inner-inner v4 (note:                 are don't care)
 #ifdef IPV6_ENABLE
-			(false, false, false, _,     _    ) : rewrite_inner_ipv6_hdr1(); // outer v6
-			(true,  false, _,     false, _    ) : rewrite_inner_ipv6_hdr2(); // inner v6
-			(true,  true,  _,     _,     false) : rewrite_inner_ipv6_hdr3(); // inner-inner v6
+			(false, true,  _,     _,     _,     _    ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, false, false, true,  _,     _    ) : rewrite_inner_ipv6_hdr2(); // inner v6       (note:           hdr_3 are don't care)
+			(false, false, false, false, false, true ) : rewrite_inner_ipv6_hdr3(); // inner-inner v6 (note:                 are don't care)
+#endif
+*/
+			(true,  false, false, false, false, false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  false, false, false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, true,  false, false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  true,  false, false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, false, true,  false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  false, true,  false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, true,  true,  false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  true,  true,  false) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, false, false, true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  false, false, true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, true,  false, true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  true,  false, true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, false, true,  true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  false, true,  true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, false, true,  true,  true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+			(true,  false, true,  true,  true,  true ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
+
+			(false, false, true,  false, false, false) : rewrite_inner_ipv4_hdr2(); // inner v4       (note:           hdr_3 are don't care)
+			(false, false, true,  false, true,  false) : rewrite_inner_ipv4_hdr2(); // inner v4       (note:           hdr_3 are don't care)
+			(false, false, true,  false, false, true ) : rewrite_inner_ipv4_hdr2(); // inner v4       (note:           hdr_3 are don't care)
+			(false, false, true,  false, true,  true ) : rewrite_inner_ipv4_hdr2(); // inner v4       (note:           hdr_3 are don't care)
+
+			(false, false, false, false, true,  false) : rewrite_inner_ipv4_hdr3(); // inner-inner v4 (note:                 are don't care)
+#ifdef IPV6_ENABLE
+			(false, true,  false, false, false, false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  false, false, false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, true,  false, false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  true,  false, false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, false, true,  false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  false, true,  false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, true,  true,  false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  true,  true,  false) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, false, false, true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  false, false, true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, true,  false, true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  true,  false, true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, false, true,  true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  false, true,  true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  false, true,  true,  true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+			(false, true,  true,  true,  true,  true ) : rewrite_inner_ipv6_hdr1(); // outer v6       (note: hdr_2 and hdr_3 are don't care)
+
+			(false, false, false, true,  false, false) : rewrite_inner_ipv6_hdr2(); // inner v6       (note:           hdr_3 are don't care)
+			(false, false, false, true,  true,  false) : rewrite_inner_ipv6_hdr2(); // inner v6       (note:           hdr_3 are don't care)
+			(false, false, false, true,  false, true ) : rewrite_inner_ipv6_hdr2(); // inner v6       (note:           hdr_3 are don't care)
+			(false, false, false, true,  true,  true ) : rewrite_inner_ipv6_hdr2(); // inner v6       (note:           hdr_3 are don't care)
+
+			(false, false, false, false, false, true ) : rewrite_inner_ipv6_hdr3(); // inner-inner v6 (note:                 are don't care)
 #endif
 		}
 	}
@@ -2153,6 +2151,69 @@ control TunnelEncap(
 	}
 
 	//=============================================================================
+	// Table #3: Terminate L2 (for GRE)
+	//=============================================================================
+
+	action decap_l2_outer() {
+		// ----- l2 -----
+		hdr_1.ethernet.setInvalid();
+		hdr_1.e_tag.setInvalid();
+		hdr_1.vn_tag.setInvalid();
+		hdr_1.vlan_tag[0].setInvalid();
+		hdr_1.vlan_tag[1].setInvalid();
+#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+		hdr_1.mpls[0].setInvalid();
+  #if MPLS_DEPTH > 1
+		hdr_1.mpls[1].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 2
+		hdr_1.mpls[2].setInvalid();
+  #endif
+  #if MPLS_DEPTH > 3
+		hdr_1.mpls[3].setInvalid();
+  #endif
+#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
+#ifdef MPLS_L2VPN_ENABLE
+		hdr_1.mpls_pw_cw.setInvaid();
+#endif // MPLS_L2VPN_ENABLE
+	}
+
+	action decap_l2_inner() {
+		// ----- l2 -----
+		hdr_2.ethernet.setInvalid();
+		hdr_2.vlan_tag[0].setInvalid();
+	}
+
+	action decap_l2_inner_inner() {
+		// ----- l2 -----
+	}
+
+	// Remove the first valid l2.  This could be in any layer(s) prior to the first
+	// valid l3, because we could have decapped l3 tunnel(s) and had to leave the
+	// l2 from a previous layer.
+/*
+	table decap_l2 {
+		key = {
+			hdr_1.ethernet.isValid() : exact;
+			hdr_2.ethernet.isValid() : exact;
+		}
+
+		actions = {
+			decap_l2_outer;
+			decap_l2_inner;
+			decap_l2_inner_inner;
+		}
+
+		const entries = {
+			(true,  false) : decap_l2_outer; // note: inner is don't care
+			(true,  true ) : decap_l2_outer; // note: inner is don't care
+			(false, true ) : decap_l2_inner;
+			(false, false) : decap_l2_inner_inner;
+		}
+	}
+*/
+
+	//=============================================================================
 	// Apply
 	//=============================================================================
 
@@ -2172,72 +2233,33 @@ control TunnelEncap(
 
 			// Add outer L3/L4/Tunnel headers.
 //			tunnel.apply();
+
 			switch(tunnel.apply().action_run) {
 				rewrite_ipv4_gre: {
-					// ----- tunnel -----
-					// this is organized from highest priority to lowest priority
-					if(lyr == 3) {
-						// invalidate l2
-					} else if(lyr == 2) {
-						// invalidate l2
-						hdr_2.ethernet.setInvalid();
-						hdr_2.vlan_tag[0].setInvalid();
+//					decap_l2.apply();
+
+					if(hdr_1.ethernet.isValid() == true) {
+						decap_l2_outer();
 					} else {
-						// invalidate l2
-						hdr_1.ethernet.setInvalid();
-						hdr_1.e_tag.setInvalid();
-						hdr_1.vn_tag.setInvalid();
-						hdr_1.vlan_tag[0].setInvalid();
-						hdr_1.vlan_tag[1].setInvalid();
-#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-						hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-						hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-						hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-						hdr_1.mpls[3].setInvalid();
-  #endif
-#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-#ifdef MPLS_L2VPN_ENABLE
-						hdr_1.mpls_pw_cw.setInvaid();
-#endif // MPLS_L2VPN_ENABLE
+						if(hdr_2.ethernet.isValid() == true) {
+							decap_l2_inner();
+						} else {
+							decap_l2_inner_inner();
+						}
 					}
 				}
 				rewrite_ipv6_gre: {
 #ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
-					// ----- tunnel -----
-					// this is organized from highest priority to lowest priority
-					if(lyr == 3) {
-						// invalidate l2
-					} else if(lyr == 2) {
-						// invalidate l2
-						hdr_2.ethernet.setInvalid();
-						hdr_2.vlan_tag[0].setInvalid();
+//					decap_l2.apply();
+
+					if(hdr_1.ethernet.isValid() == true) {
+						decap_l2_outer();
 					} else {
-						// invalidate l2
-						hdr_1.ethernet.setInvalid();
-						hdr_1.e_tag.setInvalid();
-						hdr_1.vn_tag.setInvalid();
-						hdr_1.vlan_tag[0].setInvalid();
-						hdr_1.vlan_tag[1].setInvalid();
-#if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-						hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-						hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-						hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-						hdr_1.mpls[3].setInvalid();
-  #endif
-#endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
-#ifdef MPLS_L2VPN_ENABLE
-						hdr_1.mpls_pw_cw.setInvaid();
-#endif // MPLS_L2VPN_ENABLE
+						if(hdr_2.ethernet.isValid() == true) {
+							decap_l2_inner();
+						} else {
+							decap_l2_inner_inner();
+						}
 					}
 #endif
 				}

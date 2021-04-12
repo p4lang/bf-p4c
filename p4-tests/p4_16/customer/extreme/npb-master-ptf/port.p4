@@ -140,22 +140,22 @@ control IngressPortMapping(
 	action set_port_properties(
 		// note: for regular ports, port_lag_index and l2_fwd_en come from the port_metadata table.
 		switch_yid_t exclusion_id
-#ifdef PROFILE_BETA
-#else
+#ifdef CPU_HDR_CONTAINS_EG_PORT
 		,
 		switch_port_lag_index_t port_lag_index,
 		bool l2_fwd_en
+#else
 #endif
 	) {
 		stats.count();
 
 		ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-#ifdef PROFILE_BETA
-#else
+#ifdef CPU_HDR_CONTAINS_EG_PORT
 		ig_md.port_lag_index = port_lag_index;
 		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
+#else
 #endif
-#ifdef PROFILE_BETA
+#ifdef PA_NO_INIT
 		ig_intr_md_for_tm.bypass_egress = 0;
 #endif
 	}

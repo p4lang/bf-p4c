@@ -31,7 +31,7 @@
     
     #define SSAP_ID_WIDTH                   16                                // original value: 16
     #define DSAP_ID_WIDTH                   16                                // original value: 16
-    #define VPN_ID_WIDTH                    12                                // original value: 16
+    #define VPN_ID_WIDTH                    16                                // original value: 16
     #define SF_FLOW_CLASS_WIDTH_A            8 // for sf0...acl               // original value:  8
     #define SF_FLOW_CLASS_WIDTH_B           10 // for sf0...sfp select        // original value: 10
     #define SF_HASH_WIDTH                   16 // for sf0...sfp select        // original value: 16(?)
@@ -44,9 +44,9 @@
     #define UDF_WIDTH                      128 // 16B
 
   #ifdef BUG_00593008_WORKAROUND
-	#define BRIDGED_METADATA_WIDTH          43 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+	#define BRIDGED_METADATA_WIDTH          38 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #else
-	#define BRIDGED_METADATA_WIDTH          42 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+	#define BRIDGED_METADATA_WIDTH          37 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #endif
 
 #else // Full field widths
@@ -91,9 +91,9 @@
     #define UDF_WIDTH                      256 // 32B
 
   #ifdef BUG_00593008_WORKAROUND
-	#define BRIDGED_METADATA_WIDTH          43 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+	#define BRIDGED_METADATA_WIDTH          38 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #else
-	#define BRIDGED_METADATA_WIDTH          42 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+	#define BRIDGED_METADATA_WIDTH          37 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #endif
 
 #endif // FIELD_WIDTHS_REDUCED

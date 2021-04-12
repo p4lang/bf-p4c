@@ -43,7 +43,7 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 
 	table ing_flow_class {
 		key = {
-			hdr_0.nsh_type1.vpn    : ternary @name("vpn");
+			ig_md.nsh_md.vpn       : ternary @name("vpn");
 			mac_type               : ternary @name("mac_type");
 			ip_proto               : ternary @name("ip_proto");
 			l4_src_port            : ternary @name("l4_src_port");
@@ -71,7 +71,7 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 	action compute_hash(
 	) {
 		hash = hash_func.get({
-			hdr_0.nsh_type1.vpn,
+			ig_md.nsh_md.vpn,
 			flow_class_internal
 		});
 	}
@@ -164,8 +164,8 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 
 		bit<8>                     si_predec
 	) {
-		hdr_0.nsh_type1.spi    = spi;
-		hdr_0.nsh_type1.si     = si;
+		ig_md.nsh_md.spi       = spi;
+		ig_md.nsh_md.si        = si;
 
 		// change metadata
 		ig_md.nsh_md.si_predec = si_predec;
@@ -186,7 +186,7 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 		key = {
 			ig_md.nsh_md.sfc          : exact @name("sfc");
 #ifndef SFF_SCHD_SIMPLE
-//			hdr_0.nsh_type1.vpn       : selector;
+//			ig_md.nsh_md.vpn          : selector;
 //			flow_class_internal       : selector;
 			ig_md.nsh_md.hash_1       : selector;
 #endif // SFF_SCHD_SIMPLE

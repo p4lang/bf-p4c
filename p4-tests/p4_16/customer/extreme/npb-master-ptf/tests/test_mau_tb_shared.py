@@ -23,26 +23,26 @@ assert g_is_tofino or g_is_tofino2
 
 if g_is_tofino:
 	# Tofino 1 settings!
-	TOFINO_1          = True;
-	BRIDGING_ENABLE   = False;
-	TRANSPORT_ENABLE  = False;
-	SFF_SCHD_SIMPLE   = True;
-	CPU_ENABLE        = True;
-	ETAG_ENABLE       = True;
-	VNTAG_ENABLE      = True;
-	PROFILE_BETA      = False; # must be set true  for beta release
-	SPLIT_EG_PORT_TBL = False; # must be set false for beta release
+	TOFINO_1                 = True;
+	BRIDGING_ENABLE          = False;
+	TRANSPORT_ENABLE         = False;
+	SFF_SCHD_SIMPLE          = True;
+	CPU_ENABLE               = True;
+	ETAG_ENABLE              = True;
+	VNTAG_ENABLE             = True;
+	CPU_HDR_CONTAINS_EG_PORT = True;
+	SPLIT_EG_PORT_TBL        = False;
 elif g_is_tofino2:
 	# Tofino 2 settings!
-	TOFINO_1          = False;
-	BRIDGING_ENABLE   = True;
-	TRANSPORT_ENABLE  = False;
-	SFF_SCHD_SIMPLE   = False;
-	CPU_ENABLE        = True;
-	ETAG_ENABLE       = True;
-	VNTAG_ENABLE      = True;
-	PROFILE_BETA      = False; # must be set true  for beta release
-	SPLIT_EG_PORT_TBL = True;  # must be set false for beta release
+	TOFINO_1                 = False;
+	BRIDGING_ENABLE          = True;
+	TRANSPORT_ENABLE         = False;
+	SFF_SCHD_SIMPLE          = False;
+	CPU_ENABLE               = True;
+	ETAG_ENABLE              = True;
+	VNTAG_ENABLE             = True;
+	CPU_HDR_CONTAINS_EG_PORT = True;
+	SPLIT_EG_PORT_TBL        = False;
 
 #############################################
 

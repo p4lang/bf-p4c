@@ -52,20 +52,23 @@ control IngressMirror(
 #else
                 ig_md.port_lag_index,
 #endif
-//               ig_md.timestamp,
-                 (bit<32>)hdr.transport.nsh_type1.timestamp,
+/*
+                 ig_md.timestamp,
+//               (bit<32>)hdr.transport.nsh_type1.timestamp,
 #if __TARGET_TOFINO__ == 1
                  0,
 #endif
                 ig_md.mirror.session_id
+*/
+				ig_md.cpu_reason
             });
         } else if (ig_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_DTEL_DROP) {
 #ifdef DTEL_ENABLE
             mirror.emit<switch_dtel_drop_mirror_metadata_h>(ig_md.dtel.session_id, {
                 ig_md.mirror.src,
                 ig_md.mirror.type,
-//              ig_md.timestamp,
-                (bit<48>)hdr.transport.nsh_type1.timestamp,
+                ig_md.timestamp,
+//              (bit<48>)hdr.transport.nsh_type1.timestamp,
 #if __TARGET_TOFINO__ == 1
                 0,
 #endif
@@ -104,7 +107,8 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.bridged_md); // Ingress only.
 
         // ***** PRE-TRANSPORT *****
-        pkt.emit(hdr.transport.nsh_type1);
+//      pkt.emit(hdr.transport.nsh_type1);
+      pkt.emit(hdr.transport.nsh_type1_internal);
 
         // ***** TRANSPORT *****
 //      pkt.emit(hdr.transport.ethernet);

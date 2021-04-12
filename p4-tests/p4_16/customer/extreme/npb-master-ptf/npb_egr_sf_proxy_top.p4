@@ -63,8 +63,8 @@ control npb_egr_sf_proxy_top (
 
 	table egr_sf_action_sel {
 		key = {
-		    hdr_0.nsh_type1.spi : exact @name("spi");
-		    hdr_0.nsh_type1.si  : exact @name("si");
+		    eg_md.nsh_md.spi : exact @name("spi");
+		    eg_md.nsh_md.si  : exact @name("si");
 		}
 
 		actions = {
@@ -81,7 +81,7 @@ control npb_egr_sf_proxy_top (
 	// Table #x: SF Ip Length Range
 	// =========================================================================
 
-//	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ip_len;  // direct counter
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ip_len;  // direct counter
 
 	bit<SF_L3_LEN_RNG_WIDTH> ip_len = 0;
 	bool                     ip_len_is_rng_bitmask = false;
@@ -90,7 +90,7 @@ control npb_egr_sf_proxy_top (
 	action egr_sf_ip_len_rng_hit(
 		bit<SF_L3_LEN_RNG_WIDTH> rng_bitmask
 	) {
-//		stats_ip_len.count();
+		stats_ip_len.count();
 
 		ip_len = rng_bitmask;
 		ip_len_is_rng_bitmask = true;
@@ -100,7 +100,7 @@ control npb_egr_sf_proxy_top (
 
 	action egr_sf_ip_len_rng_miss(
 	) {
-//		stats_ip_len.count();
+		stats_ip_len.count();
 
 		ip_len = eg_md.lkp_1.ip_len;
 		ip_len_is_rng_bitmask = false;
@@ -110,7 +110,7 @@ control npb_egr_sf_proxy_top (
 
 	action no_action_ip_len_rng(
 	) {
-//		stats_ip_len.count();
+		stats_ip_len.count();
 	}
 
 	// =====================================
@@ -121,15 +121,15 @@ control npb_egr_sf_proxy_top (
 		}
 
 		actions = {
-			NoAction;
-//			no_action_ip_len_rng;
+//			NoAction;
+			no_action_ip_len_rng;
 			egr_sf_ip_len_rng_hit;
 			egr_sf_ip_len_rng_miss;
 		}
 
 		const default_action = egr_sf_ip_len_rng_miss;
 		size = NPB_EGR_SF_2_EGRESS_SFP_POLICY_L3_LEN_RNG_TABLE_DEPTH;
-//		counters = stats_ip_len;
+		counters = stats_ip_len;
 	}
 #endif
 
@@ -271,9 +271,9 @@ control npb_egr_sf_proxy_top (
 			// the lookup that uses it, but before any actions have run....
 
 #ifdef BUG_09719_WORKAROUND
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si - 1; // decrement sp_index
+			eg_md.nsh_md.si = eg_md.nsh_md.si - 1; // decrement sp_index
 #else
-			hdr_0.nsh_type1.si = hdr_0.nsh_type1.si |-| 1; // decrement sp_index
+			eg_md.nsh_md.si = eg_md.nsh_md.si |-| 1; // decrement sp_index
 #endif
 
 			// ==================================
@@ -330,7 +330,6 @@ control npb_egr_sf_proxy_top (
 				eg_intr_md_for_dprsr,
 				eg_intr_md_for_oport
 			);
-
 			// ----------------------------------
 			// Action #2 - Hdr Edit
 			// ----------------------------------
@@ -343,7 +342,6 @@ control npb_egr_sf_proxy_top (
 				eg_intr_md_for_dprsr,
 				eg_intr_md_for_oport
 			);
-
 /*
 			// ----------------------------------
 			// Action #3 - Truncate
@@ -357,7 +355,6 @@ control npb_egr_sf_proxy_top (
 				eg_intr_md_for_oport
 			);
 */
-
 			// ----------------------------------
 			// Action #4 - Meter
 			// ----------------------------------
@@ -379,9 +376,9 @@ control npb_egr_sf_proxy_top (
 			npb_egr_sf_proxy_dedup.apply (
 				eg_md.nsh_md.dedup_en,
 				eg_md.lkp_1,         // for hash
-				(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+				(bit<VPN_ID_WIDTH>)eg_md.nsh_md.vpn, // for hash
 //				eg_md.ingress_port,  // for dedup
-				hdr_0.nsh_type1.sap, // for dedup
+				eg_md.nsh_md.sap, // for dedup
 				eg_intr_md_for_dprsr.drop_ctl
 			);
 #endif

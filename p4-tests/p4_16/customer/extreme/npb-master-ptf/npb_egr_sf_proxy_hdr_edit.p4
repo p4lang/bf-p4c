@@ -9,6 +9,7 @@ control npb_egr_sf_proxy_hdr_edit (
 	inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport
 ) {
 
+	bool      hit  = false;
 	bit<3>    pcp_ = 0;
 	vlan_id_t vid_ = 0;
 
@@ -20,20 +21,31 @@ control npb_egr_sf_proxy_hdr_edit (
 	// Table: bd_to_vlan_mapping
 	// -----------------------------------------------------------------
 #ifdef SF_2_EDIT_BD_TO_VID_TABLE_ENABLE
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;
+
     action set_vlan_tagged(vlan_id_t vid, bit<3> pcp) {
+		stats.count();
+
+		hit  = true;
 		pcp_ = pcp;
 		vid_ = vid;
     }
 
+	action no_action() { 
+		stats.count();
+	}
+
     table bd_to_vlan_mapping {
         key = { eg_md.nsh_md.add_tag_vlan_bd : exact @name("bd"); }
         actions = {
+//			NoAction;
+			no_action;
 			set_vlan_tagged;
-			NoAction;
         }
 
-        const default_action = NoAction;
+        const default_action = no_action;
         size = 512;
+		counters = stats;
     }
 #endif
 	// -----------------------------------------------------------------
@@ -118,6 +130,8 @@ control npb_egr_sf_proxy_hdr_edit (
 
 	table hdr_add {
 		key = {
+			hit                           : exact;
+
 			hdr_1_ethernet_isEtypeStag    : exact;
 #ifdef ETAG_ENABLE
 			hdr_1.e_tag.isValid()         : exact;
@@ -171,89 +185,89 @@ control npb_egr_sf_proxy_hdr_edit (
 
 #if defined(ETAG_ENABLE) && defined(VNTAG_ENABLE)
 
-			// ====   =============   =============   =====    =====
-			// eth    e               vn              vl[0]    vl[1]
-			// ====   =============   =============   =====    =====
+			// ===    ======   =============   =============   =====    =====
+			// hit    eth      e               vn              vl[0]    vl[1]
+			// ===    ======   =============   =============   =====    =====
 
 			// case 0 (eth  to vlan)
-			(false,   false, false,   false, false,   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
-			(false,   false, true,    false, false,   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
-			(false,   false, false,   false, true,    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
-			(false,   false, true,    false, true,    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,   false, false,   false, false,   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,   false, true,    false, false,   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,   false, false,   false, true,    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,   false, true,    false, true,    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
 
 			// case 1 (eth  to vlan)
-			(false,   false, false,   false, false,   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
-			(false,   false, true,    false, false,   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
-			(false,   false, false,   false, true,    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
-			(false,   false, true,    false, true,    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,   false, false,   false, false,   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,   false, true,    false, false,   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,   false, false,   false, true,    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,   false, true,    false, true,    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
 
 			// case 2 (e/vn to vlan)
-			(false,   true,  false,   false, false,   false,   false): hdr_add_0__from_e_tag___to_vlan_tag0(); // empty
-			(false,   true,  false,   false, true,    false,   false): hdr_add_0__from_e_tag___to_vlan_tag0(); // empty
+			(true,    false,   true,  false,   false, false,   false,   false): hdr_add_0__from_e_tag___to_vlan_tag0(); // empty
+			(true,    false,   true,  false,   false, true,    false,   false): hdr_add_0__from_e_tag___to_vlan_tag0(); // empty
 
-			(false,   false, false,   true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
-			(false,   false, true,    true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
+			(true,    false,   false, false,   true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
+			(true,    false,   false, true,    true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
 
 			// case 3 (e/vn to vlan)
-			(false,   true,  false,   false, false,   true,    false): hdr_add_1__from_e_tag___to_vlan_tag0(); // one full
-			(false,   true,  false,   false, true,    true,    false): hdr_add_1__from_e_tag___to_vlan_tag0(); // one full
+			(true,    false,   true,  false,   false, false,   true,    false): hdr_add_1__from_e_tag___to_vlan_tag0(); // one full
+			(true,    false,   true,  false,   false, true,    true,    false): hdr_add_1__from_e_tag___to_vlan_tag0(); // one full
 
-			(false,   false, false,   true,  false,   true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
-			(false,   false, true,    true,  false,   true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
+			(true,    false,   false, false,   true,  false,   true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
+			(true,    false,   false, true,    true,  false,   true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
 
 #elif defined(ETAG_ENABLE) && !defined(VNTAG_ENABLE)
 
-			// ====   =============   =============   =====    =====
-			// eth    e               vn              vl[0]    vl[1]
-			// ====   =============   =============   =====    =====
+			// ===    ======   =============   =============   =====    =====
+			// hit    eth      e               vn              vl[0]    vl[1]
+			// ===    ======   =============   =============   =====    =====
 
 			// case 0 (eth  to vlan)
-			(false,   false, false,                   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
-			(false,   false, true,                    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,   false, false,                   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,   false, true,                    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
 
 			// case 1 (eth  to vlan)
-			(false,   false, false,                   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
-			(false,   false, true,                    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,   false, false,                   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,   false, true,                    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
 
 			// case 2 (e/vn to vlan)
-			(false,   true,  false,                   false,   false): hdr_add_0__from_e_tag___to_vlan_tag0(); // empty
+			(true,    false,   true,  false,                   false,   false): hdr_add_0__from_e_tag___to_vlan_tag0(); // empty
 
 			// case 3 (e/vn to vlan)
-			(false,   true,  false,                   true,    false): hdr_add_1__from_e_tag___to_vlan_tag0(); // one full
+			(true,    false,   true,  false,                   true,    false): hdr_add_1__from_e_tag___to_vlan_tag0(); // one full
 
 #elif !defined(ETAG_ENABLE) && defined(VNTAG_ENABLE)
 
-			// ====   =============   =============   =====    =====
-			// eth    e               vn              vl[0]    vl[1]
-			// ====   =============   =============   =====    =====
+			// ===    ======   =============   =============   =====    =====
+			// hit    eth      e               vn              vl[0]    vl[1]
+			// ===    ======   =============   =============   =====    =====
 
 			// case 0 (eth  to vlan)
-			(false,                   false, false    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
-			(false,                   false, true     false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,                   false, false    false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,                   false, true     false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
 
 			// case 1 (eth  to vlan)
-			(false,                   false, false,   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
-			(false,                   false, true,    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,                   false, false,   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,                   false, true,    true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
 
 			// case 2 (e/vn to vlan)
-			(false,                   true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
-			(false,                   true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
+			(true,    false,                   true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
+			(true,    false,                   true,  false,   false,   false): hdr_add_0__from_vn_tag__to_vlan_tag0(); // empty
 
 			// case 3 (e/vn to vlan)
-			(false,                   true,  false    true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
-			(false,                   true,  false    true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
+			(true,    false,                   true,  false    true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
+			(true,    false,                   true,  false    true,    false): hdr_add_1__from_vn_tag__to_vlan_tag0(); // one full
 
 #elif !defined(ETAG_ENABLE) && !defined(VNTAG_ENABLE)
 
-			// ====   =============   =============   =====    =====
-			// eth    e               vn              vl[0]    vl[1]
-			// ====   =============   =============   =====    =====
+			// ===    ======   =============   =============   =====    =====
+			// hit    eth      e               vn              vl[0]    vl[1]
+			// ===    ======   =============   =============   =====    =====
 
 			// case 0 (eth  to vlan)
-			(false,                                   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
+			(true,    false,                                   false,   false): hdr_add_0__from_eth_____to_vlan_tag0(); // empty
 
 			// case 1 (eth  to vlan)
-			(false,                                   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
+			(true,    false,                                   true,    false): hdr_add_1__from_eth_____to_vlan_tag0(); // one full
 
 #endif 
 		}
@@ -273,9 +287,13 @@ control npb_egr_sf_proxy_hdr_edit (
 #endif
 		
 #ifdef SF_2_EDIT_BD_TO_VID_TABLE_ENABLE
+/*
 		if(bd_to_vlan_mapping.apply().hit) {
 			hdr_add.apply();
 		}
+*/
+		bd_to_vlan_mapping.apply();
+		hdr_add.apply();
 #endif
 	}
 

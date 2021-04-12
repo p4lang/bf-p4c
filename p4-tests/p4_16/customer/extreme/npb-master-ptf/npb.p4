@@ -51,11 +51,7 @@
 #include "port.p4"
 //#include "validation.p4"
 #include "rewrite.p4"
-#ifdef PROFILE_BETA
-  #include "tunnel_beta.p4"
-#else
-  #include "tunnel.p4"
-#endif
+#include "tunnel.p4"
 #include "multicast.p4"
 #include "meter.p4"
 #include "dtel.p4"
@@ -82,25 +78,21 @@
 @pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
 @pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
 
-// Add pragmas to pragmas.p4 that are needed to fit design
-#include "pragmas.p4"
-
-// @pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
-// @pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
-// @pa_atomic("egress" , "eg_md.bypass")
-// @pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
-// @pa_container_size("egress" , "protocol_outer_0" , 8)
-// @pa_container_size("egress" , "protocol_inner_0" , 8)
-// @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
-
-#ifdef PROFILE_BETA
+#ifdef PA_MONOGRESS
+@pa_parser_group_monogress  //grep for monogress in phv_allocation log to confirm
+#endif
+#ifdef PA_NO_INIT
 @pa_no_init("ingress", "ig_intr_md_for_tm.bypass_egress")  // reset in port.p4
 @pa_no_init("egress",  "eg_md.tunnel_1.terminate")         // reset in npb_egr_parser.p4
 @pa_no_init("egress",  "eg_md.lkp_1.next_lyr_valid")       // reset in npb_egr_set_lkp.p4
 @pa_no_init("egress",  "eg_intr_md_for_dprsr.mirror_type") // reset in this file (below)
 @pa_no_init("ingress", "ig_md.tunnel_2.terminate")         // reset in npb_ing_parser.p4
-//@pa_no_init("ingress", "ig_md.mirror.src")                 // reset in this file (below)
-#endif // PROFILE_BETA
+//@pa_no_init("ingress", "ig_md.mirror.src")                 // reset in this file (below) NOT NEEDED
+#endif // PA_NO_INIT
+
+// Add pragmas to pragmas.p4 that are needed to fit design
+#include "pragmas.p4"
+
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -117,6 +109,7 @@ control SwitchIngress(
 
 	// ---------------------------------------------------------------------
 
+	IngressSetLookup() ingress_set_lookup;
 	IngressPortMapping(PORT_VLAN_TABLE_SIZE, BD_TABLE_SIZE, PORT_TABLE_SIZE, VLAN_TABLE_SIZE) ingress_port_mapping;
 #ifdef VALIDATION_ENABLE
 	PktValidation() pkt_validation_0;
@@ -135,7 +128,9 @@ control SwitchIngress(
 	IngressMirrorMeter() ingress_mirror_meter;
 //	IngressIpDtelSampleAcl(INGRESS_IP_DTEL_ACL_TABLE_SIZE) ingress_ip_dtel_acl;
 	Nexthop(NEXTHOP_TABLE_SIZE, ECMP_GROUP_TABLE_SIZE, ECMP_SELECT_TABLE_SIZE) nexthop;
+#ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
 	OuterFib(OUTER_NEXTHOP_TABLE_SIZE, OUTER_ECMP_GROUP_TABLE_SIZE, OUTER_ECMP_SELECT_TABLE_SIZE) outer_fib;
+#endif
 	LAG() lag;
   	IngressDtel() dtel;
 
@@ -145,15 +140,15 @@ control SwitchIngress(
 
 		ig_intr_md_for_dprsr.drop_ctl = 0;  // no longer present in latest switch.p4
 		ig_md.multicast.id = 0;             // no longer present in latest switch.p4
-#ifdef PROFILE_BETA
-//		ig_md.mirror.src = SWITCH_PKT_SRC_BRIDGED; // for barefoot reset bug
+#ifdef PA_NO_INIT
+//		ig_md.mirror.src = SWITCH_PKT_SRC_BRIDGED; // for barefoot reset bug NOT NEEDED
 #endif
 
 #if defined(PARSER_ERROR_HANDLING_ENABLE)
         //ParserValidation.apply(hdr, ig_md, ig_intr_from_prsr, ig_intr_md_for_dprsr, ig_intr_md_for_tm);
 #endif // if defined(PARSER_ERROR_HANDLING_ENABLE)
 
-		IngressSetLookup.apply(hdr, ig_md);  // set lookup structure fields that parser couldn't
+		ingress_set_lookup.apply(hdr, ig_md);  // set lookup structure fields that parser couldn't
 
 #ifdef ING_HDR_STACK_COUNTERS
 		IngressHdrStackCounters.apply(hdr);
@@ -191,7 +186,6 @@ control SwitchIngress(
     #else
 			dmac.apply(hdr.outer.ethernet.dst_addr, ig_md);
     #endif
-
 		} else {
 			// ----- NPB Path -----
 #endif // BRIDGING ENABLE
@@ -220,7 +214,9 @@ control SwitchIngress(
 #ifdef LAG_HASH_MASKING_ENABLE
 		// if lag hash masking enabled, move this before the hash
 		nexthop.apply(ig_md);
+  #ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
 		outer_fib.apply(ig_md);
+  #endif
 #endif
 		HashMask.apply(ig_md.lkp_1, ig_md.nsh_md.lag_hash_mask_en);
 
@@ -235,12 +231,14 @@ control SwitchIngress(
 #ifndef LAG_HASH_MASKING_ENABLE
 		// this code should be removed if lag hash masking ever fits
 		nexthop.apply(ig_md);
+  #ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
 		outer_fib.apply(ig_md);
+  #endif
 #endif
 
-#ifdef LAG_HASH_IN_NSH_HDR_ENABLE
-		hdr.transport.nsh_type1.lag_hash = ig_md.hash[switch_lag_hash_width-1:switch_lag_hash_width/2];
-#endif
+//#ifdef LAG_HASH_IN_NSH_HDR_ENABLE
+//		hdr.transport.nsh_type1.lag_hash = ig_md.hash[switch_lag_hash_width-1:switch_lag_hash_width/2];
+//#endif
 
 		if (ig_md.egress_port_lag_index == SWITCH_FLOOD) {
 		} else {
@@ -307,7 +305,7 @@ control SwitchEgress(
 
 //		eg_intr_md_for_dprsr.drop_ctl = 0;
 		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
-#ifdef PROFILE_BETA
+#ifdef PA_NO_INIT
 		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_INVALID;// for barefoot reset bug
 #endif
 
@@ -360,13 +358,11 @@ control SwitchEgress(
 			vlan_decap.apply(hdr.transport, eg_md);
 			tunnel_encap.apply(hdr.transport, hdr.outer, hdr.inner, hdr.inner_inner, eg_md, eg_md.tunnel_0, eg_md.tunnel_1, eg_md.tunnel_2);
 			tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
-			if (eg_md.tunnel_0.type != SWITCH_TUNNEL_TYPE_NONE) { // derek added this check
-				vlan_xlate.apply(hdr.transport, eg_md);
-			}
+			vlan_xlate.apply(hdr.transport, eg_md);
 
 #ifdef DTEL_ENABLE
-			dtel.apply(hdr.outer, hdr.transport.nsh_type1.timestamp, eg_md, eg_intr_md, eg_md.dtel.hash);
-			dtel_config.apply(hdr.outer, hdr.transport.nsh_type1.timestamp, eg_md, eg_intr_md_for_dprsr);
+			dtel.apply(hdr.outer, eg_md, eg_intr_md, eg_md.dtel.hash);
+			dtel_config.apply(hdr.outer, eg_md, eg_intr_md_for_dprsr);
 #endif
 		}
 		egress_port_mapping2.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);

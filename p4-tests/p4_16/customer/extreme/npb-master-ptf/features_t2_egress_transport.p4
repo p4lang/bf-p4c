@@ -22,6 +22,9 @@
 
 // List of all supported #define directives.
 
+#define PA_MONOGRESS
+#define PA_NO_INIT
+
 // ===== pkt header defines =================================
 
 // ----- applies to: transport -----
@@ -58,6 +61,7 @@
 // ===== feature defines ====================================
 
 // ----- parser -----
+#undef  INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID  // populate tunnei_id w/ session_id
 #undef  INGRESS_PARSER_POPULATES_LKP_0
 #define INGRESS_PARSER_POPULATES_LKP_1
 #define INGRESS_PARSER_POPULATES_LKP_2
@@ -66,6 +70,11 @@
 #define EGRESS_PARSER_POPULATES_LKP_SCOPED
 #undef  PARSER_ERROR_HANDLING_ENABLE
 #undef  PARSER_L4_PORT_OVERLOAD
+#undef  INNER_INNER_IP_LEN_ENABLE
+
+// ----- switch: general -----
+#define SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
+#undef  SPLIT_EG_PORT_TABLE_ENABLE // helps with fitting, splits the egress port table into two.
 
 // ----- switch: mirroring -----
 #define MIRROR_INGRESS_ENABLE      // only valid if MIRROR_ENABLE is defined
@@ -167,4 +176,3 @@
 #undef  CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
 #undef  INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
 #undef  EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit
-#undef  SPLIT_EG_PORT_TABLE_ENABLE            // helps with fitting, splits the egress port table into two.

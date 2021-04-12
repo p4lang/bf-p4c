@@ -26,7 +26,11 @@ parser NpbIngressParser(
     state start {
         pkt.extract(ig_intr_md);
         ig_md.port           = ig_intr_md.ingress_port;
-        ig_md.timestamp      = ig_intr_md.ingress_mac_tstamp;
+#if defined(PTP_ENABLE) || defined(INT_V2)
+        ig_md.timestamp = ig_intr_md.ingress_mac_tstamp;
+#else
+        ig_md.timestamp = ig_intr_md.ingress_mac_tstamp[31:0];
+#endif
 //      ig_md.flags.rmac_hit = false;
 
         // Check for resubmit flag if packet is resubmitted.
@@ -48,7 +52,7 @@ parser NpbIngressParser(
         ig_md.lkp_2.tunnel_id = 0;
 */
 
-#ifdef PROFILE_BETA
+#ifdef PA_NO_INIT
         ig_md.tunnel_0.terminate = false;
         ig_md.tunnel_1.terminate = false;
         ig_md.tunnel_2.terminate = false;
@@ -144,12 +148,12 @@ parser NpbIngressParser(
     
     state parse_port_metadata {
         // Parse port metadata produced by ibuf
-#ifdef PROFILE_BETA
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+		pkt.advance(PORT_METADATA_SIZE);
+#else
         switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
         ig_md.port_lag_index = port_md.port_lag_index;
 		ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
-#else
-		pkt.advance(PORT_METADATA_SIZE);
 #endif
         transition check_from_cpu;
     }
@@ -392,7 +396,7 @@ parser NpbIngressParser(
         // todo: should the lkp struct be set in state parse_transport_ipv4_no_options_frags instead?
 //      ig_md.lkp_0.ip_type       = SWITCH_IP_TYPE_IPV4;
         ig_md.lkp_0.ip_proto      = hdr.transport.ipv4.protocol;
-        ig_md.lkp.ip_tos          = hdr.transport.ipv4.tos; // not byte-aligned so set in mau
+        ig_md.lkp_0.ip_tos        = hdr.transport.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_0.ip_flags      = hdr.transport.ipv4.flags;
         ig_md.lkp_0.ip_src_addr   = (bit<128>)hdr.transport.ipv4.src_addr;
         ig_md.lkp_0.ip_dst_addr   = (bit<128>)hdr.transport.ipv4.dst_addr;
@@ -513,6 +517,15 @@ parser NpbIngressParser(
 
     state parse_transport_nsh {
 	    pkt.extract(hdr.transport.nsh_type1);
+
+        ig_md.nsh_md.ttl = hdr.transport.nsh_type1.ttl;
+        ig_md.nsh_md.spi = hdr.transport.nsh_type1.spi;
+        ig_md.nsh_md.si = hdr.transport.nsh_type1.si;
+        ig_md.nsh_md.ver = hdr.transport.nsh_type1.ver;
+        ig_md.nsh_md.vpn = hdr.transport.nsh_type1.vpn;
+        ig_md.nsh_md.scope = hdr.transport.nsh_type1.scope;
+        ig_md.nsh_md.sap = hdr.transport.nsh_type1.sap;
+
         transition select(hdr.transport.nsh_type1.next_proto) {
             NSH_PROTOCOLS_ETH: parse_outer_ethernet;
             default: accept;  // todo: support ipv4? ipv6?

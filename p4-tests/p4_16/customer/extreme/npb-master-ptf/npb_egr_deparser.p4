@@ -50,12 +50,15 @@ control EgressMirror(
 #else
                 eg_md.port_lag_index,
 #endif
-//              eg_md.ingress_timestamp,
-                (bit<32>)hdr.transport.nsh_type1.timestamp,
+/*
+                eg_md.ingress_timestamp,
+//              (bit<32>)hdr.transport.nsh_type1.timestamp,
     #if __TARGET_TOFINO__ == 1
                 0,
     #endif
                 eg_md.mirror.session_id
+*/
+                eg_md.cpu_reason
             });
   #endif
         } else if (eg_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_CPU) {
@@ -80,8 +83,8 @@ control EgressMirror(
             mirror.emit<switch_dtel_switch_local_mirror_metadata_h>(eg_md.dtel.session_id, {
                 eg_md.mirror.src,
                 eg_md.mirror.type,
-//              eg_md.ingress_timestamp,
-                (bit<48>)hdr.transport.nsh_type1.timestamp,
+                eg_md.ingress_timestamp,
+//              (bit<48>)hdr.transport.nsh_type1.timestamp,
     #if __TARGET_TOFINO__ == 1
                 0,
     #endif
@@ -106,8 +109,8 @@ control EgressMirror(
             mirror.emit<switch_dtel_drop_mirror_metadata_h>(eg_md.dtel.session_id, {
                 eg_md.mirror.src,
                 eg_md.mirror.type,
-//              eg_md.ingress_timestamp,
-                (bit<48>)hdr.transport.nsh_type1.timestamp,
+                eg_md.ingress_timestamp,
+//              (bit<48>)hdr.transport.nsh_type1.timestamp,
     #if __TARGET_TOFINO__ == 1
                  0,
     #endif

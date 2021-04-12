@@ -17,7 +17,7 @@ control npb_egr_sff_top (
 	// implementations that do not support this TTL field.
 
     action new_ttl(bit<6> ttl) {
-        hdr_0.nsh_type1.ttl = ttl;
+        eg_md.nsh_md.ttl = ttl;
     }
 
     action discard() {
@@ -25,7 +25,7 @@ control npb_egr_sff_top (
     }
 
     table npb_egr_sff_dec_ttl {
-        key = { hdr_0.nsh_type1.ttl : exact; }
+        key = { eg_md.nsh_md.ttl : exact; }
         actions = { new_ttl; discard; }
 		size = 64;
         const entries = {
@@ -98,6 +98,73 @@ control npb_egr_sff_top (
     }
 
 	// =========================================================================
+	// Table #1: 
+	// =========================================================================
+
+    action end_of_path() {
+//		eg_md.nsh_md.setInvalid(); // it's the end of the line for this nsh chain....
+    }
+
+	action middle_of_path_drop() {
+		eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
+	}
+
+	action middle_of_path() {
+
+            // note: according to p4 spec, initializing a header also automatically sets it valid.
+//          hdr_0.nsh_type1.setValid();
+            hdr_0.nsh_type1 = {
+                version    = 0x0,
+                o          = 0x0,
+                reserved   = 0x0,
+                ttl        = eg_md.nsh_md.ttl, // 63 is the rfc's recommended default value (0 will get dec'ed to 63).
+                len        = 0x6,  // in 4-byte words (1 + 1 + 4).
+                reserved2  = 0x0,
+                md_type    = 0x1,  // 0 = reserved, 1 = fixed len, 2 = variable len.
+                next_proto = NSH_PROTOCOLS_ETH, // 1 = ipv4, 2 = ipv6, 3 = ethernet, 4 = nsh, 5 = mpls.
+
+                spi        = eg_md.nsh_md.spi,
+                si         = eg_md.nsh_md.si,
+
+                ver        = 0x2,
+                reserved3  = 0x0,
+#ifdef LAG_HASH_IN_NSH_HDR_ENABLE
+				lag_hash   = eg_md.hash[switch_lag_hash_width-1:switch_lag_hash_width/2],
+#else
+                lag_hash   = 0x0,
+#endif
+
+                vpn        = eg_md.nsh_md.vpn,
+                sfc_data   = 0x0,
+
+                reserved4  = 0x0,
+                scope      = eg_md.nsh_md.scope,
+                sap        = eg_md.nsh_md.sap,
+
+#ifdef SFC_TIMESTAMP_ENABLE
+                timestamp = eg_md.timestamp[31:0]
+#else
+                timestamp = 0
+#endif
+		};
+	}
+
+    table npb_egr_sff_final {
+        key = {
+			eg_md.nsh_md.end_of_path : exact;
+			eg_md.nsh_md.ttl : ternary;
+			eg_md.nsh_md.si : ternary;
+		}
+        actions = { end_of_path; middle_of_path_drop; middle_of_path; }
+		default_action = middle_of_path;
+        const entries = {
+            (true,  _,     _    )  : end_of_path;
+            (false, 0,     _    )  : middle_of_path_drop;
+            (false, _,     0    )  : middle_of_path_drop;
+		}
+	}
+
+	// =========================================================================
 	// Table #2: SFF
 	// =========================================================================
 
@@ -121,11 +188,11 @@ control npb_egr_sff_top (
 		stats.count();
 
 		// hdr reformat to old type 1 format (slx-style)
-		hdr_0.nsh_type1.spi        = tool_address;
-		hdr_0.nsh_type1.si         = 0x1;
+		eg_md.nsh_md.spi        = tool_address;
+		eg_md.nsh_md.si         = 0x1;
 
-		hdr_0.nsh_type1.ver        = 0x1;
-		hdr_0.nsh_type1.reserved3  = 0x0; // not necessary, but allows the design to fit.
+		eg_md.nsh_md.ver        = 0x1;
+//		eg_md.nsh_md.reserved3  = 0x0; // not necessary, but allows the design to fit.
 	}
 
 	// =====================================
@@ -141,8 +208,8 @@ control npb_egr_sff_top (
 
 	table egr_sff_fib {
 		key = {
-			hdr_0.nsh_type1.spi     : exact @name("spi");
-			hdr_0.nsh_type1.si      : exact @name("si");
+			eg_md.nsh_md.spi     : exact @name("spi");
+			eg_md.nsh_md.si      : exact @name("si");
 		}
 
 		actions = {
@@ -197,7 +264,7 @@ control npb_egr_sff_top (
 				// process start + end of chain
 				// ---------------
 
-				hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+				eg_md.nsh_md.setInvalid(); // it's the end of the line for this nsh chain....
 
 			} else {
 
@@ -205,7 +272,7 @@ control npb_egr_sff_top (
 				// process start of chain
 				// ---------------
 
-				if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
+				if((eg_md.nsh_md.ttl == 0) || (eg_md.nsh_md.si == 0)) {
 					eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
 				}
 
@@ -228,7 +295,7 @@ control npb_egr_sff_top (
 				// process end of chain
 				// ---------------
 
-				hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+				eg_md.nsh_md.setInvalid(); // it's the end of the line for this nsh chain....
 
 			} else {
 
@@ -236,7 +303,7 @@ control npb_egr_sff_top (
 				// process middle of chain
 				// ---------------
 
-				if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
+				if((eg_md.nsh_md.ttl == 0) || (eg_md.nsh_md.si == 0)) {
 					eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
 				}
 
@@ -247,13 +314,14 @@ control npb_egr_sff_top (
 
 		npb_egr_sff_dec_ttl.apply();
 
+/*
 		if(eg_md.nsh_md.end_of_path == true) {
 
 			// ---------------
 			// process end of chain
 			// ---------------
 
-			hdr_0.nsh_type1.setInvalid(); // it's the end of the line for this nsh chain....
+			eg_md.nsh_md.setInvalid(); // it's the end of the line for this nsh chain....
 
 		} else {
 
@@ -261,12 +329,12 @@ control npb_egr_sff_top (
 			// process middle of chain
 			// ---------------
 
-			if((hdr_0.nsh_type1.ttl == 0) || (hdr_0.nsh_type1.si == 0)) {
+			if((eg_md.nsh_md.ttl == 0) || (eg_md.nsh_md.si == 0)) {
 				eg_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
 			}
 
 		}
-
+*/
 		// -------------------------------------
 		// Fowrarding Lookup
 		// -------------------------------------
@@ -277,6 +345,9 @@ control npb_egr_sff_top (
 #ifdef EGRESS_NSH_HDR_VER_1_SUPPORT
 		egr_sff_fib.apply();
 #endif
+
+		npb_egr_sff_final.apply();
+
 	}
 
 }

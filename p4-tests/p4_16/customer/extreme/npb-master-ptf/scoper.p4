@@ -25,13 +25,13 @@
 
 // ============================================================================
 
-control Scoper(
+control Scoper_ScopeOnly(
 		in    switch_lookup_fields_t lkp_in,
 
 		inout switch_lookup_fields_t lkp
 ) {
 
-	apply {
+	action scoper() {
 #if 0
 		// Derek: Can't use this code, as we need to alias the 128-bit ip addresses with a 32-bit version.  Need to use the code below instead.
 		lkp = lkp_in;
@@ -75,6 +75,177 @@ control Scoper(
 		lkp.next_lyr_valid      = lkp_in.next_lyr_valid;
 #endif
 	}
+
+	apply {
+		scoper();
+	}
+}
+
+// ============================================================================
+
+control Scoper_TermOnly(
+		inout switch_lookup_fields_t lkp,
+
+		in    bool terminate_flag,
+		inout bit<8> scope,
+		inout bool terminate_1,
+		inout bool terminate_2
+) {
+
+	action term_0() {
+		terminate_1           = true;
+		scope = 1;
+	}
+
+	action term_1() {
+		terminate_1           = true;
+		terminate_2           = true;
+		scope = 2;
+	}
+
+	table scope_inc {
+		key = {
+			lkp.next_lyr_valid : exact;
+			terminate_flag : exact;
+			scope : exact;
+		}
+		actions = {
+			NoAction;
+			term_0;
+			term_1;
+		}
+		const entries = {
+			(true, true,  0)  : term_0();
+			(true, true,  1)  : term_1();
+		}
+		const default_action = NoAction;
+	}
+
+	apply {
+//		scope_inc.apply();
+
+		if((lkp.next_lyr_valid == true) && (terminate_flag == true)) {
+			if(scope == 0) {
+				term_0();
+			} else {
+				term_1();
+			}
+		}
+	}
+}
+
+// ============================================================================
+
+control Scoper_ScopeAndTerm(
+		in    switch_lookup_fields_t lkp_in,
+
+		inout switch_lookup_fields_t lkp,
+
+		in    bool terminate_flag,
+		in    bool scope_flag,
+		inout bit<8> scope,
+		inout bool terminate_1,
+		inout bool terminate_2
+) {
+
+	action scoper() {
+#if 0
+		// Derek: Can't use this code, as we need to alias the 128-bit ip addresses with a 32-bit version.  Need to use the code below instead.
+		lkp = lkp_in;
+#else
+		// l2
+		lkp.mac_src_addr        = lkp_in.mac_src_addr;
+		lkp.mac_dst_addr        = lkp_in.mac_dst_addr;
+		lkp.mac_type            = lkp_in.mac_type;
+		lkp.pcp                 = lkp_in.pcp;
+		lkp.pad                 = lkp_in.pad;
+		lkp.vid                 = lkp_in.vid;
+
+		// l3
+		lkp.ip_type             = lkp_in.ip_type;
+		lkp.ip_proto            = lkp_in.ip_proto;
+		lkp.ip_tos              = lkp_in.ip_tos;
+		lkp.ip_flags            = lkp_in.ip_flags;
+		lkp.ip_src_addr         = lkp_in.ip_src_addr;
+		lkp.ip_dst_addr         = lkp_in.ip_dst_addr;
+		// Comment the two below as they are alias fields and do not need to be written again.
+		//lkp.ip_src_addr_v4    = lkp_in.ip_src_addr_v4;
+		//lkp.ip_dst_addr_v4    = lkp_in.ip_dst_addr_v4;
+		lkp.ip_len              = lkp_in.ip_len;
+
+		// l4
+		lkp.tcp_flags           = lkp_in.tcp_flags;
+		lkp.l4_src_port         = lkp_in.l4_src_port;
+		lkp.l4_dst_port         = lkp_in.l4_dst_port;
+
+		// tunnel
+		lkp.tunnel_type         = lkp_in.tunnel_type;
+		lkp.tunnel_id           = lkp_in.tunnel_id;
+
+  #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
+		// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
+		lkp.tunnel_outer_type   = lkp_in.tunnel_outer_type; // egress only
+		lkp.tunnel_inner_type   = lkp_in.tunnel_inner_type; // egress only
+  #endif
+
+		// misc
+		lkp.next_lyr_valid      = lkp_in.next_lyr_valid;
+#endif
+	}
+
+	action scope_0() {
+		scoper();
+		scope = 1;
+	}
+
+	action scope_1() {
+		// we can't scope any deeper here
+		scope = 2;
+	}
+
+	action term_0() {
+		terminate_1           = true;
+		scoper();
+		scope = 1;
+	}
+
+	action term_1() {
+		terminate_1           = true;
+		terminate_2           = true;
+		// we can't scope any deeper here
+		scope = 2;
+	}
+
+	table scope_inc {
+		key = {
+			lkp.next_lyr_valid : exact;
+			terminate_flag : exact;
+			scope_flag : exact;
+			scope : exact;
+		}
+		actions = {
+			NoAction;
+			scope_0;
+			scope_1;
+			term_0;
+			term_1;
+		}
+		const entries = {
+			(true, false, true,  0)  : scope_0();
+			(true, false, true,  1)  : scope_1();
+
+			(true, true,  true,  0)  : term_0(); // scope is a don't care when terminating
+			(true, true,  true,  1)  : term_1(); // scope is a don't care when terminating
+			(true, true,  false, 0)  : term_0(); // scope is a don't care when terminating
+			(true, true,  false, 1)  : term_1(); // scope is a don't care when terminating
+		}
+		const default_action = NoAction;
+	}
+
+	apply {
+		scope_inc.apply();
+	}
+
 }
 
 // ============================================================================
@@ -141,7 +312,7 @@ control ScoperOuter(
 	table scope_l2_ {
 		key = {
 			hdr_1.ethernet.isValid(): exact;
-            
+
 #ifdef ETAG_ENABLE
 			hdr_1.e_tag.isValid(): exact;
 #endif // ETAG_ENABLE
@@ -156,7 +327,7 @@ control ScoperOuter(
 		actions = {
 			scope_l2_none;
 			scope_l2;
-            
+
 #ifdef ETAG_ENABLE
 			scope_l2_e_tag;
 #endif // ETAG_ENABLE
@@ -171,7 +342,7 @@ control ScoperOuter(
 		const entries = {
 
 #if defined(ETAG_ENABLE) && defined(VNTAG_ENABLE)
-            
+
 			(false, false, false, false, false): scope_l2_none();
 
 			(true,  false, false, false, false): scope_l2();
@@ -188,7 +359,7 @@ control ScoperOuter(
 			(true,  false, true,  true,  true ): scope_l2_2tags();
 
 #elif defined(ETAG_ENABLE) && !defined(VNTAG_ENABLE)
-            
+
 			(false, false, false, false): scope_l2_none();
 
 			(true,  false, false, false): scope_l2();
@@ -200,7 +371,7 @@ control ScoperOuter(
 
 			(true,  false, true,  true ): scope_l2_2tags();
 			(true,  true,  true,  true ): scope_l2_2tags();
-            
+
 #elif !defined(ETAG_ENABLE) && defined(VNTAG_ENABLE)
 
 			(false, false, false, false): scope_l2_none();
@@ -226,7 +397,7 @@ control ScoperOuter(
 			(true,  true,  true ): scope_l2_2tags();
 
 #endif
-        }
+		}
 	}
 
 	// -----------------------------

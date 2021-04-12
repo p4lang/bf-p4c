@@ -22,6 +22,9 @@
 
 // List of all supported #define directives.
 
+#define PA_MONOGRESS
+#undef  PA_NO_INIT
+
 // ===== pkt header defines =================================
 
 // ----- applies to: transport -----
@@ -45,7 +48,7 @@
 #undef  MPLS_SR_ENABLE     // Choose just one of either SR or L2/L3VPN MPLS (not both)
 #undef  MPLS_L2VPN_ENABLE  // L2VPN and L3VPN MPLS can be enabled together.
 #undef  MPLS_L3VPN_ENABLE  // But neither can be enabled if SR MPLS is enabled
-#undef  MPLSoGRE_ENABLE
+#undef  MPLSoGRE_ENABLE    // Add MPLS-over-GRE support to MPLS mode(s) selected above
 
 // ----- applies to: inner -----
 #define INNER_GRE_ENABLE
@@ -67,7 +70,11 @@
 #define EGRESS_PARSER_POPULATES_LKP_SCOPED
 #undef  PARSER_ERROR_HANDLING_ENABLE
 #undef  PARSER_L4_PORT_OVERLOAD
-#undef  INNER_INNER_IP_LEN_ENABLE
+#define INNER_INNER_IP_LEN_ENABLE
+
+// ----- switch: general -----
+#define SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
+#undef  SPLIT_EG_PORT_TABLE_ENABLE // helps with fitting, splits the egress port table into two.
 
 // ----- switch: mirroring -----
 #define MIRROR_INGRESS_ENABLE      // only valid if MIRROR_ENABLE is defined
@@ -164,9 +171,8 @@
 #define FIELD_WIDTHS_REDUCED                  // to help w/ fitting
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
-#define MIRROR_METERS                         // this feature currently doesn't fit
+#undef  MIRROR_METERS                         // this feature currently doesn't fit
 #undef  LAG_TABLE_INDIRECT_COUNTERS           // this feature currently doesn't fit
-#undef  CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
-#undef  INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
-#undef  EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit
-#undef  SPLIT_EG_PORT_TABLE_ENABLE            // helps with fitting, splits the egress port table into two.
+#define CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
+#define INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
+#define EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit

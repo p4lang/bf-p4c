@@ -402,7 +402,6 @@ control IngressDtel(in  switch_header_outer_t hdr,
 
 
 control DtelConfig(inout switch_header_outer_t hdr,
-                   inout bit<32> hdr_transport_timestamp, // derek hack
                    inout switch_egress_metadata_t eg_md,
                    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
 
@@ -505,8 +504,7 @@ control DtelConfig(inout switch_header_outer_t hdr,
         hdr.dtel.next_proto = next_proto;
         hdr.dtel.reserved = 0;
         hdr.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
-//      hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
-        hdr.dtel.timestamp = (bit<32>) hdr_transport_timestamp; // derek hack
+        hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
 #endif
     }
 
@@ -555,8 +553,7 @@ control DtelConfig(inout switch_header_outer_t hdr,
         hdr.dtel.next_proto = next_proto;
         hdr.dtel.reserved[14:13] = etrap_status;  // etrap indication
         hdr.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
-//      hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
-        hdr.dtel.timestamp = (bit<32>) hdr_transport_timestamp; // derek hack
+        hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
 #endif
     }
 
@@ -808,7 +805,6 @@ control IntEdge(inout switch_egress_metadata_t eg_md)(
 }
 
 control EgressDtel(inout switch_header_outer_t hdr,
-                   inout bit<32> hdr_transport_timestamp, // derek hack
                    inout switch_egress_metadata_t eg_md,
                    in egress_intrinsic_metadata_t eg_intr_md,
                    in bit<32> hash) {
@@ -871,10 +867,8 @@ control EgressDtel(inout switch_header_outer_t hdr,
 
     apply {
 #ifdef DTEL_ENABLE
-//      eg_md.dtel.latency =
-//          eg_md.timestamp[31:0] - eg_md.ingress_timestamp[31:0];
         eg_md.dtel.latency =
-            eg_md.timestamp[31:0] - hdr_transport_timestamp; // derek hack
+            eg_md.timestamp[31:0] - eg_md.ingress_timestamp[31:0];
         if (eg_md.pkt_src == SWITCH_PKT_SRC_DEFLECTED && hdr.dtel_drop_report.isValid())
 #ifdef INT_V2
             eg_md.port = hdr.dtel_metadata_1.egress_port;

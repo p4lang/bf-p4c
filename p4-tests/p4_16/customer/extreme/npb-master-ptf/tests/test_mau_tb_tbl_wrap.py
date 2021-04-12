@@ -258,7 +258,7 @@ def npb_ing_port_add(self, target, port, port_lag_ptr, bridging_enable, sap, vpn
 
 		try:
 
-			if(PROFILE_BETA == True):
+			if(CPU_HDR_CONTAINS_EG_PORT == False):
 
 				table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
 				table.entry_add(
@@ -387,7 +387,7 @@ def npb_ing_port_del(self, target, port, port_lag_ptr):
 
 		try:
 
-			if(PROFILE_BETA == True):
+			if(CPU_HDR_CONTAINS_EG_PORT == False):
 
 				table = self.bfrt_info.table_get('NpbIngressParser.$PORT_METADATA')
 				table.entry_del(

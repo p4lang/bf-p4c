@@ -90,45 +90,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
 
         ig_md.drop_reason = SWITCH_DROP_REASON_NEXTHOP;
     }
-/*
-    action set_ecmp_properties(
-		switch_port_lag_index_t port_lag_index,
-        switch_bd_t bd,
-        switch_nexthop_t nexthop_index
-	) {
-		stats.count();
-
-        ig_md.nexthop = nexthop_index;
-        set_nexthop_properties(port_lag_index, bd);
-    }
-
-    action set_ecmp_properties_drop(
-	) {
-		stats.count();
-
-        set_nexthop_properties_drop();
-    }
-
-    action set_ecmp_properties_post_routed_flood(
-        switch_bd_t bd,
-        switch_mgid_t mgid,
-        switch_nexthop_t nexthop_index
-	) {
-		stats.count();
-
-        ig_md.nexthop = nexthop_index;
-        set_nexthop_properties_post_routed_flood(bd, mgid);
-    }
-
-    action set_ecmp_properties_glean(
-		switch_nexthop_t nexthop_index
-	) {
-		stats.count();
-
-        ig_md.nexthop = nexthop_index;
-        set_nexthop_properties_glean();
-    }
-*/
+#ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
     action set_nexthop_properties_tunnel(
 		switch_bd_t bd,
 		switch_tunnel_index_t tunnel_index
@@ -139,39 +101,25 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
         ig_md.tunnel_0.index = tunnel_index;
         ig_md.egress_port_lag_index = 0;
     }
-/*
-    action set_ecmp_properties_tunnel(
+#else
+	// use this code for combined nexthop and outer-nexthop tables.
+    action set_nexthop_properties_tunnel(
 		switch_bd_t bd,
 		switch_tunnel_index_t tunnel_index,
-		switch_nexthop_t nexthop_index
+
+		switch_port_lag_index_t port_lag_index, // added
+        switch_outer_nexthop_t nexthop_index // added
 	) {
 		stats.count();
 
-        set_nexthop_properties_tunnel(bd, tunnel_index);
-        ig_md.nexthop = nexthop_index;
-    }
-*/
-/*
-    table ecmp {
-        key = {
-            ig_md.nexthop : exact;
-            hash : selector;
-        }
+        // TODO(msharif) : Disable cut-through for non-ip packets.
+        ig_md.tunnel_0.index = tunnel_index;
+//      ig_md.egress_port_lag_index = 0; // removed
 
-        actions = {
-            NoAction;
-            set_ecmp_properties;
-            set_ecmp_properties_drop;
-            set_ecmp_properties_glean;
-            set_ecmp_properties_post_routed_flood;
-            set_ecmp_properties_tunnel;
-        }
-
-        const default_action = NoAction;
-        size = ecmp_table_size;
-        implementation = ecmp_selector;
+        ig_md.outer_nexthop = nexthop_index; // added
+        ig_md.egress_port_lag_index = port_lag_index; // added
     }
-*/
+#endif
 #ifdef INIT_BANNED_ON_NEXTHOP
     @no_field_initialization
 #endif
@@ -195,18 +143,9 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
     }
 
     apply {
-
-
-
-
-
-
         switch(nexthop.apply().action_run) {
-//          NoAction : { ecmp.apply(); }
             default : {}
         }
-
-
     }
 }
 
@@ -218,6 +157,7 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
                      switch_uint32_t fib_table_size,
                      switch_uint32_t ecmp_table_size,
                      switch_uint32_t ecmp_selection_table_size) {
+
 //  Hash<switch_uint16_t>(HashAlgorithm_t.IDENTITY) selector_hash;
 //  ActionProfile(ecmp_selection_table_size) ecmp_action_profile;
 //  ActionSelector(ecmp_action_profile,

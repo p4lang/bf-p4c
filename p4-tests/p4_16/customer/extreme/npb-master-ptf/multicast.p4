@@ -35,8 +35,8 @@ control MulticastReplication (
 
 		eg_md.bd             = bd;
 
-		hdr_0.nsh_type1.spi  = spi;
-		hdr_0.nsh_type1.si   = si;
+		eg_md.nsh_md.spi     = spi;
+		eg_md.nsh_md.si      = si;
 
 		eg_md.nexthop        = nexthop_index;
 		eg_md.tunnel_0.index = tunnel_index;

@@ -25,6 +25,38 @@ control npb_ing_sff_top (
 
 	// =====================================
 
+	action unicast_direct(
+		switch_port_lag_index_t port_lag_index,
+
+		bool end_of_chain,
+		bit<6> lag_hash_mask_en
+	) {
+		stats.count();
+
+//		ig_md.egress_port_lag_index = port_lag_index; // DOES NOT FIT
+
+		ig_md.nsh_md.end_of_path = end_of_chain;
+		ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
+	}
+
+	// =====================================
+
+	action multicast(
+//		switch_mgid_t mgid,
+
+		bool end_of_chain,
+		bit<6> lag_hash_mask_en
+	) {
+		stats.count();
+
+//		ig_md.multicast.id = mgid;
+
+		ig_md.nsh_md.end_of_path = end_of_chain;
+		ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
+	}
+
+	// =====================================
+
 	action unicast(
 		switch_nexthop_t nexthop_index,
 
@@ -41,30 +73,19 @@ control npb_ing_sff_top (
 
 	// =====================================
 
-	action multicast(
-		bool end_of_chain,
-		bit<6> lag_hash_mask_en
-	) {
-		stats.count();
-
-		ig_md.nsh_md.end_of_path = end_of_chain;
-		ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
-	}
-
-	// =====================================
-
 	table ing_sff_fib {
 		key = {
-			hdr_0.nsh_type1.spi     : exact @name("spi");
+			ig_md.nsh_md.spi        : exact @name("spi");
 #ifdef SFF_PREDECREMENTED_SI_ENABLE
 			ig_md.nsh_md.si_predec  : exact @name("si");
 #else
-			hdr_0.nsh_type1.si      : exact @name("si");
+			ig_md.nsh_md.si         : exact @name("si");
 #endif
 		}
 
 		actions = {
 			drop_pkt;
+			unicast_direct;
 			multicast;
 			unicast;
 		}

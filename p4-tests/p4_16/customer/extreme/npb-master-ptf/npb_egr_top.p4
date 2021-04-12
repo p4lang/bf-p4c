@@ -46,17 +46,17 @@ control npb_egr_top (
 /*
         npb_ing_sf_npb_basic_adv_dedup_hash.apply (
             eg_md.lkp_1,         // for hash
-            (bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+            (bit<VPN_ID_WIDTH>)eg_md.nsh_md.vpn, // for hash
             eg_md.nsh_md.hash_2
         );
 
 		npb_ing_sf_npb_basic_adv_dedup.apply (
 			eg_md.nsh_md.dedup_en,
 			eg_md.lkp_1,         // for hash
-			(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+			(bit<VPN_ID_WIDTH>)eg_md.nsh_md.vpn, // for hash
 			eg_md.nsh_md.hash_2,
 //			eg_md.ingress_port,  // for dedup
-			hdr_0.nsh_type1.sap, // for dedup
+			eg_md.nsh_md.sap, // for dedup
 			eg_intr_md_for_dprsr.drop_ctl
 		);
 */
@@ -64,9 +64,9 @@ control npb_egr_top (
 		npb_egr_sf_proxy_dedup.apply (
 			eg_md.nsh_md.dedup_en,
 			eg_md.lkp_1,         // for hash
-			(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+			(bit<VPN_ID_WIDTH>)eg_md.nsh_md.vpn, // for hash
 //			eg_md.ingress_port,  // for dedup
-			hdr_0.nsh_type1.sap, // for dedup
+			eg_md.nsh_md.sap, // for dedup
 			eg_intr_md_for_dprsr.drop_ctl
 		);
 #endif
@@ -75,7 +75,7 @@ control npb_egr_top (
 		// Set Initial Scope
 		// -------------------------------------
 
-		if(hdr_0.nsh_type1.scope == 0) {
+		if(eg_md.nsh_md.scope == 0) {
 #ifdef EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
 			// do nothing
 #else
@@ -135,8 +135,8 @@ control npb_egr_top (
 		tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 		tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
-		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
+//		eg_md.nsh_md.scope = eg_md.nsh_md.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
+		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0, eg_md.nsh_md.scope);
 
 		// -------------------------------------
 		// SFF - Hdr Decap / Encap

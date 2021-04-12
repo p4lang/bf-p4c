@@ -310,7 +310,6 @@ control IngressMacAcl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
-	inout switch_nexthop_t nexthop_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -338,7 +337,7 @@ control IngressMacAcl(
 			int_control_flags                      : ternary;
 #endif
 			// -------------------------------------------
-			hdr.nsh_type1.sap                      : ternary @name("sap");
+			ig_md.nsh_md.sap                      : ternary @name("sap");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -377,7 +376,6 @@ control IngressIpAcl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
-	inout switch_nexthop_t nexthop_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -406,7 +404,7 @@ control IngressIpAcl(
 			int_control_flags                      : ternary;
 #endif
 			// -------------------------------------------
-			hdr.nsh_type1.sap                      : ternary @name("sap");
+			ig_md.nsh_md.sap                      : ternary @name("sap");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -478,7 +476,6 @@ control IngressIpv4Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
-	inout switch_nexthop_t nexthop_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -509,7 +506,7 @@ control IngressIpv4Acl(
 			int_control_flags                      : ternary;
 #endif
 			// -------------------------------------------
-			hdr.nsh_type1.sap                      : ternary @name("sap");
+			ig_md.nsh_md.sap                      : ternary @name("sap");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -582,7 +579,6 @@ control IngressIpv6Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
-	inout switch_nexthop_t nexthop_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -613,7 +609,7 @@ control IngressIpv6Acl(
 			int_control_flags                      : ternary;
 #endif
 			// -------------------------------------------
-			hdr.nsh_type1.sap                      : ternary @name("sap");
+			ig_md.nsh_md.sap                      : ternary @name("sap");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -688,7 +684,6 @@ control IngressL7Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
-	inout switch_nexthop_t nexthop_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -716,7 +711,7 @@ control IngressL7Acl(
 			int_control_flags                      : ternary;
 #endif
 			// -------------------------------------------
-			hdr.nsh_type1.sap                      : ternary @name("sap");
+			ig_md.nsh_md.sap                      : ternary @name("sap");
 			// -------------------------------------------
 			flow_class_                            : ternary @name("flow_class");
 		}
@@ -794,7 +789,6 @@ control IngressAcl(
 //	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 
-	switch_nexthop_t nexthop;
 	bool drop;
 	bool terminate;
 	bool scope;
@@ -812,12 +806,12 @@ control IngressAcl(
 	// -------------------------------------
 /*
 	action new_scope(bit<8> scope_new) {
-		hdr_0.nsh_type1.scope = scope_new;
+		ig_md.nsh_md.scope = scope_new;
 	}
 
 	table scope_inc {
 		key = {
-			hdr_0.nsh_type1.scope : exact;
+			ig_md.nsh_md.scope : exact;
 		}
 		actions = {
 			new_scope;
@@ -844,7 +838,6 @@ control IngressAcl(
 	// -------------------------------------
 
 	apply {
-		nexthop                      = 0;
 		drop                         = false;
 		terminate                    = false;
 		scope                        = false;
@@ -859,7 +852,7 @@ control IngressAcl(
 		ig_md.nsh_md.dedup_en        = false;
 		ig_md.nsh_md.sfc_enable      = false;
 
-#ifdef PROFILE_BETA
+#ifdef PA_NO_INIT
 		ig_intr_md_for_tm.copy_to_cpu = 0;
 #endif
 
@@ -883,7 +876,6 @@ control IngressAcl(
 			l4_dst_port, l4_dst_port_is_rng_bitmask,
 			int_ctrl_flags,
 			// ----- results -----
-			nexthop,
 			drop,
 			terminate,
 			scope,
@@ -905,7 +897,6 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
-				nexthop,
 				drop,
 				terminate,
 				scope,
@@ -927,7 +918,6 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
-				nexthop,
 				drop,
 				terminate,
 				scope,
@@ -947,7 +937,6 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
-				nexthop,
 				drop,
 				terminate,
 				scope,
@@ -972,7 +961,6 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
-				nexthop,
 				drop,
 				terminate,
 				scope,
@@ -994,14 +982,14 @@ control IngressAcl(
 		}
 
 		// note: terminate + !scope is an illegal condition
-
+/*
 		if(lkp.next_lyr_valid == true) {
 
 			// ----- terminate -----
 
 			if(terminate == true) {
 				ig_md.tunnel_1.terminate           = true;
-				if(hdr_0.nsh_type1.scope == 1) {
+				if(ig_md.nsh_md.scope == 1) {
 					ig_md.tunnel_2.terminate           = true;
 				}
 			}
@@ -1010,7 +998,7 @@ control IngressAcl(
 
 #ifdef SF_0_ALLOW_SCOPE_CHANGES
 			if(scope == true) {
-				if(hdr_0.nsh_type1.scope == 0) {
+				if(ig_md.nsh_md.scope == 0) {
 
 					// note: need to change scope here so that the lag
 					// hash gets the new values....
@@ -1035,18 +1023,20 @@ control IngressAcl(
 //					ig_md.nsh_md.hash_1 = ig_md.nsh_md.hash_2;
 				}
 
-				hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+				ig_md.nsh_md.scope = ig_md.nsh_md.scope + 1;
 //				scope_inc.apply();
 			}
 #endif
 		}
+*/
+		Scoper_ScopeAndTerm.apply(ig_md.lkp_2, ig_md.lkp_1, terminate, scope, ig_md.nsh_md.scope, ig_md.tunnel_1.terminate, ig_md.tunnel_2.terminate);
 
 		// ----- truncate -----
 
 		if(ig_md.nsh_md.truncate_enable) {
 #if __TARGET_TOFINO__ == 2
 			ig_intr_md_for_dprsr.mtu_trunc_len = ig_md.nsh_md.truncate_len + BRIDGED_METADATA_WIDTH;
-  #ifdef PROFILE_BETA
+  #ifdef PA_NO_INIT
 		} else {
 			ig_intr_md_for_dprsr.mtu_trunc_len = 0x3fff;
   #endif
@@ -1111,7 +1101,7 @@ control EgressMacAcl(
 ) (
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1180,7 +1170,7 @@ control EgressIpAcl(
 )(
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1282,7 +1272,7 @@ control EgressIpv4Acl(
 ) (
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1388,7 +1378,7 @@ control EgressIpv6Acl(
 )(
 	switch_uint32_t table_size=512
 ) {
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=true) stats;
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES,true_egress_accounting=false) stats;
 
 	EGRESS_ACL_ACTIONS
 
@@ -1545,7 +1535,7 @@ control EgressAcl(
 
 	table terminate_table {
 		key = {
-			hdr_0.nsh_type1.scope        : exact;
+			eg_md.nsh_md.scope           : exact;
 
 			eg_md.nsh_md.terminate_outer : exact; // prev
 			terminate                    : exact; // curr
@@ -1711,15 +1701,15 @@ control EgressAcl(
 /*
 		if(terminate || eg_md.nsh_md.terminate_inner) {
 			eg_md.tunnel_1.terminate           = true;
-			if(hdr_0.nsh_type1.scope == 1) {
+			if(eg_md.nsh_md.scope == 1) {
 				eg_md.tunnel_2.terminate           = true;
 			}
 		}
 */
 
-#ifdef PROFILE_BETA
+#ifdef PA_NO_INIT
 
-		if(((eg_md.nsh_md.terminate_inner == true) && (hdr_0.nsh_type1.scope == 1)) || ((lkp.next_lyr_valid == true) && (terminate == true))) {
+		if(((eg_md.nsh_md.terminate_inner == true) && (eg_md.nsh_md.scope == 1)) || ((lkp.next_lyr_valid == true) && (terminate == true))) {
 			eg_md.tunnel_1.terminate           = true;
 		} else {
 			eg_md.tunnel_1.terminate           = false;
@@ -1730,7 +1720,7 @@ control EgressAcl(
 
 			if(terminate == true) { 
 //				eg_md.tunnel_1.terminate           = true;
-				if(hdr_0.nsh_type1.scope == 1) {
+				if(eg_md.nsh_md.scope == 1) {
 					eg_md.tunnel_2.terminate           = true;
 				}
 
@@ -1743,7 +1733,7 @@ control EgressAcl(
 
 				// note: don't need to advance the data here, as nobody else looks at it after this.
 
-				hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+				eg_md.nsh_md.scope = eg_md.nsh_md.scope + 1;
 //				scope_inc.apply();
 			}
 		}
@@ -1752,18 +1742,18 @@ control EgressAcl(
 
 		if((eg_md.nsh_md.terminate_inner == true)) {
 			// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-			if(hdr_0.nsh_type1.scope == 1) {
+			if(eg_md.nsh_md.scope == 1) {
 				eg_md.tunnel_1.terminate           = true;
 			}
 		}
-
+/*
 		if(lkp.next_lyr_valid == true) {
 
 			// ----- terminate -----
 
 			if(terminate == true) { 
 				eg_md.tunnel_1.terminate           = true;
-				if(hdr_0.nsh_type1.scope == 1) {
+				if(eg_md.nsh_md.scope == 1) {
 					eg_md.tunnel_2.terminate           = true;
 				}
 
@@ -1776,10 +1766,12 @@ control EgressAcl(
 
 				// note: don't need to advance the data here, as nobody else looks at it after this.
 
-				hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope + 1;
+				eg_md.nsh_md.scope = eg_md.nsh_md.scope + 1;
 //				scope_inc.apply();
 			}
 		}
+*/
+		Scoper_TermOnly.apply(eg_md.lkp_1, terminate, eg_md.nsh_md.scope, eg_md.tunnel_1.terminate, eg_md.tunnel_2.terminate);
 
 #endif
 
@@ -1788,7 +1780,7 @@ control EgressAcl(
 		if(eg_md.nsh_md.truncate_enable) {
 #if __TARGET_TOFINO__ == 2
 			eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len;
-  #ifdef PROFILE_BETA
+  #ifdef PA_NO_INIT
 		} else {
 			eg_intr_md_for_dprsr.mtu_trunc_len = 0x3fff;
   #endif

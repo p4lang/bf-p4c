@@ -41,13 +41,13 @@ control npb_ing_top (
 		// npb path.  For now, just setting it to 0 here (it's set in port.p4,
 		// but probably not using the fields we want to be used for the npb)
 		
-		ig_intr_md_for_tm.level2_exclusion_id = 0;
+//		ig_intr_md_for_tm.level2_exclusion_id = 0;
 
 		// -----------------------------------------------------------------
 		// Set Initial Scope
 		// -----------------------------------------------------------------
 
-		if(hdr_0.nsh_type1.scope == 0) {
+		if(ig_md.nsh_md.scope == 0) {
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
 			// do nothing
 #else
@@ -60,7 +60,7 @@ control npb_ing_top (
 #endif
 		} else {
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
-			Scoper.apply(
+			Scoper_ScopeOnly.apply(
 				ig_md.lkp_2,
 
 				ig_md.lkp_1
@@ -133,7 +133,7 @@ control npb_ing_top (
 /*
 		npb_ing_sf_npb_basic_adv_dedup_hash.apply (
 			ig_md.lkp_1,         // for hash
-			(bit<VPN_ID_WIDTH>)hdr_0.nsh_type1.vpn, // for hash
+			(bit<VPN_ID_WIDTH>)ig_md.nsh_md.vpn, // for hash
 			ig_md.nsh_md.hash_2
 		);
 */
@@ -182,14 +182,14 @@ control npb_ing_top (
 		tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 		tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
-		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0);
+//		ig_md.nsh_md.scope = ig_md.nsh_md.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
+		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, tunnel_2.terminate, hdr_0, ig_md.nsh_md.scope);
   #else
 		tunnel_decap_outer.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 //		tunnel_decap_inner.apply(hdr_1, tunnel_1, hdr_2, tunnel_2, hdr_3);
 
-//		hdr_0.nsh_type1.scope = hdr_0.nsh_type1.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
-		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, false,              hdr_0);
+//		ig_md.nsh_md.scope = ig_md.nsh_md.scope - (bit<8>)eg_md.nsh_md.terminate_popcount;
+		TunnelDecapScopeDecrement.apply(tunnel_1.terminate, false,              hdr_0, ig_md.nsh_md.scope);
   #endif
 #endif
 
@@ -227,5 +227,22 @@ control npb_ing_top (
 				ig_intr_md_for_tm
 			);
 		}
+
+		// -------------------------------------
+		// Add NSH header
+		// -------------------------------------
+
+        hdr_0.nsh_type1_internal = {
+            version  = 0,
+            o        = 0,
+            reserved = 0,
+            ttl      = ig_md.nsh_md.ttl,
+            len      = 0,
+            spi      = ig_md.nsh_md.spi,
+            si       = ig_md.nsh_md.si,
+            vpn      = ig_md.nsh_md.vpn,
+            scope    = ig_md.nsh_md.scope,
+            sap      = ig_md.nsh_md.sap
+        };
 	}
 }

@@ -123,13 +123,13 @@ action add_bridged_md(
 		ig_md.nexthop,
 //		ig_md.lkp.pkt_type,
 		ig_md.cpu_reason,
-//		ig_md.timestamp,
+		ig_md.timestamp,
+		ig_md.hash,
 		ig_md.flags.rmac_hit,
 		ig_md.flags.bypass_egress
 	};
 
 	bridged_md.nsh = {
-		// nsh metadata
 //		ig_md.nsh_md.start_of_path,
 		ig_md.nsh_md.end_of_path,
 		ig_md.nsh_md.l2_fwd_en,

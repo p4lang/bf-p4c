@@ -258,31 +258,47 @@ header nsh_type1_h {
     bit<4> md_type;
     bit<8> next_proto;
 
-	// --------------------
-
     // word 1: base word 1
     bit<24> spi;
     bit<8>  si;
 
-	// --------------------
+    // word 2: ext type 1 word 0
+	bit<8>  ver;
+//	bit<8>  scope;
+	bit<8>  reserved3;
+//	bit<16> reserved3;
+	bit<16> lag_hash;
 
-    // word 2: ext type 1 word 0-3
-	bit<8>                          ver;       // word 0
-//	bit<8>                          scope;     // word 0
-	bit<8>                          reserved3; // word 0
-//	bit<16>                         reserved3; // word 0
-	bit<16>                         lag_hash;  // word 0
+    // word 2: ext type 1 word 1
+	bit<16> vpn;
+	bit<16> sfc_data; // unused
 
-	bit<16>                         vpn;       // word 1
-	bit<16>                         sfc_data;  // word 1
+    // word 2: ext type 1 word 2
+	bit<8>  reserved4;
+	bit<8>  scope;
+	bit<16> sap;
 
-	bit<8>                          reserved4; // word 2
-	bit<8>                          scope;     // word 2
-	bit<16>                         sap;       // word 2
-
-	bit<32>                         timestamp; // word 3
+    // word 2: ext type 1 word 3
+	bit<32> timestamp;
 }
 
+header nsh_type1_internal_h {
+    // word 0: base word 0
+    bit<2> version;
+    bit<1> o;
+    bit<1> reserved;
+    bit<6> ttl;
+    bit<6> len; // in 4-byte words
+
+    // word 0: base word 1
+    bit<24> spi;
+    bit<8>  si;
+
+    // word 2: ext type 1 word 0-3
+	bit<16> vpn;
+	bit<8>  scope;
+	bit<16> sap;
+}
 
 //-----------------------------------------------------------
 // ERSPAN

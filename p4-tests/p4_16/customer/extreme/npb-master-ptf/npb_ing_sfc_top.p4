@@ -60,15 +60,15 @@ control npb_ing_sfc_top (
 		stats.count();
 
 //		ig_md.nsh_md.si_predec  = 0;
-		ig_md.nsh_md.si_predec  = hdr_0.nsh_type1.si;
+		ig_md.nsh_md.si_predec  = ig_md.nsh_md.si;
 	}
 
 	// ---------------------------------
 
 	table ing_sfc_sf_sel {
 		key = {
-			hdr_0.nsh_type1.spi : exact @name("spi");
-			hdr_0.nsh_type1.si  : exact @name("si");
+			ig_md.nsh_md.spi : exact @name("spi");
+			ig_md.nsh_md.si  : exact @name("si");
 		}
 
 		actions = {
@@ -95,12 +95,12 @@ control npb_ing_sfc_top (
 	) {
 		stats_nsh_xlate.count();
 
-		hdr_0.nsh_type1.ttl     = ttl;
-		hdr_0.nsh_type1.spi     = spi;
-		hdr_0.nsh_type1.si      = si;
+		ig_md.nsh_md.ttl     = ttl;
+		ig_md.nsh_md.spi     = spi;
+		ig_md.nsh_md.si      = si;
 		ig_md.nsh_md.si_predec  = si_predec;
 
-		hdr_0.nsh_type1.ver     = 0x2;
+		ig_md.nsh_md.ver     = 0x2;
 	}
 
 	// ---------------------------------
@@ -116,7 +116,7 @@ control npb_ing_sfc_top (
 
 	table ing_sfc_sf_sel_nsh_xlate {
 		key = {
-			hdr_0.nsh_type1.spi : exact @name("tool_address");
+			ig_md.nsh_md.spi : exact @name("tool_address");
 		}
 
 		actions = {
@@ -147,10 +147,10 @@ control npb_ing_sfc_top (
 
 		ig_md.nsh_md.si_predec    = si_predec;    //  8 bits
 
-		hdr_0.nsh_type1.sap        = (bit<16>)sap; // 16 bits
-		hdr_0.nsh_type1.vpn        = (bit<16>)vpn; // 16 bits
-		hdr_0.nsh_type1.spi        = spi;          // 24 bits
-		hdr_0.nsh_type1.si         = si;           //  8 bits
+		ig_md.nsh_md.sap        = (bit<16>)sap; // 16 bits
+		ig_md.nsh_md.vpn        = (bit<16>)vpn; // 16 bits
+		ig_md.nsh_md.spi        = spi;          // 24 bits
+		ig_md.nsh_md.si         = si;           //  8 bits
 	}
 
 	// ---------------------------------
@@ -210,7 +210,7 @@ control npb_ing_sfc_top (
 
 			// ----- table -----
   #ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
-			if(hdr_0.nsh_type1.ver == 2) {
+			if(ig_md.nsh_md.ver == 2) {
     #ifdef SFF_PREDECREMENTED_SI_ENABLE
 				ing_sfc_sf_sel.apply();
     #endif
@@ -232,11 +232,13 @@ control npb_ing_sfc_top (
 //			ig_md.nsh_md.start_of_path = true;  // * see design note below
 //			ig_md.nsh_md.sfc_enable    = false; // * see design note below
 
-			// ----- header -----
+			ig_md.nsh_md.ttl = 0x00; // 63 is the rfc's recommended default value.
 
+			// ----- header -----
+/*
 			// note: according to p4 spec, initializing a header also automatically sets it valid.
-//			hdr_0.nsh_type1.setValid();
-			hdr_0.nsh_type1 = {
+//			ig_md.nsh_md.setValid();
+			ig_md.nsh_md = {
 				version    = 0x0,
 				o          = 0x0,
 				reserved   = 0x0,
@@ -266,7 +268,7 @@ control npb_ing_sfc_top (
 				timestamp = 0
 #endif
 			};
-
+*/
 			// ----- table -----
 			port_mapping.apply();
 

@@ -20,7 +20,7 @@ parser NpbEgressParser(
         eg_md.pkt_length = eg_intr_md.pkt_length;
         eg_md.port = eg_intr_md.egress_port;
 
-#ifdef PROFILE_BETA
+#ifdef PA_NO_INIT
         eg_md.tunnel_0.terminate = false;
         eg_md.tunnel_1.terminate = false;
         eg_md.tunnel_2.terminate = false;
@@ -93,7 +93,8 @@ parser NpbEgressParser(
         eg_md.nexthop              = hdr.bridged_md.base.nexthop;
 //      eg_md.pkt_type             = hdr.bridged_md.base.pkt_type;
         eg_md.cpu_reason           = hdr.bridged_md.base.cpu_reason;
-//      eg_md.ingress_timestamp    = hdr.bridged_md.base.timestamp;
+        eg_md.ingress_timestamp    = hdr.bridged_md.base.timestamp;
+		eg_md.hash                 = hdr.bridged_md.base.hash;
         eg_md.flags.rmac_hit       = hdr.bridged_md.base.rmac_hit;
 		eg_md.flags.bypass_egress  = hdr.bridged_md.base.bypass_egress;
 #ifdef TUNNEL_ENABLE
@@ -159,8 +160,10 @@ parser NpbEgressParser(
         eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
 #endif
 		eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRRROR; // for cpu header (derek added)
+/*
         eg_md.mirror.session_id = port_md.session_id;         // for ??? header
 //      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
+*/
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 #ifdef PACKET_LENGTH_ADJUSTMENT
         eg_md.mirror.type = port_md.type;
@@ -185,8 +188,10 @@ parser NpbEgressParser(
         eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
 #endif
 		eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRRROR; // for cpu header (derek added)
+/*
         eg_md.mirror.session_id = port_md.session_id;         // for ??? header
 //      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
+*/
         eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 #ifdef PACKET_LENGTH_ADJUSTMENT
         eg_md.mirror.type = port_md.type;
@@ -458,6 +463,7 @@ parser NpbEgressParser(
         }
     }
     state parse_transport_nsh {
+/*
 	    pkt.extract(hdr.transport.nsh_type1);
         scope = hdr.transport.nsh_type1.scope;
 
@@ -468,6 +474,28 @@ parser NpbEgressParser(
             (1, NSH_PROTOCOLS_ETH): parse_outer_ethernet_scope1;
 #else
             (1, NSH_PROTOCOLS_ETH): parse_outer_ethernet_scope0;
+#endif // EGRESS_PARSER_POPULATES_LKP_SCOPED
+            
+            default: reject;  // todo: support ipv4? ipv6?
+        }
+*/
+	    pkt.extract(hdr.transport.nsh_type1_internal);
+        scope = hdr.transport.nsh_type1_internal.scope;
+
+		eg_md.nsh_md.ttl           = hdr.transport.nsh_type1_internal.ttl;
+		eg_md.nsh_md.spi           = hdr.transport.nsh_type1_internal.spi;
+		eg_md.nsh_md.si            = hdr.transport.nsh_type1_internal.si;
+		eg_md.nsh_md.vpn           = hdr.transport.nsh_type1_internal.vpn;
+		eg_md.nsh_md.scope         = hdr.transport.nsh_type1_internal.scope;
+		eg_md.nsh_md.sap           = hdr.transport.nsh_type1_internal.sap;
+
+        transition select(scope) {
+            (0): parse_outer_ethernet_scope0;
+
+#ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
+            (1): parse_outer_ethernet_scope1;
+#else
+            (1): parse_outer_ethernet_scope0;
 #endif // EGRESS_PARSER_POPULATES_LKP_SCOPED
             
             default: reject;  // todo: support ipv4? ipv6?
@@ -1602,7 +1630,7 @@ parser NpbEgressParser(
     // Scope 0
     //-------------------------------------------------------------------------            
 
-    // For scope0 inner parsing, v4 or v6 is all that's needed downstream.
+    // For scope0 inner parsing, l2 and v4 or v6 is all that's needed downstream.
         
     state parse_inner_ipv4_scope0 {
         pkt.extract(hdr.inner.ipv4);
