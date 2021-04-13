@@ -248,11 +248,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  ".*gateway sharing search .*, but wants a different match group"
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Unimplemented .*: Split attached table with some match and some attached in the same stage, but not all in one stage"
   ../glass/testsuite/p4_tests/fox/COMPILER-957/case6123.p4
 )
