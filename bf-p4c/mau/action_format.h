@@ -133,15 +133,16 @@ class Parameter {
 
 
 class Argument : public Parameter {
-    cstring _name;
+    IR::ID _name;
     le_bitrange _param_field;
 
 
  public:
-    cstring name() const override { return _name; }
+    cstring name() const override { return _name.name; }
+    cstring originalName() const { return _name.originalName; }
     le_bitrange param_field() const { return _param_field; }
 
-    Argument(cstring n, le_bitrange pf) : _name(n), _param_field(pf) {}
+    Argument(IR::ID n, le_bitrange pf) : _name(n), _param_field(pf) {}
     virtual ~Argument() {}
 
     bool from_p4_program() const override { return true; }

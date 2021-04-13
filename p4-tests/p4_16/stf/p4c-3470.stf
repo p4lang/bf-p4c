@@ -1,0 +1,11 @@
+# Add entries
+add doSet hdr.data.addr:0x10101010 set(value:0xf)
+add doSet hdr.data.addr:0x20202020 set2(value:0xf)
+
+#        addr     op 
+expect 1 10101010 0f  
+packet 0 10101010 00 
+
+expect 1 20202020 0f 
+packet 0 20202020 00 
+

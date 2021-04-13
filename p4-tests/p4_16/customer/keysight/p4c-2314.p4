@@ -697,7 +697,7 @@ control process_port_forwarding(inout ingress_metadata_t ig_md,
     }
     @name("._set_eg_port")
     action _set_eg_port(
-      @brief(Egress Port)
+      @brief("Egress Port")
       @description ("Egress port specification")
       @Api(label=Port,type=uint32,format=dec)
       PortId_t eg_port

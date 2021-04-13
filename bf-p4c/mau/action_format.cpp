@@ -2260,7 +2260,7 @@ void Format::create_argument(ALUOperation &alu,
     BUG_CHECK(ir_arg != nullptr, "Cannot create argument");
     Argument *arg = new Argument(ir_arg->name.name, read.range());
     if (cond_arg)
-        arg->set_cond(VALUE, cond_arg->orig_arg->name);
+        arg->set_cond(VALUE, cond_arg->orig_arg->name.toString());
     ALUParameter ap(arg, container_bits);
     LOG6("\t\tCreating Argument " << arg << " at container bits " << container_bits);
     alu.add_param(ap);
@@ -2285,7 +2285,7 @@ void Format::create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &rea
         BUG("Any constant used in an ALU operation would by definition have to be < 32 bits");
     Constant *con = new Constant(constant_value, read.size());
     if (cond_arg)
-        con->set_cond(VALUE, cond_arg->orig_arg->name);
+        con->set_cond(VALUE, cond_arg->orig_arg->name.toString());
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
     LOG6("\t\tCreating Constant " << con << " at container bits " << container_bits);

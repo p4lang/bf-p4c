@@ -84,9 +84,10 @@ static bool using_tna_arch() {
     // executable, but the user elects to use a non-Barefoot backend with non-Barefoot options.
     // In this scenario, this function still gets called from primitive converters that are
     // statically registered by this compilation unit.
-    auto& options = P4CContext::get().options();
+    auto& context = P4CContext::get();
+    auto* bfn_context = dynamic_cast<BFNContext*>(&context);
 
-    if (tna_architectures.count(options.arch) != 0)
+    if (bfn_context != nullptr && tna_architectures.count(bfn_context->options().arch) != 0)
         return true;
     return false;
 }

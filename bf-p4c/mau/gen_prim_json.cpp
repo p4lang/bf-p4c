@@ -367,7 +367,7 @@ void GeneratePrimitiveInfo::validate_add_op_json(Util::JsonObject *_primitive,
     } else  if (auto cnst = exp->to<IR::Constant>()) {
          add_op_json(_primitive, op_name, "immediate", cnst->toString());
      } else if (auto aarg = exp->to<IR::MAU::ActionArg>()) {
-         add_op_json(_primitive, op_name, "action_param", canon_name(aarg->name));
+         add_op_json(_primitive, op_name, "action_param", canon_name(aarg->name.toString()));
      } else if (auto *sl = exp->to<IR::Slice>()) {
          if (auto e0 = sl->e0) {
             if (auto *ao = e0->to<IR::MAU::AttachedOutput>()) {

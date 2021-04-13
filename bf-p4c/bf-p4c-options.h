@@ -60,6 +60,11 @@ class BFN_Options : public CompilerOptions {
     cstring programName;
     cstring outputDir = nullptr;    // output directory, default "programName.device"
 
+    // Default value on v1ModelVersion must be set based on changes to p4c
+    // frontend. Check PR 2706 in p4lang/p4c. This value will need an update
+    // whenever latest version model number changes in the frontend
+    int v1ModelVersion = 20200408;
+
     BFN_Options();
 
     /// Process the command line arguments and set options accordingly.

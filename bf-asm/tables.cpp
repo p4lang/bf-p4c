@@ -1142,26 +1142,36 @@ Table::Actions::Action::reverse_alias() const {
 std::string Table::Actions::Action::alias_lookup(int lineno, std::string name,
                                                  int &lo, int &hi) const {
     bool err = false;
-    while (alias.count(name)) {
+    bool found = false;
+    while (alias.count(name) && !found) {
         for (auto &a : ValuesForKey(alias, name)) {
             // FIXME -- need better handling of multiple aliases...
             if (lo >= 0 && a.name != "hash_dist") {
                 if (a.lo >= 0) {
                     if (a.hi >= 0 && hi + a.lo > a.hi) {
                         err = true;
-                        continue; }
+                        continue;
+                    }
                     lo += a.lo;
-                    hi += a.lo; }
+                    hi += a.lo;
+                    name = a.name;
+                    found = true;
+                }
             } else {
                 lo = a.lo;
-                hi = a.hi; }
-            name = a.name;
+                hi = a.hi;
+                name = (alias.count(a.name)) ?
+                        alias_lookup(lineno, a.name, lo, hi) : a.name;
+            }
             lineno = a.lineno;
             err = false;
-            break; }
+            break;
+        }
         if (err) {
             error(lineno, "invalid bitslice of %s", name.c_str());
-            break; } }
+            break;
+        }
+    }
     return name;
 }
 
@@ -1323,6 +1333,15 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                             } else {
                                 k->second.is_constant = true;
                                 k->second.value = a.value.i; }
+                        } else if (a.value.type == tSTR) {
+                            auto k = alias.find(a.value.s);
+                            if (k == alias.end()) {
+                                alias.emplace(a.key.s, a.value);
+                            } else {
+                                auto alias_value = k->second;
+                                alias.erase(k);
+                                alias.emplace(a.key.s, alias_value);
+                            }
                         } else { alias.emplace(a.key.s, a.value); } } }
 
         } else if (CHECKTYPE2(i, tSTR, tCMD)) {
@@ -1498,7 +1517,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
                           iaddr, inst->slot);
                 tbl->stage->imem_use[iaddr][inst->slot] = 1; } } }
     for (auto &a : alias) {
-        while (alias.count(a.second.name) == 1) {
+        while (alias.count(a.second.name) >= 1) {
             // the alias refers to something else in the alias list
             auto &rec = alias.find(a.second.name)->second;
             if (rec.name == a.first) {

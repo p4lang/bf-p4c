@@ -1068,7 +1068,7 @@ Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Acti
     return 0;
 }
 
-Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
+Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *act) {
     if (!dest.check() || !src1.check() || !src2.check()) return this;
     if (dest->reg.mau_id() < 0) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
@@ -1142,7 +1142,8 @@ struct Set : VLIWInstruction {
 };
 
 DepositField::DepositField(Table *tbl, const Set &s)
-: VLIWInstruction(s), dest(s.dest), src1(s.src), src2(::Phv::Ref(s.dest->reg, tbl->gress)) {}
+: VLIWInstruction(s), dest(s.dest), src1(s.src), src2(::Phv::Ref(s.dest->reg, tbl->gress)) {
+}
 
 Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) const {

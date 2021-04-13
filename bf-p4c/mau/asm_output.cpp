@@ -426,7 +426,9 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput::TableMatch::Prox
 void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
         const ActionData::Parameter *param, le_bitrange adt_range, cstring alias,
         safe_vector<ActionData::Argument> &full_args, cstring action_name) const {
+    LOG3("Emitting single alias for " << param << " in action : " << action_name);
     bool found = false;
+    cstring found_arg_name;
     bool single_value = true;
     le_bitrange arg_bits = { 0, 0 };
     if (auto arg = param->to<ActionData::Argument>()) {
@@ -438,15 +440,19 @@ void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
                 arg_bits = arg->param_field();
             }
             found = true;
+            found_arg_name = full_arg.originalName();
             break;
         }
         BUG_CHECK(found, "An argument %s was not found in the parameters of action %s",
                   arg->name(), action_name);
     }
 
+    std::string param_name_suffix = "";
     out << sep << param->name();
-    if (!single_value)
-        out << "." << arg_bits.lo << "-" << arg_bits.hi;
+    if (!single_value) {
+        param_name_suffix = "." + std::to_string(arg_bits.lo) + "-" + std::to_string(arg_bits.hi);
+        out << param_name_suffix;
+    }
     out << ": ";
     out << alias << "(" << adt_range.lo << ".." << adt_range.hi << ")";
     sep = ", ";
@@ -456,6 +462,14 @@ void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
         out << sep << constant->name() << ": ";
         out << constant->value().getrange(0, 32);
         sep = ", ";
+    } else {
+        // Additional aliasing to map locally generated action param names to the p4
+        // equivalent. With changes in frontend due to P4C-3644 all action params
+        // will become unique to fix issues with inlining and need this mapping.
+        if (param->name() != found_arg_name) {
+            out << ", " << found_arg_name << param_name_suffix
+                << ": " << param->name() << param_name_suffix;
+        }
     }
 }
 
@@ -492,7 +506,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
     safe_vector<ActionData::Argument> full_args;
     for (auto arg : af->args) {
         le_bitrange full_arg_bits = { 0, arg->type->width_bits() - 1};
-        full_args.emplace_back(arg->name.name, full_arg_bits);
+        full_args.emplace_back(arg->name, full_arg_bits);
     }
 
     out << indent << "- { ";
@@ -2567,13 +2581,13 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             bool first = true;
             for (auto arg : act->args) {
                 if (verbose) {
-                    out << indent++ << arg->name << ":" << std::endl;
+                    out << indent++ << arg->name.toString() << ":" << std::endl;
                     out << indent << "width: " << arg->type->width_bits() << std::endl;
                     emit_user_annotation_context_json(out, indent, arg);
                     indent--;
                 } else {
                     if (!first) out << ", ";
-                    out << arg->name << ": " << arg->type->width_bits();
+                    out << arg->name.toString() << ": " << arg->type->width_bits();
                 }
 
                 first = false;
@@ -2584,11 +2598,12 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         }
     }
     bool preorder(const IR::MAU::Action *act) override {
+        LOG5("EmitAction preorder Action : " << act->name);
         for (auto call : act->stateful_calls) {
             auto *at = call->attached_callee;
             if (call->index == nullptr) continue;
             if (auto aa = call->index->to<IR::MAU::ActionArg>()) {
-                alias[aa->name] = self.indirect_address(at);
+                alias[aa->name.toString()] = self.indirect_address(at);
             }
         }
         auto &instr_mem = table->resources->instr_mem;
@@ -2647,7 +2662,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                     out << sep << k->value;
                     sep = ", ";
                 } else if (auto *a = call->index->to<IR::MAU::ActionArg>()) {
-                    out << sep << a->name;
+                    out << sep << a->name.toString();
                     sep = ", ";
                 } else if (call->index->is<IR::MAU::HashDist>()) {
                     out << sep << "$hash_dist";
@@ -2667,6 +2682,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         }
         return false; }
     bool preorder(const IR::MAU::SaluAction *act) override {
+        LOG5("EmitAction preorder SaluAction : " << act->name);
         out << indent << canon_name(act->name);
         if (act->inst_code >= 0) out << " " << act->inst_code;
         out << ":" << std::endl;
@@ -2677,6 +2693,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     bool preorder(const IR::Annotations *) override { return false; }
 
     bool preorder(const IR::MAU::Instruction *inst) override {
+        LOG5("  EmitAction preorder Instruction : " << inst->name);
         out << indent << "- " << inst->name;
         sep = " ";
         is_empty = false;
@@ -2685,11 +2702,13 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
      *  down through the entirety of the action pass
      */
     bool preorder(const IR::MAU::MultiOperand *mo) override {
+        LOG5("  EmitAction preorder MultiOperand : " << mo);
         out << sep << mo->name;
         sep = ", ";
         return false;
     }
     void handle_phv_expr(const IR::Expression *expr) {
+        LOG5("  EmitAction handle_phv_expr for expr: " << expr);
         unsigned use_type = isWrite() ? PHV::FieldUse::WRITE : PHV::FieldUse::READ;
         PHV::FieldUse use(use_type);
         if (sep) {
@@ -2728,6 +2747,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
      * HashDist IR object have already been converted in InstructionAdjustment
      */
     void handle_hash_dist(const IR::Expression *expr) {
+        LOG5("  EmitAction handle_hash_dist for expr: " << expr);
         int lo = -1; int hi = -1;
         const IR::MAU::HashDist *hd = nullptr;
         bool is_wrapped = false;
@@ -2767,6 +2787,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
 
 
     void handle_random_number(const IR::Expression *expr) {
+        LOG5("  EmitAction handle_random_number for expr: " << expr);
         int lo = -1;  int hi = -1;
         const IR::MAU::RandomNumber *rn = nullptr;
         bool is_wrapped = false;
@@ -2802,6 +2823,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     }
 
     bool preorder(const IR::Slice *sl) override {
+        LOG5("  EmitAction preorder slice : " << sl);
         assert(sep);
         if (self.phv.field(sl)) {
             handle_phv_expr(sl);
@@ -2823,6 +2845,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     }
 
     bool preorder(const IR::MAU::WrappedSlice *sl) override {
+        LOG5("  EmitAction preorder wrapped slice : " << sl);
         assert(sep);
         if (auto mo = sl->e0->to<IR::MAU::MultiOperand>()) {
             visit(mo);
@@ -2840,18 +2863,21 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     }
 
     bool preorder(const IR::Constant *c) override {
+        LOG5("  EmitAction preorder constant : " << c);
         assert(sep);
         out << sep << c->value;
         sep = ", ";
         return false;
     }
     bool preorder(const IR::BoolLiteral *c) override {
+        LOG5("  EmitAction preorder BoolLiteral: " << c);
         assert(sep);
         out << sep << c->value;
         sep = ", ";
         return false;
     }
     bool preorder(const IR::MAU::ActionDataConstant *adc) override {
+        LOG5("  EmitAction preorder ActionDataConstant: " << adc);
         assert(sep);
         out << sep << adc->name;
         sep = ", ";
@@ -2862,16 +2888,19 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     }
 
     bool preorder(const IR::MAU::ActionArg *a) override {
+        LOG5("  EmitAction preorder ActionArg : " << a);
         assert(sep);
         out << sep << a->toString();
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::SaluReg *r) override {
+        LOG5("  EmitAction preorder SaluReg: " << r);
         assert(sep);
         out << sep << r->name;
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::SaluFunction *fn) override {
+        LOG5("  EmitAction preorder SaluFunction: " << fn);
         assert(sep);
         out << sep << fn->name;
         sep = "(";
@@ -2880,6 +2909,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::AttachedOutput *att) override {
+        LOG5("  EmitAction preorder AttachedOutput: " << att);
         assert(sep);
         out << sep << self.find_attached_name(table, att->attached);
         if (auto mtr = att->attached->to<IR::MAU::Meter>()) {
@@ -2889,6 +2919,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         sep = ", ";
         return false; }
     bool preorder(const IR::Member *m) override {
+        LOG5("  EmitAction preorder Member: " << m);
         if (m->expr->is<IR::MAU::AttachedOutput>()) {
             visit(m->expr, "expr");
             out << " " << m->member;
@@ -2896,15 +2927,18 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         } else {
             return preorder(static_cast<const IR::Expression *>(m)); } }
     bool preorder(const IR::MAU::StatefulCounter *sc) override {
+        LOG5("  EmitAction preorder StatefulCounter: " << sc);
         assert(sep);
         out << sep << self.find_attached_name(table, sc->attached);
         out << " address";
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::HashDist *hd) override {
+        LOG5("  EmitAction preorder HashDist: " << hd);
         handle_hash_dist(hd);
         return false; }
     bool preorder(const IR::MAU::RandomNumber *rn) override {
+        LOG5("  EmitAction preorder RandomNumber: " << rn);
         handle_random_number(rn);
         return false;
     }
@@ -2929,8 +2963,12 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         sep = nullptr;
         out << std::endl;
     }
-    bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
+    bool preorder(const IR::Cast *c) override {
+        LOG5("  EmitAction preorder Cast: " << c);
+        visit(c->expr); return false;
+    }
     bool preorder(const IR::MAU::IXBarExpression *e) override {
+        LOG5("  EmitAction preorder IXBarExpression : " << e);
         if (findContext<IR::MAU::Action>()) {
             out << sep << "ixbar /* " << e->expr << " */";
         } else if (findContext<IR::MAU::SaluAction>()) {
@@ -2941,6 +2979,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         sep = ", ";
         return false; }
     bool preorder(const IR::Expression *exp) override {
+        LOG5("  EmitAction preorder Expression : " << exp);
         handle_phv_expr(exp);
         return false;
     }
@@ -3475,7 +3514,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             size_t param_index = 0;
             for (auto param : *method_call->arguments) {
                 auto p = param_list.at(param_index++);
-                auto param_name = p->name;
+                auto param_name = p->name.toString();
                 out << indent++ << "- parameter_name: " << param_name << std::endl;
                 out << indent << "value: \"0x" << std::hex;
                 if (param->expression->type->to<IR::Type_Boolean>()) {
@@ -4197,7 +4236,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             int index = 0;
             for (auto param : act->default_params) {
                 if (const auto pval = param->expression->to<IR::Constant>())
-                    out << indent << act->args[index++]->name << ": "
+                    out << indent << act->args[index++]->name.toString() << ": "
                         << '"' << hex_big_int(pval->value) << '"' << std::endl;
             }
             indent--;

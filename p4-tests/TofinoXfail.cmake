@@ -1533,6 +1533,7 @@ p4c_add_xfail_reason("tofino"
   "Not all applies of table .* are mutually exclusive"
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_one_action_fail_after.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_one_action_fail_before.p4
+  testdata/p4_16_samples/psa-table-hit-miss.p4
 )
 
 # P4C-2115
@@ -1704,9 +1705,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*unexpected statement with call"
-  testdata/p4_16_samples/issue2291-bmv2.p4
   testdata/p4_16_samples/issue2205-1-bmv2.p4
-  testdata/p4_16_samples/issue2355.p4
 )
 
 p4c_add_xfail_reason("tofino"

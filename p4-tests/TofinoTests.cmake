@@ -8,7 +8,12 @@ packet_test_setup_check("tofino")
 set (V1_SEARCH_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 # Exclude some bmv2 p4s with conditional checksum updates that are not needed for backend
-set (V1_EXCLUDE_FILES "issue461-bmv2\\.p4" "issue1079-bmv2\\.p4" "header-stack-ops-bmv2\\.p4")
+set (V1_EXCLUDE_FILES 
+    "issue461-bmv2\\.p4" 
+    "issue1079-bmv2\\.p4"
+    "issue2291\\.p4" 
+    "header-stack-ops-bmv2\\.p4" 
+    "gauntlet.*-bmv2\\.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" P4_16_V1_TESTS INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")

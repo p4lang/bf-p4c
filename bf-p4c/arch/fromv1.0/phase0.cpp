@@ -409,7 +409,7 @@ struct FindPhase0Table : public Inspector {
 
             phase0->paramWrites.emplace_back(Phase0WriteFromParam {
                 dest->to<IR::Member>(),
-                source->to<IR::PathExpression>()->path->name.name
+                source->to<IR::PathExpression>()->path->name.toString()
             });
         }
 
@@ -487,11 +487,11 @@ struct FindPhase0Table : public Inspector {
             const int phase     = is_pad_field ? 0 : alignment;
             packing.padToAlignment(8, phase);
             LOG4("Padding phase = " << phase << ",  totalWidth = " << packing.totalWidth);
-            packing.appendField(new IR::PathExpression(param->name),
-                                 param->name, fieldSize);
+            packing.appendField(new IR::PathExpression(param->name.toString()),
+                                 param->name.toString(), fieldSize);
             if (!is_pad_field)
                 packing.padToAlignment(8);
-            LOG4("Append field " << param->name << " of size " <<
+            LOG4("Append field " << param->name.toString() << " of size " <<
                  fieldSize << " and apply padding (if non-padding field): totalWidth = " <<
                  packing.totalWidth);
         }

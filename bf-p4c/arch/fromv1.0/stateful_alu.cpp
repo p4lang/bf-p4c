@@ -12,8 +12,9 @@ const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
     if (!has_stateful_alu) {
         has_stateful_alu = true;
         if (use_v1model()) {
+            auto &options = BackendOptions();
             std::stringstream versionArg;
-            versionArg << "-DV1MODEL_VERSION=" << V1Model::instance.version;
+            versionArg << "-DV1MODEL_VERSION=" << options.v1ModelVersion;
             structure->include("tofino/stateful_alu.p4", versionArg.str());
         }
     }

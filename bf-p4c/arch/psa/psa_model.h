@@ -412,7 +412,7 @@ struct Pipeline : public ::Model::Elem {
 class PsaModel : public ::Model::Model {
  protected:
     PsaModel() :
-        Model::Model("1.0"), file("psa.p4"),
+        Model::Model(), file("psa.p4"),
         headersType("headers"),
         metadataType("metadata"),
         resubmitMetaType("resubmit_meta"), recircMetaType("recirc_meta"),
