@@ -1085,19 +1085,30 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
             if (auto t = call->type->to<IR::Type_Bits>()) {
                 hashWidth = t->width_bits();
             }
-            auto *typeArg = call->typeArguments->at(0);
-            auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
-            BUG_CHECK(typeSpec != nullptr,
-                  "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
 
             auto fieldListArg = call->arguments->at(0);
             LOG4("FieldList for Hash: " << fieldListArg);
             std::vector<cstring> hashFieldNames;
+            auto *typeArgs = new IR::Vector<IR::Type>();
             if (auto fieldListExpr = fieldListArg->expression->to<IR::ListExpression>()) {
                 for (auto f : fieldListExpr->components) {
+                    if (auto c = f->to<IR::Concat>()) {
+                        for (auto e : convertConcatToList(c)) {
+                            hashFieldNames.push_back(e->toString());
+                            typeArgs->push_back(e->type);
+                        }
+                        continue;
+                    }
                     hashFieldNames.push_back(f->toString());
+                    auto t = f->type->is<IR::Type_SerEnum>() ?
+                        f->type->to<IR::Type_SerEnum>()->type : f->type;
+                    typeArgs->push_back(t);
                 }
             }
+            auto *typeList = new IR::Type_List(*typeArgs);
+            auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeList, p4RtTypeInfo);
+            BUG_CHECK(typeSpec != nullptr,
+                  "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
             return DynHash{decl->controlPlaneName(), typeSpec,
                 decl->to<IR::IAnnotated>(), hashFieldNames, hashWidth};
         }

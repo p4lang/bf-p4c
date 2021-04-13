@@ -33,6 +33,9 @@ boost::optional<const IR::ExpressionValue*>
 getExpressionFromProperty(const IR::P4Table* table,
                           const cstring& propertyName);
 
+std::vector<const IR::Expression*>
+convertConcatToList(const IR::Concat* expr);
+
 }  // namespace BFN
 
 #endif /* BF_P4C_ARCH_HELPERS_H_ */

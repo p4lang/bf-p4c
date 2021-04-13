@@ -123,4 +123,30 @@ getExpressionFromProperty(const IR::P4Table* table,
     return expr;
 }
 
+void convertConcatToList(std::vector<const IR::Expression*>& slices,
+        const IR::Concat* expr) {
+    if (expr->left->is<IR::Constant>()) {
+        slices.push_back(expr->left);
+    } else if (auto lhs = expr->left->to<IR::Concat>()) {
+        convertConcatToList(slices, lhs);
+    } else {
+        slices.push_back(expr->left); }
+
+    if (expr->right->is<IR::Constant>()) {
+        slices.push_back(expr->right);
+    } else if (auto rhs = expr->right->to<IR::Concat>()) {
+        convertConcatToList(slices, rhs);
+    } else {
+        slices.push_back(expr->right);
+    }
+}
+
+std::vector<const IR::Expression*>
+convertConcatToList(const IR::Concat* expr) {
+    std::vector<const IR::Expression*> slices;
+
+    convertConcatToList(slices, expr);
+    return slices;
+}
+
 }  // namespace BFN
