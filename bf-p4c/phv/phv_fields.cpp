@@ -1390,7 +1390,7 @@ class CollectPhvFields : public Inspector {
     bool preorder(const IR::TempVar* tv) override {
         phv.addTempVar(tv, getGress());
 
-        if (auto match = findContext<IR::BFN::MatchLVal>()) {
+        if (findContext<IR::BFN::MatchLVal>()) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_avoid_alloc(true);

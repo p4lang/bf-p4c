@@ -1181,7 +1181,8 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
                                   size->to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
-                                  actionSelDecl->to<IR::IAnnotated>()};
+                                  actionSelDecl->to<IR::IAnnotated>(),
+                                  false  /* sel suffix */};
         }
         auto maxGroupSize = instance->getParameterValue("max_group_size");
         auto numGroups = instance->getParameterValue("num_groups");
@@ -1195,7 +1196,8 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
             -1  /* size */,
             maxGroupSize->to<IR::Constant>()->asInt(),
             numGroups->to<IR::Constant>()->asInt(),
-            actionSelDecl->to<IR::IAnnotated>()};
+            actionSelDecl->to<IR::IAnnotated>(),
+            false  /* sel suffix */};
     }
 
     static p4configv1::Extern* getP4InfoExtern(P4RuntimeSymbolType typeId,
@@ -1886,7 +1888,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances to symbol table
         forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName,
-                                                       const IR::ParserBlock* parserBlock) {
+                                                       const IR::ParserBlock*) {
             symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
         });
     }
@@ -2022,7 +2024,6 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
 
         addExternInstanceCommon(symbols, p4info, externBlock, pipeName);
 
-        auto p4RtTypeInfo = p4info->mutable_type_info();
         // Direct resources are handled by addTableProperties.
         if (externBlock->type->name == "Lpf") {
             auto lpf = Lpf::from(externBlock);

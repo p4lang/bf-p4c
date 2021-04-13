@@ -60,7 +60,7 @@ struct ResolveNegativeExtract : public PassManager {
 
         void end_apply() override {
             // Required data capture update all node states
-            const int max_buff_size = Device::pardeSpec().byteInputBufferSize();
+            const unsigned max_buff_size = Device::pardeSpec().byteInputBufferSize();
             for (auto kv : historic_states) {
                 // 1] Distribute the required history value and adjust transitions
                 auto state = kv.first;
