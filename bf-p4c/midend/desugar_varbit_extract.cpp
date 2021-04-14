@@ -188,7 +188,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
 
     for (auto& v : reject_matches)
         LOG2(encode_var << " = " << v << " : reject");
-    varbit_hdr_instance_to_variable_state[header_name] = state;
+    varbit_hdr_instance_to_variable_state[header_name].insert(state);
     return true;
 }
 
@@ -226,7 +226,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
         check_compile_time_constant(c, call, varbit_field_size);
         match_to_length[0] = c->asUnsigned();  // use 0 as key, but really don't care
         length_to_match[c->asUnsigned()] = 0;
-        varbit_hdr_instance_to_constant_state[headerName][c->asUnsigned()] = state;
+        varbit_hdr_instance_to_constant_state[headerName][c->asUnsigned()].insert(state);
     } else {
         bool ok = enumerate_varbit_field_values(call, state, varbit_field, varsize_expr,
                             encode_var, match_to_length, length_to_match, reject_matches,
@@ -322,7 +322,8 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                     } else {
                         ::error("Unsupported header type %1%", expr);
                     }
-                    enumerate_varbit_field_values(call, state, varsize_expr, hdr_type, headerName);
+                    enumerate_varbit_field_values(call, state,
+                                                  varsize_expr, hdr_type, headerName);
 
                     auto parser = findContext<IR::BFN::TnaParser>();
                     state_to_parser[state] = parser;
@@ -387,19 +388,23 @@ create_varbit_header_type(const IR::Type_Header* orig_hdr, cstring orig_hdr_inst
 }
 
 Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
-    for (auto & hdr_len_state : cve.varbit_hdr_instance_to_constant_state) {
+    for (auto & hdr_len_states : cve.varbit_hdr_instance_to_constant_state) {
         // If the length is declared as a constant, the creation of branches
         // for each state should happen in the ascending order of the lengths
         unsigned prev_length = 0;
-        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_len_state.first);
-        for (auto len_state : hdr_len_state.second) {
-             create_branches(len_state.second, varbit_field, prev_length);
-             prev_length = len_state.first;
+        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_len_states.first);
+        for (auto len_states : hdr_len_states.second) {
+            for (auto state : len_states.second) {
+                create_branches(state, varbit_field, prev_length);
+                prev_length = len_states.first;
+            }
         }
     }
-    for (auto& hdr_state : cve.varbit_hdr_instance_to_variable_state) {
-        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_state.first);
-        create_branches(hdr_state.second, varbit_field, 0);
+    for (auto hdr_states : cve.varbit_hdr_instance_to_variable_state) {
+        for (auto& state : hdr_states.second) {
+            auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_states.first);
+            create_branches(state, varbit_field, 0);
+        }
     }
     return Modifier::init_apply(root);
 }
@@ -433,7 +438,6 @@ create_add_statement(const IR::Member* method,
     auto addCall = new IR::MethodCallExpression(method, typeArgs, args);
     return new IR::MethodCallStatement(addCall);
 }
-
 const IR::ParserState*
 RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
         const IR::ParserState* state, const IR::Expression* select,
@@ -568,11 +572,13 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
         auto length = kv.first;
 
         if (length) {
-            create_varbit_header_type(orig_hdr, orig_hdr_inst,
+            if (length-prev_length != 0) {
+                create_varbit_header_type(orig_hdr, orig_hdr_inst,
                                       varbit_field, length-prev_length,
                                       length,
                                       varbit_hdr_instance_to_header_types);
-            prev_length = length;
+                prev_length = length;
+            }
 
             const IR::Expression* select = nullptr;
 
@@ -604,6 +610,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
     state_to_branch_states[state] = length_to_branch_state;
     state_to_end_state[state] = no_option_state;
 }
+
 
 bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
     auto orig = getOriginal<IR::P4Parser>();

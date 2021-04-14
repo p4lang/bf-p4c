@@ -109,14 +109,14 @@ class CollectVarbitExtract : public Inspector {
 
     std::map<const IR::ParserState*, const IR::Type_Header*> state_to_varbit_header;
     // Map to store if the varbit extract length is dynamic
-    std::map<cstring, const IR::ParserState*> varbit_hdr_instance_to_variable_state;
+    std::map<cstring, ordered_set<const IR::ParserState*>> varbit_hdr_instance_to_variable_state;
 
     std::map<const IR::ParserState*, const IR::Expression*> state_to_encode_var;
 
     std::map<const IR::ParserState*, const IR::AssignmentStatement*> state_to_csum_verify;
     // Map to store if the varbit extract length is constant
-    std::map<cstring,
-             std::map<unsigned, const IR::ParserState*>> varbit_hdr_instance_to_constant_state;
+    std::map<cstring, std::map<unsigned,
+             ordered_set<const IR::ParserState*>>> varbit_hdr_instance_to_constant_state;
     std::map<cstring, const IR::StructField*> varbit_hdr_instance_to_varbit_field;
 
     std::map<const IR::ParserState*,

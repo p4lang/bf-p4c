@@ -184,6 +184,9 @@ control IngressDeparser(packet_out pkt,
     /***********************  H E A D E R S  ************************/
 
 struct my_egress_headers_t {
+    ethernet_t         ethernet;
+    vlan_tag_t[2]      vlan_tag;
+    ipv4_t             ipv4;
 }
 
     /********  G L O B A L   E G R E S S   M E T A D A T A  *********/
@@ -203,6 +206,29 @@ parser EgressParser(packet_in      pkt,
     /* This is a mandatory state, required by Tofino Architecture */
     state start {
         pkt.extract(eg_intr_md);
+        transition parse_ethernet;
+    }
+    
+    state parse_ethernet {
+        pkt.extract(hdr.ethernet);
+        transition select(hdr.ethernet.ether_type) {
+            ETHERTYPE_TPID :  parse_vlan_tag;
+            ETHERTYPE_IPV4 :  parse_ipv4;
+            default        :  accept;
+        }
+    }
+
+    state parse_vlan_tag {
+        pkt.extract(hdr.vlan_tag.next);
+        transition select(hdr.vlan_tag.last.ether_type) {
+            ETHERTYPE_TPID :  parse_vlan_tag;
+            ETHERTYPE_IPV4 :  parse_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_ipv4 {
+        pkt.extract(hdr.ipv4, ((bit<32>)hdr.ipv4.ihl - 32w5) * 32);
         transition accept;
     }
 }
