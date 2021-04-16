@@ -307,6 +307,8 @@ class TranslateProgram : public Inspector {
     PSA::ProgramStructure* structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
+    // Used for deparser checksum
+    std::map<cstring, IR::Vector<IR::Expression>> fieldListMap;
 
  public:
     explicit TranslateProgram(PSA::ProgramStructure* structure,
@@ -459,51 +461,116 @@ class TranslateProgram : public Inspector {
         }
     }
 
+    void translateDeparserAdd(const IR::MethodCallStatement* addStmt) {
+        auto mi = P4::MethodInstance::resolve(addStmt, refMap, typeMap);
+        auto addMethod = mi->to<P4::ExternMethod>();
+        auto declName = addMethod->object->to<IR::Declaration_Instance>()->name;
+        auto sourceList = (*addMethod->expr->arguments)[0]->
+                                           expression->to<IR::ListExpression>();
+        for (auto source : sourceList->components) {
+            fieldListMap[declName].push_back(source);
+        }
+        structure->_map.emplace(addStmt, nullptr);
+    }
+
+    IR::AssignmentStatement* translateDeparserGet(const IR::AssignmentStatement* getStmt) {
+        auto dest = getStmt->left->to<IR::Member>();
+        auto expr = getStmt->right->to<IR::MethodCallExpression>();
+        auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
+        auto getMethod = mi->to<P4::ExternMethod>();
+        auto declName = getMethod->object->to<IR::Declaration_Instance>()->name;
+        if (fieldListMap.count(declName)) {
+            auto decl = new IR::Declaration_Instance(declName,
+                   new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
+            auto list = new IR::ListExpression(fieldListMap.at(declName));
+            auto typeArgs = new IR::Vector<IR::Type>({ list->type });
+            auto args = new IR::Vector<IR::Argument>({ new IR::Argument(list) });
+            structure->_map.emplace(getMethod->object->to<IR::Declaration_Instance>(),
+                                                                        decl);
+            auto update = new IR::MethodCallExpression(new IR::Member(
+                           new IR::PathExpression(declName), "update"),
+                           typeArgs, args);
+            auto assignUpdate = new IR::AssignmentStatement(dest, update);
+            return assignUpdate;
+        }
+    }
+
+    bool isDeparserAdd(const IR::MethodCallStatement* methodStmt) {
+        auto mi = P4::MethodInstance::resolve(methodStmt, refMap, typeMap);
+        if (auto em = mi->to<P4::ExternMethod>()) {
+            cstring name = em->actualExternType->name;
+            if (name == "InternetChecksum" && em->method->name == "add") {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool isDeparserGet(const IR::AssignmentStatement* assignStmt) {
+        auto member = assignStmt->left->to<IR::Member>();
+        auto expr = assignStmt->right->to<IR::MethodCallExpression>();
+        if (!member || !expr) return false;
+        auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
+        if (auto em = mi->to<P4::ExternMethod>()) {
+            cstring name = em->actualExternType->name;
+            if (name == "InternetChecksum" && em->method->name == "get") {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    IR::BlockStatement*
+    translateDeparserCsumIfBlock(const IR::BlockStatement* block) {
+        if (!block) return nullptr;
+        IR::BlockStatement* if_block = nullptr;
+        for (auto stmt : block->components) {
+            if (auto methodStmt = stmt->to<IR::MethodCallStatement>()) {
+                if (isDeparserAdd(methodStmt)) {
+                    translateDeparserAdd(methodStmt);
+                }
+            } else if (auto assignStmt = stmt->to<IR::AssignmentStatement>()) {
+                if (isDeparserGet(assignStmt)) {
+                    auto assignUpdate = translateDeparserGet(assignStmt);
+                    if_block = new IR::BlockStatement({assignUpdate});
+                }
+            }
+        }
+        return if_block;
+    }
+
     void postorder(const IR::P4Control* control) override {
         if (control->name != structure->getBlockName(ProgramStructure::INGRESS_DEPARSER) &&
             control->name != structure->getBlockName(ProgramStructure::EGRESS_DEPARSER))
             return;
         auto body = control->body->to<IR::BlockStatement>();
-        std::map<cstring, IR::Vector<IR::Expression>> fieldListMap;
+
         for (auto comp : body->components) {
-            if (auto methodStmt = comp->to<IR::MethodCallStatement>()) {
-                auto mi = P4::MethodInstance::resolve(methodStmt, refMap, typeMap);
-                if (auto em = mi->to<P4::ExternMethod>()) {
-                    cstring name = em->actualExternType->name;
-                    if (name == "InternetChecksum" && em->method->name == "add") {
-                        auto declName = em->object->to<IR::Declaration_Instance>()->name;
-                        structure->_map.emplace(methodStmt, nullptr);
-                        auto sourceList = (*em->expr->arguments)[0]->
-                                           expression->to<IR::ListExpression>();
-                        for (auto source : sourceList->components) {
-                            fieldListMap[declName].push_back(source);
-                        }
-                    }
+            // Find if the ifstatement is the condition for checksum
+            if (auto ifStatement = comp->to<IR::IfStatement>()) {
+                IR::BlockStatement* new_true_block = nullptr;
+                IR::BlockStatement* new_false_block = nullptr;
+                if (ifStatement->ifTrue) {
+                    new_true_block = translateDeparserCsumIfBlock(
+                                      ifStatement->ifTrue->to<IR::BlockStatement>());
+                }
+                if (ifStatement->ifFalse) {
+                    new_false_block = translateDeparserCsumIfBlock(
+                                       ifStatement->ifFalse->to<IR::BlockStatement>());
+                }
+                // Not a checksum if statement
+                if (!new_true_block && !new_false_block) continue;
+                auto ifStmt = new IR::IfStatement(ifStatement->condition, new_true_block,
+                                                       new_false_block);
+                structure->_map.emplace(ifStatement, ifStmt);
+            } else if (auto methodStmt = comp->to<IR::MethodCallStatement>()) {
+                if (isDeparserAdd(methodStmt)) {
+                    translateDeparserAdd(methodStmt);
                 }
             } else if (auto assignStmt = comp->to<IR::AssignmentStatement>()) {
-                auto member = assignStmt->left->to<IR::Member>();
-                auto expr = assignStmt->right->to<IR::MethodCallExpression>();
-                if (!member || !expr) continue;
-                auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
-                if (auto em = mi->to<P4::ExternMethod>()) {
-                    cstring name = em->actualExternType->name;
-                    if (name == "InternetChecksum" && em->method->name == "get") {
-                        auto declName = em->object->to<IR::Declaration_Instance>()->name;
-                        if (fieldListMap.count(declName)) {
-                            auto decl = new IR::Declaration_Instance(declName,
-                                   new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
-                            auto list = new IR::ListExpression(fieldListMap.at(declName));
-                            auto typeArgs = new IR::Vector<IR::Type>({ list->type });
-                            auto args = new IR::Vector<IR::Argument>({ new IR::Argument(list) });
-                            structure->_map.emplace(em->object->to<IR::Declaration_Instance>(),
-                                                                                        decl);
-                            auto update = new IR::MethodCallExpression(new IR::Member(
-                                           new IR::PathExpression(declName), "update"),
-                                           typeArgs, args);
-                            auto assignUpdate = new IR::AssignmentStatement(member, update);
-                            structure->_map.emplace(assignStmt, assignUpdate);
-                        }
-                    }
+                if (isDeparserGet(assignStmt)) {
+                    auto assignUpdate = translateDeparserGet(assignStmt);
+                    structure->_map.emplace(assignStmt, assignUpdate);
                 }
             }
         }

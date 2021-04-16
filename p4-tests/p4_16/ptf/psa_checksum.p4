@@ -199,6 +199,7 @@ control EgressDeparserImpl(packet_out packet,
     InternetChecksum() ck_ip;
     InternetChecksum() ck_tcp;
     apply {
+        if (hdr.ipv4.isValid()) {
         ck_ip.add({
             /* 16-bit word  0   */ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv,
             /* 16-bit word  1   */ hdr.ipv4.totalLen,
@@ -210,6 +211,7 @@ control EgressDeparserImpl(packet_out packet,
             /* 16-bit words 8-9 */ hdr.ipv4.dstAddr
             });
         hdr.ipv4.hdrChecksum = ck_ip.get();
+        }
         ck_tcp.add({hdr.tcp.srcPort,
                     hdr.tcp.dstPort,
                     hdr.tcp.seqNo,
