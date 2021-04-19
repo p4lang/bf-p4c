@@ -217,8 +217,6 @@ class DarkLiveRange : public Inspector {
 
     /// Map of field ID to the live range for each field.
     DarkLiveRangeMap livemap;
-    ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, PHV::FieldUse>>
-        fieldToUnitUseMap;
     ordered_set<const PHV::Field*> doNotInitToDark;
     ordered_set<const IR::MAU::Action*> doNotInitActions;
     ordered_set<const IR::MAU::Table*> doNotInitTables;

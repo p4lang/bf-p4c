@@ -263,16 +263,16 @@ class FieldUse {
         return *this;
     }
 
-    cstring toString() const {
+    cstring toString(unsigned dark = 0) const {
         if (use_ == 0) return "";
         std::stringstream ss;
         bool checkLiveness = true;
         if (use_ & READ) {
-            ss << "R";
+            ss << (dark & READ ? "R" : "r");
             checkLiveness = false;
         }
         if (use_ & WRITE) {
-            ss << "W";
+            ss << (dark & WRITE ? "W" : "w");
             checkLiveness = false;
         }
         if (checkLiveness && (use_ & LIVE))

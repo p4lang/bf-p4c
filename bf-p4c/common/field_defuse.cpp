@@ -97,6 +97,9 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
         uses[def].emplace(use);
         defs[use].emplace(def); }
     non_dark_refs[use] |= needsIXBar;
+
+    LOG5("\t Adding IXBar " << needsIXBar << " for use  " << use <<
+         "  non_dark_refs:" << non_dark_refs.size());
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                        const IR::Expression *e, bool needsIXBar) {
@@ -144,6 +147,8 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
     non_dark_refs[def] |= needsIXBar;
+    LOG5("\t Adding IXBar " << needsIXBar << " for def " << def <<
+         "  non_dark_refs:" << non_dark_refs.size());
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                         const IR::Expression *e, bool needsIXBar) {
@@ -210,7 +215,7 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
     // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
     // not all of them.
     // Only multistage_fifo.p4 needs visit stateful call before the action code runs.
-    LOG1("FieldDefUse preorder: " << act);
+    LOG1("FieldDefUse preorder Action : " << act);
     visit(act->stateful_calls, "stateful");
     if (act->parallel) {
         mode = VisitJustReads;
@@ -231,7 +236,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
     // TODO(yumin): The long-term fix for this is to change the order of visiting when
     // visiting IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
-    LOG1("FieldDefUse preorder: " << prim);
+    LOG1("FieldDefUse preorder Primitive : " << prim);
     if (prim->operands.size() > 0) {
         if (mode != VisitJustWrites) {
             for (size_t i = 1; i < prim->operands.size(); ++i) {
@@ -320,6 +325,10 @@ void FieldDefUse::flow_merge(Visitor &a_) {
         BUG_CHECK(&info != &i, "same object in FieldDefUse::flow_merge");
         info.def.insert(i.def.begin(), i.def.end());
         info.use.insert(i.use.begin(), i.use.end()); }
+
+    for (auto ndr : a.non_dark_refs) {
+        non_dark_refs[ndr.first] |= a.non_dark_refs[ndr.first];
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const FieldDefUse::info &i) {

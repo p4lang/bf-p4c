@@ -72,7 +72,6 @@ Visitor::profile_t DarkLiveRange::init_apply(const IR::Node* root) {
     livemap.clear();
     overlay.clear();
     doNotInitActions.clear();
-    fieldToUnitUseMap.clear();
     doNotInitToDark.clear();
     doNotInitTables.clear();
     BUG_CHECK(dg.finalized, "Dependence graph is not populated.");
@@ -157,7 +156,6 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
         } else {
             BUG("Unknown unit encountered %1%", use_unit->toString());
         }
-        fieldToUnitUseMap[f][use_unit] |= PHV::FieldUse(READ);
     }
 
     // Set live range for every def of the field.
@@ -199,7 +197,6 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
         } else {
             BUG("Unknown unit encountered %1%", def_unit->toString());
         }
-        fieldToUnitUseMap[f][def_unit] |= PHV::FieldUse(WRITE);
     }
 }
 
@@ -1429,6 +1426,8 @@ cstring DarkLiveRange::DarkLiveRangeMap::printDarkLiveRanges() const {
     auto numStages = DEPARSER;
     const int PARSER = -1;
     ss << std::endl << "Uses for fields to determine dark overlay potential:" << std::endl;
+    ss << " *** LIVERANGE LEGEND - W/R: Dark compatible write/read   w/r: Dark incompatible "
+        "wrote/read" << std::endl;
     std::vector<std::string> headers;
     headers.push_back("Field");
     headers.push_back("Bit Size");
@@ -1449,11 +1448,16 @@ cstring DarkLiveRange::DarkLiveRangeMap::printDarkLiveRanges() const {
         row.push_back(std::string(use_type.toString()));
         for (int i = 0; i <= DEPARSER; i++) {
             PHV::FieldUse use_type;
-            if (entry.second.count(std::make_pair(i, PHV::FieldUse(READ))))
+            unsigned dark = 0;
+            if (entry.second.count(std::make_pair(i, PHV::FieldUse(READ)))) {
                 use_type |= PHV::FieldUse(READ);
-            if (entry.second.count(std::make_pair(i, PHV::FieldUse(WRITE))))
+                if (entry.second.at(std::make_pair(i, PHV::FieldUse(READ))).second) dark |= 1;
+            }
+            if (entry.second.count(std::make_pair(i, PHV::FieldUse(WRITE)))) {
                 use_type |= PHV::FieldUse(WRITE);
-            row.push_back(std::string(use_type.toString()));
+                if (entry.second.at(std::make_pair(i, PHV::FieldUse(WRITE))).second) dark |= 2;
+            }
+            row.push_back(std::string(use_type.toString(dark)));
         }
         tp.addRow(row);
     }

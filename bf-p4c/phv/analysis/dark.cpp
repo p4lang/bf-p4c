@@ -53,13 +53,6 @@ Visitor::profile_t MarkDarkCandidates::init_apply(const IR::Node* root) {
 void MarkDarkCandidates::end_apply() {
     for (PHV::Field& f : phv) {
         std::stringstream ss;
-        // Ignore dark analysis is field is not a mocha candidate.
-        // Dark fields can go into mocha and so are definitely mocha candidates.
-        // XXX(Deep): In the long run, we should move to using dark containers as a kind of spill
-        // space, where fields can be temporarily written into dark from normal/mocha containers in
-        // stages where they are not used. The following requirement is overly restrictive, once we
-        // enable such spill-oriented allocation.
-        if (!f.is_mocha_candidate()) continue;
 
         ss << "    Candidate field for dark: " << f << std::endl;
 
@@ -92,6 +85,18 @@ void MarkDarkCandidates::end_apply() {
             ss << "    ...digest field encountered.";
             LOG5(ss.str());
             continue; }
+
+        // Ignore dark analysis is field is not a mocha candidate.
+        // Dark fields can go into mocha and so are definitely mocha candidates.
+        // XXX(Deep): In the long run, we should move to using dark containers as a kind of spill
+        // space, where fields can be temporarily written into dark from normal/mocha containers in
+        // stages where they are not used. The following requirement is overly restrictive, once we
+        // enable such spill-oriented allocation.
+        if (!f.is_mocha_candidate()) {
+            ss << "    ... non-mocha candidate.";
+            LOG5(ss.str());
+            continue;
+        }
 
         f.set_dark_candidate(true);
         ++darkCount;

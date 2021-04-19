@@ -157,8 +157,18 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     const ordered_set<const PHV::Field*> &getUninitializedFields() const {
         return uninitialized_fields; }
+
     bool hasNonDarkContext(locpair info) const {
-        if (!non_dark_refs.count(info)) return true;
+        if (non_dark_refs.count(info)) {
+            LOG4("\t non_dark_refs:" << non_dark_refs.size());
+        }
+
+        if (!non_dark_refs.count(info)) {
+            LOG5("\t\t non_dark_refs for expression " << info.second << " not found for unit " <<
+                 info.first << ", but assuming it is non-dark");
+            return true;
+        }
+
         return non_dark_refs.at(info);
     }
 
