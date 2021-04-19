@@ -1819,12 +1819,6 @@ p4c_add_xfail_reason("tofino"
   p4c_2249
 )
 
-# P4C-3207
-p4c_add_xfail_reason("tofino"
-  "Cannot unify type"
-  ba102_simple_l3_acl
-)
-
 # P4C-3208
 p4c_add_xfail_reason("tofino"
   "Unexpected type _"

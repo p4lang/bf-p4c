@@ -86,8 +86,6 @@ p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
   # P4C-3295
   extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
-  # P4C-3473
-  extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -495,4 +493,10 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
    "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*"
    extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Ran out of parser match registers for .*"
+  # P4C-3473
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4
 )

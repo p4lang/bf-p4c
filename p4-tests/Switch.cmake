@@ -99,18 +99,21 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
     "${testExtraArgs} -arch tna -bfrt -profile x1_tofino -to 7200" ${SWITCH_P4_16_PTF})
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x1"
          "all
+         ^hash
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
   p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x2" ${SWITCH_P4_16_X2}
     "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -to 7200 -Xp4c=\"--set-max-power 50\"" ${SWITCH_P4_16_PTF})
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x2"
          "all
+         ^hash
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
   p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x0" ${SWITCH_P4_16}
    "${testExtraArgs} -arch tna -bfrt -profile x0_tofino -to 7200" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x0"
          "all
+         ^hash
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
 # All switch_16 tests should depend on the test being compiled, rather than
