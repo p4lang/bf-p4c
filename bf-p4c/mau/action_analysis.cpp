@@ -753,7 +753,6 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
              hi = write_bits.hi;
          }
          le_bitrange mini_write_bits(lo, hi);
-
          auto &init_phv_alignment = cont_action.initialization_phv_alignment;
          if (init_phv_alignment.find(alloc.container()) == init_phv_alignment.end()) {
              init_phv_alignment[alloc.container()].emplace_back(mini_write_bits, read_bits);
@@ -761,6 +760,53 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
              init_phv_alignment[alloc.container()].emplace_back(mini_write_bits, read_bits);
          }
     });
+
+    // Check if this is read in a form of "0 ++ <PHV_field>"
+    if (auto concat = read.expr->to<IR::Concat>()) {
+        auto constant = concat->left->to<IR::Constant>();
+        if (constant != nullptr && (constant->value == 0)) {
+            if (auto type = constant->type->to<IR::Type_Bits>()) {
+                int resize_size = type->size;
+                // Check if the resize bits are unnalocated on top of
+                // the field
+                // Note: there might be more alloc slices, just use and find the
+                //       one corresponding to the MSBs of the field
+                bool are_allocated = false;
+                field->foreach_alloc(range, cont_action.table_context, &use,
+                         [&](const PHV::AllocSlice &alloc) {
+                     // We care about the alloc slice that represents the MSBs
+                     if (alloc.field_slice().hi != field->size-1)
+                         return;
+                     int container_size = alloc.container().size();
+                     int start_container_bit = alloc.container_slice().hi+1;
+                     // Check if there are enough bits left in the container
+                     if (start_container_bit + resize_size > container_size) {
+                         are_allocated = true;
+                         return;
+                     }
+                     // Get all of the allocated bits
+                     auto alloc_bits = phv.bits_allocated(alloc.container());
+                     // Get the bits that should be unallocated
+                     auto resize_bits = alloc_bits.getslice(start_container_bit, resize_size);
+                     // Check if any of them is allocated
+                     if (!resize_bits.empty()) {
+                         are_allocated = true;
+                         return;
+                     }
+                });
+                // If we found that there are not enough unallocated bits raise an error
+                if (are_allocated) {
+                    error_message += "resizing for the field " + field->name +
+                                     " requires at least " + resize_size +
+                                     " pad bits above the field"
+                                     " (consider adding pa_solitary to the field)";
+                    return false;
+                }
+                le_bitrange mini_write_bits((write_bits.hi-resize_size)+1, write_bits.hi);
+                cont_action.extra_resize_reads.add_alignment(mini_write_bits, mini_write_bits);
+            }
+        }
+    }
     return true;
 }
 
@@ -2129,6 +2175,7 @@ bool ActionAnalysis::ContainerAction::verify_source_to_bit(int operands,
 
     move_source_to_bit(bit_uses, adi.alignment);
     move_source_to_bit(bit_uses, ci.alignment);
+    move_source_to_bit(bit_uses, extra_resize_reads);
 
     for (size_t i = 0; i < container.size(); i++) {
         if (!(bit_uses[i] == operands || bit_uses[i] == 0))

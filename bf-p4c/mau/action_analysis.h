@@ -318,6 +318,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ActionDataInfo adi;
         ConstantInfo ci;
         bitvec invalidate_write_bits;
+        // This is for keeping information about extra 0 bits when one of the reads
+        // is resized by "0 ++ <PHV>"
+        TotalAlignment extra_resize_reads;
 
 
         std::map<PHV::Container, safe_vector<Alignment>> initialization_phv_alignment;
