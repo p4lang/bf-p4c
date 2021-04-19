@@ -50,6 +50,7 @@ class TablePlacement : public PassManager {
         bool root = false;
         int uid = -1;
         bitvec      parents;    // same as 'refs', as a bitvec
+        bitvec      immed_tables;       // the tables directly in the sequence
         bitvec      tables;     // the tables in the seqence and their control dependent children
         ordered_set<const IR::MAU::Table *> refs;  // parent tables of this seq
     };
@@ -59,9 +60,13 @@ class TablePlacement : public PassManager {
     static bool can_split(const IR::MAU::Table *, const IR::MAU::AttachedMemory *);
 
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
+    std::vector<struct TableInfo *> tblByUid;
     std::map<cstring, struct TableInfo *> tblByName;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     std::map<const IR::MAU::AttachedMemory *, ordered_set<const IR::MAU::Table *>> attached_to;
+    int uid(const IR::MAU::Table *t) { return tblInfo.at(t).uid; }
+    int uid(cstring t) { return tblByName.at(t)->uid; }
+    int uid(const IR::MAU::TableSeq *t) { return seqInfo.at(t).uid; }
     class SetupInfo;
 
     TablePlacement(const BFN_Options &, DependencyGraph &,
@@ -154,6 +159,7 @@ class TablePlacement : public PassManager {
 
 class DecidePlacement : public MauInspector {
     TablePlacement &self;
+    typedef TablePlacement::Placed Placed;
 
  public:
     struct GroupPlace;
@@ -164,26 +170,23 @@ class DecidePlacement : public MauInspector {
  private:
     struct save_placement_t;
     std::map<cstring, save_placement_t>  saved_placements;
-    void savePlacement(const TablePlacement::Placed *, ordered_set<const GroupPlace *> &);
-    void recomputePartlyPlaced(const TablePlacement::Placed *,
-                               ordered_set<const IR::MAU::Table *> &);
+    int backtrack_count = 0;  // number of times backtracked in this pipe
+    static constexpr int MaxBacktracksPerPipe = 1000;
+    void savePlacement(const Placed *, ordered_set<const GroupPlace *> &);
+    void recomputePartlyPlaced(const Placed *, ordered_set<const IR::MAU::Table *> &);
 
     void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     bool preorder(const IR::BFN::Pipe *) override;
     /// @returns true if all the metadata initialization induced dependencies for table @t are
     /// satisfied, i.e. all the tables that must be placed before table t (due to ordering imposed
     /// by the live range shrinking pass) have been placed. @returns false otherwise.
-    bool are_metadata_deps_satisfied(const TablePlacement::Placed *placed,
-        const IR::MAU::Table* t) const;
-    TablePlacement::Placed *try_backfill_table(const TablePlacement::Placed *done,
-        const IR::MAU::Table *tbl, cstring before);
+    bool are_metadata_deps_satisfied(const Placed *placed, const IR::MAU::Table* t) const;
+    Placed *try_backfill_table(const Placed *done, const IR::MAU::Table *tbl, cstring before);
     bool can_place_with_partly_placed(const IR::MAU::Table *tbl,
-        const ordered_set<const IR::MAU::Table *> &partly_placed,
-        const TablePlacement::Placed *placed);
-    bool gateway_thread_can_start(const IR::MAU::Table *, const TablePlacement::Placed *placed);
+        const ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed);
+    bool gateway_thread_can_start(const IR::MAU::Table *, const Placed *placed);
     IR::MAU::Table *create_starter_table(gress_t gress);
-    const TablePlacement::Placed *place_table(ordered_set<const GroupPlace *>&work,
-        const TablePlacement::Placed *pl);
+    const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
     template <class... Args> void error(Args... args) { self.error(args...); }
     int errorCount() const { return self.errorCount(); }
 };
