@@ -146,16 +146,13 @@ ClotResourcesLogging::logExtractClotInfo(bool hasChecksum, int length, int offse
                                          unsigned tag, const Clot *clot) {
     auto usage = new ClotUsage(hasChecksum, length, offset, tag);
 
-    if (clot) {
-        int clotOffset = 0;
-        for (auto *f : clot->all_slices()) {
-            const std::string name = cstring(canon_name(f->field()->name)).c_str();
-            const auto msb = f->range().hi;
-            const auto lsb = f->range().lo;
-            auto cf = new ClotField(clotOffset, lsb, msb, name);
-            clotOffset += f->field()->size;
-            usage->append_field_lists(cf);
-        }
+    for (auto *f : clot->all_slices()) {
+        const std::string name = cstring(canon_name(f->field()->name)).c_str();
+        const auto msb = f->range().hi;
+        const auto lsb = f->range().lo;
+        const auto clotOffset = clot->bit_offset(f);
+        auto cf = new ClotField(clotOffset, lsb, msb, name);
+        usage->append_field_lists(cf);
     }
 
     return usage;
