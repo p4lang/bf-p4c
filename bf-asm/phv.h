@@ -101,7 +101,7 @@ class Phv : public Section {
     std::map<std::string, std::map<int, PerStageInfo>> names[3];
 
  private:
-    typedef std::map<int, std::vector<std::string>> user_stagenames_t;
+    typedef std::map<int, std::set<std::string>> user_stagenames_t;
     std::map<const Register *, std::pair<gress_t, user_stagenames_t>, ptrless<Register>>
                 user_defined;
     bitvec      phv_use[3];
@@ -226,8 +226,8 @@ class Phv : public Section {
     static unsigned mau_groupsize();
 
     // Return all field names in @arg reg at @arg stage
-    static const std::vector<std::string> &aliases(const Register *reg, int stage) {
-        static std::vector<std::string> empty;
+    static const std::set<std::string> &aliases(const Register *reg, int stage) {
+        static std::set<std::string> empty;
         if (!phv.user_defined.count(reg)) return empty;
         auto &m = phv.user_defined.at(reg).second;
         auto it = m.upper_bound(stage);

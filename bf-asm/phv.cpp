@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include "log.h"
 #include "misc.h"
 #include "phv.h"
@@ -88,13 +89,14 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
             if (max_stage != INT_MAX) {
               /* a name that spans across stages - add it to all stages */
               for (int i=stage; i <= max_stage; i++) {
-                user_defined[&sl->reg].second[i].push_back(name);
+                user_defined[&sl->reg].second[i].insert(name);
               }
             } else {
               for (int i=0; i < Target::NUM_MAU_STAGES(); i++) {
-                user_defined[&sl->reg].second[i].push_back(name);
+                user_defined[&sl->reg].second[i].insert(name);
               }
             }
+            LOG5(" Adding " << name << " to user_defined");
         }
         auto &reg = names[gress][name];
         if (what.type == tSTR) {
@@ -318,6 +320,7 @@ void Phv::output(json::map &ctxt_json) {
             phv_container["container_type"] = slot.first->type_to_string();
             json::vector &phv_records = phv_container["records"] = json::vector();
             for (auto field_name : stage_usernames) {
+                LOG5("Output phv record for field : " << field_name);
                 unsigned phv_lsb = 0, phv_msb = 0;
                 unsigned field_lo = 0;
                 int field_size = 0;
@@ -412,7 +415,11 @@ void Phv::output(json::map &ctxt_json) {
                                         = std::move(*mutex_json_vec);
                             }
                             field_added = true;
-                            phv_records.push_back(phv_record.clone());
+                            // Skip duplicates
+                            if (!std::any_of(phv_records.begin(), phv_records.end(),
+                                    [&phv_record](std::unique_ptr<json::obj> &r) {
+                                    return *r == phv_record;}))
+                                phv_records.push_back(phv_record.clone());
                         }
                     }
                     if (!field_added) {
