@@ -20,6 +20,21 @@ class Test_checksum(P4RuntimeTest):
         req.device_id = self.device_id
         self.write_request(req)
         pkt = testutils.simple_tcp_packet()
-
+        print("Sending a good packet")
         testutils.send_packet(self, ingress_port, str(pkt))
         testutils.verify_packets(self, pkt, [egress_port])
+
+class Test_bad_checksum(P4RuntimeTest):
+   @autocleanup
+   def runTest(self):
+        ingress_port = self.swports(0)
+        egress_port  = self.swports(1)
+
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.write_request(req)
+        pkt = testutils.simple_tcp_packet()
+        print("Sending packet with bad Checksum ")
+        pkt[IP].chksum = 0xDEAD
+        testutils.send_packet(self, ingress_port, str(pkt))
+        testutils.verify_no_other_packets(self)

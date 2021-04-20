@@ -145,7 +145,11 @@ control ingress(inout headers hdr,
                 inout psa_ingress_output_metadata_t ostd)
 {
        apply {
-           ostd.egress_port = (PortId_t) 1;
+          if (istd.parser_error == error.BadIPv4HeaderChecksum) {
+              ingress_drop(ostd);
+          } else {
+              ostd.egress_port = (PortId_t) 1;
+          }
        }
 }
 // END:Parse_Error_Example

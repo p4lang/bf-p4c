@@ -623,8 +623,8 @@ class TranslateProgram : public Inspector {
                     } else if (structure->error_to_constant.count(node->member)) {
                         // custom errors
                         structure->_map.emplace(node,
-                                                new IR::Constant(IR::Type::Bits::get(16),
-                                                structure->error_to_constant.at(node->member)));
+                                         new IR::Constant(IR::Type::Bits::get(16),
+                                         1 << structure->error_to_constant.at(node->member)));
                    }
                 }
                 structure->typeNamesToDo.emplace(node, node);
