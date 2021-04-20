@@ -843,7 +843,7 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         return rv;
     }
 
-
+    std::set<cstring> getFieldNameSlice(const PHV::Field *field, le_bitrange range) const;
     void flow_merge(Visitor &v) override;
 
     // void all_bfs(boost::default_bfs_visitor* vis);

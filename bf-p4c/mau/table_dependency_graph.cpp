@@ -736,6 +736,24 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
     }
 }
 
+std::set<cstring> FindDataDependencyGraph::getFieldNameSlice(const PHV::Field *field,
+                                                             le_bitrange range) const {
+    std::set<cstring> retval;
+
+    if (phv.alloc_done()) {
+        field->foreach_alloc([&](const PHV::AllocSlice &sl) {
+            if (range.overlaps(sl.field_slice()))
+                retval.insert(field->name + sl.field_slice().formatAsSlice(field->size));
+        });
+    }
+
+    // Used in case PHV Allocation was not completed or this field does not have any AllocSlices
+    if (retval.empty()) {
+        retval.insert(field->name);
+    }
+    return retval;
+}
+
 /**
  * The reduction or dependencies must be tracked so that all tables that are in the same
  * reduction or group do not have any dependencies between them, but they as a block do
@@ -841,87 +859,90 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
         if (self.phv.getAliasMap().count(originalField))
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
         for (const PHV::Field* field : candidateFields) {
-            cstring field_name = field->name;
             cstring red_or_key;
             bool is_red_or = self.red_info.is_reduction_or(findContext<IR::MAU::Instruction>(),
                                                            table, red_or_key);
             bool non_first_write_red_or = false;
-            if (self.access.count(field_name)) {
-                LOG6("\t\tadd_dependency(" << field_name << ")");
-                // AlwaysRun Actions (ARA)
-                //   1) either initialize to zero or
-                //   2) move between PHVs.
-                // In either case the write operand of
-                // the ARA is not dependent to prior accesses because
-                //   1) the zero-init is the first access of this field or
-                //   2) the read of the move is dependent to prior accesses.
-                if (isWrite()) {
-                    if (table->is_always_run_action()) {
-                        LOG7("\t Skipping dependencies for write expression " << e << " of ARA " <<
-                            table->name);
-                    } else {
-                        // Write-after-read dependence.
-                        addDeps(self.access[field->name].ixbar_read,
-                                DependencyGraph::ANTI_TABLE_READ, field);
-                        addDeps(self.access[field->name].action_read,
-                                DependencyGraph::ANTI_ACTION_READ, field);
-                        // Write-after-write dependence.
-                        if (is_red_or) {
-                            auto pos = self.red_or_use.find(field->name);
-                            // If reduction_or, and the previous write was a reduction_or
-                            if (pos != self.red_or_use.end()) {
-                                ERROR_CHECK(pos->second == red_or_key, "%s: The reduction_or "
-                                            "groups collide on field %s, over group %s and "
-                                            "group %s", table->srcInfo, field->name, red_or_key,
-                                            pos->second);
-                                addDeps(self.access[field->name].reduction_or_write,
-                                        DependencyGraph::REDUCTION_OR_OUTPUT, field);
-                                non_first_write_red_or = true;
+
+            std::set<cstring> field_slice_set = self.getFieldNameSlice(field, range);
+            for (const cstring &field_name : field_slice_set) {
+                if (self.access.count(field_name)) {
+                    LOG6("\t\tadd_dependency(" << field_name << ") ");
+                    // AlwaysRun Actions (ARA)
+                    //   1) either initialize to zero or
+                    //   2) move between PHVs.
+                    // In either case the write operand of
+                    // the ARA is not dependent to prior accesses because
+                    //   1) the zero-init is the first access of this field or
+                    //   2) the read of the move is dependent to prior accesses.
+                    if (isWrite()) {
+                        if (table->is_always_run_action()) {
+                            LOG7("\t Skipping dependencies for write expression " << e <<
+                                 " of ARA " << table->name);
+                        } else {
+                            // Write-after-read dependence.
+                            addDeps(self.access[field_name].ixbar_read,
+                                    DependencyGraph::ANTI_TABLE_READ, field);
+                            addDeps(self.access[field_name].action_read,
+                                    DependencyGraph::ANTI_ACTION_READ, field);
+                            // Write-after-write dependence.
+                            if (is_red_or) {
+                                auto pos = self.red_or_use.find(field_name);
+                                // If reduction_or, and the previous write was a reduction_or
+                                if (pos != self.red_or_use.end()) {
+                                    ERROR_CHECK(pos->second == red_or_key, "%s: The reduction_or "
+                                                "groups collide on field %s, over group %s and "
+                                                "group %s", table->srcInfo, field_name, red_or_key,
+                                                pos->second);
+                                    addDeps(self.access[field_name].reduction_or_write,
+                                            DependencyGraph::REDUCTION_OR_OUTPUT, field);
+                                    non_first_write_red_or = true;
+                                } else {
+                                    // If reduction_or and previous write was not reduction_or
+                                    addDeps(self.access[field_name].write, DependencyGraph::OUTPUT,
+                                            field);
+                                }
                             } else {
-                                // If reduction_or and previous write was not reduction_or
-                                addDeps(self.access[field->name].write, DependencyGraph::OUTPUT,
+                                // If normal
+                                addDeps(self.access[field_name].write, DependencyGraph::OUTPUT,
+                                        field);
+                            }
+                        }
+                    } else {
+                        // Read-after-write dependence.
+                        if (isIxbarRead()) {
+                            addDeps(self.access[field_name].write,
+                                    DependencyGraph::IXBAR_READ, field);
+                        } else if (is_red_or) {
+                            // If reduction_or, and the previous write was a reduction_or
+                            auto pos = self.red_or_use.find(field_name);
+                            if (pos != self.red_or_use.end()) {
+                                ERROR_CHECK(pos->second == red_or_key, "%s: "
+                                "The reduction_or groups collide on field %s, over group %s and "
+                                "group %s", table->srcInfo, field_name, red_or_key, pos->second);
+                                addDeps(self.access[field_name].reduction_or_write,
+                                        DependencyGraph::REDUCTION_OR_READ, field);
+                            } else {
+                                // If reduction_or, and the previous write was normal
+                                addDeps(self.access[field_name].write, DependencyGraph::ACTION_READ,
                                         field);
                             }
                         } else {
                             // If normal
-                            addDeps(self.access[field->name].write, DependencyGraph::OUTPUT, field);
+                            addDeps(self.access[field_name].write,
+                                    DependencyGraph::ACTION_READ, field);
                         }
-                    }
-                } else {
-                    // Read-after-write dependence.
-                    if (isIxbarRead()) {
-                        addDeps(self.access[field->name].write,
-                                DependencyGraph::IXBAR_READ, field);
-                    } else if (is_red_or) {
-                        // If reduction_or, and the previous write was a reduction_or
-                        auto pos = self.red_or_use.find(field->name);
-                        if (pos != self.red_or_use.end()) {
-                            ERROR_CHECK(pos->second == red_or_key, "%s: "
-                            "The reduction_or groups collide on field %s, over group %s and "
-                            "group %s", table->srcInfo, field->name, red_or_key, pos->second);
-                            addDeps(self.access[field->name].reduction_or_write,
-                                    DependencyGraph::REDUCTION_OR_READ, field);
-                        } else {
-                            // If reduction_or, and the previous write was normal
-                            addDeps(self.access[field->name].write, DependencyGraph::ACTION_READ,
-                                    field);
-                        }
-                    } else {
-                        // If normal
-                        addDeps(self.access[field->name].write,
-                                DependencyGraph::ACTION_READ, field);
                     }
                 }
             }
             if (isWrite() && !non_first_write_red_or && self.phv.alloc_done()) {
                 /// FIXME(cc): Do we need to restrict the context here, or is it always the
                 /// whole pipeline?
-                field->foreach_alloc([&](const PHV::AllocSlice &sl) {
-                    // Consider actual field slices instead of entire fields when calculating
-                    // container conflicts.
-                    if (!range.overlaps(sl.field_slice())) return;
-                    bitvec range(sl.container_slice().lo, sl.width());
-                    cont_writes[sl.container()] |= range;
+                // Consider actual field slices instead of entire fields when calculating
+                // container conflicts.
+                field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
+                    bitvec cont_range(sl.container_slice().lo, sl.width());
+                    cont_writes[sl.container()] |= cont_range;
                 });
             }
         }
@@ -981,7 +1002,8 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
     }
 
     bool preorder(const IR::Expression *e) override {
-        auto* originalField = self.phv.field(e);
+        le_bitrange range;
+        auto* originalField = self.phv.field(e, &range);
         if (!originalField) {
           return true; }
         ordered_set<const PHV::Field*> candidateFields;
@@ -994,37 +1016,40 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
 
         for (const PHV::Field* field : candidateFields) {
             cstring red_or_key;
-            auto &a = self.access[field->name];
-            if (isWrite()) {
-                LOG6("\t\tupdate_access write " << field->name);
-                a.ixbar_read.clear();
-                a.action_read.clear();
-                a.reduction_or_write.clear();
-                a.reduction_or_read.clear();
-                a.write.clear();
-                bool is_red_or = self.red_info.is_reduction_or(
-                                                   findContext<IR::MAU::Instruction>(),
-                                                    table, red_or_key);
-                if (is_red_or) {
-                    a.reduction_or_write.insert(std::make_pair(table, action_context));
-                    self.red_or_use[field->name] = red_or_key;
-                } else if (self.red_or_use.count(field->name)) {
-                    self.red_or_use.erase(self.red_or_use.find(field->name));
-                }
-                a.write.insert(std::make_pair(table, action_context));
-            } else {
-                LOG6("\t\tupdate_access read " << field->name);
-                if (isIxbarRead()) {
-                    self.access[field->name].ixbar_read.insert(
-                        std::make_pair(table, action_context));
-                } else {
+
+            std::set<cstring> field_slice_set = self.getFieldNameSlice(field, range);
+            for (const cstring &field_name : field_slice_set) {
+                auto &a = self.access[field_name];
+                if (isWrite()) {
+                    LOG6("\t\tupdate_access write " << field_name);
+                    a.ixbar_read.clear();
+                    a.action_read.clear();
+                    a.reduction_or_write.clear();
+                    a.reduction_or_read.clear();
+                    a.write.clear();
                     bool is_red_or = self.red_info.is_reduction_or(
-                                                       findContext<IR::MAU::Instruction>(),
-                                                       table, red_or_key);
+                                                    findContext<IR::MAU::Instruction>(),
+                                                        table, red_or_key);
                     if (is_red_or) {
-                        a.reduction_or_read.insert(std::make_pair(table, action_context));
+                        a.reduction_or_write.insert(std::make_pair(table, action_context));
+                        self.red_or_use[field_name] = red_or_key;
+                    } else if (self.red_or_use.count(field_name)) {
+                        self.red_or_use.erase(self.red_or_use.find(field_name));
                     }
-                    a.action_read.insert(std::make_pair(table, action_context));
+                    a.write.insert(std::make_pair(table, action_context));
+                } else {
+                    LOG6("\t\tupdate_access read " << field_name);
+                    if (isIxbarRead()) {
+                        a.ixbar_read.insert(std::make_pair(table, action_context));
+                    } else {
+                        bool is_red_or = self.red_info.is_reduction_or(
+                                                        findContext<IR::MAU::Instruction>(),
+                                                        table, red_or_key);
+                        if (is_red_or) {
+                            a.reduction_or_read.insert(std::make_pair(table, action_context));
+                        }
+                        a.action_read.insert(std::make_pair(table, action_context));
+                    }
                 }
             }
 
@@ -1032,18 +1057,18 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
               if (isWrite()) {
                   /// FIXME(cc): Do we need to restrict the context here, or is it always the
                   /// whole pipeline?
-                  field->foreach_alloc([&](const PHV::AllocSlice &sl) {
-                      bitvec range(sl.container_slice().lo, sl.width());
-                      cont_writes[sl.container()] |= range;
+                  field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
+                      bitvec cont_range(sl.container_slice().lo, sl.width());
+                      cont_writes[sl.container()] |= cont_range;
                       self.dg.containers_write_[table][sl.container()] = true;
                   });
               }
               if (isIxbarRead() || gateway_context) {
-                field->foreach_alloc([&](const PHV::AllocSlice &sl) {
+                field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
                     self.dg.containers_read_xbar_[table][sl.container()] = true;
                 });
               } else if (isRead()) {
-                field->foreach_alloc([&](const PHV::AllocSlice &sl) {
+                field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
                     self.dg.containers_read_alu_[table][sl.container()] = true;
                 });
               }
