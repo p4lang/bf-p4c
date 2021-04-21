@@ -178,7 +178,7 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 auto prevPovOffset = prevPovBit - reg_pov[prevPovReg];
                 Deparser::write_pov_in_json(fd, fd_entry, prevPovReg, prevPovBit, prevPovOffset);
                 fd["Content"] = std::move(chunk_bytes);
-                fd_entry["bytes"] = std::move(fd_entry_chunk_bytes);
+                fd_entry["chunks"] = std::move(fd_entry_chunk_bytes);
                 fd_gress.push_back(std::move(fd));
                 fd_entries.push_back(std::move(fd_entry));
                 prev_row = row;
@@ -187,17 +187,20 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
             auto povBit = fde_control[row].pov_sel.value % povReg->size;
             json::map chunk_byte;
             json::map fd_entry_chunk_byte;
+            json::map fd_entry_chunk;
             chunk_byte["Byte"] = pos;
-            fd_entry_chunk_byte["byte_number"] = pos;
+            fd_entry_chunk_byte["chunk_number"] = pos;
             auto phvReg = Phv::reg(ent.what->encode());
-            if (ent.what->encode() < 224 || ent.what->encode() > 235) {
+            if (ent.what->encode() < CHECKSUM_ENGINE_PHVID_TOFINO_LOW ||
+                ent.what->encode() > CHECKSUM_ENGINE_PHVID_TOFINO_HIGH) {
                 write_field_name_in_json(phvReg, povReg,
-                                         povBit, chunk_byte, fd_entry_chunk_byte,
+                                         povBit, chunk_byte, fd_entry_chunk,
                                          11, gress);
             } else {
                 write_csum_const_in_json(ent.what->encode(), chunk_byte,
-                                         fd_entry_chunk_byte, gress);
+                                         fd_entry_chunk, gress);
             }
+            fd_entry_chunk_byte["chunk"] = std::move(fd_entry_chunk);
             chunk_bytes.push_back(std::move(chunk_byte.clone()));
             fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte.clone()));
             fde_data[row].phv[pos++] = ent.what->encode();
@@ -545,7 +548,8 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
 }
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Tofino>() {
-    return 224 + gress * 6 + unit;
+    return CHECKSUM_ENGINE_PHVID_TOFINO_LOW +
+           (gress * CHECKSUM_ENGINE_PHVID_TOFINO_PER_GRESS) + unit;
 }
 
 template<> unsigned Deparser::FDEntry::Constant::encode<Target::Tofino>() {

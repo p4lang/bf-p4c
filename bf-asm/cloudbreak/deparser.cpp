@@ -469,11 +469,11 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
 }
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Cloudbreak>() {
-    return 240 + unit;
+    return CONSTANTS_PHVID_CLOUDBREAK_HIGH + unit;
 }
 
 template<> unsigned Deparser::FDEntry::Constant::encode<Target::Cloudbreak>() {
-    return 224 + Deparser::constant_idx(gress, val);
+    return CONSTANTS_PHVID_CLOUDBREAK_LOW + Deparser::constant_idx(gress, val);
 }
 
 template<> void Deparser::gen_learn_quanta(Target::Cloudbreak::parser_regs &regs,

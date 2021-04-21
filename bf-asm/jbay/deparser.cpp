@@ -425,18 +425,19 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
         while (size--) {
             json::map chunk_byte;
             json::map fd_entry_chunk_byte;
+            json::map fd_entry_chunk;
             chunk_byte["Byte"] = byte;
             fd_entry_chunk_byte["chunk_number"] = byte;
-            fd_entry_chunk_byte["is_phv"] = true;
-            if (ent_what->encode() < 224) {
+            if (ent_what->encode() < CONSTANTS_PHVID_JBAY_LOW) {
                 auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent_what);
                 auto phv_reg = phv->reg();
                 write_field_name_in_json(phv_reg, &ent_pov->reg, ent_pov->lo,
-                                         chunk_byte, fd_entry_chunk_byte, 19, gress);
+                                         chunk_byte, fd_entry_chunk, 19, gress);
             } else {
                 write_csum_const_in_json(ent_what->encode(), chunk_byte,
-                                         fd_entry_chunk_byte, gress);
+                                         fd_entry_chunk, gress);
             }
+            fd_entry_chunk_byte["chunk"] = std::move(fd_entry_chunk);
             chunk_bytes.push_back(std::move(chunk_byte));
             fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));
             chunk[ch].is_phv |= 1 << byte;
@@ -489,39 +490,33 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
             for (int j = 0; j < 8 && i + j < clot->length; ++j) {
                 json::map chunk_byte;
                 json::map fd_entry_chunk_byte;
+                json::map fd_entry_chunk;
+                chunk_byte["Byte"] = j;
+                fd_entry_chunk_byte["chunk_number"] = j;
                 if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
                     // This is PHV replaced, PHV is used
                     chunk[ch].is_phv |= 1 << j;
                     chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
-                    chunk_byte["Byte"] = j;
-                    fd_entry_chunk_byte["chunk_number"] = j;
-                    // PHV replaced => actual PHV is outputted
-                    fd_entry_chunk_byte["is_phv"] = true;
                     auto phv_reg = &phv_repl->second->reg;
                     write_field_name_in_json(phv_reg, &pov_bit->reg,
                                              pov_bit->lo, chunk_byte,
-                                             fd_entry_chunk_byte, 19, gress);
+                                             fd_entry_chunk, 19, gress);
                     if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
                         ++phv_repl;
                 } else if (csum_repl != clot->csum_replace.end()
                         && int(csum_repl->first) <= i + j) {
                     chunk[ch].is_phv |= 1 << j;
                     chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
-                    chunk_byte["Byte"] = j;
-                    fd_entry_chunk_byte["chunk_number"] = j;
-                    fd_entry_chunk_byte["is_phv"] = true;
                     write_csum_const_in_json(csum_repl->second.encode(), chunk_byte,
-                                             fd_entry_chunk_byte, gress);
+                                             fd_entry_chunk, gress);
                     if (int(csum_repl->first + 2) <= i + j + 1)
                         ++csum_repl;
                 } else {
                     chunk[ch].byte_off.phv_offset[j] = i + j;
-                    chunk_byte["Byte"] = j;
-                    fd_entry_chunk_byte["chunk_number"] = j;
-                    fd_entry_chunk_byte["is_phv"] = false;
                     chunk_byte["CLOT"] = clot_tag;
-                    fd_entry_chunk_byte["clot_tag"] = clot_tag;
+                    fd_entry_chunk["clot_tag"] = clot_tag;
                 }
+                fd_entry_chunk_byte["chunk"] = std::move(fd_entry_chunk);
                 chunk_bytes.push_back(std::move(chunk_byte));
                 fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));
             }
@@ -1006,7 +1001,8 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
 #if 0
 namespace {
 static struct JbayChecksumReg : public Phv::Register {
-    JbayChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+232, 16) {
+    JbayChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit,
+                                              unit+CONSTANTS_PHVID_JBAY_HIGH, 16) {
         snprintf(name, "csum%d", unit); }
     int deparser_id() const override { return uid; }
 } jbay_checksum_units[8] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7} };
@@ -1021,11 +1017,11 @@ template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::JBay>() const {
 #endif
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::JBay>() {
-    return 232 + unit;
+    return CONSTANTS_PHVID_JBAY_HIGH + unit;
 }
 
 template<> unsigned Deparser::FDEntry::Constant::encode<Target::JBay>() {
-    return 224 + Deparser::constant_idx(gress, val);
+    return CONSTANTS_PHVID_JBAY_LOW + Deparser::constant_idx(gress, val);
 }
 
 template<> void Deparser::gen_learn_quanta(Target::JBay::parser_regs &regs,

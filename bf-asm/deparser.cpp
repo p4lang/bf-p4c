@@ -503,23 +503,36 @@ void write_csum_const_in_json(int deparserPhvIdx,
                               json::map& chunk_byte,
                               json::map& fd_entry_chunk_byte,
                               gress_t gress) {
-    fd_entry_chunk_byte["phv_container"] = deparserPhvIdx;
     if (options.target == Target::Tofino::tag) {
-        if (deparserPhvIdx >= 224 && deparserPhvIdx <= 235) {
-            chunk_byte["Checksum"] = deparserPhvIdx - 224 - gress * 6;
+        if (deparserPhvIdx >= CHECKSUM_ENGINE_PHVID_TOFINO_LOW &&
+            deparserPhvIdx <= CHECKSUM_ENGINE_PHVID_TOFINO_HIGH) {
+            auto csum_id = deparserPhvIdx - CHECKSUM_ENGINE_PHVID_TOFINO_LOW -
+                           (gress * CHECKSUM_ENGINE_PHVID_TOFINO_PER_GRESS);
+            chunk_byte["Checksum"] = csum_id;
+            fd_entry_chunk_byte["csum_engine"] = csum_id;
         }
     } else if (options.target == Target::JBay::tag) {
-        if (deparserPhvIdx > 224 && deparserPhvIdx < 232) {
-            chunk_byte["Constant"] = Deparser::get_constant(gress, deparserPhvIdx - 224);
+        if (deparserPhvIdx > CONSTANTS_PHVID_JBAY_LOW &&
+            deparserPhvIdx < CONSTANTS_PHVID_JBAY_HIGH) {
+            chunk_byte["Constant"] = Deparser::get_constant(
+                                        gress, deparserPhvIdx - CONSTANTS_PHVID_JBAY_LOW);
+            fd_entry_chunk_byte["phv_container"] = deparserPhvIdx;
         } else {
-            chunk_byte["Checksum"] = deparserPhvIdx - 232;
+            auto csum_id = deparserPhvIdx - CONSTANTS_PHVID_JBAY_HIGH;
+            chunk_byte["Checksum"] = csum_id;
+            fd_entry_chunk_byte["csum_engine"] = csum_id;
         }
 #if HAVE_CLOUDBREAK
     } else if (options.target == Target::Cloudbreak::tag) {
-        if (deparserPhvIdx > 224 && deparserPhvIdx < 240) {
-            chunk_byte["Constant"] = Deparser::get_constant(gress, deparserPhvIdx - 224);
+        if (deparserPhvIdx > CONSTANTS_PHVID_CLOUDBREAK_LOW &&
+            deparserPhvIdx < CONSTANTS_PHVID_CLOUDBREAK_HIGH) {
+            chunk_byte["Constant"] = Deparser::get_constant(
+                                        gress, deparserPhvIdx - CONSTANTS_PHVID_CLOUDBREAK_LOW);
+            fd_entry_chunk_byte["phv_container"] = deparserPhvIdx;
         } else {
-            chunk_byte["Checksum"] = deparserPhvIdx - 240;
+            auto csum_id = deparserPhvIdx - CONSTANTS_PHVID_CLOUDBREAK_HIGH;
+            chunk_byte["Checksum"] = csum_id;
+            fd_entry_chunk_byte["csum_engine"] = csum_id;
         }
 #endif
     }
