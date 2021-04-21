@@ -842,7 +842,7 @@ build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 add_library(tofinobackend ${BF_P4C_SOURCES})
 add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
-target_include_directories(tofinobackend PRIVATE "${CMAKE_SOURCE_DIR}/third_party/spdlog/include")
+target_include_directories(tofinobackend PRIVATE "${BFN_P4C_SOURCE_DIR}/third_party/spdlog/include")
 
 add_library(bfp4c ${P4C_BAREFOOT_SRCS})
 target_link_libraries (bfp4c tofinobackend bfn_p4runtime
