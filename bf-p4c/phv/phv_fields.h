@@ -183,6 +183,8 @@ class Field : public LiftLess<Field> {
     /// The alignment requirement of this field. If boost::none, there is no
     /// particular alignment requirement.
     boost::optional<FieldAlignment> alignment;
+    /// List of alignment sources for this field (mainly for error printing)
+    std::list<std::pair<FieldAlignment, Util::SourceInfo>> alignmentSources;
 
     /// @see Field::validContainerRange().
     nw_bitrange validContainerRange_i = ZeroToMax();
@@ -714,7 +716,8 @@ class Field : public LiftLess<Field> {
 
     /// Update the alignment requirement for this field. Reports an error if
     /// conflicting requirements render the alignment unsatisfiable.
-    void updateAlignment(PHV::AlignmentReason, const FieldAlignment& newAlignment);
+    void updateAlignment(PHV::AlignmentReason, const FieldAlignment& newAlignment,
+                         const Util::SourceInfo& newAlignmentSource);
 
     /// Erase the alignment requirement for this field.
     void eraseAlignment();

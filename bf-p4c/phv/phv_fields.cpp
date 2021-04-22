@@ -1049,12 +1049,14 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
         !field_i->is_digest() && (!field_i->metadata || uses.is_used_parde(field_i));
 }
 
-void PHV::Field::updateAlignment(PHV::AlignmentReason reason, const FieldAlignment& newAlignment) {
+void PHV::Field::updateAlignment(PHV::AlignmentReason reason, const FieldAlignment& newAlignment,
+                                 const Util::SourceInfo& newAlignmentSource) {
     LOG3("Inferred alignment " << newAlignment << " for field " << name);
 
     // If there's no existing alignment for this field, just take this one.
     if (!alignment) {
         alignment = newAlignment;
+        alignmentSources.push_back({newAlignment, newAlignmentSource});
 
         // used by bridged packing
         alignment_i.addConstraint(reason, newAlignment.align);
@@ -1064,17 +1066,46 @@ void PHV::Field::updateAlignment(PHV::AlignmentReason reason, const FieldAlignme
     // If there is an existing alignment, it must agree with this new one.
     // Otherwise the program is inconsistent and we can't compile it.
     if (*alignment != newAlignment) {
-        ::fatal_error("Inferred incompatible container alignments for field %1%:"
-                      " %2% != %3% (little endian)",
-                      name, cstring::to_cstring(newAlignment),
-                      cstring::to_cstring(*alignment));
+        auto alignmentSourceStr = [&](const FieldAlignment& alignment,
+                                      const Util::SourceInfo& srcInfo) {
+            std::stringstream ss;
+            ss << (srcInfo.isValid() ? srcInfo.toPositionString() : "Source unknown")
+               << ": alignment = " << alignment.align << " (little endian)" << std::endl
+               << (srcInfo.isValid() ? srcInfo.toSourceFragment() : "");
+            return ss.str();
+        };
+        std::stringstream inferredAlignments;
+        inferredAlignments << alignmentSourceStr(newAlignment, newAlignmentSource)
+                           << "Previously inferred alignments:" << std::endl;
+        for (auto &alignmentSource : alignmentSources) {
+            inferredAlignments << alignmentSourceStr(alignmentSource.first, alignmentSource.second);
+        }
+
+        std::string errorExplanation;
+        switch (reason) {
+            case PHV::AlignmentReason::PARSER :
+                errorExplanation =
+                    "Extracting or assigning values with different in-byte alignments "
+                    "within packet to the same field is not supported in the parser.\n"
+                    "Make sure that all values assigned to this field start at the same offset "
+                    "within byte.";
+                break;
+            default:
+                errorExplanation = "";
+                break;
+        }
+
+        ::fatal_error("Inferred incompatible container alignments for field %1%:\n%2%%3%",
+                      name, inferredAlignments.str(), errorExplanation);
     } else {
+        alignmentSources.push_back({newAlignment, newAlignmentSource});
+
         alignment_i.updateConstraint(reason);
     }
 }
 
 void PHV::Field::eraseAlignment() {
-    LOG3("Clearn alignment for field " << name);
+    LOG3("Clear alignment for field " << name);
     // used by phv allocation
     alignment = boost::none;
     // used by bridged packing
@@ -1500,7 +1531,8 @@ struct ComputeFieldAlignments : public Inspector {
         LOG3("A. Updating alignment of " << fieldInfo->name << " to " << alignment);
         LOG3("Extract: " << extract << ", parser state: " <<
                 findContext<IR::BFN::ParserState>()->name);
-        fieldInfo->updateAlignment(PHV::AlignmentReason::PARSER, alignment);
+        fieldInfo->updateAlignment(PHV::AlignmentReason::PARSER, alignment,
+                                   lval->field->getSourceInfo());
 
         // If a parsed field starts at a container bit index larger than the bit
         // index at which it's located in the input buffer, we won't be able to
@@ -1547,7 +1579,8 @@ struct ComputeFieldAlignments : public Inspector {
                         const auto alignment = FieldAlignment(le_bitrange(
                                     StartLen((source->offset + f->size), f->size)));
                         LOG3("B. Updating alignment of " << f->name << " to " << alignment);
-                        f->updateAlignment(PHV::AlignmentReason::DEPARSER, alignment);
+                        f->updateAlignment(PHV::AlignmentReason::DEPARSER, alignment,
+                                           source->field->field->getSourceInfo());
                     }
                 }
             }
@@ -1571,7 +1604,8 @@ struct ComputeFieldAlignments : public Inspector {
             nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
             LOG3("C. Updating alignment of " << fieldInfo->name << " to " << emittedBits);
             LOG3("Emit primitive: " << emitPrimitive);
-            fieldInfo->updateAlignment(PHV::AlignmentReason::DEPARSER, FieldAlignment(emittedBits));
+            fieldInfo->updateAlignment(PHV::AlignmentReason::DEPARSER, FieldAlignment(emittedBits),
+                                       emit->source->field->getSourceInfo());
             currentBit += fieldInfo->size;
         }
 
@@ -1844,7 +1878,8 @@ class CollectPardeConstraints : public Inspector {
                 LOG3("D. Updating alignment of " << f->name << " to " <<
                         FieldAlignment(le_bitrange(StartLen(0, f->size))));
                 f->updateAlignment(PHV::AlignmentReason::DEPARSER,
-                        FieldAlignment(le_bitrange(StartLen(0, f->size))));
+                        FieldAlignment(le_bitrange(StartLen(0, f->size))),
+                        param->source->field->getSourceInfo());
                 f->set_deparsed_bottom_bits(true);
             }
         }
@@ -1937,7 +1972,8 @@ class CollectPardeConstraints : public Inspector {
                                 << FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         fieldInfo->updateAlignment(
                                 PHV::AlignmentReason::DIGEST,
-                                FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
+                                FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))),
+                                fieldListEntry->field->getSourceInfo());
                         LOG3(fieldInfo << " is marked to be byte_aligned "
                              "because it's in a field_list and digested.");
                     } else if (fieldInfo->padding) {
