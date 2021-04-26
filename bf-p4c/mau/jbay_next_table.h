@@ -6,6 +6,8 @@
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "next_table.h"
+#include "table_mutex.h"
+#include "table_control_deps.h"
 
 
 /* This pass determines next table propagation in tofino2. It minimizes the use of long branches
@@ -28,7 +30,7 @@ class JbayNextTable : public PassRepeated, public NextTable {
       *         If no destination is found, returns -1, -1.
       */
     std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId dest) const;
-    JbayNextTable();
+    explicit JbayNextTable(bool disableNextTableUse = false);
     friend std::ostream& operator<<(std::ostream& out, const JbayNextTable& nt) {
       out << "Long Branches:" << std::endl;
       for (auto id_tag : nt.lbs) {
@@ -100,7 +102,7 @@ class JbayNextTable : public PassRepeated, public NextTable {
             return rv;
         }
 
-        class BuildTableToSeqs : public MauInspector {
+        class BuildTableToSeqs : public MauTableInspector {
             LocalizeSeqs &self;
             profile_t init_apply(const IR::Node *node) override  {
                 auto rv = MauInspector::init_apply(node);
@@ -113,7 +115,7 @@ class JbayNextTable : public PassRepeated, public NextTable {
             explicit BuildTableToSeqs(LocalizeSeqs &s) : self(s) { visitDagOnce = false; }
         };
 
-        class BuildCanLocalizeMaps : public MauInspector {
+        class BuildCanLocalizeMaps : public MauTableInspector {
             LocalizeSeqs &self;
             profile_t init_apply(const IR::Node *node) override {
                 auto rv = MauInspector::init_apply(node);
@@ -159,6 +161,14 @@ class JbayNextTable : public PassRepeated, public NextTable {
         return t->is_placed() ? t->unique_id() : t->pp_unique_id();
     }
 
+    /*===================================Data for next_table use ================================*/
+    TablesMutuallyExclusive                         mutex;
+    TableControlDeps                                control_dep;
+    ordered_map<const IR::MAU::Table *, std::pair<int, int>>    use_next_table;
+    class FindNextTableUse;
+    bool uses_next_table(const IR::MAU::Table *tbl) const {
+        return use_next_table.count(tbl) > 0; }
+
     /*===================================Data gathered by Prop===================================*/
     std::map<int, Memories>                         mems;       // Map from stage to tables
     std::map<int, int>                              stage_id;   // Map from stage to next open LID
@@ -180,6 +190,7 @@ class JbayNextTable : public PassRepeated, public NextTable {
         void add_table_seq(const IR::MAU::Table*, std::pair<cstring, const IR::MAU::TableSeq*>);
         void local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
         void cross_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
+        void next_table_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
         bool preorder(const IR::MAU::Table*) override;
 
         profile_t init_apply(const IR::Node* root) override;

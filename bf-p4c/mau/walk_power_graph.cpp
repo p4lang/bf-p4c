@@ -221,8 +221,8 @@ void WalkPowerGraph::clear_mpr_settings() {
  * mpr config.
  */
 void WalkPowerGraph::compute_mpr() {
-  if (next_table_properties_)
-    LOG4("" << *next_table_properties_);
+  BUG_CHECK(next_table_properties_, "next table properties not set");
+  LOG4("" << *next_table_properties_);
 
   for (gress_t g : Device::allGresses()) {
     MprSettings* mpr = mpr_settings_.at(g);
@@ -277,10 +277,13 @@ void WalkPowerGraph::compute_mpr() {
                 if (!mau_features_->uid_to_table_.count(p_uid)) continue;
                 auto p = mau_features_->uid_to_table_.at(p_uid);
                 if (p->stage() > last_match_dep_stage) continue;
-                if (p->resources->table_format.next_table_bits() > 3) {
+                if (next_table_properties_->uses_next_table(p)) {
                   // Annoying corner case -- tables that have too many potential next tables
                   // for the next table map cannot use global_exec/long_branch and must use
-                  // the next table.  Should mark these special corner case tables in the IR.
+                  // the next table.  We also prefer to use next table in some cases to
+                  // conserve long branches.  We determine which tables these are by
+                  // querying the next_table_properties, but perhaps should mark these
+                  // tables in the IR?
                   // In addition, if this table is in an action-dependent stage, we can't
                   // use the mpr_next_table unless we can also set mpr_stage to this stage.
                   // Otherwise we need to mark it always run.  See P4C-3469
@@ -290,17 +293,18 @@ void WalkPowerGraph::compute_mpr() {
                   mpr->set_mpr_stage(stage, t->stage());
                   mpr_stage_required = true;
                   next_tables |= 1 << *t->logical_id;
-                } else if (t->stage() == p->stage() + 1) {
+                  // Unfortunately, the info in next_table_properties is not good enough --
+                  // a table might use next_table for one successor and global_exec and/or
+                  // long_branch for others.  So we enable power for all
+                }
+                if (t->stage() == p->stage() + 1) {
                   // trigger via global exec
                   glob_exec |= (1 << *t->logical_id);
-                } else if (next_table_properties_) {
-                  // trigger via long branch or next table
+                } else {
+                  // trigger via long branch
                   int tag = next_table_properties_->long_branch_tag_for(p_uid, t->unique_id());
-                  if (tag >= 0) {
+                  if (tag >= 0)
                     long_branch |= 1 << tag;
-                  } else {
-                    next_tables |= 1 << *t->logical_id;
-                  }
                 }
               }
             }

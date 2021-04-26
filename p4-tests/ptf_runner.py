@@ -442,6 +442,9 @@ def main():
         args.enable_model_logging = True
         args.verbose_model_logging = True
 
+    if os.getenv('KEEP_LOGS') is not None:
+        args.keep_logs = True
+
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
     if not args.pdtest and not args.bfrt_test and not os.path.exists(p4info_path):
         error("P4Info file {} not found".format(p4info_path))

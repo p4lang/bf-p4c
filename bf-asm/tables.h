@@ -1559,6 +1559,7 @@ public:
     unsigned input_use() const;
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
+    bool is_branch() const;   // Tofino2/3 needs is_a_brnch set to use next_table
     void verify_format();
 )
 

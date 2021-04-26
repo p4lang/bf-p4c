@@ -337,6 +337,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/simple_power_graph.cpp
   mau/split_gateways.cpp
   mau/stateful_alu.cpp
+  mau/table_control_deps.cpp
   mau/table_dependency_graph.cpp
   mau/table_format.cpp
   mau/table_layout.cpp
@@ -397,6 +398,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/split_gateways.h
   mau/stateful_alu.h
   mau/static_entries_const_prop.h
+  mau/table_control_deps.h
   mau/table_dependency_graph.h
   mau/table_flow_graph.h
   mau/table_format.h

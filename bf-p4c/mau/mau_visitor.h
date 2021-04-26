@@ -16,6 +16,12 @@ class MauInspector : public Inspector {
     bool preorder(const IR::BFN::TnaDeparser *) override { return false; }
 };
 
+class MauTableInspector : public MauInspector {
+    // skip subtrees (of tables) that never contain tables
+    bool preorder(const IR::MAU::Action *) override { return false; }
+    bool preorder(const IR::Expression *) override { return false; }
+};
+
 class MauModifier : public Modifier {
     /// for traversing backend IR
     bool preorder(IR::BFN::AbstractParser *) override { return false; }

@@ -312,6 +312,66 @@ bool JbayNextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::
     return true;
 }
 
+class JbayNextTable::FindNextTableUse : public MauTableInspector {
+    JbayNextTable &self;
+    std::vector<const IR::MAU::Table *> tables;
+
+    int first_id(const IR::MAU::TableSeq *seq) {
+        for (auto *t : seq->tables) {
+            if (t->always_run != IR::MAU::AlwaysRun::ACTION)
+                return *t->global_id(); }
+        return -1; }
+    int stage_diff(std::pair<int, int> range) {
+        return range.second/Memories::LOGICAL_TABLES - range.first/Memories::LOGICAL_TABLES; }
+    // a single table may be both the end of a range (be invoked by next table) and the
+    // start of a range (invoke another table via next_table) wthout interference, so
+    // equal end points does not count as an 'overlap'
+    bool overlaps(std::pair<int, int> r1, std::pair<int, int> r2) {
+        return r1.second > r2.first && r2.second > r1.first; }
+
+    profile_t init_apply(const IR::Node *root) {
+        self.use_next_table.clear();
+        tables.clear();
+        return MauTableInspector::init_apply(root); }
+    void postorder(const IR::MAU::Table *t) override {
+        // only care about tables that have control dependent successors (for now)
+        // FIXME -- such tables could use next_table to trigger the next table from the
+        // containing seq, if that was useful.  Probably almost never useful?
+        if (!t->next.empty()) tables.push_back(t); }
+    void postorder(const IR::BFN::Pipe *) {
+        std::stable_sort(tables.begin(), tables.end(),
+                         [this](const IR::MAU::Table *a, const IR::MAU::Table *b) {
+            return self.control_dep.paths(a) > self.control_dep.paths(b); });
+        for (auto *t : tables) {
+            std::pair<int, int> range;
+            range.first = range.second = *t->global_id();
+            for (auto *seq : Values(t->next)) {
+                range.second = std::max(range.second, first_id(seq)); }
+            if (stage_diff(range) < 2 && self.control_dep.paths(t) <= 8) {
+                // can use just local/global exec -- no need for next_table or long_branch
+                continue; }
+            bool can_use_next = true;
+            for (auto &p : self.use_next_table) {
+                if (p.first->gress != t->gress) continue;
+                if (self.mutex(p.first, t)) continue;
+                if (self.control_dep(p.first, t)) continue;
+                if (self.control_dep(t, p.first)) continue;
+                if (!overlaps(range, p.second)) continue;
+                can_use_next = false;
+                break; }
+            if (can_use_next) {
+                self.use_next_table.emplace(t, range);
+            } else if (self.control_dep.paths(t) > 8) {
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%s requires too many next table "
+                      "encodings for indirect map and can't fit within it", t);
+            }
+        }
+    }
+
+ public:
+    explicit FindNextTableUse(JbayNextTable &s) : self(s) {}
+};
+
 /* Holds next table prop information for a specific table sequence. One created per call to
  * add_table_seq. Note that add_table_seq may be called on the same table sequence multiple times,
  * as table sequences can both be (1) under the same table multiple times (multiple actions run the
@@ -503,6 +563,21 @@ void JbayNextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &e
     }
 }
 
+void JbayNextTable::Prop::next_table_prop(const NTInfo &nti,
+                                          std::map<int, bitvec> &executed_paths) {
+    auto stages = nti.stages;
+    for (int i = nti.first_stage; i <= nti.last_stage; i++) {
+        if (stages[i].empty()) continue;
+        auto *first = stages[i].front();
+        if (i - nti.first_stage < 2 && self.control_dep.paths(nti.parent) < 8)
+            break;
+        LOG3("  - " << first->name << " on " << nti.seq_nm << "; NEXT_TABLE from " <<
+             nti.parent->name << " on range [" << nti.first_stage << " -- " << i << "]");
+        executed_paths[i].setbit(*first->global_id());
+        self.props[get_uid(nti.parent)][nti.seq_nm].insert(get_uid(first));
+        break; }
+}
+
 bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
     if (t->always_run == IR::MAU::AlwaysRun::ACTION)
         return true;
@@ -518,6 +593,8 @@ bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
     for (auto ts : t->next) {
         std::map<int, bitvec> executed_paths;
         NTInfo nti(t, ts);
+        if (self.use_next_table.count(t)) {
+            next_table_prop(nti, executed_paths); }
         local_prop(nti, executed_paths);
         cross_prop(nti, executed_paths);
     }
@@ -945,11 +1022,14 @@ void JbayNextTable::TagReduce::alloc_dt_mems() {
     }
 }
 
-JbayNextTable::JbayNextTable() {
+JbayNextTable::JbayNextTable(bool disableNextTableUse) {
     addPasses({ &localize_seqs,
-               new Prop(*this),
-               new LBAlloc(*this),
-               new TagReduce(*this) });
+                &mutex,
+                &control_dep,
+                disableNextTableUse ? nullptr : new FindNextTableUse(*this),
+                new Prop(*this),
+                new LBAlloc(*this),
+                new TagReduce(*this) });
 }
 
 ordered_set<UniqueId> JbayNextTable::next_for(const IR::MAU::Table *tbl, cstring what) const {

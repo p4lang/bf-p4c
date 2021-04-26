@@ -12,7 +12,7 @@
 
 /// Determines which of the program's table dependencies should be ignored, based on
 /// @ignore_table_dependency annotations appearing in the program.
-class IgnoreTableDeps : public MauInspector {
+class IgnoreTableDeps : public MauTableInspector {
     using TablePair = std::pair<const IR::MAU::Table *, const IR::MAU::Table *>;
 
     /// When a table A is in the set mapped by table B, the dependencies between A and B should be
@@ -29,7 +29,7 @@ class IgnoreTableDeps : public MauInspector {
     ordered_map<const IR::MAU::Table *, std::set<cstring>> table_to_pragmas;
 
     profile_t init_apply(const IR::Node *node) override {
-        auto rv = MauInspector::init_apply(node);
+        auto rv = MauTableInspector::init_apply(node);
         ignore_dep_map.clear();
         internal_name_to_table.clear();
         external_name_to_table.clear();
@@ -87,7 +87,7 @@ class IgnoreTableDeps : public MauInspector {
  *  run.  Of the above benefits, benefits 2-5 apply.  However, the placement is not affected
  */
 
-class TablesMutuallyExclusive : public MauInspector {
+class TablesMutuallyExclusive : public MauTableInspector {
     ordered_map<const IR::MAU::Table *, int>    table_ids;
     std::map<int, const IR::MAU::Table *>       rev_table_ids;
 
@@ -116,7 +116,7 @@ class TablesMutuallyExclusive : public MauInspector {
         cstring &name);
 
     profile_t init_apply(const IR::Node *root) override {
-        profile_t rv = MauInspector::init_apply(root);
+        profile_t rv = MauTableInspector::init_apply(root);
 
         table_ids.clear();
         rev_table_ids.clear();

@@ -124,6 +124,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         if (nt) return { nt->unique_id() };
         return {};
     }
+    bool uses_next_table(const IR::MAU::Table *) const { return true; }
 
     void dbprint(std::ostream &out) const override {
         out << "DefaultNext:" << IndentCtl::indent;

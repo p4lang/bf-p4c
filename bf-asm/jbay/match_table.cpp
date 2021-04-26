@@ -50,7 +50,12 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     if (long_branch_input >= 0)
         setup_muxctl(merge.pred_long_brch_lt_src[logical_id], long_branch_input);
 
+    if (result == nullptr)
+        result = this;
+
     bool is_branch = (miss_next.next_table() != nullptr);
+    if (!is_branch && gateway && gateway->is_branch())
+        is_branch = true;
     if (!is_branch)
         for (auto &n : hit_next)
             if (n.next_table() != nullptr) {
@@ -62,10 +67,7 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
                 is_branch = true;
                 break; }
 
-    if (result == nullptr)
-        result = this;
-
-    if (result->get_format_field_size("next") > 3)
+    if (!is_branch && result->get_format_field_size("next") > 3)
         is_branch = true;
 
     if (is_branch)

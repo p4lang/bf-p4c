@@ -595,6 +595,15 @@ unsigned GatewayTable::input_use() const {
     return rv;
 }
 
+bool GatewayTable::is_branch() const {
+    for (auto &line : table)
+        if (line.next.next_table() != nullptr)
+            return true;
+    if (!miss.run_table && miss.next.next_table() != nullptr)
+        return true;
+    return false;
+}
+
 /* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from
  * the hash bus?   Currently we assume that the input_xbar is declared to set up the
  * hash signals correctly so that we can just match them.  Should at least check it
