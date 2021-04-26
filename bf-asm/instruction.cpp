@@ -408,6 +408,7 @@ struct operand {
             error(lineno, "action bus entry %d(rng %d) out of range for %d-bit access",
                   size == 2 ? byte+32 : byte, rng.unit, size*8);
             return -1; }
+        unsigned bitoffset(int group) const override { return lo; }
         void dbprint(std::ostream &out) const override {
             out << "rng " << rng.unit << '(' << lo << ".." << hi << ')'; }
     };

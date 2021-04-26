@@ -1,0 +1,8 @@
+# Test verifies that each 8b slice of a 24b random number takes a different value.
+
+add ingress.test1 data.f1:0xc000 ingress.set_rand()
+add ingress.test2 meta.rand_num:0xffffffff ingress.set_f3(val:0x1234)
+
+#        f1   f2 f3   f4 f5 f6 f7
+packet 0 c000 00 0000 00 00 00 00
+expect 3 c000 01 0000 02 00 03 00

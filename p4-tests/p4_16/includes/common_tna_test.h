@@ -1,10 +1,12 @@
 
+#ifndef INGRESS_DPRSR_OVERRIDE
 control ingressDeparser(packet_out packet, inout headers hdr, in metadata meta,
                         in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs) {
     apply {
         packet.emit(hdr);
     }
 }
+#endif
 
 #ifndef egress
 parser egressParser(packet_in packet, out headers hdr, out metadata meta,
