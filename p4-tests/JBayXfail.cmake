@@ -438,7 +438,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "invalid SuperCluster was formed"
+  "invalid SuperCluster was formed|Compiler Bug.*SIGSEGV"
   # digest fields related failures.
   testdata/p4_14_samples/source_routing.p4
 )
