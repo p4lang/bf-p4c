@@ -15,6 +15,7 @@ tna32q_program = os.path.join(p4_16_path, 'tna_32q_2pipe/tna_32q_2pipe.p4')
 t2na_program = os.path.join(tests_dir, 'p4_16/ptf/ipv4_checksum.p4')
 p4_16_includes_dir = os.path.join(tests_dir, 'p4_16/includes')
 p4c_driver_tests_outputs = os.path.join(tests_dir, 'p4c_driver_tests_outputs')
+p4c_3078_program = os.path.join(tests_dir, 'p4_16/compile_only/p4c-3078.p4')
 
 # A map of test name to: (compiler args, xfail_msg, files to check for (non)existence)
 # **** Note *****
@@ -28,6 +29,18 @@ test_matrix = {
 
     # Preprocessor only
     'p4_preprocessor_only': (['-I', p4_16_includes_dir, '-E', p4_16_default, '-o', 'p4_preprocessor_only'], None, None),
+
+    # Default program name
+    'default_program_name': (['--target', 'tofino', '--arch', 'tna', '-o', 'default_program_name',
+                              '-I', p4_16_includes_dir, p4c_3078_program],
+                             None,
+                             ['p4c-3078.conf', 'pipe/p4c-3078.bfa']),
+    # Explicit program name
+    'explicit_program_name': (['--target', 'tofino', '--arch', 'tna', '-o', 'explicit_program_name',
+                               '--program-name', 'foo_bar_p4c_3078',
+                               '-I', p4_16_includes_dir, p4c_3078_program],
+                              None,
+                              ['foo_bar_p4c_3078.conf', 'pipe/foo_bar_p4c_3078.bfa']),
 
     # Tofino P4-16
     'p4_16_tna': (['--target', 'tofino', '--arch', 'tna',

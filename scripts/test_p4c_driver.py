@@ -140,6 +140,9 @@ class Test:
                             action="store_true", default=False)
         # parser.add_argument("--bf-rt-schema", action="store",
         #                   help="Generate and write BF-RT JSON schema  to the specified file")
+        parser.add_argument("--program-name",
+                            help="Program name overriding the default name derived from source file name.",
+                            action="store", default=None, type=str)
         parser.add_argument("--validate-output", action="store_true", default=False,
                             help="run context.json validation")
         parser.add_argument("--validate-manifest", action="store_true", default=False,
