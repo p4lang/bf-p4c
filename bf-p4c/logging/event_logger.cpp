@@ -4,8 +4,9 @@
 #include <spdlog/sinks/null_sink.h>
 #include <rapidjson/prettywriter.h>
 #include <ctime>
+
 #include "event_log_schema.h"
-#include "lib/log.h"
+#include "rapidjson_adapter.h"
 
 #ifndef EVENT_LOG_SCHEMA_VERSION
 #error "event_logger.cpp: EVENT_LOG_SCHEMA_VERSION is not defined!"
@@ -13,21 +14,7 @@
 
 using Schema = Logging::Event_Log_Schema_Logger;
 
-/**
- *  Wrapper for Schema::Event_Base objects
- *  It enables schema header to be included in this file and
- *  not publicly in the header.
- */
-class EventBaseWrapper {
-    Schema::Event_Base *obj = nullptr;
-
- public:
-    explicit EventBaseWrapper(Schema::Event_Base *base) : obj(base) {}
-
-    void serialize(Logging::Writer &writer) const {
-        obj->serialize(writer);
-    }
-};
+EventLogger::~EventLogger() {}
 
 namespace std {
     string to_string(EventLogger::AllocPhase phase) {
@@ -41,10 +28,14 @@ static Schema::SourceInfo *getSourceInfo(const Util::SourceInfo &info) {
     return new Schema::SourceInfo(info.column, info.filename.c_str(), info.line);
 }
 
-EventLogger::EventLogger() {
+void EventLogger::nullInit() {
     // Unless explicitly initialized via init(), logs to null sink
     auto logger = spdlog::create<spdlog::sinks::null_sink_st>("null_logger");
     spdlog::set_default_logger(logger);
+}
+
+EventLogger::EventLogger() {
+    nullInit();
 }
 
 void EventLogger::deinit() {
@@ -60,16 +51,12 @@ std::ostream &EventLogger::getDebugStream(unsigned level, const std::string &fil
             << ::Log::Detail::OutputLogPrefix(file.c_str(), level);
 }
 
-bool EventLogger::isVerbosityAtLeast(unsigned level, const std::string &file) const {
-    return level <= MAX_LOGGING_LEVEL && ::Log::fileLogLevelIsAtLeast(file.c_str(), level);
-}
-
-inline void EventLogger::logSink(const EventBaseWrapper &obj) {
+template<typename T>
+inline void EventLogger::logSink(const T *obj) {
     rapidjson::StringBuffer sb;
     Logging::PlainWriterAdapter writerAdapter(sb);
-    obj.serialize(writerAdapter);
+    obj->serialize(writerAdapter);
 
-    // Actual logging sink
     spdlog::error(sb.GetString());
 }
 
@@ -99,7 +86,7 @@ void EventLogger::init(const std::string &OUTDIR, const std::string &FILENAME) {
 
 void EventLogger::logStart() {
     auto ls = new Schema::EventLogStart(EVENT_LOG_SCHEMA_VERSION, getCurrentTimestamp());
-    logSink(EventBaseWrapper(ls));
+    logSink(ls);
 }
 
 void EventLogger::passChange(const std::string &manager, const std::string &pass, unsigned seq) {
@@ -109,58 +96,54 @@ void EventLogger::passChange(const std::string &manager, const std::string &pass
     lastSeq = seq;
 
     auto pc = new Schema::EventPassChanged(manager, pass, seq, getCurrentTimestamp());
-    logSink(EventBaseWrapper(pc));
+    logSink(pc);
 }
 
 void EventLogger::parserError(const std::string &message, const Util::SourceInfo &info) {
     auto src = getSourceInfo(info);
     auto pe = new Schema::EventParserError(message, src, getCurrentTimestamp());
-    logSink(EventBaseWrapper(pe));
+    logSink(pe);
 }
 
 void EventLogger::error(const std::string &message, const std::string &type,
                         const Util::SourceInfo *info) {
     auto src = info ? getSourceInfo(*info) : nullptr;
     auto ce = new Schema::EventCompilationError(message, getCurrentTimestamp(), src, type);
-    logSink(EventBaseWrapper(ce));
+    logSink(ce);
 }
 
 void EventLogger::warning(const std::string &message, const std::string &type,
                           const Util::SourceInfo *info) {
     auto src = info ? getSourceInfo(*info) : nullptr;
     auto cw = new Schema::EventCompilationWarning(message, getCurrentTimestamp(), src, type);
-    logSink(EventBaseWrapper(cw));
+    logSink(cw);
 }
 
 void EventLogger::debug(unsigned verbosity, const std::string &file, const std::string &message) {
-    if (!isVerbosityAtLeast(verbosity, file)) return;
-
     getDebugStream(verbosity, file) << message << std::endl;
 
     auto d = new Schema::EventDebug(file, message, getCurrentTimestamp(), verbosity);
-    logSink(EventBaseWrapper(d));
+    logSink(d);
 }
 
 void EventLogger::decision(unsigned verbosity, const std::string &file,
                            const std::string &description, const std::string &what,
                            const std::string &why) {
-    if (!isVerbosityAtLeast(verbosity, file)) return;
-
     const std::string message = description + ", choosing: " + what + ", because: " + why;
     getDebugStream(verbosity, file) << message << std::endl;
 
     auto d = new Schema::EventDecision(what, file, description, why,
                                        getCurrentTimestamp(), verbosity);
-    logSink(EventBaseWrapper(d));
+    logSink(d);
 }
 
 void EventLogger::iterationChange(unsigned iteration, AllocPhase phase) {
     auto ic = new Schema::EventIterationChanged(iteration, std::to_string(phase),
                                                 getCurrentTimestamp());
-    logSink(EventBaseWrapper(ic));
+    logSink(ic);
 }
 
 void EventLogger::pipeChange(int pipeId) {
     auto pps = new Schema::EventPipeProcessingStarted(pipeId, getCurrentTimestamp());
-    logSink(EventBaseWrapper(pps));
+    logSink(pps);
 }

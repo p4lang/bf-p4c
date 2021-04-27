@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <string>
+#include "lib/log.h"
 
 namespace IR {
 class Node;  // Forward declare IR::Node for debug hook
@@ -11,8 +12,6 @@ class Node;  // Forward declare IR::Node for debug hook
 namespace Util {
 class SourceInfo;  // Forward declare Util::SourceInfo for errors/warnings
 };
-
-class EventBaseWrapper;  // Wraps Schema::Event_Log_Schema_Logger::Event_Base
 
 // Copy typedef of DebugHook so we don't have to depend on ir/ir.h
 typedef std::function<void(const char*, unsigned, const char*, const IR::Node*)> DebugHook;
@@ -36,12 +35,9 @@ class EventLogger {
     EventLogger(EventLogger &&other) = delete;
     EventLogger(const EventLogger &other) = delete;
     EventLogger &operator=(const EventLogger &other) = delete;
-    ~EventLogger() {}
+    ~EventLogger();
 
-    /**
-     *  Used in testing to manually reset spdlog at will
-     */
-    void deinit();
+    void nullInit();
 
     /**
      *  Each message requires current timestamp in form of number of seconds
@@ -56,20 +52,12 @@ class EventLogger {
     virtual std::ostream &getDebugStream(unsigned level, const std::string &file) const;
 
     /**
-     *  Uses lib/log.h capabilities to check whether particular C++ source file
-     *  has verbosity level set to at least 'level'
-     *
-     *  Used to determine whether particular debug/decision log should be emitted
-     *  (backwards compatibility)
-     */
-    virtual bool isVerbosityAtLeast(unsigned level, const std::string &file) const;
-
-    /**
      *  This is sink function for all logging functions. It accepts object to
      *  be serialized, serializes it to JSON and then calls underlying logger
      *  to dump it to output.
      */
-    void logSink(const EventBaseWrapper &obj);
+    template<typename T>
+    void logSink(const T *obj);
 
     /**
      *  This function is called from constructor, bootstrapping event log with
@@ -98,6 +86,11 @@ class EventLogger {
      * \note Until this function is called, all events go to null sink
      */
     void init(const std::string &outdir, const std::string &filename);
+
+    /**
+     *  Used in testing to manually reset spdlog at will
+     */
+    void deinit();
 
     /**
      *  This function is expected to be called from ErrorReporter
@@ -151,6 +144,14 @@ class EventLogger {
     }
 };
 
+#define TAB1 "  "
+#define TAB2 TAB1 TAB1
+#define TAB3 TAB1 TAB2
+#define TAB4 TAB2 TAB2
+#define TAB5 TAB1 TAB4
+#define TAB6 TAB3 TAB3
+#define TAB7 TAB1 TAB6
+
 /**
  *  NOTE: We need __FILE__ macro to look up whether source file in which this is called
  *  has logging level set to appropriate level or not. Because __FILE__ is used, we can't
@@ -159,7 +160,10 @@ class EventLogger {
  *
  *  These macros log into both Event Log and regular LOGn.
  */
-#define LOG_DEBUG(level, message) EventLogger::get().debug(level, __FILE__, message);
+#define LOG_DEBUG(level, message) if (LOGGING(level)) { \
+    std::stringstream out; \
+    out << message; \
+    EventLogger::get().debug(level, __FILE__, out.str()); }
 #define LOG_DEBUG1(message) LOG_DEBUG(1, message)
 #define LOG_DEBUG2(message) LOG_DEBUG(2, message)
 #define LOG_DEBUG3(message) LOG_DEBUG(3, message)

@@ -18,6 +18,7 @@
 #include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/phv/analysis/mutex_overlay.h"
 #include "bf-p4c/mau/action_mutex.h"
+#include "bf-p4c/logging/event_logger.h"
 #include "ir/visitor.h"
 
 class PhvInfo;
@@ -136,6 +137,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
 
     phvLoggingInfo->superclusters = &clustering.cluster_groups();
     phvLoggingInfo->pragmas = &pragmas;
+    EventLogger::get().iterationChange(invocationCount, EventLogger::AllocPhase::PhvAllocation);
     setName("PHV Analysis");
 }
 

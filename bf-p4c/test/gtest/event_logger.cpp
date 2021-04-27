@@ -8,18 +8,12 @@ namespace Test {
 
 class EventLoggerTestable : public EventLogger {
  private:
-    bool verbosityCheck = true;
-
     std::string getCurrentTimestamp() const override {
         return "TIMESTAMP";
     }
 
     std::ostream &getDebugStream(unsigned, const std::string &) const override {
         return std::clog;
-    }
-
-    bool isVerbosityAtLeast(unsigned, const std::string &) const override {
-        return verbosityCheck;
     }
 
  public:
@@ -34,12 +28,8 @@ class EventLoggerTestable : public EventLogger {
         };
     }
 
-    void setVerbosityCheckFlag(bool value) {
-        verbosityCheck = value;
-    }
-
-    void deinit() {
-        EventLogger::deinit();
+    void restore() {
+        EventLogger::nullInit();
     }
 };
 
@@ -52,12 +42,16 @@ class EventLoggerTest : public ::testing::Test {
     const Util::SourceInfo srcInfo = Util::SourceInfo("file.cpp", 1, 10, "");
 
     void SetUp() {
+        // ::EventLogger might be initialized from previous regressions, clear it
+        ::EventLogger::get().deinit();
         unlink(PATH.c_str());
-        EventLogger::get2().setVerbosityCheckFlag(true);
     }
 
     void TearDown() {
-        EventLogger::get2().deinit();
+        // Clear logger
+        EventLogger::get().deinit();
+        // Restore null_logger so follow-up regression works
+        EventLogger::get2().restore();
         unlink(PATH.c_str());
     }
 
@@ -189,25 +183,6 @@ TEST_F(EventLoggerTest, ExportsEventDecision) {
     std::vector<std::string> expectedLines = {
         R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
         R"({"event_type":"decision","decision":"Picked decision","file":"file.cpp","message":"Description","reason":"Reason","time":"TIMESTAMP","verbosity":3})"
-    };
-    compareFileWithExpected(load, expectedLines);
-
-    EXPECT_TRUE(load.eof());
-}
-
-TEST_F(EventLoggerTest, NoDebugOrDecisionIfVerbosityFalse) {
-    initLogger();
-    EventLogger::get2().setVerbosityCheckFlag(false);
-
-    // These won't be emitted because verbosity is false
-    EventLogger::get2().debug(6, "file.cpp", "Debug");
-    EventLogger::get2().decision(3, "file.cpp", "Description", "Picked decision", "Reason");
-
-    std::ifstream load(PATH);
-    EXPECT_TRUE(load.good());
-
-    std::vector<std::string> expectedLines = {
-        R"({"event_type":"start","schema_version":"1.0.0","time":"TIMESTAMP"})",
     };
     compareFileWithExpected(load, expectedLines);
 

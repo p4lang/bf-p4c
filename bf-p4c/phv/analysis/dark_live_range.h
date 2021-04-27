@@ -15,6 +15,7 @@
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
+#include "bf-p4c/logging/event_logger.h"
 
 /** This class calculates the live range of fields to determine potential for overlay due to
   * spilling into dark containers. The calculated live ranges use the min_stage value for tables
@@ -167,8 +168,10 @@ class DarkLiveRange : public Inspector {
                 else
                     dg_stage = std::min(dg_stage, dg.min_stage(tbl));
 
-                LOG6("\t\t\tTable: " << tbl->externalName() << ", phvInfo min-stage: " << stage);
-                LOG6("\t\t\tTable: " << tbl->externalName() << ", DG min-stage: " << dg_stage);
+                LOG_DEBUG6(TAB3 "Table: " << tbl->externalName()
+                           << ", phvInfo min-stage: " << stage);
+                LOG_DEBUG6(TAB3 "Table: " << tbl->externalName()
+                           << ", DG min-stage: " << dg_stage);
             }
 
             return std::min(stage, dg_stage);
