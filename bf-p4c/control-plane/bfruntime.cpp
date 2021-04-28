@@ -142,7 +142,11 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER,
         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME,
-        BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID,
+        BF_RT_DATA_SNAPSHOT_ENABLED_NEXT_TABLES,
+        BF_RT_DATA_SNAPSHOT_GLOBAL_EXECUTE_TABLES,
+        BF_RT_DATA_SNAPSHOT_ENABLED_GLOBAL_EXECUTE_TABLES,
+        BF_RT_DATA_SNAPSHOT_LONG_BRANCH_TABLES,
+        BF_RT_DATA_SNAPSHOT_ENABLED_LONG_BRANCH_TABLES,
         BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR,
         BF_RT_DATA_SNAPSHOT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_TABLE_NAME,
@@ -2113,8 +2117,33 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
             // instead...
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_MPR_NEXT_TABLE_ID, "mpr_next_table_id",
-                    makeTypeInt("uint32"), false /* repeated */);
+                    BF_RT_DATA_SNAPSHOT_ENABLED_NEXT_TABLES, "enabled_next_tables",
+                    makeTypeString(), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_GLOBAL_EXECUTE_TABLES, "global_execute_tables",
+                    makeTypeString(), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_ENABLED_GLOBAL_EXECUTE_TABLES,
+                    "enabled_global_execute_tables",
+                    makeTypeString(), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_LONG_BRANCH_TABLES, "long_branch_tables",
+                    makeTypeString(), true /* repeated */);
+                addROSingleton(dataJson, f);
+            }
+            {
+                auto* f = makeCommonDataField(
+                    BF_RT_DATA_SNAPSHOT_ENABLED_LONG_BRANCH_TABLES, "enabled_long_branch_tables",
+                    makeTypeString(), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
