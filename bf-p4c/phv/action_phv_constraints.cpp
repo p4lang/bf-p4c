@@ -2966,9 +2966,11 @@ bool ActionPhvConstraints::cannot_initialize(
             LOG5("\t\t\t  Field slice " << write << " must be checked for PHV/action data/non-zero "
                  "constant sources.");
             for (auto& read : constraint_tracker.sources(write, action)) {
-                if (read.ad) return true;
-                if (read.phv_used != boost::none) return true;
-                if (read.constant && read.const_value != 0) return true;
+                if (read.ad) { LOG5("\t\t\t... action data"); return true; }
+                if (read.phv_used != boost::none) { LOG5("\t\t\t... PHV"); return true; }
+                if (read.constant && read.const_value != 0) {
+                    LOG5("\t\t\t... action data");
+                    return true; }
             }
         }
     }

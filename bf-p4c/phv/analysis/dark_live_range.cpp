@@ -1074,13 +1074,23 @@ boost::optional<PHV::Allocation::ActionSet> DarkLiveRange::getInitActions(
     PHV::Allocation::ActionSet moveActions;
     const PHV::Field* f = field.field.field();
     for (const auto* act : tablesToActions.getActionsForTable(t)) {
+        // If field is already written in this action, do not initialize here.
+        // *ALEX* This should be updated to be done at slice granularity
+        if (actionConstraints.written_in(field.field, act)) {
+            LOG5("\tA. Field " << field.field << " already written in action " << act->name <<
+                " of table " << t->name);
+            // continue;
+        }
         if (cannotInitInAction(c, act, alloc)) {
             LOG_DEBUG2(TAB3 "Cannot init " << field.field << " in do not init action "
                        << act->name);
             return boost::none;
         }
-        // If field is already written in this action, do not initialize here.
-        if (actionConstraints.written_in(field.field, act)) continue;
+        if (actionConstraints.written_in(field.field, act)) {
+            LOG5("\tB. Field " << field.field << " already written in action " << act->name <<
+                " of table " << t->name);
+            continue;
+        }
         auto& actionReads = actionConstraints.actionReadsSlices(act);
         auto actionWrites = actionConstraints.actionWritesSlices(act);
         auto inits = alloc.getMetadataInits(act);

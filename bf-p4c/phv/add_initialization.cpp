@@ -675,7 +675,7 @@ void ComputeDependencies::summarizeDarkInits(
             if (alloc.getInitPrimitive()->destAssignedToZero()) {
                 for (const auto* t : initTables) {
                     fieldWrites[&f][dg.min_stage(t)][t].insert(alloc.field_slice());
-                    LOG5("\t\t insering zero write for table " << t->name);
+                    LOG5("\t\t inserting zero write for table " << t->name);
                 }
             }
             if (alloc.getInitPrimitive()->getSourceSlice()) {
@@ -782,11 +782,17 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
     // C1[0] <-- f1 {1, 2}
     // C1[1] <-- f2 {1, 3}
     // C1 <-- f3 {3, 7}
+    if (LOGGING(5)) {
+        LOG5("\t\t Slices:");
+        for (auto slc : alloc_slices) LOG5("\t\t\t" << slc);
+    }
+
     for (unsigned i = 0; i < alloc_slices.size() - 1; ++i) {
         const PHV::AllocSlice& alloc = alloc_slices.at(i);
         if (!fieldWrites.count(alloc.field()) && !fieldReads.count(alloc.field())) continue;
         ordered_set<const IR::MAU::Table*> allocUses;
-        ordered_set<const IR::MAU::Table*> nextAllocUses;
+        ordered_set<PHV::AllocSlice> next_dep_slices;
+
         // Gather all the usedefs for alloc.
         if (fieldReads.count(alloc.field())) {
             int minStageRead = (alloc.getEarliestLiveness().second == READ)
@@ -808,62 +814,86 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
         }
 
         // Find the initialization point for the next alloc slice.
-        const PHV::AllocSlice& nextAlloc = alloc_slices.at(i + 1);
-        if (checkBitsOverlap && !nextAlloc.container_slice().overlaps(alloc.container_slice())) {
-            LOG5("\t\tIgnoring alloc because the previous alloc and this one do not "
-                    "overlap in the container.");
-            continue;
-        }
-        if (!checkBitsOverlap && !nextAlloc.field_slice().overlaps(alloc.field_slice())) {
-            LOG5("\t\tIgnoring alloc because the previous alloc belongs to a different "
-                 "slice of the field.");
-            continue;
-        }
-        if (nextAlloc.getInitPrimitive()->isNOP()) {
-            // Add all the uses of the field to the set of fields to which the dependencies must
-            // be inserted.
-            LOG5("\t\tAdd dependencies to all usedefs of " << nextAlloc);
-            // Gather all usedefs for nextAlloc.
-            if (fieldReads.count(nextAlloc.field())) {
-                int minStageRead = (nextAlloc.getEarliestLiveness().second == READ)
-                    ? nextAlloc.getEarliestLiveness().first :
-                      (nextAlloc.getEarliestLiveness().first + 1);
-                accountUses(minStageRead, nextAlloc.getLatestLiveness().first, nextAlloc,
-                            fieldReads, nextAllocUses);
-            }
-            if (fieldWrites.count(nextAlloc.field())) {
-                int maxStageWritten = (nextAlloc.getLatestLiveness().second == WRITE)
-                    ? nextAlloc.getLatestLiveness().first
-                    : (nextAlloc.getLatestLiveness().first == 0 ?
-                      0 : nextAlloc.getLatestLiveness().first - 1);
-                accountUses(nextAlloc.getEarliestLiveness().first, maxStageWritten, nextAlloc,
-                            fieldWrites, nextAllocUses);
-            }
-            for (const auto* t : nextAllocUses)
-                LOG5("\t\t\t" << t->name << " (Stage " << dg.min_stage(t) << ")");
-        } else if (nextAlloc.getInitPrimitive()->mustInitInLastMAUStage()) {
-            // No need for any dependencies here.
-            LOG5("\t\tNo need to insert dependencies to the last always_init block.");
-        } else if (nextAlloc.getInitPrimitive()->getInitPoints().size() > 0) {
-            const IR::MAU::Table* initTable = nullptr;
-            for (const auto* action : nextAlloc.getInitPrimitive()->getInitPoints()) {
-                auto tbl = actionsMap.getTableForAction(action);
-                BUG_CHECK(tbl, "No table corresponding to action %1%", action->name);
-                if (initTable)
-                    BUG_CHECK(initTable == *tbl, "Multiple tables found for dark primitive");
-                initTable = *tbl;
-            }
-            LOG5("\t\tAdd dependencies to initialization point " << initTable->name <<
-                    " (Stage " << dg.min_stage(initTable) << ")");
-            nextAllocUses.insert(initTable);
-        }
+        for (unsigned j = i+1; j < alloc_slices.size(); ++j) {
+            const PHV::AllocSlice& nextAlloc = alloc_slices.at(j);
+            ordered_set<const IR::MAU::Table*> nextAllocUses;
 
-        for (const auto* fromDep : allocUses) {
-            for (const auto* toDep : nextAllocUses) {
-                if (fromDep == toDep) continue;
-                LOG4("\t\tAdd dep from " << fromDep->name << " --> " << toDep->name);
-                phv.addMetadataDependency(fromDep, toDep);
-                LOG2("\t" << fromDep->name << " --> " << toDep->name);
+            if (checkBitsOverlap &&
+                !nextAlloc.container_slice().overlaps(alloc.container_slice())) {
+                LOG5("\t\tIgnoring alloc " << nextAlloc << " because the previous alloc and this "
+                     "one do not overlap in the container.");
+                continue;
+            }
+            if (!checkBitsOverlap && !nextAlloc.field_slice().overlaps(alloc.field_slice())) {
+                LOG5("\t\tIgnoring alloc " << nextAlloc << " because the previous alloc belongs"
+                     " to a different slice of the field.");
+                continue;
+            }
+            if (nextAlloc.getInitPrimitive()->isNOP()) {
+                // Add all the uses of the field to the set of fields to which the dependencies
+                // must be inserted.
+                LOG5("\t\tAdd dependencies to all usedefs of " << nextAlloc);
+                // Gather all usedefs for nextAlloc.
+                if (fieldReads.count(nextAlloc.field())) {
+                    int minStageRead = (nextAlloc.getEarliestLiveness().second == READ)
+                        ? nextAlloc.getEarliestLiveness().first :
+                        (nextAlloc.getEarliestLiveness().first + 1);
+                    accountUses(minStageRead, nextAlloc.getLatestLiveness().first, nextAlloc,
+                                fieldReads, nextAllocUses);
+                }
+                if (fieldWrites.count(nextAlloc.field())) {
+                    int maxStageWritten = (nextAlloc.getLatestLiveness().second == WRITE)
+                        ? nextAlloc.getLatestLiveness().first
+                        : (nextAlloc.getLatestLiveness().first == 0 ?
+                           0 : nextAlloc.getLatestLiveness().first - 1);
+                    accountUses(nextAlloc.getEarliestLiveness().first, maxStageWritten, nextAlloc,
+                                fieldWrites, nextAllocUses);
+                }
+                for (const auto* t : nextAllocUses)
+                    LOG5("\t\t\t" << t->name << " (Stage " << dg.min_stage(t) << ")");
+            } else if (nextAlloc.getInitPrimitive()->mustInitInLastMAUStage()) {
+                // No need for any dependencies here.
+                LOG5("\t\tNo need to insert dependencies to the last always_init block.");
+            } else if (nextAlloc.getInitPrimitive()->getInitPoints().size() > 0) {
+                const IR::MAU::Table* initTable = nullptr;
+                for (const auto* action : nextAlloc.getInitPrimitive()->getInitPoints()) {
+                    auto tbl = actionsMap.getTableForAction(action);
+                    BUG_CHECK(tbl, "No table corresponding to action %1%", action->name);
+                    if (initTable)
+                        BUG_CHECK(initTable == *tbl, "Multiple tables found for dark primitive");
+                    initTable = *tbl;
+                }
+                LOG5("\t\tAdd dependencies to initialization point " << initTable->name <<
+                     " (Stage " << dg.min_stage(initTable) << ")");
+                nextAllocUses.insert(initTable);
+            }
+
+            // Add dependencies between tables of AllocSlice and next sorted AllocSlice
+            for (const auto* fromDep : allocUses) {
+                for (const auto* toDep : nextAllocUses) {
+                    if (fromDep == toDep) continue;
+
+                    // Check if an earlier dependent slice has dependencies to nextAlloc also ...
+                    bool intermediate_dep = false;
+                    for (auto dep_slc : next_dep_slices) {
+                        if (nextAlloc.container_slice().overlaps(dep_slc.container_slice())) {
+                            intermediate_dep = true;
+                            break;
+                        }
+                    }
+                    // ... amd if it does avoid adding dependencies.
+                    // That is only add dependencies between temporaly neighboring slices.
+                    // I.e. for 3 slices in liverange sorted order s1, s2, s3 with dependences
+                    // between each pair of slices, only add dependences s1-->s2, s2-->s3 and
+                    // skip dependence s1-->s3
+                    if (intermediate_dep) continue;
+
+                    LOG4("\t\tAdd dep from " << fromDep->name << " --> " << toDep->name);
+                    phv.addMetadataDependency(fromDep, toDep);
+
+                    // Keep track of Slices we add container confict dependences to
+                    next_dep_slices.insert(nextAlloc);
+                }
             }
         }
     }
