@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_P416_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_p416_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_p416_baremetal_tofino2 --bf-rt-schema bf_arista_switch_p416_baremetal_tofino2/context/bf-rt.json
-// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_P416_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_p416_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_p416_baremetal_tofino2 --bf-rt-schema bf_arista_switch_p416_baremetal_tofino2/context/bf-rt.json
+// p4c 9.5.0 (SHA: 0115db3)
 
 #include <core.p4>
 #include <t2na.p4>       /* TOFINO2_ONLY */
@@ -713,6 +713,7 @@ struct Sardinia {
     bit<1>  Corydon;
     bit<6>  Heuvelton;
     bit<1>  Manilla;
+    bit<8>  Whitewood;
 }
 
 struct Chavies {
@@ -724,7 +725,7 @@ struct Chavies {
 struct Kenney {
     bit<10> Miranda;
     bit<10> Peebles;
-    bit<2>  Wellton;
+    bit<1>  Wellton;
     bit<8>  Crestone;
     bit<6>  Buncombe;
     bit<16> Pettry;
@@ -2024,8 +2025,8 @@ parser Parkway(packet_in Palouse, out Orting Hookdale, out Yerington Funston, ou
     @name(".Sespe") Checksum() Sespe;
     @name(".Callao") Checksum() Callao;
     @name(".Wagener") value_set<bit<9>>(2) Wagener;
-    @name(".Monrovia") value_set<bit<18>>(4) Monrovia;
-    @name(".Rienzi") value_set<bit<18>>(4) Rienzi;
+    @name(".Monrovia") value_set<bit<19>>(8) Monrovia;
+    @name(".Rienzi") value_set<bit<19>>(8) Rienzi;
     state Ambler {
         transition select(Wyndmoor.ingress_port) {
             Wagener: Olmitz;
@@ -2182,7 +2183,7 @@ parser Parkway(packet_in Palouse, out Orting Hookdale, out Yerington Funston, ou
         Palouse.extract<Suttle>(Hookdale.PeaRidge);
         Palouse.extract<Teigen>(Hookdale.Cranbury);
         Palouse.extract<Almedia>(Hookdale.Bronwood);
-        transition select(Hookdale.PeaRidge.Ankeny ++ Wyndmoor.ingress_port[1:0]) {
+        transition select(Hookdale.PeaRidge.Ankeny ++ Wyndmoor.ingress_port[2:0]) {
             Rienzi: Skillman;
             Monrovia: Volens;
             default: accept;
@@ -2455,7 +2456,7 @@ control Nason(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Belmore.Wilmore & 4w0x8  : ternary @name("Belmore.Wilmore") ;
             Funston.Belmore.Buckfield        : ternary @name("Belmore.Buckfield") ;
         }
-        default_action = Hemlock();
+        const default_action = Hemlock();
         size = 512;
         counters = Oneonta;
         requires_versioning = false;
@@ -2470,7 +2471,7 @@ control Nason(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Millhaven.Cisco    : exact @name("Millhaven.Cisco") ;
             Funston.Millhaven.Higginson: exact @name("Millhaven.Higginson") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Nixon") table Nixon {
@@ -2484,7 +2485,7 @@ control Nason(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Millhaven.Higginson: exact @name("Millhaven.Higginson") ;
             Funston.Millhaven.Oriskany : exact @name("Millhaven.Oriskany") ;
         }
-        default_action = Hester();
+        const default_action = Hester();
         size = 16384;
         idle_timeout = true;
     }
@@ -2499,7 +2500,7 @@ control Nason(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Millhaven.Glendevey: exact @name("Millhaven.Glendevey") ;
         }
         size = 2048;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Midas") table Midas {
         actions = {
@@ -2514,7 +2515,7 @@ control Nason(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Millhaven.Gasport  : ternary @name("Millhaven.Gasport") ;
             Funston.Sequim.Dairyland   : ternary @name("Sequim.Dairyland") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 512;
         requires_versioning = false;
     }
@@ -2572,7 +2573,7 @@ control Kapowsin(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
         key = {
             Funston.Millhaven.Higginson & 12w0xfff: exact @name("Millhaven.Higginson") ;
         }
-        default_action = Crown(1w0, 1w0, 1w0);
+        const default_action = Crown(1w0, 1w0, 1w0);
         size = 4096;
     }
     apply {
@@ -2619,7 +2620,7 @@ control Luning(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
             Funston.Daisytown.Basalt               : ternary @name("Daisytown.Basalt") ;
             Funston.Millhaven.Quinhagak            : ternary @name("Millhaven.Quinhagak") ;
         }
-        default_action = Flippen();
+        const default_action = Flippen();
         size = 512;
         requires_versioning = false;
     }
@@ -2656,7 +2657,7 @@ control Micro(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Millhaven.Soledad: ternary @name("Millhaven.Soledad") ;
             Funston.Newhalem.Kendrick: ternary @name("Newhalem.Kendrick") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 1024;
         requires_versioning = false;
     }
@@ -2669,7 +2670,7 @@ control Micro(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Newhalem.Solomon: exact @name("Newhalem.Solomon") ;
         }
         size = 8192;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Baudette.Lugert == 3w0) {
@@ -2768,7 +2769,7 @@ control Bernard(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
             Funston.Empire.Stilwell: exact @name("Empire.Stilwell") ;
         }
         size = 512;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Millhaven.Lovewell == 1w1) {
@@ -2803,7 +2804,7 @@ control Baranof(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
         }
         size = 1024;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @ignore_table_dependency(".Mogadore") @disable_atomic_modify(1) @name(".Exeter") table Exeter {
         actions = {
@@ -2814,7 +2815,7 @@ control Baranof(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
             Funston.Newhalem.Kendrick: exact @name("Newhalem.Kendrick") ;
             Funston.Empire.Stilwell  : exact @name("Empire.Stilwell") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 8192;
     }
     @name(".Yulee") Micro() Yulee;
@@ -2877,7 +2878,7 @@ control Oconee(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
             Funston.Empire.Stilwell : exact @name("Empire.Stilwell") ;
             Funston.Newhalem.Solomon: exact @name("Newhalem.Solomon") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 131072;
         idle_timeout = true;
     }
@@ -2890,7 +2891,7 @@ control Oconee(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
             Funston.Empire.Stilwell & 10w0xff: exact @name("Empire.Stilwell") ;
             Funston.Newhalem.Broussard       : lpm @name("Newhalem.Broussard") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 12288;
         idle_timeout = true;
     }
@@ -2948,7 +2949,7 @@ control Ozona(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Empire.Stilwell  : exact @name("Empire.Stilwell") ;
             Funston.Westville.Solomon: exact @name("Westville.Solomon") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 16384;
         idle_timeout = true;
     }
@@ -2956,7 +2957,6 @@ control Ozona(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
         actions = {
             @tableonly Leland();
             @defaultonly Kempton();
-            @defaultonly NoAction();
         }
         key = {
             Funston.Empire.Stilwell  : exact @name("Empire.Stilwell") ;
@@ -2964,7 +2964,7 @@ control Ozona(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
         }
         size = 1024;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = Kempton();
     }
     apply {
         switch (Aynor.apply().action_run) {
@@ -3089,7 +3089,7 @@ control Millikin(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Empire.Stilwell                                           : exact @name("Empire.Stilwell") ;
             Funston.Westville.Solomon & 128w0xffffffffffffffff0000000000000000: lpm @name("Westville.Solomon") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 2048;
         idle_timeout = true;
     }
@@ -3121,7 +3121,7 @@ control Millikin(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Westville.Kalkaska & 16w0x3fff                       : exact @name("Westville.Kalkaska") ;
             Funston.Westville.Solomon & 128w0x3ffffffffff0000000000000000: lpm @name("Westville.Solomon") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 16384;
         idle_timeout = true;
     }
@@ -3137,7 +3137,7 @@ control Millikin(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Empire.Stilwell                 : exact @name("Empire.Stilwell") ;
             Funston.Newhalem.Solomon & 32w0xfff00000: lpm @name("Newhalem.Solomon") ;
         }
-        default_action = Algonquin();
+        const default_action = Algonquin();
         size = 8192;
         idle_timeout = true;
     }
@@ -3153,7 +3153,7 @@ control Millikin(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Empire.Stilwell                                           : exact @name("Empire.Stilwell") ;
             Funston.Westville.Solomon & 128w0xfffffc00000000000000000000000000: lpm @name("Westville.Solomon") ;
         }
-        default_action = Beatrice();
+        const default_action = Beatrice();
         size = 1024;
         idle_timeout = true;
     }
@@ -3180,7 +3180,7 @@ control Millikin(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Yorkshire.Naubinway          : exact @name("Yorkshire.Naubinway") ;
             Funston.Newhalem.Solomon & 32w0xfffff: lpm @name("Newhalem.Solomon") ;
         }
-        default_action = Flynn();
+        const default_action = Flynn();
         size = 196608;
         idle_timeout = true;
     }
@@ -3269,7 +3269,7 @@ control Felton(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
             Funston.Hallwood.RossFork & 16w0xf: exact @name("Hallwood.RossFork") ;
         }
         size = 16;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".WestPark") table WestPark {
         actions = {
@@ -3418,7 +3418,6 @@ control Asharoken(inout Orting Hookdale, inout Yerington Funston, in ingress_int
         actions = {
             Weissert();
             Bellmead();
-            @defaultonly NoAction();
         }
         key = {
             Funston.Millhaven.Lecompte             : ternary @name("Millhaven.Lecompte") ;
@@ -3428,7 +3427,7 @@ control Asharoken(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Baudette.Tombstone & 20w0xc0000: ternary @name("Baudette.Tombstone") ;
         }
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Bellmead();
     }
     apply {
         NorthRim.apply();
@@ -3597,7 +3596,7 @@ control Wardville(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Millhaven.Wartburg  : ternary @name("Millhaven.Wartburg") ;
             Hookdale.Courtdale.isValid(): exact @name("Courtdale") ;
         }
-        default_action = Chatom();
+        const default_action = Chatom();
         size = 512;
         requires_versioning = false;
     }
@@ -3616,7 +3615,7 @@ control Wardville(inout Orting Hookdale, inout Yerington Funston, in ingress_int
         }
         size = 3072;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Willette") table Willette {
         actions = {
@@ -3679,7 +3678,7 @@ control Wardville(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Sequim.Ackley      : exact @name("Sequim.Ackley") ;
             Hookdale.Biggers[0].Comfrey: exact @name("Biggers[0].Comfrey") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 1024;
     }
     @ways(1) @disable_atomic_modify(1) @name(".BarNunn") table BarNunn {
@@ -3690,8 +3689,8 @@ control Wardville(inout Orting Hookdale, inout Yerington Funston, in ingress_int
         key = {
             Hookdale.Biggers[0].Comfrey: exact @name("Biggers[0].Comfrey") ;
         }
+        const default_action = NoAction();
         size = 4096;
-        default_action = NoAction();
     }
     apply {
         switch (Bains.apply().action_run) {
@@ -3921,7 +3920,7 @@ control DeRidder(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Hookdale.Dacono.Dowell           : ternary @name("Dacono.Dowell") ;
             Hookdale.Dacono.Glendevey        : ternary @name("Dacono.Glendevey") ;
         }
-        default_action = Slinger();
+        const default_action = Slinger();
         size = 2048;
         counters = Bechyn;
         requires_versioning = false;
@@ -3937,7 +3936,7 @@ control DeRidder(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Siloam") Wakefield() Siloam;
     apply {
@@ -3973,7 +3972,7 @@ control Ozark(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
         key = {
             Hookdale.Dacono.isValid(): exact @name("Dacono") ;
         }
-        default_action = Blakeman(20w511);
+        const default_action = Blakeman(20w511);
         size = 2;
     }
     apply {
@@ -4032,7 +4031,7 @@ control FourTown(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
         size = 512;
         requires_versioning = false;
         meters = Palco;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".McKee") table McKee {
         actions = {
@@ -4047,7 +4046,7 @@ control FourTown(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Baudette.Glendevey: exact @name("Baudette.Glendevey") ;
             Funston.Baudette.Pathfork : exact @name("Baudette.Pathfork") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 16384;
     }
     apply {
@@ -4086,7 +4085,7 @@ control Bigfork(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
         key = {
             Funston.Baudette.Tombstone & 20w0x7ff: exact @name("Baudette.Tombstone") ;
         }
-        default_action = Marquand();
+        const default_action = Marquand();
         size = 512;
     }
     apply {
@@ -4117,7 +4116,7 @@ control Kelliher(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Hookdale.Kinde.Glendevey : ternary @name("Kinde.Glendevey") ;
             Hookdale.Nooksack.Solomon: exact @name("Nooksack.Solomon") ;
         }
-        default_action = Hopeton();
+        const default_action = Hopeton();
         size = 512;
         requires_versioning = false;
     }
@@ -4208,7 +4207,7 @@ control Woolwine(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Hookdale.Biggers[1].isValid(): exact @name("Biggers[1]") ;
         }
         size = 256;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Vananda") table Vananda {
         actions = {
@@ -4297,7 +4296,7 @@ control Inkom(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Funston.Baudette.Lugert   : exact @name("Baudette.Lugert") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Hookdale.Thawville.isValid() == false) {
@@ -4390,7 +4389,7 @@ control Shelby(inout Orting Hookdale, inout Yerington Funston, in egress_intrins
         }
         size = 14;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Medart.apply();
@@ -4432,7 +4431,7 @@ control Waseca(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
             Funston.Baudette.Tombstone: ternary @name("Baudette.Tombstone") ;
             Funston.Swisshome.Plains  : selector @name("Swisshome.Plains") ;
         }
-        default_action = Wattsburg();
+        const default_action = Wattsburg();
         size = 512;
         implementation = Bethune;
         requires_versioning = false;
@@ -4517,7 +4516,7 @@ control Clarkdale(inout Orting Hookdale, inout Yerington Funston, in ingress_int
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Catlin.apply();
@@ -4540,7 +4539,7 @@ control Antoine(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
         key = {
             Funston.Twain.Peebles: exact @name("Twain.Peebles") ;
         }
-        default_action = Lowemont();
+        const default_action = Lowemont();
         size = 1024;
     }
     apply {
@@ -4563,7 +4562,7 @@ control CassCity(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Twain.Miranda        : exact @name("Twain.Miranda") ;
             Funston.Millhaven.Heppner    : exact @name("Millhaven.Heppner") ;
         }
-        default_action = Sanborn(32w0);
+        const default_action = Sanborn(32w0);
         size = 4096;
     }
     apply {
@@ -4589,7 +4588,7 @@ control Saxis(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
         }
         size = 31;
         implementation = Baldridge;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Carlson.apply();
@@ -4654,7 +4653,7 @@ control Ivanpah(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
             Circle.egress_port: exact @name("Circle.Clarion") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Gunder.apply();
@@ -4672,7 +4671,7 @@ control Maury(inout Orting Hookdale, inout Yerington Funston, in egress_intrinsi
         key = {
             Circle.egress_port: exact @name("Circle.Clarion") ;
         }
-        default_action = Ashburn(10w0);
+        const default_action = Ashburn(10w0);
         size = 128;
     }
     apply {
@@ -4698,7 +4697,7 @@ control Luverne(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         }
         size = 31;
         implementation = Brookwood;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Granville.apply();
@@ -4706,12 +4705,12 @@ control Luverne(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
 }
 
 control Council(inout Orting Hookdale, inout Yerington Funston, in egress_intrinsic_metadata_t Circle, in egress_intrinsic_metadata_from_parser_t Kingsdale, inout egress_intrinsic_metadata_for_deparser_t Tekonsha, inout egress_intrinsic_metadata_for_output_port_t Clermont) {
-    @name(".Capitola") Meter<bit<32>>(32w31, MeterType_t.BYTES) Capitola;
+    @name(".Capitola") Meter<bit<32>>(32w31, MeterType_t.BYTES, 8w1, 8w1, 8w0) Capitola;
     @name(".Liberal") action Liberal(bit<32> Norridge) {
-        Funston.Boonsboro.Wellton = (bit<2>)Capitola.execute((bit<32>)Norridge);
+        Funston.Boonsboro.Wellton = (bit<1>)Capitola.execute((bit<32>)Norridge);
     }
     @name(".Doyline") action Doyline() {
-        Funston.Boonsboro.Wellton = (bit<2>)2w2;
+        Funston.Boonsboro.Wellton = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Belcourt") table Belcourt {
         actions = {
@@ -4721,7 +4720,7 @@ control Council(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         key = {
             Funston.Boonsboro.Peebles: exact @name("Boonsboro.Peebles") ;
         }
-        default_action = Doyline();
+        const default_action = Doyline();
         size = 1024;
     }
     apply {
@@ -4744,8 +4743,8 @@ control Moorman(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         key = {
             Funston.Boonsboro.Wellton: exact @name("Boonsboro.Wellton") ;
         }
-        size = 1;
-        default_action = NoAction();
+        size = 512;
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Boonsboro.Miranda != 10w0) {
@@ -4834,7 +4833,7 @@ control Comunas(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
         size = 512;
         counters = Alcoma;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Norland.apply();
@@ -4864,7 +4863,7 @@ control Thatcher(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Funston.Millhaven.Galloway  : ternary @name("Millhaven.Galloway") ;
             Funston.Millhaven.Ankeny    : ternary @name("Millhaven.Ankeny") ;
         }
-        default_action = Archer(5w0);
+        const default_action = Archer(5w0);
         size = 512;
         requires_versioning = false;
     }
@@ -4887,7 +4886,7 @@ control Dougherty(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Balmorhea.Maumee  : exact @name("Balmorhea.Maumee") ;
             Funston.Balmorhea.GlenAvon: exact @name("Balmorhea.GlenAvon") ;
         }
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Bigspring.apply();
@@ -4985,7 +4984,7 @@ control Walland(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         key = {
             Funston.Baudette.McGrady & 32w0xffff: exact @name("Baudette.McGrady") ;
         }
-        default_action = Melrose(32w0, 32w0);
+        const default_action = Melrose(32w0, 32w0);
         size = 65536;
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Twichell") table Twichell {
@@ -4995,7 +4994,7 @@ control Walland(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         key = {
             Funston.Baudette.McGrady & 32w0xffff: exact @name("Baudette.McGrady") ;
         }
-        default_action = Melrose(32w0, 32w0);
+        const default_action = Melrose(32w0, 32w0);
         size = 65536;
     }
     @stage(2) @disable_atomic_modify(1) @name(".Ferndale") table Ferndale {
@@ -5006,7 +5005,7 @@ control Walland(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         key = {
             Funston.Baudette.Pathfork & 12w0xfff: exact @name("Baudette.Pathfork") ;
         }
-        default_action = Edinburgh();
+        const default_action = Edinburgh();
         size = 4096;
     }
     apply {
@@ -5034,7 +5033,7 @@ control Broadford(inout Orting Hookdale, inout Yerington Funston, in egress_intr
         key = {
             Funston.Baudette.McGrady & 32w0xff000000: exact @name("Baudette.McGrady") ;
         }
-        default_action = Nerstrand(24w0, 24w0, 12w0);
+        const default_action = Nerstrand(24w0, 24w0, 12w0);
         size = 256;
     }
     apply {
@@ -5068,7 +5067,7 @@ control McDougal(inout Orting Hookdale, inout Yerington Funston, in egress_intri
         key = {
             Funston.Baudette.SomesBar & 32w0xff000000: exact @name("Baudette.SomesBar") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 256;
     }
     apply {
@@ -5114,7 +5113,7 @@ control Ickesburg(inout Orting Hookdale, inout Yerington Funston, in egress_intr
             Circle.egress_port & 9w0x7f: exact @name("Circle.Clarion") ;
             Funston.Baudette.Ivyland   : exact @name("Baudette.Ivyland") ;
         }
-        default_action = Olivet();
+        const default_action = Olivet();
         size = 128;
     }
     apply {
@@ -5378,7 +5377,7 @@ control Upalco(inout Orting Hookdale, inout Yerington Funston, in egress_intrins
         }
         size = 16;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Bosco") table Bosco {
         actions = {
@@ -5391,7 +5390,7 @@ control Upalco(inout Orting Hookdale, inout Yerington Funston, in egress_intrins
             Funston.Baudette.Wauconda: exact @name("Baudette.Wauconda") ;
             Funston.Baudette.Lugert  : exact @name("Baudette.Lugert") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 128;
     }
     @disable_atomic_modify(1) @name(".Almeria") table Almeria {
@@ -5445,7 +5444,7 @@ control Upalco(inout Orting Hookdale, inout Yerington Funston, in egress_intrins
             Circle.egress_port & 9w0x7f: exact @name("Circle.Clarion") ;
         }
         size = 512;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         switch (Bosco.apply().action_run) {
@@ -5582,7 +5581,7 @@ control Telegraph(inout Orting Hookdale, inout Yerington Funston, in ingress_int
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Millhaven.Lakehills == 1w0 && Funston.Daisytown.Basalt == 1w0 && Funston.Daisytown.Darien == 1w0 && Funston.Empire.LaUnion & 4w0x4 == 4w0x4 && Funston.Millhaven.DeGraff == 1w1 && Funston.Millhaven.Gasport == 3w0x1) {
@@ -5608,7 +5607,7 @@ control Reading(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Lindsborg.Ramos != 16w0 && Funston.Millhaven.Gasport == 3w0x1) {
@@ -5618,6 +5617,9 @@ control Reading(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
 }
 
 control Sanatoga(inout Orting Hookdale, inout Yerington Funston, in ingress_intrinsic_metadata_t Wyndmoor, in ingress_intrinsic_metadata_from_parser_t Mayflower, inout ingress_intrinsic_metadata_for_deparser_t Halltown, inout ingress_intrinsic_metadata_for_tm_t Picabo) {
+    @name(".Kempton") action Kempton() {
+        ;
+    }
     @name(".Tocito") action Tocito(bit<16> Bergton, bit<1> Cassa, bit<1> Pawtucket) {
         Funston.Magasco.Bergton = Bergton;
         Funston.Magasco.Cassa = Cassa;
@@ -5626,15 +5628,15 @@ control Sanatoga(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
     @disable_atomic_modify(1) @name(".Mulhall") table Mulhall {
         actions = {
             Tocito();
-            @defaultonly NoAction();
+            @defaultonly Kempton();
         }
         key = {
             Funston.Baudette.Dowell   : exact @name("Baudette.Dowell") ;
             Funston.Baudette.Glendevey: exact @name("Baudette.Glendevey") ;
             Funston.Baudette.Pathfork : exact @name("Baudette.Pathfork") ;
         }
+        const default_action = Kempton();
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         if (Funston.Millhaven.Stratford == 1w1) {
@@ -5699,7 +5701,7 @@ control Okarche(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Baudette.Lugert != 3w2) {
@@ -5759,7 +5761,7 @@ control Hughson(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
             Funston.Baudette.Tombstone & 20w0xf0000: ternary @name("Baudette.Tombstone") ;
             Picabo.mcast_grp_a & 16w0xf000         : ternary @name("Picabo.mcast_grp_a") ;
         }
-        default_action = Anthony(16w0);
+        const default_action = Anthony(16w0);
         size = 512;
         requires_versioning = false;
     }
@@ -5801,7 +5803,7 @@ control Piedmont(inout Orting Hookdale, inout Yerington Funston, in egress_intri
             Circle.egress_rid: exact @name("Circle.egress_rid") ;
         }
         size = 16384;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Marvin") table Marvin {
         actions = {
@@ -5811,7 +5813,7 @@ control Piedmont(inout Orting Hookdale, inout Yerington Funston, in egress_intri
         key = {
             Circle.egress_rid: exact @name("Circle.egress_rid") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
     }
     apply {
         if (Circle.egress_rid != 16w0) {
@@ -5869,7 +5871,7 @@ control Daguao(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
         key = {
             Funston.Newhalem.Kendrick: ternary @name("Newhalem.Kendrick") ;
         }
-        default_action = Ripley();
+        const default_action = Ripley();
         size = 4096;
         requires_versioning = false;
     }
@@ -5882,7 +5884,7 @@ control Daguao(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
         key = {
             Funston.Westville.Kendrick: ternary @name("Westville.Kendrick") ;
         }
-        default_action = Rendon();
+        const default_action = Rendon();
         size = 512;
         requires_versioning = false;
     }
@@ -5897,7 +5899,7 @@ control Daguao(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Arion") table Arion {
         actions = {
@@ -5910,7 +5912,7 @@ control Daguao(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Funston.Millhaven.Gasport == 3w0x1) {
@@ -5951,7 +5953,7 @@ control Finlayson(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Millhaven.Ankeny: ternary @name("Millhaven.Ankeny") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Rembrandt") table Rembrandt {
         actions = {
@@ -5962,7 +5964,7 @@ control Finlayson(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Millhaven.Gasport & 3w0x3: exact @name("Millhaven.Gasport") ;
             Funston.Wyndmoor.Blencoe & 9w0x7f: exact @name("Wyndmoor.Blencoe") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 512;
     }
     @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(5) @name(".Leetsdale") table Leetsdale {
@@ -5986,7 +5988,7 @@ control Finlayson(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Millhaven.Galloway: ternary @name("Millhaven.Galloway") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Millican") Daguao() Millican;
     apply {
@@ -6419,7 +6421,7 @@ control Rodessa(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
             Circle.egress_port & 9w0x7f: exact @name("Circle.Clarion") ;
             Funston.Baudette.Pathfork  : exact @name("Baudette.Pathfork") ;
         }
-        default_action = LaFayette();
+        const default_action = LaFayette();
         size = 4096;
     }
     apply {
@@ -6534,7 +6536,7 @@ control Newburgh(inout Orting Hookdale, inout Yerington Funston, in egress_intri
             Funston.Baudette.Lugert             : exact @name("Baudette.Lugert") ;
             Funston.Millhaven.Soledad & 12w0xfff: exact @name("Millhaven.Soledad") ;
         }
-        default_action = Bairoil();
+        const default_action = Bairoil();
         size = 12288;
         counters = Baroda;
     }
@@ -6559,7 +6561,7 @@ control Berrydale(inout Orting Hookdale, inout Yerington Funston, in egress_intr
             Funston.Baudette.Lugert & 3w1       : exact @name("Baudette.Lugert") ;
             Funston.Baudette.Pathfork & 12w0xfff: exact @name("Baudette.Pathfork") ;
         }
-        default_action = Tusculum();
+        const default_action = Tusculum();
         size = 8192;
         counters = Benitez;
     }
@@ -6587,7 +6589,7 @@ control WestLine(inout Orting Hookdale, inout Yerington Funston, in egress_intri
             Hookdale.Nooksack.isValid(): exact @name("Nooksack") ;
         }
         size = 16384;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Laney.apply();
@@ -6644,7 +6646,8 @@ control Humble(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
         }
         counters = Nashua;
         size = 3072;
-        default_action = NoAction();
+        const default_action = NoAction();
+        requires_versioning = false;
     }
     apply {
         if (Funston.HighRock.Lawai != 8w0 && Funston.Millhaven.Delavan & 3w0x1 == 3w0) {
@@ -6673,7 +6676,8 @@ control Slick(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             @defaultonly NoAction();
         }
         size = 2048;
-        default_action = NoAction();
+        const default_action = NoAction();
+        requires_versioning = false;
     }
     apply {
         if (Funston.HighRock.Lawai != 8w0 && Funston.Millhaven.Delavan & 3w0x1 == 3w0) {
@@ -25129,7 +25133,7 @@ control Motley(inout Orting Hookdale, inout Yerington Funston, in egress_intrins
             Hookdale.Biggers[0].isValid(): exact @name("Biggers[0]") ;
         }
         size = 512;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Conda.apply();
@@ -25234,6 +25238,8 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
         Hookdale.Biggers[0].setInvalid();
         Hookdale.Biggers[1].setInvalid();
     }
+    @name(".Point") action Point() {
+    }
     @name(".Palco") DirectMeter(MeterType_t.BYTES) Palco;
     @name(".Seaford") action Seaford(bit<20> Tombstone, bit<32> Craigtown) {
         Funston.Baudette.McGrady[19:0] = Funston.Baudette.Tombstone;
@@ -25261,7 +25267,7 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Pueblo();
             Beaman();
             Challenge();
-            @defaultonly NoAction();
+            @defaultonly Point();
         }
         key = {
             Funston.Baudette.Lugert     : exact @name("Baudette.Lugert") ;
@@ -25269,6 +25275,7 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Hookdale.Courtdale.isValid(): exact @name("Courtdale") ;
         }
         size = 512;
+        const default_action = Point();
         const entries = {
                         (3w0, true, false) : Snowflake();
 
@@ -25290,7 +25297,6 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
 
         }
 
-        default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Weslaco") table Weslaco {
         actions = {
@@ -25312,7 +25318,7 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Hookdale.Nooksack.isValid() : ternary @name("Nooksack") ;
             Hookdale.Dacono.isValid()   : ternary @name("Dacono") ;
         }
-        default_action = Kempton();
+        const default_action = Kempton();
         size = 256;
         requires_versioning = false;
     }
@@ -25324,7 +25330,6 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Denning();
             Cross();
             Kempton();
-            @defaultonly NoAction();
         }
         key = {
             Hookdale.Peoria.isValid()   : ternary @name("Peoria") ;
@@ -25337,7 +25342,7 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Kempton();
     }
     @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Chispa") table Chispa {
         actions = {
@@ -25350,7 +25355,7 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Hookdale.Wanamassa.isValid(): exact @name("Wanamassa") ;
         }
         size = 2;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Asherton") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Asherton;
     @name(".Bridgton.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Asherton) Bridgton;
@@ -25366,7 +25371,7 @@ control Waukesha(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
         }
         size = 512;
         implementation = Torrance;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Haena") Waukesha() Haena;
     @name(".Janney") Yorklyn() Janney;
@@ -25621,21 +25626,6 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
         Palouse.extract<Charco>(Hookdale.Frederika);
         transition accept;
     }
-    state Levasy {
-        Palouse.extract<Littleton>(Hookdale.Pineville);
-        Funston.Belmore.Wilmore = (bit<4>)4w0x5;
-        transition accept;
-    }
-    state Chatanika {
-        Palouse.extract<Littleton>(Hookdale.Pineville);
-        Funston.Belmore.Wilmore = (bit<4>)4w0x6;
-        transition accept;
-    }
-    state Boyle {
-        Palouse.extract<Littleton>(Hookdale.Pineville);
-        Funston.Belmore.Wilmore = (bit<4>)4w0x8;
-        transition accept;
-    }
     state Noyack {
         Palouse.extract<Littleton>(Hookdale.Pineville);
         transition accept;
@@ -25648,11 +25638,8 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Thurmond;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): RichBar;
             (8w0x45 &&& 8w0xff, 16w0x800): Harding;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Levasy;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Indios;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Larwill;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Chatanika;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Boyle;
             default: Noyack;
         }
     }
@@ -25661,11 +25648,8 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
         transition select((Palouse.lookahead<bit<24>>())[7:0], (Palouse.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): RichBar;
             (8w0x45 &&& 8w0xff, 16w0x800): Harding;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Levasy;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Indios;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Larwill;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Chatanika;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Boyle;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Ackerly;
             default: Noyack;
         }
@@ -25676,11 +25660,8 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Lauada;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): RichBar;
             (8w0x45 &&& 8w0xff, 16w0x800): Harding;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Levasy;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Indios;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Larwill;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Chatanika;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Boyle;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Ackerly;
             default: Noyack;
         }
@@ -25688,13 +25669,12 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
     state Harding {
         Palouse.extract<Littleton>(Hookdale.Pineville);
         Palouse.extract<LasVegas>(Hookdale.Nooksack);
-        Funston.Millhaven.Woodfield = Hookdale.Nooksack.Woodfield;
-        Funston.Belmore.Wilmore = (bit<4>)4w0x1;
         transition select(Hookdale.Nooksack.Tallassee, Hookdale.Nooksack.Irvine) {
             (13w0x0 &&& 13w0x1fff, 8w1): Brady;
             (13w0x0 &&& 13w0x1fff, 8w17): Valier;
             (13w0x0 &&& 13w0x1fff, 8w6): Ravinia;
-            default: accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            default: Philip;
         }
     }
     state Valier {
@@ -25706,17 +25686,17 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
     state Indios {
         Palouse.extract<Littleton>(Hookdale.Pineville);
         Hookdale.Nooksack.Solomon = (Palouse.lookahead<bit<160>>())[31:0];
-        Funston.Belmore.Wilmore = (bit<4>)4w0x3;
         Hookdale.Nooksack.Norcatur = (Palouse.lookahead<bit<14>>())[5:0];
         Hookdale.Nooksack.Irvine = (Palouse.lookahead<bit<80>>())[7:0];
-        Funston.Millhaven.Woodfield = (Palouse.lookahead<bit<72>>())[7:0];
+        transition accept;
+    }
+    state Philip {
+        Funston.Udall.Doddridge = (bit<1>)1w1;
         transition accept;
     }
     state Larwill {
         Palouse.extract<Littleton>(Hookdale.Pineville);
         Palouse.extract<Garcia>(Hookdale.Courtdale);
-        Funston.Millhaven.Woodfield = Hookdale.Courtdale.Bonney;
-        Funston.Belmore.Wilmore = (bit<4>)4w0x2;
         transition select(Hookdale.Courtdale.Commack) {
             8w58: Brady;
             8w17: Valier;

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-stable/bin/p4c-bfn  -DPROFILE_GREENT=1 -Ibf_arista_switch_greent/includes -I/usr/share/p4c-stable/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--disable-power-check --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement'  --target tofino-tna --o bf_arista_switch_greent --bf-rt-schema bf_arista_switch_greent/context/bf-rt.json
-// p4c 9.2.1-pr.3 (SHA: c3a6e48)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_GREENT=1 -Ibf_arista_switch_greent/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_greent --bf-rt-schema bf_arista_switch_greent/context/bf-rt.json
+// p4c 9.5.0 (SHA: 0115db3)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -668,6 +668,7 @@ struct Barrow {
     bit<1>  LaLuz;
     bit<6>  Townville;
     bit<1>  Lenexa;
+    bit<8>  Madera;
 }
 
 struct Monahans {
@@ -679,7 +680,7 @@ struct Monahans {
 struct Heuvelton {
     bit<10> Pinole;
     bit<10> Bells;
-    bit<2>  Corydon;
+    bit<1>  Corydon;
     bit<8>  Chavies;
     bit<6>  Miranda;
     bit<16> Peebles;
@@ -1502,8 +1503,8 @@ parser Recluse(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out in
     @name(".Parkway") Checksum() Parkway;
     @name(".Palouse") Checksum() Palouse;
     @name(".Sespe") value_set<bit<9>>(2) Sespe;
-    @name(".Callao") value_set<bit<18>>(4) Callao;
-    @name(".Wagener") value_set<bit<18>>(4) Wagener;
+    @name(".Callao") value_set<bit<19>>(4) Callao;
+    @name(".Wagener") value_set<bit<19>>(4) Wagener;
     state Monrovia {
         transition select(HighRock.ingress_port) {
             Sespe: Rienzi;
@@ -1640,11 +1641,11 @@ parser Recluse(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out in
         Arapahoe.extract<Galloway>(Almota.Biggers);
         Arapahoe.extract<Lowes>(Almota.Pineville);
         Arapahoe.extract<Chugwater>(Almota.Courtdale);
-        transition select(Almota.Biggers.Denhoff ++ HighRock.ingress_port[1:0]) {
+        transition select(Almota.Biggers.Denhoff ++ HighRock.ingress_port[2:0]) {
             Wagener: Nephi;
             Callao: Olcott;
-            18w1276 &&& 18w0x3fffc: Westoak;
-            18w1280 &&& 18w0x3fffc: Westoak;
+            19w2552 &&& 19w0x7fff8: Westoak;
+            19w2560 &&& 19w0x7fff8: Westoak;
             default: accept;
         }
     }
@@ -1928,7 +1929,7 @@ control Moosic(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Martelle.Fairmount & 4w0x8: ternary @name("Martelle.Fairmount") ;
             Lemont.Martelle.Forkville        : ternary @name("Martelle.Forkville") ;
         }
-        default_action = GunnCity();
+        const default_action = GunnCity();
         size = 512;
         counters = Marquand;
         requires_versioning = false;
@@ -1943,7 +1944,7 @@ control Moosic(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Gambrills.Adona   : exact @name("Gambrills.Adona") ;
             Lemont.Gambrills.Connell : exact @name("Gambrills.Connell") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Tenstrike") table Tenstrike {
@@ -1957,7 +1958,7 @@ control Moosic(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Gambrills.Connell : exact @name("Gambrills.Connell") ;
             Lemont.Gambrills.Cisco   : exact @name("Gambrills.Cisco") ;
         }
-        default_action = Sneads();
+        const default_action = Sneads();
         size = 65536;
         idle_timeout = true;
     }
@@ -1972,7 +1973,7 @@ control Moosic(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Gambrills.Littleton: exact @name("Gambrills.Littleton") ;
         }
         size = 2048;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Aguila") table Aguila {
         actions = {
@@ -1987,7 +1988,7 @@ control Moosic(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Gambrills.NewMelle : ternary @name("Gambrills.NewMelle") ;
             Lemont.Newhalem.Newfolden : ternary @name("Newhalem.Newfolden") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 512;
         requires_versioning = false;
     }
@@ -2045,7 +2046,7 @@ control Nixon(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         key = {
             Lemont.Gambrills.Connell & 12w0xfff: exact @name("Gambrills.Connell") ;
         }
-        default_action = Mattapex(1w0, 1w0, 1w0);
+        const default_action = Mattapex(1w0, 1w0, 1w0);
         size = 4096;
     }
     apply {
@@ -2092,7 +2093,7 @@ control Vanoss(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Ekron.Ackley                : ternary @name("Ekron.Ackley") ;
             Lemont.Gambrills.Ivyland           : ternary @name("Gambrills.Ivyland") ;
         }
-        default_action = Potosi();
+        const default_action = Potosi();
         size = 512;
         requires_versioning = false;
     }
@@ -2147,7 +2148,7 @@ control Boring(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Baudette.Buncombe: exact @name("Baudette.Buncombe") ;
             Lemont.Masontown.Garcia : exact @name("Masontown.Garcia") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 65536;
         idle_timeout = true;
     }
@@ -2160,7 +2161,7 @@ control Boring(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Baudette.Buncombe & 8w0x7f: exact @name("Baudette.Buncombe") ;
             Lemont.Masontown.Fredonia        : lpm @name("Masontown.Fredonia") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 8192;
         idle_timeout = true;
     }
@@ -2218,7 +2219,7 @@ control Campo(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Lemont.Baudette.Buncombe: exact @name("Baudette.Buncombe") ;
             Lemont.Wesson.Garcia    : exact @name("Wesson.Garcia") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 65536;
         idle_timeout = true;
     }
@@ -2226,7 +2227,6 @@ control Campo(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         actions = {
             @tableonly SanPablo();
             @defaultonly Nason();
-            @defaultonly NoAction();
         }
         key = {
             Lemont.Baudette.Buncombe: exact @name("Baudette.Buncombe") ;
@@ -2234,7 +2234,7 @@ control Campo(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 2048;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = Nason();
     }
     apply {
         switch (Forepaugh.apply().action_run) {
@@ -2355,7 +2355,7 @@ control WildRose(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Lemont.Baudette.Buncombe                                     : exact @name("Baudette.Buncombe") ;
             Lemont.Wesson.Garcia & 128w0xffffffffffffffff0000000000000000: lpm @name("Wesson.Garcia") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 8192;
         idle_timeout = true;
     }
@@ -2387,7 +2387,7 @@ control WildRose(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Lemont.Wesson.LaUnion & 16w0x3fff                       : exact @name("Wesson.LaUnion") ;
             Lemont.Wesson.Garcia & 128w0x3ffffffffff0000000000000000: lpm @name("Wesson.Garcia") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 65536;
         idle_timeout = true;
     }
@@ -2403,7 +2403,7 @@ control WildRose(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Lemont.Baudette.Buncombe               : exact @name("Baudette.Buncombe") ;
             Lemont.Masontown.Garcia & 32w0xfff00000: lpm @name("Masontown.Garcia") ;
         }
-        default_action = Salitpa();
+        const default_action = Salitpa();
         size = 1024;
         idle_timeout = true;
     }
@@ -2419,7 +2419,7 @@ control WildRose(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Lemont.Baudette.Buncombe                                     : exact @name("Baudette.Buncombe") ;
             Lemont.Wesson.Garcia & 128w0xfffffc00000000000000000000000000: lpm @name("Wesson.Garcia") ;
         }
-        default_action = Spanaway();
+        const default_action = Spanaway();
         size = 1024;
         idle_timeout = true;
     }
@@ -2446,7 +2446,7 @@ control WildRose(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Lemont.Jayton.Sublett               : exact @name("Jayton.Sublett") ;
             Lemont.Masontown.Garcia & 32w0xfffff: lpm @name("Masontown.Garcia") ;
         }
-        default_action = Oconee();
+        const default_action = Oconee();
         size = 131072;
         idle_timeout = true;
     }
@@ -2535,7 +2535,7 @@ control Scottdale(inout Knights Almota, inout Mather Lemont, in ingress_intrinsi
             Lemont.Westville.Norma & 16w0xf: exact @name("Westville.Norma") ;
         }
         size = 16;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Waterman") table Waterman {
         actions = {
@@ -2702,7 +2702,7 @@ control Flynn(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Lemont.Gambrills.Ambrose: ternary @name("Gambrills.Ambrose") ;
             Almota.Milano.isValid() : exact @name("Milano") ;
         }
-        default_action = Laclede();
+        const default_action = Laclede();
         size = 512;
         requires_versioning = false;
     }
@@ -2721,7 +2721,7 @@ control Flynn(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 3072;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Timnath") table Timnath {
         actions = {
@@ -2770,7 +2770,7 @@ control Flynn(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Lemont.Newhalem.Broussard: exact @name("Newhalem.Broussard") ;
             Almota.Moultrie[0].Kalida: exact @name("Moultrie[0].Kalida") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 1024;
     }
     @ways(1) @disable_atomic_modify(1) @name(".Plano") table Plano {
@@ -2781,8 +2781,8 @@ control Flynn(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         key = {
             Almota.Moultrie[0].Kalida: exact @name("Moultrie[0].Kalida") ;
         }
+        const default_action = NoAction();
         size = 4096;
-        default_action = NoAction();
     }
     apply {
         switch (Endicott.apply().action_run) {
@@ -3004,7 +3004,7 @@ control ElCentro(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Almota.Hearne.Glendevey        : ternary @name("Hearne.Glendevey") ;
             Almota.Hearne.Littleton        : ternary @name("Hearne.Littleton") ;
         }
-        default_action = Neosho();
+        const default_action = Neosho();
         size = 2048;
         counters = Twinsburg;
         requires_versioning = false;
@@ -3020,7 +3020,7 @@ control ElCentro(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Pillager") Chatom() Pillager;
     apply {
@@ -3057,7 +3057,7 @@ control Nighthawk(inout Knights Almota, inout Mather Lemont, in ingress_intrinsi
         key = {
             Almota.Hearne.isValid(): exact @name("Hearne") ;
         }
-        default_action = Heaton(20w511);
+        const default_action = Heaton(20w511);
         size = 2;
     }
     apply {
@@ -3116,7 +3116,7 @@ control Lacombe(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         size = 512;
         requires_versioning = false;
         meters = Somis;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Froid") table Froid {
         actions = {
@@ -3131,7 +3131,7 @@ control Lacombe(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Lemont.Yerington.Littleton: exact @name("Yerington.Littleton") ;
             Lemont.Yerington.Bonduel  : exact @name("Yerington.Bonduel") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 65536;
     }
     apply {
@@ -3170,7 +3170,7 @@ control Hector(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
         key = {
             Lemont.Yerington.Sardinia & 20w0x7ff: exact @name("Yerington.Sardinia") ;
         }
-        default_action = Ossining();
+        const default_action = Ossining();
         size = 512;
     }
     apply {
@@ -3201,7 +3201,7 @@ control Reynolds(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Almota.Bronwood.Littleton: ternary @name("Bronwood.Littleton") ;
             Almota.Garrison.Garcia   : exact @name("Garrison.Garcia") ;
         }
-        default_action = Kosmos();
+        const default_action = Kosmos();
         size = 512;
         requires_versioning = false;
     }
@@ -3292,7 +3292,7 @@ control Paragonah(inout Knights Almota, inout Mather Lemont, in ingress_intrinsi
             Almota.Moultrie[1].isValid(): exact @name("Moultrie[1]") ;
         }
         size = 256;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Slinger") table Slinger {
         actions = {
@@ -3381,7 +3381,7 @@ control Ozark(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Lemont.Yerington.Subiaco: exact @name("Yerington.Subiaco") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Almota.Armagh.isValid() == false) {
@@ -3461,7 +3461,7 @@ control Rumson(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_me
         }
         size = 14;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Bernstein.apply();
@@ -3505,7 +3505,7 @@ control Kingman(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Lemont.Yerington.Sardinia: ternary @name("Yerington.Sardinia") ;
             Lemont.Millhaven.Minturn : selector @name("Millhaven.Minturn") ;
         }
-        default_action = Woolwine();
+        const default_action = Woolwine();
         size = 512;
         implementation = Astatula;
         requires_versioning = false;
@@ -3590,7 +3590,7 @@ control Botna(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Inkom.apply();
@@ -3613,7 +3613,7 @@ control Gowanda(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         key = {
             Lemont.Crannell.Bells: exact @name("Crannell.Bells") ;
         }
-        default_action = Onamia();
+        const default_action = Onamia();
         size = 1024;
     }
     apply {
@@ -3637,7 +3637,7 @@ control Durant(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Gambrills.Lakehills     : exact @name("Gambrills.Lakehills") ;
             Lemont.Gambrills.Sledge        : exact @name("Gambrills.Sledge") ;
         }
-        default_action = Kingsdale(32w0);
+        const default_action = Kingsdale(32w0);
         size = 4096;
     }
     apply {
@@ -3663,7 +3663,7 @@ control Clermont(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
         }
         size = 128;
         implementation = Ardenvoir;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Clinchco.apply();
@@ -3727,7 +3727,7 @@ control Snook(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
             Covert.egress_port: exact @name("Covert.Lathrop") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Haugen.apply();
@@ -3745,7 +3745,7 @@ control Goldsmith(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
         key = {
             Covert.egress_port: exact @name("Covert.Lathrop") ;
         }
-        default_action = Encinitas(10w0);
+        const default_action = Encinitas(10w0);
         size = 1024;
     }
     apply {
@@ -3771,7 +3771,7 @@ control Herring(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_m
         }
         size = 128;
         implementation = Plush;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Bethune.apply();
@@ -3779,12 +3779,12 @@ control Herring(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_m
 }
 
 control PawCreek(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_metadata_t Covert, in egress_intrinsic_metadata_from_parser_t Mondovi, inout egress_intrinsic_metadata_for_deparser_t Lynne, inout egress_intrinsic_metadata_for_output_port_t OldTown) {
-    @name(".Cornwall") Meter<bit<32>>(32w128, MeterType_t.BYTES) Cornwall;
+    @name(".Cornwall") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Cornwall;
     @name(".Langhorne") action Langhorne(bit<32> Verdery) {
-        Lemont.Aniak.Corydon = (bit<2>)Cornwall.execute((bit<32>)Verdery);
+        Lemont.Aniak.Corydon = (bit<1>)Cornwall.execute((bit<32>)Verdery);
     }
     @name(".Comobabi") action Comobabi() {
-        Lemont.Aniak.Corydon = (bit<2>)2w2;
+        Lemont.Aniak.Corydon = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @stage(8) @name(".Bovina") table Bovina {
         actions = {
@@ -3794,7 +3794,7 @@ control PawCreek(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
         key = {
             Lemont.Aniak.Bells: exact @name("Aniak.Bells") ;
         }
-        default_action = Comobabi();
+        const default_action = Comobabi();
         size = 1024;
     }
     apply {
@@ -3816,8 +3816,8 @@ control Natalbany(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
         key = {
             Lemont.Aniak.Corydon: exact @name("Aniak.Corydon") ;
         }
-        size = 1;
-        default_action = NoAction();
+        size = 512;
+        const default_action = NoAction();
     }
     apply {
         if (Lemont.Aniak.Pinole != 10w0) {
@@ -3906,7 +3906,7 @@ control Romeo(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         size = 512;
         counters = Caspian;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Ayden.apply();
@@ -3936,7 +3936,7 @@ control Sanborn(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Lemont.Gambrills.Ankeny   : ternary @name("Gambrills.Ankeny") ;
             Lemont.Gambrills.Denhoff  : ternary @name("Gambrills.Denhoff") ;
         }
-        default_action = Kerby(5w0);
+        const default_action = Kerby(5w0);
         size = 512;
         requires_versioning = false;
     }
@@ -3959,7 +3959,7 @@ control Lackey(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
             Lemont.Swisshome.Belgrade: exact @name("Swisshome.Belgrade") ;
             Lemont.Swisshome.Burwell : exact @name("Swisshome.Burwell") ;
         }
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Carlson.apply();
@@ -4057,7 +4057,7 @@ control Gwynn(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
         key = {
             Lemont.Yerington.Ericsburg & 32w0x3fff: exact @name("Yerington.Ericsburg") ;
         }
-        default_action = Rolla(32w0, 32w0);
+        const default_action = Rolla(32w0, 32w0);
         size = 16384;
     }
     @disable_atomic_modify(1) @name(".Doyline") table Doyline {
@@ -4068,7 +4068,7 @@ control Gwynn(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
         key = {
             Lemont.Yerington.Bonduel & 12w0xfff: exact @name("Yerington.Bonduel") ;
         }
-        default_action = Capitola();
+        const default_action = Capitola();
         size = 4096;
     }
     apply {
@@ -4092,7 +4092,7 @@ control Belcourt(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
         key = {
             Lemont.Yerington.Ericsburg & 32w0xff000000: exact @name("Yerington.Ericsburg") ;
         }
-        default_action = Moorman(24w0, 24w0, 12w0);
+        const default_action = Moorman(24w0, 24w0, 12w0);
         size = 256;
     }
     apply {
@@ -4139,7 +4139,7 @@ control Alcoma(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_me
             Covert.egress_port & 9w0x7f: exact @name("Covert.Lathrop") ;
             Lemont.Yerington.Lovewell  : exact @name("Yerington.Lovewell") ;
         }
-        default_action = Bluff();
+        const default_action = Bluff();
         size = 128;
     }
     apply {
@@ -4352,7 +4352,7 @@ control Silvertip(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
         }
         size = 16;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Pound") table Pound {
         actions = {
@@ -4366,7 +4366,7 @@ control Silvertip(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
             Lemont.Yerington.Tornillo: exact @name("Yerington.Tornillo") ;
             Lemont.Yerington.Subiaco : exact @name("Yerington.Subiaco") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 128;
     }
     @disable_atomic_modify(1) @name(".Oakley") table Oakley {
@@ -4417,7 +4417,7 @@ control Silvertip(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
             Covert.egress_port & 9w0x7f: exact @name("Covert.Lathrop") ;
         }
         size = 512;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         switch (Pound.apply().action_run) {
@@ -4553,7 +4553,7 @@ control Newsoms(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Lemont.Gambrills.Billings == 1w0 && Lemont.Ekron.Ackley == 1w0 && Lemont.Ekron.Knoke == 1w0 && Lemont.Baudette.Pettry & 4w0x4 == 4w0x4 && Lemont.Gambrills.Scarville == 1w1 && Lemont.Gambrills.NewMelle == 3w0x1) {
@@ -4579,7 +4579,7 @@ control Cidra(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Lemont.Earling.Gotham != 16w0 && Lemont.Gambrills.NewMelle == 3w0x1) {
@@ -4589,6 +4589,9 @@ control Cidra(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
 }
 
 control Calimesa(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_metadata_t HighRock, in ingress_intrinsic_metadata_from_parser_t Hookdale, inout ingress_intrinsic_metadata_for_deparser_t Funston, inout ingress_intrinsic_metadata_for_tm_t WebbCity) {
+    @name(".Nason") action Nason() {
+        ;
+    }
     @name(".Keller") action Keller(bit<16> Brookneal, bit<1> Hoven, bit<1> Shirley) {
         Lemont.Udall.Brookneal = Brookneal;
         Lemont.Udall.Hoven = Hoven;
@@ -4597,15 +4600,15 @@ control Calimesa(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
     @disable_atomic_modify(1) @name(".Elysburg") table Elysburg {
         actions = {
             Keller();
-            @defaultonly NoAction();
+            @defaultonly Nason();
         }
         key = {
             Lemont.Yerington.Glendevey: exact @name("Yerington.Glendevey") ;
             Lemont.Yerington.Littleton: exact @name("Yerington.Littleton") ;
             Lemont.Yerington.Bonduel  : exact @name("Yerington.Bonduel") ;
         }
+        const default_action = Nason();
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         if (Lemont.Gambrills.Weatherby == 1w1) {
@@ -4670,7 +4673,7 @@ control Charters(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Lemont.Yerington.Subiaco != 3w2) {
@@ -4730,7 +4733,7 @@ control Petrolia(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Lemont.Yerington.Sardinia & 20w0xf0000: ternary @name("Yerington.Sardinia") ;
             WebbCity.mcast_grp_a & 16w0xf000      : ternary @name("WebbCity.mcast_grp_a") ;
         }
-        default_action = Ceiba(16w0);
+        const default_action = Ceiba(16w0);
         size = 512;
         requires_versioning = false;
     }
@@ -4772,7 +4775,7 @@ control DeerPark(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
             Covert.egress_rid: exact @name("Covert.egress_rid") ;
         }
         size = 16384;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @ways(1) @name(".Selvin") table Selvin {
         actions = {
@@ -4782,7 +4785,7 @@ control DeerPark(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
         key = {
             Covert.egress_rid: exact @name("Covert.egress_rid") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
     }
     apply {
         if (Covert.egress_rid != 16w0) {
@@ -4840,7 +4843,7 @@ control Terry(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         key = {
             Lemont.Masontown.Solomon: ternary @name("Masontown.Solomon") ;
         }
-        default_action = Nipton();
+        const default_action = Nipton();
         size = 2048;
         requires_versioning = false;
     }
@@ -4853,7 +4856,7 @@ control Terry(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         key = {
             Lemont.Wesson.Solomon: ternary @name("Wesson.Solomon") ;
         }
-        default_action = Sodaville();
+        const default_action = Sodaville();
         size = 1024;
         requires_versioning = false;
     }
@@ -4868,7 +4871,7 @@ control Terry(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".DewyRose") table DewyRose {
         actions = {
@@ -4881,7 +4884,7 @@ control Terry(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Lemont.Gambrills.NewMelle == 3w0x1) {
@@ -4922,7 +4925,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Lemont.Gambrills.Denhoff: ternary @name("Gambrills.Denhoff") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @placement_priority(".Goodlett") @name(".Idylside") table Idylside {
         actions = {
@@ -4933,7 +4936,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Lemont.Gambrills.NewMelle & 3w0x3: exact @name("Gambrills.NewMelle") ;
             Lemont.HighRock.Toklat & 9w0x7f  : exact @name("HighRock.Toklat") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 512;
     }
     @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(2) @name(".Stovall") table Stovall {
@@ -4957,7 +4960,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Lemont.Gambrills.Ankeny: ternary @name("Gambrills.Ankeny") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".BigArm") Terry() BigArm;
     apply {
@@ -5391,7 +5394,7 @@ control Canton(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_me
             Lemont.Yerington.Bonduel        : exact @name("Yerington.Bonduel") ;
             Lemont.Yerington.Kaaawa & 6w0x3f: exact @name("Yerington.Kaaawa") ;
         }
-        default_action = Northboro();
+        const default_action = Northboro();
         size = 4096;
     }
     apply {
@@ -5620,7 +5623,7 @@ control Emigrant(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
             Almota.PeaRidge.Ravena         : exact @name("PeaRidge.Ravena") ;
         }
         size = 2048;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Almota.PeaRidge.isValid()) {
@@ -5647,7 +5650,7 @@ control Edmeston(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
             Almota.PeaRidge.Ravena          : exact @name("PeaRidge.Ravena") ;
         }
         size = 2048;
-        default_action = Ossining();
+        const default_action = Ossining();
     }
     apply {
         if (Almota.PeaRidge.isValid()) {
@@ -5669,7 +5672,6 @@ control Statham(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
             Almota.Cotter.Solomon  : ternary @name("Cotter.Solomon") ;
             Almota.Cotter.Garcia   : ternary @name("Cotter.Garcia") ;
             Almota.Kinde.Solomon   : ternary @name("Kinde.Solomon") ;
-            //Almota.Kinde.Solomon   : ternary @name("Kinde.Solomon") ;
             Almota.Cotter.Antlers  : ternary @name("Cotter.Antlers") ;
             Almota.Hillside.Ankeny : ternary @name("Hillside.Ankeny") ;
             Almota.Hillside.Denhoff: ternary @name("Hillside.Denhoff") ;
@@ -5779,6 +5781,9 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         Almota.Moultrie[0].setInvalid();
         Almota.Moultrie[1].setInvalid();
     }
+    @name(".Perma") action Perma() {
+        Lemont.Swisshome.Petrey = (bit<2>)2w0;
+    }
     @name(".Tullytown") action Tullytown(bit<24> Glendevey, bit<24> Littleton, bit<12> Connell, bit<20> Lawai) {
         Lemont.Yerington.SomesBar = Lemont.Newhalem.Newfolden;
         Lemont.Yerington.Glendevey = Glendevey;
@@ -5877,7 +5882,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Carrizozo();
             Munday();
             FarrWest();
-            @defaultonly NoAction();
+            @defaultonly Perma();
         }
         key = {
             Lemont.Yerington.Subiaco : exact @name("Yerington.Subiaco") ;
@@ -5885,6 +5890,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Almota.Milano.isValid()  : exact @name("Milano") ;
         }
         size = 512;
+        const default_action = Perma();
         const entries = {
                         (3w0, true, false) : Carrizozo();
 
@@ -5898,7 +5904,6 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
 
         }
 
-        default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Berrydale") table Berrydale {
         actions = {
@@ -5920,7 +5925,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Almota.Garrison.isValid(): ternary @name("Garrison") ;
             Almota.Hearne.isValid()  : ternary @name("Hearne") ;
         }
-        default_action = Nason();
+        const default_action = Nason();
         size = 256;
         requires_versioning = false;
     }
@@ -5932,7 +5937,6 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Unity();
             LaFayette();
             Nason();
-            @defaultonly NoAction();
         }
         key = {
             Almota.Hillside.isValid(): ternary @name("Hillside") ;
@@ -5945,7 +5949,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Nason();
     }
     @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Tusculum") table Tusculum {
         actions = {
@@ -5958,7 +5962,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
             Almota.Kinde.isValid() : exact @name("Kinde") ;
         }
         size = 2;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Forman") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Forman;
     @name(".WestLine.Breese") Hash<bit<51>>(HashAlgorithm_t.CRC16, Forman) WestLine;
@@ -5974,7 +5978,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         }
         size = 512;
         implementation = Lenox;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".McClusky") table McClusky {
         actions = {
@@ -6165,7 +6169,7 @@ control Gonzalez(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
             Covert.egress_qid & 5w0x7  : exact @name("Covert.egress_qid") ;
         }
         size = 576;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Lenapah") table Lenapah {
         actions = {
@@ -6185,7 +6189,7 @@ control Gonzalez(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Colburn") Downs() Colburn;
     @name(".Kirkwood") Herring() Kirkwood;
@@ -6282,21 +6286,6 @@ parser Weslaco(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out eg
         Arapahoe.extract<Sutherlin>(Almota.Wanamassa);
         transition accept;
     }
-    state Ponder {
-        Arapahoe.extract<Killen>(Almota.Pinetop);
-        Lemont.Martelle.Fairmount = (bit<4>)4w0x5;
-        transition accept;
-    }
-    state Levasy {
-        Arapahoe.extract<Killen>(Almota.Pinetop);
-        Lemont.Martelle.Fairmount = (bit<4>)4w0x6;
-        transition accept;
-    }
-    state Indios {
-        Arapahoe.extract<Killen>(Almota.Pinetop);
-        Lemont.Martelle.Fairmount = (bit<4>)4w0x8;
-        transition accept;
-    }
     state Rhinebeck {
         Arapahoe.extract<Killen>(Almota.Pinetop);
         transition accept;
@@ -6309,11 +6298,8 @@ parser Weslaco(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out eg
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Baker;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Thurmond;
             (8w0x45 &&& 8w0xff, 16w0x800): Lauada;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Ponder;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Fishers;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Philip;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Levasy;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Indios;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Larwill;
             (8w0x0 &&& 8w0x0, 16w0x2f): Chatanika;
             default: Rhinebeck;
@@ -6324,11 +6310,8 @@ parser Weslaco(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out eg
         transition select((Arapahoe.lookahead<bit<24>>())[7:0], (Arapahoe.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Thurmond;
             (8w0x45 &&& 8w0xff, 16w0x800): Lauada;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Ponder;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Fishers;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Philip;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Levasy;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Indios;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Larwill;
             default: Rhinebeck;
         }
@@ -6339,11 +6322,8 @@ parser Weslaco(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out eg
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Glenoma;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Thurmond;
             (8w0x45 &&& 8w0xff, 16w0x800): Lauada;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Ponder;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Fishers;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Philip;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Levasy;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Indios;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Larwill;
             default: Rhinebeck;
         }
@@ -6351,13 +6331,12 @@ parser Weslaco(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out eg
     state Lauada {
         Arapahoe.extract<Killen>(Almota.Pinetop);
         Arapahoe.extract<Westboro>(Almota.Garrison);
-        Lemont.Gambrills.LasVegas = Almota.Garrison.LasVegas;
-        Lemont.Martelle.Fairmount = (bit<4>)4w0x1;
         transition select(Almota.Garrison.Irvine, Almota.Garrison.Antlers) {
             (13w0x0 &&& 13w0x1fff, 8w1): RichBar;
             (13w0x0 &&& 13w0x1fff, 8w17): Torrance;
             (13w0x0 &&& 13w0x1fff, 8w6): Lefor;
-            default: accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            default: Robstown;
         }
     }
     state Torrance {
@@ -6373,17 +6352,17 @@ parser Weslaco(packet_in Arapahoe, out Knights Almota, out Mather Lemont, out eg
     state Fishers {
         Arapahoe.extract<Killen>(Almota.Pinetop);
         Almota.Garrison.Garcia = (Arapahoe.lookahead<bit<160>>())[31:0];
-        Lemont.Martelle.Fairmount = (bit<4>)4w0x3;
         Almota.Garrison.Burrel = (Arapahoe.lookahead<bit<14>>())[5:0];
         Almota.Garrison.Antlers = (Arapahoe.lookahead<bit<80>>())[7:0];
-        Lemont.Gambrills.LasVegas = (Arapahoe.lookahead<bit<72>>())[7:0];
+        transition accept;
+    }
+    state Robstown {
+        Lemont.Hallwood.Rainelle = (bit<1>)1w1;
         transition accept;
     }
     state Philip {
         Arapahoe.extract<Killen>(Almota.Pinetop);
         Arapahoe.extract<Coalwood>(Almota.Milano);
-        Lemont.Gambrills.LasVegas = Almota.Milano.Pilar;
-        Lemont.Martelle.Fairmount = (bit<4>)4w0x2;
         transition select(Almota.Milano.Bonney) {
             8w58: RichBar;
             8w17: Torrance;

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
+// p4c 9.5.0 (SHA: 0115db3)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -704,6 +704,7 @@ struct Lecompte {
     bit<1>  Norland;
     bit<6>  Weslaco;
     bit<1>  Compton;
+    bit<8>  Bennet;
 }
 
 struct Tombstone {
@@ -715,7 +716,7 @@ struct Tombstone {
 struct Ericsburg {
     bit<10> Subiaco;
     bit<10> Marcus;
-    bit<2>  Pittsboro;
+    bit<1>  Pittsboro;
     bit<8>  Staunton;
     bit<6>  Lugert;
     bit<16> Goulds;
@@ -1460,8 +1461,8 @@ parser Knights(packet_in Humeston, out Westbury Jayton, out McCracken Millstone,
     @name(".Basco") Checksum() Basco;
     @name(".Gamaliel") value_set<bit<9>>(2) Gamaliel;
     @name(".Orting") value_set<bit<9>>(32) Orting;
-    @name(".Parmalee") value_set<bit<18>>(4) Parmalee;
-    @name(".Donnelly") value_set<bit<18>>(4) Donnelly;
+    @name(".Parmalee") value_set<bit<19>>(4) Parmalee;
+    @name(".Donnelly") value_set<bit<19>>(4) Donnelly;
     state SanRemo {
         transition select(Astor.ingress_port) {
             Gamaliel: Thawville;
@@ -1638,7 +1639,7 @@ parser Knights(packet_in Humeston, out Westbury Jayton, out McCracken Millstone,
         Humeston.extract<Hampton>(Jayton.Daisytown);
         Humeston.extract<Bonney>(Jayton.Balmorhea);
         Humeston.extract<Loris>(Jayton.Udall);
-        transition select(Jayton.Daisytown.Irvine ++ Astor.ingress_port[1:0]) {
+        transition select(Jayton.Daisytown.Irvine ++ Astor.ingress_port[2:0]) {
             Donnelly: Welch;
             Parmalee: Pineville;
             default: accept;
@@ -1955,7 +1956,7 @@ control Schroeder(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
         key = {
             Millstone.ElkNeck.Glendevey: exact @name("ElkNeck.Glendevey") ;
         }
-        default_action = Chubbuck(11w0);
+        const default_action = Chubbuck(11w0);
         size = 2048;
     }
     @name(".Buenos") action Buenos(bit<11> Gracewood) {
@@ -1974,7 +1975,7 @@ control Schroeder(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
         key = {
             Millstone.Nuyaka.Glendevey: exact @name("Nuyaka.Glendevey") ;
         }
-        default_action = Buenos(11w0);
+        const default_action = Buenos(11w0);
         size = 2048;
     }
     apply {
@@ -2012,7 +2013,7 @@ control Hemlock(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 1;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Goodlett.Boquillas") Hash<bit<16>>(HashAlgorithm_t.IDENTITY) Goodlett;
     @name(".BigPoint") action BigPoint() {
@@ -2053,7 +2054,7 @@ control Hemlock(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Kamrar.Kremlin: exact @name("Kamrar.Kremlin") ;
         }
         size = 5;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Ponder") action Ponder() {
     }
@@ -2070,7 +2071,7 @@ control Hemlock(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Kamrar.DonaAna            : exact @name("Kamrar.DonaAna") ;
             Jayton.Crannell.Almedia & 24w0xff000: exact @name("Crannell.Almedia") ;
         }
-        default_action = Ponder();
+        const default_action = Ponder();
         size = 173056;
     }
     apply {
@@ -2244,7 +2245,7 @@ control Westview(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Kamrar.Caroleen: ternary @name("Kamrar.Caroleen") ;
             Millstone.Guion.Moquah   : exact @name("Guion.Moquah") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 9;
         requires_versioning = false;
     }
@@ -2309,7 +2310,7 @@ control Sunman(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
             Millstone.LaMoille.Philbrook & 3w1: ternary @name("LaMoille.Philbrook") ;
         }
         size = 5;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Cortland.apply();
@@ -2373,7 +2374,7 @@ control Exeter(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
         }
 
         size = 5;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Higgston.apply();
@@ -2406,7 +2407,7 @@ control Spanaway(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         }
 
         size = 2;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Columbus.apply();
@@ -2457,7 +2458,7 @@ control McDonough(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.LaMoille.Bucktown & 4w0x8: ternary @name("LaMoille.Bucktown") ;
             Millstone.LaMoille.Rocklin         : ternary @name("LaMoille.Rocklin") ;
         }
-        default_action = Aynor();
+        const default_action = Aynor();
         size = 512;
         counters = Leland;
         requires_versioning = false;
@@ -2472,7 +2473,7 @@ control McDonough(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Guion.Moorcroft: exact @name("Guion.Moorcroft") ;
             Millstone.Guion.Toklat   : exact @name("Guion.Toklat") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 1024;
     }
     @disable_atomic_modify(1) @name(".Bowers") table Bowers {
@@ -2486,7 +2487,7 @@ control McDonough(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Guion.Toklat   : exact @name("Guion.Toklat") ;
             Millstone.Guion.Bledsoe  : exact @name("Guion.Bledsoe") ;
         }
-        default_action = Millikin();
+        const default_action = Millikin();
         size = 4096;
         idle_timeout = true;
     }
@@ -2501,7 +2502,7 @@ control McDonough(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Guion.Albemarle: exact @name("Guion.Albemarle") ;
         }
         size = 2048;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Scottdale") table Scottdale {
         actions = {
@@ -2516,7 +2517,7 @@ control McDonough(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Guion.Colona   : ternary @name("Guion.Colona") ;
             Millstone.Elkville.LaLuz : ternary @name("Elkville.LaLuz") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 512;
         requires_versioning = false;
     }
@@ -2575,7 +2576,7 @@ control Camargo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         key = {
             Millstone.Guion.Toklat & 12w0xfff: exact @name("Guion.Toklat") ;
         }
-        default_action = Pioche(1w0, 1w0, 1w0);
+        const default_action = Pioche(1w0, 1w0, 1w0);
         size = 4096;
     }
     apply {
@@ -2617,7 +2618,7 @@ control Flynn(inout Westbury Jayton, inout McCracken Millstone, in ingress_intri
             Millstone.Belmont.Monahans          : ternary @name("Belmont.Monahans") ;
             Millstone.Guion.Eastwood            : ternary @name("Guion.Eastwood") ;
         }
-        default_action = Algonquin();
+        const default_action = Algonquin();
         size = 512;
         requires_versioning = false;
     }
@@ -2672,7 +2673,7 @@ control Penzance(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Bridger.Tornillo: exact @name("Bridger.Tornillo") ;
             Millstone.Nuyaka.Glendevey: exact @name("Nuyaka.Glendevey") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 8192;
         idle_timeout = true;
     }
@@ -2680,7 +2681,6 @@ control Penzance(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         actions = {
             @tableonly Elmsford();
             @defaultonly Starkey();
-            @defaultonly NoAction();
         }
         key = {
             Millstone.Bridger.Tornillo: exact @name("Bridger.Tornillo") ;
@@ -2688,7 +2688,7 @@ control Penzance(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         }
         size = 512;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = Starkey();
     }
     apply {
         switch (RedLake.apply().action_run) {
@@ -2760,7 +2760,7 @@ control Felton(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
             Millstone.Corvallis.Peebles & 14w0xf: exact @name("Corvallis.Peebles") ;
         }
         size = 16;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".LoneJack") table LoneJack {
         actions = {
@@ -2825,7 +2825,6 @@ control BigRock(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         actions = {
             Timnath();
             Woodsboro();
-            @defaultonly NoAction();
         }
         key = {
             Millstone.Guion.RockPort               : ternary @name("Guion.RockPort") ;
@@ -2835,7 +2834,7 @@ control BigRock(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Mickleton.Hiland & 20w0xc0000: ternary @name("Mickleton.Hiland") ;
         }
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Woodsboro();
     }
     apply {
         Amherst.apply();
@@ -2970,7 +2969,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Guion.Guadalupe: ternary @name("Guion.Guadalupe") ;
             Jayton.Hallwood.isValid(): exact @name("Hallwood") ;
         }
-        default_action = NorthRim();
+        const default_action = NorthRim();
         size = 512;
         requires_versioning = false;
     }
@@ -2989,7 +2988,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @ways(1) @disable_atomic_modify(1) @name(".Quijotoa") table Quijotoa {
         actions = {
@@ -3011,7 +3010,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Elkville.Pierceton: exact @name("Elkville.Pierceton") ;
             Jayton.Ekron[0].Chevak      : exact @name("Ekron[0].Chevak") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 1024;
     }
     @ways(1) @disable_atomic_modify(1) @name(".Gilman") table Gilman {
@@ -3022,8 +3021,8 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         key = {
             Jayton.Ekron[0].Chevak: exact @name("Ekron[0].Chevak") ;
         }
+        const default_action = NoAction();
         size = 4096;
-        default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Kalaloch") table Kalaloch {
         actions = {
@@ -3033,7 +3032,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         key = {
             Jayton.Crannell.Almedia & 24w0x200fff: exact @name("Crannell.Almedia") ;
         }
-        default_action = Ravenwood();
+        const default_action = Ravenwood();
         size = 8192;
     }
     @name(".Papeton") Sunman() Papeton;
@@ -3187,7 +3186,7 @@ control BarNunn(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Jayton.Baudette.Lacona          : ternary @name("Baudette.Lacona") ;
             Jayton.Baudette.Albemarle       : ternary @name("Baudette.Albemarle") ;
         }
-        default_action = Clifton();
+        const default_action = Clifton();
         size = 2048;
         counters = Jemison;
         requires_versioning = false;
@@ -3203,7 +3202,7 @@ control BarNunn(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Fordyce") Ihlen() Fordyce;
     apply {
@@ -3240,7 +3239,7 @@ control Ugashik(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         key = {
             Jayton.Baudette.isValid(): exact @name("Baudette") ;
         }
-        default_action = Heizer(20w511);
+        const default_action = Heizer(20w511);
         size = 2;
     }
     apply {
@@ -3299,7 +3298,7 @@ control Wakefield(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
         size = 512;
         requires_versioning = false;
         meters = Froid;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Rhine") table Rhine {
         actions = {
@@ -3314,7 +3313,7 @@ control Wakefield(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Mickleton.Albemarle: exact @name("Mickleton.Albemarle") ;
             Millstone.Mickleton.Rockham  : exact @name("Mickleton.Rockham") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 4096;
     }
     apply {
@@ -3353,7 +3352,7 @@ control LaJara(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
         key = {
             Millstone.Mickleton.Hiland & 20w0x7ff: exact @name("Mickleton.Hiland") ;
         }
-        default_action = Ozona();
+        const default_action = Ozona();
         size = 64;
     }
     apply {
@@ -3427,7 +3426,7 @@ control Pocopson(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Jayton.Ekron[1].isValid() : exact @name("Ekron[1]") ;
         }
         size = 256;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Hagewood") table Hagewood {
         actions = {
@@ -3516,7 +3515,7 @@ control Hyrum(inout Westbury Jayton, inout McCracken Millstone, in ingress_intri
             Millstone.Mickleton.Ipava  : exact @name("Mickleton.Ipava") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Jayton.Mather.isValid() == false) {
@@ -3606,7 +3605,7 @@ control Brownson(inout Westbury Jayton, inout McCracken Millstone, in egress_int
         }
         size = 14;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Portales.apply();
@@ -3649,7 +3648,7 @@ control Owentown(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Astor.Corinth   : selector @name("Astor.Corinth") ;
             Millstone.Elvaston.Cuprum : selector @name("Elvaston.Cuprum") ;
         }
-        default_action = Astatula();
+        const default_action = Astatula();
         size = 64;
         implementation = Addicks;
         requires_versioning = false;
@@ -3734,7 +3733,7 @@ control Gowanda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Verdery.apply();
@@ -3757,7 +3756,7 @@ control Onamia(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
         key = {
             Millstone.Lynch.Marcus: exact @name("Lynch.Marcus") ;
         }
-        default_action = Tekonsha();
+        const default_action = Tekonsha();
         size = 1024;
     }
     apply {
@@ -3780,7 +3779,7 @@ control Ardenvoir(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Lynch.Subiaco          : exact @name("Lynch.Subiaco") ;
             Millstone.Guion.Fairmount        : exact @name("Guion.Fairmount") ;
         }
-        default_action = Clinchco(32w0);
+        const default_action = Clinchco(32w0);
         size = 4096;
     }
     apply {
@@ -3806,7 +3805,7 @@ control OjoFeliz(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         }
         size = 128;
         implementation = Protivin;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Medart.apply();
@@ -3870,7 +3869,7 @@ control Waseca(inout Westbury Jayton, inout McCracken Millstone, in egress_intri
             Sumner.egress_port: exact @name("Sumner.Matheson") ;
         }
         size = 256;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Truro.apply();
@@ -3888,7 +3887,7 @@ control Plush(inout Westbury Jayton, inout McCracken Millstone, in egress_intrin
         key = {
             Sumner.egress_port: exact @name("Sumner.Matheson") ;
         }
-        default_action = Bethune(10w0);
+        const default_action = Bethune(10w0);
         size = 128;
     }
     apply {
@@ -3914,7 +3913,7 @@ control Cornwall(inout Westbury Jayton, inout McCracken Millstone, in egress_int
         }
         size = 128;
         implementation = Natalbany;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Lignite.apply();
@@ -3922,12 +3921,12 @@ control Cornwall(inout Westbury Jayton, inout McCracken Millstone, in egress_int
 }
 
 control Clarkdale(inout Westbury Jayton, inout McCracken Millstone, in egress_intrinsic_metadata_t Sumner, in egress_intrinsic_metadata_from_parser_t Boring, inout egress_intrinsic_metadata_for_deparser_t Nucla, inout egress_intrinsic_metadata_for_output_port_t Tillson) {
-    @name(".Talbert") Meter<bit<32>>(32w128, MeterType_t.BYTES) Talbert;
+    @name(".Talbert") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Talbert;
     @name(".Brunson") action Brunson(bit<32> Kingsdale) {
-        Millstone.Sanford.Pittsboro = (bit<2>)Talbert.execute((bit<32>)Kingsdale);
+        Millstone.Sanford.Pittsboro = (bit<1>)Talbert.execute((bit<32>)Kingsdale);
     }
     @name(".Catlin") action Catlin() {
-        Millstone.Sanford.Pittsboro = (bit<2>)2w2;
+        Millstone.Sanford.Pittsboro = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Antoine") table Antoine {
         actions = {
@@ -3937,7 +3936,7 @@ control Clarkdale(inout Westbury Jayton, inout McCracken Millstone, in egress_in
         key = {
             Millstone.Sanford.Marcus: exact @name("Sanford.Marcus") ;
         }
-        default_action = Catlin();
+        const default_action = Catlin();
         size = 1024;
     }
     apply {
@@ -3959,8 +3958,8 @@ control Romeo(inout Westbury Jayton, inout McCracken Millstone, in egress_intrin
         key = {
             Millstone.Sanford.Pittsboro: exact @name("Sanford.Pittsboro") ;
         }
-        size = 1;
-        default_action = NoAction();
+        size = 512;
+        const default_action = NoAction();
     }
     apply {
         if (Millstone.Sanford.Subiaco != 10w0) {
@@ -4049,7 +4048,7 @@ control Lowemont(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         size = 512;
         counters = Wauregan;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Bufalo.apply();
@@ -4079,7 +4078,7 @@ control Langford(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Guion.Tallassee : ternary @name("Guion.Tallassee") ;
             Millstone.Guion.Irvine    : ternary @name("Guion.Irvine") ;
         }
-        default_action = Cowley(5w0);
+        const default_action = Cowley(5w0);
         size = 512;
         requires_versioning = false;
     }
@@ -4102,7 +4101,7 @@ control Carlson(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Baytown.Daleville: exact @name("Baytown.Daleville") ;
             Millstone.Baytown.Dairyland: exact @name("Baytown.Dairyland") ;
         }
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Newland.apply();
@@ -4193,7 +4192,7 @@ control Granville(inout Westbury Jayton, inout McCracken Millstone, in egress_in
         key = {
             Millstone.Mickleton.Lapoint & 32w0x7fff: exact @name("Mickleton.Lapoint") ;
         }
-        default_action = Council(32w0, 32w0);
+        const default_action = Council(32w0, 32w0);
         size = 32768;
     }
     apply {
@@ -4214,7 +4213,7 @@ control Doyline(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         key = {
             Millstone.Mickleton.Lapoint & 32w0xff000000: exact @name("Mickleton.Lapoint") ;
         }
-        default_action = Belcourt(24w0, 24w0, 12w0);
+        const default_action = Belcourt(24w0, 24w0, 12w0);
         size = 256;
     }
     apply {
@@ -4242,7 +4241,7 @@ control Herod(inout Westbury Jayton, inout McCracken Millstone, in egress_intrin
         key = {
             Millstone.Mickleton.Lapoint & 32w0x7fff: exact @name("Mickleton.Lapoint") ;
         }
-        default_action = Rixford(32w0, 32w0);
+        const default_action = Rixford(32w0, 32w0);
         size = 32768;
     }
     apply {
@@ -4288,7 +4287,7 @@ control Comunas(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
             Sumner.egress_port & 9w0x7f: exact @name("Sumner.Matheson") ;
             Millstone.Mickleton.Onycha : exact @name("Mickleton.Onycha") ;
         }
-        default_action = Kilbourne();
+        const default_action = Kilbourne();
         size = 128;
     }
     apply {
@@ -4524,7 +4523,7 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         }
         size = 16;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Corum") table Corum {
         actions = {
@@ -4538,7 +4537,7 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
             Millstone.Mickleton.Standish: exact @name("Mickleton.Standish") ;
             Millstone.Mickleton.Ipava   : exact @name("Mickleton.Ipava") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 128;
     }
     @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
@@ -4589,7 +4588,7 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
             Sumner.egress_port & 9w0x7f: exact @name("Sumner.Matheson") ;
         }
         size = 512;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         switch (Corum.apply().action_run) {
@@ -4646,7 +4645,7 @@ control TenSleep(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             Millstone.Kamrar.Caroleen : exact @name("Kamrar.Caroleen") ;
             Millstone.Kamrar.Glenmora : exact @name("Kamrar.Glenmora") ;
         }
-        default_action = Elysburg();
+        const default_action = Elysburg();
         size = 4096;
         counters = Keller;
     }
@@ -4725,7 +4724,7 @@ control Kinter(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Millstone.Guion.Buckfield == 1w0 && Millstone.Belmont.Monahans == 1w0 && Millstone.Belmont.Pinole == 1w0 && Millstone.Bridger.Satolah & 4w0x4 == 4w0x4 && Millstone.Guion.Minto == 1w1 && Millstone.Guion.Colona == 3w0x1) {
@@ -4751,7 +4750,7 @@ control Mapleton(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Millstone.Dozier.Merrill != 16w0 && Millstone.Guion.Colona == 3w0x1) {
@@ -4761,6 +4760,9 @@ control Mapleton(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
 }
 
 control Weimar(inout Westbury Jayton, inout McCracken Millstone, in ingress_intrinsic_metadata_t Astor, in ingress_intrinsic_metadata_from_parser_t Lookeba, inout ingress_intrinsic_metadata_for_deparser_t Alstown, inout ingress_intrinsic_metadata_for_tm_t Hohenwald) {
+    @name(".Starkey") action Starkey() {
+        ;
+    }
     @name(".BigPark") action BigPark(bit<16> Maddock, bit<1> Sublett, bit<1> Wisdom) {
         Millstone.Ocracoke.Maddock = Maddock;
         Millstone.Ocracoke.Sublett = Sublett;
@@ -4769,15 +4771,15 @@ control Weimar(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
     @disable_atomic_modify(1) @name(".Watters") table Watters {
         actions = {
             BigPark();
-            @defaultonly NoAction();
+            @defaultonly Starkey();
         }
         key = {
             Millstone.Mickleton.Lacona   : exact @name("Mickleton.Lacona") ;
             Millstone.Mickleton.Albemarle: exact @name("Mickleton.Albemarle") ;
             Millstone.Mickleton.Rockham  : exact @name("Mickleton.Rockham") ;
         }
+        const default_action = Starkey();
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         if (Millstone.Guion.Nenana == 1w1) {
@@ -4842,7 +4844,7 @@ control Burmester(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Millstone.Mickleton.Ipava != 3w2) {
@@ -4902,7 +4904,7 @@ control Waucousta(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Millstone.Mickleton.Hiland & 20w0xf0000: ternary @name("Mickleton.Hiland") ;
             Hohenwald.mcast_grp_a & 16w0xf000      : ternary @name("Hohenwald.mcast_grp_a") ;
         }
-        default_action = Nipton(16w0);
+        const default_action = Nipton(16w0);
         size = 512;
         requires_versioning = false;
     }
@@ -4927,7 +4929,7 @@ control Sodaville(inout Westbury Jayton, inout McCracken Millstone, in egress_in
             Sumner.egress_rid: exact @name("Sumner.egress_rid") ;
         }
         size = 16384;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Sumner.egress_rid != 16w0) {
@@ -4976,7 +4978,7 @@ control Rotonda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         key = {
             Millstone.ElkNeck.Dowell: ternary @name("ElkNeck.Dowell") ;
         }
-        default_action = Newcomb();
+        const default_action = Newcomb();
         size = 1024;
         requires_versioning = false;
     }
@@ -4989,7 +4991,7 @@ control Rotonda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         key = {
             Millstone.Nuyaka.Dowell: ternary @name("Nuyaka.Dowell") ;
         }
-        default_action = August();
+        const default_action = August();
         size = 512;
         requires_versioning = false;
     }
@@ -5004,7 +5006,7 @@ control Rotonda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Stovall") table Stovall {
         actions = {
@@ -5017,7 +5019,7 @@ control Rotonda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Millstone.Guion.Colona == 3w0x1) {
@@ -5080,7 +5082,7 @@ control Skiatook(inout Westbury Jayton, inout McCracken Millstone, in egress_int
             Sumner.egress_port & 9w0x7f: exact @name("Sumner.Matheson") ;
             Millstone.Mickleton.Rockham: exact @name("Mickleton.Rockham") ;
         }
-        default_action = Telegraph();
+        const default_action = Telegraph();
         size = 4096;
     }
     apply {
@@ -5193,7 +5195,7 @@ control Canalou(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
             Millstone.Mickleton.Ipava           : exact @name("Mickleton.Ipava") ;
             Millstone.Guion.Dandridge & 12w0xfff: exact @name("Guion.Dandridge") ;
         }
-        default_action = Duster();
+        const default_action = Duster();
         size = 12288;
         counters = Engle;
     }
@@ -5218,7 +5220,7 @@ control Hooks(inout Westbury Jayton, inout McCracken Millstone, in egress_intrin
             Millstone.Mickleton.Ipava & 3w1       : exact @name("Mickleton.Ipava") ;
             Millstone.Mickleton.Rockham & 12w0xfff: exact @name("Mickleton.Rockham") ;
         }
-        default_action = Sultana();
+        const default_action = Sultana();
         size = 8192;
         counters = Hughson;
     }
@@ -5279,7 +5281,8 @@ control Pierson(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         counters = Piedmont;
         size = 2560;
-        default_action = NoAction();
+        const default_action = NoAction();
+        requires_versioning = false;
     }
     apply {
         if (Millstone.Goodwin.Bessie != 8w0 && Millstone.Guion.Sledge & 3w0x1 == 3w0) {
@@ -5308,7 +5311,8 @@ control Flomaton(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
             @defaultonly NoAction();
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
+        requires_versioning = false;
     }
     apply {
         if (Millstone.Goodwin.Bessie != 8w0 && Millstone.Guion.Sledge & 3w0x1 == 3w0) {
@@ -5543,6 +5547,8 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         Jayton.Ekron[0].setInvalid();
         Jayton.Ekron[1].setInvalid();
     }
+    @name(".Seabrook") action Seabrook() {
+    }
     @name(".Oxnard") action Oxnard() {
     }
     @name(".RichBar") action RichBar(bit<10> Glenmora, bit<2> Tehachapi, bit<18> Alamosa) {
@@ -5638,7 +5644,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Kamrar.Luzerne            : ternary @name("Kamrar.Luzerne") ;
             Millstone.Kamrar.DonaAna & 16w0xe000: ternary @name("Kamrar.DonaAna") ;
         }
-        default_action = Oxnard();
+        const default_action = Oxnard();
         size = 2048;
         requires_versioning = false;
     }
@@ -5685,7 +5691,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Kamrar.Caroleen: exact @name("Kamrar.Caroleen") ;
             Millstone.Kamrar.Luzerne : exact @name("Kamrar.Luzerne") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 3;
     }
     @name(".Ponder") action Ponder() {
@@ -5705,7 +5711,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Jayton.Crannell.Almedia & 24w0xff000: exact @name("Crannell.Almedia") ;
         }
         size = 316180;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Moosic") action Moosic(bit<16> Sewaren) {
         Millstone.Kamrar.Sewaren = Sewaren;
@@ -5753,7 +5759,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
 
         size = 2;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Froid") DirectMeter(MeterType_t.BYTES) Froid;
     @name(".Calverton") action Calverton(bit<20> Hiland, bit<32> Longport) {
@@ -5774,7 +5780,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Tatum();
             Waretown();
             Croft();
-            @defaultonly NoAction();
+            @defaultonly Seabrook();
         }
         key = {
             Millstone.Mickleton.Ipava: exact @name("Mickleton.Ipava") ;
@@ -5782,6 +5788,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Jayton.Hallwood.isValid(): exact @name("Hallwood") ;
         }
         size = 512;
+        const default_action = Seabrook();
         const entries = {
                         (3w0, true, false) : Paoli();
 
@@ -5797,7 +5804,6 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
 
         }
 
-        default_action = NoAction();
     }
     @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".Indios") table Indios {
         actions = {
@@ -5811,7 +5817,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Bridger.Tornillo : exact @name("Bridger.Tornillo") ;
             Millstone.ElkNeck.Glendevey: exact @name("ElkNeck.Glendevey") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 8192;
         idle_timeout = true;
     }
@@ -5827,7 +5833,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Bridger.Tornillo                                         : exact @name("Bridger.Tornillo") ;
             Millstone.Nuyaka.Glendevey & 128w0xffffffffffffffff0000000000000000: lpm @name("Nuyaka.Glendevey") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 2048;
         idle_timeout = true;
     }
@@ -5859,7 +5865,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Nuyaka.Richvale & 16w0x3fff                         : exact @name("Nuyaka.Richvale") ;
             Millstone.Nuyaka.Glendevey & 128w0x3ffffffffff0000000000000000: lpm @name("Nuyaka.Glendevey") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 16384;
         idle_timeout = true;
     }
@@ -5875,7 +5881,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Bridger.Tornillo                 : exact @name("Bridger.Tornillo") ;
             Millstone.ElkNeck.Glendevey & 32w0xffffffff: lpm @name("ElkNeck.Glendevey") ;
         }
-        default_action = RockHill();
+        const default_action = RockHill();
         size = 10240;
         idle_timeout = true;
     }
@@ -5891,7 +5897,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Bridger.Tornillo                                         : exact @name("Bridger.Tornillo") ;
             Millstone.Nuyaka.Glendevey & 128w0xfffffc00000000000000000000000000: lpm @name("Nuyaka.Glendevey") ;
         }
-        default_action = Coryville();
+        const default_action = Coryville();
         size = 1024;
         idle_timeout = true;
     }
@@ -5930,7 +5936,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 512;
         implementation = Salamonia;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Brockton") table Brockton {
         actions = {
@@ -5952,7 +5958,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Jayton.Sequim.isValid()   : ternary @name("Sequim") ;
             Jayton.Baudette.isValid() : ternary @name("Baudette") ;
         }
-        default_action = Starkey();
+        const default_action = Starkey();
         size = 256;
         requires_versioning = false;
     }
@@ -5964,7 +5970,6 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Leetsdale();
             Valmont();
             Starkey();
-            @defaultonly NoAction();
         }
         key = {
             Jayton.Magasco.isValid()  : ternary @name("Magasco") ;
@@ -5977,7 +5982,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Starkey();
     }
     @name(".Downs") Spanaway() Downs;
     @name(".Ancho") Northboro() Ancho;
@@ -6333,21 +6338,6 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
         Humeston.extract<McBride>(Jayton.Boonsboro);
         transition accept;
     }
-    state Funston {
-        Humeston.extract<Algodones>(Jayton.Swisshome);
-        Millstone.LaMoille.Bucktown = (bit<4>)4w0x5;
-        transition accept;
-    }
-    state Recluse {
-        Humeston.extract<Algodones>(Jayton.Swisshome);
-        Millstone.LaMoille.Bucktown = (bit<4>)4w0x6;
-        transition accept;
-    }
-    state Arapahoe {
-        Humeston.extract<Algodones>(Jayton.Swisshome);
-        Millstone.LaMoille.Bucktown = (bit<4>)4w0x8;
-        transition accept;
-    }
     state Parkway {
         Humeston.extract<Algodones>(Jayton.Swisshome);
         transition accept;
@@ -6360,11 +6350,8 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Bratt;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Hearne;
             (8w0x45 &&& 8w0xff, 16w0x800): Moultrie;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Funston;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Mayflower;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Herald;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Recluse;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Arapahoe;
             default: Parkway;
         }
     }
@@ -6373,11 +6360,8 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
         transition select((Humeston.lookahead<bit<24>>())[7:0], (Humeston.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Hearne;
             (8w0x45 &&& 8w0xff, 16w0x800): Moultrie;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Funston;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Mayflower;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Herald;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Recluse;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Arapahoe;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Almond;
             default: Parkway;
         }
@@ -6388,11 +6372,8 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Tabler;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Hearne;
             (8w0x45 &&& 8w0xff, 16w0x800): Moultrie;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Funston;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Mayflower;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Herald;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Recluse;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Arapahoe;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Almond;
             default: Parkway;
         }
@@ -6400,13 +6381,12 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
     state Moultrie {
         Humeston.extract<Algodones>(Jayton.Swisshome);
         Humeston.extract<Cornell>(Jayton.Sequim);
-        Millstone.Guion.Weinert = Jayton.Sequim.Weinert;
-        Millstone.LaMoille.Bucktown = (bit<4>)4w0x1;
         transition select(Jayton.Sequim.Steger, Jayton.Sequim.Quogue) {
             (13w0x0 &&& 13w0x1fff, 8w1): Pinetop;
             (13w0x0 &&& 13w0x1fff, 8w17): Gurdon;
             (13w0x0 &&& 13w0x1fff, 8w6): Saugatuck;
-            default: accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            default: Hookdale;
         }
     }
     state Gurdon {
@@ -6418,10 +6398,12 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
     state Mayflower {
         Humeston.extract<Algodones>(Jayton.Swisshome);
         Jayton.Sequim.Glendevey = (Humeston.lookahead<bit<160>>())[31:0];
-        Millstone.LaMoille.Bucktown = (bit<4>)4w0x3;
         Jayton.Sequim.Grannis = (Humeston.lookahead<bit<14>>())[5:0];
         Jayton.Sequim.Quogue = (Humeston.lookahead<bit<80>>())[7:0];
-        Millstone.Guion.Weinert = (Humeston.lookahead<bit<72>>())[7:0];
+        transition accept;
+    }
+    state Hookdale {
+        Millstone.Hapeville.Luzerne = (bit<1>)1w1;
         transition accept;
     }
     state Hilltop {
@@ -6436,12 +6418,10 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
         Jayton.Hallwood.Palmhurst = Jayton.Woodston.Palmhurst;
         Jayton.Hallwood.Dowell = Jayton.Woodston.Glendevey;
         Jayton.Hallwood.Glendevey = Jayton.Woodston.Dowell;
-        Millstone.Guion.Weinert = Jayton.Hallwood.Palmhurst;
         transition Halltown;
     }
     state Shivwits {
         Humeston.extract<Littleton>(Jayton.Hallwood);
-        Millstone.Guion.Weinert = Jayton.Hallwood.Palmhurst;
         transition Halltown;
     }
     state Herald {
@@ -6452,7 +6432,6 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
         }
     }
     state Halltown {
-        Millstone.LaMoille.Bucktown = (bit<4>)4w0x2;
         transition select(Jayton.Hallwood.Riner) {
             8w58: Pinetop;
             8w17: Gurdon;

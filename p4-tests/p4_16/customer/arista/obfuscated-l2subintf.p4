@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2SUBINTF=1 -Ibf_arista_switch_l2subintf/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_l2subintf --bf-rt-schema bf_arista_switch_l2subintf/context/bf-rt.json
-// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2SUBINTF=1 -Ibf_arista_switch_l2subintf/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_l2subintf --bf-rt-schema bf_arista_switch_l2subintf/context/bf-rt.json
+// p4c 9.5.0 (SHA: 0115db3)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -617,6 +617,7 @@ struct Weatherby {
     bit<1>  Brainard;
     bit<6>  Monteview;
     bit<1>  Glenpool;
+    bit<8>  Soledad;
 }
 
 struct Traverse {
@@ -628,7 +629,7 @@ struct Traverse {
 struct Standish {
     bit<10> Pachuta;
     bit<10> Whitefish;
-    bit<2>  Ralls;
+    bit<1>  Ralls;
     bit<8>  Blairsden;
     bit<6>  Clover;
     bit<16> Barrow;
@@ -1429,8 +1430,8 @@ parser Nevis(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorhe
     @name(".Magasco") Checksum() Magasco;
     @name(".Twain") Checksum() Twain;
     @name(".Boonsboro") value_set<bit<9>>(2) Boonsboro;
-    @name(".Wegdahl") value_set<bit<18>>(4) Wegdahl;
-    @name(".Denning") value_set<bit<18>>(4) Denning;
+    @name(".Wegdahl") value_set<bit<19>>(4) Wegdahl;
+    @name(".Denning") value_set<bit<19>>(4) Denning;
     state Talco {
         transition select(Hapeville.ingress_port) {
             Boonsboro: Terral;
@@ -1565,7 +1566,7 @@ parser Nevis(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorhe
         Lindsborg.extract<Madawaska>(Daisytown.Makawao);
         Lindsborg.extract<Commack>(Daisytown.Mather);
         Lindsborg.extract<Pilar>(Daisytown.Gambrills);
-        transition select(Daisytown.Makawao.Tallassee ++ Hapeville.ingress_port[1:0]) {
+        transition select(Daisytown.Makawao.Tallassee ++ Hapeville.ingress_port[2:0]) {
             Denning: Cross;
             Wegdahl: Jayton;
             default: accept;
@@ -1829,7 +1830,7 @@ control Kinde(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Bergton.Altus & 4w0x8     : ternary @name("Bergton.Altus") ;
             Balmorhea.Bergton.Sewaren           : ternary @name("Bergton.Sewaren") ;
         }
-        default_action = Saugatuck();
+        const default_action = Saugatuck();
         size = 512;
         counters = Peoria;
         requires_versioning = false;
@@ -1844,7 +1845,7 @@ control Kinde(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Cassa.Moorcroft: exact @name("Cassa.Moorcroft") ;
             Balmorhea.Cassa.Toklat   : exact @name("Cassa.Toklat") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Funston") table Funston {
@@ -1858,7 +1859,7 @@ control Kinde(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Cassa.Toklat   : exact @name("Cassa.Toklat") ;
             Balmorhea.Cassa.Bledsoe  : exact @name("Cassa.Bledsoe") ;
         }
-        default_action = Sunbury();
+        const default_action = Sunbury();
         size = 16384;
         idle_timeout = true;
     }
@@ -1873,7 +1874,7 @@ control Kinde(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Cassa.Lacona   : exact @name("Cassa.Lacona") ;
         }
         size = 2048;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Halltown") table Halltown {
         actions = {
@@ -1888,7 +1889,7 @@ control Kinde(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Cassa.Belfair  : ternary @name("Cassa.Belfair") ;
             Balmorhea.HillTop.Lugert : ternary @name("HillTop.Lugert") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 512;
         requires_versioning = false;
     }
@@ -1946,7 +1947,7 @@ control Recluse(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         key = {
             Balmorhea.Cassa.Toklat & 12w0xfff: exact @name("Cassa.Toklat") ;
         }
-        default_action = Arapahoe(1w0, 1w0, 1w0);
+        const default_action = Arapahoe(1w0, 1w0, 1w0);
         size = 4096;
     }
     apply {
@@ -1993,7 +1994,7 @@ control Callao(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_i
             Balmorhea.Emida.LaConner            : ternary @name("Emida.LaConner") ;
             Balmorhea.Cassa.Forkville           : ternary @name("Cassa.Forkville") ;
         }
-        default_action = Wagener();
+        const default_action = Wagener();
         size = 512;
         requires_versioning = false;
     }
@@ -2048,7 +2049,7 @@ control Baker(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Doddridge.Bonduel: exact @name("Doddridge.Bonduel") ;
             Balmorhea.Pawtucket.Dowell : exact @name("Pawtucket.Dowell") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 98304;
         idle_timeout = true;
     }
@@ -2061,7 +2062,7 @@ control Baker(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Doddridge.Bonduel & 9w0xff: exact @name("Doddridge.Bonduel") ;
             Balmorhea.Pawtucket.Norland         : lpm @name("Pawtucket.Norland") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 10240;
         idle_timeout = true;
     }
@@ -2119,7 +2120,7 @@ control Swanlake(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Doddridge.Bonduel: exact @name("Doddridge.Bonduel") ;
             Balmorhea.Buckhorn.Dowell  : exact @name("Buckhorn.Dowell") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 16384;
         idle_timeout = true;
     }
@@ -2127,7 +2128,6 @@ control Swanlake(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         actions = {
             @tableonly Gracewood();
             @defaultonly Wanamassa();
-            @defaultonly NoAction();
         }
         key = {
             Balmorhea.Doddridge.Bonduel: exact @name("Doddridge.Bonduel") ;
@@ -2135,7 +2135,7 @@ control Swanlake(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         }
         size = 1024;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = Wanamassa();
     }
     apply {
         switch (Skillman.apply().action_run) {
@@ -2256,7 +2256,7 @@ control Westoak(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Doddridge.Bonduel                                       : exact @name("Doddridge.Bonduel") ;
             Balmorhea.Buckhorn.Dowell & 128w0xffffffffffffffff0000000000000000: lpm @name("Buckhorn.Dowell") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 2048;
         idle_timeout = true;
     }
@@ -2288,7 +2288,7 @@ control Westoak(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Buckhorn.Tombstone & 16w0x3fff                     : exact @name("Buckhorn.Tombstone") ;
             Balmorhea.Buckhorn.Dowell & 128w0x3ffffffffff0000000000000000: lpm @name("Buckhorn.Dowell") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 16384;
         idle_timeout = true;
     }
@@ -2304,7 +2304,7 @@ control Westoak(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Doddridge.Bonduel               : exact @name("Doddridge.Bonduel") ;
             Balmorhea.Pawtucket.Dowell & 32w0xfff00000: lpm @name("Pawtucket.Dowell") ;
         }
-        default_action = Dwight();
+        const default_action = Dwight();
         size = 8192;
         idle_timeout = true;
     }
@@ -2320,7 +2320,7 @@ control Westoak(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Doddridge.Bonduel                                       : exact @name("Doddridge.Bonduel") ;
             Balmorhea.Buckhorn.Dowell & 128w0xfffffc00000000000000000000000000: lpm @name("Buckhorn.Dowell") ;
         }
-        default_action = RockHill();
+        const default_action = RockHill();
         size = 1024;
         idle_timeout = true;
     }
@@ -2347,7 +2347,7 @@ control Westoak(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Warsaw.Harney                : exact @name("Warsaw.Harney") ;
             Balmorhea.Pawtucket.Dowell & 32w0xfffff: lpm @name("Pawtucket.Dowell") ;
         }
-        default_action = Virgilina();
+        const default_action = Virgilina();
         size = 163840;
         idle_timeout = true;
     }
@@ -2436,7 +2436,7 @@ control Tularosa(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Dateland.Pajaros & 16w0xf: exact @name("Dateland.Pajaros") ;
         }
         size = 16;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Cassadaga") table Cassadaga {
         actions = {
@@ -2501,7 +2501,6 @@ control Hemlock(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         actions = {
             Mabana();
             Hester();
-            @defaultonly NoAction();
         }
         key = {
             Balmorhea.Cassa.NewMelle                : ternary @name("Cassa.NewMelle") ;
@@ -2511,7 +2510,7 @@ control Hemlock(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Rainelle.Edgemoor & 20w0xc0000: ternary @name("Rainelle.Edgemoor") ;
         }
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Hester();
     }
     apply {
         Goodlett.apply();
@@ -2659,7 +2658,7 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Cassa.Laxon        : ternary @name("Cassa.Laxon") ;
             Daisytown.Hillsview.isValid(): exact @name("Hillsview") ;
         }
-        default_action = Crown();
+        const default_action = Crown();
         size = 512;
         requires_versioning = false;
     }
@@ -2678,7 +2677,7 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         }
         size = 3072;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Forepaugh") table Forepaugh {
         actions = {
@@ -2727,7 +2726,7 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.HillTop.Pittsboro    : exact @name("HillTop.Pittsboro") ;
             Daisytown.Greenland[0].Spearman: exact @name("Greenland[0].Spearman") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 1024;
     }
     @ways(1) @disable_atomic_modify(1) @name(".Hagaman") table Hagaman {
@@ -2738,8 +2737,8 @@ control BigPoint(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         key = {
             Daisytown.Greenland[0].Spearman: exact @name("Greenland[0].Spearman") ;
         }
+        const default_action = NoAction();
         size = 4096;
-        default_action = NoAction();
     }
     apply {
         switch (Campo.apply().action_run) {
@@ -2961,7 +2960,7 @@ control Scottdale(inout BealCity Daisytown, inout Provencal Balmorhea, in ingres
             Daisytown.Kamrar.Horton             : ternary @name("Kamrar.Horton") ;
             Daisytown.Kamrar.Lacona             : ternary @name("Kamrar.Lacona") ;
         }
-        default_action = Morrow();
+        const default_action = Morrow();
         size = 2048;
         counters = Camargo;
         requires_versioning = false;
@@ -2977,7 +2976,7 @@ control Scottdale(inout BealCity Daisytown, inout Provencal Balmorhea, in ingres
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Weathers") Andrade() Weathers;
     apply {
@@ -3014,7 +3013,7 @@ control Coupland(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         key = {
             Daisytown.Kamrar.isValid(): exact @name("Kamrar") ;
         }
-        default_action = RedLake(20w511);
+        const default_action = RedLake(20w511);
         size = 2;
     }
     apply {
@@ -3073,7 +3072,7 @@ control DeepGap(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         size = 512;
         requires_versioning = false;
         meters = Ruston;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Leacock") table Leacock {
         actions = {
@@ -3088,7 +3087,7 @@ control DeepGap(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Rainelle.Lacona : exact @name("Rainelle.Lacona") ;
             Balmorhea.Rainelle.Ivyland: exact @name("Rainelle.Ivyland") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 16384;
     }
     apply {
@@ -3127,7 +3126,7 @@ control WestPark(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         key = {
             Balmorhea.Rainelle.Edgemoor & 20w0x7ff: exact @name("Rainelle.Edgemoor") ;
         }
-        default_action = Hillside();
+        const default_action = Hillside();
         size = 512;
     }
     apply {
@@ -3158,7 +3157,7 @@ control BigRock(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Daisytown.Wesson.Lacona  : ternary @name("Wesson.Lacona") ;
             Daisytown.Gastonia.Dowell: exact @name("Gastonia.Dowell") ;
         }
-        default_action = Timnath();
+        const default_action = Timnath();
         size = 512;
         requires_versioning = false;
     }
@@ -3249,7 +3248,7 @@ control Asharoken(inout BealCity Daisytown, inout Provencal Balmorhea, in ingres
             Daisytown.Greenland[1].isValid(): exact @name("Greenland[1]") ;
         }
         size = 256;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".ElkMills") table ElkMills {
         actions = {
@@ -3338,7 +3337,7 @@ control Ravenwood(inout BealCity Daisytown, inout Provencal Balmorhea, in ingres
             Balmorhea.Rainelle.Madera : exact @name("Rainelle.Madera") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Daisytown.Goodwin.isValid() == false) {
@@ -3418,7 +3417,7 @@ control Twinsburg(inout BealCity Daisytown, inout Provencal Balmorhea, in egress
         }
         size = 14;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Islen.apply();
@@ -3462,7 +3461,7 @@ control BarNunn(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Rainelle.Edgemoor: ternary @name("Rainelle.Edgemoor") ;
             Balmorhea.Millston.Pinole  : selector @name("Millston.Pinole") ;
         }
-        default_action = Somis();
+        const default_action = Somis();
         size = 512;
         implementation = Kingsland;
         requires_versioning = false;
@@ -3547,7 +3546,7 @@ control Hector(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_i
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Wakeman.apply();
@@ -3570,7 +3569,7 @@ control Chilson(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         key = {
             Balmorhea.Mickleton.Whitefish: exact @name("Mickleton.Whitefish") ;
         }
-        default_action = BigFork();
+        const default_action = BigFork();
         size = 1024;
     }
     apply {
@@ -3593,7 +3592,7 @@ control Paragonah(inout BealCity Daisytown, inout Provencal Balmorhea, in ingres
             Balmorhea.Mickleton.Pachuta      : exact @name("Mickleton.Pachuta") ;
             Balmorhea.Cassa.Crozet           : exact @name("Cassa.Crozet") ;
         }
-        default_action = DeRidder(32w0);
+        const default_action = DeRidder(32w0);
         size = 4096;
     }
     apply {
@@ -3619,7 +3618,7 @@ control Duchesne(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         }
         size = 128;
         implementation = Cropper;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Beeler.apply();
@@ -3683,7 +3682,7 @@ control Slinger(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_i
             NantyGlo.egress_port: exact @name("NantyGlo.Matheson") ;
         }
         size = 256;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Palco.apply();
@@ -3701,7 +3700,7 @@ control Melder(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         key = {
             NantyGlo.egress_port: exact @name("NantyGlo.Matheson") ;
         }
-        default_action = FourTown(10w0);
+        const default_action = FourTown(10w0);
         size = 128;
     }
     apply {
@@ -3727,7 +3726,7 @@ control Farner(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         }
         size = 128;
         implementation = Govan;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Gladys.apply();
@@ -3735,12 +3734,12 @@ control Farner(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
 }
 
 control Rumson(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_intrinsic_metadata_t NantyGlo, in egress_intrinsic_metadata_from_parser_t Yatesboro, inout egress_intrinsic_metadata_for_deparser_t Maxwelton, inout egress_intrinsic_metadata_for_output_port_t Ihlen) {
-    @name(".McKee") Meter<bit<32>>(32w128, MeterType_t.BYTES) McKee;
+    @name(".McKee") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) McKee;
     @name(".Bigfork") action Bigfork(bit<32> Ironia) {
-        Balmorhea.Mentone.Ralls = (bit<2>)McKee.execute((bit<32>)Ironia);
+        Balmorhea.Mentone.Ralls = (bit<1>)McKee.execute((bit<32>)Ironia);
     }
     @name(".Jauca") action Jauca() {
-        Balmorhea.Mentone.Ralls = (bit<2>)2w2;
+        Balmorhea.Mentone.Ralls = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Brownson") table Brownson {
         actions = {
@@ -3750,7 +3749,7 @@ control Rumson(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         key = {
             Balmorhea.Mentone.Whitefish: exact @name("Mentone.Whitefish") ;
         }
-        default_action = Jauca();
+        const default_action = Jauca();
         size = 1024;
     }
     apply {
@@ -3772,8 +3771,8 @@ control Punaluu(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_i
         key = {
             Balmorhea.Mentone.Ralls: exact @name("Mentone.Ralls") ;
         }
-        size = 1;
-        default_action = NoAction();
+        size = 512;
+        const default_action = NoAction();
     }
     apply {
         if (Balmorhea.Mentone.Pachuta != 10w0) {
@@ -3862,7 +3861,7 @@ control Hopeton(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         size = 512;
         counters = Bernstein;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Scarville.apply();
@@ -3892,7 +3891,7 @@ control Owentown(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Cassa.Hampton     : ternary @name("Cassa.Hampton") ;
             Balmorhea.Cassa.Tallassee   : ternary @name("Cassa.Tallassee") ;
         }
-        default_action = Basye(5w0);
+        const default_action = Basye(5w0);
         size = 512;
         requires_versioning = false;
     }
@@ -3915,7 +3914,7 @@ control Ardsley(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
             Balmorhea.Sopris.Pettry  : exact @name("Sopris.Pettry") ;
             Balmorhea.Sopris.Buncombe: exact @name("Sopris.Buncombe") ;
         }
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Westend.apply();
@@ -4013,7 +4012,7 @@ control Brule(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
         key = {
             Balmorhea.Rainelle.LakeLure & 32w0xffff: exact @name("Rainelle.LakeLure") ;
         }
-        default_action = Durant(32w0, 32w0);
+        const default_action = Durant(32w0, 32w0);
         size = 65536;
     }
     @disable_atomic_modify(1) @name(".Torrance") table Torrance {
@@ -4024,7 +4023,7 @@ control Brule(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
         key = {
             Balmorhea.Rainelle.Ivyland & 12w0xfff: exact @name("Rainelle.Ivyland") ;
         }
-        default_action = Clermont();
+        const default_action = Clermont();
         size = 4096;
     }
     apply {
@@ -4048,7 +4047,7 @@ control Shelby(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         key = {
             Balmorhea.Rainelle.LakeLure & 32w0xff000000: exact @name("Rainelle.LakeLure") ;
         }
-        default_action = Chambers(24w0, 24w0, 12w0);
+        const default_action = Chambers(24w0, 24w0, 12w0);
         size = 256;
     }
     apply {
@@ -4094,7 +4093,7 @@ control Ghent(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
             NantyGlo.egress_port & 9w0x7f: exact @name("NantyGlo.Matheson") ;
             Balmorhea.Rainelle.Randall   : exact @name("Rainelle.Randall") ;
         }
-        default_action = Medart();
+        const default_action = Medart();
         size = 128;
     }
     apply {
@@ -4306,7 +4305,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         }
         size = 16;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Liberal") table Liberal {
         actions = {
@@ -4320,7 +4319,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
             Balmorhea.Rainelle.Bufalo : exact @name("Rainelle.Bufalo") ;
             Balmorhea.Rainelle.Madera : exact @name("Rainelle.Madera") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 128;
     }
     @disable_atomic_modify(1) @name(".Doyline") table Doyline {
@@ -4371,7 +4370,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
             NantyGlo.egress_port & 9w0x7f: exact @name("NantyGlo.Matheson") ;
         }
         size = 512;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         switch (Liberal.apply().action_run) {
@@ -4507,7 +4506,7 @@ control Silvertip(inout BealCity Daisytown, inout Provencal Balmorhea, in ingres
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Balmorhea.Cassa.Chaffee == 1w0 && Balmorhea.Emida.LaConner == 1w0 && Balmorhea.Emida.McGrady == 1w0 && Balmorhea.Doddridge.Sardinia & 4w0x4 == 4w0x4 && Balmorhea.Cassa.Moquah == 1w1 && Balmorhea.Cassa.Belfair == 3w0x1) {
@@ -4533,7 +4532,7 @@ control Cornish(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         }
         size = 16384;
         idle_timeout = true;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Balmorhea.ElkNeck.Broussard != 16w0 && Balmorhea.Cassa.Belfair == 3w0x1) {
@@ -4543,6 +4542,9 @@ control Cornish(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
 }
 
 control Pelican(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_intrinsic_metadata_t Hapeville, in ingress_intrinsic_metadata_from_parser_t Earling, inout ingress_intrinsic_metadata_for_deparser_t Udall, inout ingress_intrinsic_metadata_for_tm_t Barnhill) {
+    @name(".Wanamassa") action Wanamassa() {
+        ;
+    }
     @name(".Unionvale") action Unionvale(bit<16> Kalkaska, bit<1> Newfolden, bit<1> Candle) {
         Balmorhea.Nuyaka.Kalkaska = Kalkaska;
         Balmorhea.Nuyaka.Newfolden = Newfolden;
@@ -4551,15 +4553,15 @@ control Pelican(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
     @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
         actions = {
             Unionvale();
-            @defaultonly NoAction();
+            @defaultonly Wanamassa();
         }
         key = {
             Balmorhea.Rainelle.Horton : exact @name("Rainelle.Horton") ;
             Balmorhea.Rainelle.Lacona : exact @name("Rainelle.Lacona") ;
             Balmorhea.Rainelle.Ivyland: exact @name("Rainelle.Ivyland") ;
         }
+        const default_action = Wanamassa();
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         if (Balmorhea.Cassa.Fairmount == 1w1) {
@@ -4624,7 +4626,7 @@ control Advance(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Balmorhea.Rainelle.Madera != 3w2) {
@@ -4684,7 +4686,7 @@ control Mantee(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_i
             Balmorhea.Rainelle.Edgemoor & 20w0xf0000: ternary @name("Rainelle.Edgemoor") ;
             Barnhill.mcast_grp_a & 16w0xf000        : ternary @name("Barnhill.mcast_grp_a") ;
         }
-        default_action = Angeles(16w0);
+        const default_action = Angeles(16w0);
         size = 512;
         requires_versioning = false;
     }
@@ -4726,7 +4728,7 @@ control Twichell(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_
             NantyGlo.egress_rid: exact @name("NantyGlo.egress_rid") ;
         }
         size = 16384;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Konnarock") table Konnarock {
         actions = {
@@ -4736,7 +4738,7 @@ control Twichell(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_
         key = {
             NantyGlo.egress_rid: exact @name("NantyGlo.egress_rid") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
     }
     apply {
         if (NantyGlo.egress_rid != 16w0) {
@@ -4794,7 +4796,7 @@ control Tillicum(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         key = {
             Balmorhea.Pawtucket.Findlay: ternary @name("Pawtucket.Findlay") ;
         }
-        default_action = Trail();
+        const default_action = Trail();
         size = 4096;
         requires_versioning = false;
     }
@@ -4807,7 +4809,7 @@ control Tillicum(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         key = {
             Balmorhea.Buckhorn.Findlay: ternary @name("Buckhorn.Findlay") ;
         }
-        default_action = RedBay();
+        const default_action = RedBay();
         size = 512;
         requires_versioning = false;
     }
@@ -4822,7 +4824,7 @@ control Tillicum(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         }
         size = 1024;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Olivet") table Olivet {
         actions = {
@@ -4835,7 +4837,7 @@ control Tillicum(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         if (Balmorhea.Cassa.Belfair == 3w0x1) {
@@ -4876,7 +4878,7 @@ control Nordland(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Cassa.Tallassee: ternary @name("Cassa.Tallassee") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
         actions = {
@@ -4887,7 +4889,7 @@ control Nordland(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Cassa.Belfair & 3w0x3     : exact @name("Cassa.Belfair") ;
             Balmorhea.Hapeville.Corinth & 9w0x7f: exact @name("Hapeville.Corinth") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 512;
     }
     @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority(1) @ways(3) @name(".Fosston") table Fosston {
@@ -4911,7 +4913,7 @@ control Nordland(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress
             Balmorhea.Cassa.Hampton: ternary @name("Cassa.Hampton") ;
         }
         size = 1024;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".TenSleep") Tillicum() TenSleep;
     apply {
@@ -5345,7 +5347,7 @@ control DewyRose(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_
             Balmorhea.Rainelle.Ivyland          : exact @name("Rainelle.Ivyland") ;
             Balmorhea.Rainelle.Lovewell & 6w0x3f: exact @name("Rainelle.Lovewell") ;
         }
-        default_action = Kinston();
+        const default_action = Kinston();
         size = 4096;
     }
     apply {
@@ -5459,7 +5461,7 @@ control Veradale(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_
             Balmorhea.Rainelle.Madera           : exact @name("Rainelle.Madera") ;
             Balmorhea.Cassa.Lordstown & 12w0xfff: exact @name("Cassa.Lordstown") ;
         }
-        default_action = Picacho();
+        const default_action = Picacho();
         size = 12288;
         counters = Parole;
     }
@@ -5484,7 +5486,7 @@ control Morgana(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_i
             Balmorhea.Rainelle.Madera & 3w1      : exact @name("Rainelle.Madera") ;
             Balmorhea.Rainelle.Ivyland & 12w0xfff: exact @name("Rainelle.Ivyland") ;
         }
-        default_action = Sanatoga();
+        const default_action = Sanatoga();
         size = 8192;
         counters = Aquilla;
     }
@@ -5653,6 +5655,8 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
         Daisytown.Greenland[0].setInvalid();
         Daisytown.Greenland[1].setInvalid();
     }
+    @name(".Hagerman") action Hagerman() {
+    }
     @name(".Ruston") DirectMeter(MeterType_t.BYTES) Ruston;
     @name(".Rendon") action Rendon(bit<20> Edgemoor, bit<32> Northboro) {
         Balmorhea.Rainelle.LakeLure[19:0] = Balmorhea.Rainelle.Edgemoor;
@@ -5695,7 +5699,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
         }
         size = 4096;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Rembrandt") table Rembrandt {
         actions = {
@@ -5712,7 +5716,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
         key = {
             Balmorhea.Sopris.Stilwell: ternary @name("Sopris.Stilwell") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 8192;
         requires_versioning = false;
     }
@@ -5723,7 +5727,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Haena();
             Janney();
             Hodges();
-            @defaultonly NoAction();
+            @defaultonly Hagerman();
         }
         key = {
             Balmorhea.Rainelle.Madera    : exact @name("Rainelle.Madera") ;
@@ -5731,6 +5735,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Daisytown.Hillsview.isValid(): exact @name("Hillsview") ;
         }
         size = 512;
+        const default_action = Hagerman();
         const entries = {
                         (3w0, true, false) : Haena();
 
@@ -5744,7 +5749,6 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
 
         }
 
-        default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Millican") table Millican {
         actions = {
@@ -5766,7 +5770,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Daisytown.Gastonia.isValid() : ternary @name("Gastonia") ;
             Daisytown.Kamrar.isValid()   : ternary @name("Kamrar") ;
         }
-        default_action = Wanamassa();
+        const default_action = Wanamassa();
         size = 256;
         requires_versioning = false;
     }
@@ -5778,7 +5782,6 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Ripley();
             Conejo();
             Wanamassa();
-            @defaultonly NoAction();
         }
         key = {
             Daisytown.Millhaven.isValid(): ternary @name("Millhaven") ;
@@ -5791,7 +5794,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = Wanamassa();
     }
     @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Waretown") table Waretown {
         actions = {
@@ -5804,7 +5807,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Daisytown.Belmore.isValid()  : exact @name("Belmore") ;
         }
         size = 2;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Moxley") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Moxley;
     @name(".Stout.Cacao") Hash<bit<51>>(HashAlgorithm_t.CRC16, Moxley) Stout;
@@ -5820,7 +5823,7 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
         }
         size = 512;
         implementation = Blunt;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Hooven") table Hooven {
         actions = {
@@ -6067,21 +6070,6 @@ parser Mocane(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorh
         Lindsborg.extract<Mackville>(Daisytown.Newhalem);
         transition accept;
     }
-    state Garrison {
-        Lindsborg.extract<Albemarle>(Daisytown.Shingler);
-        Balmorhea.Bergton.Altus = (bit<4>)4w0x5;
-        transition accept;
-    }
-    state Biggers {
-        Lindsborg.extract<Albemarle>(Daisytown.Shingler);
-        Balmorhea.Bergton.Altus = (bit<4>)4w0x6;
-        transition accept;
-    }
-    state Pineville {
-        Lindsborg.extract<Albemarle>(Daisytown.Shingler);
-        Balmorhea.Bergton.Altus = (bit<4>)4w0x8;
-        transition accept;
-    }
     state Nooksack {
         Lindsborg.extract<Albemarle>(Daisytown.Shingler);
         transition accept;
@@ -6094,11 +6082,8 @@ parser Mocane(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorh
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Covert;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Crump;
             (8w0x45 &&& 8w0xff, 16w0x800): Wyndmoor;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Garrison;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Milano;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Dacono;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Biggers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Pineville;
             default: Nooksack;
         }
     }
@@ -6107,11 +6092,8 @@ parser Mocane(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorh
         transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Crump;
             (8w0x45 &&& 8w0xff, 16w0x800): Wyndmoor;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Garrison;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Milano;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Dacono;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Biggers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Pineville;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Snowflake;
             default: Nooksack;
         }
@@ -6122,11 +6104,8 @@ parser Mocane(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorh
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Ekwok;
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Crump;
             (8w0x45 &&& 8w0xff, 16w0x800): Wyndmoor;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Garrison;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Milano;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Dacono;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Biggers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Pineville;
             (8w0x0 &&& 8w0x0, 16w0x88f7): Snowflake;
             default: Nooksack;
         }
@@ -6134,13 +6113,12 @@ parser Mocane(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorh
     state Wyndmoor {
         Lindsborg.extract<Albemarle>(Daisytown.Shingler);
         Lindsborg.extract<Weinert>(Daisytown.Gastonia);
-        Balmorhea.Cassa.Garibaldi = Daisytown.Gastonia.Garibaldi;
-        Balmorhea.Bergton.Altus = (bit<4>)4w0x1;
         transition select(Daisytown.Gastonia.Ledoux, Daisytown.Gastonia.Steger) {
             (13w0x0 &&& 13w0x1fff, 8w1): Picabo;
             (13w0x0 &&& 13w0x1fff, 8w17): Freetown;
             (13w0x0 &&& 13w0x1fff, 8w6): Thawville;
-            default: accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            default: Pinetop;
         }
     }
     state Freetown {
@@ -6152,17 +6130,17 @@ parser Mocane(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorh
     state Milano {
         Lindsborg.extract<Albemarle>(Daisytown.Shingler);
         Daisytown.Gastonia.Dowell = (Lindsborg.lookahead<bit<160>>())[31:0];
-        Balmorhea.Bergton.Altus = (bit<4>)4w0x3;
         Daisytown.Gastonia.Helton = (Lindsborg.lookahead<bit<14>>())[5:0];
         Daisytown.Gastonia.Steger = (Lindsborg.lookahead<bit<80>>())[7:0];
-        Balmorhea.Cassa.Garibaldi = (Lindsborg.lookahead<bit<72>>())[7:0];
+        transition accept;
+    }
+    state Pinetop {
+        Balmorhea.Lawai.Basalt = (bit<1>)1w1;
         transition accept;
     }
     state Dacono {
         Lindsborg.extract<Albemarle>(Daisytown.Shingler);
         Lindsborg.extract<Glendevey>(Daisytown.Hillsview);
-        Balmorhea.Cassa.Garibaldi = Daisytown.Hillsview.Riner;
-        Balmorhea.Bergton.Altus = (bit<4>)4w0x2;
         transition select(Daisytown.Hillsview.Turkey) {
             8w58: Picabo;
             8w17: Freetown;

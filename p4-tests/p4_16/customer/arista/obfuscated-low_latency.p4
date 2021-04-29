@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.4.0-pr.5 (SHA: 80d0eb8)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
+// p4c 9.5.0 (SHA: 0115db3)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -537,6 +537,7 @@ struct Manilla {
     bit<1>  Ericsburg;
     bit<6>  Staunton;
     bit<1>  Scarville;
+    bit<8>  RockPort;
 }
 
 struct Lugert {
@@ -548,7 +549,7 @@ struct Lugert {
 struct Oilmont {
     bit<10> Goulds;
     bit<10> LaConner;
-    bit<2>  McGrady;
+    bit<1>  McGrady;
     bit<8>  Tornillo;
     bit<6>  Satolah;
     bit<16> RedElm;
@@ -944,7 +945,7 @@ control Tabler(inout Udall Jayton, inout Wildorado Millstone, in ingress_intrins
         key = {
             Millstone.Ocracoke.Higginson & 12w0xfff: exact @name("Ocracoke.Higginson") ;
         }
-        default_action = Moultrie(1w0, 1w0, 1w0);
+        const default_action = Moultrie(1w0, 1w0, 1w0);
         size = 4096;
     }
     apply {
@@ -1038,9 +1039,10 @@ control Peoria(inout Udall Jayton, inout Wildorado Millstone, in ingress_intrins
         }
         key = {
             Millstone.BealCity.McCammon: ternary @name("BealCity.McCammon") ;
+            Millstone.Yerington.Blencoe: selector @name("Yerington.Blencoe") ;
             Millstone.Goodwin.Norma    : selector @name("Goodwin.Norma") ;
         }
-        default_action = Sedan();
+        const default_action = Sedan();
         size = 512;
         implementation = Funston;
         requires_versioning = false;
@@ -1142,7 +1144,7 @@ control Callao(inout Udall Jayton, inout Wildorado Millstone, in ingress_intrins
         size = 512;
         counters = Wagener;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     apply {
         Orrick.apply();
@@ -1242,7 +1244,7 @@ control Geistown(inout Udall Jayton, inout Wildorado Millstone, in egress_intrin
             Millhaven.egress_port & 9w0x7f: exact @name("Millhaven.Clarion") ;
             Millstone.BealCity.Bennet     : exact @name("BealCity.Bennet") ;
         }
-        default_action = Olcott();
+        const default_action = Olcott();
         size = 128;
     }
     apply {
@@ -1405,7 +1407,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
         size = 512;
         requires_versioning = false;
         meters = Coryville;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @disable_atomic_modify(1) @stage(0) @name(".Marquand") table Marquand {
         actions = {
@@ -1418,7 +1420,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Millstone.BealCity.SoapLake: exact @name("BealCity.SoapLake") ;
             Millstone.BealCity.Ipava   : exact @name("BealCity.Ipava") ;
         }
-        default_action = Hettinger();
+        const default_action = Hettinger();
         size = 53248;
     }
     @name(".Kempton") DirectCounter<bit<64>>(CounterType_t.PACKETS) Kempton;
@@ -1449,7 +1451,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Millstone.Dozier.Hulbert & 4w0x8    : ternary @name("Dozier.Hulbert") ;
             Millstone.Dozier.Wakita             : ternary @name("Dozier.Wakita") ;
         }
-        default_action = Oneonta();
+        const default_action = Oneonta();
         size = 512;
         counters = Kempton;
         requires_versioning = false;
@@ -1464,7 +1466,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Millstone.Ocracoke.Cisco    : exact @name("Ocracoke.Cisco") ;
             Millstone.Ocracoke.Higginson: exact @name("Ocracoke.Higginson") ;
         }
-        default_action = Hettinger();
+        const default_action = Hettinger();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Goodlett") table Goodlett {
@@ -1478,7 +1480,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Millstone.Ocracoke.Higginson: exact @name("Ocracoke.Higginson") ;
             Millstone.Ocracoke.Oriskany : exact @name("Ocracoke.Oriskany") ;
         }
-        default_action = Hemlock();
+        const default_action = Hemlock();
         size = 53248;
         idle_timeout = true;
     }
@@ -1541,7 +1543,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Jayton.Nevis.Rains                  : ternary @name("Nevis.Rains") ;
             Jayton.Nevis.SoapLake               : ternary @name("Nevis.SoapLake") ;
         }
-        default_action = Crown();
+        const default_action = Crown();
         size = 2048;
         counters = BigPoint;
         requires_versioning = false;
@@ -1557,7 +1559,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
         }
         size = 512;
         requires_versioning = false;
-        default_action = NoAction();
+        const default_action = NoAction();
     }
     @name(".Luning") DirectCounter<bit<64>>(CounterType_t.PACKETS) Luning;
     @name(".Flippen") action Flippen() {
@@ -1620,23 +1622,23 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
     @disable_atomic_modify(1) @name(".Cheyenne") table Cheyenne {
         actions = {
             Lattimore();
-            Hettinger();
+            @defaultonly Hettinger();
         }
         key = {
             Millstone.BealCity.Rains   : exact @name("BealCity.Rains") ;
             Millstone.BealCity.SoapLake: exact @name("BealCity.SoapLake") ;
             Millstone.BealCity.Ipava   : exact @name("BealCity.Ipava") ;
         }
-        default_action = Hettinger();
+        const default_action = Hettinger();
         size = 16384;
     }
     @name(".Pacifica.Fabens") Hash<bit<16>>(HashAlgorithm_t.CRC16) Pacifica;
     @name(".Judson") action Judson() {
-        Millstone.Goodwin.Norma = Pacifica.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Jayton.Nevis.Rains, Jayton.Nevis.SoapLake, Jayton.Nevis.Connell, Jayton.Nevis.Cisco, Millstone.Ocracoke.Basic, Millstone.Yerington.Blencoe });
+        Millstone.Goodwin.Norma = Pacifica.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Jayton.Nevis.Rains, Jayton.Nevis.SoapLake, Jayton.Nevis.Connell, Jayton.Nevis.Cisco, Millstone.Ocracoke.Basic });
     }
     @name(".Mogadore.Quebrada") Hash<bit<16>>(HashAlgorithm_t.CRC16) Mogadore;
     @name(".Westview") action Westview() {
-        Millstone.Goodwin.Norma = Mogadore.get<tuple<bit<8>, bit<32>, bit<32>, bit<9>>>({ Jayton.Twain.Norcatur, Jayton.Twain.Petrey, Jayton.Twain.Armona, Millstone.Yerington.Blencoe });
+        Millstone.Goodwin.Norma = Mogadore.get<tuple<bit<8>, bit<32>, bit<32>>>({ Jayton.Twain.Norcatur, Jayton.Twain.Petrey, Jayton.Twain.Armona });
     }
     @name(".Pimento") action Pimento() {
         Millstone.Goodwin.Norma = Millstone.Toluca.McAllen;
@@ -1664,7 +1666,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Jayton.Twain.isValid(): ternary @name("Twain") ;
             Jayton.Nevis.isValid(): ternary @name("Nevis") ;
         }
-        default_action = Hettinger();
+        const default_action = Hettinger();
         size = 256;
         requires_versioning = false;
     }
