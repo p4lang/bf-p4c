@@ -294,7 +294,7 @@ int PHV::Allocation::empty_containers(PHV::Size size) const {
  */
 void PHV::Allocation::allocate(
         PHV::AllocSlice slice,
-        boost::optional<LiveRangeShrinkingMap> initNodes,
+        LiveRangeShrinkingMap* initNodes,
         bool singleGressParserGroup) {
     auto& phvSpec = Device::phvSpec();
     unsigned slice_cid = phvSpec.containerToId(slice.container());

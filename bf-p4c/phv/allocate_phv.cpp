@@ -1479,6 +1479,7 @@ CoreAllocation::tryAllocSliceList(
         // Flag case that overlay requires new container such as dark overlay
         bool new_overlay_container = false;
         bool canDarkInitUseARA = checkDarkOverlay(candidate_slices, perContainerAlloc);
+        PHV::Allocation::LiveRangeShrinkingMap initActions;
         // Check that the placement can be done through metadata initialization.
         for (auto& slice : candidate_slices) {
             if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField()) continue;
@@ -1547,7 +1548,13 @@ CoreAllocation::tryAllocSliceList(
                         break;
                     } else {
                         can_place = true;
-                        allocedSlices = alloced_slices;
+
+                        if (!allocedSlices) {
+                            allocedSlices = alloced_slices;
+                        } else {
+                            allocedSlices->insert(alloced_slices.begin(), alloced_slices.end());
+                        }
+
                         new_candidate_slices.push_back(slice);
                         LOG_DEBUG5(TAB1 "Found the following initialization points:");
                         LOG_DEBUG5(meta_init_i.printLiveRangeShrinkingMap(*initNodes, TAB2));
@@ -1558,21 +1565,31 @@ CoreAllocation::tryAllocSliceList(
                             if (!slice.field()->is_padding() && kv.first == slice.field()) {
                                 LOG_DEBUG5(TAB2 "A. Inserting " << slice << " into metaInitSlices");
                                 metaInitSlices.insert(slice);
+
+                                initActions[kv.first].insert(kv.second.begin(), kv.second.end());
+                                LOG6("\t\t\tAdding initActions for field: " << kv.first);
                                 continue; }
+
                             for (const auto& sl : alloced_slices) {
                                 if (!sl.field()->is_padding() && kv.first == sl.field()) {
                                     LOG_DEBUG5(TAB2 "B. Inserting " << sl
                                                << " into metaInitSlices");
                                     metaInitSlices.insert(sl);
+
+                                    initActions[kv.first].insert(kv.second.begin(),
+                                                                 kv.second.end());
+                                    LOG6("\t\t\tAdding initActions for field: " << kv.first);
                                     continue; } } } }
+
                     if (!noInitPresent && disableMetadataInit) {
                         LOG_DEBUG5(TAB1 "Failed: Live range shrinking requiring metadata "
                                    "initialization is disabled in this round");
                         can_place = false;
-                        break;
-                    }
-                } else if (!c.is(PHV::Kind::dark) && darkOverlay) {
-                    LOG_DEBUG5(TAB1 "Can overlay " << slice << " on " << alloced_slices <<
+                        break; }
+
+                } else if (!c.is(PHV::Kind::dark) && can_overlay(phv_i.dark_mutex(), slice.field(),
+                            alloced_slices)) {
+                    LOG5("    ...and can overlay " << slice << " on " << alloced_slices <<
                          " by pushing one of them into a dark container.");
                     auto darkInitNodes = dark_init_i.findInitializationNodes(
                         group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA);
@@ -1687,7 +1704,6 @@ CoreAllocation::tryAllocSliceList(
         // Check whether the candidate slice allocations respect action-induced constraints.
         CanPackErrorCode canPackErrorCode;
         boost::optional<PHV::Allocation::ConditionalConstraints> action_constraints;
-        PHV::Allocation::LiveRangeShrinkingMap initActions;
 
         // Gather the initialization actions for all the fields that are allocated to/are candidates
         // for allocation in this container. All these are summarized in the initActions map.
@@ -1698,13 +1714,6 @@ CoreAllocation::tryAllocSliceList(
             if (initPointsForTransaction && initPointsForTransaction->size() > 0)
                 initActions[field_slice.field()].insert(initPointsForTransaction->begin(),
                         initPointsForTransaction->end());
-        }
-        // Get the initialization actions that were determined as part of the current transaction.
-        if (initNodes) {
-            for (auto kv : *initNodes) {
-                initActions[kv.first].insert(kv.second.begin(), kv.second.end());
-                LOG_DEBUG6(TAB1 "Adding initActions for field: " << kv.first);
-            }
         }
 
         // -  Populate actual_container_state with allocated slices that
@@ -1938,14 +1947,14 @@ CoreAllocation::tryAllocSliceList(
                 previous_allocations.find(PHV::FieldSlice(slice.field(), slice.field_slice()))
                     != previous_allocations.end();
             if ((is_referenced || slice.field()->isGhostField()) && !is_allocated) {
-                if (initNodes && initNodes->count(slice.field())) {
+                if (initActions.size() && initActions.count(slice.field())) {
                     // For overlay enabled by live range shrinking, we also need to store
                     // initialization information as a member of the allocated slice.
-                    this_alloc.allocate(slice, initNodes, singleGressParserGroups);
-                    LOG_DEBUG5(TAB2 "Found initialization point for metadata field "
-                               << slice.field()->name);
+                    this_alloc.allocate(slice, &initActions, singleGressParserGroups);
+                    LOG5("\t\tFound initialization point for metadata field " <<
+                            slice.field()->name);
                 } else {
-                    this_alloc.allocate(slice, boost::none, singleGressParserGroups); }
+                    this_alloc.allocate(slice, nullptr, singleGressParserGroups); }
             } else if (!is_referenced && !slice.field()->isGhostField()) {
                 LOG_DEBUG5("NOT ALLOCATING unreferenced field: " << slice); } }
 
@@ -1953,12 +1962,12 @@ CoreAllocation::tryAllocSliceList(
         // slices get allocated, the initialization actions for already allocated slices in the
         // container may change. So, update the initialization information in these already
         // allocated slices based on the latest initialization plan.
-        if (initNodes && allocedSlices) {
+        if (initActions.size() && allocedSlices) {
             for (auto& slice : *allocedSlices) {
-                if (initNodes->count(slice.field())) {
-                    LOG_DEBUG5(TAB2 "Initialization noted corresponding to already allocated "
-                               "slice: " << slice);
-                    this_alloc.addMetadataInitialization(slice, *initNodes); } } }
+                if (initActions.count(slice.field())) {
+                    LOG5("        Initialization noted corresponding to already allocated slice: "
+                            << slice);
+                    this_alloc.addMetadataInitialization(slice, initActions); } } }
 
         // Recursively try to allocate slices according to conditional
         // constraints induced by actions.  NB: By allocating the current slice
@@ -2031,7 +2040,6 @@ CoreAllocation::tryAllocSliceList(
         }
         perContainerAlloc.commit(this_alloc);
 
-        // auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i,
         auto score = score_ctx.make_score(
             perContainerAlloc, phv_i, clot_i, uses_i,
             field_to_parser_states_i, parser_critical_path_i, num_bitmasks);
@@ -2041,7 +2049,6 @@ CoreAllocation::tryAllocSliceList(
         if ((!best_candidate || score_ctx.is_better(score, best_score))) {
             LOG_DEBUG5(TAB2 "Best score for container " << c);
             best_score = score;
-            // best_candidate = std::move(this_alloc); }
             best_candidate = std::move(perContainerAlloc);
         }
     }  // end of for containers
@@ -2273,7 +2280,7 @@ bool CoreAllocation::generateNewAllocSlices(
     }
     alloc_attempt.removeAllocatedSlice(toBeRemovedFromAlloc);
     for (auto& slice : toBeAddedToAlloc) {
-        alloc_attempt.allocate(slice, boost::none, singleGressParserGroups);
+        alloc_attempt.allocate(slice, nullptr, singleGressParserGroups);
         LOG_DEBUG5(TAB2 "Allocating slice " << slice);
     }
     PHV::Container c = origSlice.container();
@@ -3437,7 +3444,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryDeparserZeroAlloc(
                 phv_i.addZeroContainer(slice.gress(), zero[slice.gress()]);
                 slice_list_offset += alloc_slice_width; }
             for (auto& alloc_slice : candidate_slices)
-                alloc_attempt.allocate(alloc_slice, boost::none, singleGressParserGroups); } }
+                alloc_attempt.allocate(alloc_slice, nullptr, singleGressParserGroups); } }
     return alloc_attempt;
 }
 

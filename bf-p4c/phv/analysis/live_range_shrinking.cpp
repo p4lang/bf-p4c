@@ -449,6 +449,7 @@ FindInitializationNode::getInitializationCandidates(
         // to avoid adding too many initializations for the field).
         LOG_DEBUG4(TAB2 "Group dominator at an earlier stage (" << allowedStage << ") than "
                    "allowed stage (" << lastAllowedStage << ")");
+        // *ALEX* What is it about having more than 3 strict dominators?
         if (fStrictDominators.size() > 3) return boost::none;
         auto all_f_table_uses = getTableUsesForField(f, true /* uses */, true /* defs */);
         bool dominatorsIncreaseCriticalPath = std::any_of(
@@ -735,7 +736,7 @@ FindInitializationNode::findInitializationNodes(
                 g_field_units.insert(kv.first);
             }
             g_units[g].insert(g_field_units.begin(), g_field_units.end());
-            LOG_DEBUG2(TAB2 "Can all defuses of " << f->name << " reach defuses of "
+            LOG_DEBUG2(TAB2 "Can any defuses of " << f->name << " reach defuses of "
                        << g->name << "?");
             auto reach_condition = canFUnitsReachGUnits(f_dominators, g_field_units,
                     flowGraph);
