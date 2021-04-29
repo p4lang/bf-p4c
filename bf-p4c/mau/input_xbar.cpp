@@ -1,3 +1,4 @@
+#include "input_xbar.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/mau/gateway.h"

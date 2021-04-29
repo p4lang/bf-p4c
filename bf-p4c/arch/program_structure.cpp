@@ -1,8 +1,8 @@
 #include "program_structure.h"
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/iostreams/stream.hpp>
 #include <set>
 #include <algorithm>
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/stream.hpp>
 
 #include "ir/ir.h"
 #include "lib/path.h"

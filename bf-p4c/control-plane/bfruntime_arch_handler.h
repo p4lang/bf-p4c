@@ -1,12 +1,12 @@
 #ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
 #define EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
 
-#include <boost/optional.hpp>
-
 #include <iostream>
 #include <set>
 #include <unordered_map>
 #include <vector>
+
+#include <boost/optional.hpp>
 
 #include "barefoot/p4info.pb.h"
 

@@ -1,8 +1,8 @@
 #include "bf-p4c/mau/instruction_adjustment.h"
 
+#include <queue>
 #include <boost/optional.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <queue>
 
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/common/slice.h"

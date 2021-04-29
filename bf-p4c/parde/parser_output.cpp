@@ -1,5 +1,5 @@
-#include <boost/optional/optional_io.hpp>
 #include <algorithm>
+#include <boost/optional/optional_io.hpp>
 
 #include "lib/match.h"
 #include "lib/log.h"

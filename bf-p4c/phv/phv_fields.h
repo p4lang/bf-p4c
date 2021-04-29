@@ -1,9 +1,9 @@
 #ifndef BF_P4C_PHV_PHV_FIELDS_H_
 #define BF_P4C_PHV_PHV_FIELDS_H_
 
+#include <limits>
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
-#include <limits>
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"

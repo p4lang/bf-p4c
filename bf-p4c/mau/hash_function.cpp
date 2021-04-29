@@ -4,6 +4,7 @@
 #include "dynamic_hash/dynamic_hash.h"
 #include "lib/hex.h"
 #include "lib/gmputil.h"
+#include "bf-p4c/mau/hash_function.h"
 
 /**
  * The list of currently supported crc strings, and their corresponding conversion to the

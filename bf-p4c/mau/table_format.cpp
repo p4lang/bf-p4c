@@ -1,3 +1,4 @@
+#include "table_format.h"
 #include "lib/dyn_vector.h"
 #include "memories.h"
 

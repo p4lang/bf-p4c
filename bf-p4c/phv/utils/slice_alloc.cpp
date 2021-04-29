@@ -1,5 +1,5 @@
-#include <boost/optional/optional_io.hpp>
 #include <iostream>
+#include <boost/optional/optional_io.hpp>
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 

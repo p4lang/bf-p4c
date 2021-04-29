@@ -1,5 +1,5 @@
-#ifndef BF_P4C_LIB_UNION_FIND_H
-#define BF_P4C_LIB_UNION_FIND_H
+#ifndef EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_
+#define EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_
 
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
@@ -175,4 +175,4 @@ std::ostream &operator<<(std::ostream &out, const UnionFind<T>* uf) {
 }
 
 
-#endif  /* BF_P4C_LIB_UNION_FIND_H */
+#endif  /* EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_ */

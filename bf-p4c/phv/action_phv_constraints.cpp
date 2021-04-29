@@ -1,5 +1,5 @@
-#include <boost/optional/optional_io.hpp>
 #include <tuple>
+#include <boost/optional/optional_io.hpp>
 
 #include "lib/algorithm.h"
 #include "bf-p4c/common/asm_output.h"

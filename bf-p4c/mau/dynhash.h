@@ -1,8 +1,8 @@
 #ifndef BF_P4C_MAU_DYNHASH_H_
 #define BF_P4C_MAU_DYNHASH_H_
 
-#include <boost/range/irange.hpp>
 #include <vector>
+#include <boost/range/irange.hpp>
 #include "mau_visitor.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"

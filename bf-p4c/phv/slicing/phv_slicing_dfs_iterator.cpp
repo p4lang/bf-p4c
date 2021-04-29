@@ -1,10 +1,10 @@
 #include "bf-p4c/phv/slicing/phv_slicing_dfs_iterator.h"
 
-#include <boost/range/adaptor/reversed.hpp>
-
 #include <algorithm>
 #include <numeric>
 #include <sstream>
+
+#include <boost/range/adaptor/reversed.hpp>
 
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/error.h"

@@ -1,3 +1,4 @@
+#include "unique_id.h"
 #include "ir/ir.h"
 #include "ir/json_generator.h"
 #include "ir/json_loader.h"

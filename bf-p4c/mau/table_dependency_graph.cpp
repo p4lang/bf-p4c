@@ -1,12 +1,12 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include <assert.h>
+#include <algorithm>
+#include <numeric>
+#include <sstream>
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/lookup_edge.hpp>
 #include <boost/optional/optional_io.hpp>
-#include <algorithm>
-#include <numeric>
-#include <sstream>
 #include "bf-p4c/common/run_id.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/error_type.h"

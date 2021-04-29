@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_P4RUNTIME_FORCE_STD_H_
 #define EXTENSIONS_BF_P4C_CONTROL_PLANE_P4RUNTIME_FORCE_STD_H_
 
+#include "p4runtime_force_std.h"
+
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>

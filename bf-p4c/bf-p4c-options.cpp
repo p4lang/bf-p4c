@@ -1,12 +1,12 @@
 #include "bf-p4c-options.h"
 #include <libgen.h>
 #include <sys/stat.h>
-#include <boost/algorithm/string.hpp>
 #include <algorithm>
 #include <cstring>
 #include <set>
 #include <unordered_set>
 #include <vector>
+#include <boost/algorithm/string.hpp>
 #include "ir/ir.h"
 #include "ir/visitor.h"
 #include "lib/cstring.h"

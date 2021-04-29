@@ -1,11 +1,11 @@
 #ifndef BF_P4C_MAU_TABLE_FLOW_GRAPH_H_
 #define BF_P4C_MAU_TABLE_FLOW_GRAPH_H_
 
+#include <map>
+#include <set>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
 #include <boost/optional.hpp>
-#include <map>
-#include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/lib/boost_graph.h"
 #include "bf-p4c/mau/mau_visitor.h"

@@ -1,3 +1,4 @@
+#include "marshal.h"
 #include "ir/ir.h"
 
 cstring MarshaledFrom::toString() const {

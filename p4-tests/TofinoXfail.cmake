@@ -1269,6 +1269,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Assignment source cannot be evaluated in the parser"
   testdata/p4_14_samples/TLV_parsing.p4
+  testdata/p4_16_samples/parser-unroll-test1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1676,6 +1677,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Tofino requires byte-aligned headers, but header .* is not byte-aligned"
   testdata/p4_16_samples/custom-type-restricted-fields.p4
+  testdata/p4_16_samples/parser-unroll-test3.p4
+  testdata/p4_16_samples/parser-unroll-test4.p4
+  testdata/p4_16_samples/parser-unroll-test5.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1888,6 +1892,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No PhvInfo::header for header named"
   extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
+  testdata/p4_16_samples/issue2726-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

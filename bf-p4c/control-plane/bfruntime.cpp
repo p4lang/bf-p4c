@@ -1,7 +1,5 @@
 #include "bf-p4c/control-plane/bfruntime.h"
 
-#include <boost/optional.hpp>
-
 #include <algorithm>
 #include <iomanip>
 #include <iterator>
@@ -10,6 +8,8 @@
 #include <regex>
 #include <sstream>
 #include <string>
+
+#include <boost/optional.hpp>
 
 #include "barefoot/p4info.pb.h"
 #include "bf-p4c/device.h"

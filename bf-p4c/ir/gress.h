@@ -1,8 +1,8 @@
 #ifndef BF_P4C_IR_GRESS_H_
 #define BF_P4C_IR_GRESS_H_
 
-#include <boost/optional.hpp>
 #include <iosfwd>
+#include <boost/optional.hpp>
 
 class cstring;
 

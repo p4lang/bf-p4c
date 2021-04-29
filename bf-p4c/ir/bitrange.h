@@ -1,12 +1,12 @@
 #ifndef EXTENSIONS_BF_P4C_IR_BITRANGE_H_
 #define EXTENSIONS_BF_P4C_IR_BITRANGE_H_
 
-#include <boost/optional.hpp>
-
 #include <algorithm>
 #include <iosfwd>
 #include <limits>
 #include <utility>
+
+#include <boost/optional.hpp>
 
 #include "lib/exceptions.h"
 

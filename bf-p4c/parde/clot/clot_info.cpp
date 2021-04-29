@@ -1,7 +1,10 @@
-#include <boost/range/adaptor/reversed.hpp>
+#include "clot_info.h"
 
 #include <array>
 #include <vector>
+
+#include <boost/range/adaptor/reversed.hpp>
+
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/logging/logging.h"
@@ -9,7 +12,6 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitvec.h"
-#include "clot_info.h"
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
 

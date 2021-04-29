@@ -1,6 +1,6 @@
-#include <boost/optional/optional_io.hpp>
 #include <iostream>
 #include <numeric>
+#include <boost/optional/optional_io.hpp>
 #include "bf-p4c/common/table_printer.h"
 #include "lib/algorithm.h"
 #include "bf-p4c/device.h"

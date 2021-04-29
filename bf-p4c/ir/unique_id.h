@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "lib/cstring.h"
+#include "lib/exceptions.h"
 
 class JSONGenerator;
 class JSONLoader;

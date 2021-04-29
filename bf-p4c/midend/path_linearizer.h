@@ -1,8 +1,8 @@
 #ifndef BF_P4C_MIDEND_PATH_LINEARIZER_H_
 #define BF_P4C_MIDEND_PATH_LINEARIZER_H_
 
-#include <boost/optional.hpp>
 #include <vector>
+#include <boost/optional.hpp>
 #include "ir/ir.h"
 
 namespace BFN {

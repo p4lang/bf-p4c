@@ -1,9 +1,9 @@
 #ifndef BF_P4C_PHV_SLICING_PHV_SLICING_SPLIT_H_
 #define BF_P4C_PHV_SLICING_PHV_SLICING_SPLIT_H_
 
-#include <boost/optional.hpp>
-
 #include <utility>
+
+#include <boost/optional.hpp>
 
 #include "lib/bitvec.h"
 #include "lib/ordered_map.h"

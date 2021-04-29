@@ -1,10 +1,10 @@
 #include "bf-p4c/phv/allocate_phv.h"
 
+#include <numeric>
+#include <sstream>
 #include <boost/format.hpp>
 #include <boost/optional/optional_io.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <numeric>
-#include <sstream>
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"

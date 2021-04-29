@@ -3,10 +3,10 @@
 #ifndef BF_P4C_LIB_BOOST_GRAPH_H_
 #define BF_P4C_LIB_BOOST_GRAPH_H_
 
+#include <map>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
 #include <boost/tuple/tuple.hpp>
-#include <map>
 
 #include "lib/bitvec.h"
 #include "lib/cstring.h"

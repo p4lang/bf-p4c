@@ -1,8 +1,8 @@
 #ifndef BF_P4C_ARCH_COLLECT_BRIDGED_FIELDS_H_
 #define BF_P4C_ARCH_COLLECT_BRIDGED_FIELDS_H_
 
-#include <boost/optional.hpp>
 #include <utility>
+#include <boost/optional.hpp>
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"

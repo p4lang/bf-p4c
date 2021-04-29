@@ -491,6 +491,9 @@ class NormalizeProgram : public Transform {
             auto it = namescopes.find(name);
             if (it == namescopes.end()) {
                 auto stack = new std::vector<const IR::Node *>();
+                // We don't need to save something that does not need renaming
+                if (name == rename)
+                    continue;
                 stack->push_back(getOriginal<IR::Node>());
                 namescopes.emplace(name, stack);
                 renameMap.emplace(name, rename);

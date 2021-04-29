@@ -1,14 +1,14 @@
 #include "bf-p4c/parde/lower_parser.h"
 
-#include <boost/optional/optional_io.hpp>
-#include <boost/range/adaptor/reversed.hpp>
-
 #include <algorithm>
 #include <numeric>
 #include <sstream>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include <boost/optional/optional_io.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/bridge_metadata.h"

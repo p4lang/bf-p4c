@@ -1,9 +1,9 @@
 #ifndef BF_P4C_ARCH_ARCH_H_
 #define BF_P4C_ARCH_ARCH_H_
 
+#include <set>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
-#include <set>
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "lib/path.h"

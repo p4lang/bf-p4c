@@ -2,8 +2,8 @@
 #define EXTENSIONS_BF_P4C_PARDE_DUMP_PARSER_H_
 
 #include <sys/stat.h>
-#include <boost/algorithm/string.hpp>
 #include <fstream>
+#include <boost/algorithm/string.hpp>
 
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parser_info.h"

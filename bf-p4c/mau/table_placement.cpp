@@ -1,10 +1,11 @@
 #include "bf-p4c/mau/table_placement.h"
 
-#include <boost/range/adaptor/reversed.hpp>
-
 #include <algorithm>
 #include <list>
 #include <sstream>
+
+#include <boost/range/adaptor/reversed.hpp>
+
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/ir/table_tree.h"
 #include "bf-p4c/lib/error_type.h"
