@@ -366,7 +366,7 @@ std::ostream& operator<<(std::ostream &out, const DarkLiveRange::OrderedFieldInf
     out << " Field : " << i.field << " [ " << i.minStage << ", " << i.maxStage << " ]";
     out << " Units [ ";
     for (auto u : i.units) {
-        out << u << ", ";
+        out << DBPrint::Brief << u << ", ";
     }
     out << " ] " << std::endl;
     return out;

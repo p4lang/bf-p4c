@@ -359,7 +359,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
                 rv.push_back(info);
             } else {
                 rv[rv.size() - 1].addAccess(std::make_pair(i, PHV::FieldUse(READ)), readAccess);
-                LOG_DEBUG5(TAB1 "Adding Read Access: " << readAccess.first);
+                LOG_DEBUG5(TAB1 "Adding Read Access: " << DBPrint::Brief << readAccess.first);
             }
         }
         if (fieldsLiveAtStage->second != nullptr) {
@@ -380,7 +380,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
                 rv.push_back(info);
             } else {
                 rv[rv.size() - 1].addAccess(std::make_pair(i, PHV::FieldUse(WRITE)), writeAccess);
-                LOG_DEBUG5(TAB1 "Adding Write Access: " << writeAccess.first);
+                LOG_DEBUG5(TAB1 "Adding Write Access: " << DBPrint::Brief << writeAccess.first);
             }
         }
     }
@@ -433,7 +433,8 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
             } else {
                 rv2[rv2.size() - 1].addAccess(std::make_pair(-1, PHV::FieldUse(WRITE)),
                                               writeAccess);
-                LOG_DEBUG5(TAB3 "Adding Parser Write Access: " << writeAccess.first);
+                LOG_DEBUG5(TAB3 "Adding Parser Write Access: " << DBPrint::Brief
+                                                               << writeAccess.first);
             }
         }
     }
@@ -844,7 +845,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 return boost::none;
             } else {
                 groupDominator = *newGroupDominator;
-                LOG_DEBUG2(TAB2 "Setting new group dominator to " << groupDominator);
+                LOG_DEBUG2(TAB2 "Setting new group dominator to " << DBPrint::Brief
+                                                                  << groupDominator);
             }
 
             BUG_CHECK(!ARAspill, "Reached nextDominator while ARAspill ...?");
@@ -1339,13 +1341,13 @@ const IR::MAU::Table* DarkLiveRange::getGroupDominator(
                 return nullptr;
             }
             tablesToUnits[*t] = (*t)->to<IR::BFN::Unit>();
-            LOG_DEBUG2(TAB3 "Adding Table - Unit : " << u);
+            LOG_DEBUG2(TAB3 "Adding Table - Unit : " << DBPrint::Brief << u);
             continue;
         }
         const auto* t = u->to<IR::MAU::Table>();
         BUG_CHECK(t, "Non-deparser non-table use found.");
         tablesToUnits[t] = u;
-        LOG_DEBUG2(TAB3 "Adding Table - Unit : " << u);
+        LOG_DEBUG2(TAB3 "Adding Table - Unit : " << DBPrint::Brief << u);
     }
     if (tablesToUnits.size() == 0) return nullptr;
     ordered_set<const IR::MAU::Table*> tables;
