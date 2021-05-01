@@ -321,11 +321,15 @@ struct Digest {
 /// The information about a hash instance which is needed to serialize it.
 struct DynHash {
     const cstring name;       // The fully qualified external name of the dynhash
-    const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the fields used
-    // for hash calculation.
+    // The format of the fields used for hash calculation.
+    const p4configv1::P4DataTypeSpec* typeSpec;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this dynhash
                                         // declaration.
-    std::vector<cstring> hashFieldNames;  // Field Names of a Hash Field List
+    struct hashField {
+        cstring hashFieldName;        // Field Name
+        bool isConstant;                // true if field is a constant
+    };
+    std::vector<hashField> hashFieldInfo;
     const int hashWidth;
 };
 
@@ -1088,18 +1092,18 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
 
             auto fieldListArg = call->arguments->at(0);
             LOG4("FieldList for Hash: " << fieldListArg);
-            std::vector<cstring> hashFieldNames;
             auto *typeArgs = new IR::Vector<IR::Type>();
+            std::vector<DynHash::hashField> hashFieldInfo;
             if (auto fieldListExpr = fieldListArg->expression->to<IR::ListExpression>()) {
                 for (auto f : fieldListExpr->components) {
                     if (auto c = f->to<IR::Concat>()) {
                         for (auto e : convertConcatToList(c)) {
-                            hashFieldNames.push_back(e->toString());
+                            hashFieldInfo.push_back({ e->toString(), e->is<IR::Constant>() });
                             typeArgs->push_back(e->type);
                         }
                         continue;
                     }
-                    hashFieldNames.push_back(f->toString());
+                    hashFieldInfo.push_back({ f->toString(), f->is<IR::Constant>() });
                     auto t = f->type->is<IR::Type_SerEnum>() ?
                         f->type->to<IR::Type_SerEnum>()->type : f->type;
                     typeArgs->push_back(t);
@@ -1110,7 +1114,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
             BUG_CHECK(typeSpec != nullptr,
                   "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
             return DynHash{decl->controlPlaneName(), typeSpec,
-                decl->to<IR::IAnnotated>(), hashFieldNames, hashWidth};
+                decl->to<IR::IAnnotated>(), hashFieldInfo, hashWidth};
         }
         return boost::none;
     }
@@ -1261,8 +1265,10 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         dynHash.set_hash_width(dynHashInstance.hashWidth);
         dynHash.mutable_type_spec()->CopyFrom(*dynHashInstance.typeSpec);
         auto dynHashName = prefix(pipeName, dynHashInstance.name);
-        for (const auto& f : dynHashInstance.hashFieldNames) {
-            dynHash.add_field_names(f);
+        for (const auto& f : dynHashInstance.hashFieldInfo) {
+            auto newF = dynHash.add_field_infos();
+            newF->set_field_name(f.hashFieldName);
+            newF->set_is_constant(f.isConstant);
         }
         addP4InfoExternInstance(
             symbols, SymbolType::HASH(), "DynHash", dynHashName,

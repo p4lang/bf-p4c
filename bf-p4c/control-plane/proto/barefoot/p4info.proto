@@ -148,7 +148,11 @@ message Digest {
 message DynHash {
   //TODO(msharif): Not sure if hash algorithm is needed?
   p4.config.v1.P4DataTypeSpec type_spec = 1;
-  repeated string field_names = 2;
+  message field_info {
+      string field_name = 1;
+      bool is_constant = 2;
+  }
+  repeated field_info field_infos = 2;
   int32 hash_width = 3;
 }
 

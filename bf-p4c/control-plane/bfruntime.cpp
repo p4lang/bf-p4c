@@ -953,9 +953,27 @@ struct BfRtSchemaGenerator::DynHash {
     const P4Id cmpId;
     const P4Id algId;
     const p4configv1::P4DataTypeSpec typeSpec;
-    const std::vector<cstring> hashFieldNames;  // Field Names of a Hash Field List
+    struct hashField {
+        cstring hashFieldName;        // Field Name
+        bool isConstant;              // true if field is a constant
+    };
+    const std::vector<hashField> hashFieldInfo;
     const int hashWidth;
     Util::JsonArray* annotations;
+
+    std::vector<cstring> getHashFieldNames() const {
+        std::vector<cstring> hashFieldNames;
+        for (auto &f : hashFieldInfo) {
+            hashFieldNames.push_back(f.hashFieldName);
+        }
+        return hashFieldNames;
+    }
+
+    bool is_constant(cstring name) const {
+        for (auto &f : hashFieldInfo)
+            if (f.hashFieldName == name) return f.isConstant;
+        return false;
+    }
 
     static boost::optional<DynHash> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -965,15 +983,15 @@ struct BfRtSchemaGenerator::DynHash {
             ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
             return boost::none;
         }
-        std::vector<cstring> field_names;
-        for (auto f : dynHash.field_names()) {
-            field_names.push_back(f);
+        std::vector<hashField> hfInfo;
+        for (auto f : dynHash.field_infos()) {
+            hfInfo.push_back({f.field_name(), f.is_constant()});
         }
         auto cfgId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_CONFIGURE);
         auto cmpId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_COMPUTE);
         auto algId = makeBfRtId(pre.id(), ::barefoot::P4Ids::HASH_ALGORITHM);
         return DynHash{pre.name(), cfgId, cmpId, algId, dynHash.type_spec(),
-                       field_names, dynHash.hash_width(), transformAnnotations(pre)};
+                       hfInfo, dynHash.hash_width(), transformAnnotations(pre)};
     }
 };
 
@@ -1635,17 +1653,19 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
     tableJson->emplace("key", new Util::JsonArray());  // empty key for configure table
 
     auto* dataJson = new Util::JsonArray();
+    auto hashFieldNames = dynHash.getHashFieldNames();
     auto parser = TypeSpecParser::make(
-        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &dynHash.hashFieldNames, "", "");
+        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &hashFieldNames, "", "");
+    int numConstants = 0;
     for (const auto &field : parser) {
         auto* containerItemsJson = new Util::JsonArray();
+        auto fLength = field.type->get("width")->to<Util::JsonValue>()->getInt();
         {
             auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_START_BIT, "start_bit",
                 makeTypeInt("uint64", 0), false /* repeated */);
             addSingleton(containerItemsJson, f, false /* mandatory */, false /* read-only */);
         }
         {
-            auto fLength = field.type->get("width")->to<Util::JsonValue>()->getInt();
             auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_LENGTH, "length",
                 makeTypeInt("uint64", fLength), false /* repeated */);
             addSingleton(containerItemsJson, f, false /* mandatory */, false /* read-only */);
@@ -1655,7 +1675,16 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
                 makeTypeInt("uint64"), false /* repeated */);
             addSingleton(containerItemsJson, f, true /* mandatory */, false /* read-only */);
         }
-        auto* fJson = makeContainerDataField(field.id, field.name,
+        cstring field_prefix = "";
+        if (dynHash.is_constant(field.name)) {
+            // Constant fields have unique field names with the format
+            // constant<id>_<size>_<value>
+            // id increments by 1 for every constant field.
+            // Should match names generated in context.json (mau/dynhash.cpp)
+            field_prefix = "constant" + std::to_string(numConstants++)
+                            + "_" + std::to_string(fLength) + "_";
+        }
+        auto* fJson = makeContainerDataField(field.id, field_prefix + field.name,
                 containerItemsJson, true /* repeated */);
         addSingleton(dataJson, fJson, false /* mandatory */, false /* read-only */);
     }
@@ -1791,8 +1820,9 @@ BfRtSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
     auto* keyJson = new Util::JsonArray();
     for (const auto& member : dynHash.typeSpec.tuple().members()) {
         auto* type = makeTypeBytes(member.bitstring().bit().bitwidth());
-        if (dynHash.hashFieldNames.size() > hashNameIdx) {
-            addKeyField(keyJson, id++, dynHash.hashFieldNames[hashNameIdx++],
+        auto hashFieldNames = dynHash.getHashFieldNames();
+        if (hashFieldNames.size() > hashNameIdx) {
+            addKeyField(keyJson, id++, hashFieldNames[hashNameIdx++],
                     true /* mandatory */, "Exact", type);
         }
     }
