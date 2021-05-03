@@ -14,6 +14,48 @@ namespace PHV {
 class Field;
 }  // namespace PHV
 
+/** The purpose of this pass is to adjust shift instruction that only write to a single slice but
+  * sourced from multiple containers. This is only seen with signed shifted right operation
+  * currently since all of the unsigned shift operation are either sliced or splitted. This pass
+  * have to adjust the operation, shift value and slice boundary to match the expected result. For
+  * example these P4_14 lines:
+  *     header_type my_header_t {
+  *         fields {
+  *             a: 32;
+  *         }
+  *     }
+  *     header my_header_t my_header;
+  *     header_type my_md_t {
+  *         fields {
+  *             a: 32 (signed);
+  *         }
+  *    }
+  *    ...
+  *    modify_field_with_shift(my_header.a, my_md.a, 9, 0xff);
+  *
+  * Will be translated by the compiler to this operation:
+  *    instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 9);
+  *
+  * As we can see, this operation does not make any sense but the compiler does not decode the
+  * shift value to adjust the slice so the source and destination slice will always be at the same
+  * position regardless of the shift value. This pass will translate such instructions using
+  * shrs, set or funnel-shift depending on the situation. The example above will get translated to:
+  *     instruction:funnel-shift(ingress::my_header.a[7:0], ingress::my_md.a[23:16],
+  *                              ingress::my_md.a[15:8], 1)
+  */
+class AdjustShiftInstructions : public MauTransform, TofinoWriteContext {
+    const PhvInfo &phv;
+
+    const IR::Node *preorder(IR::MAU::Instruction *) override;
+    // ignore stuff related to stateful alus
+    const IR::Node *preorder(IR::MAU::AttachedOutput *ao) override { prune(); return ao; }
+    const IR::Node *preorder(IR::MAU::StatefulAlu *salu) override { prune(); return salu; }
+    const IR::Node *preorder(IR::MAU::HashDist *hd) override { prune(); return hd; }
+
+ public:
+    explicit AdjustShiftInstructions(const PhvInfo &p) : phv(p) { }
+};
+
 /** The purpose of these classes is to adjust the instructions in a single action that perform on
  *  multiple containers into one single action for the entire container.  The pass also
  *  verifies that many Tofino specific constraints for the individual ALUs either through the

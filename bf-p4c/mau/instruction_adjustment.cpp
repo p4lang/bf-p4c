@@ -295,6 +295,135 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
     }
 }
 
+/** AdjustShiftInstructions pass adjust shift instruction that only write to a single slice but
+  * sourced from multiple containers. This is a list of various shift + slice operation and
+  * their expected translation:
+  *     header my_header_t {
+  *         bit<32> a;
+  *         bit<32> b; }
+  *  ...
+  *     struct ig_md_t {
+  *         int<32> a;
+  *         bit<32> b; }
+  *  ...
+  *(1)  h.my_header.a[7:0] = (ig_md.a >> 3)[15:8];
+  *  ----> shrs(ingress::hdr.my_header.a[7:0], ingress::ig_md.a[15:8], 3);
+  *  -> Translated to --> funnel-shift(ingress::hdr.my_header.a[7:0], ingress::ig_md.a[23:16],
+  *                                    ingress::ig_md.a[15:8], 3);
+  *
+  *(2)  h.my_header.a[7:0] = ig_md.a[15:8] >> 3;
+  *  ----> shru(ingress::hdr.my_header.a[7:0], ingress::ig_md.a[15:8], 3);
+  *  -> No Translation needed
+  *
+  *(3)  h.my_header.b[7:0] = (ig_md.b >> 3)[15:8];
+  *  ----> set(ingress::hdr.my_header.b[7:0], ingress::ig_md.b[18:11]);
+  *  -> No Translation needed
+  *
+  *(4)  h.my_header.b[7:0] = ig_md.b[15:8] >> 3;
+  *  ----> shru(ingress::hdr.my_header.a[7:0], ingress::ig_md.a[15:8], 3);
+  *  -> No Translation needed
+  *
+  *(5) h.my_header.a[7:0] = (ig_md.a << 3)[15:8];
+  *  ----> set(ingress::hdr.my_header.a[7:0], ingress::ig_md.a[12:5]);
+  *  -> No Translation needed
+  *
+  *(6)  h.my_header.a[7:0] = ig_md.a[15:8] << 3;
+  *  ----> shl(ingress::hdr.my_header.a[7:0], ingress::ig_md.a[15:8], 3);
+  *  -> No Translation needed
+  *
+  *(7)  h.my_header.b[7:0] = (ig_md.b << 3)[15:8];
+  *  ----> set(ingress::hdr.my_header.b[7:0], ingress::ig_md.b[12:5]);
+  *  -> No Translation needed
+  *
+  *(8)  h.my_header.b[7:0] = ig_md.b[15:8] << 3;
+  *  ----> shl(ingress::hdr.my_header.b[7:0], ingress::ig_md.b[15:8], 3);
+  *  -> No Translation needed
+  */
+const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
+    le_bitrange bits;
+    auto* field = phv.field(inst->operands.at(0), &bits);
+    if (!field) return inst;  // error?
+
+    int num_slices = 0;
+    int dst_cont_size;
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+                         [&](const PHV::AllocSlice& alloc) {
+        num_slices++;
+        dst_cont_size = alloc.container().size();
+    });
+    BUG_CHECK(num_slices >= 1, "No PHV slices allocated for %s", &use);
+    if (num_slices > 1) return inst;  // This will be handled by split instruction
+
+    cstring opcode = inst->name;
+
+    // Currently only support signed shift right operation since all of the other shift operation
+    // working on a single slice must have been handled through slicing + deposit field.
+    if (opcode != "shrs") return inst;
+
+    // Instruction only needs to be adjusted if the destination container is smaller than the
+    // source field. Otherwise, the operation will be aligned properly.
+    le_bitrange src_bits;
+    auto* src_field = phv.field(inst->operands.at(1), &src_bits);
+    if (src_field->size <= dst_cont_size) return inst;
+
+    // Instruction format is "instruction:shrx(dest, src, shift);"
+    const IR::Constant *c = inst->operands[2]->to<IR::Constant>();
+    BUG_CHECK(c != nullptr, "No shift constant found");
+    int shift_val = c->asInt();
+
+    BUG_CHECK(bits.size() == dst_cont_size,
+              "Destination slice does not cover the entire destination container");
+
+    LOG5("Adjusting signed shift right instruction: " << inst);
+    IR::MAU::Instruction *adjust = nullptr;
+    const IR::Expression* dest_expr = inst->operands[0];
+    const IR::Expression* src_expr = inst->operands[1];
+
+    const IR::Slice *src_slice = src_expr->to<IR::Slice>();
+    BUG_CHECK(src_slice != nullptr, "No source slice found");
+    unsigned low_bit = src_slice->getL();
+    int offset = shift_val + low_bit;
+
+    // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 24);
+    // ******|-->  instruction:set(ingress::my_header.a[7:0], ingress::my_md.a[31:24]);
+    if ((offset % dst_cont_size) == 0 && (offset < src_field->size)) {
+        const IR::Expression *new_src_expr = new IR::Slice(src_slice->e0,
+                                                           offset + dst_cont_size - 1, offset);
+        adjust = new IR::MAU::Instruction("set", { dest_expr, new_src_expr });
+
+    // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 25);
+    // ******|-->  instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[31:24], 1);
+    } else if (offset + dst_cont_size > src_field->size) {
+        shift_val = (offset + dst_cont_size) - src_field->size;
+        if (shift_val >= dst_cont_size)
+            shift_val = dst_cont_size - 1;
+
+        const IR::Expression* shift_adj = new IR::Constant(shift_val);
+        const IR::Expression *new_src_expr = new IR::Slice(src_slice->e0, src_field->size - 1,
+                                                           src_field->size - dst_cont_size);
+        adjust = new IR::MAU::Instruction("shrs", { dest_expr, new_src_expr, shift_adj });
+
+    // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 9);
+    // ******|-->  instruction:funnel-shift(ingress::my_header.a[7:0], ingress::my_md.a[23:16],
+    //                                      ingress::my_md.a[15:8], 1);
+    } else {
+        const IR::Expression* shift_adj = new IR::Constant(offset % dst_cont_size);
+        int container_offset = offset / dst_cont_size;
+        int high_bit = ((container_offset + 1) * dst_cont_size) - 1;
+        int low_bit = container_offset * dst_cont_size;
+
+        const IR::Expression* slice_src1 = new IR::Slice(src_slice->e0, high_bit, low_bit);
+        const IR::Expression* slice_src2 = new IR::Slice(src_slice->e0, high_bit + dst_cont_size,
+                                                         low_bit + dst_cont_size);
+        adjust = new IR::MAU::Instruction("funnel-shift",
+                                          { dest_expr, slice_src2, slice_src1, shift_adj });
+    }
+
+    LOG5("Translated instruction: " << adjust);
+    return adjust;
+}
+
 /** SplitInstructions */
 const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     le_bitrange bits;
@@ -1415,6 +1544,7 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
 /** Instruction Adjustment */
 InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv) {
     addPasses({
+        new AdjustShiftInstructions(phv),
         new SplitInstructions(phv),
         new ConstantsToActionData(phv),
         new ExpressionsToHash(phv),

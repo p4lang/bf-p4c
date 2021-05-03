@@ -1015,7 +1015,11 @@ static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                 break;
             if (cast)
                 continue;
-            rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
+            // The last operand of a shift operation is the shift value. This constant must not be
+            // sliced but returned as is.
+            if ((inst->name != "shrs" && inst->name != "shru" && inst->name != "shl") ||
+                (i != (rv->operands.size() - 1)))
+                rv->operands[i] = MakeSlice(rv->operands[i], lo, hi);
         }
         return rv; }
     return nullptr;
