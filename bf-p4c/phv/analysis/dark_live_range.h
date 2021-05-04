@@ -199,6 +199,7 @@ class DarkLiveRange : public Inspector {
     const BuildDominatorTree                &domTree;
     const ActionPhvConstraints              &actionConstraints;
     const MauBacktracker                    &tableAlloc;
+    ordered_map<FieldDefUse::locpair, bool> non_dark_refs;
 
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.

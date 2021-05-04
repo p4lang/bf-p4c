@@ -51,7 +51,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// Maps uses to defs and vice versa.
     ordered_map<locpair, LocPairSet>  &uses, &defs;
-    ordered_map<locpair, bool> non_dark_refs;
+    ordered_map<locpair, bool> ixbar_refs;
 
     /// All uses and all defs for each field.
     ordered_map<int, LocPairSet>      &located_uses, &located_defs;
@@ -159,17 +159,17 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return uninitialized_fields; }
 
     bool hasNonDarkContext(locpair info) const {
-        if (non_dark_refs.count(info)) {
-            LOG4("\t non_dark_refs:" << non_dark_refs.size());
+        if (ixbar_refs.count(info)) {
+            LOG4("\t ixbar_refs:" << ixbar_refs.size());
         }
 
-        if (!non_dark_refs.count(info)) {
-            LOG5("\t\t non_dark_refs for expression " << info.second << " not found for unit " <<
+        if (!ixbar_refs.count(info)) {
+            LOG5("\t\t ixbar_refs for expression " << info.second << " not found for unit " <<
                  info.first << ", but assuming it is non-dark");
             return true;
         }
 
-        return non_dark_refs.at(info);
+        return ixbar_refs.at(info);
     }
 
     bool hasUninitializedRead(int fid) const {

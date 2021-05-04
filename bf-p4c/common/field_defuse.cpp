@@ -59,7 +59,7 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     parser_zero_inits.clear();
     alias_destinations.clear();
     uninitialized_fields.clear();
-    non_dark_refs.clear();
+    ixbar_refs.clear();
     return rv;
 }
 
@@ -96,10 +96,10 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
         LOG4("  " << use << " uses " << def);
         uses[def].emplace(use);
         defs[use].emplace(def); }
-    non_dark_refs[use] |= needsIXBar;
+    ixbar_refs[use] |= needsIXBar;
 
     LOG5("\t Adding IXBar " << needsIXBar << " for use  " << use <<
-         "  non_dark_refs:" << non_dark_refs.size());
+         "  ixbar_refs:" << ixbar_refs.size());
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                        const IR::Expression *e, bool needsIXBar) {
@@ -146,9 +146,9 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
         info.def.clear(); }
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
-    non_dark_refs[def] |= needsIXBar;
+    ixbar_refs[def] |= needsIXBar;
     LOG5("\t Adding IXBar " << needsIXBar << " for def " << def <<
-         "  non_dark_refs:" << non_dark_refs.size());
+         "  ixbar_refs:" << ixbar_refs.size());
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                         const IR::Expression *e, bool needsIXBar) {
@@ -326,8 +326,8 @@ void FieldDefUse::flow_merge(Visitor &a_) {
         info.def.insert(i.def.begin(), i.def.end());
         info.use.insert(i.use.begin(), i.use.end()); }
 
-    for (auto ndr : a.non_dark_refs) {
-        non_dark_refs[ndr.first] |= a.non_dark_refs[ndr.first];
+    for (auto ndr : a.ixbar_refs) {
+        ixbar_refs[ndr.first] |= a.ixbar_refs[ndr.first];
     }
 }
 
