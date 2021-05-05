@@ -8,11 +8,11 @@ packet_test_setup_check("tofino")
 set (V1_SEARCH_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (V1_EXCLUDE_PATTERNS "package" "extern")
 # Exclude some bmv2 p4s with conditional checksum updates that are not needed for backend
-set (V1_EXCLUDE_FILES 
-    "issue461-bmv2\\.p4" 
+set (V1_EXCLUDE_FILES
+    "issue461-bmv2\\.p4"
     "issue1079-bmv2\\.p4"
-    "issue2291\\.p4" 
-    "header-stack-ops-bmv2\\.p4" 
+    "issue2291\\.p4"
+    "header-stack-ops-bmv2\\.p4"
     "gauntlet.*-bmv2\\.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
@@ -748,9 +748,14 @@ p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4")
 foreach(t IN LISTS ba102_tests)
   get_filename_component(p4name ${t} NAME)
   string (REGEX REPLACE ".p4" "" testname ${p4name})
-  # TODO: Only one ptf test available, figure out how to run p4-16 pd test in our env
-  file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+  get_filename_component(__td ${t} DIRECTORY)
+  set (ptfdir "${__td}/../ptf-tests")
+  if (EXISTS ${ptfdir})
+    p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna" ${ptfdir})
+  else()
+    file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+  endif()
   p4c_add_test_label("tofino" "BA-102" ba102_${testname})
   set_tests_properties("tofino/ba102_${testname}" PROPERTIES RUN_SERIAL 1)
 endforeach()
@@ -812,7 +817,7 @@ set (P4FACTORY_REGRESSION_TESTS_INTERNAL
   mod_field_conditionally
   # multi_thread_test                         # PTF failure
   # multicast_scale                           # test runs for too long
-  # netcache                                  # PTF failure (post new dynhash configure BF-RT update)  
+  # netcache                                  # PTF failure (post new dynhash configure BF-RT update)
   opcode_test
   opcode_test_saturating
   opcode_test_signed
