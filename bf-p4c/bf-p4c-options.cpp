@@ -293,6 +293,9 @@ BFN_Options::BFN_Options() {
             return true;
         }, "Reduce number of MAU stages available for compiler. Defaults to "
            "max number of stages available for given device. This may affect table placement");
+    registerOption("--enable-event-logger", nullptr,
+        [this] (const char *) { enable_event_logger = true; return true; },
+        "Enable logging to Event Logger. Creates events.json in output folder.");
 }
 
 using Target = std::pair<cstring, cstring>;

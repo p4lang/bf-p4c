@@ -9,7 +9,7 @@ TEST_DRIVER_TIMEOUT = 2000
 BF_P4C_PATH = os.path.abspath(os.path.dirname(__file__)).replace('/scripts/gen_reference_outputs', '')
 
 P4C = os.path.join(BF_P4C_PATH, "build/p4c/p4c")
-P4C_ARGS = ['"-g"', '"--validate-output"', '"--create-graphs"', '"--verbose 1"']
+P4C_ARGS = ['"-g"', '"--validate-output"', '"--create-graphs"', '"--verbose 1"', '\"-Xp4c=\'--enable-event-logger\'\"']
 
 GLASS = "/usr/local/bin/p4c-tofino"
 GLASS_ARGS = ['"-g"', '" -j 16"', '"--create-graphs dot"']

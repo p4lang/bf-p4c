@@ -277,7 +277,7 @@ int main(int ac, char **av) {
     }
 
     // Initialize EventLogger
-    if (BackendOptions().debugInfo) {
+    if (BackendOptions().enable_event_logger) {
         EventLogger::get().init(BFNContext::get().getOutputDirectory().c_str(), "events.json");
     }
 
@@ -354,7 +354,7 @@ int main(int ac, char **av) {
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
 
     // Register event logger in manifest
-    if (BackendOptions().debugInfo) {
+    if (BackendOptions().enable_event_logger) {
         manifest.setEventLog("events.json");
     }
 

@@ -41,6 +41,7 @@ class BFN_Options : public CompilerOptions {
     bool alt_phv_alloc = false;
     int traffic_limit = 100;
     int num_stages_override = 0;
+    bool enable_event_logger = false;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in
