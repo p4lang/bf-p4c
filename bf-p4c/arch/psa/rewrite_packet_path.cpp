@@ -136,9 +136,6 @@ struct TranslatePacketPathIfStatement : public Transform {
 
 struct FindPacketPath : public Inspector {
     PSA::ProgramStructure* structure;
-    bool resubmit = false;
-    bool clone_i2e = false;
-    bool clone_e2e = false;
     explicit FindPacketPath(PSA::ProgramStructure* structure): structure(structure) { }
     bool preorder(const IR::AssignmentStatement* stmt) override {
         auto ctxt = findContext<IR::BFN::TnaControl>();
@@ -151,20 +148,22 @@ struct FindPacketPath : public Inspector {
             if (!leftPath) return false;
             auto rightBool = stmt->right->to<IR::BoolLiteral>();
             if (ctxt->thread == INGRESS) {
+            // Here we check if psa_ingress_output_metadata.resubmit/clone flags are set.
+            // Those flags determine if the packet might be clonned or resubmitted
                 if (leftPath && rightBool &&
                     leftPath->name == COMPILER_META && leftMember->member == "resubmit" &&
                     rightBool->value == true) {
-                    resubmit |= true;
+                    structure->resubmit.exists |= true;
                 } else if (leftPath && rightBool &&
                     leftPath->name == COMPILER_META && leftMember->member == "clone_i2e" &&
                     rightBool->value == true) {
-                    clone_i2e |= true;
+                    structure->clone_i2e.exists |= true;
                 }
             } else {
                 if (leftPath && rightBool &&
                     leftPath->name == COMPILER_META && leftMember->member == "clone_e2e" &&
                     rightBool->value == true) {
-                    clone_e2e |= true;
+                    structure->clone_e2e.exists |= true;
                 }
             }
         }
@@ -176,11 +175,9 @@ struct PacketPath : public Transform {
     PSA::ProgramStructure* structure;
     P4::TypeMap* typeMap;
     P4::ReferenceMap* refMap;
-    FindPacketPath* fpa;
     explicit PacketPath(PSA::ProgramStructure* structure, P4::TypeMap* typeMap,
-                                P4::ReferenceMap* refMap,
-                                FindPacketPath* fpa)
-    : structure(structure), typeMap(typeMap), refMap(refMap), fpa(fpa) {
+                                P4::ReferenceMap* refMap)
+    : structure(structure), typeMap(typeMap), refMap(refMap) {
         setName("PacketPath");
     }
 
@@ -189,8 +186,10 @@ struct PacketPath : public Transform {
         auto *fieldAnnotations = new IR::Annotations();
         fieldAnnotations->annotations.push_back(
                             new IR::Annotation(IR::ID("flexible"), {}));
-        if ((fpa->clone_i2e && structure->clone_i2e.structType->to<IR::Type_StructLike>()->name) ||
-           (fpa->clone_e2e && structure->clone_e2e.structType->to<IR::Type_StructLike>()->name)) {
+        if ((structure->clone_i2e.exists &&
+             structure->clone_i2e.structType->to<IR::Type_StructLike>()->name) ||
+           (structure->clone_e2e.exists &&
+            structure->clone_e2e.structType->to<IR::Type_StructLike>()->name)) {
             fields.push_back(new IR::StructField("mirror_source", fieldAnnotations,
                                                                   IR::Type::Bits::get(8)));
         }
@@ -203,6 +202,15 @@ struct PacketPath : public Transform {
 
     IR::Type_StructLike* postorder(IR::Type_StructLike* type) override {
         prune();
+        if (type->name == structure->recirculate.structType->to<IR::Type_StructLike>()->name) {
+            if (type->fields.size()) {
+                // Note that recirculate can exist even when the recirculate header is empty.
+                // But if the header is empty, we dont need to add an additional state.
+                // The "exists" flag is mainly used to determine if extra state and assignments
+                // are needed
+                structure->recirculate.exists = true;
+            }
+        }
         if (type->name == structure->recirculate.structType->to<IR::Type_StructLike>()->name ||
             type->name == structure->resubmit.structType->to<IR::Type_StructLike>()->name ||
             type->name == structure->clone_i2e.structType->to<IR::Type_StructLike>()->name ||
@@ -313,7 +321,7 @@ struct PacketPath : public Transform {
             state->components.push_back(advance);
         }
         // If resubmit is enabled then add assignment statements
-        if (fpa->resubmit) {
+        if (structure->resubmit.exists) {
             copyToMetadata(state, structure->resubmit, member);
             // Add assignment statement for packet path
             auto packetPath = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("packet_path"));
@@ -330,7 +338,7 @@ struct PacketPath : public Transform {
     void updateMirrorState(IR::ParserState* state) {
         auto *tnaContext = findContext<IR::BFN::TnaParser>();
         auto packetInParam = tnaContext->tnaParams.at("pkt");
-        if (!fpa->clone_i2e && !fpa->clone_e2e) {
+        if (!structure->clone_i2e.exists && !structure->clone_e2e.exists) {
             auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("advance"));
             auto constant = new IR::Constant(IR::Type::Bits::get(32), 0);
@@ -341,13 +349,13 @@ struct PacketPath : public Transform {
             return;
         }
         auto selectCases = new IR::Vector<IR::SelectCase>();
-        if (fpa->clone_e2e) {
+        if (structure->clone_e2e.exists) {
             selectCases->push_back(new IR::SelectCase(new IR::Mask(
                                                   new IR::Constant(IR::Type::Bits::get(8), 31),
                                new IR::Constant(IR::Type::Bits::get(8), 25)),
                                new IR::PathExpression("__mirror_egress")));
         }
-        if (fpa->clone_i2e) {
+        if (structure->clone_i2e.exists) {
             selectCases->push_back(new IR::SelectCase(new IR::Mask(
                                                    new IR::Constant(IR::Type::Bits::get(8), 31),
                                    new IR::Constant(IR::Type::Bits::get(8), 8)),
@@ -363,14 +371,39 @@ struct PacketPath : public Transform {
         return;
     }
 
-    const IR::ParserState *preorder(IR::ParserState *state) override {
+    void skip_to_packet(IR::ParserState* state, const IR::BFN::TnaParser* parser) {
+        auto statements = new IR::IndexedVector<IR::StatOrDecl>();
+        auto packetInParam = parser->tnaParams.at("pkt");
+        auto select = new IR::PathExpression("__skip_to_packet");
+        state->selectExpression = select;
+        auto method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("advance"));
+        auto constant = new IR::Constant(IR::Type::Bits::get(32), 64);
+        auto args = new IR::Vector<IR::Argument>({ new IR::Argument(constant) });
+        auto callExpr = new IR::MethodCallExpression(method, args);
+        auto advance = new IR::MethodCallStatement(callExpr);
+        statements->push_back(advance);
+        state->components = *statements;
+    }
+
+    const IR::ParserState *postorder(IR::ParserState *state) override {
+        auto parser = findOrigCtxt<IR::BFN::TnaParser>();
         if (state->name == "__phase0") {
-            addRecirculateState(state);
+            if (structure->recirculate.exists) {
+                addRecirculateState(state);
+            }
         } else if (state->name == "__resubmit") {
-            updateResubmitState(state);
-            addRecirculateState(state);
+            if (structure->resubmit.exists) {
+                updateResubmitState(state);
+            }
         } else if (state->name == "__mirrored") {
-            updateMirrorState(state);
+            if (structure->clone_i2e.exists || structure->clone_e2e.exists) {
+                updateMirrorState(state);
+            }
+        } else if (state->name == "__check_resubmit") {
+            if (!structure->resubmit.exists && !structure->recirculate.exists) {
+                skip_to_packet(state, parser);
+            }
         }
         return state;
     }
@@ -410,9 +443,9 @@ struct PacketPath : public Transform {
         if (node->thread == gress_t::INGRESS) {
             node->states.push_back(create_recirculate_state(node));
         } else {
-            if (fpa->clone_i2e) {
+            if (structure->clone_i2e.exists) {
                 node->states.push_back(create_mirror_state(node, INGRESS));
-            } else if (fpa->clone_e2e) {
+            } else if (structure->clone_e2e.exists) {
                 node->states.push_back(create_mirror_state(node, EGRESS));
             }
         }
@@ -523,11 +556,11 @@ struct PacketPath : public Transform {
     const IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* control) override {
         if (control->thread == EGRESS && structure->recirculate.ifStatement) {
             return deparseRecirculate(control);
-        } else if (control->thread == INGRESS && fpa->resubmit) {
+        } else if (control->thread == INGRESS && structure->resubmit.exists) {
             return deparserResubmit(control);
-        } else if (control->thread == INGRESS && fpa->clone_i2e) {
+        } else if (control->thread == INGRESS && structure->clone_i2e.exists) {
             deparserMirror(control);
-        } else if (control->thread == EGRESS && fpa->clone_e2e) {
+        } else if (control->thread == EGRESS && structure->clone_e2e.exists) {
             deparserMirror(control);
         }
         return control;
@@ -538,10 +571,7 @@ struct PacketPath : public Transform {
 // control paramters and add them in egress control
 struct MoveAssignment : public Transform {
     PSA::ProgramStructure* structure;
-    const FindPacketPath* fpa;
-    MoveAssignment(PSA::ProgramStructure* structure,
-                   const FindPacketPath* fpa)
-    : structure(structure), fpa(fpa) { }
+    explicit MoveAssignment(PSA::ProgramStructure* structure) : structure(structure) { }
 
     void add_clone_data(cstring clone, cstring compilerMeta, IR::BFN::TnaControl* control) {
         auto* compilerCloneHeader = new IR::Member(
@@ -605,7 +635,7 @@ struct MoveAssignment : public Transform {
             auto* body = control->body->clone();
             body->components.push_back(newifStmt);
             control->body = body;
-        } else if (control->thread == INGRESS && fpa->resubmit) {
+        } else if (control->thread == INGRESS && structure->resubmit.exists) {
             IR::IndexedVector<IR::StatOrDecl> components;
             auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr");
             auto resubmitType = new IR::Member(new IR::PathExpression(ig_dprsr),
@@ -626,9 +656,9 @@ struct MoveAssignment : public Transform {
             auto* body = control->body->clone();
             body->components.push_back(newifStmt);
             control->body = body;
-        } else if (control->thread == EGRESS && fpa->clone_e2e) {
+        } else if (control->thread == EGRESS && structure->clone_e2e.exists) {
             add_clone_data("clone_e2e", cgMetadataParam, control);
-        } else if (control->thread == INGRESS && fpa->clone_i2e) {
+        } else if (control->thread == INGRESS && structure->clone_i2e.exists) {
             add_clone_data("clone_i2e", cgMetadataParam, control);
         }
         return control;
@@ -638,13 +668,12 @@ struct MoveAssignment : public Transform {
 RewritePacketPath::RewritePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                      PSA::ProgramStructure* structure) {
     setName("RewritePacketPath");
-    auto* findPacketPath = new FindPacketPath(structure);
     addPasses({
-        findPacketPath,
-        new PacketPath(structure, typeMap, refMap, findPacketPath),
+        new FindPacketPath(structure),
+        new PacketPath(structure, typeMap, refMap),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
-        new MoveAssignment(structure, findPacketPath),
+        new MoveAssignment(structure),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
     });

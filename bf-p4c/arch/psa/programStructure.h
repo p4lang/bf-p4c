@@ -17,16 +17,19 @@ namespace BFN {
 
 namespace PSA {
 
-// structure to describe the info related to resubmit/clone/recirc in a PSA program
+// structure to describe the info related to resubmit/clone/recirc/bridge in a PSA program
 struct PacketPathInfo {
-    /// The name of the resubmit_metadata in ingress parser param.
+    /// The name of the metadata in ingress parser param.
     cstring paramNameInParser;
 
-    /// The name of the resubmit_metadata in egress deparser param.
+    /// The name of the metadata in egress deparser param.
     cstring paramNameInDeparser;
 
     /// name in compiler_generated_meta
     cstring generatedName;
+
+    /// If packet path exists
+    bool exists = false;
 
     /// Map user-defined name to arch-defined param name in source block.
     ordered_map<cstring, cstring> srcParams;
@@ -34,11 +37,11 @@ struct PacketPathInfo {
     /// Map arch-defined param name to user-defined name in dest block.
     ordered_map<cstring, cstring> dstParams;
 
-    /// A P4 type for the resubmit data, based on the type of the parameter to
+    /// A P4 type for the data, based on the type of the parameter to
     /// the parser.
     const IR::Type* p4Type = nullptr;
     const IR::Type* structType = nullptr;
-    // the statements in deparser to emit resubmit metadata, in PSA, the emit
+    // the statements in deparser to emit resubmit/clone/recir metadata, in PSA, the emit
     // is represented with assignments to out parameter in the deparser block.
     // the source typically has the following code pattern.
     // if (psa_resubmit(istd)) {
@@ -90,6 +93,9 @@ struct ProgramStructure : BFN::ProgramStructure {
 
     std::map<gress_t, std::map<cstring, const IR::MethodCallExpression*>> state_to_verify;
 
+    // Vector of bridge field assignment in deparser in PSA. These will be moved to ingress
+    // control later
+    std::vector<IR::AssignmentStatement*> bridgeFieldAssignments;
     const IR::P4Program *create(const IR::P4Program *program) override;
     void loadModel();
 

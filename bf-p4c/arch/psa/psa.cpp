@@ -12,6 +12,7 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/arch/rewrite_action_selector.h"
+#include "bf-p4c/arch/fromv1.0/add_metadata_parser_states.h"
 #include "rewrite_bridge_metadata.h"
 
 namespace BFN {

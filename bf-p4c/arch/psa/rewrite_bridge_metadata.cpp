@@ -51,12 +51,23 @@ struct PsaBridgeIngressToEgress : public Transform {
         return type;
     }
 
+    void skip_to_packet(IR::ParserState* state) {
+        auto select = new IR::PathExpression("__egress_p4_entry_point");
+        state->selectExpression = select;
+        state->components.clear();
+    }
+
     IR::ParserState* preorder(IR::ParserState* state) override {
         prune();
-        if (state->name == "__ingress_metadata")
+        if (state->name == "__ingress_metadata" && structure->bridge.exists) {
             return updateIngressMetadataState(state);
-        else if (state->name == "__bridged_metadata")
+        } else if (state->name == "__bridged_metadata" && structure->bridge.exists) {
             return updateBridgedMetadataState(state);
+        } else if (state->name == "__check_mirrored") {
+            if (!structure->bridge.exists && !structure->clone_i2e.exists &&
+                !structure->clone_e2e.exists)
+                skip_to_packet(state);
+        }
         return state;
     }
 
@@ -237,20 +248,20 @@ struct FindBridgeMetadataAssignment : public Transform {
 
         // This is a write to bridged metadata; remove it.
         LOG4("Removing ingress deparser assignment to bridged metadata: " << assignment);
-        bridgedFieldAssignments.push_back(assignment);
+        structure->bridgeFieldAssignments.push_back(assignment);
+        // If bridge assignments exists then bridging exists
+        structure->bridge.exists = true;
         return nullptr;
     }
 
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
     PSA::ProgramStructure* structure;
-    IR::IndexedVector<IR::StatOrDecl> bridgedFieldAssignments;
 };
 
 struct MoveBridgeMetadataAssignment : public Transform {
-    explicit MoveBridgeMetadataAssignment(PSA::ProgramStructure* structure,
-            IR::IndexedVector<IR::StatOrDecl>* bridgedFieldAssignments)
-    : structure(structure), bridgedFieldAssignments(bridgedFieldAssignments) { }
+    explicit MoveBridgeMetadataAssignment(PSA::ProgramStructure* structure)
+    : structure(structure) { }
 
     IR::BFN::TnaControl*
     preorder(IR::BFN::TnaControl* control) override {
@@ -273,8 +284,7 @@ struct MoveBridgeMetadataAssignment : public Transform {
                 new IR::PathExpression(cgMetadataParam), IR::ID(BRIDGED_MD));
         auto metadataPath = new IR::PathExpression(metdataParam);
         auto* body = control->body->clone();
-        for (auto s : *bridgedFieldAssignments) {
-            auto stmt = s->to<IR::AssignmentStatement>();
+        for (auto stmt : structure->bridgeFieldAssignments) {
             IR::Member* newLeftMember = nullptr;
             IR::Member* newRightMember = nullptr;
             if (auto leftMember = stmt->left->to<IR::Member>()) {
@@ -297,23 +307,18 @@ struct MoveBridgeMetadataAssignment : public Transform {
         return control;
     }
     PSA::ProgramStructure* structure;
-    IR::IndexedVector<IR::StatOrDecl>* bridgedFieldAssignments;
 };
 
 AddPsaBridgeMetadata::AddPsaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                            PSA::ProgramStructure* structure) {
-    auto* bridgeIngressToEgress = new PsaBridgeIngressToEgress(refMap, typeMap, structure);
-    auto* findBridgedMetaAssignments = new FindBridgeMetadataAssignment(refMap, typeMap,
-                                                                                structure);
     addPasses({
+        new FindBridgeMetadataAssignment(refMap, typeMap, structure),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
-        bridgeIngressToEgress,
+        new PsaBridgeIngressToEgress(refMap, typeMap, structure),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
-        findBridgedMetaAssignments,
-        new MoveBridgeMetadataAssignment(structure,
-                                   &findBridgedMetaAssignments->bridgedFieldAssignments),
+        new MoveBridgeMetadataAssignment(structure),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
     });
