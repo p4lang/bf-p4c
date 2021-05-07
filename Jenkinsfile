@@ -8,18 +8,20 @@ node {
     stopPreviousRuns(this)
 }
 
+/// Docker registry to be used
+// Docker Hub
+DOCKER_CREDENTIALS = "bfndocker"
+DOCKER_REGISTRY = ""
+DOCKER_PROJECT = "barefootnetworks"
+// CaaS (AMR)
+// DOCKER_CREDENTIALS = "bfndocker-caas"
+// DOCKER_REGISTRY = "amr-registry.caas.intel.com"
+// DOCKER_PROJECT = "${DOCKER_REGISTRY}/bxd-sw"
+
 node ('compiler-nodes') {
     // Clean workspace before doing anything
     sh "sudo chmod -R 777 ."
     deleteDir()
-    environment {
-        def bf_p4c_compilers_rev = ""
-        def bf_p4c_compilers_rev_short = ""
-        def image_pulled = ""
-        def bf_switch_rev = ""
-        def metrics_cid = ""
-        def p4c_cid = ""
-    }
     try {
         ansiColor('xterm') {
             timestamps {
@@ -41,19 +43,22 @@ node ('compiler-nodes') {
 
                 stage ('Pull image') {
                     echo 'Attempting to pull existing bf-p4c-compilers Docker image'
-
                     withCredentials([usernamePassword(
-                        credentialsId: "bfndocker",
+                        credentialsId: "${DOCKER_CREDENTIALS}",
                         usernameVariable: "DOCKER_USERNAME",
                         passwordVariable: "DOCKER_PASSWORD"
                     )]) {
-                        sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
+                        sh """
+                            docker login \
+                                -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} \
+                                ${DOCKER_REGISTRY}
+                        """
                     }
-
+                    image_tag = "${env.BRANCH_NAME.toLowerCase()}_${bf_p4c_compilers_rev}"
                     try {
-                        sh "docker pull barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev}"
+                        sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
                         image_pulled = 'true'
-                        echo "Pulled image bf-p4c-compilers:${bf_p4c_compilers_rev}"
+                        echo "Pulled image bf-p4c-compilers:${image_tag}"
                     } catch (err) {
                         image_pulled = 'false'
                         echo 'Nothing pulled'
@@ -66,7 +71,7 @@ node ('compiler-nodes') {
                         echo 'Checking out p4factory for reference'
                         sh 'git clone git@github.com:barefootnetworks/p4factory.git'
                         dir('p4factory') {
-                            p4factory_rev = sh (
+                            def p4factory_rev = sh (
                                 script: 'git rev-parse HEAD',
                                 returnStdout: true
                             ).trim()
@@ -88,9 +93,9 @@ node ('compiler-nodes') {
                         echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
                         dir('p4-tests/p4_16/switch_16') {
                             sh """
-                                git fetch origin ${bf_switch_rev} &&
-                                git checkout ${bf_switch_rev} &&
-                                git submodule update --init --recursive &&
+                                git fetch
+                                git checkout ${bf_switch_rev}
+                                git submodule update --init --recursive
                                 git log -1 --stat
                             """
                         }
@@ -107,11 +112,12 @@ node ('compiler-nodes') {
 
                         echo 'Building intermediate Docker image'
                         sh """
-                            mkdir -p ~/.ccache_bf-p4c-compilers &&
+                            mkdir -p ~/.ccache_bf-p4c-compilers
                             docker build \
                                 --pull \
                                 -f docker/Dockerfile.tofino \
-                                -t bf-p4c-compilers_intermediate_${bf_p4c_compilers_rev} \
+                                -t bf-p4c-compilers_intermediate_${image_tag} \
+                                --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
                                 --build-arg MAKEFLAGS=j16 \
                                 --build-arg BUILD_FOR=jenkins-intermediate \
                                 --build-arg BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
@@ -125,8 +131,10 @@ node ('compiler-nodes') {
                             'Unified': {
                                 echo 'Building final Docker image to run tests with (unified build)'
                                 sh """
+                                    docker rm -f bf-p4c-compilers_build_${image_tag} \
+                                        || true
                                     docker run \
-                                        --name bf-p4c-compilers_build_${bf_p4c_compilers_rev} \
+                                        --name bf-p4c-compilers_build_${image_tag} \
                                         -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                         -e MAKEFLAGS=j16 \
                                         -e BUILD_FOR=jenkins-final \
@@ -134,12 +142,12 @@ node ('compiler-nodes') {
                                         -e BUILD_GLASS=false \
                                         -e GEN_REF_OUTPUTS=false \
                                         -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                        bf-p4c-compilers_intermediate_${bf_p4c_compilers_rev} \
-                                        /bfn/bf-p4c-compilers/docker/docker_build.sh &&
+                                        bf-p4c-compilers_intermediate_${image_tag} \
+                                        /bfn/bf-p4c-compilers/docker/docker_build.sh
                                     docker commit \
-                                        bf-p4c-compilers_build_${bf_p4c_compilers_rev} \
-                                        barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev} &&
-                                    docker rm bf-p4c-compilers_build_${bf_p4c_compilers_rev}
+                                        bf-p4c-compilers_build_${image_tag} \
+                                        ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
+                                    docker rm -f bf-p4c-compilers_build_${image_tag}
                                 """
                             },
 
@@ -154,7 +162,7 @@ node ('compiler-nodes') {
                                         -e BUILD_GLASS=false \
                                         -e GEN_REF_OUTPUTS=false \
                                         -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                        bf-p4c-compilers_intermediate_${bf_p4c_compilers_rev} \
+                                        bf-p4c-compilers_intermediate_${image_tag} \
                                         /bfn/bf-p4c-compilers/docker/docker_build.sh
                                 """
                             },
@@ -163,8 +171,39 @@ node ('compiler-nodes') {
                     }
 
                     stage ('Push image') {
-                        echo "Pushing the built Docker image bf-p4c-compilers:${bf_p4c_compilers_rev}"
-                        sh "docker push barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev}"
+                        echo "Pushing the built Docker image bf-p4c-compilers:${image_tag}"
+                        // sh "docker push ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
+                        // While migrating images, push to both barefootnetworks and bxd-sw @ CaaS
+                        parallel (
+                            'barefootnetworks': {
+                                withCredentials([usernamePassword(
+                                credentialsId: "bfndocker",
+                                usernameVariable: "DOCKER_USERNAME",
+                                passwordVariable: "DOCKER_PASSWORD"
+                                )]) {
+                                    sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
+                                }
+                                sh """
+                                    docker tag  ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
+                                                barefootnetworks/bf-p4c-compilers:${image_tag}
+                                    docker push barefootnetworks/bf-p4c-compilers:${image_tag}
+                                """
+                            },
+                            'bxd-sw @ CaaS': {
+                                withCredentials([usernamePassword(
+                                credentialsId: "bfndocker-caas",
+                                usernameVariable: "DOCKER_USERNAME",
+                                passwordVariable: "DOCKER_PASSWORD"
+                                )]) {
+                                    sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} amr-registry.caas.intel.com"
+                                }
+                                sh """
+                                    docker tag  ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
+                                                amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:${image_tag}
+                                    docker push amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:${image_tag}
+                                """
+                            }
+                        )
                     }
 
                 }
@@ -195,7 +234,7 @@ def runInDocker(Map namedArgs, String cmd) {
             -e CTEST_PARALLEL_LEVEL=${args.ctestParallelLevel} \
             -e CTEST_OUTPUT_ON_FAILURE='true' \
             ${args.extraArgs} \
-            barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev} \
+            ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
             ${cmd}
     """
 }
@@ -210,16 +249,18 @@ node ('compiler-travis') {
     deleteDir()
     echo 'Pulling the built Docker image for the PR'
     withCredentials([usernamePassword(
-        credentialsId: "bfndocker",
+        credentialsId: "${DOCKER_CREDENTIALS}",
         usernameVariable: "DOCKER_USERNAME",
         passwordVariable: "DOCKER_PASSWORD"
     )]) {
         sh """
-            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-            docker pull barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev}
-            docker pull barefootnetworks/p4v:latest
+            docker login \
+                -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} \
+                ${DOCKER_REGISTRY}
         """
     }
+    sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
+    sh "docker pull ${DOCKER_PROJECT}/p4v:latest"
     ansiColor('xterm') {
         timestamps {
 
@@ -251,15 +292,15 @@ node ('compiler-travis') {
                         )
 
                         echo 'Running switch-14 and switch-16 tests for METRICS'
-                        sh "docker pull barefootnetworks/compiler_metrics:stage"
+                        sh "docker pull ${DOCKER_PROJECT}/compiler_metrics:stage"
                         sh "mkdir -p metrics_store"
-                        metrics_cid = sh (
-                            script: '''
+                        def metrics_cid = sh (
+                            script: """
                                 docker run --rm -t -d \
                                     -w /bfn/compiler_metrics/database \
                                     --entrypoint bash \
-                                    barefootnetworks/compiler_metrics:stage
-                            ''',
+                                    ${DOCKER_PROJECT}/compiler_metrics:stage
+                            """,
                             returnStdout: true
                         ).trim()
                         echo "metrics cid: ${metrics_cid}"
@@ -268,18 +309,18 @@ node ('compiler-travis') {
                                 ${metrics_cid}:/bfn/compiler_metrics/database/compiler_metrics.sqlite \
                                 metrics_store/
                             docker tag \
-                                barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev} \
-                                barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev}_metrics
+                                ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
+                                ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}_metrics
                         """
 
                         def curr_pwd = pwd()
-                        p4c_cid = sh (
+                        def p4c_cid = sh (
                             script: """
                                 docker run --privileged --rm -t -d \
                                     -v ${curr_pwd}/metrics_store:/mnt \
                                     -w /bfn/bf-p4c-compilers/scripts/gen_reference_outputs \
                                     --entrypoint bash \
-                                    barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev}_metrics
+                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}_metrics
                             """,
                             returnStdout: true
                         ).trim()
@@ -441,15 +482,14 @@ node ('compiler-travis') {
 
                     "p4o": {
                         echo 'Running p4 obfuscator tests'
-                        def bf_p4c_cid = ""
-                        bf_p4c_cid = sh (
+                        def bf_p4c_cid = sh (
                             script: """
                                 docker run \
                                     --privileged \
                                     --rm -t -d \
                                     -w /bfn/bf-p4c-compilers/build/p4c \
                                     --entrypoint bash \
-                                    barefootnetworks/bf-p4c-compilers:${bf_p4c_compilers_rev}
+                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
                             """,
                             returnStdout: true
                         ).trim()
@@ -458,13 +498,12 @@ node ('compiler-travis') {
                         sh """
                             mkdir -p p4o_regression
                             docker cp ${bf_p4c_cid}:/bfn/bf-p4c-compilers/build p4o_regression/
-                            docker tag barefootnetworks/p4v:latest barefootnetworks/p4v:p4o_regression
+                            docker tag ${DOCKER_PROJECT}/p4v:latest ${DOCKER_PROJECT}/p4v:p4o_regression
                         """
 
                         try {
                             def p4o_pwd = pwd()
-                            def p4v_cid = ""
-                            p4v_cid = sh (
+                            def p4v_cid = sh (
                                 script: """
                                     docker run \
                                         --privileged \
@@ -472,15 +511,15 @@ node ('compiler-travis') {
                                         -v ${p4o_pwd}/p4o_regression/build:/bfn/bf-p4c-compilers/build \
                                         -w /bfn/p4v/mutine/obfuscator/bin/scripts \
                                         --entrypoint bash \
-                                        barefootnetworks/p4v:p4o_regression
+                                        ${DOCKER_PROJECT}/p4v:p4o_regression
                                 """,
                                 returnStdout: true
                             ).trim()
                             echo "p4v_cid: ${p4v_cid}"
 
                             sh """
-                            docker exec ${p4v_cid} \
-                                python3 -u main.py -t compiler -r serial -f tests.csv
+                                docker exec ${p4v_cid} \
+                                    python3 -u main.py -t compiler -r serial -f tests.csv
                             """
 
                             sh """
