@@ -634,6 +634,8 @@ extern T max<T>(in T t1, in T t2);
 
 extern T min<T>(in T t1, in T t2);
 
+extern void funnel_shift_right<T>(out T dst, in T src1, in T src2, int shift_amount);
+
 extern void invalidate<T>(in T field);
 
 /// Phase0

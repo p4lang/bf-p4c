@@ -198,7 +198,11 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
             field->set_solitary(PHV::SolitaryReason::ALU);
             if (inst->name == "funnel-shift") {
                 field->set_exact_containers(true);
-                field->set_no_split(true);
+                if (field->size <= 32) {
+                    field->set_no_split(true);
+                } else {
+                    field->set_no_holes(true);
+                }
                 continue;
             }
             bool no_split = false;

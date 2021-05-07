@@ -5,6 +5,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "ir/ir-generated.h"
 
 /**
  * Until the Register.read and Register.write functions have a separate Instruction
@@ -27,6 +28,16 @@ class ToFunnelShiftInstruction : public MauTransform {
 
  public:
     ToFunnelShiftInstruction() {}
+};
+
+/**
+ * This class convert extern funnel_shift_right method call to funnel-shift instruction.
+ */
+class ConvertFunnelShiftExtern : public MauTransform {
+    const IR::Expression *preorder(IR::Primitive*) override;
+
+ public:
+    ConvertFunnelShiftExtern() {}
 };
 
 /**

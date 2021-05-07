@@ -57,6 +57,16 @@ const IR::Expression *ToFunnelShiftInstruction::preorder(IR::Cast *e) {
     return e;
 }
 
+const IR::Expression *ConvertFunnelShiftExtern::preorder(IR::Primitive* prim) {
+    if (prim->name != "funnel_shift_right")
+        return prim;
+    const auto* dst = prim->operands[0];
+    const auto* src1 = prim->operands[1];
+    const auto* src2 = prim->operands[2];
+    const auto* n_shift = prim->operands[3];
+    return new IR::MAU::Instruction(prim->srcInfo, "funnel-shift", {dst, src1, src2, n_shift});
+}
+
 bool HashGenSetup::CreateHashGenExprs::preorder(const IR::BFN::SignExtend *se) {
     if (!findContext<IR::MAU::Action>())
         return false;
@@ -2824,6 +2834,7 @@ const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
 InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
     new CheckInvalidate(phv),           // Instructions in actions are sequential.
     new UnimplementedRegisterMethodCalls,
+    new ConvertFunnelShiftExtern,
     new ToFunnelShiftInstruction,
     new HashGenSetup(phv, options),
     new Synth2PortSetup(phv),
