@@ -1,9 +1,9 @@
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include <iosfwd>
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
@@ -137,5 +137,76 @@ TEST_F(V1ModelStdMetaTranslateNegativeTest, DeqTimedelta) {
     EXPECT_TRUE(errorOutputContains(
         "standard_metadata field standard_metadata.deq_timedelta cannot be translated"));
 }
+
+static boost::optional<TofinoPipeTestCase> makeTestCaseIngress(
+        const std::string& ingress_apply_block) {
+    SCOPED_TRACE("V1ModelStdMetaTranslateIngressExitTest");
+
+    auto& options = BackendOptions();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
+    auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+        struct H { }
+        struct M { bit<8> m1; }
+        parser parse(packet_in packet, out H headers, inout M meta, inout standard_metadata_t sm) {
+            state start {
+                transition accept;
+            }
+        }
+        control ig(inout H headers, inout M meta, inout standard_metadata_t sm) {
+            apply { %INGRESS_APPLY_BLOCK% } }
+        control eg(inout H headers, inout M meta, inout standard_metadata_t sm) { apply { } }
+        control verifyChecksum(inout H headers, inout M meta) { apply { } }
+        control computeChecksum(inout H headers, inout M meta) { apply { } }
+        control deparse(packet_out packet, in H headers) { apply { packet.emit(headers); } }
+        V1Switch(parse(), verifyChecksum(), ig(), eg(), computeChecksum(), deparse()) main;
+    )");
+
+    boost::replace_first(source, "%INGRESS_APPLY_BLOCK%", ingress_apply_block);
+
+    return TofinoPipeTestCase::create(source);
+}
+
+class V1ModelStdMetaTranslateIngressExitTest
+    : public V1ModelStdMetaTranslateTestBase,
+      public WithParamInterface<std::string> {
+ public:
+    V1ModelStdMetaTranslateIngressExitTest() : ingress_apply_block(GetParam()) {}
+
+ protected:
+    const std::string ingress_apply_block;
+};
+
+TEST_P(V1ModelStdMetaTranslateIngressExitTest, IngressExitStatement) {
+    auto test = makeTestCaseIngress(ingress_apply_block);
+    ASSERT_TRUE(test);
+    EXPECT_EQ(0u, ::diagnosticCount());
+}
+
+INSTANTIATE_TEST_CASE_P(IngressExitStatementTest, V1ModelStdMetaTranslateIngressExitTest,
+    ::testing::Values(
+        R"(
+            exit;
+        )",
+        R"(
+            if (sm.ingress_port == 1) {
+                exit;
+            }
+        )",
+        R"(
+            if (sm.ingress_port == 1) {
+                meta.m1 = 0;
+            } else {
+                exit;
+            }
+        )",
+        R"(
+            if (sm.ingress_port == 1) {
+                meta.m1 = 0;
+            }
+            exit;
+        )"));
 
 }  // namespace Test

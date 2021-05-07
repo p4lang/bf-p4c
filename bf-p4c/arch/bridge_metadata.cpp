@@ -291,7 +291,14 @@ struct BridgeIngressToEgress : public Transform {
         if (ctxt->thread != INGRESS) return exit;
         auto stmt = updateIngressControl(ctxt);
         stmt->push_back(exit);
-        return stmt;
+        const IR::Node* parent = getContext()->node;
+        if (parent->is<IR::BlockStatement>())
+            return stmt;
+        else if (parent->is<IR::IfStatement>())
+            return new IR::BlockStatement(*stmt);
+        else
+            BUG("Unexpected parent type - %1% (expected is BlockStatement or IfStatement)",
+                    parent->toString());
     }
 
     IR::BFN::TnaDeparser*

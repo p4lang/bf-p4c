@@ -1708,7 +1708,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: .*visitor returned non-Statement type"
+  "error:.*Conditional execution in actions unsupported on this target"
   testdata/p4_16_samples/issue2359.p4
 )
 
