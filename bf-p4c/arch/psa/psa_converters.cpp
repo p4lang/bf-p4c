@@ -132,8 +132,8 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     // add ig_intr_md
     auto path = new IR::Path("ingress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md", IR::Direction::Out, type);
-    tnaParams.emplace("ig_intr_md", param->name);
+    param = new IR::Parameter(params->getParameter(3)->name, IR::Direction::Out, type);
+    tnaParams.emplace("ig_intr_md", params->getParameter(3)->name);
     paramList->push_back(param);
 
     // add ig_intr_md_from_prsr
@@ -620,15 +620,19 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto membername = node->member.name;
     auto expr = node->expr->to<IR::PathExpression>();
     if (!expr) return node;
-    auto pathname = expr->path->name;
+    cstring pathname = expr->path->name.toString();
 
     gress_t thread;
+    cstring blockName = "";
     if (auto* parser = findContext<IR::BFN::TnaParser>()) {
         thread = parser->thread;
+        blockName = parser->toString();
     } else if (auto* control = findContext<IR::BFN::TnaControl>()) {
         thread = control->thread;
+        blockName = control->toString();
     } else if (auto* control = findContext<IR::BFN::TnaDeparser>()) {
         thread = control->thread;
+        blockName = control->toString();
     } else {
         LOG3("Member expression " << node << " is not inside a translated control; "
             "won't translate it");
@@ -637,6 +641,20 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
 
     auto& nameMap = thread == INGRESS ? structure->ingressMetadataNameMap
                                       : structure->egressMetadataNameMap;
+
+    if (auto t = expr->type->to<IR::Type_Struct>()) {
+        auto tName = t->getName();
+        if ((tName == PSA::IG_OUT_INTR_MD_TYPE)
+           || (tName == PSA::EG_OUT_INTR_MD_TYPE))
+                pathname = PSA::OUT_INTR_MD;
+        else if ((tName == PSA::IG_INP_INTR_MD_TYPE)
+           || (tName == PSA::EG_INP_INTR_MD_TYPE))
+                pathname = PSA::INP_INTR_MD;
+    }
+
+    LOG5("Finding metadata field in block " << blockName
+            << " for type " << expr->type->toString()
+            << " : { " << pathname << ", " << membername << " }");
     if (auto type = node->type->to<IR::Type_Bits>()) {
         BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
         auto it = nameMap.find(MetadataField{pathname, membername, type->size});

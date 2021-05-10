@@ -79,7 +79,7 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"standard_metadata", "drop", 1},
                                MetadataField{"ig_intr_md_for_dprsr", "drop_ctl", 3});
 
-        structure->addMetadata(INGRESS,
+        structure->addMetadata(EGRESS,
                                MetadataField{"standard_metadata", "drop", 1},
                                MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
 

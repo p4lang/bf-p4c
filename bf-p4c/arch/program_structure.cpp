@@ -113,4 +113,12 @@ void ProgramStructure::createActions() {
     }
 }
 
+std::ostream &operator<<(std::ostream &out, const BFN::MetadataField &m) {
+    out << "Metadata Field { struct : " << m.structName
+        << ", field : " << m.fieldName << ", width : " << m.width
+        << ", offset : " << m.offset << ", isCG : " << m.isCG
+        << " }" << std::endl;
+    return out;
+}
+
 }  // namespace BFN

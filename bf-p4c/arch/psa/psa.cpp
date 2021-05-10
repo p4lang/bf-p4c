@@ -4,6 +4,7 @@
 #include "psa.h"
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"
+#include "ir/ir.h"
 #include "midend/convertEnums.h"
 #include "midend/copyStructures.h"
 #include "midend/validateProperties.h"
@@ -25,7 +26,7 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
         if (type->name != "PSA_PacketPath_t") {
             return false;
         }
-        LOG3("Convert Enum to Bits " << type->name);
+        LOG3("Convert Enum to Bits " << type->name.toString());
         return true;
     }
 
@@ -37,7 +38,7 @@ class MeterColorTo8Bits: public P4::ChooseEnumRepresentation {
         if (type->name != "PSA_MeterColor_t") {
             return false;
         }
-        LOG3("Convert Enum to Bits " << type->name);
+        LOG3("Convert Enum to Bits " << type->name.toString());
         return true;
     }
 
@@ -57,7 +58,7 @@ class AnalyzeProgram : public Inspector {
         CHECK_NULL(block);
         auto blockType = block->to<BlockType>();
         CHECK_NULL(blockType);
-        LOG1("find block " << blockType->container->name << " of type " << type);
+        LOG1("find block " << blockType->container->name.toString() << " of type " << type);
         structure->blockNames.emplace(type, blockType->container->name);
     }
 
@@ -151,7 +152,7 @@ class AnalyzeProgram : public Inspector {
             structure->ingress_parser.psaParams.emplace("metadata", param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(3);
-            structure->ingress_parser.psaParams.emplace("istd", param->name);
+            structure->ingress_parser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(4);
             structure->resubmit.paramNameInParser = param->name;
             create_metadata_header(param, "__resubmit_data", INGRESS, structure->resubmit);
@@ -167,7 +168,7 @@ class AnalyzeProgram : public Inspector {
             structure->egress_parser.psaParams.emplace("metadata", param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(3);
-            structure->egress_parser.psaParams.emplace("istd", param->name);
+            structure->egress_parser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(4);
             structure->bridge.paramNameInParser = param->name;
             structure->egress_parser.psaParams.emplace("normal_metadata", param->name);
@@ -256,7 +257,7 @@ class AnalyzeProgram : public Inspector {
             structure->ingress_deparser.psaParams.emplace("metadata", param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(6);
-            structure->ingress_deparser.psaParams.emplace("istd", param->name);
+            structure->ingress_deparser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             collectPacketPathInfo(node);
         } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
@@ -271,7 +272,7 @@ class AnalyzeProgram : public Inspector {
             structure->egress_deparser.psaParams.emplace("metadata", param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(5);
-            structure->egress_deparser.psaParams.emplace("istd", param->name);
+            structure->egress_deparser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(6);
             structure->egress_deparser.psaParams.emplace("edstd", param->name);
             collectPacketPathInfo(node);
@@ -282,9 +283,9 @@ class AnalyzeProgram : public Inspector {
             structure->ingress.psaParams.emplace("metadata", param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(2);
-            structure->ingress.psaParams.emplace("istd", param->name);
+            structure->ingress.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(3);
-            structure->ingress.psaParams.emplace("ostd", param->name);
+            structure->ingress.psaParams.emplace(PSA::OUT_INTR_MD, param->name);
         } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto param = node->getApplyParameters()->getParameter(0);
             structure->egress.psaParams.emplace("hdr", param->name);
@@ -292,9 +293,9 @@ class AnalyzeProgram : public Inspector {
             structure->egress.psaParams.emplace("metadata", param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(2);
-            structure->egress.psaParams.emplace("istd", param->name);
+            structure->egress.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(3);
-            structure->egress.psaParams.emplace("ostd", param->name);
+            structure->egress.psaParams.emplace(PSA::OUT_INTR_MD, param->name);
         }
     }
 
@@ -494,6 +495,7 @@ class TranslateProgram : public Inspector {
             auto assignUpdate = new IR::AssignmentStatement(dest, update);
             return assignUpdate;
         }
+        return nullptr;
     }
 
     bool isDeparserAdd(const IR::MethodCallStatement* methodStmt) {
@@ -579,8 +581,8 @@ class TranslateProgram : public Inspector {
     }
 
     void postorder(const IR::Member* node) override {
-        ordered_set<cstring> toTranslateInControl = {"istd", "ostd"};
-        ordered_set<cstring> toTranslateInParser = {"istd", "ostd"};
+        ordered_set<cstring> toTranslateInControl = {PSA::INP_INTR_MD, PSA::OUT_INTR_MD};
+        ordered_set<cstring> toTranslateInParser = {PSA::INP_INTR_MD, PSA::OUT_INTR_MD};
         auto gress = findOrigCtxt<IR::P4Control>();
         if (gress) {
             if (auto expr = node->expr->to<IR::PathExpression>()) {
@@ -811,55 +813,55 @@ class LoadTargetArchitecture : public Inspector {
 
     void setup_metadata_map() {
         structure->addMetadata(INGRESS,
-                               MetadataField{"istd", "ingress_port", 9},
+                               MetadataField{PSA::INP_INTR_MD, "ingress_port", 9},
                                MetadataField{"ig_intr_md", "ingress_port", 9});
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "ingress_port", 9},
+                               MetadataField{PSA::INP_INTR_MD, "ingress_port", 9},
                                MetadataField{"eg_intr_md", "ingress_port", 9});
 
         structure->addMetadata(INGRESS,
-                               MetadataField{"istd", "ingress_timestamp", 48},
+                               MetadataField{PSA::INP_INTR_MD, "ingress_timestamp", 48},
                                MetadataField{"ig_intr_md", "ingress_mac_tstamp", 48});
         structure->addMetadata(INGRESS,
-                               MetadataField{"istd", "parser_error", 16},
+                               MetadataField{PSA::INP_INTR_MD, "parser_error", 16},
                                MetadataField{"ig_intr_md_from_parser", "parser_err", 16});
         structure->addMetadata(INGRESS,
-                               MetadataField{"ostd", "class_of_service", 3},
+                               MetadataField{PSA::OUT_INTR_MD, "class_of_service", 3},
                                MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
         structure->addMetadata(INGRESS,
-                               MetadataField{"ostd", "drop", 1},
+                               MetadataField{PSA::OUT_INTR_MD, "drop", 1},
                                MetadataField{COMPILER_META, "drop", 1});
-        structure->addMetadata(INGRESS, MetadataField{"ostd", "multicast_group", 16},
+        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "multicast_group", 16},
                                MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
         structure->addMetadata(INGRESS,
-                               MetadataField{"ostd", "egress_port", 9},
+                               MetadataField{PSA::OUT_INTR_MD, "egress_port", 9},
                                MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
-        structure->addMetadata(INGRESS, MetadataField{"ostd", "resubmit", 1},
+        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "resubmit", 1},
                                MetadataField{COMPILER_META, "resubmit", 1});
-        structure->addMetadata(INGRESS, MetadataField{"ostd", "clone", 1},
+        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "clone", 1},
                                MetadataField{COMPILER_META, "clone_i2e", 1});
         structure->addMetadata(INGRESS,
-                               MetadataField{"istd", "packet_path", 0},
+                               MetadataField{PSA::INP_INTR_MD, "packet_path", 0},
                                MetadataField{COMPILER_META, "packet_path", 0});
 
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "egress_port", 9},
+                               MetadataField{PSA::INP_INTR_MD, "egress_port", 9},
                                MetadataField{"eg_intr_md", "egress_port", 9});
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "egress_timestamp", 48},
+                               MetadataField{PSA::INP_INTR_MD, "egress_timestamp", 48},
                                MetadataField{"eg_intr_md_for_dprsr", "egress_global_tstamp", 48});
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "parser_error", 16},
+                               MetadataField{PSA::INP_INTR_MD, "parser_error", 16},
                                MetadataField{"eg_intr_md_from_parser", "parser_err", 16});
         structure->addMetadata(EGRESS,
-                               MetadataField{"ostd", "drop", 1},
+                               MetadataField{PSA::OUT_INTR_MD, "drop", 1},
                                MetadataField{COMPILER_META, "drop", 1});
-        structure->addMetadata(EGRESS, MetadataField{"ostd", "clone", 1},
+        structure->addMetadata(EGRESS, MetadataField{PSA::OUT_INTR_MD, "clone", 1},
                                MetadataField{COMPILER_META, "clone_e2e", 1});
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "packet_path", 0},
+                               MetadataField{PSA::INP_INTR_MD, "packet_path", 0},
                                MetadataField{COMPILER_META, "packet_path", 0});
-        structure->addMetadata(MetadataField{"ostd", "clone_session_id", 10},
+        structure->addMetadata(MetadataField{PSA::OUT_INTR_MD, "clone_session_id", 10},
                                MetadataField{COMPILER_META, "mirror_id", 10});
     }
 

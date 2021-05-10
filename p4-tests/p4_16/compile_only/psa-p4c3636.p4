@@ -1,11 +1,59 @@
-#include <core.p4>
 #include <psa.p4>
+
 // psa defs
 error {
     UnhandledIPv4Options,
     BadIPv4HeaderChecksum
 }
+# 2 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
 
+// These headers have to come first, to override their fixed counterparts.
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/roles.h" 1
+# 5 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/bitwidths.p4" 1
+# 6 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/minimum_guaranteed_sizes.p4" 1
+
+
+
+// -- Fixed Table sizes --------------------------------------------------------
+# 14 "/mnt/pins-infra/sai_p4/instantiations/google/minimum_guaranteed_sizes.p4"
+# copybara:strip_begin(comment only applies internally)
+// The IPv4 and IPv6 minimums appear to hold in practice, but Broadcom's
+// Algorithmic LPM implementation is subtle, and we do not understand it well
+// enough to guarantee these limits. If you are planning to develop a feature
+// that relies on these minimums, please talk to us first.
+//
+// These limits are taken from Sandcastle:
+// http://google3/platforms/networking/sandblaze/stack/hal/target/config/tomahawk3_l3_lpm_profiles.txt
+# copybara:strip_end
+// The implementation of ALPM varies across ASICs and requires more
+// custom P4 externs to accurately program ALPM
+# 37 "/mnt/pins-infra/sai_p4/instantiations/google/minimum_guaranteed_sizes.p4"
+// The maximum number of wcmp groups.
+
+
+// The maximum sum of weights across all wcmp groups.
+
+
+// The maximum sum of weights for each wcmp group.
+
+
+// -- ACL Table sizes ----------------------------------------------------------
+
+
+
+
+// Maximum channelization for current use-cases is 96 ports, and each port may
+// have up to 2 linkqual flows associated with it.
+
+
+// 1 entry for LLDP, 1 entry for ND, and 6 entries for traceroute: TTL 0,1,2 for
+// IPv4 and IPv6
+# 7 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
+
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/headers.p4" 1
+# 20 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/headers.p4"
 typedef bit<48> ethernet_addr_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<128> ipv6_addr_t;
@@ -118,6 +166,85 @@ header gre_t {
 
 struct empty_metadata_t {
 }
+# 9 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/metadata.p4" 1
+
+
+
+##include "arch.p4"
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/ids.h" 1
+
+
+
+// All declarations (tables, actions, action profiles, meters, counters) have a
+// stable ID. This list will evolve as new declarations are added. IDs cannot be
+// reused. If a declaration is removed, its ID macro is kept and marked reserved
+// to avoid the ID being reused.
+//
+// The IDs are classified using the 8 most significant bits to be compatible
+// with "6.3. ID Allocation for P4Info Objects" in the P4Runtime specification.
+
+// --- Tables ------------------------------------------------------------------
+
+// IDs of fixed SAI tables (8 most significant bits = 0x02).
+# 30 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/ids.h"
+// --- Actions -----------------------------------------------------------------
+
+// IDs of fixed SAI actions (8 most significant bits = 0x01).
+# 52 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/ids.h"
+// --- Copy to CPU session -----------------------------------------------------
+
+// The COPY_TO_CPU_SESSION_ID must be programmed in the target using P4Runtime:
+//
+// type: INSERT
+// entity {
+//   packet_replication_engine_entry {
+//     clone_session_entry {
+//       session_id: COPY_TO_CPU_SESSION_ID
+//       replicas { egress_port: 0xfffffffd } # to CPU
+//     }
+//   }
+// }
+//
+
+
+// --- Packet-IO ---------------------------------------------------------------
+
+// Packet-in ingress port field. Indicates which port the packet arrived at.
+// Uses @p4runtime_translation(.., string).
+
+
+// Packet-in target egress port field. Indicates the port a packet would have
+// taken if it had not gotten trapped. Uses @p4runtime_translation(.., string).
+
+
+// Packet-out egress port field. Indicates the egress port for the packet-out to
+// be taken. Mutually exclusive with "submit_to_ingress". Uses
+// @p4runtime_translation(.., string).
+
+
+// Packet-out submit_to_ingress field. Indicates that the packet should go
+// through the ingress pipeline to determine which port to take (if any).
+// Mutually exclusive with "egress_port".
+
+
+//--- Packet Replication Engine Instances --------------------------------------
+
+// Egress instance type definitions.
+// The egress instance is a 32-bit standard metadata set by the packet
+// replication engine (PRE) in the V1Model architecture. However, the values are
+// not defined by the P4 specification. Here we define our own values; these may
+// be changed when we adopt another architecture.
+# 6 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/metadata.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/headers.p4" 1
+# 7 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/metadata.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/bitwidths.p4" 1
+# 8 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/metadata.p4" 2
+
+// -- Translated Types ---------------------------------------------------------
+
+// BMv2 does not support @p4runtime_translation.
+
 
 @p4runtime_translation("", string)
 
@@ -325,9 +452,20 @@ action copy_i2e_metadata(inout headers_t headers,
   headers.i2e.dst_mac = local_metadata.packet_rewrites.dst_mac;
   headers.i2e.admit_to_l3 = local_metadata.admit_to_l3;
 }
+# 10 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/parser.p4" 1
+
+
+
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/arch.p4" 1
+# 5 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/parser.p4" 2
+
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/metadata.p4" 1
+# 7 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/parser.p4" 2
+
 parser packet_parser(packet_in packet, out headers_t headers,
                      inout local_metadata_t local_metadata,
-                     in psa_ingress_parser_input_metadata_t abcd, in empty_metadata_t resub_meta, in empty_metadata_t recirc_meta) {
+                     in psa_ingress_parser_input_metadata_t standard_metadata, in empty_metadata_t resub_meta, in empty_metadata_t recirc_meta) {
 
   InternetChecksum() csum;
 
@@ -344,7 +482,7 @@ parser packet_parser(packet_in packet, out headers_t headers,
     local_metadata.wcmp_selector_input = 0;
     local_metadata.mirror_session_id_valid = false;
     local_metadata.color = PSA_MeterColor_t.GREEN;
-    // local_metadata.ingress_port = (port_id_t)(PortIdUint_t)abcd.ingress_port;
+    // local_metadata.ingress_port = (port_id_t)(PortIdUInt_t)standard_metadata.ingress_port;
 
     transition parse_ethernet;
   }
@@ -435,7 +573,7 @@ parser packet_parser(packet_in packet, out headers_t headers,
   }
 } // parser packet_parser
 
-control packet_deparser(packet_out packet, out empty_metadata_t clone_i2e_meta, out empty_metadata_t resubmit_meta, out empty_metadata_t normal_meta, inout headers_t headers, in local_metadata_t local_metadata, in psa_ingress_output_metadata_t istd) {
+control packet_deparser(packet_out packet, out empty_metadata_t clone_i2e_meta, out empty_metadata_t resubmit_meta, out empty_metadata_t normal_meta, inout headers_t headers, in local_metadata_t local_metadata, in psa_ingress_output_metadata_t standard_metadata) {
 
   Digest<smac_learn_digest>() smac_digest;
   apply {
@@ -465,7 +603,7 @@ control packet_deparser(packet_out packet, out empty_metadata_t clone_i2e_meta, 
 parser egress_parser(packet_in buffer,
                       out headers_t headers,
                       inout local_metadata_t local_metadata,
-                      in psa_egress_parser_input_metadata_t standard_metadata,
+                      in psa_egress_parser_input_metadata_t istd,
                       in empty_metadata_t normal_meta,
                       in empty_metadata_t clone_i2e_meta,
                       in empty_metadata_t clone_e2e_meta)
@@ -551,10 +689,28 @@ control egress_deparser(packet_out packet,
       /* 16-bit words 8-9 */ headers.ipv4.dst_addr
     });
     headers.ipv4.header_checksum = csum.get();
+# 250 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/parser.p4"
     packet.emit(headers);
   }
 }
+# 11 "/mnt/pins-infra/sai_p4/instantiations/google/sai.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/routing.p4" 1
+
+
+
+
+
+
+
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/roles.h" 1
+
+
+
+
+
 // Instantiations of SAI P4 can override these roles by defining the macros.
+# 9 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/routing.p4" 2
+# 1 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/minimum_guaranteed_sizes.p4" 1
 
 
 
@@ -569,12 +725,14 @@ control egress_deparser(packet_out packet,
 //
 // Instantiations of SAI P4 can override these sizes by defining the following
 // macros.
+# 48 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/minimum_guaranteed_sizes.p4"
 // The maximum sum of weights across all wcmp groups.
 
 
 
 
 // The maximum sum of weights for each wcmp group.
+# 10 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/routing.p4" 2
 
 // This control block models the L3 routing pipeline.
 //
@@ -600,7 +758,7 @@ control egress_deparser(packet_out packet,
 // read and applied in the egress stage.
 control routing(in headers_t headers,
                 inout local_metadata_t local_metadata,
-                in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   // Wcmp group id, only valid if `wcmp_group_id_valid` is true.
   bool wcmp_group_id_valid = false;
   wcmp_group_id_t wcmp_group_id_value;
@@ -650,7 +808,7 @@ control routing(in headers_t headers,
                               @id(2) @format(MAC_ADDRESS)
                               ethernet_addr_t src_mac) {
     // Cast is necessary, because v1model does not define port using `type`.
-    ostd.egress_port = (PortId_t)(PortIdUint_t)port;
+    standard_metadata.egress_port = (PortId_t)(PortIdUint_t)port;
     local_metadata.packet_rewrites.src_mac = src_mac;
   }
 
@@ -757,7 +915,7 @@ control routing(in headers_t headers,
   // Sets SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION to SAI_PACKET_ACTION_DROP.
   @id(0x01000006)
   action drop() {
-    ingress_drop(ostd);
+    ingress_drop(standard_metadata);
   }
 
   // Sets SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION to SAI_PACKET_ACTION_FORWARD, and
@@ -814,7 +972,7 @@ control routing(in headers_t headers,
     // Drop packets by default, then override in the router_interface_table.
     // TODO: This should just be the default behavior of v1model:
     // https://github.com/p4lang/behavioral-model/issues/992
-    ingress_drop(ostd);
+    ingress_drop(standard_metadata);
 
     if (local_metadata.admit_to_l3) {
 
@@ -890,7 +1048,7 @@ control routing(in headers_t headers,
 
 control port_config(in headers_t headers,
                     inout local_metadata_t local_metadata,
-                    in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                    in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
 
   // SAI_PORT_ATTR_PORT_VLAN_ID
   // Sets VRF, if this port is an L3 port
@@ -921,7 +1079,7 @@ control port_config(in headers_t headers,
 
 control ingress_bridge(in headers_t headers,
                        inout local_metadata_t local_metadata,
-                       in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                       in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
 
 
 
@@ -941,8 +1099,8 @@ control ingress_bridge(in headers_t headers,
   // Sets SAI_BRIDGE_ATTR_TYPE to SAI_BRIDGE_TYPE_1Q
   @id(0x0100000E)
   @sai_attr_action_key_value("SAI_BRIDGE_PORT_ATTR_TYPE SAI_BRIDGE_PORT_TYPE_PORT")
-  action set_1q_bridge_port(@id(1) @sai_attr_key("ignore") bit<16> bridge_port_id,
-                            @id(2) @sai_attr_key("SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE") bit<1> learn) {
+  action set_1q_bridge_port(@id(1) bit<16> bridge_port_id,
+                            @id(2) @sai_attr_key(SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE, 1) bit<1> learn) {
     local_metadata.ibridge_port = bridge_port_id;
     local_metadata.bridge.id = local_metadata.ingress_vlan;
     local_metadata.bridge.type = 0;
@@ -952,10 +1110,11 @@ control ingress_bridge(in headers_t headers,
   // match port_id only when SAI_BRIDGE_PORT_TYPE_PORT
   // match port_id and vlan_id when SAI_BRIDGE_PORT_TYPE_SUB_PORT
   @id(0x0200004B)
+  @proto_package("p4fixed")
   table bridge_port_table {
     key = {
-      local_metadata.ingress_port : exact @name("port_id") @id(1) @sai_attr_key("SAI_BRIDGE_PORT_ATTR_PORT_ID");
-      local_metadata.ingress_vlan : ternary @name("vlan_id") @id(2) @sai_attr_key("SAI_BRIDGE_PORT_ATTR_VLAN_ID");
+      local_metadata.ingress_port : exact @name("port_id") @id(1) @sai_attr_key(SAI_BRIDGE_PORT_ATTR_PORT_ID, 1) @sai_object_ref(SAI_OBJECT_TYPE_PORT, 1);
+      local_metadata.ingress_vlan : ternary @name("vlan_id") @id(2) @sai_attr_key(SAI_BRIDGE_PORT_ATTR_VLAN_ID, 2);
     }
     actions = {
       @proto_id(1) set_1q_bridge_port;
@@ -989,9 +1148,9 @@ control ingress_bridge(in headers_t headers,
   // Sets flood group for this vlan
   // SAI_VLAN_ATTR_LEARN_DISABLE
   @id(0x01000010)
-  action set_vlan_config(@id(1) @sai_attr_key("ignore") bit<16> mgid,
-                         @id(2) @sai_attr_key("SAI_VLAN_ATTR_LEARN_DISABLE") bit<1> learn_disable,
-                         @id(3) @sai_attr_key("ignore") vrf_id_t vrf) {
+  action set_vlan_config(@id(1) bit<16> mgid,
+                         @id(2) @sai_attr_key(SAI_VLAN_ATTR_LEARN_DISABLE, 1) bit<1> learn_disable,
+                         @id(3) vrf_id_t vrf) {
     local_metadata.mgid = mgid;
     local_metadata.vrf_id = vrf;
     local_metadata.vlan.learn = learn_disable;
@@ -1003,7 +1162,7 @@ control ingress_bridge(in headers_t headers,
   @id(0x0200004C)
   table vlan_table {
     key = {
-      local_metadata.ingress_vlan : exact @name("vlan_id") @id(1) @sai_attr_key("SAI_VLAN_ATTR_VLAN_ID");
+      local_metadata.ingress_vlan : exact @name("vlan_id") @id(1) @sai_attr_key(SAI_VLAN_ATTR_VLAN_ID, 1);
     }
     actions = {
       @proto_id(1) set_vlan_config;
@@ -1112,7 +1271,7 @@ control vlan_encap(inout headers_t headers,
 
 control fdb(in headers_t headers,
             inout local_metadata_t local_metadata,
-            in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+            in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
 
   @sai_attr_action_key_value("SAI_FDB_ENTRY_PACKET_ACTION SAI_PACKET_ACTION_FORWARD")
   action set_bridge_port(@id(1) @sai_attr_key("SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID") bit<16> bridge_port_id) {
@@ -1126,11 +1285,11 @@ control fdb(in headers_t headers,
 
   @sai_attr_action_key_value("SAI_FDB_ENTRY_PACKET_ACTION SAI_PACKET_ACTION_DROP")
   action drop() {
-    ingress_drop(ostd);
+    ingress_drop(standard_metadata);
   }
 
   action set_flood() {
-  multicast(ostd,
+  multicast(standard_metadata,
              (MulticastGroup_t) (MulticastGroupUint_t) local_metadata.mgid);
   }
 
@@ -1156,7 +1315,7 @@ control fdb(in headers_t headers,
 
   // This eventually needs another indirection when LAG comes into play
   action set_out_port(@id(1) port_id_t port_id) {
-    ostd.egress_port = (PortId_t)(PortIdUint_t)port_id;
+    standard_metadata.egress_port = (PortId_t)(PortIdUint_t)port_id;
   }
 
 //@id(EGRESS_BRIDGE_PORT_TABLE_ID)
@@ -1172,7 +1331,7 @@ control fdb(in headers_t headers,
   }
 
   apply {
-    if (ostd.egress_port == (PortId_t)0) {
+    if (standard_metadata.egress_port == (PortId_t)0) {
     dmac.apply();
     }
     egress_bridge_port_table.apply();
@@ -1242,7 +1401,7 @@ control mirroring_encap(inout headers_t headers,
 # 11 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/mirroring_clone.p4"
 control mirroring_clone(inout headers_t headers,
                         inout local_metadata_t local_metadata,
-                        in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                        in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   port_id_t mirror_port;
   CloneSessionId_t pre_session;
 
@@ -1315,7 +1474,7 @@ control mirroring_clone(inout headers_t headers,
       if (mirror_session_table.apply().hit) {
         // Map mirror port to Packet Replication Engine session.
         if (mirror_port_to_pre_session_table.apply().hit) {
-          ostd.clone_session_id = (CloneSessionId_t)pre_session; ostd.clone = true;
+          standard_metadata.clone_session_id = (CloneSessionId_t)pre_session; standard_metadata.clone = true;
 
 
 
@@ -1333,7 +1492,7 @@ control mirroring_clone(inout headers_t headers,
 # 12 "/mnt/pins-infra/sai_p4/instantiations/google/../../fixed/l3_admit.p4"
 control l3_admit(in headers_t headers,
                  inout local_metadata_t local_metadata,
-                 in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                 in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   @id(0x01000008)
   action admit_to_l3() {
     local_metadata.admit_to_l3 = true;
@@ -1371,12 +1530,12 @@ control l3_admit(in headers_t headers,
 
 control ttl(inout headers_t headers,
                   inout local_metadata_t local_metadata,
-                  in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                  in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   apply {
     if (local_metadata.admit_to_l3) {
       if (headers.ipv4.isValid()) {
         if (headers.ipv4.ttl <= 1) {
-          ingress_drop(ostd);
+          ingress_drop(standard_metadata);
         } else {
           headers.ipv4.ttl = headers.ipv4.ttl - 1;
         }
@@ -1384,7 +1543,7 @@ control ttl(inout headers_t headers,
 
       if (headers.ipv6.isValid()) {
         if (headers.ipv6.hop_limit <= 1) {
-          ingress_drop(ostd);
+          ingress_drop(standard_metadata);
         } else {
           headers.ipv6.hop_limit = headers.ipv6.hop_limit - 1;
         }
@@ -1456,7 +1615,7 @@ control packet_rewrites(inout headers_t headers,
 
 control acl_ingress(in headers_t headers,
                     inout local_metadata_t local_metadata,
-                    in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                    in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   // IPv4 TTL or IPv6 hoplimit bits (or 0, for non-IP packets)
   bit<8> ttl = 0;
   // First 6 bits of IPv4 TOS or IPv6 traffic class (or 0, for non-IP packets)
@@ -1476,7 +1635,7 @@ control acl_ingress(in headers_t headers,
   @id(0x01000101)
   @sai_action(SAI_PACKET_ACTION_COPY)
   action copy(@sai_action_param(QOS_QUEUE) @id(1) qos_queue_t qos_queue) {
-    ostd.clone_session_id = (CloneSessionId_t)1024; ostd.clone = true;
+    standard_metadata.clone_session_id = (CloneSessionId_t)1024; standard_metadata.clone = true;
     acl_ingress_counter.count();
   }
 
@@ -1485,7 +1644,7 @@ control acl_ingress(in headers_t headers,
   @sai_action(SAI_PACKET_ACTION_TRAP)
   action trap(@sai_action_param(QOS_QUEUE) @id(1) qos_queue_t qos_queue) {
     copy(qos_queue);
-    ingress_drop(ostd);
+    ingress_drop(standard_metadata);
   }
 
   // Forward the packet normally (i.e., perform no action). This is useful as
@@ -1610,7 +1769,7 @@ control acl_ingress(in headers_t headers,
 # 11 "/mnt/pins-infra/sai_p4/instantiations/google/acl_lookup.p4"
 control acl_lookup(in headers_t headers,
                    inout local_metadata_t local_metadata,
-                    in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                    in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   // First 6 bits of IPv4 TOS or IPv6 traffic class (or 0, for non-IP packets)
   bit<6> dscp = 0;
 
@@ -1686,18 +1845,18 @@ control acl_lookup(in headers_t headers,
 
 control ingress(inout headers_t headers,
                 inout local_metadata_t local_metadata,
-                in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t ostd) {
+                in psa_ingress_input_metadata_t istd, inout psa_ingress_output_metadata_t standard_metadata) {
   apply {
-    port_config.apply(headers, local_metadata, istd, ostd);
-    ingress_bridge.apply(headers, local_metadata, istd, ostd);
-    acl_lookup.apply(headers, local_metadata, istd, ostd);
-    l3_admit.apply(headers, local_metadata, istd, ostd);
+    port_config.apply(headers, local_metadata, istd, standard_metadata);
+    ingress_bridge.apply(headers, local_metadata, istd, standard_metadata);
+    acl_lookup.apply(headers, local_metadata, istd, standard_metadata);
+    l3_admit.apply(headers, local_metadata, istd, standard_metadata);
     // hashing.apply(headers, local_metadata);
-    routing.apply(headers, local_metadata, istd, ostd);
-    fdb.apply(headers, local_metadata, istd, ostd);
-    acl_ingress.apply(headers, local_metadata, istd, ostd);
-    ttl.apply(headers, local_metadata, istd, ostd);
-    mirroring_clone.apply(headers, local_metadata, istd, ostd);
+    routing.apply(headers, local_metadata, istd, standard_metadata);
+    fdb.apply(headers, local_metadata, istd, standard_metadata);
+    acl_ingress.apply(headers, local_metadata, istd, standard_metadata);
+    ttl.apply(headers, local_metadata, istd, standard_metadata);
+    mirroring_clone.apply(headers, local_metadata, istd, standard_metadata);
 
     copy_i2e_metadata(headers, local_metadata);
   }
@@ -1705,12 +1864,12 @@ control ingress(inout headers_t headers,
 
 control egress(inout headers_t headers,
                inout local_metadata_t local_metadata,
-               in psa_egress_input_metadata_t istd, inout psa_egress_output_metadata_t ostd) {
+               in psa_egress_input_metadata_t standard_metadata, inout psa_egress_output_metadata_t ostd) {
   apply {
     headers.i2e.setInvalid();
     packet_rewrites.apply(headers, local_metadata);
-    mirroring_encap.apply(headers, local_metadata, istd, ostd);
-    vlan_encap.apply(headers, local_metadata, istd, ostd);
+    mirroring_encap.apply(headers, local_metadata, standard_metadata, ostd);
+    vlan_encap.apply(headers, local_metadata, standard_metadata, ostd);
   }
 } // control egress
 

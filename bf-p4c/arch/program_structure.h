@@ -42,6 +42,10 @@ struct MetadataField {
     MetadataField(cstring sn, cstring fn, int w, int o, bool isCG) :
         structName(sn), fieldName(fn), width(w), offset(o), isCG(isCG) {}
 
+    cstring name() {
+        return structName + "." + fieldName;
+    }
+
     bool operator<(const MetadataField &other) const {
         if (structName != other.structName)
             return structName < other.structName;
@@ -52,6 +56,9 @@ struct MetadataField {
         return structName == other.structName &&
                fieldName == other.fieldName;
     }
+
+    bool operator !=(const MetadataField &a) const { return !(*this == a); }
+    friend std::ostream &operator<<(std::ostream &out, const BFN::MetadataField &m);
 };
 
 struct ProgramStructure {
@@ -140,8 +147,15 @@ struct ProgramStructure {
     void addMetadata(gress_t gress, MetadataField src, MetadataField dst) {
         auto &nameMap = (gress == gress_t::INGRESS) ?
                         ingressMetadataNameMap : egressMetadataNameMap;
-        nameMap.emplace(src, dst);
+        auto itr = nameMap.emplace(src, dst);
+        if (!itr.second) {
+            BUG_CHECK(itr.first->second == dst,
+                "Cannot add metadata mapping %1% - %2% as mapping already exists to %1% - %3%",
+                src.name(), dst.name(), itr.first->second.name());
+        }
         targetMetadataSet.insert(dst);
+        LOG3("Adding Metadata map on thread '" << gress);
+        LOG3(" src : " << src << ", dst : " << dst);
     }
 
     void addMetadata(MetadataField src, MetadataField dst) {

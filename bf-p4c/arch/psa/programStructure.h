@@ -63,6 +63,13 @@ enum PSA_TYPES {
     TYPE_CI2EM, TYPE_CE2EM, TYPE_RESUBM, TYPE_RECIRCM,
     PSA_TOTAL_TYPES};
 
+static const cstring INP_INTR_MD = "__psa_inp_intrinsic_md__";
+static const cstring OUT_INTR_MD = "__psa_out_intrinsic_md__";
+static const cstring IG_INP_INTR_MD_TYPE = "psa_ingress_input_metadata_t";
+static const cstring EG_INP_INTR_MD_TYPE = "psa_egress_input_metadata_t";
+static const cstring IG_OUT_INTR_MD_TYPE = "psa_ingress_output_metadata_t";
+static const cstring EG_OUT_INTR_MD_TYPE = "psa_egress_output_metadata_t";
+
 struct ProgramStructure : BFN::ProgramStructure {
     cstring type_params[PSA_TOTAL_TYPES];
 
