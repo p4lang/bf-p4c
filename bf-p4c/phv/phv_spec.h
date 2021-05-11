@@ -339,4 +339,9 @@ class CloudbreakPhvSpec : public JBayPhvSpec {
 };
 #endif /* HAVE_CLOUDBREAK */
 
+#if HAVE_FLATROCK
+class FlatrockPhvSpec : public TofinoPhvSpec {
+};
+#endif /* HAVE_FLATROCK */
+
 #endif /* EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_ */

@@ -330,6 +330,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino3", "t2na"},
         {"tofino3", "t3na"},
   #endif /* HAVE_CLOUDBREAK */
+  #if HAVE_FLATROCK
+        {"tofino5", "v1model"},
+        {"tofino5", "t5na"},
+  #endif /* HAVE_FLATROCK */
     };
 
     // !!!!!!!!!!!!
@@ -371,6 +375,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         } else if (target == "tofino3") {
             preprocessor_options += " -D__TARGET_TOFINO__=3";
 #endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+        } else if (target == "tofino5") {
+            preprocessor_options += " -D__TARGET_TOFINO__=5";
+#endif /* HAVE_FLATROCK */
         } else {
             BUG("Unknown target %s", target);
         }

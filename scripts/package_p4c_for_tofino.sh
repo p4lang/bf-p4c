@@ -75,6 +75,7 @@ $topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
                                    -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF -DENABLE_UBPF=OFF \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
                                    $enable_cb \
+                                   -DENABLE_FLATROCK=OFF \
                                    $enable_static \
                                    $barefoot_internal \
                                    -DENABLE_GTESTS=OFF

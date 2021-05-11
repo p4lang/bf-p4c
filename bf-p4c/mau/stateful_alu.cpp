@@ -53,6 +53,22 @@ const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
 }
 #endif
 
+#if HAVE_FLATROCK
+const Device::StatefulAluSpec &FlatrockDevice::getStatefulAluSpec() const {
+    static const Device::StatefulAluSpec spec = {
+        /* .CmpMask = */ true,
+        /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
+        /* .MaxSize = */ 128,
+        /* .MaxDualSize = */ 128,
+        /* .MaxInstructions = */ 4,
+        /* .OutputWords = */ 4,
+        /* .DivModUnit = */ true,
+        /* .FastClear = */ true,
+    };
+    return spec;
+}
+#endif
+
 cstring Device::StatefulAluSpec::cmpUnit(unsigned idx) const {
     if (idx < CmpUnits.size())
         return CmpUnits.at(idx);

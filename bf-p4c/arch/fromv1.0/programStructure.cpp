@@ -450,8 +450,14 @@ IR::BlockStatement*
 generate_hash_block_statement(P4V1::ProgramStructure* structure,
         const IR::Primitive *prim,
         const cstring temp, ExpressionConverter &conv, unsigned num_ops) {
-    if (BackendOptions().arch == "tna" || BackendOptions().arch == "t2na" ||
-        BackendOptions().arch == "t3na") {
+    if (BackendOptions().arch == "tna" || BackendOptions().arch == "t2na"
+#if HAVE_CLOUDBREAK
+        || BackendOptions().arch == "t3na"
+#endif
+#if HAVE_FLATROCK
+        || BackendOptions().arch == "t5na"
+#endif
+    ) {
         auto st = dynamic_cast<P4V1::TnaProgramStructure*>(structure);
         BUG_CHECK(st != nullptr, "Unable to cast structure to tna programStructure");
         return generate_tna_hash_block_statement(st, prim, temp, conv, num_ops);
@@ -2498,10 +2504,17 @@ void TnaProgramStructure::loadModel() {
     else if (BackendOptions().arch == "t3na")
         include("t3na.p4", "-D__TARGET_TOFINO__=3");
 #endif
+#if HAVE_FLATROCK
+    else if (BackendOptions().arch == "t5na")
+        include("tna.p4", "-D__TARGET_TOFINO__=5");
+#endif
     else
         ::error("Must specify either --arch tna or --arch t2na"
 #if HAVE_CLOUDBREAK
                 " or --arch t3na"
+#endif
+#if HAVE_FLATROCK
+                " or --arch t5na"
 #endif
                 "");
 

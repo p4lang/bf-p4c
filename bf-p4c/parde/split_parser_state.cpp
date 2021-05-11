@@ -916,6 +916,10 @@ struct AllocateParserState : public ParserTransform {
                 JBayExtractAllocator jea(*this);
                 ClotAllocator cla(*this);
 #endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+            } else if (Device::currentDevice() == Device::FLATROCK) {
+                TofinoExtractAllocator tea(*this);
+#endif /* HAVE_FLATROCK */
             } else {
                 BUG("Unknown device");
             }

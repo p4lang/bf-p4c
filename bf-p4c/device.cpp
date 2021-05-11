@@ -29,6 +29,10 @@ void Device::init(cstring name) {
     else if (lower_name == "tofino3")
         instance_ = new CloudbreakDevice();
 #endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+    else if (lower_name == "tofino5")
+        instance_ = new FlatrockDevice();
+#endif /* HAVE_CLOUDBREAK */
     else
         BUG("Unknown device %s", name);
 }

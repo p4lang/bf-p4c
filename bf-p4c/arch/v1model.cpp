@@ -310,6 +310,10 @@ class LoadTargetArchitecture : public Inspector {
         else if (Device::currentDevice() == Device::CLOUDBREAK)
             filenames.push_back("tofino3.p4");
 #endif  // HAVE_CLOUDBREAK
+#if HAVE_FLATROCK
+        else if (Device::currentDevice() == Device::FLATROCK)
+            filenames.push_back("tofino.p4");
+#endif  // HAVE_FLATROCK
         else
             BUG("Unsupported device id %s", Device::currentDevice());
         filenames.push_back("tofino/stratum.p4");

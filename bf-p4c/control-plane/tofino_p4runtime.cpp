@@ -48,7 +48,12 @@ void generateP4Runtime(const IR::P4Program* program,
     p4RuntimeSerializer->registerArch("psa", new PSAArchHandlerBuilder());
     p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
     p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
+#if HAVE_CLOUDBREAK
     p4RuntimeSerializer->registerArch("t3na", new TofinoArchHandlerBuilder());
+#endif
+#if HAVE_FLATROCK
+    p4RuntimeSerializer->registerArch("t5na", new TofinoArchHandlerBuilder());
+#endif
 
     auto arch = P4::P4RuntimeSerializer::resolveArch(options);
 
@@ -56,7 +61,7 @@ void generateP4Runtime(const IR::P4Program* program,
         std::cout << "Generating P4Runtime output for architecture " << arch << std::endl;
 
 
-    if (options.p4RuntimeForceStdExterns && (arch != "tna" && arch != "t2na" && arch != "t3na")) {
+    if (options.p4RuntimeForceStdExterns && (arch[0] != 't' || !arch.endsWith("na"))) {
         ::error("--p4runtime-force-std-externs can only be used with "
                 "Tofino-specific architectures, such as 'tna'");
         return;

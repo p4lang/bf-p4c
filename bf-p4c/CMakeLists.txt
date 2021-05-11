@@ -24,6 +24,9 @@ endif()
 if (ENABLE_CLOUDBREAK)
   add_definitions("-DHAVE_CLOUDBREAK=1")
 endif()
+if (ENABLE_FLATROCK)
+  add_definitions("-DHAVE_FLATROCK=1")
+endif()
 if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
@@ -650,11 +653,17 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/fromv1.0/v1_converters.cpp
   arch/fromv1.0/v1_program_structure.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
   arch/t2na.cpp)
 endif ()
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t2na.cpp")
+if (ENABLE_FLATROCK)
+  list (APPEND BF_P4C_BACKEND_ARCH_SRCS
+  arch/t5na.cpp)
+endif ()
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t5na.cpp")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
@@ -675,6 +684,8 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/rewrite_action_selector.h
   arch/bridge.h
   arch/tna.h
+  arch/t2na.h
+  arch/t5na.h
   arch/v1model.h
   arch/fromv1.0/add_metadata_parser_states.h
   arch/fromv1.0/egress_packet_length.h
@@ -686,10 +697,6 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/fromv1.0/v1_converters.h
   arch/fromv1.0/v1_program_structure.h
   )
-if (ENABLE_JBAY)
-  list (APPEND BF_P4C_BACKEND_ARCH_HDRS
-  arch/t2na.h)
-endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_LOGGING_HDRS
@@ -1025,7 +1032,7 @@ if (ENABLE_CLOUDBREAK)
   set (CLOUDBREAK_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino3.cfg)
   set_source_files_properties (${CLOUDBREAK_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
   if (NOT ENABLE_BAREFOOT_INTERNAL)
-    # Remove the P4-14 support for JBay
+    # Remove the P4-14 support for Cloudbreak
     add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
       COMMAND sed -e '/v1model/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg > ${CLOUDBREAK_TARGET_CFG_FILE}
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg
@@ -1041,6 +1048,27 @@ if (ENABLE_CLOUDBREAK)
   add_custom_target(remove_p4_14_for_cb ALL DEPENDS ${CLOUDBREAK_TARGET_CFG_FILE})
   add_dependencies(p4c_driver remove_p4_14_for_cb)
 endif (ENABLE_CLOUDBREAK)
+
+if (ENABLE_FLATROCK)
+  set (FLATROCK_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino5.cfg)
+  set_source_files_properties (${FLATROCK_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
+  if (NOT ENABLE_BAREFOOT_INTERNAL)
+    # Remove the P4-14 support for Flatrock
+    add_custom_command(OUTPUT ${FLATROCK_TARGET_CFG_FILE}
+      COMMAND sed -e '/v1model/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg > ${FLATROCK_TARGET_CFG_FILE}
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg
+      COMMENT "Removing P4-14, and PSA support for Tofino5"
+      )
+  else()
+    add_custom_command(OUTPUT ${FLATROCK_TARGET_CFG_FILE}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg ${FLATROCK_TARGET_CFG_FILE}
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg
+      COMMENT "Copying Tofino5 config"
+      )
+  endif()
+  add_custom_target(remove_p4_14_for_ftr ALL DEPENDS ${FLATROCK_TARGET_CFG_FILE})
+  add_dependencies(p4c_driver remove_p4_14_for_ftr)
+endif (ENABLE_FLATROCK)
 
 install (FILES ${DRIVER_FILES} ${JBAY_TARGET_CFG_FILE} ${P4C_DRIVER_MACROS}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
@@ -1113,6 +1141,9 @@ if(ENABLE_CLOUDBREAK)
 else()
   set(SED_RELEASE_FILTERS -e '/\\<CLOUDBREAK_ONLY\\>/d')
 endif(ENABLE_CLOUDBREAK)
+if(!ENABLE_FLATROCK)
+  list(APPEND SED_RELEASE_FILTERS -e '/\\<FLATROCK_ONLY\\>/d')
+endif(!ENABLE_FLATROCK)
 
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we

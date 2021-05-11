@@ -1,6 +1,7 @@
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/arch/t2na.h"
+#include "bf-p4c/arch/t5na.h"
 #include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/arch/psa/psa.h"
 #include "bf-p4c/device.h"
@@ -32,6 +33,12 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
     } else if (options.arch == "t3na") {
         if (Device::currentDevice() == Device::CLOUDBREAK) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
+        }
+#endif
+#if HAVE_FLATROCK
+    } else if (options.arch == "t5na") {
+        if (Device::currentDevice() == Device::FLATROCK) {
+            passes.push_back(new BFN::T5naArchTranslation(refMap, typeMap, options));
         }
 #endif
     } else if (options.arch == "psa") {

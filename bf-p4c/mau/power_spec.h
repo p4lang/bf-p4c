@@ -251,4 +251,13 @@ class CloudbreakMauPowerSpec : public JBayMauPowerSpec {
 };
 #endif  /* HAVE_CLOUDBREAK */
 
+#if HAVE_FLATROCK
+class FlatrockMauPowerSpec : public JBayMauPowerSpec {
+ public:
+  FlatrockMauPowerSpec() { }
+  double get_max_power() const override { return 1e9; }  // essentially unlimited for now
+  double get_excess_power_threshold() const override { return 1e9; }
+};
+#endif  /* HAVE_FLATROCK */
+
 #endif /* EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_ */

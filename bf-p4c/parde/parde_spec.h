@@ -216,4 +216,10 @@ class CloudbreakPardeSpec : public JBayPardeSpec {
 };
 #endif /* HAVE_CLOUDBREAK */
 
+#if HAVE_FLATROCK
+class FlatrockPardeSpec : public TofinoPardeSpec {
+ public:
+};
+#endif /* HAVE_FLATROCK */
+
 #endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_ */

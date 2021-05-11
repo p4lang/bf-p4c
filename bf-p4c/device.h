@@ -15,6 +15,9 @@ class Device {
 #if HAVE_CLOUDBREAK
     CLOUDBREAK,
 #endif
+#if HAVE_FLATROCK
+    FLATROCK,
+#endif
     };
     /**
      * Initialize the global device context for the provided target - e.g.
@@ -255,5 +258,49 @@ class CloudbreakDevice : public Device {
     bool getHasCompareInstructions() const override { return true; }
 };
 #endif /* HAVE_CLOUDBREAK */
+
+#if HAVE_FLATROCK
+class FlatrockDevice : public Device {
+    const FlatrockPhvSpec phv_;
+    const FlatrockPardeSpec parde_;
+    const FlatrockMauPowerSpec mau_power_;
+
+ protected:
+#ifdef EMU_OVERRIDE_STAGE_COUNT
+    const int NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT;
+#else
+    const int NUM_MAU_STAGES = 14;  // ingress stages, egress is 12
+#endif
+
+ public:
+    FlatrockDevice() : Device("Tofino5"), phv_(), parde_() {}
+    Device::Device_t device_type() const override { return Device::FLATROCK; }
+    cstring get_name() const override { return "Tofino5"; }
+    int getNumPipes() const override { return 8; }
+    int getNumPortsPerPipe() const override { return 4; }
+    int getNumChannelsPerPort() const override { return 18; }
+    int getNumStages() const override { return NUM_MAU_STAGES; }
+    int getLongBranchTags() const override { return 8; }
+    int getAlwaysRunIMemAddr() const override { return 63; }
+    unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
+    gress_t getMaxGress() const override { return GHOST; }
+    unsigned getMaxResubmitId() const override { return 8; }
+    unsigned getMaxDigestId() const override { return 8; }
+    unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
+    int getCloneSessionIdWidth() const override { return 10; }
+    int getQueueIdWidth() const override { return 5; }
+    int getPortBitWidth() const override { return 9; }
+    int getNumMaxChannels() const override {
+        return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
+
+    const PhvSpec& getPhvSpec() const override { return phv_; }
+    const PardeSpec& getPardeSpec() const override { return parde_; }
+    const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
+    bool getIfMemoryCoreSplit() const override { return true; }
+    int getUniqueGatewayShifts() const override { return 5; }
+    bool getHasCompareInstructions() const override { return true; }
+};
+#endif /* HAVE_FLATROCK */
 
 #endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */
