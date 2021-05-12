@@ -59,6 +59,13 @@ class EventLoggerTest : public ::testing::Test {
         EventLogger::get2().init(OUTDIR, FILE);
     }
 
+    void deinitLogger() {
+        // Normally logger is destroyed when program ends
+        // We need to emulate this in the test so the stream
+        // is flushed and closed
+        EventLogger::get().deinit();
+    }
+
     void compareFileWithExpected(std::ifstream &file,
                                  const std::vector<std::string> &expectedLines) {
         for (auto &expectedLine : expectedLines) {
@@ -85,6 +92,7 @@ TEST_F(EventLoggerTest, DoesNothingWithoutInit) {
 
 TEST_F(EventLoggerTest, ExportsEventLogStart) {
     initLogger();
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -100,6 +108,7 @@ TEST_F(EventLoggerTest, ExportsEventLogStart) {
 TEST_F(EventLoggerTest, ExportsParserError) {
     initLogger();
     EventLogger::get2().parserError("Parser error", srcInfo);
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -119,6 +128,7 @@ TEST_F(EventLoggerTest, ExportsEventCompilationError) {
     EventLogger::get2().error("Error with only src info", "", &srcInfo);
     EventLogger::get2().error("Error with only type", "type");
     EventLogger::get2().error("Error with type and src", "type", &srcInfo);
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -141,6 +151,7 @@ TEST_F(EventLoggerTest, ExportsEventCompilationWarning) {
     EventLogger::get2().warning("Warning with only src info", "", &srcInfo);
     EventLogger::get2().warning("Warning with only type", "type");
     EventLogger::get2().warning("Warning with type and src", "type", &srcInfo);
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -160,6 +171,7 @@ TEST_F(EventLoggerTest, ExportsEventCompilationWarning) {
 TEST_F(EventLoggerTest, ExportsEventDebug) {
     initLogger();
     EventLogger::get2().debug(6, "file.cpp", "Debug");
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -176,6 +188,7 @@ TEST_F(EventLoggerTest, ExportsEventDebug) {
 TEST_F(EventLoggerTest, ExportsEventDecision) {
     initLogger();
     EventLogger::get2().decision(3, "file.cpp", "Description", "Picked decision", "Reason");
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -197,6 +210,7 @@ TEST_F(EventLoggerTest, ExportsDeduplicatedPassChange) {
     debugHook("mgr", 1, "pass2", nullptr);
     debugHook("mgr", 1, "pass2", nullptr);  // this message should be deduplicated
     debugHook("mgr2", 0, "pass", nullptr);
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -217,6 +231,7 @@ TEST_F(EventLoggerTest, ExportsPipeChange) {
 
     initLogger();
     EventLogger::get2().pipeChange(1);
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
@@ -236,6 +251,7 @@ TEST_F(EventLoggerTest, ExportsIterationChange) {
     initLogger();
     EventLogger::get2().iterationChange(1, EventLogger::AllocPhase::PhvAllocation);
     EventLogger::get2().iterationChange(2, EventLogger::AllocPhase::TablePlacement);
+    deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());

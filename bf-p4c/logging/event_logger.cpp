@@ -14,7 +14,9 @@
 
 using Schema = Logging::Event_Log_Schema_Logger;
 
-EventLogger::~EventLogger() {}
+EventLogger::~EventLogger() {
+    deinit();
+}
 
 namespace std {
     string to_string(EventLogger::AllocPhase phase) {
@@ -73,11 +75,6 @@ void EventLogger::init(const std::string &OUTDIR, const std::string &FILENAME) {
        only use synchronous logger with multithread safety. */
     auto logger = spdlog::basic_logger_mt("logger", OUTDIR + "/" + FILENAME, TRUNCATE);
 
-    /* NOTE: Following command flushes log after every single message so P4I always
-       gets valid objects. If this proves to be a bottleneck, we would have to remove
-       it and P4I would have to implement some stream parsing solution. */
-    logger->flush_on(spdlog::level::err);
-
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("%v");  // print just the message, no decorations
 
@@ -87,6 +84,7 @@ void EventLogger::init(const std::string &OUTDIR, const std::string &FILENAME) {
 void EventLogger::logStart() {
     auto ls = new Schema::EventLogStart(EVENT_LOG_SCHEMA_VERSION, getCurrentTimestamp());
     logSink(ls);
+    delete ls;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::passChange(const std::string &manager, const std::string &pass, unsigned seq) {
@@ -97,12 +95,14 @@ void EventLogger::passChange(const std::string &manager, const std::string &pass
 
     auto pc = new Schema::EventPassChanged(manager, pass, seq, getCurrentTimestamp());
     logSink(pc);
+    delete pc;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::parserError(const std::string &message, const Util::SourceInfo &info) {
     auto src = getSourceInfo(info);
     auto pe = new Schema::EventParserError(message, src, getCurrentTimestamp());
     logSink(pe);
+    delete pe;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::error(const std::string &message, const std::string &type,
@@ -110,6 +110,7 @@ void EventLogger::error(const std::string &message, const std::string &type,
     auto src = info ? getSourceInfo(*info) : nullptr;
     auto ce = new Schema::EventCompilationError(message, getCurrentTimestamp(), src, type);
     logSink(ce);
+    delete ce;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::warning(const std::string &message, const std::string &type,
@@ -117,6 +118,7 @@ void EventLogger::warning(const std::string &message, const std::string &type,
     auto src = info ? getSourceInfo(*info) : nullptr;
     auto cw = new Schema::EventCompilationWarning(message, getCurrentTimestamp(), src, type);
     logSink(cw);
+    delete cw;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::debug(unsigned verbosity, const std::string &file, const std::string &message) {
@@ -124,6 +126,7 @@ void EventLogger::debug(unsigned verbosity, const std::string &file, const std::
 
     auto d = new Schema::EventDebug(file, message, getCurrentTimestamp(), verbosity);
     logSink(d);
+    delete d;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::decision(unsigned verbosity, const std::string &file,
@@ -135,15 +138,18 @@ void EventLogger::decision(unsigned verbosity, const std::string &file,
     auto d = new Schema::EventDecision(what, file, description, why,
                                        getCurrentTimestamp(), verbosity);
     logSink(d);
+    delete d;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::iterationChange(unsigned iteration, AllocPhase phase) {
     auto ic = new Schema::EventIterationChanged(iteration, std::to_string(phase),
                                                 getCurrentTimestamp());
     logSink(ic);
+    delete ic;  // GC seems to fail to collect on this pointer
 }
 
 void EventLogger::pipeChange(int pipeId) {
     auto pps = new Schema::EventPipeProcessingStarted(pipeId, getCurrentTimestamp());
     logSink(pps);
+    delete pps;  // GC seems to fail to collect on this pointer
 }
