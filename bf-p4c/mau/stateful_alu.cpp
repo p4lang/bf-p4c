@@ -69,6 +69,124 @@ const Device::StatefulAluSpec &FlatrockDevice::getStatefulAluSpec() const {
 }
 #endif
 
+/**
+ * @brief This class detects a following pattern:
+ * 
+ * if (expr1 && expr2) {
+ *  dst = rvval1 | rvval2;
+ * } else if (expr1) {
+ *  dst = rvval1;
+ * } else if (expr2) {
+ *  dst = rvval2;
+ * }
+ * 
+ * This can be optimized into two instructions which are executed at the same
+ * time and results are OR-ed together. This pattern is typical for the translation from
+ * P4 14 to P4 16
+ */
+class  SaluOredIf : public Inspector {
+    // Top-level if statement
+    const IR::Expression *top_if = nullptr;
+    const IR::AssignmentStatement *top_st = nullptr;
+
+    // Second level-if condition
+    const IR::Expression *second_if = nullptr;
+    const IR::AssignmentStatement *second_st = nullptr;
+
+    // Third level-if condition
+    const IR::Expression *third_if = nullptr;
+    const IR::AssignmentStatement *third_st = nullptr;
+
+    // Flag for the signalization of SALU pred
+    bool is_saluOredIf = false;
+
+    /**
+     * @brief Analyze if the pattern seems fine regarding
+     * captured data.
+     */
+    void analyze_pattern() {
+        // 1] Check if cond1/2 is as same as in the case of AND-ed version
+        auto land_node = top_if->to<IR::LAnd>();
+        if (!land_node) return;
+        if (!land_node->left->equiv(*second_if) || !land_node->right->equiv(*third_if)) return;
+        // 2] Check that true bodies has the assignment statements only into the same variable
+        if (!top_st || !second_st || !third_st) return;
+
+        // 3] Check that the top-level body merges both statements using the OR operator and that
+        // expr1 | expr2 parts are as same as in following if statements
+        if (!top_st->left->equiv(*second_st->left) ||
+            !second_st->left->equiv(*third_st->left)) return;
+
+        // TODO: Maybe we can also support the permutation of both subtrees
+        auto or_st = top_st->right->to<IR::BOr>();
+        if (!or_st) return;
+        if (!or_st->left->equiv(*second_st->right) ||
+            !or_st->right->equiv(*third_st->right)) return;
+
+        // All conditions are met
+        is_saluOredIf = true;
+    }
+
+ public:
+    bool preorder(const IR::IfStatement *if_node) override {
+        // Catch the correct condition
+        if (!top_if) {
+            /* To match:
+             * if (expr1 && expr2) {
+             *  dst = rvval1 | rvval2;
+             * } else if
+             */
+            LOG3("Trying to analyze: " << if_node);
+            top_if = if_node->condition;
+            top_st = if_node->ifTrue->to<IR::AssignmentStatement>();
+            LOG4("top_if -> " << top_if << std::endl << "top_st -> " << top_st);
+            if (!if_node->ifFalse) {
+                return false;
+            }
+            visit(if_node->ifFalse);
+        } else if (!second_if) {
+            /* To match:
+             * } else if (expr1) {
+             *  dst = rvval1;
+             * } else if
+             */
+            second_if = if_node->condition;
+            second_st = if_node->ifTrue->to<IR::AssignmentStatement>();
+            LOG4("second_if -> " << second_if << std::endl << "second_st -> " << second_st);
+            if (!if_node->ifFalse) {
+                return false;
+            }
+            visit(if_node->ifFalse);
+        } else if (!third_if) {
+            /* To match:
+             * if (expr2) {
+             *  dst = rvval2;
+             * }
+             * 
+             * Run the analysis because tree pattern seems fine
+             */
+            third_if = if_node->condition;
+            third_st = if_node->ifTrue->to<IR::AssignmentStatement>();
+            LOG4("third_if -> " << third_if << std::endl << "third_st -> " << third_st);
+            if (if_node->ifFalse) {
+                // Not allowed shape, end the traversing
+                return false;
+            }
+            analyze_pattern();
+        } else {
+            // We don't need to go deeper because it is not a required
+            // shape.
+            return false;
+        }
+
+        return false;
+    }
+
+    bool is_matched() const {
+        return is_saluOredIf;
+    }
+};
+
 cstring Device::StatefulAluSpec::cmpUnit(unsigned idx) const {
     if (idx < CmpUnits.size())
         return CmpUnits.at(idx);
@@ -221,6 +339,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     switch (param_types->at(idx)) {
     case param_t::VALUE:        /* inout value or local var */
         if (islvalue(etype)) {
+            captureAssigstateProps();
             if (!dest)
                 alu_write[field_idx] = true;
             etype = VALUE; }
@@ -317,6 +436,9 @@ void CreateSaluInstruction::clearFuncState() {
     math = IR::MAU::StatefulAlu::MathUnit();
     math_function = nullptr;
     return_encoding = nullptr;
+    assig_st = nullptr;
+    assig_pred = nullptr;
+    written_dest.clear();
 }
 
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
@@ -365,7 +487,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
               action_type_name, reg_action->name, func->name, cmp_instr.size(),
               Device::statefulAluSpec().CmpUnits.size());
     if (onebit) {
-        action->action.push_back(onebit);
+        insert_instruction(onebit);
         LOG3("  add " << *action->action.back()); }
     for (auto &kv : output_address_subword_predicate) {
         // JBAY-2631: we now put the predicate controlling the subword bit into salu_mathtable,
@@ -375,7 +497,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         output->operands.push_back(new IR::MAU::SaluFunction(kv.second, "lmatch")); }
     for (auto *instr : outputs) {
         if (instr) {
-            action->action.push_back(instr);
+            insert_instruction(instr);
             LOG3("  add " << *action->action.back()); } }
     if (math.valid) {
         if (salu->math.valid && !(math == salu->math))
@@ -400,6 +522,8 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
                 return_encoding->cmp_used &= ~mask; }
         LOG4("  return_encoding->cmp_used = 0x" << hex(return_encoding->cmp_used)); }
     if (action->action.empty()) {
+        // Action body is empty, insert the nop instruction directly - we don't need
+        // to merge any instructions.
         action->action.push_back(new IR::MAU::Instruction("nop"));
         warning(ErrorType::ERR_EXPECTED, "%1%: stateful action '%2%' to have instructions "
             "assigned. Please verify the action is valid.", salu, action->name); }
@@ -456,6 +580,72 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
     assignDone = true;
 }
 
+void CreateSaluInstruction::captureAssigstateProps() {
+    // Capture the destination variable together with predicate assigned
+    // to given written lvalue
+
+    const Context *assignCtxt = nullptr;
+    auto assig = findContext<IR::AssignmentStatement>(assignCtxt);
+    // Check if the expression is not in an assignment or not the first (left) child
+    // of the assignment
+    if (!assig || assignCtxt->child_index != 0)   {
+        BUG("Expression is not the left child of the assignment.");
+    }
+
+    // Backup statement & predicate for the checkWriteAfterWrite method
+    assig_st = assig;
+    assig_pred = predicate;
+    LOG4("Caputred assignment statement: " << assig_st);
+    LOG4("Captured predicate statement: " << assig_pred);
+}
+
+void CreateSaluInstruction::checkWriteAfterWrite() {
+    // Destination variable with assigned predicate should be available
+    // here. The code here needs to check all predicates for given assignment
+    // statement. The report will be reported if and only if both expressions
+    // can be fired in the same time --> can lead to a data corruption
+    if (!assig_st) return;
+
+    // Check if we already have some data for the destination
+    auto lvalue_name = assig_st->left->toString();
+    LOG4("Searching for the lvalue: " << lvalue_name);
+    auto elem = written_dest.find(lvalue_name);
+    if (elem == written_dest.end()) {
+        LOG4("lvalue doesn't find, storing for the next analysis: name=" << lvalue_name <<
+            ", pred=" << assig_pred);
+        written_dest[lvalue_name].push_back(assig_pred);
+        assig_st = nullptr;
+        assig_pred = nullptr;
+        return;
+    }
+
+    static const char* common_acc_msg = "Field %s is assigned in two "
+    "expressions which can be executed in the same time. "
+    "Please rewrite the RegisterAction body %s.";
+
+    // We need to check if the current variable has an intersection
+    // with any other predicate inside the vector. We need to insert
+    // the record if it isn't already here
+    bool found = false;
+    for (auto pred : elem->second) {
+        LOG4("Probing predicates: " << pred << " and " <<assig_pred);
+        if (pred == nullptr || assig_pred == nullptr ||  // Expression is always runned
+            pred->equiv(*assig_pred)) {                  // Predicates are same
+            found = true;
+            error(common_acc_msg, lvalue_name, action->name);
+        }
+    }
+
+    if (!found) {
+        LOG4("lvalue doesn't find, storing for the next analysis: name=" << lvalue_name <<
+            ", pred=" << assig_pred);
+        written_dest[lvalue_name].push_back(assig_pred);
+    }
+
+    assig_st = nullptr;
+    assig_pred = nullptr;
+}
+
 bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     BUG_CHECK(operands.empty(), "%1%: recursion failure", as);
     etype = NONE;
@@ -486,22 +676,47 @@ static const IR::Expression *negatePred(const IR::Expression *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
+    // This pass is used for the detection of special IF statement pattern
+    // which can be optimized to the construction with less ASM instructions
+    SaluOredIf saluOrIf;
+    s->apply(saluOrIf);
+    if (saluOrIf.is_matched()) {
+        // In this case we want to skip the predicate analysis and go into the false
+        // node directly because the SALU unit will be generated as stand-alone if blocks.
+        split_ifs = true;
+        visit(s->ifFalse);
+        split_ifs = false;
+        return false;
+    }
+
+    // Standard IF statement analysis
     BUG_CHECK(operands.empty() && pred_operands.empty(), "%1%: recursion failure", s);
     etype = IF;
     dest = nullptr;
     visit(s->condition, "condition");
     BUG_CHECK(operands.empty() && pred_operands.size() == 1, "%1%: recursion failure",
-              s->condition);
+            s->condition);
     etype = NONE;
     auto old_predicate = predicate;
     auto new_predicate = pred_operands.at(0);
     pred_operands.clear();
-    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    predicate = old_predicate ? new IR::LAnd(new_predicate, old_predicate) : new_predicate;
     visit(s->ifTrue, "ifTrue");
-    new_predicate = negatePred(new_predicate);
-    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
-    visit(s->ifFalse, "ifFalse");
+    // Don't modify the predicate if we are running the if splitting mode because that mode
+    // means that we want to run IF statements in parallel. This is related to SaluOrdIf
+    // optimization
+    if (!split_ifs) {
+        new_predicate = negatePred(new_predicate);
+        predicate = old_predicate ? new IR::LAnd(new_predicate, old_predicate) : new_predicate;
+        visit(s->ifFalse, "ifFalse");
+    } else {
+        // Restore the old predicate and run the analysis
+        predicate = old_predicate;
+        visit(s->ifFalse, "ifFalse");
+    }
+
     predicate = old_predicate;
+
     return false;
 }
 
@@ -519,14 +734,14 @@ bool CreateSaluInstruction::preorder(const IR::Mux *mux) {
     auto old_predicate = predicate;
     auto new_predicate = pred_operands.at(0);
     pred_operands.clear();
-    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    predicate = old_predicate ? new IR::LAnd(new_predicate, old_predicate) : new_predicate;
     etype = save_state.etype;
     dest = save_state.dest;
     operands = save_state.operands;
     visit(mux->e1, "e1");
     doAssignment(mux->srcInfo);
     new_predicate = negatePred(new_predicate);
-    predicate = old_predicate ? new IR::LAnd(old_predicate, new_predicate) : new_predicate;
+    predicate = old_predicate ? new IR::LAnd(new_predicate, old_predicate) : new_predicate;
     etype = save_state.etype;
     dest = save_state.dest;
     operands = save_state.operands;
@@ -950,6 +1165,7 @@ void CreateSaluInstruction::postorder(const IR::LOr *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::Add *e) {
+    checkAndReportComplexInstrution(e);
     if (etype == IF)
         return true;
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
@@ -960,6 +1176,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
+    checkAndReportComplexInstrution(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = isSigned(e->type) ? "sadds" : "saddu";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
@@ -970,6 +1187,7 @@ bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::Sub *e) {
+    checkAndReportComplexInstrution(e);
     if (etype == IF) {
         visit(e->left, "left");
         negate = !negate;
@@ -984,6 +1202,7 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
+    checkAndReportComplexInstrution(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = isSigned(e->type) ? "ssubs" : "ssubu";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
@@ -994,6 +1213,7 @@ bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
 }
 
 void CreateSaluInstruction::postorder(const IR::BAnd *e) {
+    checkAndReportComplexInstrution(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "andca";
@@ -1016,7 +1236,62 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
     } else {
         error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
+void CreateSaluInstruction::checkAndReportComplexInstrution(const IR::Operation_Binary* op) const {
+    if (!isComplexInstruction(op)) return;
+
+    error("You can only have more than one binary operator in a statement if "
+         "the outer one is |%1%", op->srcInfo);
+}
+bool CreateSaluInstruction::isComplexInstruction(const IR::Operation_Binary *op) const {
+    // The code checks if the passed binary operation is in the simple form: left <op> right
+    // or if the sub-trees are not supported complex operations.
+    //
+    //  Examples:
+    // ===========
+    //
+    //  1. (l1 <op1> r2) <op2> <whatever>;
+    //  2. <whatever> <op1> (l1 <op2> l2)
+    //
+    // The method returns true if so, false otherwise
+    //
+    // IR::L* operators (LAnd, LOr, etc.) are working with predicates
+    bool ret = false;
+    for (auto oper : {op->left, op->right}) {
+        ret |= oper->is<IR::Add>()  | oper->is<IR::AddSat>();
+        ret |= oper->is<IR::Sub>()  | oper->is<IR::SubSat>();
+        ret |= oper->is<IR::BAnd>() | oper->is<IR::BOr>() | oper->is<IR::BXor>();
+        ret |= oper->is<IR::Div>()  | oper->is<IR::Mod>();
+    }
+
+    return ret;
+}
+bool CreateSaluInstruction::preorder(const IR::BOr *e) {
+    if (isComplexInstruction(e)) {
+        BUG_CHECK(etype == VALUE, "The etype should be the VALUE instead of %1%, failing on "
+            "following expression %2%", etype, e->srcInfo);
+        BUG_CHECK(operands.size() == 1, "One operand is expected at this place! Failing on "
+            "following expression %1%", e->srcInfo);
+        // Collect & dump data for the left subtree
+        auto old_opcode = opcode;
+        auto old_operands = operands;
+        visit(e->left);
+        doAssignment(e->left->srcInfo);
+        // Collect & dump data for the right subtree
+        etype  = VALUE;
+        opcode = old_opcode;
+        operands = old_operands;
+        visit(e->right);
+        doAssignment(e->right->srcInfo);
+    }
+
+    return true;
+}
 void CreateSaluInstruction::postorder(const IR::BOr *e) {
+    if (isComplexInstruction(e)) {
+        LOG3("Complex SALU instruction has been detected. Skipping the OR postorder analysis");
+        return;
+    }
+
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "orca";
@@ -1042,6 +1317,7 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
     return false;
 }
 void CreateSaluInstruction::postorder(const IR::BXor *e) {
+    checkAndReportComplexInstrution(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
             opcode = "xnor";
@@ -1165,11 +1441,12 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
     auto k = operands.back()->to<IR::Constant>();
     switch (etype) {
     case IF:
-        action->action.push_back(rv = new IR::MAU::SaluInstruction(opcode, 0, &operands));
+        insert_instruction(rv = new IR::MAU::SaluInstruction(opcode, 0, &operands));
         LOG3("  add " << *action->action.back());
         break;
     case VALUE:
     case MATCH:
+        checkWriteAfterWrite();
         if (regtype->width_bits() == 1) {
             opcode = "clr_bit";
             if (predicate)
@@ -1187,11 +1464,12 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
-        action->action.push_back(rv = new IR::MAU::SaluInstruction(opcode, predicate ? 1 : 0,
+        insert_instruction(rv = new IR::MAU::SaluInstruction(opcode, predicate ? 1 : 0,
                                                                    &operands));
         LOG3("  add " << *action->action.back());
         break;
     case OUTPUT:
+        checkWriteAfterWrite();
         if (regtype->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             opcode = onebit ? onebit->name : "read_bit";
@@ -1213,10 +1491,10 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             // use ALU_HI to drive the output as it is otherwise unused
             auto *val = operands.at(0);
             if (predicate)
-                action->action.push_back(new IR::MAU::SaluInstruction(
+                insert_instruction(new IR::MAU::SaluInstruction(
                         "alu_a", 1, predicate, new IR::MAU::SaluReg(val->type, "hi", true), val));
             else
-                action->action.push_back(new IR::MAU::SaluInstruction(
+                insert_instruction(new IR::MAU::SaluInstruction(
                         "alu_a", 0, new IR::MAU::SaluReg(val->type, "hi", true), val));
             LOG3("  add " << *action->action.back());
             operands.at(0) = new IR::MAU::SaluReg(val->type, "alu_hi", true);
@@ -1253,6 +1531,69 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
         BUG("Invalid etype");
         break; }
     return rv;
+}
+
+/**
+ * @brief Compare two instructions if they are same and predicates are
+ * not null.
+ *
+ * @param si1 First instruction to check
+ * @param si2 Second instruction to check
+ * @return true Both instructions are same, predicates are not same
+ * @return false Instructions have different options
+ */
+static bool check_instructions(const IR::MAU::SaluInstruction *si1,
+    const IR::MAU::SaluInstruction *si2) {
+    // Similar instructions differs in one field only (the predicate).
+    LOG3("Probing instructions: " << si1 << " and " << si2);
+    if (si1->name != si2->name || si1->output_operand != si2->output_operand ||
+        si1->operands.size() != si2->operands.size())
+        return false;
+    // Start the check from the output operand index (typically after the predicate)
+    for (size_t i = si1->output_operand; i < si1->operands.size(); i++)
+        if (!si1->operands.at(i)->equiv(*si2->operands.at(i)))
+            return false;
+    return true;
+}
+
+void CreateSaluInstruction::insert_instruction(const IR::MAU::SaluInstruction *si_insert) {
+    // We need to iterate over instructions inside the body and check if we can merge
+    // instructions together. Two instructions is possible to merge if:
+    // 1] Opcode and params are same
+    // 2] The only difference is the predicate
+    //
+    // Instructions are merged together via the IR::BOr node where left and right
+    // node is predicate of both values. We don't need to insert the BOr if predicate
+    // expressions are same.
+    bool insert = true;
+    for (auto it = action->action.begin(); it != action->action.end(); it++) {
+        auto si_orig = (*it)->to<IR::MAU::SaluInstruction>();
+        BUG_CHECK(si_orig,
+            "SALU instruction is the only type which can be inserted into SALU assembler!");
+        // We don't want to insert same instruction which is already ther
+        if (si_orig->equiv(*si_insert)) {
+            LOG3("Same instruction " << si_insert << " has been detected. I will not be included.");
+            insert = false;
+            break;
+        }
+
+        bool similar_inst = check_instructions(si_orig, si_insert);
+        if (similar_inst) {
+            auto merged_pred = new IR::LOr(si_insert->operands.at(0), si_orig->operands.at(0));
+
+            auto new_inst = si_insert->clone();
+            new_inst->operands[0] = merged_pred;
+            LOG3("Merging instruction " << si_orig << " and " << si_insert << " into " << new_inst);
+
+            action->action.erase(it);
+            action->action.insert(it, new_inst);
+            insert = false;
+            break;
+        }
+    }
+
+    // Instruction cannot be merged a we can insert it here
+    if (insert) action->action.push_back(si_insert);
 }
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {

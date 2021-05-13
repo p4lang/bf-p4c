@@ -1,6 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
 #define EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
 
+#include <map>
+#include <vector>
+
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "mau_visitor.h"
@@ -101,6 +104,29 @@ class CreateSaluInstruction : public Inspector {
     int                                         comb_pred_width = 0;
     IR::MAU::SaluAction::ReturnEnumEncoding     *return_encoding = nullptr;
     int                                         return_enum_word = -1;
+    bool                                        split_ifs = false;
+
+    // Map for detection of WAW data hazards
+    // * Key is the lvalue
+    // * Value is the set of predicates for a given expression
+    std::map<cstring,
+        std::vector<const IR::Expression*>>  written_dest;
+    const IR::AssignmentStatement           *assig_st = nullptr;
+    const IR::Expression                    *assig_pred = nullptr;
+    void captureAssigstateProps();
+    void checkWriteAfterWrite();
+
+    bool isComplexInstruction(const IR::Operation_Binary *op) const;
+    void checkAndReportComplexInstrution(const IR::Operation_Binary* op) const;
+
+    /**
+     * @brief Insert the instruction into the SALU body.
+     *
+     * The method tries to search for already inserted instructions if they are same
+     * but they have a different predicate at the same time. If so, both instructions are
+     * merged together and predicates are aggregated using the | operator.
+     */
+    void insert_instruction(const IR::MAU::SaluInstruction *si);
 
     void clearFuncState();
     const IR::MAU::SaluInstruction *createInstruction();
@@ -164,7 +190,7 @@ class CreateSaluInstruction : public Inspector {
     void postorder(const IR::Cmpl *) override;
     bool preorder(const IR::BAnd *) override { return true; }
     void postorder(const IR::BAnd *) override;
-    bool preorder(const IR::BOr *) override { return true; }
+    bool preorder(const IR::BOr *) override;
     void postorder(const IR::BOr *) override;
     bool preorder(const IR::BXor *) override { return true; }
     void postorder(const IR::BXor *) override;

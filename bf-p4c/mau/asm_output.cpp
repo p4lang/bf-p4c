@@ -2950,10 +2950,28 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         out << sep << "-";
         sep = "";
         return true; }
+    bool check_add_paren(const IR::Expression *br, const IR::Operation_Binary *parent) const {
+        auto *bin_br = br->to<IR::Operation>();
+        if (!bin_br) {
+            return false;
+        } else {
+            // Add parenthesis by default based on the precedence level, low-precedence operator
+            // needs to be in parenthesis
+            return bin_br->getPrecedence() < parent->getPrecedence();
+        }
+    }
     bool preorder_binop(const IR::Operation::Binary *bin, const char *op) {
+        bool add_paren = false;
+        if (add_paren = check_add_paren(bin->left, bin)) out << " (";
         visit(bin->left);
+        if (add_paren) out << ") ";
         sep = op;
+        if (add_paren = check_add_paren(bin->right, bin)) {
+            out << op << "(";
+            sep = "";
+        }
         visit(bin->right);
+        if (add_paren) out << ") ";
         sep = ", ";
         return false; }
     bool preorder(const IR::LAnd *e) override { return preorder_binop(e, " & "); }

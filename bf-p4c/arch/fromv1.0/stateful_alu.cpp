@@ -1,5 +1,10 @@
+#include <vector>
+#include <utility>
+
 #include "stateful_alu.h"
 #include "frontends/p4-14/typecheck.h"
+#include "frontends/p4/strengthReduction.h"
+#include "frontends/common/constantFolding.h"
 #include "lib/bitops.h"
 #include "programStructure.h"
 
@@ -21,6 +26,177 @@ const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
     return nullptr;
 }
 
+/**
+ * @brief This inspector runs the expression analysis to search
+ * for the predicate that cannot happen. For example:
+ * - expr && !expr
+ * - !expr && expr
+ * - expr && expr2 && !expr
+ *
+ * @warning Relation operator is taken as atomic value and it shouldn't contain any relation
+ * sub-expressions.
+ */
+class ConstantLogicValue : public Inspector {
+    /**
+     * @brief Collect all relation operator atomic expressions
+     * (e.g., there is no other relation operator in subtree)
+     */
+    struct CollectRelationAtoms : public Inspector {
+        std::vector<const IR::Operation_Relation*> m_rel_atoms;
+        // Flag which means that all nodes were collected without any error
+        // bool m_collection_ok = true;
+
+        bool preorder(const IR::Operation_Relation *op) override {
+            // Check if we have any relation operator as a sub-expression
+            for (auto node : {op->left, op->right}) {
+                bool has_relation = false;
+                forAllMatching<IR::Operation_Relation>(node,
+                    [&has_relation](const IR::Operation_Relation *){ has_relation = true; });
+                if (has_relation) {
+                   LOG4("We need to continue into the expression");
+                   return true;
+                }
+            }
+
+            // Everything seems fine insert the node if it is unique, the operator is inserted
+            // if needed
+            auto result = std::find_if(m_rel_atoms.begin(), m_rel_atoms.end(),
+                [&](const IR::Operation_Relation *node) {
+                    return node->equiv(*op);
+            });
+            if (result == m_rel_atoms.end()) {
+                // Check that we have a format required for the analysis
+                LOG4("Pushing the node into the collection: " << op);
+                m_rel_atoms.push_back(op);
+            }
+
+            return false;
+        }
+    };
+
+    // Data vector configuration
+    using ExpressionConfig = std::pair<const IR::Expression*, bool>;
+
+    /**
+     * @brief Replace all relation operators with a passed
+     * value vector.
+     */
+    class RewriteTerms : public Transform {
+        const std::vector<ExpressionConfig>& m_config;
+
+     public:
+        IR::Node* preorder(IR::Operation_Relation *op) override {
+            // Check if the operation exists and copy the configuration if yes
+            LOG4("Trying to replace: " << op);
+            auto result = std::find_if(m_config.begin(), m_config.end(),
+                [&](const ExpressionConfig &rel) {
+                    return rel.first->equiv(*op);
+                });
+            // Return the original node if we don't have a configuration
+            // for this expression
+            if (result == m_config.end()) {
+                return op;
+            } else {
+                auto ret = new IR::BoolLiteral((*result).second);
+                LOG4("Rewriting the node " << op << " with " << ret);
+                return ret;
+            }
+        }
+
+        explicit RewriteTerms(const std::vector<ExpressionConfig> &conf) :
+            m_config(conf) {}
+    };
+
+    // Computed flags for the next analysis
+    bool m_always_false;
+    bool m_always_true;
+
+    // Remember the analyzed subtree
+    const IR::Expression *m_expression;
+
+    void compute_flags(const CollectRelationAtoms &collect_exprs) {
+        // Now, we need to try all possibilities of relation
+        // operator values and setup all corresponding flags
+        // of this class.
+        //
+        // Identify the maximum number of iterations to probe all possibilities
+        if (collect_exprs.m_rel_atoms.size() == 0) return;
+
+        bool is_always_false = true;
+        bool is_always_true  = true;
+
+        unsigned max_iter = (1 << collect_exprs.m_rel_atoms.size()) - 1;
+        for (unsigned it = 0; it <= max_iter; it++) {
+            // TODO: It will be better to implement this as iterator over the
+            // binary vector of predefined values
+            // 1] Prepare the replacement configuration
+            unsigned tmp_conf = it;
+            std::vector<ExpressionConfig> ep;
+            std::stringstream ss;
+            ss << "Creating the following expression configuration:" << std::endl;
+            for (unsigned bit = 0; bit < collect_exprs.m_rel_atoms.size(); bit ++) {
+                auto econf = std::make_pair(collect_exprs.m_rel_atoms[bit], tmp_conf & 0x1);
+                ss << "\t* " << econf.first << " =====> " << econf.second << std::endl;
+                ep.push_back(econf);
+                tmp_conf <<= 1;
+            }
+            if (LOGGING(4)) LOG4(ss.str());
+
+            // 2] Rewrite the copy of the tree
+            RewriteTerms rwt(ep);
+            auto rew_expr = m_expression->apply(RewriteTerms(ep));
+            LOG4("Running the strength analysis of following expression: " << rew_expr);
+
+            // 3] Do the strength reduction, check the result and aggregate
+            // the flag.
+            PassRepeated reduc_pass = {
+                new P4::DoStrengthReduction(),
+                new P4::DoConstantFolding(nullptr, nullptr, true),
+            };
+            rew_expr = rew_expr->apply(reduc_pass);
+            LOG4("Strength reduction result: " << rew_expr);
+            // The result can be an expression which needs to be
+            // analyzed.
+            if (!rew_expr->is<IR::BoolLiteral>()) {
+                // We cannot distinguish the real value
+                is_always_false = false;
+                is_always_true  = false;
+                LOG4("Cannot distinguish the constant value (true/false)");
+                break;
+            }
+            auto bl = rew_expr->to<IR::BoolLiteral>();
+            is_always_false &= !bl->value;
+            is_always_true  &= bl->value;
+        }
+
+        // Store computed flags
+        m_always_false = is_always_false;
+        m_always_true  = is_always_true;
+        LOG4("Analysis result always_false=" << m_always_false << ", always_true=" <<
+            m_always_true);
+    }
+
+ public:
+    explicit ConstantLogicValue(const IR::Expression *expr) :
+        m_always_false(false), m_always_true(false), m_expression(expr) {
+        LOG4("Starting the analysis of: " << expr);
+        CollectRelationAtoms collect_exprs;
+        m_expression->apply(collect_exprs);
+
+        // Check if is safe to run the analysis
+        // if (collect_exprs.m_collection_ok)
+        compute_flags(collect_exprs);
+    }
+
+    bool is_false() const {
+        return m_always_false;
+    }
+
+    bool is_true() const {
+        return m_always_true;
+    }
+};
+
 class CreateSaluApplyFunction : public Inspector {
     // These annotations will be put on the RegisterAction instance that will be
     // created to contain the apply function being created by this inspector
@@ -35,15 +211,26 @@ class CreateSaluApplyFunction : public Inspector {
     const IR::Expression *cond_hi = nullptr;
     const IR::Expression *math_input = nullptr;
     const IR::Expression *pred = nullptr;
+    // Each expression there has a predicate on corresponding index
+    // where index is of type expr_index_t.
+    // The NUM_EXPR_INDEX_T --> number of available slots in SALU
+    static const unsigned NUM_EXPR_INDEX_T  = 5;
+    const IR::Expression *expr[NUM_EXPR_INDEX_T]       = { nullptr };
+    const IR::Expression *expr_pred[NUM_EXPR_INDEX_T]  = { nullptr };
+    const IR::Expression *expr_dest[NUM_EXPR_INDEX_T]  = { nullptr };
+    int                   expr_idx[NUM_EXPR_INDEX_T]   = { 0 };
+    Util::SourceInfo      expr_src_info[NUM_EXPR_INDEX_T];
+    Util::SourceInfo      expr_pred_src_info[NUM_EXPR_INDEX_T];
     const IR::Statement *output = nullptr;
     const Util::SourceInfo *applyLoc = nullptr;
-    enum expr_index_t { UNUSED, LO1, LO2, HI1, HI2, OUT } expr_index = UNUSED;
+    enum expr_index_t { LO1, LO2, HI1, HI2, OUT, UNUSED } expr_index = UNUSED;
     bool saturating = false;
     bool convert_to_saturating = false;
     bool have_output = false;
     bool defer_out = false;
     bool cmpl_out = false;
     bool need_alu_hi = false;
+    // bool alu_output_used[2] = { false, false };
     PassManager rewrite;
 
     IR::Expression *makeRegFieldMember(IR::Expression *e, int idx) {
@@ -56,6 +243,19 @@ class CreateSaluApplyFunction : public Inspector {
             need_alu_hi = true;
             e = new IR::PathExpression(utype, new IR::Path("alu_hi")); }
         return e; }
+
+    // cast an expression to a type if necessary
+    const IR::Expression *castTo(const IR::Type *type, const IR::Expression *e) {
+        if (e->type != type) {
+            auto t1 = e->type->to<IR::Type::Bits>();
+            auto t2 = type->to<IR::Type::Bits>();
+            if (t1 && t2 && t1->size != t2->size && t1->isSigned != t2->isSigned) {
+                /* P4_16 does not allow changing both size and signedness with a single cast,
+                 * so we need two, changing size first, then signedness */
+                e = new IR::Cast(IR::Type::Bits::get(t2->size, t1->isSigned), e); }
+            e = new IR::Cast(type, e); }
+        return e;
+    }
 
     class RewriteExpr : public Transform {
         CreateSaluApplyFunction &self;
@@ -183,28 +383,23 @@ class CreateSaluApplyFunction : public Inspector {
     };
 
     bool preorder(const IR::Property *prop) {
-        // DANGER -- we rely on the fact that we use a map (not ordered_map) for
-        // properties, so they will always be processed in alphabetic order.
         LOG4("CreateSaluApply visiting prop " << prop);
         bool predicate = false;
         int idx = 0;
         if (prop->name == "condition_hi") {
             applyLoc = &prop->value->srcInfo;
             cond_hi = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
-            if (!cond_hi->type->is<IR::Type::Boolean>())
-                cond_hi = new IR::Cast(IR::Type::Boolean::get(), cond_hi);
+            cond_hi = castTo(IR::Type::Boolean::get(), cond_hi);
             return false;
         } else if (prop->name == "condition_lo") {
             applyLoc = &prop->value->srcInfo;
             cond_lo = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
-            if (!cond_lo->type->is<IR::Type::Boolean>())
-                cond_lo = new IR::Cast(IR::Type::Boolean::get(), cond_lo);
+            cond_lo = castTo(IR::Type::Boolean::get(), cond_lo);
             return false;
         } else if (prop->name == "math_unit_input") {
             applyLoc = &prop->value->srcInfo;
             math_input = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
-            if (math_input->type != utype)
-                math_input = new IR::Cast(utype, math_input);
+            math_input = castTo(utype, math_input);
             return false;
         } else if ((prop->name == "initial_register_lo_value")
                 || (prop->name == "initial_register_hi_value")) {
@@ -232,47 +427,250 @@ class CreateSaluApplyFunction : public Inspector {
             predicate = true;
         } else if (prop->name == "update_lo_1_value") {
             if (expr_index != LO1) pred = nullptr;
+            expr_index = LO1;
             idx = 0;
         } else if (prop->name == "update_lo_2_value") {
             if (expr_index != LO2) pred = nullptr;
+            expr_index = LO2;
             idx = 0;
         } else if (prop->name == "update_hi_1_value") {
             if (expr_index != HI1) pred = nullptr;
+            expr_index = HI1;
             idx = 1;
         } else if (prop->name == "update_hi_2_value") {
             if (expr_index != HI2) pred = nullptr;
+            expr_index = HI2;
             idx = 1;
         } else if (prop->name == "output_value") {
             have_output = true;
             if (expr_index != OUT) pred = nullptr;
+            expr_index = OUT;
             idx = -1;
         } else {
             return false; }
+
         applyLoc = &prop->value->srcInfo;
         convert_to_saturating = saturating && !predicate;
         auto e = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
         convert_to_saturating = false;
+
+        // Store data required during the end_apply SALU body creation if we have
+        // a non-empty expression
         if (!e) return false;
         if (predicate) {
-            if (e->type != IR::Type::Boolean::get())
-                e = new IR::Cast(IR::Type::Boolean::get(), e);
-            pred = e;
-            return false; }
+            expr_pred[expr_index] = castTo(IR::Type::Boolean::get(), e);
+            expr_pred_src_info[expr_index] = prop->srcInfo;
+            return false;
+        }
+
+        // Prepare the destination expression based on the detected
+        // property.
         IR::Expression *dest = new IR::PathExpression(utype,
-                new IR::Path(idx < 0 ? "rv" : "value"));
-        if (idx >= 0)
+            new IR::Path(idx < 0 ? "rv" : "value"));
+        if (idx >= 0) {
             dest = makeRegFieldMember(dest, idx);
-        else if (cmpl_out)
+        } else if (cmpl_out) {
             e = new IR::Cmpl(e);
-        const IR::Statement *instr = structure->assign(prop->srcInfo, dest, e, utype);
-        LOG2("adding " << instr << " with pred " << pred);
-        if (pred)
-            instr = new IR::IfStatement(pred, instr, nullptr);
-        if (idx < 0 && defer_out)
-            output = instr;
-        else
-            body->push_back(instr);
+        }
+
+        // Remember everything important for the next iteration
+        expr_dest[expr_index]     = dest;
+        expr[expr_index]          = e;
+        expr_idx[expr_index]      = idx;
+        expr_src_info[expr_index] = prop->srcInfo;
         return false; }
+
+    /**
+     * @brief Create the standard assignment statement for captured
+     * data from the property phase
+     *
+     * @param alu_idx ALU IDX where to start the analysis
+     * @return const IR::Statement* of the IR::AssignmentStatement, the statement
+     * can be also wrapped in the IF statement when needed.
+     */
+    const IR::Statement* standard_assignment(int alu_idx) {
+        const IR::Statement *instr = structure->assign(expr_src_info[alu_idx],
+                                expr_dest[alu_idx], expr[alu_idx], utype);
+        LOG2("adding " << instr << " with pred " << expr_pred[alu_idx]);
+        // Add the IF condition in a case that we have a not null predicate
+        if (expr_pred[alu_idx]) {
+            instr = new IR::IfStatement(expr_pred[alu_idx], instr, nullptr);
+        }
+
+        return instr;
+    }
+
+    /**
+     * @brief We want to generate a following shape of the code
+     *  if (P1) {
+     *      res = E1 | E2;
+     *  } else {
+     *      res = E2;
+     *  }
+     * 
+     * @param alu_idx ALU IDX where we are starting the analysis
+     * @return const IR::Statement* instance of created if-else statement
+     */
+    const IR::Statement* merge_assigment_with_if(int alu_idx) {
+        // Prepare individual parts of the expression above, assignments, predicate
+        // and false branch. Individual parts of captured data depends on not null
+        // predicate occupancy
+        auto assig1 = structure->assign(expr_src_info[alu_idx], expr_dest[alu_idx],
+            expr[alu_idx], utype);
+        auto assig2 = structure->assign(expr_src_info[alu_idx+1], expr_dest[alu_idx+1],
+            expr[alu_idx+1], utype);
+        auto pred = expr_pred[alu_idx] ? expr_pred[alu_idx] : expr_pred[alu_idx+1];
+        auto false_branch = expr_pred[alu_idx] ? assig2 : assig1;
+
+        auto ret_if = new IR::IfStatement(pred,
+            // res = E1 | E2
+            new IR::AssignmentStatement(assig1->left,
+                new IR::BOr(assig1->right, assig2->right)),
+            // res = E2
+            false_branch);
+
+        LOG2("Adding the if statement " << ret_if);
+        return ret_if;
+    }
+
+    /**
+     * @brief Create the if statement for captured data from the
+     * property phase
+     *
+     * @param alu_idx ALU IDX where to start the analysis
+     * @return const IR::Statement* instance of created if-else statement
+     */
+    const IR::Statement* merge_if_statements(int alu_idx) {
+        auto pred1 = expr_pred[alu_idx];
+        auto pred2 = expr_pred[alu_idx+1];
+        auto assig1 = structure->assign(expr_src_info[alu_idx], expr_dest[alu_idx],
+            expr[alu_idx], utype);
+        auto assig2 = structure->assign(expr_src_info[alu_idx+1], expr_dest[alu_idx+1],
+            expr[alu_idx+1], utype);
+
+        const IR::Statement *ret_stmt;
+        if (pred1->equiv(*pred2)) {
+            // Both predicates are same and we can build an expression if the form of:
+            // if (pred) {
+            //    value = expr1 | expr2;
+            // }
+            ret_stmt = new IR::IfStatement(pred1,
+                new IR::AssignmentStatement(assig1->left,
+                    new IR::BOr(assig1->right, assig2->right)),
+                nullptr);
+        } else {
+            // Both predicates are different and we need to generate a more complicated
+            // structure of IF statements which reflects the SALU behavior:
+            // if (pred1 && pred2) dst = expr1 | expr2;
+            // else if (pred1)  dst = expr1;
+            // else if (pred2)  dst = expr2;
+
+            // if (pred1) ...
+            // else if(pred2) ...
+            ret_stmt = new IR::IfStatement(pred1, assig1,
+                new IR::IfStatement(pred2, assig2, nullptr));
+
+            // Run the always false analysis to check if we can insert the
+            // AND-ed condition here
+            auto and_pred = new IR::LAnd(pred1, pred2);
+            ConstantLogicValue always_false(and_pred);
+            if (!always_false.is_false()) {
+                    // if (pred1 && pred2 ) {
+                ret_stmt = new IR::IfStatement(and_pred,
+                    // dst = expr1 | expr2; }
+                    new IR::AssignmentStatement(assig1->left,
+                        new IR::BOr(assig1->right, assig2->right)),
+                    ret_stmt);
+            }
+        }
+
+        LOG2("Adding the if statement " << ret_stmt);
+        return ret_stmt;
+    }
+
+    /**
+     * @brief Emit output instruction for the SALU unit
+     */
+    void emit_output() {
+        auto out_inst = standard_assignment(OUT);
+        body->components.push_back(out_inst);
+    }
+
+    /**
+     * @brief Check the predicate and return error message
+     * 
+     * @warning The code assumes that nullptr value of the expression was checked from callee
+     * @param alu_idx ALU Index to check
+     */
+    void check_predicate_for_null(int alu_idx) const {
+        if (!expr_pred[alu_idx]) return;
+
+        error("Corresponding expression for the predicate wasn't found! %s",
+            expr_pred_src_info[alu_idx]);
+    }
+
+    /**
+     * @brief This function takes all expressions & predicates captured during the
+     * property analysis and crafts the target SALU body.
+     */
+    void emit_salu_body() {
+        // The for cycle is processing the body in tuples where we are
+        // always starting from lower indexes
+        // Check if we need to deffer the output
+        if (!defer_out && have_output) emit_output();
+
+        for (auto alu_idx : {LO1, HI1}) {
+            // We have following possibilities:
+            // 0] Both expressions are null
+            // 1] LO1/HI1 isn't null but LO2/HI2 is
+            // 2] LO2/HI2 isn't null but LO1/HI1 is
+            // 3] Both expression are not null
+            if (!expr[alu_idx] && !expr[alu_idx+1]) {
+                  check_predicate_for_null(alu_idx);
+                  check_predicate_for_null(alu_idx+1);
+                  continue;
+            }
+
+            if (expr[alu_idx] && !expr[alu_idx+1]) {
+                check_predicate_for_null(alu_idx+1);
+                body->components.push_back(standard_assignment(alu_idx));
+                continue;
+            }
+            if (!expr[alu_idx] && expr[alu_idx+1]) {
+                check_predicate_for_null(alu_idx);
+                body->components.push_back(standard_assignment(alu_idx+1));
+                continue;
+            }
+
+            // Both expressions are there, the next behavior is based on predicates
+            if (!expr_pred[alu_idx] && !expr_pred[alu_idx+1]) {
+                // Predicates aren't available and we can merge
+                // expressions together
+                auto assig1 = standard_assignment(alu_idx)->to<IR::AssignmentStatement>();
+                auto assig2 = standard_assignment(alu_idx+1)->to<IR::AssignmentStatement>();
+                BUG_CHECK(assig1 && assig2,
+                    "IR::AssignmentStatement statements are expected here!");
+                auto instr = new IR::AssignmentStatement(assig1->left,
+                    new IR::BOr(assig1->right, assig2->right));
+                LOG2("Adding the merged assignment " << instr);
+                body->components.push_back(instr);
+                continue;
+            }
+            if ((expr_pred[alu_idx] && !expr_pred[alu_idx+1]) ||
+                (!expr_pred[alu_idx] && expr_pred[alu_idx+1])) {
+                // Only one predicate is there and we need to emit a specialized
+                // IF statement (see the method for details).
+                body->push_back(merge_assigment_with_if(alu_idx));
+                continue;
+            }
+
+            // Both predicates are there and we can merge them together
+            body->components.push_back(merge_if_statements(alu_idx));
+        }
+        // Generate the output instruction if required
+        if (defer_out && have_output)
+            emit_output();
+    }
 
  public:
     CreateSaluApplyFunction(IR::Annotations *annots, P4V1::ProgramStructure *s,
@@ -288,6 +686,7 @@ class CreateSaluApplyFunction : public Inspector {
         if (auto st = rtype->to<IR::Type_StructLike>())
             rtype = new IR::Type_Name(st->name); }
     void end_apply(const IR::Node *) {
+        // Emit helping alu_hi & rv when needed
         if (need_alu_hi)
             body->components.insert(body->components.begin(),
                     new IR::Declaration_Variable("alu_hi", utype, new IR::Constant(utype, 0)));
@@ -298,10 +697,11 @@ class CreateSaluApplyFunction : public Inspector {
                 new IR::AssignmentStatement(new IR::PathExpression("rv"),
                                             new IR::Constant(utype, 0)));
             apply_params->push_back(new IR::Parameter("rv", IR::Direction::Out, utype)); }
+        // Emit body and prepare the apply method
+        emit_salu_body();
         apply = new IR::Function("apply",
                 new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"), body);
-        if (output && defer_out)
-            body->push_back(output); }
+    }
     static const IR::Function *create(IR::Annotations *annots, P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type *rtype,
                 const IR::Type::Bits *utype, cstring math_unit_name = cstring(),

@@ -5469,10 +5469,7 @@ control Chamois(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intri
             Picabo Penzance;
             Penzance = Morrow;
             if (!Lookeba.Belmore.isValid()) {
-                Morrow.Jayton = Lookeba.Twain.Uvalde - Penzance.Circle;
-            }
-            if (!Lookeba.Belmore.isValid()) {
-                Morrow.Jayton = 32w1;
+                Morrow.Jayton = (Lookeba.Twain.Uvalde - Penzance.Circle) | 32w1;
             }
             if (!Lookeba.Belmore.isValid()) {
                 Morrow.Circle = Lookeba.Twain.Uvalde + 32w0x2000;

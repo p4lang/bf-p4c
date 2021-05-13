@@ -1935,3 +1935,14 @@ p4c_add_xfail_reason("tofino"
    ba102_simple_l3_rewrite_920
    ba102_simple_l3_rewrite_930
 )
+
+# P4C-3402
+p4c_add_xfail_reason("tofino"
+  "error: Field .* is assigned in two expressions which can be executed in the same time."
+  extensions/p4_tests/p4_16/compile_only/p4c-3402.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: You can only have more than one binary operator in a statement"
+  extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
+)

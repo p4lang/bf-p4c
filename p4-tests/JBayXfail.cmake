@@ -500,3 +500,14 @@ p4c_add_xfail_reason("tofino2"
    "error: Inferred incompatible container alignments for field egress::eg_md.field:[\r\n\t ]*.*p4c-3431.p4.77.: alignment = 6 .*[\r\n\t ]*.*eg_md.field = parse_1_md.field.*[\r\n\t ]*.*[\r\n\t ]*Previously inferred alignments:[\r\n\t ]*.*p4c-3431.p4.68.: alignment = 0 .*[\r\n\t ]*.*eg_md.field = hdr.field"
    extensions/p4_tests/p4_16/compile_only/p4c-3431.p4
 )
+
+# P4C-3402
+p4c_add_xfail_reason("tofino2"
+  "error: Field .* is assigned in two expressions which can be executed in the same time."
+  extensions/p4_tests/p4_16/compile_only/p4c-3402.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "error: You can only have more than one binary operator in a statement"
+  extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
+)
