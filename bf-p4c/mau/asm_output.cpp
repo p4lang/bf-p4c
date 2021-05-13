@@ -3367,11 +3367,16 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         bool disable_atomic_modify;
         tbl->getAnnotation("disable_atomic_modify", disable_atomic_modify);
 
-        // NOTE: Replace with commented code once driver support is in for
-        // Tofino2+ archs - Driver JIRA - DRV-4404
-        // if (disable_atomic_modify && BackendOptions().target == "tofino")
-        if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
-            out << ", disable_atomic_modify : true";
+        // Similar check in table_placement.cpp -> initial_stage_and_entries()
+        if (tbl->layout.alpm && tbl->layout.atcam) {
+            // NOTE: Replace with commented code once driver support is in for
+            // Tofino2+ archs - Driver JIRA - DRV-4404
+            // if (!disable_atomic_modify && BackendOptions().target == "tofino")
+            if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
+                out << ", disable_atomic_modify : true";
+        } else {
+            if (disable_atomic_modify) out << ", disable_atomic_modify : true";
+        }
     }
     out << " }" << std::endl;
 

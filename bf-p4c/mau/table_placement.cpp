@@ -1220,6 +1220,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             // Tofino2+ archs - Driver JIRA - DRV-4404
             // if (!disable_atomic_modify && BackendOptions().target == "tofino")
             //     rv->entries += t->layout.partition_count;
+            // Similar check in mau/asm_output.cpp -> emit_table_context_json()
             if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
                 rv->entries += t->layout.partition_count;
         }

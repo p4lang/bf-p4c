@@ -145,8 +145,6 @@ struct header_t {
 struct empty_header_t {}
 
 struct empty_metadata_t {}
-# 29 "/mnt/alpm_test/alpm_test.p4" 2
-# 1 "/mnt/p4-tests/p4-programs/p4_16_programs/common/util.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -248,8 +246,6 @@ control EmptyEgress(
         inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
     apply {}
 }
-# 30 "/mnt/alpm_test/alpm_test.p4" 2
-
 
 struct metadata_t {}
 
