@@ -99,7 +99,7 @@ export PYTHON3_DEPS="Cython \
                      ply==3.9 \
                      prettytable \
                      pyinstaller \
-                     pyroute2 \
+                     pyroute2==0.5.18 \
                      pyyaml \
                      scapy \
                      texttable \
