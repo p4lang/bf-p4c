@@ -260,6 +260,7 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     switch (gress) {
     case INGRESS: out << "ingress"; break;
     case EGRESS: out << "egress"; break;
+    case GHOST: out << "ghost"; break;
     default: out << "(invalid gress " << static_cast<int>(gress) << ")"; }
     return out; }
 

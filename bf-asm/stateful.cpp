@@ -401,7 +401,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
                     auto &action_ctl = map_alu.meter_alu_group_action_ctl[meter_group_index];
                     action_ctl.right_alu_action_enable = 1;
                     action_ctl.right_alu_action_delay =
-                        stage->group_table_use[gress] & Stage::USE_SELECTOR ? 4 : 0;
+                        stage->group_table_use[timing_thread(gress)] & Stage::USE_SELECTOR ? 4 : 0;
                     auto &switch_ctl = regs.rams.array.switchbox.row[row].ctl;
                     switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
                     // disable action data address huffman decoding, on the assumtion we're not
