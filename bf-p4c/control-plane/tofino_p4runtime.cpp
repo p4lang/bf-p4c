@@ -8,6 +8,7 @@
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
+#include "midend/eliminateNewtype.h"
 #include "lib/nullstream.h"
 
 namespace BFN {
@@ -33,13 +34,17 @@ class CheckReservedNames : public Inspector {
 void generateP4Runtime(const IR::P4Program* program,
                        const BFN_Options& options) {
     // If the user didn't ask for us to generate P4Runtime, skip the analysis.
-    if (options.p4RuntimeFile.isNullOrEmpty() &&
-        options.p4RuntimeFiles.isNullOrEmpty() &&
-        options.p4RuntimeEntriesFile.isNullOrEmpty() &&
-        options.p4RuntimeEntriesFiles.isNullOrEmpty() &&
-        options.bfRtSchema.isNullOrEmpty()) {
-        return;
-    }
+    bool doNotGenerateP4Info = options.p4RuntimeFile.isNullOrEmpty() &&
+            options.p4RuntimeFiles.isNullOrEmpty() &&
+            options.p4RuntimeEntriesFile.isNullOrEmpty() &&
+            options.p4RuntimeEntriesFiles.isNullOrEmpty() &&
+            options.bfRtSchema.isNullOrEmpty();
+    bool generateP4Info = !doNotGenerateP4Info;
+
+    bool doNotGenerateBFRT = options.bfRtSchema.isNullOrEmpty();
+    bool generateBFRT = !doNotGenerateBFRT;
+
+    if (doNotGenerateP4Info && doNotGenerateBFRT) return;
 
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
 
@@ -86,23 +91,33 @@ void generateP4Runtime(const IR::P4Program* program,
         program = program->apply(RewriteActionSelector(&refMap, &typeMap));
     }
 
-    auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
+    // Generate P4Info o/p
+    if (generateP4Info) {
+        auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 
-    if (options.p4RuntimeForceStdExterns) {
-        auto p4RuntimeStd = convertToStdP4Runtime(p4Runtime);
-        p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4RuntimeStd, options);
-    } else {
-        p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4Runtime, options);
+        if (options.p4RuntimeForceStdExterns) {
+            auto p4RuntimeStd = convertToStdP4Runtime(p4Runtime);
+            p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4RuntimeStd, options);
+        } else {
+            p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4Runtime, options);
+        }
     }
 
-    if (!options.bfRtSchema.isNullOrEmpty()) {
+    // Generate BFRT json o/p
+    if (generateBFRT) {
         std::ostream* out = openFile(options.bfRtSchema, false);
         if (!out) {
             ::error("Couldn't open BF-RT schema file: %1%", options.bfRtSchema);
             return;
         }
 
+        // New types must be eliminated to resolve their bitwidths to be
+        // generated in BF-RT json.
+        auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap);
+        program = program->apply(P4::EliminateNewtype(&refMap, &typeMap, typeChecking));
         program->apply(CheckReservedNames());
+
+        auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
         BFRT::serializeBfRtSchema(out, p4Runtime);
     }
 }
