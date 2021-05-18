@@ -1556,8 +1556,11 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
     }
 
     BUG_CHECK(!selectExpr->is<IR::Constant>(), "%1% constant selection expression %2% "
-                                               "should have been eliminated by now.",
-                                               selectExpr->srcInfo, selectExpr);
+                                               "should have been eliminated by now. "
+                                               "please make sure there's a key in the "
+                                               "Keyset expressions matches %3%. Or add a "
+                                               "default or _ label in the select expression",
+                                               selectExpr->srcInfo, selectExpr, selectExpr);
 
     // We can split a Concat into multiple selects. Note that this is quite
     // unlike a Slice; the Concat operands may not even be adjacent in the input
