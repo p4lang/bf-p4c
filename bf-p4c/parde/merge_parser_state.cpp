@@ -57,6 +57,7 @@ class ComputeMergeableState : public ParserInspector {
 
  private:
     void postorder(const IR::BFN::ParserState* state) {
+        LOG1("ComputeMergeableState postorder on state: " << state->name);
         // If branching, cannot fold in any children node.
         if (state->dontMerge)
             return;

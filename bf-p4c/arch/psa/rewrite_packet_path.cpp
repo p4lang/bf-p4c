@@ -386,6 +386,11 @@ struct PacketPath : public Transform {
         state->components = *statements;
     }
 
+    void skip_to_phase0(IR::ParserState* state, const IR::BFN::TnaParser* parser) {
+        auto select = new IR::PathExpression("__phase0");
+        state->selectExpression = select;
+    }
+
     const IR::ParserState *postorder(IR::ParserState *state) override {
         auto parser = findOrigCtxt<IR::BFN::TnaParser>();
         if (state->name == "__phase0") {
@@ -402,7 +407,13 @@ struct PacketPath : public Transform {
             }
         } else if (state->name == "__check_resubmit") {
             if (!structure->resubmit.exists && !structure->recirculate.exists) {
-                skip_to_packet(state, parser);
+                auto pstates = parser->states;
+                auto it = std::find_if(pstates.begin(), pstates.end(),
+                    [] (const IR::ParserState *p ) { return p->name == "__phase0"; });
+                if (it != pstates.end())
+                    skip_to_phase0(state, parser);
+                else
+                    skip_to_packet(state, parser);
             }
         }
         return state;
