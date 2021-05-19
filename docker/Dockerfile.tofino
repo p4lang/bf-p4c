@@ -1,7 +1,7 @@
 # 'amr-registry.caas.intel.com/bxd-sw' for CaaS (AMR)
 ARG DOCKER_PROJECT=barefootnetworks
 # 'jarvis' for jarvis image
-ARG MODEL_TAG=tofino_debug
+ARG MODEL_TAG=tofino_master
 
 FROM ${DOCKER_PROJECT}/model:${MODEL_TAG}
 
