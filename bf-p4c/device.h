@@ -66,6 +66,7 @@ class Device {
     static int isMemoryCoreSplit() { return Device::get().getIfMemoryCoreSplit(); }
     static int uniqueGatewayShifts() { return Device::get().getUniqueGatewayShifts(); }
     static bool hasCompareInstructions() { return Device::get().getHasCompareInstructions(); }
+    static int numLogTablesPerStage() { return Device::get().getNumLogTablesPerStage(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -95,6 +96,7 @@ class Device {
     virtual bool getIfMemoryCoreSplit() const = 0;
     virtual int getUniqueGatewayShifts() const = 0;
     virtual bool getHasCompareInstructions() const = 0;
+    virtual int getNumLogTablesPerStage() const = 0;
 
  private:
     static Device* instance_;
@@ -142,6 +144,7 @@ class TofinoDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return false; }
     int getUniqueGatewayShifts() const override { return 1; }
     bool getHasCompareInstructions() const override { return false; }
+    int getNumLogTablesPerStage() const override { return 16; }
 };
 
 class JBayDevice : public Device {
@@ -184,6 +187,7 @@ class JBayDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return true; }
     int getUniqueGatewayShifts() const override { return 5; }
     bool getHasCompareInstructions() const override { return true; }
+    int getNumLogTablesPerStage() const override { return 16; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -256,6 +260,7 @@ class CloudbreakDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return true; }
     int getUniqueGatewayShifts() const override { return 5; }
     bool getHasCompareInstructions() const override { return true; }
+    int getNumLogTablesPerStage() const override { return 16; }
 };
 #endif /* HAVE_CLOUDBREAK */
 

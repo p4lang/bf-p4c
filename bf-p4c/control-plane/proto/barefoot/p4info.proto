@@ -31,6 +31,7 @@ message P4Ids {
     HASH_COMPUTE                = 0x96;  // reserved for BFRT
     HASH_ALGORITHM              = 0x97;  // reserved for BFRT
     PARSER_CHOICES              = 0x98;
+    DEBUG_COUNTER               = 0x99;
     // Temporary, see ValueSet message definition below
     VALUE_SET                   = 0xfe;
   }

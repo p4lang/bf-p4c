@@ -165,6 +165,10 @@ class BfRtSchemaGenerator {
 
         BF_RT_DATA_PARSER_INSTANCE,
         BF_RT_DATA_PARSER_NAME,
+
+        BF_RT_DATA_DEBUG_CNT_TABLE_NAME,
+        BF_RT_DATA_DEBUG_CNT_TYPE,
+        BF_RT_DATA_DEBUG_CNT_VALUE,
     };
 
     /// Common counter representation between PSA and Tofino architectures
@@ -223,7 +227,9 @@ class BfRtSchemaGenerator {
     void addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const;
     void addWred(Util::JsonArray* tablesJson, const Wred& wred) const;
     void addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
+    void addSnapshotLiveness(Util::JsonArray* tablesJson, const Snapshot& snapshot) const;
     void addParserChoices(Util::JsonArray* tablesJson, const ParserChoices& parserChoices) const;
+    void addDebugCounterTable(Util::JsonArray* tablesJson) const;
 
     boost::optional<bool> actProfHasSelector(P4Id actProfId) const;
     /// Generates the JSON array for table action specs. When the function
@@ -1011,6 +1017,8 @@ struct BfRtSchemaGenerator::Snapshot {
     std::string getTrigTblName() const { return name + "." + gress + "_trigger"; }
 
     std::string getDataTblName() const { return name + "." + gress + "_data"; }
+
+    std::string getLivTblName() const { return name + "." + gress + "_liveness"; }
 
     static boost::optional<Snapshot> fromTofino(
         const p4configv1::ExternInstance& externInstance) {
@@ -2220,6 +2228,37 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
 }
 
 void
+BfRtSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
+    const Snapshot& snapshot) const {
+  auto tblName = snapshot.getLivTblName();
+  Util::JsonObject *tableJson = findJsonTable(tablesJson, tblName);
+  if (!tableJson) {
+    auto tableId = makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_LIVENESS);
+    auto* tableJson = initTableJson(tblName, tableId,
+        "SnapshotLiveness", 0 /* size, read-only table */);
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME, "field_name",
+        true /* mandatory */, "Exact", makeTypeString());
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    {
+      auto* f = makeCommonDataField(
+          BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES, "valid_stages",
+          makeTypeInt("uint32"), true /* repeated */);
+      addROSingleton(dataJson, f);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+  }
+}
+
+void
 BfRtSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
                                       const ParserChoices& parserChoices) const {
     auto* tableJson = initTableJson(
@@ -2245,6 +2284,44 @@ BfRtSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
 
     tablesJson->append(tableJson);
 }
+
+// Debug counter table is functionally dependent on P4 program and should
+// be placed in the root of P4 program node, even if it doesn't use any
+// p4info data directly.
+void
+BfRtSchemaGenerator::addDebugCounterTable(Util::JsonArray* tablesJson) const {
+    P4Id id = makeBfRtId(0, barefoot::P4Ids::DEBUG_COUNTER);
+    auto* tableJson = initTableJson("tbl_dbg_counter", id, "TblDbgCnt",
+        Device::numStages() * Device::numLogTablesPerStage() /* size */);
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_DEBUG_CNT_TABLE_NAME, "tbl_name",
+                true /* mandatory */, "Exact", makeTypeString());
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    {
+        std::vector<cstring> choices = { "DISABLED", "TBL_MISS", "TBL_HIT",
+            "GW_TBL_MISS", "GW_TBL_HIT", "GW_TBL_INHIBIT" };
+        auto* f = makeCommonDataField(
+            BF_RT_DATA_DEBUG_CNT_TYPE, "type",
+            makeTypeEnum(choices, choices[2]), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
+          BF_RT_DATA_DEBUG_CNT_VALUE, "value",
+          makeTypeInt("uint64", 0), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
 
 boost::optional<bool>
 BfRtSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
@@ -2609,6 +2686,7 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 auto snapshot = Snapshot::fromTofino(externInstance);
                 if (snapshot != boost::none) {
                     addSnapshot(tablesJson, *snapshot);
+                    addSnapshotLiveness(tablesJson, *snapshot);
                 }
             }
         } else if (externTypeId == ::barefoot::P4Ids::HASH) {
@@ -2672,6 +2750,8 @@ BfRtSchemaGenerator::genSchema() const {
     addTofinoExterns(tablesJson, learnFiltersJson);
 
     addPortMetadataExtern(tablesJson);
+
+    addDebugCounterTable(tablesJson);
 
     return json;
 }
