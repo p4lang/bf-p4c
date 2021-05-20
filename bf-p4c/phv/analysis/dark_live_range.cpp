@@ -519,6 +519,8 @@ bool DarkLiveRange::isGroupDominatorEarlierThanFirstUseOfCurrentField(
         const ordered_set<const IR::BFN::Unit*>& doms,
         const IR::MAU::Table* groupDominator) const {
     bool singleDom = (doms.size() == 1);
+    if (currentField.minStage.first < dg.min_stage(groupDominator))
+        return false;
     for (const auto* u : doms) {
         // If there is only one dominator in the list of trimmed dominators, check that the
         // only strict dominator in there is the same as the group dominator. If it is, then it is
@@ -663,7 +665,22 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             }
         }
 
+        if (LOGGING(4)) {
+            LOG_DEBUG4(TAB2 << "f_nodes:");
+
+            for (const auto* u : f_nodes) {
+                if (u->is<IR::BFN::Parser>() || u->is<IR::BFN::ParserState>() ||
+                    u->is<IR::BFN::Deparser>()) {
+                    LOG_DEBUG5(TAB3 << DBPrint::Brief << u);
+                } else {
+                    LOG_DEBUG4(TAB3 << DBPrint::Brief << u << " (stage " <<
+                               dg.min_stage(u->to<IR::MAU::Table>()) << ")");
+                }
+            }
+        }
+
         bool onlyDeparserUse = false;
+        bool infoNodesInFnodes = false;
         if (f_nodes.size() == 1) {
             const auto* u = *(f_nodes.begin());
             if (u->is<IR::BFN::Deparser>()) {
@@ -679,6 +696,20 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                            "Cannot find initialization point.");
                 return boost::none;
             }
+            // Check if any of the units referencing the current
+            // candidate field are part of the trimmed dominator nodes
+            for (auto iunit : info.units) {
+                if (f_nodes.count(iunit)) {
+                    infoNodesInFnodes = true;
+                    break;
+                }
+            }
+
+            if (!infoNodesInFnodes) {
+                LOG_DEBUG2(TAB2 " Defuse unit of field " << info.field << " dominated by later"
+                           " units. Initializing may impact table placement.");
+            }
+
             if (LOGGING(2)) {
                 for (const auto* u : f_nodes) {
                     if (u->is<IR::BFN::Deparser>()) {
@@ -750,7 +781,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         while (ARAspill || groupDominator != nullptr) {
             // Check that the group dominator can be used to add the move instruction without
             // lengthening the dependence chain.
-            // ALEX:
+
             bool goToNextDominator = false;
             bool groupDominatorAfterLastUsePrevField = ARAspill ? true :
                 (dg.min_stage(groupDominator) > lastField->maxStage.first) ||
@@ -1251,7 +1282,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     boost::optional<PHV::Allocation::ActionSet>  initActions;
     if (!useARA) {
         initActions = getInitActions(c, field, t, alloc);
-        if (!drkInit && !initActions) return boost::none;
+        if (!initActions) return boost::none;
     }
 
     PHV::AllocSlice dstSlice(field.field);
@@ -1261,10 +1292,12 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     dstSlice.setLiveness(std::make_pair(earlyLRstg, PHV::FieldUse(WRITE)), field.maxStage);
     LOG_DEBUG5(TAB4 "Created destination slice " << dstSlice);
     // ALEX: Use initAction for non-ARA primitives
-    if (useARA)
+    if (useARA) {
         return new PHV::DarkInitEntry(dstSlice);
-    else
+    } else {
+        BUG_CHECK((initActions->size() > 0), "No actions found to zero init darl overlay!");
         return new PHV::DarkInitEntry(dstSlice, *initActions);
+    }
 }
 
 boost::optional<PHV::DarkInitEntry>

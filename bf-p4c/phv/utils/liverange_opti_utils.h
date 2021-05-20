@@ -97,12 +97,18 @@ static void getTrimmedDominators(
         const auto* t1 = table1 ? u1->to<IR::MAU::Table>() : nullptr;
         for (const auto* u2 : candidates) {
             if (u1 == u2) continue;
+            LOG5("\t\t\tDoes " << DBPrint::Brief << u1 << " dominate " << DBPrint::Brief <<
+                 u2 << " ?");
             if (hasParserUse({ u2 })) continue;
             bool table2 = u2->is<IR::MAU::Table>();
             const auto* t2 = table2 ? u2->to<IR::MAU::Table>() : nullptr;
             // If u1 dominates u2, only consider u1. So, mark u2 for deletion.
-            if (domTree.strictlyDominates(t1, t2))
+            if (domTree.strictlyDominates(t1, t2)) {
                 dominatedNodes.insert(u2);
+                LOG5("\t\t\t   YES!");
+            } else {
+                LOG5("\t\t\t   NO!");
+            }
         }
     }
     for (const auto* u : dominatedNodes)
