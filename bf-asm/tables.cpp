@@ -2521,6 +2521,8 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
         } else if (auto s = get_stateful()) {
             source = "stful_ptr";
             start_bit = s->address_shift();
+        } else {
+            error(lineno, "Table %s has a meter_addr but no attached meter", name());
         }
     } else if (field_name == "meter_pfe") {
         if (get_meter()) {
@@ -2529,6 +2531,8 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
             source = "sel_ptr";
         } else if (get_stateful()) {
             source = "stful_ptr";
+        } else {
+            error(lineno, "Table %s has a meter_pfe but no attached meter", name());
         }
         start_bit = METER_PER_FLOW_ENABLE_START_BIT;
     } else if (field_name == "meter_type") {
@@ -2538,6 +2542,8 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
             source = "sel_ptr";
         else if (get_stateful())
             source = "stful_ptr";
+        else
+            error(lineno, "Table %s has a meter_type but no attached meter", name());
         start_bit = METER_TYPE_START_BIT;
     } else if (field_name == "sel_len_mod") {
         source = "selection_length";

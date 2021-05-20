@@ -992,8 +992,17 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
     gw_linked |= next->use.preferred()->layout.gateway_match;
+    // P4C-3595
+    // If the placed table has been split some of the attached tables might
+    // have been moved to its part (meter/counters/...)
+    // Remove them, so that pack fields for them dont clutter the table
+    // that no longer has those resources
+    auto *tbl = next->table->clone();
+    erase_if(tbl->attached, [next](const IR::MAU::BackendAttached *ba) {
+        return !next->attached_entries.count(ba->attached) ||
+               next->attached_entries.at(ba->attached).entries == 0; });
     TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
-                               next->resources.proxy_hash_ixbar, next->table,
+                               next->resources.proxy_hash_ixbar, tbl,
                                immediate_mask, gw_linked, lc.fpc);
 
     if (!current_format.find_format(&next->resources.table_format)) {
