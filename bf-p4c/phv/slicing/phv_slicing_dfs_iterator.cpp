@@ -722,6 +722,23 @@ bool DfsItrContext::dfs_prune_unwell_formed(const SuperCluster* sc) const {
                 LOG5("DFS pruned: found pack conflict in: " << sl);
                 return true;
             }
+            ordered_set<const PHV::AlignedCluster*> seen;
+            int size = 0;
+            for (auto& slice : *sl) {
+                if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size != 0) {
+                    LOG5("DFS pruned: "
+                         << "slice at offset " << size << " has deparsed_bottom_bits: " << slice);
+                    return true;
+                }
+                size += slice.size();
+                const auto* cluster = &sc->aligned_cluster(slice);
+                if (seen.find(cluster) != seen.end()) {
+                    LOG5("DFS pruned: slice list has two slices from the same aligned cluster: \n"
+                         << sl);
+                    return true;
+                }
+                seen.insert(cluster);
+            }
         }
     }
     auto err = new PHV::Error();
