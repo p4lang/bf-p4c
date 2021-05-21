@@ -1831,6 +1831,11 @@ p4c_add_xfail_reason("tofino"
 
 # p4_16/errors Always fail tests
 p4c_add_xfail_reason("tofino"
+  "error: Wrong port metadata field packing size, should be exactly 64 bits, is .* bits"
+  extensions/p4_tests/p4_16/errors/p4c-3664.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "error: Adjust byte count operand on primitive .* does not resolve to a constant value"
   extensions/p4_tests/p4_16/errors/meters_adjust_byte_count_neg.p4
 )

@@ -785,13 +785,22 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
              packing->totalWidth);
     }
 
+    std::stringstream packss;
+    packss << packing;
+    // Make sure we didn't overflow.
+    ERROR_CHECK(int(packing->totalWidth) <= phase0Size,
+                "Wrong port metadata field packing size, should be exactly %1% bits, is %2% bits\n"
+                "Port Metadata Struct : \n %3% \n"
+                "Note: Compiler may add padding to each field to make them \n"
+                "   byte-aligned to help with allocation. This can result in \n"
+                "   increasing the port metadata struct size. Please ensure the \n"
+                "   fields are within allowed bitsize once padded. Alternatively \n"
+                "   explicit pad fields can be added to the struct but must be \n"
+                "   marked with @padding annotation \n",
+                phase0Size, packing->totalWidth, packss.str());
+
     // Pad out the layout to fill the available phase 0 space.
     packing->padToAlignment(phase0Size);
-
-    // Make sure we didn't overflow.
-    ERROR_CHECK(int(packing->totalWidth) == phase0Size,
-                "Wrong port metadata field packing size, should be exactly %1% bits, is %2% bits",
-                phase0Size, packing->totalWidth);
 
     // Use the layout to construct a type for phase 0 data.
     IR::IndexedVector<IR::StructField> *packFields = new IR::IndexedVector<IR::StructField>();
