@@ -420,6 +420,7 @@ struct IXBar {
             IR::MAU::HashFunction algorithm;
             std::map<int, le_bitrange> galois_start_bit_to_p4_hash;
             const IR::Expression *hash_gen_expr = nullptr;   // expression from HashGenExpr
+            cstring name;    // Original name in case of hash distribution unit sharing
 
             void clear() {
                 allocated = false;
@@ -525,44 +526,6 @@ struct IXBar {
     static HashDistDest_t dest_location(const IR::Node *node, bool precolor = false);
     static std::string hash_dist_name(HashDistDest_t dest);
 
-    struct HashDistIRUse {
-        IXBar::Use use;
-        le_bitrange p4_hash_range;
-        HashDistDest_t dest;
-        // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *created_hd = nullptr;
-        cstring dyn_hash_name;
-        bool is_dynamic() const { return !dyn_hash_name.isNull(); }
-    };
-
-    struct HashDistUse {
-        safe_vector<HashDistIRUse> ir_allocations;
-        int expand = -1;
-        int unit = -1;
-        int shift = -1;
-        bitvec mask;
-
-        std::set<cstring> outputs;
-
-        int hash_group() const;
-        bitvec destinations() const;
-        unsigned hash_table_inputs() const;
-        bitvec galois_matrix_bits() const;
-
-        cstring used_by;
-        std::string used_for() const;
-
-        void clear() {
-            ir_allocations.clear();
-            expand = -1;
-            unit = -1;
-            shift = 0;
-            mask.clear();
-            outputs.clear();
-        }
-    };
-
-
     /**
      * The Hash Distribution Unit is captured in uArch section 6.4.3.5.3 Hash Distribution.
      * This is sourcing calculations from the Galois matrix and sends them to various locations
@@ -589,6 +552,48 @@ struct IXBar {
             : func(f), bits_in_use(b), dest(d), shift(s) {}
     };
 
+    struct HashDistIRUse {
+        IXBar::Use use;
+        le_bitrange p4_hash_range;
+        HashDistDest_t dest;
+        // Only currently used for dynamic hash.  Goal is to remove
+        const IR::MAU::HashDist *created_hd = nullptr;
+        cstring dyn_hash_name;
+        bool is_dynamic() const { return !dyn_hash_name.isNull(); }
+    };
+
+    struct HashDistUse {
+        // Source of this translated HashDistUse.
+        safe_vector<HashDistAllocPostExpand> src_reqs;
+
+        safe_vector<HashDistIRUse> ir_allocations;
+        int expand = -1;
+        int unit = -1;
+        int shift = -1;
+        bitvec mask;
+
+        std::set<cstring> outputs;
+
+        int hash_group() const;
+        bitvec destinations() const;
+        unsigned hash_table_inputs() const;
+        bitvec galois_matrix_bits() const;
+
+        cstring used_by;
+        std::string used_for() const;
+
+        void clear() {
+            src_reqs.clear();
+            ir_allocations.clear();
+            expand = -1;
+            unit = -1;
+            shift = 0;
+            mask.clear();
+            outputs.clear();
+        }
+    };
+
+    ordered_map<const IR::MAU::Table *, const safe_vector<HashDistUse> *> tbl_hash_dists;
 
     class XBarHashDist : public MauInspector {
         safe_vector<HashDistAllocPostExpand> alloc_reqs;

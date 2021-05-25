@@ -3518,7 +3518,7 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
  */
 void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring /* name */) {
+        bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring name) {
     use.ir_allocations.emplace_back();
     auto &rv = use.ir_allocations.back();
     ContByteConversion               map_alloc;
@@ -3605,6 +3605,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         hdh.hash_gen_expr = nullptr; }
     hdh.group = hash_group;
     hdh.allocated = true;
+    hdh.name = name;
     rv.p4_hash_range = alloc_req.func->hash_bits;
     rv.dest = alloc_req.dest;
     rv.created_hd = alloc_req.created_hd;
@@ -4194,19 +4195,70 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
  */
 bool IXBar::XBarHashDist::allocate_hash_dist() {
     for (int i = HD_IMMED_LO; i < HD_DESTS; i++) {
+        bool dynamic_hash = false;
         safe_vector<HashDistAllocPostExpand> dest_reqs;
         for (auto alloc_req : alloc_reqs) {
-            if (alloc_req.dest == static_cast<HashDistDest_t>(i))
+            if (alloc_req.dest == static_cast<HashDistDest_t>(i)) {
+                if (alloc_req.func && alloc_req.func->is_dynamic())
+                    dynamic_hash = true;
+
                 dest_reqs.push_back(alloc_req);
+            }
         }
         if (dest_reqs.empty())
             continue;
+
+        // Try to find a previously allocated hash dist that would match this new request.
+        // Never share dynamic hash or chained address.
+        // Share resource based on the same destination (this might be over conservative) since
+        // most of the time the shift is different accross destination even if the input is the
+        // same. Some destination also have different timing over others.
+        if (!dest_reqs[0].chained_addr && !dynamic_hash) {
+            bool found_prev_alloc = false;
+            for (auto kv : self.tbl_hash_dists) {
+                const safe_vector<HashDistUse> *hash_dist_vect = kv.second;
+                for (const HashDistUse &hash_dist : *hash_dist_vect) {
+                    if (hash_dist.src_reqs.size() == dest_reqs.size() &&
+                        hash_dist.src_reqs[0].dest == static_cast<HashDistDest_t>(i)) {
+                        bool match = true;
+                        for (int j = 0; j < (int)dest_reqs.size(); j++) {
+                            const HashDistAllocPostExpand &pe_src = hash_dist.src_reqs[j];
+                            const HashDistAllocPostExpand &pe_dst = dest_reqs[j];
+                            if (!pe_src.func->equiv_inputs_alg(pe_dst.func) ||
+                                pe_src.bits_in_use != pe_dst.bits_in_use ||
+                                pe_src.shift != pe_dst.shift ||
+                                pe_src.chained_addr != pe_dst.chained_addr) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) {
+                            // Found HDU previously allocated that exactly match out need.
+                            resources->hash_dists.emplace_back(hash_dist);
+                            resources->hash_dists.back().used_by = tbl->name;
+                            found_prev_alloc = true;
+                            break;
+                        }
+                    }
+                }
+                if (found_prev_alloc)
+                    break;
+            }
+            // Still have to look for other destination if needed
+            if (found_prev_alloc)
+                continue;
+        }
+
         HashDistUse hd_alloc;
         hd_alloc.used_by = tbl->name;
         if (!self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", tbl, false) &&
             !self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", tbl, true)) {
             return false;
         }
+        // Save source data for reuse by other table of the same stage.
+        if (!dest_reqs[0].chained_addr && !dynamic_hash)
+            hd_alloc.src_reqs = dest_reqs;
+
         resources->hash_dists.emplace_back(hd_alloc);
 
         if (dest_reqs[0].chained_addr && hd_alloc.expand >= 0) {
@@ -4442,20 +4494,26 @@ void IXBar::update(cstring name, const Use &alloc) {
     }
     if (alloc.hash_dist_hash.allocated) {
         auto &hdh = alloc.hash_dist_hash;
+
+        // This alias is used to cover for shared HDU
+        cstring local_name = name;
+        if (!hdh.name.isNullOrEmpty())
+            local_name = hdh.name;
+
         for (int i = 0; i < HASH_TABLES; i++) {
             if (((1U << i) & alloc.hash_table_inputs[hdh.group]) == 0) continue;
             for (auto bit : bitvec(hdh.galois_matrix_bits)) {
                 if (!hash_dist_bit_use[i][bit]) {
-                    hash_dist_bit_use[i][bit] = name;
-                } else if (hash_dist_bit_use[i][bit] != name) {
+                    hash_dist_bit_use[i][bit] = local_name;
+                } else if (hash_dist_bit_use[i][bit] != local_name) {
                     BUG("Conflicting hash distribution bit allocation %s and %s",
-                        name, hash_dist_bit_use[i][bit]);
+                        local_name, hash_dist_bit_use[i][bit]);
                 }
             }
             hash_dist_bit_inuse[i] |= hdh.galois_matrix_bits;
         }
         hash_used_per_function[hdh.group] |= hdh.galois_matrix_bits;
-        hash_group_print_use[hdh.group] = name;
+        hash_group_print_use[hdh.group] = local_name;
         hash_group_use[hdh.group] |= alloc.hash_table_inputs[hdh.group];
         update_hash_parity(hdh.group);
     }
@@ -4546,6 +4604,7 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
     for (auto &hash_dist : rsrc->hash_dists) {
         update(name + "$hash_dist" + std::to_string(index++), hash_dist);
     }
+    tbl_hash_dists.emplace(tbl, &rsrc->hash_dists);
 }
 
 void IXBar::update(const IR::MAU::Table *tbl) {
