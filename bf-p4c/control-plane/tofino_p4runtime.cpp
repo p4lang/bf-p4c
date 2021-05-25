@@ -65,13 +65,6 @@ void generateP4Runtime(const IR::P4Program* program,
     if (Log::verbose())
         std::cout << "Generating P4Runtime output for architecture " << arch << std::endl;
 
-
-    if (options.p4RuntimeForceStdExterns && (arch[0] != 't' || !arch.endsWith("na"))) {
-        ::error("--p4runtime-force-std-externs can only be used with "
-                "Tofino-specific architectures, such as 'tna'");
-        return;
-    }
-
     // Typedefs in P4 source are replaced in the midend. However since bf
     // runtime runs before midend, we run the pass to eliminate typedefs here to
     // facilitate bf-rt json generation.
