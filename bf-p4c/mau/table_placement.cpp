@@ -1192,6 +1192,13 @@ bool TablePlacement::can_split(const IR::MAU::Table *tbl, const IR::MAU::Attache
 }
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) {
+    // TODO(yumin): In the second round of table placement, where we ignore container conflicts,
+    // we probably should not ignore container conflicts that are unavoidable because of PARDE
+    // constraints. However, this feature is causing some regressions because in PHV metadata
+    // initialization, we might add initializations that would introduce container conflicts
+    // for other fields in the same byte with it. This feature will be enabled with the fix
+    // on metadata initialization side.
+    const bool enable_unavoidable_container_conflict = false;
     rv->use.format_type.invalidate();  // will need to be recomputed
     auto *t = rv->table;
     if (t->match_table) {
@@ -1320,14 +1327,15 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
                 rv->stage_advance_log = "gateway dependency on table " + p->table->name;
-            } else if (deps.container_conflict(p->table, rv->table)) {
-                if (!ignoreContainerConflicts) {
-                    rv->stage++;
-                    LOG2("  - action dependency between " << p->table->name << " and table " <<
-                         rv->table->name << " due to PHV allocation advances stage to " <<
-                         rv->stage);
-                    rv->stage_advance_log = "container conflict with table " + p->table->name;
-                }
+            } else if ((!ignoreContainerConflicts &&
+                        deps.container_conflict(p->table, rv->table)) ||
+                       (enable_unavoidable_container_conflict && ignoreContainerConflicts &&
+                        deps.unavoidable_container_conflict(p->table, rv->table))) {
+                rv->stage++;
+                LOG2("  - action dependency between "
+                     << p->table->name << " and table " << rv->table->name
+                     << " due to PHV allocation advances stage to " << rv->stage);
+                rv->stage_advance_log = "container conflict with table " + p->table->name;
             } else {
                 for (auto ctbl : tables_with_shared) {
                     // FIXME -- once we can put shared attached tables in different stages, we
@@ -1339,16 +1347,17 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                         rv->stage_advance_log = "shared table " + ctbl->name +
                             " depends on table " + p->table->name;
                         break;
-                    } else if (deps.container_conflict(p->table, ctbl)) {
-                        if (!ignoreContainerConflicts) {
-                            rv->stage++;
-                            LOG2("  - action dependency between " << p->table->name << " and "
-                                 "table " << ctbl->name << " due to PHV allocation advances "
-                                 "stage to " << rv->stage);
-                            rv->stage_advance_log = "shared table " + ctbl->name +
-                                " container conflict with table " + p->table->name;
-                            break;
-                        }
+                    } else if ((!ignoreContainerConflicts &&
+                                deps.container_conflict(p->table, ctbl)) ||
+                               (enable_unavoidable_container_conflict && ignoreContainerConflicts &&
+                                deps.unavoidable_container_conflict(p->table, ctbl))) {
+                        rv->stage++;
+                        LOG2("  - action dependency between " << p->table->name << " and "
+                             "table " << ctbl->name << " due to PHV allocation advances "
+                             "stage to " << rv->stage);
+                        rv->stage_advance_log = "shared table " + ctbl->name +
+                            " container conflict with table " + p->table->name;
+                        break;
                     }
                 }
             }

@@ -95,6 +95,7 @@ void PhvInfo::clear() {
     constantExtractedInSameState.clear();
     sameStateConstantExtraction.clear();
     fields_to_tempvars_i.clear();
+    same_container_alloc_i.clear();
     PhvInfo::clearMinStageInfo();
     PhvInfo::resetDeparserStage();
 }
@@ -2334,6 +2335,27 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldAccessType &op) {
     return out;
 }
 
+
+std::ostream &operator<<(std::ostream& out, const PhvInfo::SameContainerAllocConstraint& c) {
+    out << "SameContainerAllocConstraint:\n";
+    for (const auto& set : c.same_byte_bits) {
+        out << "{";
+        cstring sep = "";
+        for (const auto& e : *set) {
+            out << sep << e;
+            sep = ", ";
+        }
+        out << "}\n";
+    }
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out,
+                         const PhvInfo::SameContainerAllocConstraint::FieldBit& fb) {
+    out << fb.first->name << "[" << fb.second << "]";
+    return out;
+}
+
 namespace PHV {
 
 std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
@@ -2471,4 +2493,20 @@ void PhvInfo::DumpPhvFields::generate_field_histogram(gress_t gress) const {
             row << "x";
         row << " (" << entry.second << ")";
         LOG1(row.str()); }
+}
+
+bool PhvInfo::SameContainerAllocConstraint::same_container(const PHV::FieldSlice& a,
+                                                           const PHV::FieldSlice& b) const {
+    const FieldBit a_lo{a.field(), a.range().lo};
+    const FieldBit a_hi{a.field(), a.range().hi};
+    const FieldBit b_lo{b.field(), b.range().lo};
+    const FieldBit b_hi{b.field(), b.range().hi};
+    std::vector<const FieldBit*> bits{&a_lo, &a_hi, &b_lo, &b_hi};
+    for (const auto* b : bits) {
+        if (!same_byte_bits.contains(*b)) {
+            return false;
+        }
+    }
+    return same_byte_bits.find(a_lo) == same_byte_bits.find(b_hi) ||
+           same_byte_bits.find(a_hi) == same_byte_bits.find(b_lo);
 }

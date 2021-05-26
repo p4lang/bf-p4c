@@ -1,6 +1,7 @@
 #include <tuple>
 #include <boost/optional/optional_io.hpp>
 
+#include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/scc_toposort.h"
@@ -1320,62 +1321,40 @@ bool ActionPhvConstraints::is_bitmasked_set(
 
 bool ActionPhvConstraints::pack_conflicts_present(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        const std::vector<PHV::AllocSlice>& slices,
-        const PHV::SuperCluster& sc) const {
+        const std::vector<PHV::AllocSlice>& slices) const {
     // Check that none of the new slices have pack conflicts with the already allocated slices
     // (container_state).
     for (auto sl1 : container_state) {
         for (auto sl2 : slices) {
             if (sl1.field() == sl2.field()) continue;
             if (hasPackConflict(sl1.field(), sl2.field())) {
-                LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with " <<
-                     sl2.field()->name);
+                LOG5("\t\t\t" << sl1.field()->name <<
+                     " cannot be packed in the same stage with " << sl2.field()->name);
                 return true; } } }
-    // If the supercluster is not sliceable, this is all we check.
-    if (!sc.isSliceable()) return false;
 
-    // Note that the above isSliceable() check is sufficient because
-    // Assume there is pack conflict between f1 and f2.
+    // Check no pack conflicts for fields not in a same byte.
+    // Skip fields in the same byte, because no_pack is a soft constraints, when
+    // fields are in a same byte, then it's impossible to allocate them without
+    // violating this constraint.
+    // For example, assume there is a pack conflict between f1 and f2.
     // For header [f1<1>, f2<3>, f3<12>]
-    // It allows [f1<1>, f2<3>, f3<12>[0:3]], [f3<12>[4:11]]
+    // Previous implementation allows nonSliceable supercluster to bypass the check, but does
+    // not take same-byte fields into account.
+    // So it allows [f1<1>, f2<3>, f3<12>[0:3]], [f3<12>[4:11]]
     // but disallow [f1<1>, f2<3>, f3<12>].
-    // However, both of them will create a pack conflict.
-    // This is one of the bug that make allocation be short of 8-bit containers.
-    UnionFind<const PHV::Field*> same_byte_fields;
-    sc.forall_fieldslices([&](const PHV::FieldSlice& fs) { same_byte_fields.insert(fs.field()); });
-    for (const auto* sl : sc.slice_lists()) {
-        if (!sl->front().field()->exact_containers()) {
-            continue;
-        }
-        int offset = 0;
-        for (auto itr = sl->begin(); itr != sl->end(); offset += itr->size(), itr++) {
-            // If the end of fs reaches a byte boundary, skip.
-            if ((offset + itr->size()) % 8 != 0) {
-                const int byte_num = (offset + itr->size()) / 8;
-                // skip fields in the same byte, because no_pack is a soft constraints, when
-                // fields are in a same byte, then it's impossible to allocate them without
-                // violating this constraint.
-                auto next = std::next(itr);
-                int next_offset = offset + itr->size();
-                while (next != sl->end() && next_offset / 8 == byte_num) {
-                    same_byte_fields.makeUnion(itr->field(), next->field());
-                    next_offset += next->size();
-                    next++;
-                }
-            }
-        }
-    }
-
-    // If the supercluster is further sliceable, we also check the pack conflicts between slices
-    // within the candidate set.
+    // However, both of them will create the same pack conflict on f1 and f2.
+    // This is one of the previous bug that make allocation be short of 8-bit containers.
+    // we check the pack conflicts between slices within the candidate set.
     for (auto sl1 : slices) {
         for (auto sl2 : slices) {
+            if (phv.must_alloc_same_container(
+                    PHV::FieldSlice(sl1.field(), sl1.field_slice()),
+                    PHV::FieldSlice(sl2.field(), sl2.field_slice()))) {
+                continue;
+            }
             auto* f1 = sl1.field();
             auto* f2 = sl2.field();
             if (f1 == f2) continue;
-            if (same_byte_fields.contains(f1) && same_byte_fields.contains(f2) &&
-                same_byte_fields.find(f1) == same_byte_fields.find(f2))
-                continue;
             if (hasPackConflict(f1, f2)) {
                 LOG5("\t\t\tAllocation candidate " << sl1.field()->name
                                                    << " cannot be packed in "
@@ -2244,8 +2223,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::Allocation::MutuallyLiveSlices& original_container_state,
-        const PHV::Allocation::LiveRangeShrinkingMap& initActions,
-        const PHV::SuperCluster& sc) const {
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     // Allocating zero slices always succeeds...
     if (slices.size() == 0)
         return std::make_tuple(CanPackErrorCode::NO_ERROR, boost::none);
@@ -2267,7 +2245,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
 
     // Check if table placement induced any no pack constraints on fields that are candidates for
     // packing. If yes, packing not possible.
-    if (pack_conflicts_present(container_state, slices, sc))
+    if (pack_conflicts_present(container_state, slices))
         return std::make_tuple(CanPackErrorCode::PACK_CONSTRAINT_PRESENT, boost::none);
 
     // Create candidate packing

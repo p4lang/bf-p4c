@@ -1431,6 +1431,46 @@ Visitor::profile_t Clustering::ValidateClusters::init_apply(const IR::Node* root
     return Inspector::init_apply(root);
 }
 
+Visitor::profile_t Clustering::UpdateSameContainerAllocConstraint::init_apply(
+    const IR::Node* root) {
+    using FieldBit = PhvInfo::SameContainerAllocConstraint::FieldBit;
+    auto& same_container_alloc = self.phv_i.same_container_alloc_constraint();
+    auto& same_byte_bits = same_container_alloc.same_byte_bits;
+    same_container_alloc.clear();
+    // update based on newly generated clusters.
+    for (const auto* sc : self.cluster_groups()) {
+        // each bit starts with its own set.
+        sc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
+            for (int i = fs.range().lo; i <= fs.range().hi; ++i) {
+                same_byte_bits.insert({fs.field(), i});
+            }
+        });
+
+        // merge bits in same byte.
+        for (const auto* sl : sc->slice_lists()) {
+            int offset = 0;
+            boost::optional<FieldBit> prev = boost::make_optional(false, FieldBit());
+            for (const auto& fs : *sl) {
+                const auto* field = fs.field();
+                for (int i = 0; i < fs.size(); i++, offset++) {
+                    FieldBit curr{field, fs.range().lo + i};
+                    // (1) prev bit in same byte does not exist.
+                    // (2) two byte boundary bits that can be split.
+                    if (!prev ||
+                        (offset % 8 == 0 && !((*prev).first == field && field->no_split()))) {
+                        prev = curr;
+                        continue;
+                    }
+                    same_byte_bits.makeUnion(*prev, curr);
+                    prev = curr;
+                }
+            }
+        }
+    }
+
+    LOG1("updated same container alloc constraints " << same_container_alloc);
+    return Inspector::init_apply(root);
+}
 //////////////////////////////////////////////////////////
 
 //***********************************************************************************

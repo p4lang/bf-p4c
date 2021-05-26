@@ -2,6 +2,7 @@
 #include <numeric>
 #include <boost/optional/optional_io.hpp>
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/algorithm.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -1291,34 +1292,6 @@ bool PHV::SuperCluster::operator==(const PHV::SuperCluster& other) const {
     return true;
 }
 
-bool PHV::SuperCluster::isSliceable() const {
-    int sc_width = 0;
-    for (const auto* slice_list : slice_lists()) {
-        int size =  PHV::SuperCluster::slice_list_total_bits(*slice_list);
-        if (slice_list->front().field()->exact_containers()) {
-            sc_width = (sc_width < size) ? size : sc_width;
-            if (size == 8)
-                return false; } }
-    if (!exact_containers()) return true;
-    for (const auto* slice_list : slice_lists()) {
-        int min_no_split = INT_MAX;
-        int max_no_split = -1;
-        int offset = 0;
-        for (auto& slice : *slice_list) {
-            offset += slice.size();
-            if (!slice.field()->no_split()) continue;
-            int start = offset - slice.size();
-            min_no_split = (min_no_split > start) ? start : min_no_split;
-            max_no_split = (max_no_split < offset) ? offset : max_no_split;
-        }
-        // Found no split slice in this slice list.
-        if (min_no_split != INT_MAX && max_no_split != -1) {
-            int roundupSize = 8 * ROUNDUP(max_no_split, 8);
-            if (min_no_split < 8 && roundupSize >= sc_width)
-                return false; } }
-    return true;
-}
-
 const ordered_set<const PHV::SuperCluster::SliceList*>&
 PHV::SuperCluster::slice_list(const PHV::FieldSlice& slice) const {
     static const ordered_set<const SliceList*> empty;
@@ -1711,6 +1684,7 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList* list)
         out << "-null-slice-list-";
     return out;
 }
+
 
 /// Partial order for allocation status.
 bool operator<(

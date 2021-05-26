@@ -766,7 +766,7 @@ std::set<cstring> FindDataDependencyGraph::getFieldNameSlice(const PHV::Field *f
 class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDataDependencyGraph             &self;
     const IR::MAU::Table                *table;
-    ordered_map<PHV::Container, bitvec>    cont_writes;
+    ordered_map<PHV::Container, ordered_set<write_op_t>>    cont_writes;
 
  public:
     AddDependencies(FindDataDependencyGraph &self,
@@ -826,11 +826,20 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
         }
     }
 
-    void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables, bitvec range,
-            const PHV::Container container) {
+    void addContDeps(const cont_write_t &tables, const ordered_set<write_op_t>& writes,
+                     const PHV::Container container) {
+        const auto merge_range = [](const ordered_set<write_op_t> &writes) {
+            bitvec rst;
+            for (const auto &w : writes) {
+                rst |= w.second;
+            }
+            return rst;
+        };
         for (auto upstream_t : tables) {
+            auto upstream_range = merge_range(upstream_t.second);
+            auto range = merge_range(writes);
             if (self.ignore.ignore_deps(table, upstream_t.first)) {
-                WARN_CHECK(upstream_t.second == range, BFN::ErrorType::WARN_PRAGMA_USE,
+                WARN_CHECK(upstream_range == range, BFN::ErrorType::WARN_PRAGMA_USE,
                            "Table %1%: pragma ignore_table_dependency "
                            "of %2% is also ignoring PHV added action dependencies over container "
                            "%3%, which may not have been the desired outcome", table,
@@ -847,6 +856,25 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                  << " and table " << table->name << " because of container " << container);
             self.dg.container_conflicts[upstream_t.first].insert(table);
             self.dg.container_conflicts[table].insert(upstream_t.first);
+
+            // any_unavoidable returns true only if there exist two writes to two
+            // fieldslices that must be allocated to the same container because of PARDE
+            // constraints, from two tables.
+            const auto any_unavoidable = [&]() {
+                for (const auto &upstream_write : upstream_t.second) {
+                    for (const auto &table_write : writes) {
+                        if (self.phv.must_alloc_same_container(upstream_write.first,
+                                                               table_write.first)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            if (any_unavoidable()) {
+                self.dg.unavoidable_container_conflicts[upstream_t.first].insert(table);
+                self.dg.unavoidable_container_conflicts[table].insert(upstream_t.first);
+            }
         }
     }
 
@@ -942,7 +970,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 // container conflicts.
                 field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
                     bitvec cont_range(sl.container_slice().lo, sl.width());
-                    cont_writes[sl.container()] |= cont_range;
+                    cont_writes[sl.container()].insert(
+                        {PHV::FieldSlice(sl.field(), sl.field_slice()), cont_range});
                 });
             }
         }
@@ -976,7 +1005,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
     FindDataDependencyGraph                &self;
     const IR::MAU::Table                   *table;
     bool gateway_context = false;
-    ordered_map<PHV::Container, bitvec>    cont_writes;
+    ordered_map<PHV::Container, ordered_set<write_op_t>>    cont_writes;
 
  public:
     UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
@@ -1059,7 +1088,8 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                   /// whole pipeline?
                   field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
                       bitvec cont_range(sl.container_slice().lo, sl.width());
-                      cont_writes[sl.container()] |= cont_range;
+                      cont_writes[sl.container()].insert(
+                          {PHV::FieldSlice(sl.field(), sl.field_slice()), cont_range});
                       self.dg.containers_write_[table][sl.container()] = true;
                   });
               }
@@ -1181,7 +1211,7 @@ void FindDataDependencyGraph::flow_merge(Visitor &v) {
 
     for (auto &cw : dynamic_cast<FindDataDependencyGraph &>(v).cont_write) {
         for (auto entry : cw.second) {
-            cont_write[cw.first][entry.first] |= entry.second;
+            cont_write[cw.first][entry.first].insert(entry.second.begin(), entry.second.end());
         }
     }
 }

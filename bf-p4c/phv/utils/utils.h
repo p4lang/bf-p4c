@@ -985,9 +985,6 @@ class SuperCluster : public ClusterStats {
     /// Semantic equality.
     bool operator==(const SuperCluster& other) const;
 
-    /// @returns true if the supercluster can be sliced further.
-    bool isSliceable() const;
-
     /// @returns the aligned clusters in this group.
     const ordered_set<const RotationalCluster*>& clusters() const { return clusters_i; }
 

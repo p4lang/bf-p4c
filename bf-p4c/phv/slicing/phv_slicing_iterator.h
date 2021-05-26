@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_SLICING_PHV_SLICING_ITERATOR_H_
 #define BF_P4C_PHV_SLICING_PHV_SLICING_ITERATOR_H_
 
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/utils.h"
 
@@ -19,7 +20,7 @@ class ItrContext {
     IteratorInterface* pImpl;
 
  public:
-    ItrContext(const SuperCluster* sc, const PHVContainerSizeLayout& pa,
+    ItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
                const PackConflictChecker pack_conflict,
                const IsReferencedChecker is_referenced);
 

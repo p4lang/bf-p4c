@@ -105,7 +105,7 @@ class UnionFind {
 
     /// @returns a canonical element of the set containing @x.
     /// @exception if @x is not present.
-    const T find(const T x) {
+    const T find(const T x) const {
         Set* internal = internalFind(x);
         return *internal->begin();
     }

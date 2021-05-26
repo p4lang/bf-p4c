@@ -849,8 +849,7 @@ class ActionPhvConstraints : public Inspector {
     /// @returns true if there is a no-pack conflict between the fields in @container_state.
     bool pack_conflicts_present(
             const PHV::Allocation::MutuallyLiveSlices& container_state,
-            const std::vector<PHV::AllocSlice>& slices,
-            const PHV::SuperCluster& sc) const;
+            const std::vector<PHV::AllocSlice>& slices) const;
 
     /// @returns true if parser constant extract constraints are satisfied for the candidate
     /// packing. This only applies to Tofino, where fields written to using constant extractors in
@@ -883,8 +882,7 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation& alloc,
             const std::vector<PHV::AllocSlice>& slices,
             const PHV::Allocation::MutuallyLiveSlices& original_container_state,
-            const PHV::Allocation::LiveRangeShrinkingMap& initActions,
-            const PHV::SuperCluster& sc) const;
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /** @returns true if this packing would create container conflicts because of metadata
       * initialization issues.

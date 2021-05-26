@@ -1765,7 +1765,7 @@ CoreAllocation::tryAllocSliceList(
 
         std::tie(canPackErrorCode, action_constraints) =
             actions_i.can_pack(perContainerAlloc, candidate_slices,
-                    actual_container_state, initActions, super_cluster);
+                    actual_container_state, initActions);
         bool creates_new_container_conflicts =
             actions_i.creates_container_conflicts(actual_container_state, initActions,
                     meta_init_i.getTableActionsMap());
@@ -3512,7 +3512,8 @@ BruteForceAllocationStrategy::preslice_validation(
         int n_tried = 0;
         auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
         bool succ = false;
-        auto itr_ctx = PHV::Slicing::ItrContext(cluster, pa_container_sizes.field_to_layout(),
+        auto itr_ctx = PHV::Slicing::ItrContext(core_alloc_i.phv(), cluster,
+                                                pa_container_sizes.field_to_layout(),
                                                 has_pack_conflict_i, is_referenced_i);
         boost::optional<const PHV::SuperCluster::SliceList*> last_invald;
         itr_ctx.iterate([&](std::list<PHV::SuperCluster*> sliced) {
@@ -3623,8 +3624,9 @@ BruteForceAllocationStrategy::preslice_clusters(
             std::list<PHV::SuperCluster*> sliced;
 
             auto itr_ctx = PHV::Slicing::ItrContext(
-                sc, core_alloc_i.pragmas().pa_container_sizes().field_to_layout(),
-                has_pack_conflict_i, is_referenced_i);
+                core_alloc_i.phv(), sc,
+                core_alloc_i.pragmas().pa_container_sizes().field_to_layout(), has_pack_conflict_i,
+                is_referenced_i);
             itr_ctx.iterate([&](std::list<PHV::SuperCluster*> sliced_clusters) {
                 n_tried++;
                 if (n_tried > config_i.max_slicing) {
@@ -3638,17 +3640,17 @@ BruteForceAllocationStrategy::preslice_clusters(
                 //     for (const auto* f : unsatisfiable_fields) LOG5("\t" << f);
                 // }
                 // if (unsatisfiable_fields.size() == 0) {
-                    if (config_i.pre_slicing_validation) {
-                        // validation did not pass
-                        if (auto unallocatable =
-                                preslice_validation(sliced_clusters, container_groups)) {
-                            itr_ctx.invalidate(*unallocatable);
-                            return true;
-                        }
+                if (config_i.pre_slicing_validation) {
+                    // validation did not pass
+                    if (auto unallocatable =
+                            preslice_validation(sliced_clusters, container_groups)) {
+                        itr_ctx.invalidate(*unallocatable);
+                        return true;
                     }
-                    found = true;
-                    sliced = sliced_clusters;
-                    return false;
+                }
+                found = true;
+                sliced = sliced_clusters;
+                return false;
                 // }
                 // return true;
             });
@@ -4014,11 +4016,59 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         pounder_clusters.insert(super_cluster);
     }
 
+    // XXX(yumin): This part of the code is moved from a previous implementation of checking
+    // whether a super cluster can be split or not. The implementation was incorrect,
+    // but if we change this to a correct version, many regressions were triggered, because
+    // the order of allocation is drastically changed and tests were fitting by pragmas.
+    // We will leave it here until we have time to fix regression issues.
+    const auto is_sliceable_wrong_version = [](const PHV::SuperCluster* sc) {
+        int sc_width = 0;
+        for (const auto* slice_list : sc->slice_lists()) {
+            int size = PHV::SuperCluster::slice_list_total_bits(*slice_list);
+            if (slice_list->front().field()->exact_containers()) {
+                sc_width = (sc_width < size) ? size : sc_width;
+                if (size == 8) return false;
+            }
+        }
+        if (!sc->exact_containers()) return true;
+        for (const auto* slice_list : sc->slice_lists()) {
+            int min_no_split = INT_MAX;
+            int max_no_split = -1;
+            int offset = 0;
+            for (auto& slice : *slice_list) {
+                offset += slice.size();
+                if (!slice.field()->no_split()) continue;
+                int start = offset - slice.size();
+                min_no_split = (min_no_split > start) ? start : min_no_split;
+                max_no_split = (max_no_split < offset) ? offset : max_no_split;
+            }
+            // Found no split slice in this slice list.
+            if (min_no_split != INT_MAX && max_no_split != -1) {
+                int roundupSize = 8 * ROUNDUP(max_no_split, 8);
+                if (min_no_split < 8 && roundupSize >= sc_width) return false;
+            }
+        }
+        return true;
+    };
+
     // calc non_sliceable clusters
-    // i.e. 8-bit and exact container required.
-    for (const auto* super_cluster : cluster_groups)
-        if (!super_cluster->isSliceable())
-            non_sliceable.insert(super_cluster);
+    // const auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
+    for (const auto* cluster : cluster_groups) {
+        if (!is_sliceable_wrong_version(cluster)) {
+            non_sliceable.insert(cluster);
+        }
+        //// The correct version of is_sliceable check.
+        // auto itr_ctx = PHV::Slicing::ItrContext(cluster, pa_container_sizes.field_to_layout(),
+        //                                         has_pack_conflict_i, is_referenced_i);
+        // int cnt = 0;
+        // itr_ctx.iterate([&](std::list<PHV::SuperCluster*>) {
+        //     cnt++;
+        //     return cnt <= 1;
+        // });
+        // if (cnt <= 1) {
+        //     non_sliceable.insert(cluster);
+        // }
+    }
 
     // calc required_length, i.e. max(max{fieldslice.size()}, {slicelist.size()}).
     for (const auto* super_cluster : cluster_groups) {
@@ -4422,9 +4472,9 @@ BruteForceAllocationStrategy::tryVariousSlicing(
 
     // Try all possible slicings.
     auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
-    auto itr_ctx = PHV::Slicing::ItrContext(
-        cluster_group, pa_container_sizes.field_to_layout(),
-        has_pack_conflict_i, is_referenced_i);
+    auto itr_ctx = PHV::Slicing::ItrContext(core_alloc_i.phv(), cluster_group,
+                                            pa_container_sizes.field_to_layout(),
+                                            has_pack_conflict_i, is_referenced_i);
     itr_ctx.iterate([&](std::list<PHV::SuperCluster*> slicing) {
         ++n_tried;
         if (n_tried > MAX_SLICING_TRY) {

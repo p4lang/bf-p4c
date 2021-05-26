@@ -940,20 +940,12 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
                 return true;
             }
 
-            // collect all fields that is in the same byte with current fs.
-            ordered_set<const Field*> same_byte_fields;
-            for (int i = offset; i >= offset - (offset % 8); i--) {
-                same_byte_fields.insert(fs_bitmap.at(i).field());
-            }
-            for (int i = offset + fs.size(); i % 8 != 0; i++) {
-                same_byte_fields.insert(fs_bitmap.at(i).field());
-            }
-
             // seek back to the left-most possible starting bit.
             int leftmost_start = offset;
             for (; leftmost_start >= 0; leftmost_start--) {
-                const auto* prev_field = fs_bitmap.at(leftmost_start).field();
-                if (!same_byte_fields.count(prev_field) && prev_field != fs.field() &&
+                const auto prev_fs = fs_bitmap.at(leftmost_start);
+                const auto* prev_field = prev_fs.field();
+                if (prev_field != fs.field() && !phv_i.must_alloc_same_container(prev_fs, fs) &&
                     has_pack_conflict_i(prev_field, fs.field())) {
                     break;
                 }
@@ -988,9 +980,11 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
 
             // check forwarding pack_conflict.
             for (int i = leftmost_start; i < leftmost_start + sz_req.size; i++) {
-                const auto* field = fs_bitmap.at(i).field();
-                if (!same_byte_fields.count(field) && field != fs.field() &&
-                    has_pack_conflict_i(field, fs.field())) {
+                const auto next_fs = fs_bitmap.at(i);
+                const auto* next_field = next_fs.field();
+                if (next_field != fs.field() &&
+                    !phv_i.must_alloc_same_container(next_fs, fs) &&
+                    has_pack_conflict_i(next_field, fs.field())) {
                     LOG5("DFS pruned(unsat_constraint_3): not enough room after "
                          << i << ", slice list: " << sl << "\n, fieldslice " << fs
                          << " must be allocated to " << sz_req << ", offset: " << offset

@@ -49,6 +49,7 @@ enum class SplitChoice {
 class DfsItrContext : public IteratorInterface {
  public:
     // input
+    const PhvInfo& phv_i;
     const SuperCluster* sc_i;
     const PHVContainerSizeLayout pa_i;
     const PackConflictChecker has_pack_conflict_i;
@@ -96,11 +97,12 @@ class DfsItrContext : public IteratorInterface {
     const SuperCluster::SliceList* to_invalidate = nullptr;
 
  public:
-    DfsItrContext(const SuperCluster* sc, const PHVContainerSizeLayout& pa,
+    DfsItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
                   const PackConflictChecker& pack_conflict,
                   const IsReferencedChecker is_used,
                   int max_search_steps = (1 << 25))
-        : sc_i(sc),
+        : phv_i(phv),
+          sc_i(sc),
           pa_i(pa),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),

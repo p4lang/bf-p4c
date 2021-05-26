@@ -1111,12 +1111,26 @@ class PhvInfo {
         }
     };
 
+    /// SameContainerAllocConstraint stores a UnionFind for field slices that
+    /// must be allocated into one container because of PARDE constraints.
+    struct SameContainerAllocConstraint {
+        using FieldBit = std::pair<const PHV::Field*, int>;
+        UnionFind<FieldBit> same_byte_bits;
+
+        // return true if the two field slice must share a container.
+        bool same_container(const PHV::FieldSlice& a, const PHV::FieldSlice& b) const;
+        void clear() { same_byte_bits.clear(); }
+    };
+
     const SymBitMatrix& field_mutex() const { return field_mutex_i; }
     const SymBitMatrix& metadata_mutex() const { return metadata_mutex_i; }
     const SymBitMatrix& dark_mutex() const { return dark_mutex_i; }
     const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack_i; }
     const SymBitMatrix& field_no_pack_mutex() const { return field_no_pack_i; }
     const SymBitMatrix& digest_no_pack_mutex() const { return digest_no_pack_i; }
+    const SameContainerAllocConstraint& same_container_alloc_constraint() const {
+        return same_container_alloc_i;
+    }
     SymBitMatrix& field_mutex() { return field_mutex_i; }
     SymBitMatrix& metadata_mutex() { return metadata_mutex_i; }
     SymBitMatrix& dark_mutex() { return dark_mutex_i; }
@@ -1126,6 +1140,10 @@ class PhvInfo {
 
     SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together_i; }
     const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together_i; }
+    SameContainerAllocConstraint& same_container_alloc_constraint() {
+        return same_container_alloc_i;
+    }
+
     bool are_bridged_extracted_together(const PHV::Field* f1, const PHV::Field* f2) const {
         BUG_CHECK(f1 && f2, "No PHV field");
         return bridged_extracted_together_i(f1->id, f2->id);
@@ -1300,6 +1318,11 @@ class PhvInfo {
     // check allows the merging of the gateway with the table.
     bool darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const;
 
+    // return true if some bit of two fieldslice will share the same container after allocation.
+    bool must_alloc_same_container(const PHV::FieldSlice& a, const PHV::FieldSlice& b) const {
+        return same_container_alloc_i.same_container(a, b);
+    }
+
  private:  // class PhvInfo
     //
     std::map<cstring, PHV::Field>            all_fields;
@@ -1368,6 +1391,10 @@ class PhvInfo {
     /// Mapping of all the fields to the TempVars created. This is needed by the Alias
     /// transformation to automatically add initializations of validity bits for alias sources.
     ordered_map<const PHV::Field*, const IR::TempVar*>  fields_to_tempvars_i;
+
+    /// lookup table for fieldslices that must be allocated to one container
+    /// due to PARDE constraints.
+    SameContainerAllocConstraint same_container_alloc_i;
 
     /// Set of containers that must be set to 0 (and their container validity bit set
     /// unconditionally to 1) for the deparsed zero optimization.
@@ -1737,13 +1764,15 @@ std::ostream &operator<<(std::ostream &, const ordered_set<PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const ordered_set<const PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PHV::FieldAccessType &);
+std::ostream &operator<<(std::ostream&, const PhvInfo::SameContainerAllocConstraint&);
+std::ostream &operator<<(std::ostream&, const PhvInfo::SameContainerAllocConstraint::FieldBit&);
 
 namespace PHV {
 
 std::ostream &operator<<(std::ostream &, const PHV::FieldSlice &sl);
 std::ostream &operator<<(std::ostream &, const PHV::FieldSlice *sl);
 
-}   // namespace PHV
+}  // namespace PHV
 
 // These overloads must be declared directly in `namespace std` to work around
 // ADL limitations for lookup of names in sibling namespaces.

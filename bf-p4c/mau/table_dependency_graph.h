@@ -126,6 +126,12 @@ struct DependencyGraph {
     ordered_map<const IR::MAU::Table*,
              ordered_set<const IR::MAU::Table*>> container_conflicts;
 
+    /** Unavoid container conflicts due to parde constraints.
+     *  This will be a subset of the above container_conflicts.
+     */
+    ordered_map<const IR::MAU::Table*,
+             ordered_set<const IR::MAU::Table*>> unavoidable_container_conflicts;
+
     Graph g;                // Dependency graph.
 
     // True once the graph has been fully constructed.
@@ -367,6 +373,15 @@ struct DependencyGraph {
         if (container_conflicts.find(t1) == container_conflicts.end())
             return false;
         if (container_conflicts.at(t1).find(t2) == container_conflicts.at(t1).end())
+            return false;
+        return true;
+    }
+
+    bool unavoidable_container_conflict(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+        if (unavoidable_container_conflicts.find(t1) == unavoidable_container_conflicts.end())
+            return false;
+        if (unavoidable_container_conflicts.at(t1).find(t2) ==
+            unavoidable_container_conflicts.at(t1).end())
             return false;
         return true;
     }
@@ -803,7 +818,8 @@ class NameToTableMapBuilder : public MauInspector {
 
 class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
-    typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
+    using write_op_t = std::pair<PHV::FieldSlice, bitvec>;
+    using cont_write_t = ordered_map<const IR::MAU::Table*, ordered_set<write_op_t>>;
     typedef struct {
         ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> ixbar_read;
         ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> action_read;

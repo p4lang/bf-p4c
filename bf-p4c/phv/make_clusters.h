@@ -463,6 +463,16 @@ class Clustering : public PassManager {
         explicit ValidateClusters(Clustering& c) : self(c) { }
     };
 
+    class UpdateSameContainerAllocConstraint : public Inspector {
+     private:
+        Clustering& self;
+
+        profile_t init_apply(const IR::Node* root) override;
+
+     public:
+        explicit UpdateSameContainerAllocConstraint(Clustering& c) : self(c) { }
+    };
+
  public:
     Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa,
                const ActionPhvConstraints& a)
@@ -479,7 +489,8 @@ class Clustering : public PassManager {
             new MakeRotationalClusters(*this),  // populates rotational_clusters_i
             inconsistent_extracts, place_togethers,
             new MakeSuperClusters(*this, *place_togethers),  // populates super_clusters_i
-            new ValidateClusters(*this)                      // validate clustering is correct.
+            new ValidateClusters(*this),                     // validate clustering is correct.
+            new UpdateSameContainerAllocConstraint(*this)    // update SameContainerAllocConstraint
         });
     }
 
