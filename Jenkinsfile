@@ -18,160 +18,187 @@ DOCKER_PROJECT = "barefootnetworks"
 // DOCKER_REGISTRY = "amr-registry.caas.intel.com"
 // DOCKER_PROJECT = "${DOCKER_REGISTRY}/bxd-sw"
 
-node ('compiler-nodes') {
+def runInDocker(Map namedArgs, String cmd) {
+    // Supported named arguments and their default values:
+    def args = [
+        extraArgs: '',
+        workingDir: '/bfn/bf-p4c-compilers/build',
+        ctestParallelLevel: 1,
+    ]
+
+    assert args.keySet().containsAll(namedArgs.keySet())
+    args.putAll(namedArgs)
+    cmd = cmd.trim()
+
+    sh """
+        docker run --rm \
+            -w ${args.workingDir} \
+            -e CTEST_PARALLEL_LEVEL=${args.ctestParallelLevel} \
+            -e CTEST_OUTPUT_ON_FAILURE='true' \
+            ${args.extraArgs} \
+            ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
+            ${cmd}
+    """
+}
+
+def runInDocker(String cmd) {
+    runInDocker([:], cmd)
+}
+
+node ('compiler-travis') {
     // Clean workspace before doing anything
     sh "sudo chmod -R 777 ."
     deleteDir()
-    try {
-        ansiColor('xterm') {
-            timestamps {
+    ansiColor('xterm') {
+        timestamps {
 
-                stage ('Checkout') {
-                    echo 'Checking out bf-p4c-compilers'
-                    checkout scm
-                    bf_p4c_compilers_rev = sh (
-                        script: 'git rev-parse HEAD',
-                        returnStdout: true
-                    ).trim()
-                    bf_p4c_compilers_rev_short = sh (
-                        script: 'git rev-parse --short HEAD',
-                        returnStdout: true
-                    ).trim()
-                    echo "Using bf-p4c-compilers:${bf_p4c_compilers_rev}"
-                    sh 'git log -1 --stat'
+            stage ('Checkout') {
+                echo 'Checking out bf-p4c-compilers'
+                checkout scm
+                bf_p4c_compilers_rev = sh (
+                    script: 'git rev-parse HEAD',
+                    returnStdout: true
+                ).trim()
+                bf_p4c_compilers_rev_short = sh (
+                    script: 'git rev-parse --short HEAD',
+                    returnStdout: true
+                ).trim()
+                echo "Using bf-p4c-compilers:${bf_p4c_compilers_rev}"
+                sh 'git log -1 --stat'
+            }
+
+            stage ('Pull image') {
+                echo 'Attempting to pull existing bf-p4c-compilers Docker image'
+                withCredentials([usernamePassword(
+                    credentialsId: "${DOCKER_CREDENTIALS}",
+                    usernameVariable: "DOCKER_USERNAME",
+                    passwordVariable: "DOCKER_PASSWORD"
+                )]) {
+                    sh """
+                        docker login \
+                            -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} \
+                            ${DOCKER_REGISTRY}
+                    """
                 }
+                image_tag = "${env.BRANCH_NAME.toLowerCase()}_${bf_p4c_compilers_rev}"
+                try {
+                    sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
+                    image_pulled = 'true'
+                    echo "Pulled image bf-p4c-compilers:${image_tag}"
+                } catch (err) {
+                    image_pulled = 'false'
+                    echo 'Nothing pulled'
+                }
+            }
 
-                stage ('Pull image') {
-                    echo 'Attempting to pull existing bf-p4c-compilers Docker image'
-                    withCredentials([usernamePassword(
-                        credentialsId: "${DOCKER_CREDENTIALS}",
-                        usernameVariable: "DOCKER_USERNAME",
-                        passwordVariable: "DOCKER_PASSWORD"
-                    )]) {
+            if (image_pulled != 'true') {
+
+                stage ('Setup build') {
+                    echo 'Checking out p4factory for reference'
+                    sh 'git clone git@github.com:barefootnetworks/p4factory.git'
+                    dir('p4factory') {
+                        def p4factory_rev = sh (
+                            script: 'git rev-parse HEAD',
+                            returnStdout: true
+                        ).trim()
+                        echo "Using p4factory:${p4factory_rev}"
+                        sh 'git log -1 --stat'
+
+                        // Extract revision of bf-switch submodule used in p4factory
+                        // ! The submodule is not initialized at this point
+                        bf_switch_rev = sh (
+                            script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
+                            returnStdout: true
+                        ).trim()
+                    }
+                    sh 'rm -rf p4factory'
+
+                    echo "Initializing bf-p4c-compilers submodules"
+                    sh "git submodule update --init --recursive"
+
+                    echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
+                    dir('p4-tests/p4_16/switch_16') {
                         sh """
-                            docker login \
-                                -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} \
-                                ${DOCKER_REGISTRY}
+                            git fetch
+                            git checkout ${bf_switch_rev}
+                            git submodule update --init --recursive
+                            git log -1 --stat
                         """
                     }
-                    image_tag = "${env.BRANCH_NAME.toLowerCase()}_${bf_p4c_compilers_rev}"
-                    try {
-                        sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
-                        image_pulled = 'true'
-                        echo "Pulled image bf-p4c-compilers:${image_tag}"
-                    } catch (err) {
-                        image_pulled = 'false'
-                        echo 'Nothing pulled'
-                    }
                 }
 
-                if (image_pulled != 'true') {
+                stage ('Build intermediate') {
+                    // We want to mount ~/.ccache_bf-p4c-compilers into Docker when we
+                    // compile bf-p4c-compilers, but `docker build` doesn't do external
+                    // mounts. To work around this, we build the image in two stages.
+                    //
+                    // The first stage uses `docker build` to install dependencies and set
+                    // up the build environment. The second stage does the actual build in
+                    // a Docker container and cleans up.
 
-                    stage ('Setup build') {
-                        echo 'Checking out p4factory for reference'
-                        sh 'git clone git@github.com:barefootnetworks/p4factory.git'
-                        dir('p4factory') {
-                            def p4factory_rev = sh (
-                                script: 'git rev-parse HEAD',
-                                returnStdout: true
-                            ).trim()
-                            echo "Using p4factory:${p4factory_rev}"
-                            sh 'git log -1 --stat'
+                    echo 'Building intermediate Docker image'
+                    sh """
+                        mkdir -p ~/.ccache_bf-p4c-compilers
+                        docker build \
+                            --pull \
+                            -f docker/Dockerfile.tofino \
+                            -t bf-p4c-compilers_intermediate_${image_tag} \
+                            --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
+                            --build-arg MAKEFLAGS=j16 \
+                            --build-arg BUILD_FOR=jenkins-intermediate \
+                            --build-arg BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
+                            .
+                    """
+                }
 
-                            // Extract revision of bf-switch submodule used in p4factory
-                            // ! The submodule is not initialized at this point
-                            bf_switch_rev = sh (
-                                script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
-                                returnStdout: true
-                            ).trim()
-                        }
-                        sh 'rm -rf p4factory'
+                stage ('Build final') {
+                    parallel (
 
-                        echo "Initializing bf-p4c-compilers submodules"
-                        sh "git submodule update --init --recursive"
-
-                        echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
-                        dir('p4-tests/p4_16/switch_16') {
+                        'Unified': {
+                            echo 'Building final Docker image to run tests with (unified build)'
                             sh """
-                                git fetch
-                                git checkout ${bf_switch_rev}
-                                git submodule update --init --recursive
-                                git log -1 --stat
+                                docker rm -f bf-p4c-compilers_build_${image_tag} \
+                                    || true
+                                docker run \
+                                    --name bf-p4c-compilers_build_${image_tag} \
+                                    -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                    -e MAKEFLAGS=j16 \
+                                    -e BUILD_FOR=jenkins-final \
+                                    -e IMAGE_TYPE=test \
+                                    -e BUILD_GLASS=false \
+                                    -e GEN_REF_OUTPUTS=false \
+                                    -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                    bf-p4c-compilers_intermediate_${image_tag} \
+                                    /bfn/bf-p4c-compilers/docker/docker_build.sh
+                                docker commit \
+                                    bf-p4c-compilers_build_${image_tag} \
+                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
+                                docker rm -f bf-p4c-compilers_build_${image_tag}
                             """
-                        }
-                    }
+                        },
 
-                    stage ('Build intermediate') {
-                        // We want to mount ~/.ccache_bf-p4c-compilers into Docker when we
-                        // compile bf-p4c-compilers, but `docker build` doesn't do external
-                        // mounts. To work around this, we build the image in two stages.
-                        //
-                        // The first stage uses `docker build` to install dependencies and set
-                        // up the build environment. The second stage does the actual build in
-                        // a Docker container and cleans up.
+                        'Non-unified': {
+                            echo 'Testing non-unified build'
+                            sh """
+                                docker run --rm \
+                                    -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                    -e MAKEFLAGS=j16 \
+                                    -e BUILD_FOR=jenkins-final \
+                                    -e IMAGE_TYPE=non-unified \
+                                    -e BUILD_GLASS=false \
+                                    -e GEN_REF_OUTPUTS=false \
+                                    -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                    bf-p4c-compilers_intermediate_${image_tag} \
+                                    /bfn/bf-p4c-compilers/docker/docker_build.sh
+                            """
+                        },
 
-                        echo 'Building intermediate Docker image'
-                        sh """
-                            mkdir -p ~/.ccache_bf-p4c-compilers
-                            docker build \
-                                --pull \
-                                -f docker/Dockerfile.tofino \
-                                -t bf-p4c-compilers_intermediate_${image_tag} \
-                                --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
-                                --build-arg MAKEFLAGS=j16 \
-                                --build-arg BUILD_FOR=jenkins-intermediate \
-                                --build-arg BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
-                                .
-                        """
-                    }
+                    )
+                }
 
-                    stage ('Build final') {
-                        parallel (
-
-                            'Unified': {
-                                echo 'Building final Docker image to run tests with (unified build)'
-                                sh """
-                                    docker rm -f bf-p4c-compilers_build_${image_tag} \
-                                        || true
-                                    docker run \
-                                        --name bf-p4c-compilers_build_${image_tag} \
-                                        -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                        -e MAKEFLAGS=j16 \
-                                        -e BUILD_FOR=jenkins-final \
-                                        -e IMAGE_TYPE=test \
-                                        -e BUILD_GLASS=false \
-                                        -e GEN_REF_OUTPUTS=false \
-                                        -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                        bf-p4c-compilers_intermediate_${image_tag} \
-                                        /bfn/bf-p4c-compilers/docker/docker_build.sh
-                                    docker commit \
-                                        bf-p4c-compilers_build_${image_tag} \
-                                        ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
-                                    docker rm -f bf-p4c-compilers_build_${image_tag}
-                                """
-                            },
-
-                            'Non-unified': {
-                                echo 'Testing non-unified build'
-                                sh """
-                                    docker run --rm \
-                                        -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                        -e MAKEFLAGS=j16 \
-                                        -e BUILD_FOR=jenkins-final \
-                                        -e IMAGE_TYPE=non-unified \
-                                        -e BUILD_GLASS=false \
-                                        -e GEN_REF_OUTPUTS=false \
-                                        -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                        bf-p4c-compilers_intermediate_${image_tag} \
-                                        /bfn/bf-p4c-compilers/docker/docker_build.sh
-                                """
-                            },
-
-                        )
-                    }
-
-                    stage ('Push image') {
-                        echo "Pushing the built Docker image bf-p4c-compilers:${image_tag}"
+                stage ('Push image') {
+                    echo "Pushing the built Docker image bf-p4c-compilers:${image_tag}"
+                    try {
                         // sh "docker push ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
                         // While migrating images, push to both barefootnetworks and bxd-sw @ CaaS
                         parallel (
@@ -204,65 +231,16 @@ node ('compiler-nodes') {
                                 """
                             }
                         )
+                    } catch (err) {
+                        echo "Pushing of the built Docker image failed. Notifying the maintainers and continuing."
+                        emailext subject: "${env.JOB_NAME} failed to push build Docker image",
+                                    body: "Check console output at '${env.RUN_DISPLAY_URL}'",
+                                    to: "tomas.zavodnik@intel.com,prathima.kotikalapudi@intel.com",
+                                    attachLog: true
                     }
-
                 }
 
             }
-        }
-    } catch (err) {
-        currentBuild.result = 'FAILED'
-        throw err
-    }
-}
-
-def runInDocker(Map namedArgs, String cmd) {
-    // Supported named arguments and their default values:
-    def args = [
-        extraArgs: '',
-        workingDir: '/bfn/bf-p4c-compilers/build',
-        ctestParallelLevel: 1,
-    ]
-
-    assert args.keySet().containsAll(namedArgs.keySet())
-    args.putAll(namedArgs)
-    cmd = cmd.trim()
-
-    sh """
-        docker run --rm \
-            -w ${args.workingDir} \
-            -e CTEST_PARALLEL_LEVEL=${args.ctestParallelLevel} \
-            -e CTEST_OUTPUT_ON_FAILURE='true' \
-            ${args.extraArgs} \
-            ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
-            ${cmd}
-    """
-}
-
-def runInDocker(String cmd) {
-    runInDocker([:], cmd)
-}
-
-node ('compiler-travis') {
-    // Clean workspace before doing anything
-    sh "sudo chmod -R 777 ."
-    deleteDir()
-    echo 'Pulling the built Docker image for the PR'
-    withCredentials([usernamePassword(
-        credentialsId: "${DOCKER_CREDENTIALS}",
-        usernameVariable: "DOCKER_USERNAME",
-        passwordVariable: "DOCKER_PASSWORD"
-    )]) {
-        sh """
-            docker login \
-                -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} \
-                ${DOCKER_REGISTRY}
-        """
-    }
-    sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
-    sh "docker pull ${DOCKER_PROJECT}/p4v:latest"
-    ansiColor('xterm') {
-        timestamps {
 
             stage ('Test') {
                 parallel (
@@ -495,6 +473,7 @@ node ('compiler-travis') {
                         ).trim()
                         echo "bf_p4c_cid: ${bf_p4c_cid}"
 
+                        sh "docker pull ${DOCKER_PROJECT}/p4v:latest"
                         sh """
                             mkdir -p p4o_regression
                             docker cp ${bf_p4c_cid}:/bfn/bf-p4c-compilers/build p4o_regression/
