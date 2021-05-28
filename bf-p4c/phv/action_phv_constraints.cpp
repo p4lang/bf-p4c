@@ -410,6 +410,13 @@ void ActionPhvConstraints::ConstraintTracker::print_field_ordering(
 }
 
 void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& slice_lists) {
+    if (LOGGING(6)) {
+        LOG6("Slice list on input");
+        for (auto sl : slice_lists) {
+            LOG6("  " << sl);
+        }
+    }
+
     ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>> fields;
     for (const auto* sl : slice_lists) {
         for (const auto& fs : *sl) {
@@ -428,11 +435,32 @@ void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& 
         }
     }
 
+    if (LOGGING(6)) {
+        LOG6("Identified field priorities");
+        for (auto fld_prior : list_priority) {
+            LOG6("  Field = " << fld_prior.first << " --> priority = " << fld_prior.second);
+        }
+    }
+
     auto SliceListComparator = [&](const PHV::SuperCluster::SliceList* l,
                                    const PHV::SuperCluster::SliceList* r) {
+        // LO slice needs to be before HI - make that check before going to read/write status
+        // analysis. The check can be performed on first element in the slice list only
+        // because the wide arith slices are arranged like this
+        auto first_l = *l->begin();
+        auto first_r = *r->begin();
+        bool same_field_names = first_l.field() == first_r.field();
+        bool fields_in_wide_arith =
+            first_l.field()->used_in_wide_arith() && first_r.field()->used_in_wide_arith();
+        if (same_field_names && fields_in_wide_arith) {
+            return first_l.range().lo < first_r.range().lo;
+        }
+        // We can continue with the priority criteria if non-wide arith condition is met
         if (list_priority.at(l) != list_priority.at(r)) {
             return list_priority.at(l) < list_priority.at(r);
         }
+        // Slice lists aren't at the same level and LO/HI slices are not available in compared
+        // lists.
         auto l_reads = 0;
         auto l_writes = 0;
         auto r_reads = 0;
@@ -461,9 +489,11 @@ void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& 
         }
     };
     slice_lists.sort(SliceListComparator);
-    LOG6("Slice list on output");
-    for (auto sl : slice_lists) {
-        LOG6("  " << sl);
+    if (LOGGING(6)) {
+        LOG6("Slice list on output");
+        for (auto sl : slice_lists) {
+            LOG6("  " << sl);
+        }
     }
 }
 
