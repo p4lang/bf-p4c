@@ -613,33 +613,44 @@ void CreateSaluInstruction::checkWriteAfterWrite() {
     if (elem == written_dest.end()) {
         LOG4("lvalue doesn't find, storing for the next analysis: name=" << lvalue_name <<
             ", pred=" << assig_pred);
-        written_dest[lvalue_name].push_back(assig_pred);
+        written_dest[lvalue_name].emplace_back(assig_pred, assig_st->srcInfo);
         assig_st = nullptr;
         assig_pred = nullptr;
         return;
     }
 
-    static const char* common_acc_msg = "Field %s is assigned in two "
-    "expressions which can be executed in the same time. "
-    "Please rewrite the RegisterAction body %s.";
-
     // We need to check if the current variable has an intersection
     // with any other predicate inside the vector. We need to insert
     // the record if it isn't already here
     bool found = false;
-    for (auto pred : elem->second) {
-        LOG4("Probing predicates: " << pred << " and " <<assig_pred);
-        if (pred == nullptr || assig_pred == nullptr ||  // Expression is always runned
-            pred->equiv(*assig_pred)) {                  // Predicates are same
+    for (auto assigProp : elem->second) {
+        LOG4("Probing predicates: " << assigProp.predicate << " and " << assig_pred);
+        if (assigProp.predicate == nullptr || assig_pred == nullptr ||  // Always executed
+            assigProp.predicate->equiv(*assig_pred)) {                  // Predicates are same
             found = true;
-            error(common_acc_msg, lvalue_name, action->name);
+
+            std::stringstream err;
+            err << "Two or more assignments of " << lvalue_name << " inside the register "
+                << "action " << action->name.originalName << " are not mutually exclusive "
+                << "and thus cannot be implemented in Tofino Stateful ALU." << std::endl
+                << "\tThese potentially sequential assignments have been detected here:"
+                << std::endl
+                // Print the info about the first block of code
+                << assigProp.srcInfo.toPositionString() << std::endl
+                << assigProp.srcInfo.toSourceFragment()
+                // Print the info about the second block of code
+                << assig_st->srcInfo.toPositionString() << std::endl
+                << assig_st->srcInfo.toSourceFragment()
+                << "Please, rewrite your code to make sure the value is assigned no more than"
+                << " once in all cases.";
+            error("%s", err.str());
         }
     }
 
     if (!found) {
         LOG4("lvalue doesn't find, storing for the next analysis: name=" << lvalue_name <<
             ", pred=" << assig_pred);
-        written_dest[lvalue_name].push_back(assig_pred);
+        written_dest[lvalue_name].emplace_back(assig_pred, assig_st->srcInfo);
     }
 
     assig_st = nullptr;

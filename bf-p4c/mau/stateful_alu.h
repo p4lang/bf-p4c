@@ -108,9 +108,16 @@ class CreateSaluInstruction : public Inspector {
 
     // Map for detection of WAW data hazards
     // * Key is the lvalue
-    // * Value is the set of predicates for a given expression
+    // * Value is the set of predicates for a given expression and source code position
+    // of given assignment
+    struct AssignmentProperties {
+        const IR::Expression   *predicate;
+        const Util::SourceInfo &srcInfo;
+        explicit AssignmentProperties(const IR::Expression *pred, const Util::SourceInfo &src) :
+            predicate(pred), srcInfo(src) {}
+    };
     std::map<cstring,
-        std::vector<const IR::Expression*>>  written_dest;
+        std::vector<AssignmentProperties>>   written_dest;
     const IR::AssignmentStatement           *assig_st = nullptr;
     const IR::Expression                    *assig_pred = nullptr;
     void captureAssigstateProps();

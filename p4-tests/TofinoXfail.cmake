@@ -1943,7 +1943,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-3402
 p4c_add_xfail_reason("tofino"
-  "error: Field .* is assigned in two expressions which can be executed in the same time."
+  "error: Two or more assignments of .* inside the register action .* are not mutually exclusive and thus cannot be implemented in Tofino Stateful ALU."
   extensions/p4_tests/p4_16/compile_only/p4c-3402.p4
 )
 
