@@ -11,6 +11,9 @@
 
 namespace BFN {
 
+const IR::Declaration_Instance *
+getDeclInst(const P4::ReferenceMap *refMap, const IR::PathExpression *path);
+
 boost::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod);
 
 boost::optional<P4::ExternInstance>

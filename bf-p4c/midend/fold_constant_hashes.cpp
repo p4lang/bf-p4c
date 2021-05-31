@@ -3,20 +3,9 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include "frontends/p4/externInstance.h"
 #include "frontends/p4/methodInstance.h"
+#include "bf-p4c/arch/helpers.h"
 
 namespace BFN {
-
-/**
- * Auxiliary function to get a declaration instance based on a path expression.
- * @param[in] path The path expression
- * @return Returns the declaration if exists, nullptr otherwise.
- */
-const IR::Declaration_Instance *FoldConstantHashes::getDeclInst(const IR::PathExpression *path) {
-    auto *decl = refMap->getDeclaration(path->path);
-    if (!decl) return nullptr;
-    auto *decl_inst = decl->to<IR::Declaration_Instance>();
-    return decl_inst;
-}
 
 /**
  * Checks whether the declaration declares a Hash extern.
@@ -155,7 +144,7 @@ const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteCustom
         const IR::PathExpression *crc_poly_path,
         const IR::ListExpression *hash_list,
         const IR::Type *hash_type) {
-    auto *crc_poly_decl_inst = self.getDeclInst(crc_poly_path);
+    auto *crc_poly_decl_inst = getDeclInst(self.refMap, crc_poly_path);
     if (!crc_poly_decl_inst) return nullptr;
     auto *crc_poly_ref = new IR::GlobalRef(crc_poly_decl_inst->srcInfo,
         crc_poly_decl_inst->type, crc_poly_decl_inst);
@@ -237,7 +226,7 @@ const IR::Node *FoldConstantHashes::DoFoldConstantHashes::preorder(IR::MethodCal
             = extern_decl->arguments->at(1)->expression->to<IR::PathExpression>();
         if (!crc_poly_path) return mce;
         rv = substituteCustomHash(crc_poly_path, hash_list, hash_type);
-        auto *crc_poly_decl_inst = self.getDeclInst(crc_poly_path);
+        auto *crc_poly_decl_inst = getDeclInst(self.refMap, crc_poly_path);
         if (!crc_poly_decl_inst) return mce;
         // Mark the CRCPolynomial extern object for removal
         self.candidatesToRemove.insert(crc_poly_decl_inst->declid);
@@ -264,7 +253,7 @@ const IR::Node *FoldConstantHashes::DoFoldConstantHashes::preorder(IR::MethodCal
  * Do not remove declarations of candidates that are used in path expressions.
  */
 const IR::Node* FoldConstantHashes::CheckCandidesToRemove::preorder(IR::PathExpression *path) {
-    auto *decl_inst = self.getDeclInst(path);
+    auto *decl_inst = getDeclInst(self.refMap, path);
     if (!decl_inst) return path;
     auto *mcs = findContext<IR::MethodCallStatement>();
     if (!mcs) return path;

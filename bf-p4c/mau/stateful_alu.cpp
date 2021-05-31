@@ -6,6 +6,7 @@
 #include "bf-p4c/common/asm_output.h"  // for generic formatting routines
 #include "lib/hex.h"
 #include "ir/pattern.h"
+#include "bf-p4c/ir/ir_enums.h"
 
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
@@ -14,9 +15,13 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
         /* .MaxSize = */ 32,
         /* .MaxDualSize = */ 64,
         /* .MaxInstructions = */ 4,
+        /* .MaxInstructionConstWidth = */ 4,
+        /* .MinInstructionConstValue = */ -8,
+        /* .MaxInstructionConstValue = */ 7,
         /* .OutputWords = */ 1,
         /* .DivModUnit = */ false,
         /* .FastClear = */ false,
+        /* .MaxRegfileRows = */ 4
     };
     return spec;
 }
@@ -29,9 +34,13 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
         /* .MaxInstructions = */ 4,
+        /* .MaxInstructionConstWidth */ 4,
+        /* .MinInstructionConstValue */ -8,
+        /* .MaxInstructionConstValue */ 7,
         /* .OutputWords = */ 4,
         /* .DivModUnit = */ true,
         /* .FastClear = */ true,
+        /* .MaxRegfileRows = */ 4
     };
     return spec;
 }
@@ -45,9 +54,13 @@ const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
         /* .MaxInstructions = */ 4,
+        /* .MaxInstructionConstWidth */ 4,
+        /* .MinInstructionConstValue */ -8,
+        /* .MaxInstructionConstValue */ 7,
         /* .OutputWords = */ 4,
         /* .DivModUnit = */ true,
         /* .FastClear = */ true,
+        /* .MaxRegfileRows = */ 4
     };
     return spec;
 }
@@ -237,6 +250,12 @@ static bool equiv(const IR::Expression *a, const IR::Expression *b) {
     if (auto ea = a->to<IR::MAU::IXBarExpression>()) {
         auto eb = b->to<IR::MAU::IXBarExpression>();
         return equiv(ea->expr, eb->expr); }
+    if (auto sa = a->to<IR::MAU::SaluReg>()) {
+        auto sb = b->to<IR::MAU::SaluReg>();
+        return sa->equiv(*sb); }
+    if (auto sa = a->to<IR::MAU::SaluRegfileRow>()) {
+        auto sb = b->to<IR::MAU::SaluRegfileRow>();
+        return sa->equiv(*sb); }
     return false;
 }
 
@@ -258,7 +277,7 @@ bool IR::MAU::StatefulAlu::alu_output() const {
 }
 
 std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use_t u) {
-    static const char *use_names[] = { "NONE", "ALUHI", "MEMLO", "MEMHI", "MEMALL" };
+    static const char *use_names[] = { "NONE", "ALUHI", "MEMLO", "MEMHI", "MEMALL", "REGFILE" };
     if (u < sizeof(use_names)/sizeof(use_names[0]))
         return out << use_names[u];
     else
@@ -290,7 +309,7 @@ static bool is_learn(const IR::Expression *e) {
 bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field) {
     LOG4("applyArg(" << pe << ", " << field << ") etype = " << etype);
     assert(dest == nullptr || !islvalue(etype));
-    IR::Expression *e = nullptr;
+    const IR::Expression *e = nullptr;
     auto argType = pe->type;
     int idx = 0, field_idx = 0;
     LocalVar *local = nullptr;
@@ -308,6 +327,8 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             break;
         case LocalVar::MEMLO:
         case LocalVar::MEMALL:
+            break;
+        case LocalVar::REGFILE:
             break;
         default:
             BUG("invalide use in CreateSaluInstruction::LocalVar %s %d", local->name, local->use); }
@@ -357,7 +378,12 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             name = pfx + name; }
         else if (etype == MINMAX_SRC)
             name = "mem";
-        e = new IR::MAU::SaluReg(argType, name, field_idx > 0);
+        if (local && local->use == LocalVar::REGFILE) {
+            e = local->regfile;
+            negate_regfile = negate;
+        } else {
+            e = new IR::MAU::SaluReg(argType, name, field_idx > 0);
+        }
         break;
     case param_t::OUTPUT:       /* out rv; */
         if (islvalue(etype))
@@ -554,6 +580,8 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
                 use = LocalVar::MEMHI;
             } else {
                 use = LocalVar::MEMLO; }
+        } else if (operands.back()->is<IR::MAU::SaluRegfileRow>()) {
+            use = LocalVar::REGFILE;
         } else {
             use = LocalVar::ALUHI; }
         if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
@@ -1035,8 +1063,40 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
         predicate = saved_predicate;
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax", false));
+    } else if (prim->name == "RegisterParam.read") {
+        cstring name;
+        // Retrieve the name of the RegisterParam
+        if (auto *gr = prim->operands.at(0)->to<IR::GlobalRef>())
+            if (auto *di = gr->obj->to<IR::Declaration_Instance>())
+                name = di->name.name;
+        if (!name)
+            ::error(ErrorType::ERR_UNKNOWN,
+                "%1%: cannot retrieve the name of RegisterParam", prim);
+        const IR::MAU::SaluRegfileRow *regfile = nullptr;
+        if (salu->regfile.count(name) > 0)
+            regfile = salu->regfile[name];
+        if (!regfile)
+            ::error(ErrorType::ERR_UNKNOWN,
+                "%1%: no matching RegisterParam in the current stateful ALU", prim);
+        if (etype == OUTPUT || etype == VALUE)
+            visit(regfile, "prim");
+        if (etype == VALUE && dest) {
+            // Update the LocalVar so that we know it stores a value from the register file
+            dest->use = LocalVar::REGFILE;
+            dest->regfile = regfile;
+        }
     } else {
         error("%sexpression too complex for RegisterAction", prim->srcInfo); }
+    return false;
+}
+
+bool CreateSaluInstruction::preorder(const IR::MAU::SaluRegfileRow *regfile) {
+    const IR::Expression *e = regfile;
+    if (negate)
+        e = new IR::Neg(e);
+    negate_regfile = negate;
+    LOG4("Register file operand: " << e);
+    operands.push_back(e);
     return false;
 }
 
@@ -1081,6 +1141,13 @@ void CreateSaluInstruction::setupCmp(cstring op) {
     operands.clear();
 }
 
+static std::map<cstring, cstring> negate_rel_op = {
+    { "geq.s", "leq.s" }, { "geq.u", "leq.u" },
+    { "grt.s", "lss.s" }, { "grt.u", "lss.u" },
+    { "leq.s", "geq.s" }, { "leq.u", "geq.u" },
+    { "lss.s", "grt.s" }, { "lss.u", "grt.u" },
+};
+
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
     if (etype == OUTPUT && operands.empty()) {
         // output a boolean condition directly -- change it into IF setting value to 1
@@ -1099,10 +1166,28 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
             if (!eq) {
                 auto t = rel->left->type->to<IR::Type::Bits>();
                 opcode += (t && t->isSigned) ? ".s" : ".u"; }
+
+            // Keep track of negated register file reference
+            negate_regfile = false;
+
             visit(rel->left, "left");
             negate = !negate;
             visit(rel->right, "right");
-            negate = !negate; }
+            negate = !negate;
+
+            // If a register file reference is negated, the comparison is transformed
+            // so that the register file reference wouldn't be negated.
+            // E.g. memory - PHV > const => memory - PHV - const > 0 => -memory + PHV + const < 0
+            if (negate_regfile) {
+                if (!eq) opcode = negate_rel_op[opcode];
+                for (auto &op : operands) {
+                    if (auto neg = op->to<IR::Neg>())
+                        op = neg->expr;
+                    else
+                        op = new IR::Neg(op);
+                }
+            }
+        }
         BUG_CHECK(etype == IF, "etype changed?");
         setupCmp(opcode);
     } else {

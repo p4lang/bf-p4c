@@ -2908,6 +2908,11 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         out << ")";
         sep = ", ";
         return false; }
+    bool preorder(const IR::MAU::SaluRegfileRow *srr) override {
+        assert(sep);
+        out << sep << "register_param(" << srr->index << ")";
+        sep = ", ";
+        return false; }
     bool preorder(const IR::MAU::AttachedOutput *att) override {
         LOG5("  EmitAction preorder AttachedOutput: " << att);
         assert(sep);
@@ -4629,9 +4634,20 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     out << " }" << std::endl;
 
     if (salu->init_reg_lo || salu->init_reg_hi) {
-        out << indent << "initial_value : ";
+        out << indent << "initial_value: ";
         out << "{ lo: " << salu->init_reg_lo;
         out << " , hi: " << salu->init_reg_hi << " }" << std::endl;
+    }
+    if (salu->regfile.size() > 0) {
+        out << indent << "register_params: {";
+        const char *sep = "";
+        for (auto regfile_row : Keys(salu->regfile)) {
+            out << sep << ' ' << salu->regfile.at(regfile_row)->index << ": "
+                       << "{ " << salu->regfile.at(regfile_row)->externalName << ": "
+                               << salu->regfile.at(regfile_row)->initial_value << " }";
+            sep = ",";
+        }
+        out << " }" << std::endl;
     }
     if (salu->clear_value)
         out << indent << "clear_value : 0x" << salu->clear_value << std::endl;

@@ -239,6 +239,5 @@ bool operator>>(cstring s, IR::MAU::AlwaysRun &ar) {
             return true;
         }
     }
-
     return false;
 }

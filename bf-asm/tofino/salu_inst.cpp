@@ -13,19 +13,29 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
     salu.salu_pred = predication_encode & Target::Tofino::STATEFUL_PRED_MASK;
+    const int alu_const_min = Target::STATEFUL_ALU_CONST_MIN();
+    const int alu_const_max = Target::STATEFUL_ALU_CONST_MAX();
     if (srca) {
         if (auto m = srca.to<operand::Memory>()) {
             salu.salu_asrc_memory = 1;
             salu.salu_asrc_memory_index = m->field->bit(0) > 0;
         } else if (auto k = srca.to<operand::Const>()) {
             salu.salu_asrc_memory = 0;
-            if (k->value >= -8 && k->value < 8) {
+            if (k->value >= alu_const_min && k->value <= alu_const_max) {
                 salu.salu_const_src = k->value;
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->lineno, k->value);
-                salu.salu_regfile_const = 1; }
-        } else BUG(); }
+                salu.salu_regfile_const = 1;
+            }
+        } else if (auto r = srca.to<operand::Regfile>()) {
+            salu.salu_asrc_memory = 0;
+            salu.salu_const_src = r->index;
+            salu.salu_regfile_const = 1;
+        } else {
+            BUG();
+        }
+    }
     if (srcb) {
         if (auto f = srcb.to<operand::Phv>()) {
             salu.salu_bsrc_phv = 1;
@@ -36,16 +46,26 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
                 salu_instr_common.salu_alu2_lo_math_src = b->phv_index(tbl);
             } else if (auto b = m->of.to<operand::Memory>()) {
                 salu_instr_common.salu_alu2_lo_math_src = b->field->bit(0) > 0 ? 3 : 2;
-            } else BUG();
+            } else {
+                BUG();
+            }
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
-            if (k->value >= -8 && k->value < 8) {
-                salu.salu_const_src = k->value & 0xf;
+            if (k->value >= alu_const_min && k->value <= alu_const_max) {
+                salu.salu_const_src = k->value;
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->lineno, k->value);
-                salu.salu_regfile_const = 1; }
-        } else BUG(); }
+                salu.salu_regfile_const = 1;
+            }
+        } else if (auto r = srcb.to<operand::Regfile>()) {
+            salu.salu_bsrc_phv = 0;
+            salu.salu_const_src = r->index;
+            salu.salu_regfile_const = 1;
+        } else {
+            BUG();
+        }
+    }
 }
 void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
@@ -58,7 +78,7 @@ void BitOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Action
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot-ALU2LO];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_pred = predication_encode & Target::Tofino::STATEFUL_PRED_MASK;
-    //1b instructions are from mem-lo to alu1-lo
+    // 1b instructions are from mem-lo to alu1-lo
     salu.salu_asrc_memory = 1;
     salu.salu_asrc_memory_index = 0;
 }
@@ -81,12 +101,24 @@ void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
         salu.salu_cmp_bsrc_sign = srcb_neg;
         salu.salu_cmp_bsrc_enable = 1; }
     if (srcc) {
-        if (srcc->value >= -8 && srcc->value < 8) {
-            salu.salu_cmp_const_src = srcc->value & 0xf;
-            salu.salu_cmp_regfile_const = 0;
-        } else {
-            salu.salu_cmp_const_src = tbl->get_const(srcc->lineno, srcc->value);
-            salu.salu_cmp_regfile_const = 1; } }
+        if (auto k = dynamic_cast<const operand::Const *>(srcc)) {
+            const int cmp_const_min = Target::STATEFUL_CMP_CONST_MIN();
+            const int cmp_const_max = Target::STATEFUL_CMP_CONST_MAX();
+            if (k->value >= cmp_const_min && k->value <=  cmp_const_max) {
+                salu.salu_cmp_const_src = k->value;
+                salu.salu_cmp_regfile_const = 0;
+            } else {
+                salu.salu_cmp_const_src = tbl->get_const(srcc->lineno, k->value);
+                salu.salu_cmp_regfile_const = 1;
+            }
+        } else if (auto r = dynamic_cast<const operand::Regfile *>(srcc)) {
+            salu.salu_cmp_const_src = r->index;
+            salu.salu_cmp_regfile_const = 1;
+        }
+    } else {
+        salu.salu_cmp_const_src = 0;
+        salu.salu_cmp_regfile_const = 0;
+    }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
 }
 void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {

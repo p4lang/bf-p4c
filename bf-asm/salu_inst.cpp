@@ -1,4 +1,5 @@
 #include <config.h>
+#include <boost/optional.hpp>
 #include <cstring>
 
 #include "instruction.h"
@@ -32,6 +33,22 @@ struct operand {
                 return value == a->value;
             } else { return false; } }
         const char *kind() const override { return "constant"; }
+    };
+    // Operand representing a constant stored in the register file
+    struct Regfile : public Base {
+        int index;
+        Regfile *clone() const override { return new Regfile(*this); }
+        Regfile(int line, int index) : Base(line), index(index) {}
+        Regfile(int line, const value_t &n) : Base(line) {
+            if (PCHECKTYPE2M(n.vec.size == 2, n[1], tINT, tBIGINT, "SALU regfile row reference"))
+                  index = get_int64(n[1], sizeof(index) / 8, "regfile row index out of bounds");
+        }
+        void dbprint(std::ostream &out) const override { out << index; }
+        bool equiv(const Base *a_) const override {
+            if (auto *a = dynamic_cast<const Regfile *>(a_)) {
+                return index == a->index;
+            } else { return false; } }
+        const char *kind() const override { return "register file constant"; }
     };
     struct Phv : public Base {
         virtual Phv *clone() const = 0;
@@ -181,6 +198,9 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     if (v->type == tINT || v->type == tBIGINT) {
         auto i = get_int64(*v, 64, "Integer too large");
         op = new Const(v->lineno, i);
+        return; }
+    if (v->type == tCMD && *v == "register_param") {
+        op = new Regfile(v->lineno, *v);
         return; }
     if (v->type == tSTR) {
         if (auto f = tbl->format->field(v->s)) {
@@ -363,7 +383,8 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (swap_args && (
             rv->srca.to<operand::Phv>() ||
             rv->srca.to<operand::MathFn>() ||
-            (rv->srcb.to<operand::Memory>() && rv->srca.to<operand::Const>()))) {
+            (rv->srcb.to<operand::Memory>() &&
+             (rv->srca.to<operand::Const>() || rv->srca.to<operand::Regfile>())))) {
         operands = (rv->opc = swap_args)->operands;
         std::swap(rv->srca, rv->srcb); }
     if (idx < op.size)
@@ -413,21 +434,43 @@ Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
         slot = dest ? ALU2HI : ALU2LO;
     auto k1 = srca.to<operand::Const>();
     auto k2 = srcb.to<operand::Const>();
-    if (k1 && k2 && k1->value != k2->value)
-        error(lineno, "can only have one distinct constant in an SALU instruction");
+    // Check cases when both constants would be stored in the register file on different rows
+        // Two constants that do not fit as immediate constants
+    if (k1 && k2 && !k1->equiv(k2))
+        error(lineno, "can only have one constant in an SALU instruction");
     if (!k1) k1 = k2;
-    if (k1 && (k1->value < -8 || k1->value >= 8)) {
+    if (k1 && (k1->value < Target::STATEFUL_ALU_CONST_MIN()
+            || k1->value > Target::STATEFUL_ALU_CONST_MAX())) {
         if (k1->value >= (INT64_C(1) << tbl->alu_size()) ||
             k1->value < (INT64_C(-1) << (tbl->alu_size() - 1))) {
-            error(lineno, "operand %" PRIi64 " out of range for %d bit stateful ALU",
+            error(lineno, "value %" PRIi64 " of the constant operand"
+                  " out of range for %d bit stateful ALU",
                   k1->value, tbl->alu_size());
-        } else if (k1->value >= (INT64_C(1) << (Target::STATEFUL_CONST_WIDTH() - 1))) {
+        } else if (k1->value >= (INT64_C(1) << (Target::STATEFUL_REGFILE_CONST_WIDTH() - 1))) {
             // constants have a limited width, and are always signed, so need to make
             // sure they wrap properly
-            k1->value -= INT64_C(1) << Target::STATEFUL_CONST_WIDTH();
+            k1->value -= INT64_C(1) << Target::STATEFUL_REGFILE_CONST_WIDTH();
             if (k2 && k2 != k1)
-                k2->value = k1->value; }
-        tbl->get_const(k1->lineno, k1->value); }
+                k2->value = k1->value;
+        }
+    }
+    auto r1 = srca.to<operand::Regfile>();
+    auto r2 = srcb.to<operand::Regfile>();
+    if (r1 && r2 && !r1->equiv(r2))
+        error(lineno, "can only have one register file reference in an SALU instruction");
+    if (!r1) r1 = r2;
+    if (r1) {
+        int64_t v1 = tbl->get_const_val(r1->index);
+        if (v1 >= (INT64_C(1) << tbl->alu_size()) ||
+            v1 < (INT64_C(-1) << (tbl->alu_size() - 1))) {
+            error(lineno, "initial value %" PRIi64 " of the register file operand"
+                  " out of range for %d bit stateful ALU",
+                  k1->value, tbl->alu_size());
+        }
+    }
+    if (k1 && r1)
+        error(lineno, "can have either a constant or a register file reference"
+              " in an SALU instruction");
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);
     return this; }
@@ -487,7 +530,7 @@ struct CmpOP : public SaluInstruction {
     uint32_t            maska = 0xffffffffU;
     operand::Phv        *srcb = 0;
     uint32_t            maskb = 0xffffffffU;
-    operand::Const      *srcc = 0;
+    operand::Base       *srcc = 0;  // operand::Const or operand::Regfile
     bool                srca_neg = false, srcb_neg = false;
     bool                learn = false, learn_not = false;
     CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
@@ -557,19 +600,24 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                 continue; } }
         operand src(tbl, act, op[idx], true);
         if (!rv->srca && (rv->srca = src.to<operand::Memory>())) {
-            src.op = nullptr;
             rv->srca_neg = src.neg;
             rv->maska = src.mask;
-        } else if (!rv->srcb && (rv->srcb = src.to<operand::Phv>())) {
             src.op = nullptr;
+        } else if (!rv->srcb && (rv->srcb = src.to<operand::Phv>())) {
             rv->srcb_neg = src.neg;
             rv->maskb = src.mask;
-        } else if (!rv->srcc && (rv->srcc = src.to<operand::Const>())) {
             src.op = nullptr;
+        } else if (!rv->srcc && (rv->srcc = src.to<operand::Const>())) {
+            auto *srcc = src.to<operand::Const>();
             if (src.neg)
-                rv->srcc->value = -rv->srcc->value;
+                srcc->value = -srcc->value;
             if (src.mask != ~0U)
-                rv->srcc->value &= src.mask;
+                srcc->value &= src.mask;
+            src.op = nullptr;
+        } else if (!rv->srcc && (rv->srcc = src.to<operand::Regfile>())) {
+            if (src.neg || src.mask != ~0U)
+                error(src->lineno, "Register file operand cannot be negated or masked");
+            src.op = nullptr;
         } else if (src) {
             error(src->lineno, "Can't have more than one %s operand to an SALU compare",
                   src->kind()); } }

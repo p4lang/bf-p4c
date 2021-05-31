@@ -2,6 +2,19 @@
 
 namespace BFN {
 
+/**
+ * Auxiliary function to get a declaration instance based on a path expression from a reference map.
+ * @param[in] path The path expression
+ * @return Returns the declaration if exists, nullptr otherwise.
+ */
+const IR::Declaration_Instance *
+getDeclInst(const P4::ReferenceMap *refMap, const IR::PathExpression *path) {
+    auto *decl = refMap->getDeclaration(path->path);
+    if (!decl) return nullptr;
+    auto *decl_inst = decl->to<IR::Declaration_Instance>();
+    return decl_inst;
+}
+
 boost::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod) {
     boost::optional<cstring> name = boost::none;
     if (auto inst = extMethod->object->to<IR::Declaration_Instance>()) {

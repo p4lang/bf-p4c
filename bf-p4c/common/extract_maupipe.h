@@ -14,6 +14,7 @@
 #include "bf-p4c/arch/fromv1.0/mirror.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/logging/source_info_logging.h"
+#include "bf-p4c/device.h"
 
 class BFN_Options;
 class CreateSaluInstruction;
@@ -50,24 +51,58 @@ class AttachTables : public PassManager {
     // Have to keep all non StatefulAlus separate from other Declaration_Instances, because
     // selectors and StatefulAlus may have the same Declaration
     DeclarationConversions &converted;
-    DeclarationConversions all_salus;
+    std::map<const IR::Declaration_Instance *,
+             IR::MAU::StatefulAlu *> salu_inits;  // Register -> StatefulAlu
     StatefulSelectors   stateful_selectors;
 
-    // Create all the stateful ALUs by passing over all of the register actions.  Once
-    // the pipeline is fully examined, add these to the all_salus map
+    /**
+     * Create all the stateful ALUs by passing over all of the register actions.
+     * Once the pipeline is fully examined, add these to the salu_inits map.
+     */
     class InitializeStatefulAlus : public MauInspector {
         AttachTables &self;
-        std::map<const IR::Declaration_Instance *, IR::MAU::StatefulAlu *> salu_inits;
-        std::set<const IR::Declaration_Instance *> register_actions;
-        std::map<const IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
         void postorder(const IR::Expression *) override { visitAgain(); }
         void postorder(const IR::GlobalRef *) override;
-        void end_apply() override;
         void updateAttachedSalu(const IR::Declaration_Instance *,
                                 const IR::GlobalRef *);
 
      public:
         explicit InitializeStatefulAlus(AttachTables &s) : self(s) {}
+    };
+
+    /**
+     * Collect all declarations of register params and check whether
+     * each of them is used in a single stateful ALU.
+     * Then, allocate a register file row for each RegisterParam used
+     * in a stateful ALU. It reads the salu_inits map.
+     * It must be called before InitializeStatefulInstructions, which
+     * uses the information about allocated register params.
+     */
+    class InitializeRegisterParams : public MauInspector {
+        AttachTables &self;
+        std::map<const IR::Declaration_Instance *,
+             IR::MAU::StatefulAlu *> param_salus;  // RegisterParam -> StatefulAlu
+        bool preorder(const IR::MAU::Primitive *prim) override;
+        void end_apply() override;
+
+     public:
+        explicit InitializeRegisterParams(AttachTables &s) : self(s) {}
+    };
+
+    /**
+     * Creates stateful ALU instructions.  It must be called after AllocateRegisterParams,
+     * since it uses information about allocated register params.
+     */
+    class InitializeStatefulInstructions : public MauInspector {
+        AttachTables &self;
+        std::set<const IR::Declaration_Instance *> register_actions;
+        std::map<const IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
+
+        void postorder(const IR::Expression *) override { visitAgain(); }
+        void postorder(const IR::GlobalRef *gref) override;
+
+     public:
+        explicit InitializeStatefulInstructions(AttachTables &s) : self(s) {}
     };
 
     class DefineGlobalRefs : public MauModifier {
@@ -103,6 +138,8 @@ class AttachTables : public PassManager {
         : refMap(rm), typeMap(tm), converted(con), stateful_selectors(ss) {
         addPasses({
             new InitializeStatefulAlus(*this),
+            new InitializeRegisterParams(*this),
+            new InitializeStatefulInstructions(*this),
             new DefineGlobalRefs(*this, refMap, typeMap)
         });
         stop_on_error = false;

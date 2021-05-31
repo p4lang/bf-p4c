@@ -70,7 +70,8 @@ class GeneratePrimitiveInfo : public MauInspector {
     Util::JsonArray *_tables = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override;
     void add_primitive(Util::JsonArray *primitives, Util::JsonObject *prim);
-    void gen_action_json(const IR::MAU::Action *act, Util::JsonObject *_action);
+    void gen_action_json(const IR::MAU::Table *tbl,
+            const IR::MAU::Action *act, Util::JsonObject *_action);
     Util::JsonObject *add_op_json(Util::JsonObject *prim, const std::string op,
             const std::string type, cstring name);
     void validate_add_op_json(Util::JsonObject *_primitive, const std::string

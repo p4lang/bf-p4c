@@ -480,7 +480,10 @@ class StatefulAlu : MeterBus2Port {
     // The stateful_alu externs executed for each table-action pair string in
     // the match table We make table-action pairs to distinguish action calls
     // from same vs different tables
-    ordered_map<cstring, cstring>  action_map = {};
+    ordered_map<cstring, cstring>                       action_map = {};
+    // The register file expressed as a map indexing rows by the name
+    // of corresponding register param
+    ordered_map<cstring, SaluRegfileRow>                regfile = {};
     // overflow and underflow actions, if any
     cstring                                             overflow = {};
     cstring                                             underflow = {};
@@ -964,6 +967,22 @@ class SaluFunction : Operation_Unary {
     cstring             name;
     stringOp = "function";  // unused
     dbprint { out << name << "(" << expr << ")"; }
+}
+
+/**
+ * Represents constants configurable at run time from control plane
+ * stored in the register file of a SALU. They are represented by
+ * RegisterParam externs in P4 code.
+ */
+class SaluRegfileRow : Expression {
+    int index;                      // Index of the row in the register file
+    int64_t initial_value;          // Initial value loaded into the register row
+    optional ID name;               // Name of the corresponding RegisterActionParam
+    optional cstring externalName;  // External name for context.json
+    dbprint { out << "regfile(index=" << index << ", "
+                  << "initial_value=" << initial_value << ", "
+                  << "name=" << name.name << ", "
+                  << "externalName=" << externalName << ")"; }
 }
 
 class MultiOperand : ListExpression {

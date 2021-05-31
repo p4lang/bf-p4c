@@ -8,6 +8,19 @@
 
 DEFINE_TABLE_TYPE(StatefulTable)
 
+void StatefulTable::parse_register_params(int idx, const value_t &val) {
+    if (idx < 0 || idx > Target::STATEFUL_REGFILE_ROWS())
+        error(lineno, "Index out of range of the number of the register file rows (%d). "
+                      "Reduce the number of large constants or RegisterParams.",
+                      Target::STATEFUL_REGFILE_ROWS());
+    if (const_vals.size() <= size_t(idx))
+        const_vals.resize(idx + 1);
+    if (CHECKTYPE(val, tMAP) && val.map.size == 1)
+        if (CHECKTYPE(val.map.data->key, tSTR) && CHECKTYPE(val.map.data->value, tINT))
+            const_vals[idx] = std::move(const_info_t(val.lineno, val.map.data->value.i,
+                true, std::string(val.map.data->key.s)));
+}
+
 void StatefulTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::Stateful);
     if (!format)
@@ -39,22 +52,16 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                 actions = new Actions(this, kv.value.map);
         } else if (kv.key == "selection_table") {
             bound_selector = kv.value;
-        } else if (kv.key == "const_table") {
+        } else if (kv.key == "register_params") {
             if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
             if (kv.value.type == tVEC) {
-                parse_vector(const_vals, kv.value);
                 for (auto &v : kv.value.vec)
-                    const_vals_lineno.push_back(v.lineno);
+                    parse_register_params(const_vals.size(), v);
             } else {
                 for (auto &v : kv.value.map)
-                    if (CHECKTYPE(v.key, tINT) && CHECKTYPE(v.value, tINT)) {
-                        if (v.key.i < 0 || v.key.i >= 4)
-                            error(v.key.lineno, "invalid index for const_table");
-                        if (const_vals.size() <= size_t(v.key.i)) {
-                            const_vals.resize(v.key.i + 1);
-                            const_vals_lineno.resize(v.key.i + 1); }
-                        const_vals[v.key.i] = v.value.i;
-                        const_vals_lineno[v.key.i] = v.value.lineno; } }
+                    if (CHECKTYPE(v.key, tINT))
+                        parse_register_params(v.key.i, v.value);
+            }
         } else if (kv.key == "math_table") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             math_table.lineno = kv.value.lineno;
@@ -239,10 +246,19 @@ void StatefulTable::pass1() {
 }
 
 int StatefulTable::get_const(int lineno, int64_t v) {
-    size_t rv = std::find(const_vals.begin(), const_vals.end(), v) - const_vals.begin();
+    size_t rv;
+    for (rv = 0; rv < const_vals.size(); rv++) {
+        // Skip constants allocated for RegisterParams as they cannot be shared
+        // as they are subject to change.
+        if (const_vals[rv].is_param) continue;
+        if (const_vals[rv].value == v) break;
+    }
     if (rv == const_vals.size()) {
-        const_vals.push_back(v);
-        const_vals_lineno.push_back(lineno); }
+        if (rv >= Target::STATEFUL_REGFILE_ROWS())
+            error(lineno, "Out of the number of register file rows (%d). Reduce the number"
+                  " of large constants or RegisterParams.", Target::STATEFUL_REGFILE_ROWS());
+        const_vals.push_back(std::move(const_info_t(lineno, v)));
+    }
     return rv;
 }
 
@@ -571,6 +587,15 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
                 instr_slot["action_handle"] = a.handle;
                 instr_slot["instruction_slot"] = stful_action ? stful_action->code : -1;
                 act_to_sful_instr_slot.push_back(std::move(instr_slot)); } } }
+    json::vector &register_file = tbl["register_params"];
+    for (size_t i = 0; i < const_vals.size(); i++) {
+        if (!const_vals[i].is_param) continue;
+        json::map register_file_row;
+        register_file_row["register_file_index"] = i;
+        register_file_row["initial_value"] = const_vals[i].value;
+        register_file_row["name"] = const_vals[i].param_name;
+        register_file.push_back(std::move(register_file_row));
+    }
     if (bound_selector)
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);

@@ -1104,8 +1104,8 @@ void AttachTables::InitializeStatefulAlus
     if (!found) return;
 
     IR::MAU::StatefulAlu *salu = nullptr;
-    if (salu_inits.count(reg)) {
-        salu = salu_inits.at(reg);
+    if (self.salu_inits.count(reg)) {
+        salu = self.salu_inits.at(reg);
     } else {
         // Stateful ALU has not been seen yet
         LOG3("Creating new StatefulAlu for " <<
@@ -1170,7 +1170,7 @@ void AttachTables::InitializeStatefulAlus
             salu->width = 1; }
         if (auto cts = reg->annotations->getSingle("chain_total_size"))
             salu->chain_total_size = getConstant(cts);
-        salu_inits[reg] = salu; }
+        self.salu_inits[reg] = salu; }
 
     if (reg == ext) {
         // direct register call (to .clear())
@@ -1203,16 +1203,6 @@ void AttachTables::InitializeStatefulAlus
     }
     if (ext->type->toString().startsWith("LearnAction"))
         salu->learn_action = true;
-
-    // If the register action hasn't been seen before, this creates an SALU Instruction
-    if (register_actions.count(ext) == 0) {
-        LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
-        register_actions.insert(ext);
-        if (!inst_ctor[salu]) {
-            // Create exactly one CreateSaluInstruction per SALU and reuse it for all the
-            // instructions in that SALU, so we can accumulate info in it.
-            inst_ctor[salu] = new CreateSaluInstruction(salu); }
-        ext->apply(*inst_ctor[salu]); }
 
     auto prim = findContext<IR::MAU::Primitive>();
     LOG6("  - " << (prim ? prim->name : "<no primitive>"));
@@ -1254,11 +1244,92 @@ void AttachTables::InitializeStatefulAlus::postorder(const IR::GlobalRef *gref) 
     }
 }
 
-/** Convert these Stateful ALUs to constant pointers.  This was necessary to maintain const
- *  pointers for a later pass.
+/**
+ * Gathers information about register params and checks
+ * that they are used in a single stateful ALU.
  */
-void AttachTables::InitializeStatefulAlus::end_apply() {
-    self.all_salus.insert(salu_inits.begin(), salu_inits.end());
+bool AttachTables::InitializeRegisterParams::preorder(const IR::MAU::Primitive *prim) {
+    if (prim->name != "RegisterParam.read")
+        return true;
+    const IR::Declaration_Instance *reg_param_decl = nullptr;
+    if (auto *gr = prim->operands.at(0)->to<IR::GlobalRef>())
+        reg_param_decl = gr->obj->to<IR::Declaration_Instance>();
+    BUG_CHECK(reg_param_decl != nullptr, "null Declaration_Instance under GlobalRef");
+    const IR::Declaration_Instance *reg_decl = nullptr;
+    if (auto *reg_act_decl = findContext<IR::Declaration_Instance>()) {
+        if (isSaluActionType(getBaseType(reg_act_decl->type))) {
+            BUG_CHECK(!reg_act_decl->arguments->empty(),
+                "RegisterAction misses an argument");
+            auto *reg_act_decl_arg0_expr = reg_act_decl->arguments->at(0)->expression;
+            if (auto *reg_decl_path = reg_act_decl_arg0_expr->to<IR::PathExpression>())
+                reg_decl = getDeclInst(self.refMap, reg_decl_path);
+        } else {
+            ::error(ErrorType::ERR_UNSUPPORTED,
+                "%1%: RegisterParam cannot be used outside RegisterAction", prim);
+        }
+    }
+    BUG_CHECK(reg_decl != nullptr, "RegisterParam not under Register");
+    if (self.salu_inits.count(reg_decl) > 0) {
+        auto *salu = self.salu_inits.at(reg_decl);
+        if (param_salus.count(reg_param_decl) > 0) {
+            auto *previous_salu = param_salus.at(reg_param_decl);
+            if (previous_salu != salu)
+                ::error(ErrorType::ERR_UNSUPPORTED,
+                    "%1%: RegisterParam cannot be used with multiple Registers", prim);
+        } else {
+            param_salus[reg_param_decl] = salu;
+        }
+    }
+    return false;
+}
+
+/**
+ * Allocates a register file row for each register param.
+ */
+void AttachTables::InitializeRegisterParams::end_apply() {
+    for (auto p : param_salus) {
+        auto *decl = p.first;
+        auto *salu = p.second;
+        int index = static_cast<int>(salu->regfile.size());
+        if (index >= Device::statefulAluSpec().MaxRegfileRows)
+            ::error(ErrorType::ERR_OVERLIMIT,
+                "%1%: the number of available slots for register "
+                "action parameters exceeded; maximum number is %2%",
+                salu, Device::statefulAluSpec().MaxRegfileRows);
+        int64_t initial_value = 0;
+        if (auto *k = decl->arguments->at(0)->expression->to<IR::Constant>())
+            initial_value = k->asInt64();
+        auto *row = new IR::MAU::SaluRegfileRow(
+            decl->srcInfo, index, initial_value, decl->name, decl->externalName());
+        salu->regfile.insert(std::make_pair(decl->name.name, row));
+        LOG3("Added " << row << " to " << salu->name);
+    }
+}
+
+void AttachTables::InitializeStatefulInstructions::postorder(const IR::GlobalRef *gref) {
+    visitAgain();
+    auto ext = gref->obj->to<IR::Declaration_Instance>();
+    if (ext == nullptr) return;
+    if (!isSaluActionType(ext->type)) return;
+
+    const IR::Declaration_Instance *reg = nullptr;
+    const IR::Type_Specialized *regtype = nullptr;
+    const IR::Type_Extern *seltype = nullptr;
+    bool found = self.findSaluDeclarations(ext, &reg, &regtype, &seltype);
+    if (!found) return;
+
+    auto *salu = self.salu_inits.at(reg);
+
+    // If the register action hasn't been seen before, this creates an SALU Instruction
+    if (register_actions.count(ext) == 0) {
+        LOG3("Adding " << ext->name << " to stateful ALU " << salu->name);
+        register_actions.insert(ext);
+        if (!inst_ctor[salu]) {
+            // Create exactly one CreateSaluInstruction per SALU and reuse it for all the
+            // instructions in that SALU, so we can accumulate info in it.
+            LOG3("Creating instruction at stateful ALU " << salu->name << "...");
+            inst_ctor[salu] = new CreateSaluInstruction(salu); }
+        ext->apply(*inst_ctor[salu]); }
 }
 
 const IR::MAU::StatefulAlu *AttachTables::DefineGlobalRefs
@@ -1267,7 +1338,7 @@ const IR::MAU::StatefulAlu *AttachTables::DefineGlobalRefs
     bool found = self.findSaluDeclarations(ext, &reg);
     if (!found) return nullptr;
 
-    auto salu = self.all_salus.at(reg)->to<IR::MAU::StatefulAlu>();
+    auto *salu = self.salu_inits.at(reg);
     BUG_CHECK(salu, "Stateful Alu cannot be found, and should have been initialized within "
               "the previous pass");
     return salu;

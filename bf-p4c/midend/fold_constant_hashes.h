@@ -85,7 +85,6 @@ class FoldConstantHashes : public PassManager {
         const IR::Node* preorder(IR::MethodCallStatement *mcs) override;
     };
 
-    const IR::Declaration_Instance *getDeclInst(const IR::PathExpression *path);
     const IR::Type* checkHashExtern(const IR::Declaration_Instance *decl);
 
  public:

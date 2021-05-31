@@ -15,9 +15,13 @@ struct Device::StatefulAluSpec {
     int                         MaxSize;
     int                         MaxDualSize;
     int                         MaxInstructions;
+    int                         MaxInstructionConstWidth;
+    int                         MinInstructionConstValue;
+    int                         MaxInstructionConstValue;
     int                         OutputWords;
     bool                        DivModUnit;
     bool                        FastClear;
+    int                         MaxRegfileRows;
 
     cstring cmpUnit(unsigned idx) const;
 };
@@ -61,13 +65,16 @@ class CreateSaluInstruction : public Inspector {
     const std::vector<param_t>          *param_types = nullptr;
     IR::MAU::SaluAction                 *action = nullptr;
     const IR::ParameterList             *params = nullptr;
+
     struct LocalVar {
         cstring                 name;
         bool                    pair;
-        enum use_t { NONE, ALUHI, MEMLO, MEMHI, MEMALL }
+        const IR::MAU::SaluRegfileRow   *regfile = nullptr;
+        enum use_t { NONE, ALUHI, MEMLO, MEMHI, MEMALL, REGFILE }
                                 use = NONE;
-        LocalVar(cstring name, bool pair, use_t use = NONE)
-        : name(name), pair(pair), use(use) {}
+        LocalVar(cstring name, bool pair, use_t use = NONE,
+            const IR::MAU::SaluRegfileRow *regfile = nullptr)
+            : name(name), pair(pair), regfile(regfile), use(use) {}
     }                           *dest = nullptr;  // destination of current assignment
     std::map<cstring, LocalVar> locals;
     enum etype_t {
@@ -85,6 +92,7 @@ class CreateSaluInstruction : public Inspector {
         }                       etype = NONE;
     static bool islvalue(etype_t t) { return t < IF; }
     bool                        negate = false;
+    bool                        negate_regfile = false;
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
     IR::Vector<IR::Expression>                  operands, pred_operands;
@@ -170,6 +178,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::AttribLocal *) override { BUG("unconverted p4_14"); }
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::MAU::Primitive *) override;
+    bool preorder(const IR::MAU::SaluRegfileRow *) override;
     bool preorder(const IR::Operation::Relation *, cstring op, bool eq);
     bool preorder(const IR::Equ *r) override { return preorder(r, "equ", true); }
     bool preorder(const IR::Neq *r) override { return preorder(r, "neq", true); }

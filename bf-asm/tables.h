@@ -1789,8 +1789,16 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 #if HAVE_JBAY
     template<class REGS> void write_tofino2_common_regs(REGS &regs);
 #endif
-    std::vector<int64_t>   const_vals;
-    std::vector<int>       const_vals_lineno;
+    struct const_info_t {
+        int         lineno;
+        int64_t     value;
+        bool        is_param;
+        std::string param_name;
+        const_info_t() = default;
+        const_info_t(int lineno, int64_t value, bool is_param = false, std::string param_name = "")
+            : lineno(lineno), value(value), is_param(is_param), param_name(param_name) {}
+    };
+    std::vector<const_info_t> const_vals;
     struct MathTable {
         int                     lineno = -1;
         std::vector<int>        data;
@@ -1841,6 +1849,8 @@ public:
     unsigned per_flow_enable_bit(MatchTable *m = nullptr) const override;
     void set_address_used() override { address_used = true; }
     void set_output_used() override { output_used = true; }
+    void parse_register_params(int idx, const value_t &val);
+    int64_t get_const_val(int index) const { return const_vals.at(index).value; }
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         static int parse_counter_mode, (target_type, const value_t &))
     static int parse_counter_mode(const value_t &v) {
