@@ -10,13 +10,13 @@ node {
 
 /// Docker registry to be used
 // Docker Hub
-DOCKER_CREDENTIALS = "bfndocker"
-DOCKER_REGISTRY = ""
-DOCKER_PROJECT = "barefootnetworks"
+// DOCKER_CREDENTIALS = "bfndocker"
+// DOCKER_REGISTRY = ""
+// DOCKER_PROJECT = "barefootnetworks"
 // CaaS (AMR)
-// DOCKER_CREDENTIALS = "bfndocker-caas"
-// DOCKER_REGISTRY = "amr-registry.caas.intel.com"
-// DOCKER_PROJECT = "${DOCKER_REGISTRY}/bxd-sw"
+DOCKER_CREDENTIALS = "bfndocker-caas"
+DOCKER_REGISTRY = "amr-registry.caas.intel.com"
+DOCKER_PROJECT = "${DOCKER_REGISTRY}/bxd-sw"
 
 def runInDocker(Map namedArgs, String cmd) {
     // Supported named arguments and their default values:
