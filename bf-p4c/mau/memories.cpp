@@ -272,7 +272,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     table_alloc *ta;
     if (!t->conditional_gateway_only()) {
         const IXBar::Use *match_ixbar = &resources->match_ixbar;
-        if (lo->layout.gateway_match)
+        if (lo->layout.gateway_match || !ft.matchThisStage())
             match_ixbar = &resources->gateway_ixbar;
         ta = new table_alloc(t, match_ixbar, &resources->table_format, &resources->instr_mem, af,
                              &resources->memuse, lo, ft, entries, stage_table,
