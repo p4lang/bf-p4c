@@ -6,7 +6,6 @@ set (P14_XFAIL_TESTS
   ../glass/testsuite/p4_tests/arista/COMPILER-254/case1744.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-260/case1799_1.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-260/case1799.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-262/case1804.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-263/case1795.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-264/case1822.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-271/case1834.p4

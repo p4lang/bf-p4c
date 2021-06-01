@@ -1538,12 +1538,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-209/sizing.p4
 )
 
-# P4C-2122
-p4c_add_xfail_reason("tofino"
-  "Table .* has neither action table nor immediate actions"
-  ../glass/testsuite/p4_tests/arista/COMPILER-262/case1804.p4
-)
-
 # P4C-923
 p4c_add_xfail_reason("tofino"
   "ALU ops cannot operate on slices|./p4c TIMEOUT"
