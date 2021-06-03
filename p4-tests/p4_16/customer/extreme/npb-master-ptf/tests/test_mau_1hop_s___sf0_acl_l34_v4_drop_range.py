@@ -113,6 +113,7 @@ class test(BfRuntimeTest):
 		# Ingress SF(s)
 		# -----------------
 
+		#Len Range
 		npb_npb_sf0_len_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
 		npb_npb_sf0_len_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
 
@@ -124,11 +125,11 @@ class test(BfRuntimeTest):
 #		time.sleep(1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (#1, < 8k)
+		# Create / Send / Verify the packet Len (#1, < 8k)
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
@@ -147,11 +148,11 @@ class test(BfRuntimeTest):
 		testutils.verify_no_other_packets(self, 0, 1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (#2, >= 8k)
+		# Create / Send / Verify the packet Len (#2, >= 8k)
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			pktlen=8300,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
 			pktlen_exp=8300,
@@ -170,6 +171,7 @@ class test(BfRuntimeTest):
 
 		logger.info("Verify no other packets")
 		testutils.verify_no_other_packets(self, 0, 1)
+
 
 		# -----------------------------------------------------------
 		# Delete Table Entries

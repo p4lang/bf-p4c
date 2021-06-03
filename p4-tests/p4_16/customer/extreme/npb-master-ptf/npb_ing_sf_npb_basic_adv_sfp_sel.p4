@@ -1,3 +1,6 @@
+// =============================================================================
+// SF #0 - SFP Hash
+// =============================================================================
 
 control npb_ing_sf_npb_basic_adv_sfp_hash (
 	inout switch_header_transport_t                 hdr_0,
@@ -87,9 +90,7 @@ control npb_ing_sf_npb_basic_adv_sfp_hash (
 }
 
 // =============================================================================
-// =============================================================================
-// =============================================================================
-// =============================================================================
+// SF #0 - SFP Select
 // =============================================================================
 
 control npb_ing_sf_npb_basic_adv_sfp_sel (
@@ -118,7 +119,7 @@ control npb_ing_sf_npb_basic_adv_sfp_sel (
 	// Use an Action Profile with the table...
 
 	ActionProfile(
-		NPB_ING_SF_0_SFP_SCHD_TABLE_PART2_DEPTH
+		NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE
 	) schd_selector;
 
   #else // SFF_SCHD_COMPLEX_TYPE_ACTION_SELECTOR

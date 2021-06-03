@@ -61,14 +61,6 @@ class test(BfRuntimeTest):
 
 		ig_port = swports[1]
 		eg_port = swports[1]
-		ig_port_new_1 = swports[2]
-		eg_port_new_1 = swports[2]
-		ig_port_new_2 = swports[3]
-		eg_port_new_2 = swports[3]
-		ig_port_new_3 = swports[2] # derek changed from [4] so that this test can run on the hw, which only has 4 cpu ports total.
-		eg_port_new_3 = swports[2] # derek changed from [4] so that this test can run on the hw, which only has 4 cpu ports total.
-		ig_port_new_4 = swports[3] # derek changed from [5] so that this test can run on the hw, which only has 4 cpu ports total.
-		eg_port_new_4 = swports[3] # derek changed from [5] so that this test can run on the hw, which only has 4 cpu ports total.
 
 		# -----------------------
 		# Packet values to use
@@ -109,10 +101,6 @@ class test(BfRuntimeTest):
 		# Insert Table Entries
 		# -----------------------------------------------------------
 
-        # So the way this test works is that two paths are setup.  First, the packet is sent in
-        # on the first path.  Next, policy sets the sfc value.  Finally, the sfp select tables
-        # use this sfc to switch to the second path and the packet is received.
-
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
 			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap,
@@ -121,50 +109,23 @@ class test(BfRuntimeTest):
 			#egress
 		)
 
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port_new_1], ig_lag_ptr+1, 0, sap+1, vpn+1, spi, si, sf_bitmask, rmac, nexthop_ptr+1, bd+1, eg_lag_ptr+1, 0+1, 0+1, [eg_port_new_1], 0, dsap,
-			#tunnel
-			tunnel_encap_ptr+1, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+1, tunnel_encap_bd+1, dmac, tunnel_encap_smac_ptr+1, smac
-			#egress
-		)
-
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port_new_2], ig_lag_ptr+2, 0, sap+2, vpn+2, spi, si, sf_bitmask, rmac, nexthop_ptr+2, bd+2, eg_lag_ptr+2, 0+2, 0+2, [eg_port_new_2], 0, dsap,
-			#tunnel
-			tunnel_encap_ptr+2, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+2, tunnel_encap_bd+2, dmac, tunnel_encap_smac_ptr+2, smac
-			#egress
-		)
-
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port_new_3], ig_lag_ptr+3, 0, sap+3, vpn+3, spi, si, sf_bitmask, rmac, nexthop_ptr+3, bd+3, eg_lag_ptr+3, 0+3, 0+3, [eg_port_new_3], 0, dsap,
-			#tunnel
-			tunnel_encap_ptr+3, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+3, tunnel_encap_bd+3, dmac, tunnel_encap_smac_ptr+3, smac
-			#egress
-		)
-
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port_new_4], ig_lag_ptr+4, 0, sap+4, vpn+4, spi, si, sf_bitmask, rmac, nexthop_ptr+4, bd+4, eg_lag_ptr+4, 0+4, 0+4, [eg_port_new_4], 0, dsap,
-			#tunnel
-			tunnel_encap_ptr+4, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+4, tunnel_encap_bd+4, dmac, tunnel_encap_smac_ptr+4, smac
-			#egress
-		)
-
 		# -----------------
 		# Ingress SF(s)
 		# -----------------
 
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, l2_etype=0x0800, l2_etype_mask=0xffff, flow_class=flow_class_acl, sfc_enable=1, sfc=sfc)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
 
 		# -----------------
 		# Ingress SFP Sel
 		# -----------------
-
-		# note: here we use the sfc to switch to a new spi and si.
-		npb_npb_sfp_sel_add(self, self.target, vpn, flow_class_sfp, sfc, 0, 0, [spi+1, spi+2, spi+3, spi+4], [si+1, si+2, si+3, si+4], [sf_bitmask, sf_bitmask, sf_bitmask, sf_bitmask])
 
 		# -----------------
 
@@ -175,10 +136,22 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			pktlen=512,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi+1, si_exp=si+1, sap_exp=sap, vpn_exp=vpn
+			pktlen_exp=256,
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
+
+		# Derek: Have to fix up some of the expected values.  Most of these were obtained by looking the the received / truncated packet
+#		exp_pkt.exp_pkt[IP].len     = 0x01f2
+#		exp_pkt.exp_pkt[IP].chksum  = 0xf7a6
+#		exp_pkt.exp_pkt[UDP].len    = 0x01de
+#		exp_pkt.exp_pkt[UDP].chksum = 0x3dfe
+		exp_pkt.exp_pkt[IP].len     = 0x01f2
+		exp_pkt.exp_pkt[IP].chksum  = 0xf7a6
+		exp_pkt.exp_pkt[UDP].len    = 0x01de
+		exp_pkt.exp_pkt[UDP].chksum = 0x3a97
 
 		# -----------------------------------------------------------
 
@@ -187,8 +160,8 @@ class test(BfRuntimeTest):
 
 		# -----------------------------------------------------------
 
-		logger.info("Verify packet on port %d, %d, %d, or %d", eg_port_new_1, eg_port_new_2, eg_port_new_3, eg_port_new_4)
-#		testutils.verify_packets_any(self, exp_pkt, [eg_port_new_1, eg_port_new_2, eg_port_new_3, eg_port_new_4])
+		logger.info("Verify packet on port %d", eg_port)
+		testutils.verify_packets(self, exp_pkt, [eg_port])
 
 		logger.info("Verify no other packets")
 		testutils.verify_no_other_packets(self, 0, 1)
@@ -205,46 +178,20 @@ class test(BfRuntimeTest):
 			#egress
 		)
 
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port_new_1], ig_lag_ptr+1, spi+1, si+1, sf_bitmask, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_new_1],
-			#tunnel
-			tunnel_encap_ptr+1, tunnel_encap_nexthop_ptr+1, tunnel_encap_bd+1, tunnel_encap_smac_ptr+1
-			#egress
-		)
-
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port_new_2], ig_lag_ptr+2, spi+2, si+2, sf_bitmask, rmac, nexthop_ptr+2, eg_lag_ptr+2, 0+2, 0+2, 1, [eg_port_new_2],
-			#tunnel
-			tunnel_encap_ptr+2, tunnel_encap_nexthop_ptr+2, tunnel_encap_bd+2, tunnel_encap_smac_ptr+2
-			#egress
-		)
-
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port_new_3], ig_lag_ptr+3, spi+3, si+3, sf_bitmask, rmac, nexthop_ptr+3, eg_lag_ptr+3, 0+3, 0+3, 1, [eg_port_new_3],
-			#tunnel
-			tunnel_encap_ptr+3, tunnel_encap_nexthop_ptr+3, tunnel_encap_bd+3, tunnel_encap_smac_ptr+3
-			#egress
-		)
-
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port_new_4], ig_lag_ptr+4, spi+4, si+4, sf_bitmask, rmac, nexthop_ptr+4, eg_lag_ptr+4, 0+4, 0+4, 1, [eg_port_new_4],
-			#tunnel
-			tunnel_encap_ptr+4, tunnel_encap_nexthop_ptr+4, tunnel_encap_bd+4, tunnel_encap_smac_ptr+4
-			#egress
-		)
-
 		# -----------------
 		# Ingress SF(s)
 		# -----------------
 
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, l2_etype=0x0800, l2_etype_mask=0xffff)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf)
+
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf)
 
 		# -----------------
 		# Ingress SFP Sel
 		# -----------------
-
-		npb_npb_sfp_sel_del(self, self.target, vpn, sfc, 0, 0, 4)

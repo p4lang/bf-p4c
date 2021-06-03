@@ -47,34 +47,46 @@ control npb_ing_top (
 		// Set Initial Scope
 		// -----------------------------------------------------------------
 
-		if(ig_md.nsh_md.scope == 0) {
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+#else
+		Scoper_DataMux_Hdr0ToLkp.apply(
+			hdr_0,
+			hdr_1,
+
+			ig_md.lkp_0
+		);
+#endif
+
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
-			// do nothing
 #else
-			ScoperOuter.apply(
-				hdr_1,
-				tunnel_1,
+		Scoper_DataMux_Hdr1ToLkp.apply(
+			hdr_1,
+			hdr_2,
 
-				ig_md.lkp_1
-			);
+			ig_md.lkp_1
+		);
 #endif
-		} else {
+
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
-			Scoper_ScopeOnly.apply(
-				ig_md.lkp_2,
-
-				ig_md.lkp_1
-			);
 #else
-			ScoperInner.apply(
-				hdr_2,
-				tunnel_2,
+		Scoper_DataMux_Hdr2ToLkp.apply(
+			hdr_2,
+			hdr_3,
 
-				ig_md.lkp_1
-			);
+			ig_md.lkp_2
+		);
 #endif
-		}
+		// -----------------------------------------------------------------
+/*
+		Scoper_DataOnly.apply(
+			ig_md.lkp_0,
+//			ig_md.lkp_1
+			ig_md.lkp_2,
 
+			ig_md.nsh_md.scope,
+			ig_md.lkp_1
+        );
+*/
 		// -----------------------------------------------------------------
 		// Set Initial Scope (L7)
 		// -----------------------------------------------------------------
@@ -88,24 +100,26 @@ control npb_ing_top (
 		// SFC
 		// -------------------------------------
 
-		npb_ing_sfc_top.apply (
-			hdr_0,
-			tunnel_0,
-			hdr_1,
-			tunnel_1,
-			hdr_2,
-			tunnel_2,
-			hdr_udf,
+		if (!INGRESS_BYPASS(SFC)) {
+			npb_ing_sfc_top.apply (
+				hdr_0,
+				tunnel_0,
+				hdr_1,
+				tunnel_1,
+				hdr_2,
+				tunnel_2,
+				hdr_udf,
 
-			ig_md,
-			ig_intr_md,
-			ig_intr_md_from_prsr,
-			ig_intr_md_for_dprsr,
-			ig_intr_md_for_tm
-		);
+				ig_md,
+				ig_intr_md,
+				ig_intr_md_from_prsr,
+				ig_intr_md_for_dprsr,
+				ig_intr_md_for_tm
+			);
+		}
 
 		// -------------------------------------
-		// Pre-Generate Flow Schd Hashes
+		// SF #0 - SFP Hashes
 		// -------------------------------------
 
 #ifndef SFF_SCHD_SIMPLE
@@ -157,6 +171,8 @@ control npb_ing_top (
 				ig_intr_md_for_tm
 			);
 
+			// -------------------------------------
+			// SF #0 - SFP Select
 			// -------------------------------------
 
 			npb_ing_sf_npb_basic_adv_sfp_sel.apply(

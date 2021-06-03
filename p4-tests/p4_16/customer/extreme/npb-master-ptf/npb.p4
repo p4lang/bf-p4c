@@ -50,7 +50,6 @@
 #include "nexthop.p4"
 #include "port.p4"
 //#include "validation.p4"
-#include "rewrite.p4"
 #include "tunnel.p4"
 #include "multicast.p4"
 #include "meter.p4"
@@ -132,14 +131,16 @@ control SwitchIngress(
 	OuterFib(OUTER_NEXTHOP_TABLE_SIZE, OUTER_ECMP_GROUP_TABLE_SIZE, OUTER_ECMP_SELECT_TABLE_SIZE) outer_fib;
 #endif
 	LAG() lag;
+#ifdef DTEL_ENABLE
   	IngressDtel() dtel;
+#endif
 
 	// ---------------------------------------------------------------------
 
 	apply {
 
-		ig_intr_md_for_dprsr.drop_ctl = 0;  // no longer present in latest switch.p4
-		ig_md.multicast.id = 0;             // no longer present in latest switch.p4
+//		ig_intr_md_for_dprsr.drop_ctl = 0;  // no longer present in latest switch.p4
+//		ig_md.multicast.id = 0;             // no longer present in latest switch.p4
 #ifdef PA_NO_INIT
 //		ig_md.mirror.src = SWITCH_PKT_SRC_BRIDGED; // for barefoot reset bug NOT NEEDED
 #endif
@@ -177,18 +178,18 @@ control SwitchIngress(
 //		unicast.apply(hdr.transport, ig_md);
 
 #ifdef BRIDGING_ENABLE
-		if((ig_md.flags.rmac_hit == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
-			// ----- Bridging Path -----
-
 	// the new parser puts bridging in outer
     #ifdef INGRESS_PARSER_POPULATES_LKP_1
-			dmac.apply(ig_md.lkp_1.mac_dst_addr, ig_md);
+			dmac.apply(ig_md.lkp_1.mac_dst_addr, ig_md, hdr);
     #else
-			dmac.apply(hdr.outer.ethernet.dst_addr, ig_md);
+			dmac.apply(hdr.outer.ethernet.dst_addr, ig_md, hdr);
     #endif
+#endif // BRIDGING ENABLE
+
+		if((ig_md.flags.transport_valid == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
+			// ----- Bridging Path -----
 		} else {
 			// ----- NPB Path -----
-#endif // BRIDGING ENABLE
 			npb_ing_top.apply (
 				hdr.transport,
 				ig_md.tunnel_0,
@@ -286,18 +287,22 @@ control SwitchEgress(
 
 	EgressSetLookup() egress_set_lookup;
 	EgressPortMapping(PORT_TABLE_SIZE) egress_port_mapping;
-	EgressPortMapping2(PORT_TABLE_SIZE) egress_port_mapping2;
 	EgressMirrorMeter() egress_mirror_meter;
+
+	VlanXlate(VLAN_TABLE_SIZE, PORT_VLAN_TABLE_SIZE) vlan_xlate;
 	VlanDecap() vlan_decap;
-	Rewrite(NEXTHOP_TABLE_SIZE, BD_TABLE_SIZE) rewrite;
+//	TunnelDecap() tunnel_decap;
+	TunnelNexthop(NEXTHOP_TABLE_SIZE) rewrite;
 	TunnelEncap(switch_tunnel_mode_t.PIPE) tunnel_encap;
 	TunnelRewrite() tunnel_rewrite;
-	VlanXlate(VLAN_TABLE_SIZE, PORT_VLAN_TABLE_SIZE) vlan_xlate;
 //	NSHTypeFixer() nsh_type_fixer;
 //	MulticastReplication(RID_TABLE_SIZE) multicast_replication;
 	MulticastReplication(NPB_ING_SF_1_MULTICAST_RID_TABLE_SIZE) multicast_replication;
+#ifdef DTEL_ENABLE
   	EgressDtel() dtel;
   	DtelConfig() dtel_config;
+#endif
+	EgressCpuRewrite(PORT_TABLE_SIZE) cpu_rewrite;
 
 	// -------------------------------------------------------------------------
 
@@ -309,7 +314,7 @@ control SwitchEgress(
 		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_INVALID;// for barefoot reset bug
 #endif
 
-		egress_set_lookup.apply(hdr, eg_md);  // set lookup structure fields that parser couldn't
+		egress_set_lookup.apply(hdr, eg_md, eg_intr_md);  // set lookup structure fields that parser couldn't
 
 		egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 
@@ -324,7 +329,7 @@ control SwitchEgress(
 			);
 
 #ifdef BRIDGING_ENABLE
-			if((eg_md.flags.rmac_hit == false) && (eg_md.nsh_md.l2_fwd_en == true)) {
+			if((eg_md.flags.transport_valid == false) && (eg_md.nsh_md.l2_fwd_en == true)) {
 				// do nothing (bridging the packet)
 			} else {
 #endif // BRIDGING_ENABLE
@@ -365,8 +370,7 @@ control SwitchEgress(
 			dtel_config.apply(hdr.outer, eg_md, eg_intr_md_for_dprsr);
 #endif
 		}
-		egress_port_mapping2.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
-
+		cpu_rewrite.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 		set_eg_intr_md(eg_md, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
 
 #endif  /* EGR_STUBBED_OUT */

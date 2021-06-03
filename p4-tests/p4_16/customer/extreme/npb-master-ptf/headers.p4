@@ -117,8 +117,6 @@ header ipv4_h {
 #define IP4_WIDTH_BYTES 20
 
 
-
-
 header ipv4_option_h {
     bit<8> type;
     bit<8> length;
@@ -360,6 +358,22 @@ header mpls_pw_cw_h {
 //////////////////////////////////////////////////////////////
 // Tunnel Headers
 //////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------
+// Geneve
+//-----------------------------------------------------------
+
+header geneve_h {
+    bit<2>  ver;
+    bit<6>  opt_len;
+    bit<1>  O;
+    bit<1>  C;
+    bit<6>  rsvd1;
+    bit<16> proto_type;
+    bit<24> vni;
+    bit<8>  rsvd2;
+}
+
 
 //-----------------------------------------------------------
 // VXLAN
@@ -771,6 +785,84 @@ header snoop_head_enet_vlan_ipv4_h {
     bit<8> ipv4_protocol; // lookahead<bit<224>>()[7:0]
 } // 14B + 4B + 10B = 28B
 
+
+
+header snoop_ipv4_udp_h {
+    bit<4> ipv4_version;
+    bit<4> ipv4_ihl;
+    bit<8> ipv4_diffserv;
+    bit<16> ipv4_total_len;
+    bit<16> ipv4_identification;
+    bit<3> ipv4_flags;
+    bit<13> ipv4_frag_offset;
+    bit<8> ipv4_ttl;
+    bit<8> ipv4_protocol;
+    bit<16> ipv4_hdr_checksum;
+    ipv4_addr_t ipv4_src_addr;
+    ipv4_addr_t ipv4_dst_addr;
+    
+    bit<16> udp_src_port;
+    bit<16> udp_dst_port;
+    //bit<16> udp_len;
+    //bit<16> udp_checksum;
+    
+} // 20B + 4B = 24B
+
+
+header snoop_ipv4_udp_geneve_h {
+    bit<4> ipv4_version;
+    bit<4> ipv4_ihl;
+    bit<8> ipv4_diffserv;
+    bit<16> ipv4_total_len;
+    bit<16> ipv4_identification;
+    bit<3> ipv4_flags;
+    bit<13> ipv4_frag_offset;
+    bit<8> ipv4_ttl;
+    bit<8> ipv4_protocol;
+    bit<16> ipv4_hdr_checksum;
+    ipv4_addr_t ipv4_src_addr;
+    ipv4_addr_t ipv4_dst_addr;
+    
+    bit<16> udp_src_port;
+    bit<16> udp_dst_port;
+    bit<16> udp_len;
+    bit<16> udp_checksum;
+
+    bit<2>  geneve_ver;
+    bit<6>  geneve_opt_len;
+    bit<1>  geneve_O;
+    bit<1>  geneve_C;
+    bit<6>  geneve_rsvd1;
+    bit<16> geneve_proto_type;
+} // 20B + 8B + 4B = 32B
+
+
+
+header snoop_vlan_ipv4_udp_h {
+    bit<3> vlan_pcp;
+    bit<1> vlan_cfi;
+    vlan_id_t vlan_vid;
+    bit<16> vlan_ether_type;
+    
+    bit<4> ipv4_version;
+    bit<4> ipv4_ihl;
+    bit<8> ipv4_diffserv;
+    bit<16> ipv4_total_len;
+    bit<16> ipv4_identification;
+    bit<3> ipv4_flags;
+    bit<13> ipv4_frag_offset;
+    bit<8> ipv4_ttl;
+    bit<8> ipv4_protocol;
+    bit<16> ipv4_hdr_checksum;
+    ipv4_addr_t ipv4_src_addr;
+    ipv4_addr_t ipv4_dst_addr;
+    
+    bit<16> udp_src_port;
+    bit<16> udp_dst_port;
+    //bit<16> udp_len;
+    //bit<16> udp_checksum;
+    
+} // 4B + 20B + 4B = 28B
 
 
 #endif /* _P4_HEADERS_ */

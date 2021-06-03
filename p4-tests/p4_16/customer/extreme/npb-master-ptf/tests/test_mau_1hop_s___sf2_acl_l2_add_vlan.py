@@ -115,7 +115,7 @@ class test(BfRuntimeTest):
 
 		npb_npb_sf2_policy_l2_add    (self, self.target, dsap=dsap, l2_etype=0x0800, l2_etype_mask=0xffff, add_tag_vlan_bd=5)
 
-#		npb_npb_sf2_policy_hdr_edit_add(self, self.target, bd=5, pcp=0, vid=0)
+		npb_npb_sf2_policy_hdr_edit_add(self, self.target, bd=5, pcp=0, vid=0)
 
 		# -----------------
 
@@ -126,9 +126,9 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, vlan_en=False, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, vlan_en=False, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[],
-			vlan_en_exp=False,
+			vlan_en_exp=True,
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
 
@@ -195,5 +195,4 @@ class test(BfRuntimeTest):
 
 		npb_npb_sf2_policy_l2_del(self, self.target, dsap=dsap, l2_etype=0x0800, l2_etype_mask=0xffff)
 
-#		npb_npb_sf2_policy_hdr_edit_del(self, self.target, bd=5)
-
+		npb_npb_sf2_policy_hdr_edit_del(self, self.target, bd=5)

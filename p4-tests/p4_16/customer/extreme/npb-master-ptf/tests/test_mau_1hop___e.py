@@ -85,6 +85,7 @@ class test(BfRuntimeTest):
 		si                      = 5 # Arbitrary value (ttl)
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
+		ta                      = 8 # Arbitrary value
 
 		sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
@@ -99,7 +100,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap
+			[ig_port], ig_lag_ptr, 0, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap
 			#egress
 		)
 
@@ -112,9 +113,9 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, ta=ta, spi=spi, si=si, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=False, end_of_chain=True, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi, si_exp=si, ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn
 		)
 
 		# -----------------------------------------------------------
@@ -136,6 +137,6 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port]
+			[ig_port], ig_lag_ptr, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port]
 			#egress
 		)

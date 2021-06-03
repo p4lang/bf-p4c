@@ -24,7 +24,7 @@
 #define _P4_METER_
 
 #include "acl.p4"
-/*
+
 //-------------------------------------------------------------------------------------------------
 // Storm Control
 //
@@ -39,6 +39,7 @@
 // @param meter_size : Size of storm control meters [global pool]
 // Stats table size must be 512 per pipe - each port with 6 stat entries [2 colors per pkt-type]
 //-------------------------------------------------------------------------------------------------
+/*
 control StormControl(inout switch_ingress_metadata_t ig_md,
                      in switch_pkt_type_t pkt_type,
                      out bool flag)(
@@ -125,6 +126,7 @@ control IngressMirrorMeter(inout switch_ingress_metadata_t ig_md)(
         ig_md.mirror.type = SWITCH_MIRROR_TYPE_INVALID;
     }
 
+    @ways(2)
     table meter_action {
         key = {
             color: exact;
@@ -161,8 +163,10 @@ control IngressMirrorMeter(inout switch_ingress_metadata_t ig_md)(
     }
 
     apply {
+#ifdef INGRESS_MIRROR_METER_ENABLE
             meter_index.apply();
             meter_action.apply();
+#endif
     }
 }
 
@@ -184,6 +188,7 @@ control EgressMirrorMeter(inout switch_egress_metadata_t eg_md)(
         eg_md.mirror.type = SWITCH_MIRROR_TYPE_INVALID;
     }
 
+    @ways(2)
     table meter_action {
         key = {
             color: exact;
@@ -220,8 +225,10 @@ control EgressMirrorMeter(inout switch_egress_metadata_t eg_md)(
     }
 
     apply {
+#ifdef EGRESS_MIRROR_METER_ENABLE
             meter_index.apply();
             meter_action.apply();
+#endif
     }
 }
 

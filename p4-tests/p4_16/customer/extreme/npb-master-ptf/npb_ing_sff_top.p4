@@ -25,7 +25,7 @@ control npb_ing_sff_top (
 
 	// =====================================
 
-	action unicast_direct(
+	action unicast(
 		switch_port_lag_index_t port_lag_index,
 
 		bool end_of_chain,
@@ -57,7 +57,7 @@ control npb_ing_sff_top (
 
 	// =====================================
 
-	action unicast(
+	action redirect(
 		switch_nexthop_t nexthop_index,
 
 		bool end_of_chain,
@@ -85,9 +85,9 @@ control npb_ing_sff_top (
 
 		actions = {
 			drop_pkt;
-			unicast_direct;
-			multicast;
 			unicast;
+			multicast;
+			redirect;
 		}
 
 		// Derek: drop packet on miss...

@@ -136,6 +136,9 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.outer.udp);
         pkt.emit(hdr.outer.tcp);
         pkt.emit(hdr.outer.sctp);
+#ifdef GENEVE_ENABLE
+        pkt.emit(hdr.outer.geneve);
+#endif // GENEVE_ENABLE
 #ifdef VXLAN_ENABLE
         pkt.emit(hdr.outer.vxlan);
 #endif // VXLAN_ENABLE
@@ -148,7 +151,6 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.outer.gtp_v1_base);
         pkt.emit(hdr.outer.gtp_v1_optional);
 #endif // GTP_ENABLE
-
 
         // ***** INNER *****
         pkt.emit(hdr.inner.ethernet);

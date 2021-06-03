@@ -86,7 +86,7 @@ class test(BfRuntimeTest):
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
 
-		sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+		sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
 		nexthop_ptr             = 0 # Arbitrary value
 		bd                      = 1 # Arbitrary value
@@ -110,121 +110,30 @@ class test(BfRuntimeTest):
 		)
 
 		# -----------------
-		# Ingress Tunnel
+		# Ingress SF(s)
 		# -----------------
 
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=1)
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=1)
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=1)
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=1)
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=0)
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=1)
-		npb_tunnel_outer_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, terminate=1)
+		#Src Port Range
+		npb_npb_sf0_l4_src_port_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
+		npb_npb_sf0_l4_src_port_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
+
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_src=0, l4_src_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_src=1, l4_src_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
 
 		# -----------------
 
 #		time.sleep(1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN)
+		# Create / Send / Verify the packet Src Port (#1, < 8k)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
-		)
-
-		# -----------------------------------------------------------
-
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
-
-		# -----------------------------------------------------------
-
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
-
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
-
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (NVGRE)
-		# -----------------------------------------------------------
-
-		src_pkt, exp_pkt = npb_simple_2lyr_nvgre_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
-		)
-
-		# -----------------------------------------------------------
-
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
-
-		# -----------------------------------------------------------
-
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
-
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
-
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (GRE)
-		# -----------------------------------------------------------
-
-		src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
-		)
-
-		# -----------------------------------------------------------
-
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
-
-		# -----------------------------------------------------------
-
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
-
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
-
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (IPINIP)
-		# -----------------------------------------------------------
-
-		src_pkt, exp_pkt = npb_simple_2lyr_ipinip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
-		)
-
-		# -----------------------------------------------------------
-
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
-
-		# -----------------------------------------------------------
-
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
-
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
-
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (GTP-C)
-		# -----------------------------------------------------------
-
-		src_pkt, exp_pkt = npb_simple_2lyr_gtpc_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+		src_pkt, exp_pkt = npb_simple_1lyr_udp(
+#			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			udp_sport=4660, udp_dport=2152,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
 
 		# -----------------------------------------------------------
@@ -241,13 +150,66 @@ class test(BfRuntimeTest):
 		testutils.verify_no_other_packets(self, 0, 1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (GTP-U)
+		# Create / Send / Verify the packet Src Port (#2, >= 8k)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_2lyr_gtpu_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1], 
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+		src_pkt, exp_pkt = npb_simple_1lyr_udp(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			udp_sport=34661, udp_dport=2152,
+			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+		)
+
+		# -----------------------------------------------------------
+
+		logger.info("Sending packet on port %d", ig_port)
+		testutils.send_packet(self, ig_port, str(src_pkt))
+
+		# -----------------------------------------------------------
+
+#		logger.info("Verify packet on port %d", eg_port)
+#		testutils.verify_packets(self, exp_pkt, [eg_port])
+
+		logger.info("Verify no other packets")
+		testutils.verify_no_other_packets(self, 0, 1)
+
+
+		# -----------------
+		# Delete Src Port Entries
+		# -----------------
+
+		npb_npb_sf0_l4_src_port_rng_del(self, self.target,    0x0, 0x1fff) # <  8k
+		npb_npb_sf0_l4_src_port_rng_del(self, self.target, 0x2000, 0xffff) # >= 8k
+
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_src=0, l4_src_mask=0xffff) # don't drop
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_src=1, l4_src_mask=0xffff) # drop
+
+
+		# -----------------
+		# Ingress SF(s)
+		# -----------------
+
+		#Dest Port Range
+		npb_npb_sf0_l4_dst_port_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
+		npb_npb_sf0_l4_dst_port_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
+
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_dst=0, l4_dst_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_dst=1, l4_dst_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
+
+
+		# -----------------
+
+#		time.sleep(1)
+
+		# -----------------------------------------------------------
+		# Create / Send / Verify the packet Dst Port (#1, < 8k)
+		# -----------------------------------------------------------
+
+		src_pkt, exp_pkt = npb_simple_1lyr_udp(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			udp_sport=2152, udp_dport=2152,
+			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
 
 		# -----------------------------------------------------------
@@ -262,6 +224,34 @@ class test(BfRuntimeTest):
 
 		logger.info("Verify no other packets")
 		testutils.verify_no_other_packets(self, 0, 1)
+
+		# -----------------------------------------------------------
+		# Create / Send / Verify the packet Dst Port (#2, >= 8k)
+		# -----------------------------------------------------------
+
+		src_pkt, exp_pkt = npb_simple_1lyr_udp(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			udp_sport=2152, udp_dport=57005,
+			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+		)
+
+		# -----------------------------------------------------------
+
+		logger.info("Sending packet on port %d", ig_port)
+		testutils.send_packet(self, ig_port, str(src_pkt))
+
+		# -----------------------------------------------------------
+
+#		logger.info("Verify packet on port %d", eg_port)
+#		testutils.verify_packets(self, exp_pkt, [eg_port])
+
+		logger.info("Verify no other packets")
+		testutils.verify_no_other_packets(self, 0, 1)
+
+
+
+
 
 		# -----------------------------------------------------------
 		# Delete Table Entries
@@ -276,13 +266,12 @@ class test(BfRuntimeTest):
 		)
 
 		# -----------------
-		# Ingress Tunnel
+		# Delete Dst Port Entries
 		# -----------------
 
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf)
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf)
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)
-		npb_tunnel_outer_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf)
+		npb_npb_sf0_l4_dst_port_rng_del(self, self.target,    0x0, 0x1fff) # <  8k
+		npb_npb_sf0_l4_dst_port_rng_del(self, self.target, 0x2000, 0xffff) # >= 8k
+
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_dst=0, l4_dst_mask=0xffff) # don't drop
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_dst=1, l4_dst_mask=0xffff) # drop
+

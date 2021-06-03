@@ -88,7 +88,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
 	) {
 		stats.count();
 
-        ig_md.drop_reason = SWITCH_DROP_REASON_NEXTHOP;
+//      ig_md.drop_reason = SWITCH_DROP_REASON_NEXTHOP;
     }
 #ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
     action set_nexthop_properties_tunnel(

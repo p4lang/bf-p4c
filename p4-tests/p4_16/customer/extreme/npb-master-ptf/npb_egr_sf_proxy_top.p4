@@ -5,6 +5,7 @@
 #ifdef SF_2_DEDUP_ENABLE
   #include "npb_ing_sf_npb_basic_adv_dedup.p4"
 #endif
+#include "table_sizes.p4"
 
 #include "acl.p4"
 
@@ -314,7 +315,6 @@ control npb_egr_sf_proxy_top (
 				l4_dst_port,
 				l4_dst_port_is_rng_bitmask,
 				hdr_0,
-				hdr_1,
 				int_ctrl_flags
 			);
 

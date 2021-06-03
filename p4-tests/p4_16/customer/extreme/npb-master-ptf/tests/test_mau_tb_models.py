@@ -39,8 +39,10 @@ def npb_model_mac_encap(
 	vlan_vid = 0,
 
 	# transport nsh variables
-	spi      = 0,
+	spi      = 0, 
 	si       = 0,
+	ta       = 0,
+	nshtype  = 2,  
 	scope    = 0,
 	sap      = 0,
 	vpn      = 0,
@@ -64,38 +66,67 @@ def npb_model_mac_encap(
 	# -----------------
 	# build packet
 	# -----------------
-
+	
 	if(vlan_en == True):
-		pkt = \
-			testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x8100) / \
-			scapy.Dot1Q(prio=vlan_pcp, id=0, vlan=vlan_vid,  type=0x894f) / \
-			scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si, TTL=ttl, \
-				DataType=2, \
-				VPN=vpn, \
-				Scope=scope, SSAP=sap, \
+		if(nshtype == 1):
+			pkt = \
+				testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x8100) / \
+				scapy.Dot1Q(prio=vlan_pcp, id=0, vlan=vlan_vid,  type=0x894f) / \
+				scapy.NSH(MDType=1, NextProto=3, NSP=ta, NSI=1, TTL=ttl, \
+					DataType=nshtype, \
+					VPN=vpn, \
+					Scope=scope, SSAP=sap, \
 #				NPC=((2<<24) | (0    <<16) |   0), \
 #				NSC=(          (vpn  <<16) |   0), \
 #				SPC=(          (scope<<16) | sap), \
 #				SSC=(                          0), \
-			) / \
-			src_pkt_base
+				) / \
+				src_pkt_base
+		else:
+			pkt = \
+				testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x8100) / \
+				scapy.Dot1Q(prio=vlan_pcp, id=0, vlan=vlan_vid,  type=0x894f) / \
+				scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si, TTL=ttl, \
+					DataType=2, \
+					VPN=vpn, \
+					Scope=scope, SSAP=sap, \
+#				NPC=((2<<24) | (0    <<16) |   0), \
+#				NSC=(          (vpn  <<16) |   0), \
+#				SPC=(          (scope<<16) | sap), \
+#				SSC=(                          0), \
+				) / \
+				src_pkt_base
 	else:
-		pkt = \
-			testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x894f) / \
-			scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si, TTL=ttl, \
-				DataType=2, \
-				VPN=vpn, \
-				Scope=scope, SSAP=sap, \
+		if(nshtype == 1):
+			pkt = \
+				testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x894f) / \
+				scapy.NSH(MDType=1, NextProto=3, NSP=ta, NSI=1, TTL=ttl, \
+					DataType=nshtype, \
+					VPN=vpn, \
+					Scope=scope, SSAP=sap, \
 #				NPC=((2<<24) | (0    <<16) |   0), \
 #				NSC=(          (vpn  <<16) |   0), \
 #				SPC=(          (scope<<16) | sap), \
 #				SSC=(                          0), \
-			) / \
-			src_pkt_base
-
+				) / \
+				src_pkt_base
+		else:
+			pkt = \
+				testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x894f) / \
+				scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si, TTL=ttl, \
+					DataType=2, \
+					VPN=vpn, \
+					Scope=scope, SSAP=sap, \
+#				NPC=((2<<24) | (0    <<16) |   0), \
+#				NSC=(          (vpn  <<16) |   0), \
+#				SPC=(          (scope<<16) | sap), \
+#				SSC=(                          0), \
+				) / \
+				src_pkt_base
 	# -----------------
 
 	return pkt
+
 
 ################################################################################
 
@@ -119,7 +150,7 @@ def npb_model_gre_encap_v4(
 		layer = src_pkt_inner.getlayer(counter)
 		if layer is None:
 			break
-		print layer.name,
+#		print layer.name,
 		counter += 1
 
 		if(layer.name == 'IP'):
@@ -166,7 +197,7 @@ def npb_model_gre_encap_v6(
 		layer = src_pkt_inner.getlayer(counter)
 		if layer is None:
 			break
-		print layer.name,
+#		print layer.name,
 		counter += 1
 
 		if(layer.name == 'IP'):
@@ -202,6 +233,8 @@ def npb_model(
 	# nsh values
 	spi_exp        = None,
 	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,  
 	sap_exp        = None,
 	vpn_exp        = None,
 	ttl            = 63, # new packets will have a value of 63
@@ -263,8 +296,8 @@ def npb_model(
 				scope = scope + 1;       # increment scope
 			elif(i == 1):
 				# got a terminate
-				term = term + 1 + scope; # increment terminate
-				scope = 0;               # reset scope
+				term = term + 1 + (scope-1); # increment terminate
+				scope = 1;               # reset scope
 
 		for i in range(term):
 			model_pkt     = exp_pkt_base.pop(0)
@@ -284,7 +317,7 @@ def npb_model(
 
 	if(transport_encap == EgressTunnelType.NSH.value):
 		# encap with mac+nsh
-		model_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh_exp, vlan_pcp_nsh, vlan_vid_nsh, spi_exp, si_exp, scope, sap_exp, vpn_exp, ttl, model_pkt)
+		model_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh_exp, vlan_pcp_nsh, vlan_vid_nsh, spi_exp, si_exp, ta_exp, nshtype_exp, scope, sap_exp, vpn_exp, ttl, model_pkt)
 
 		# add a mask to the packet
 		model_pkt = mask.Mask(model_pkt)
@@ -319,7 +352,10 @@ def npb_model(
 ################################################################################
 
 def cpu_model(
-	result # the result from ptf's 'testutils.dp_poll' function
+	result, # the result from ptf's 'testutils.dp_poll' function
+
+	new_src_port_enable = False, # replace the cpu header's source port?
+	new_src_port        = 0
 	):
 
 	# ----- get the packet -----
@@ -354,8 +390,11 @@ def cpu_model(
 
 	# modify cpu header (convert tuple to list, modify, convert list to tuple)
 	cpu_hdr_1_list = list(cpu_hdr_1)
-	cpu_hdr_1_list[0] = cpu_hdr_1_list[0] | 0x04 # misc flags         : bypass all egress
-	cpu_hdr_1_list[1] = cpu_hdr_1_list[1]        # ing port           : (unchanged?)
+#	cpu_hdr_1_list[0] = cpu_hdr_1_list[0] | 0x04 # misc flags         : bypass all egress
+	if(new_src_port_enable == True):
+		cpu_hdr_1_list[1] = new_src_port         # ing port           : (unchanged?)
+	else:
+		cpu_hdr_1_list[1] = cpu_hdr_1_list[1]    # ing port           : (unchanged?)
 	cpu_hdr_1_list[2] = cpu_hdr_1_list[2]        # egr port/lag index : (unchanged?)
 	cpu_hdr_1_list[3] = cpu_hdr_1_list[3]        # igr bd       index : (unchanged?)
 #	cpu_hdr_1_list[4] = 0xff                     # ing bypass         : bypass all ingress

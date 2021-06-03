@@ -709,7 +709,7 @@ control DtelConfig(inout switch_header_outer_t hdr,
             eg_md.dtel.drop_report_flag : ternary;
             eg_md.dtel.flow_report_flag : ternary;
             eg_md.dtel.queue_report_flag : ternary;
-            eg_md.drop_reason : ternary;
+//          eg_md.drop_reason : ternary;
             eg_md.mirror.type : ternary;
             hdr.dtel_drop_report.isValid() : ternary;
 #ifdef DTEL_FLOW_REPORT_ENABLE

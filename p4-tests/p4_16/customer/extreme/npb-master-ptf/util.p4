@@ -119,13 +119,14 @@ action add_bridged_md(
 #else
 		ig_md.port_lag_index,
 #endif
-		ig_md.bd,
+//		ig_md.bd,
+		0,
 		ig_md.nexthop,
 //		ig_md.lkp.pkt_type,
 		ig_md.cpu_reason,
 		ig_md.timestamp,
 		ig_md.hash,
-		ig_md.flags.rmac_hit,
+		ig_md.flags.transport_valid,
 		ig_md.flags.bypass_egress
 	};
 

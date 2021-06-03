@@ -174,7 +174,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			transport_decap=False, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[1], transport_encap=EgressTunnelType.IPV4_GRE.value,
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
@@ -194,11 +194,11 @@ class test(BfRuntimeTest):
 		testutils.verify_no_other_packets(self, 0, 1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN)
+		# Create / Send / Verify the packet (NVGRE)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+		src_pkt, exp_pkt = npb_simple_2lyr_nvgre_udp(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			transport_decap=False, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[1], transport_encap=EgressTunnelType.IPV4_GRE.value,
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
@@ -222,7 +222,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 		'''
 		src_pkt, exp_pkt = npb_simple_2lyr_erspan_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[], transport_encap=EgressTunnelType.IPV4_ERSPAN.value,
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1

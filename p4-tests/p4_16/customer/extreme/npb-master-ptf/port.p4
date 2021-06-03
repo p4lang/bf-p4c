@@ -20,7 +20,7 @@
  *
  ******************************************************************************/
 
-#include "rewrite.p4"
+
 
 //-----------------------------------------------------------------------------
 // Ingress/Egress Port Mirroring
@@ -41,7 +41,7 @@ control PortMirror(
 		mirror_md.type = SWITCH_MIRROR_TYPE_PORT;
 		mirror_md.src = src;
 		mirror_md.session_id = session_id;
-#ifdef MIRROR_METERS
+#ifdef MIRROR_METER_ENABLE
 		mirror_md.meter_index = meter_index; // derek added
 #endif
 	}
@@ -112,12 +112,12 @@ control IngressPortMapping(
 	action set_cpu_port_properties(
 		switch_port_lag_index_t port_lag_index,
 //		switch_port_lag_label_t port_lag_label,
-		switch_yid_t exclusion_id,
+		switch_yid_t exclusion_id
 //		switch_qos_trust_mode_t trust_mode,
 //		switch_qos_group_t qos_group,
 //		switch_pkt_color_t color,
 //		switch_tc_t tc
-		bool l2_fwd_en
+//		bool l2_fwd_en
 	) {
 #ifdef CPU_ENABLE
 		stats.count();
@@ -129,7 +129,7 @@ control IngressPortMapping(
 //		ig_md.qos.color = color;
 //		ig_md.qos.tc = tc;
 		ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
-		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
+//		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
 
 		terminate_cpu_packet();
 #endif
@@ -142,8 +142,8 @@ control IngressPortMapping(
 		switch_yid_t exclusion_id
 #ifdef CPU_HDR_CONTAINS_EG_PORT
 		,
-		switch_port_lag_index_t port_lag_index,
-		bool l2_fwd_en
+		switch_port_lag_index_t port_lag_index
+//		bool l2_fwd_en
 #else
 #endif
 	) {
@@ -152,7 +152,7 @@ control IngressPortMapping(
 		ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
 #ifdef CPU_HDR_CONTAINS_EG_PORT
 		ig_md.port_lag_index = port_lag_index;
-		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
+//		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
 #else
 #endif
 #ifdef PA_NO_INIT
@@ -176,7 +176,12 @@ control IngressPortMapping(
 			set_cpu_port_properties;
 		}
 
+#ifdef CPU_BD_MAP_ENABLE
 		size = port_table_size * 2;
+#else
+		size = port_table_size;
+#endif
+		default_action = set_port_properties(0, 0);
 		counters = stats;
 	}
 
@@ -287,6 +292,7 @@ control IngressPortMapping(
 		}
 */
 		if(port_mapping.apply().hit) {
+/*
 			if(hdr.cpu.isValid()) {
 #ifdef CPU_BD_MAP_ENABLE
 				cpu_to_bd_mapping.apply();
@@ -298,6 +304,7 @@ control IngressPortMapping(
 					}
 				}
 			}
+*/
 		}
 
 #ifdef MIRROR_INGRESS_PORT_ENABLE
@@ -442,32 +449,29 @@ control EgressPortMapping(
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
 
 	action cpu_rewrite() {
+#ifdef SPLIT_EG_PORT_TABLE_ENABLE
+#else
 		// ----- add fabric header -----
-#ifdef CPU_FABRIC_HEADER_ENABLE
+  #ifdef CPU_FABRIC_HEADER_ENABLE
 		hdr.fabric.setValid();
 		hdr.fabric.reserved = 0;
 		hdr.fabric.color = 0;
 		hdr.fabric.qos = 0;
 		hdr.fabric.reserved2 = 0;
-#endif
+  #endif
 		// ----- add cpu header -----
 		hdr.cpu.setValid();
 		hdr.cpu.egress_queue = 0;
 		hdr.cpu.tx_bypass = 0;
 		hdr.cpu.capture_ts = 0;
 		hdr.cpu.reserved = 0;
-		// Both these line are here instead of parser out due to compiler... "error: Field is
-		// extracted in the parser into multiple containers, but the container
-		// slices after the first aren't byte aligned"
 		hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
-#ifdef CPU_HDR_CONTAINS_EG_PORT
+  #ifdef CPU_HDR_CONTAINS_EG_PORT
 		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_orig;
-#else
+  #else
 		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
-#endif
+  #endif
 		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
-#ifdef SPLIT_EG_PORT_TABLE_ENABLE
-#else
 		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
 		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
   #ifdef CPU_FABRIC_HEADER_ENABLE
@@ -501,9 +505,7 @@ control EgressPortMapping(
 	}
 
 	table port_mapping {
-		key = {
-			port : exact;
-		}
+		key = { port : exact; }
 
 		actions = {
 			port_normal;
@@ -528,10 +530,10 @@ control EgressPortMapping(
 }
 
 //-----------------------------------------------------------------------------
-// Egress Port Mapping
+// CPU-RX Header Insertion
 //-----------------------------------------------------------------------------
 
-control EgressPortMapping2(
+control EgressCpuRewrite(
 	inout switch_header_t hdr,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
@@ -546,6 +548,9 @@ control EgressPortMapping2(
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
 
 	action cpu_rewrite() {
+		stats.count();
+#ifdef CPU_ENABLE
+/*
 		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
 		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
 #ifdef CPU_FABRIC_HEADER_ENABLE
@@ -553,30 +558,48 @@ control EgressPortMapping2(
 #else
 		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN2;
 #endif
-	}
-
-	action port_normal(
-	) {
-		stats.count();
-	}
-
-	action port_cpu(
-	) {
-#ifdef CPU_ENABLE
-		stats.count();
-
-		cpu_rewrite();
+*/
+		// ----- add fabric header -----
+  #ifdef CPU_FABRIC_HEADER_ENABLE
+		hdr.fabric.setValid();
+		hdr.fabric.reserved = 0;
+		hdr.fabric.color = 0;
+		hdr.fabric.qos = 0;
+		hdr.fabric.reserved2 = 0;
+  #endif
+		// ----- add cpu header -----
+		hdr.cpu.setValid();
+		hdr.cpu.egress_queue = 0;
+		hdr.cpu.tx_bypass = 0;
+		hdr.cpu.capture_ts = 0;
+		hdr.cpu.reserved = 0;
+		hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
+  #ifdef CPU_HDR_CONTAINS_EG_PORT
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_orig;
+  #else
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
+  #endif
+		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
+		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
+		hdr.cpu.ether_type = hdr.outer.ethernet.ether_type;
+  #ifdef CPU_FABRIC_HEADER_ENABLE
+		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN;
+  #else
+		hdr.outer.ethernet.ether_type = ETHERTYPE_BFN2;
+  #endif
 #endif // CPU_ENABLE
 	}
-
-	table port_mapping {
-		key = {
-			port : exact;
-		}
+/*
+	action normal_rewrite() {
+		stats.count();
+	}
+*/
+	table cpu_port_rewrite {
+		key = { port : exact; }
 
 		actions = {
-			port_normal;
-			port_cpu;
+			cpu_rewrite;
+//			normal_rewrite;
 		}
 
 		size = table_size;
@@ -589,7 +612,7 @@ control EgressPortMapping2(
 
 	apply {
 #ifdef SPLIT_EG_PORT_TABLE_ENABLE
-		port_mapping.apply();
+		cpu_port_rewrite.apply();
 #endif
 	}
 }

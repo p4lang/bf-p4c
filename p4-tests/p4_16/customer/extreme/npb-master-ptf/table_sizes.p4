@@ -32,7 +32,7 @@
 // Switch
 // -----------------------------------------------------------------------------
 
-const bit<32> PORT_TABLE_SIZE                                      = 256;
+const bit<32> PORT_TABLE_SIZE                                      = 288;
 
 // 4K L2 vlans
 const bit<32> VLAN_TABLE_SIZE                                      = 4096;
@@ -77,11 +77,13 @@ const bit<32> LAG_MAX_MEMBERS_PER_GROUP                            = 64;        
 const bit<32> LAG_SELECTOR_TABLE_SIZE                              = 2048;  // 256 * 64 // switch.p4 was 16384
 
 // Ingress ACLs
-const bit<32> INGRESS_MAC_ACL_TABLE_SIZE                           = 2048; // derek: was told to change this from the 512 in the spec.
-//const bit<32> INGRESS_IPV4_ACL_TABLE_SIZE                          = 8192; // derek: ideally this should be 8192
-const bit<32> INGRESS_IPV4_ACL_TABLE_SIZE                          = 6144; // derek: ideally this should be 8192
+const bit<32> INGRESS_MAC_ACL_TABLE_SIZE                           = 1536; // derek: was told to change this from the 512 in the spec.
+//const bit<32> INGRESS_MAC_ACL_TABLE_SIZE                           = 2048; // derek: was told to change this from the 512 in the spec.
 //const bit<32> INGRESS_IPV4_ACL_TABLE_SIZE                          = 4096; // derek: ideally this should be 8192
+const bit<32> INGRESS_IPV4_ACL_TABLE_SIZE                          = 6144; // derek: ideally this should be 8192
+//const bit<32> INGRESS_IPV4_ACL_TABLE_SIZE                          = 8192; // derek: ideally this should be 8192
 const bit<32> INGRESS_IPV6_ACL_TABLE_SIZE                          = 2048;
+//const bit<32> INGRESS_IPV6_ACL_TABLE_SIZE                          = 3072;
 const bit<32> INGRESS_L7_ACL_TABLE_SIZE                            = 1024;
 
 // Egress ACL
@@ -105,7 +107,9 @@ const bit<32> NPB_ING_SFC_TUNNEL_NETWORK_SAP_TABLE_DEPTH           = 8192;
 const bit<32> NPB_ING_SFC_TUNNEL_OUTER_EXM_TABLE_DEPTH             = 8192; // unused now
 const bit<32> NPB_ING_SFC_TUNNEL_OUTER_TCAM_TABLE_DEPTH            = 1024; // was 256;
 const bit<32> NPB_ING_SFC_TUNNEL_INNER_EXM_TABLE_DEPTH             = 8192;
-const bit<32> NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH            = 256;
+//const bit<32> NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH            = 256;
+//const bit<32> NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH            = 1024;
+const bit<32> NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH            = 2048;
 const bit<32> NPB_ING_SFC_SF_SEL_TABLE_DEPTH                       = 8192; // derek, what size to make this?
 const bit<32> NPB_ING_SFC_SF_SEL_NSH_XLATE_TABLE_DEPTH             = 8192; // derek, what size to make this?
 
@@ -117,7 +121,8 @@ const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH   = 128;
 
 // sf #0 - sfp select
 const bit<32> NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH                 = 128;
-const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE                     = 128;
+//const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE                     = 128;
+const bit<32> NPB_ING_SF_0_SFP_SCHD_TABLE_SIZE                     = 8192;
 const bit<32> NPB_ING_SF_0_SFP_SCHD_GROUP_TABLE_SIZE               = 128;
 const bit<32> NPB_ING_SF_0_SFP_SCHD_MAX_MEMBERS_PER_GROUP          = 128;
 const bit<32> NPB_ING_SF_0_SFP_SCHD_SELECTOR_TABLE_SIZE            = 16384; // 128 * 128

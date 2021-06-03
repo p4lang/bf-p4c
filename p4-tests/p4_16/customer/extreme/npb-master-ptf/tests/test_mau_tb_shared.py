@@ -37,7 +37,7 @@ elif g_is_tofino2:
 	TOFINO_1                 = False;
 	BRIDGING_ENABLE          = True;
 	TRANSPORT_ENABLE         = False;
-	SFF_SCHD_SIMPLE          = False;
+	SFF_SCHD_SIMPLE          = True;
 	CPU_ENABLE               = True;
 	ETAG_ENABLE              = True;
 	VNTAG_ENABLE             = True;

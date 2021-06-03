@@ -178,17 +178,17 @@
 //-----------------------------------------------------------------------------
 
 #define INGRESS_ACL_ACTIONS                                                   \
-			                                                                  \
+                                                                              \
 action no_action() {                                                          \
 	stats.count();                                                            \
 }                                                                             \
-			                                                                  \
+                                                                              \
 /* --------------------------------- */                                       \
-			                                                                  \
+                                                                              \
 action hit (                                                                  \
 /*	bit<3> drop, */                                                           \
 	bool drop,                                                                \
-			                                                                  \
+                                                                              \
 	bool terminate,                                                           \
 	bool scope,                                                               \
 	bool truncate_enable,                                                     \
@@ -203,12 +203,12 @@ action hit (                                                                  \
 	switch_copp_meter_id_t copp_meter_id,                                     \
 /*	bool dtel_report_type_enable,              */                             \
 /*	switch_dtel_report_type_t dtel_report_type */                             \
-			                                                                  \
+                                                                              \
 	bit<6> indirect_counter_index                                             \
 ) {                                                                           \
 /*	ig_intr_md_for_dprsr.drop_ctl = drop; */                                  \
 	drop_                       = drop;                                       \
-			                                                                  \
+                                                                              \
 	terminate_                  = terminate;                                  \
 	scope_                      = scope;                                      \
 	ig_md.nsh_md.truncate_enable= truncate_enable;                            \
@@ -217,15 +217,15 @@ action hit (                                                                  \
 	ig_md.nsh_md.sfc_enable     = sfc_enable;                                 \
 	ig_md.nsh_md.sfc            = sfc;                                        \
 	flow_class_                 = flow_class;                                 \
-			                                                                  \
+                                                                              \
 	copy_to_cpu_                = copy_to_cpu;                                \
 	redirect_to_cpu_            = redirect_to_cpu;                            \
 	cpu_reason_                 = cpu_reason_code;                            \
 	copp_meter_id_              = copp_meter_id;                              \
-			                                                                  \
+                                                                              \
 /*	dtel_report_type_enable_    = dtel_report_type_enable */                  \
 /*	dtel_report_type_           = dtel_report_type        */                  \
-			                                                                  \
+                                                                              \
 	stats.count();                                                            \
 	indirect_counter_index_     = indirect_counter_index;                     \
 }
@@ -235,17 +235,17 @@ action hit (                                                                  \
 //-----------------------------------------------------------------------------
 
 #define EGRESS_ACL_ACTIONS                                                    \
-			                                                                  \
+                                                                              \
 action no_action() {                                                          \
 	stats.count();                                                            \
 }                                                                             \
-			                                                                  \
+                                                                              \
 /* --------------------------------- */                                       \
-			                                                                  \
+                                                                              \
 action hit(                                                                   \
 /*	bit<3> drop, */                                                           \
 	bool drop,                                                                \
-			                                                                  \
+                                                                              \
 	bool terminate,                                                           \
 	bool strip_tag_e,                                                         \
 	bool strip_tag_vn,                                                        \
@@ -264,9 +264,9 @@ action hit(                                                                   \
 ) {                                                                           \
 /*	eg_intr_md_for_dprsr.drop_ctl = drop; */                                  \
 	drop_                       = drop;                                       \
-			                                                                  \
+                                                                              \
 	terminate_                  = terminate;                                  \
-			                                                                  \
+                                                                              \
 	eg_md.nsh_md.strip_tag_e    = strip_tag_e;                                \
 	eg_md.nsh_md.strip_tag_vn   = strip_tag_vn;                               \
 	eg_md.nsh_md.strip_tag_vlan = strip_tag_vlan;                             \
@@ -276,12 +276,12 @@ action hit(                                                                   \
 	eg_md.nsh_md.dedup_en       = dedup_en;                                   \
 	eg_md.nsh_md.terminate_outer= terminate_outer;                            \
 	eg_md.nsh_md.terminate_inner= terminate_inner;                            \
-			                                                                  \
+                                                                              \
 	copy_to_cpu_                = copy_to_cpu;                                \
 	redirect_to_cpu_            = redirect_to_cpu;                            \
 	cpu_reason_                 = cpu_reason_code;                            \
 	copp_meter_id_              = copp_meter_id;                              \
-			                                                                  \
+                                                                              \
 	stats.count();                                                            \
 	indirect_counter_index_     = indirect_counter_index;                     \
 }                                                                             \
@@ -299,7 +299,6 @@ action hit(                                                                   \
 control IngressMacAcl(
 	in    switch_lookup_fields_t lkp,
 	in    switch_header_transport_t hdr,
-	in    switch_header_outer_t hdr_1,
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
 	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
@@ -338,6 +337,7 @@ control IngressMacAcl(
 #endif
 			// -------------------------------------------
 			ig_md.nsh_md.sap                      : ternary @name("sap");
+			ig_md.nsh_md.vpn                      : ternary @name("vpn");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -405,6 +405,7 @@ control IngressIpAcl(
 #endif
 			// -------------------------------------------
 			ig_md.nsh_md.sap                      : ternary @name("sap");
+			ig_md.nsh_md.vpn                      : ternary @name("vpn");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -507,6 +508,7 @@ control IngressIpv4Acl(
 #endif
 			// -------------------------------------------
 			ig_md.nsh_md.sap                      : ternary @name("sap");
+			ig_md.nsh_md.vpn                      : ternary @name("vpn");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -610,6 +612,7 @@ control IngressIpv6Acl(
 #endif
 			// -------------------------------------------
 			ig_md.nsh_md.sap                      : ternary @name("sap");
+			ig_md.nsh_md.vpn                      : ternary @name("vpn");
 			// -------------------------------------------
 #ifdef SF_0_L2_VLAN_ID_ENABLE
 			lkp.vid                                : ternary;
@@ -712,6 +715,7 @@ control IngressL7Acl(
 #endif
 			// -------------------------------------------
 			ig_md.nsh_md.sap                      : ternary @name("sap");
+			ig_md.nsh_md.vpn                      : ternary @name("vpn");
 			// -------------------------------------------
 			flow_class_                            : ternary @name("flow_class");
 		}
@@ -754,8 +758,6 @@ control IngressAcl(
 	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	inout switch_header_transport_t hdr_0,
-	in    switch_header_outer_t     hdr_1,
-	in    switch_header_inner_t     hdr_2,
 	in    udf_h hdr_udf,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags
 ) (
@@ -775,9 +777,9 @@ control IngressAcl(
 	IngressIpAcl(ip_table_size) ip_acl;
 #else
 	IngressIpv4Acl(ipv4_table_size) ipv4_acl;
-#ifdef IPV6_ENABLE
+  #ifdef IPV6_ENABLE
 	IngressIpv6Acl(ipv6_table_size) ipv6_acl;
-#endif // IPV6_ENABLE
+  #endif // IPV6_ENABLE
 #endif /* SF_0_ACL_SHARED_IP_ENABLE */
 	IngressMacAcl(mac_table_size) mac_acl;
 #ifdef UDF_ENABLE
@@ -789,17 +791,17 @@ control IngressAcl(
 //	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 
-	bool drop;
-	bool terminate;
-	bool scope;
-	switch_cpu_reason_t cpu_reason;
-	bool copy_to_cpu;
-	bool redirect_to_cpu;
-	bool dtel_report_type_enable;
-	switch_copp_meter_id_t copp_meter_id;
-	bit<SF_FLOW_CLASS_WIDTH_A> flow_class;
+	bool drop = false;
+	bool terminate = false;
+	bool scope = false;
+	switch_cpu_reason_t cpu_reason = 0;
+	bool copy_to_cpu = false;
+	bool redirect_to_cpu = false;
+	bool dtel_report_type_enable = false;
+	switch_copp_meter_id_t copp_meter_id = 0;
+	bit<SF_FLOW_CLASS_WIDTH_A> flow_class = 0;
 	switch_dtel_report_type_t dtel_report_type;
-	bit<6> indirect_counter_index;
+	bit<6> indirect_counter_index = 0;
 
 	// -------------------------------------
 	// Table: Scope Increment
@@ -838,6 +840,7 @@ control IngressAcl(
 	// -------------------------------------
 
 	apply {
+/*
 		drop                         = false;
 		terminate                    = false;
 		scope                        = false;
@@ -847,7 +850,8 @@ control IngressAcl(
 		cpu_reason                   = 0;
 //		copp_meter_id                = 0; // TODO: this may be data and therefore not need to be initialized
 		flow_class                   = 0;
-
+		indirect_counter_index       = 0;
+*/
 		ig_md.nsh_md.truncate_enable = false;
 		ig_md.nsh_md.dedup_en        = false;
 		ig_md.nsh_md.sfc_enable      = false;
@@ -868,7 +872,6 @@ control IngressAcl(
 		mac_acl.apply(
 			lkp,
 			hdr_0,
-			hdr_1,
 			ig_md,
 			ig_intr_md_for_dprsr,
 			ip_len, ip_len_is_rng_bitmask,
@@ -989,7 +992,7 @@ control IngressAcl(
 
 			if(terminate == true) {
 				ig_md.tunnel_1.terminate           = true;
-				if(ig_md.nsh_md.scope == 1) {
+				if(ig_md.nsh_md.scope == 2) {
 					ig_md.tunnel_2.terminate           = true;
 				}
 			}
@@ -998,7 +1001,7 @@ control IngressAcl(
 
 #ifdef SF_0_ALLOW_SCOPE_CHANGES
 			if(scope == true) {
-				if(ig_md.nsh_md.scope == 0) {
+				if(ig_md.nsh_md.scope == 1) {
 
 					// note: need to change scope here so that the lag
 					// hash gets the new values....
@@ -1013,8 +1016,6 @@ control IngressAcl(
   #else
 					ScoperInner.apply(
 						hdr_2,
-						ig_md.tunnel_2,
-//						ig_md.drop_reason_2,
 
 						ig_md.lkp_1
 					);
@@ -1029,7 +1030,34 @@ control IngressAcl(
 #endif
 		}
 */
-		Scoper_ScopeAndTerm.apply(ig_md.lkp_2, ig_md.lkp_1, terminate, scope, ig_md.nsh_md.scope, ig_md.tunnel_1.terminate, ig_md.tunnel_2.terminate);
+#ifdef SF_0_ALLOW_SCOPE_CHANGES
+/*
+		Scoper_ScopeAndTermAndData.apply(
+			ig_md.lkp_0,
+//			ig_md.lkp_1,
+			ig_md.lkp_2,
+
+			ig_md.lkp_1,
+
+			terminate,
+			scope,
+			ig_md.nsh_md.scope,
+			ig_md.tunnel_0.terminate,
+			ig_md.tunnel_1.terminate,
+			ig_md.tunnel_2.terminate
+		);
+*/
+		Scoper_ScopeAndTermOnly.apply(
+			ig_md.lkp_1,
+
+			terminate,
+			scope,
+			ig_md.nsh_md.scope,
+			ig_md.tunnel_0.terminate,
+			ig_md.tunnel_1.terminate,
+			ig_md.tunnel_2.terminate
+		);
+#endif
 
 		// ----- truncate -----
 
@@ -1080,7 +1108,6 @@ control IngressAcl(
 
 control EgressMacAcl(
 	in    switch_lookup_fields_t lkp,
-	in    switch_header_outer_t hdr_1,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
 	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
@@ -1471,7 +1498,6 @@ control EgressAcl(
 	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	inout switch_header_transport_t hdr_0,
-	in    switch_header_outer_t     hdr_1,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags
 ) (
 #if defined(SF_2_ACL_SHARED_IP_ENABLE)
@@ -1500,13 +1526,13 @@ control EgressAcl(
 //	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 
-	bool drop;
-	bool terminate;
-	bool copy_to_cpu;
-	bool redirect_to_cpu;
-	switch_cpu_reason_t cpu_reason;
-	switch_copp_meter_id_t copp_meter_id;
-	bit<6> indirect_counter_index;
+	bool drop = false;
+	bool terminate = false;
+	bool copy_to_cpu = false;
+	bool redirect_to_cpu = false;
+	switch_cpu_reason_t cpu_reason = 0;
+	switch_copp_meter_id_t copp_meter_id = 0;
+	bit<6> indirect_counter_index = 0;
 
 	// -------------------------------------
 	// Table: Terminate
@@ -1590,13 +1616,15 @@ control EgressAcl(
 	// -------------------------------------
 
 	apply {
+/*
 		drop                         = false;
 		terminate                    = false;
 		copy_to_cpu                  = false;
 		redirect_to_cpu              = false;
 		cpu_reason                   = 0;
 //		copp_meter_id                = 0; // TODO: this may be data and therefore not need to be initialized
-
+		indirect_counter_index       = 0;
+*/
 		eg_md.nsh_md.strip_tag_e     = false;
 		eg_md.nsh_md.strip_tag_vn    = false;
 		eg_md.nsh_md.strip_tag_vlan  = false;
@@ -1617,7 +1645,6 @@ control EgressAcl(
 		// ----- l2 -----
 		egress_mac_acl.apply(
 			lkp,
-			hdr_1,
 			eg_md,
 			eg_intr_md_for_dprsr,
 			ip_len, ip_len_is_rng_bitmask,
@@ -1701,7 +1728,7 @@ control EgressAcl(
 /*
 		if(terminate || eg_md.nsh_md.terminate_inner) {
 			eg_md.tunnel_1.terminate           = true;
-			if(eg_md.nsh_md.scope == 1) {
+			if(eg_md.nsh_md.scope == 2) {
 				eg_md.tunnel_2.terminate           = true;
 			}
 		}
@@ -1709,7 +1736,7 @@ control EgressAcl(
 
 #ifdef PA_NO_INIT
 
-		if(((eg_md.nsh_md.terminate_inner == true) && (eg_md.nsh_md.scope == 1)) || ((lkp.next_lyr_valid == true) && (terminate == true))) {
+		if(((eg_md.nsh_md.terminate_inner == true) && (eg_md.nsh_md.scope == 2)) || ((lkp.next_lyr_valid == true) && (terminate == true))) {
 			eg_md.tunnel_1.terminate           = true;
 		} else {
 			eg_md.tunnel_1.terminate           = false;
@@ -1720,7 +1747,7 @@ control EgressAcl(
 
 			if(terminate == true) { 
 //				eg_md.tunnel_1.terminate           = true;
-				if(eg_md.nsh_md.scope == 1) {
+				if(eg_md.nsh_md.scope == 2) {
 					eg_md.tunnel_2.terminate           = true;
 				}
 
@@ -1742,7 +1769,7 @@ control EgressAcl(
 
 		if((eg_md.nsh_md.terminate_inner == true)) {
 			// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
-			if(eg_md.nsh_md.scope == 1) {
+			if(eg_md.nsh_md.scope == 2) {
 				eg_md.tunnel_1.terminate           = true;
 			}
 		}
@@ -1753,7 +1780,7 @@ control EgressAcl(
 
 			if(terminate == true) { 
 				eg_md.tunnel_1.terminate           = true;
-				if(eg_md.nsh_md.scope == 1) {
+				if(eg_md.nsh_md.scope == 2) {
 					eg_md.tunnel_2.terminate           = true;
 				}
 
@@ -1771,8 +1798,16 @@ control EgressAcl(
 			}
 		}
 */
-		Scoper_TermOnly.apply(eg_md.lkp_1, terminate, eg_md.nsh_md.scope, eg_md.tunnel_1.terminate, eg_md.tunnel_2.terminate);
+		Scoper_ScopeAndTermOnly.apply(
+			eg_md.lkp_1,
 
+			terminate,
+			false,
+			eg_md.nsh_md.scope,
+			eg_md.tunnel_0.terminate,
+			eg_md.tunnel_1.terminate,
+			eg_md.tunnel_2.terminate
+		);
 #endif
 
 		// ----- truncate -----

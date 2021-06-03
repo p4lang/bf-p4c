@@ -157,7 +157,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_0, start_of_chain=True, end_of_chain=True, scope_term_list=[],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
@@ -212,7 +212,7 @@ class test(BfRuntimeTest):
 		exp_pkt_saved = exp_pkt
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+1, si=si,                          sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+1, si=si,                          sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_1, start_of_chain=True, end_of_chain=True, scope_term_list=[],
 			spi_exp=spi+1, si_exp=si,                          sap_exp=sap, vpn_exp=vpn
@@ -266,7 +266,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_0, start_of_chain=True, end_of_chain=True, scope_term_list=[],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
@@ -321,7 +321,7 @@ class test(BfRuntimeTest):
 		exp_pkt_saved = exp_pkt
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+1, si=si,                          sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+1, si=si,                          sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_1, start_of_chain=True, end_of_chain=True, scope_term_list=[],
 			spi_exp=spi+1, si_exp=si,                          sap_exp=sap, vpn_exp=vpn

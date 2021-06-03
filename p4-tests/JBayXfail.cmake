@@ -511,3 +511,8 @@ p4c_add_xfail_reason("tofino2"
   "error: You can only have more than one binary operator in a statement"
   extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "tofino2 supports up to 20 stages, using 22"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3001.p4
+)

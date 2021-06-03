@@ -92,6 +92,7 @@ class test(BfRuntimeTest):
 		sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
 		nexthop_ptr             = 0 # Arbitrary value
+		vid                     = 0 # Arbitrary value
 		bd                      = 1 # Arbitrary value
 		ig_lag_ptr              = 2 # Arbitrary value
 		eg_lag_ptr              = 3 # Arbitrary value
@@ -118,7 +119,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_bridge_cpu_add(self, self.target,
 			#ingress
-			[ig_port2], ig_lag_ptr, rmac, bd, 5, dmac, eg_lag_ptr+1, 0+1, 0+1, [eg_port2]
+			[ig_port2], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac2, eg_lag_ptr+1, 0+1, 0+1, [eg_port2]
 			#egress
 		)
 
@@ -151,7 +152,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
@@ -183,7 +184,9 @@ class test(BfRuntimeTest):
 		result = testutils.dp_poll(self, device_number=device, port_number=port, timeout=2, exp_pkt=None)
 
 		result2 = cpu_model(
-			result
+			result,
+			True,
+			ig_port2
 		)
 
 #		print "---------- Debug ----------"
@@ -195,7 +198,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac2, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac2, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac2, smac=smac,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=True, scope_term_list=[],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
@@ -223,13 +226,13 @@ class test(BfRuntimeTest):
 
 		# -----------------------------------------------------------
 
-#		logger.info("Sending packet on port %d", ig_port2)
-#		testutils.send_packet(self, ig_port2, result2)
+		logger.info("Sending packet on port %d", ig_port2)
+		testutils.send_packet(self, ig_port2, result2)
 
 		# -----------------------------------------------------------
 
-#		logger.info("Verify packet on port %d", eg_port)
-#		testutils.verify_packets(self, exp_pkt, [eg_port])
+		logger.info("Verify packet on port %d", eg_port)
+		testutils.verify_packets(self, exp_pkt, [eg_port])
 
 		logger.info("Verify no other packets")
 		testutils.verify_no_other_packets(self, 0, 1)
@@ -248,7 +251,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_bridge_del(self, self.target,
 			#ingress
-			[ig_port2], ig_lag_ptr, rmac, bd, 5, dmac, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port2]
+			[ig_port2], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac2, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port2]
 			#egress
 		)
 

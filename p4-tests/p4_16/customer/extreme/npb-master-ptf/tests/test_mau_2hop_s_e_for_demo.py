@@ -101,6 +101,9 @@ class test(BfRuntimeTest):
 		sfc_1                   = 11 # Arbitrary value
 		sfc_2                   = 12 # Arbitrary value
 		dsap                    = 13 # Arbitrary value
+		ta_0                    = 14 # Arbitrary value
+		ta_1                    = 15 # Arbitrary value
+		ta_2                    = 16 # Arbitrary value
 
 # DEREK MOVED DROPPING TO EGRESS, TO TEST THAT LOGIC
 #		sf_bitmask_0            = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
@@ -150,19 +153,19 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_3], ig_lag_ptr+3, 0,           spi_0, si_0-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+8, bd, eg_lag_ptr+8, 0+8, 0+8, [eg_port_0], 0, dsap
+			[ig_port_3], ig_lag_ptr+3, 0,       ta_0,    spi_0, si_0-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+8, bd, eg_lag_ptr+8, 0+8, 0+8, [eg_port_0], 0, dsap
 			#egress
 		)
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_3], ig_lag_ptr+3, 0,           spi_1, si_1-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+9, bd, eg_lag_ptr+9, 0+9, 0+9, [eg_port_1], 0, dsap
+			[ig_port_3], ig_lag_ptr+3, 0,       ta_1,    spi_1, si_1-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+9, bd, eg_lag_ptr+9, 0+9, 0+9, [eg_port_1], 0, dsap
 			#egress
 		)
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_3], ig_lag_ptr+3, 0,           spi_2, si_2-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+10, bd, eg_lag_ptr+10, 0+10, 0+10, [eg_port_2], 0, dsap
+			[ig_port_3], ig_lag_ptr+3, 0,        ta_2,   spi_2, si_2-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+10, bd, eg_lag_ptr+10, 0+10, 0+10, [eg_port_2], 0, dsap
 			#egress
 		)
 
@@ -231,6 +234,7 @@ class test(BfRuntimeTest):
 			scapy.NSH(MDType=1, NextProto=3, NSP=spi_0, NSI=si_0-(popcount(sf_bitmask_0)), TTL=63, \
 				DataType=2, \
                 VPN=vpn, \
+				Scope=1, \
                 SSAP=sap, \
 #				NPC=((2<<24)|(0<<16)|(sap)), \
 #				NSC=((vpn<<16)|(0)), \
@@ -308,6 +312,7 @@ class test(BfRuntimeTest):
 			scapy.NSH(MDType=1, NextProto=3, NSP=spi_1, NSI=si_1-(popcount(sf_bitmask_0)), TTL=63, \
 				DataType=2, \
                 VPN=vpn, \
+				Scope=1, \
                 SSAP=sap, \
 #				NPC=((2<<24)|(0<<16)|(sap)), \
 #				NSC=((vpn<<16)|(0)), \
@@ -446,19 +451,19 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_3], ig_lag_ptr+3, spi_0, si_0-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+8, eg_lag_ptr+8, 0+8, 0+8, 1, [eg_port_3]
+			[ig_port_3], ig_lag_ptr+3, ta_0, spi_0, si_0-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+8, eg_lag_ptr+8, 0+8, 0+8, 1, [eg_port_3]
 			#egress
 		)
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_3], ig_lag_ptr+3, spi_1, si_1-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+9, eg_lag_ptr+9, 0+9, 0+9, 1, [eg_port_3]
+			[ig_port_3], ig_lag_ptr+3, ta_1, spi_1, si_1-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+9, eg_lag_ptr+9, 0+9, 0+9, 1, [eg_port_3]
 			#egress
 		)
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_3], ig_lag_ptr+3, spi_2, si_2-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+10, eg_lag_ptr+10, 0+10, 0+10, 1, [eg_port_3]
+			[ig_port_3], ig_lag_ptr+3, ta_2, spi_2, si_2-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+10, eg_lag_ptr+10, 0+10, 0+10, 1, [eg_port_3]
 			#egress
 		)
 

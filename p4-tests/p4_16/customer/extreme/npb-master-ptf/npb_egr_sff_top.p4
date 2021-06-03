@@ -126,7 +126,7 @@ control npb_egr_sff_top (
                 spi        = eg_md.nsh_md.spi,
                 si         = eg_md.nsh_md.si,
 
-                ver        = 0x2,
+                ver        = eg_md.nsh_md.ver,
                 reserved3  = 0x0,
 #ifdef LAG_HASH_IN_NSH_HDR_ENABLE
 				lag_hash   = eg_md.hash[switch_lag_hash_width-1:switch_lag_hash_width/2],
@@ -201,7 +201,8 @@ control npb_egr_sff_top (
 	) {
 		stats.count();
 
-		// hdr already in new type 2 format -- nothing to do
+		eg_md.nsh_md.ver        = 0x2;
+//		eg_md.nsh_md.reserved3  = 0x0; // not necessary, but allows the design to fit.
 	}
 
 	// =====================================
@@ -351,3 +352,4 @@ control npb_egr_sff_top (
 	}
 
 }
+

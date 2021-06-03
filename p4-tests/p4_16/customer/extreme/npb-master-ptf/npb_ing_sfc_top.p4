@@ -22,6 +22,9 @@ control npb_ing_sfc_top (
 	switch_uint32_t port_table_size=288
 ) {
 
+	bool scope_flag = false;
+	bool term_flag = false;
+
 #ifdef TRANSPORT_ENABLE
 	IngressTunnel(
 		IPV4_SRC_TUNNEL_TABLE_SIZE, IPV6_SRC_TUNNEL_TABLE_SIZE,
@@ -36,7 +39,8 @@ control npb_ing_sfc_top (
 #ifdef SFC_OUTER_TUNNEL_TABLE_ENABLE
 	IngressTunnelOuter(NPB_ING_SFC_TUNNEL_OUTER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_OUTER_TCAM_TABLE_DEPTH) tunnel_outer;
 #endif
-	IngressTunnelInner(NPB_ING_SFC_TUNNEL_OUTER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
+//	IngressTunnelInner(NPB_ING_SFC_TUNNEL_INNER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
+	IngressTunnelOuter(NPB_ING_SFC_TUNNEL_INNER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
 
 	// =========================================================================
 	// W/  NSH... Table #0a:
@@ -190,7 +194,7 @@ control npb_ing_sfc_top (
 		// ---------------------------------------------------------------------
 
 		// -----------------------------------------------------------------------------------------------------
-		// | transport  | trasnport |
+		// | transport  | transport |
 		// | nsh valid  | eth valid | result
 		// +------------+-----------+----------------
 		// | 1          | x         | internal  fabric -> sfc no tables...instead grab fields from nsh header
@@ -269,6 +273,7 @@ control npb_ing_sfc_top (
 #endif
 			};
 */
+
 			// ----- table -----
 			port_mapping.apply();
 
@@ -287,7 +292,7 @@ control npb_ing_sfc_top (
 				// -----------------------
 				// Network SAP
 				// -----------------------
-				tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0, tunnel_0);
+				tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0);
   #endif
 #endif // TRANSPORT_ENABLE
 			} else {
@@ -300,18 +305,54 @@ control npb_ing_sfc_top (
 				// Outer SAP
 				// -----------------------
 #ifdef SFC_OUTER_TUNNEL_TABLE_ENABLE
-				tunnel_outer.apply(ig_md, ig_md.lkp_1, hdr_0, ig_md.lkp_2, hdr_2, tunnel_2);
+				tunnel_outer.apply(
+					ig_md,
+					ig_md.lkp_1,
+
+					ig_md.lkp_0,
+//					ig_md.lkp_1,
+					ig_md.lkp_2
+				);
 #endif
 			}
+
+			// always terminate transport headers
+			tunnel_0.terminate = true;
+			ig_md.nsh_md.scope = 1;
 
 			// -----------------------
 			// Inner SAP
 			// -----------------------
-			tunnel_inner.apply(ig_md, ig_md.lkp_1, hdr_0, ig_md.lkp_2, hdr_2, tunnel_2);
+			tunnel_inner.apply(
+				ig_md,
+				ig_md.lkp_1,
+
+				ig_md.lkp_0,
+//				ig_md.lkp_1,
+				ig_md.lkp_2,
+
+				scope_flag,
+				term_flag
+			);
 #ifdef SFC_NSH_ENABLE
 		}
 #endif // SFC_NSH_ENABLE
-		// always terminate transport headers
-		tunnel_0.terminate = true;
+
+        Scoper_ScopeAndTermAndData.apply(
+            ig_md.lkp_0,
+//          ig_md.lkp_1,
+            ig_md.lkp_2,
+
+            ig_md.lkp_1,
+
+            term_flag,
+            scope_flag,
+            ig_md.nsh_md.scope,
+
+            ig_md.tunnel_0.terminate,
+            ig_md.tunnel_1.terminate,
+            ig_md.tunnel_2.terminate
+        );
+
 	}
 }

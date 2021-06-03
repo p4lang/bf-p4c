@@ -37,10 +37,15 @@
 #undef  ERSPAN_TRANSPORT_INGRESS_ENABLE_V6
 #undef  ERSPAN_TRANSPORT_EGRESS_ENABLE // v4 only
 
+#undef  GENEVE_TRANSPORT_INGRESS_ENABLE_V4  // v4 only - ignores mymac check
+#define VXLAN_TRANSPORT_INGRESS_ENABLE_V4   // v4 only - ignores mymac check
+#undef  MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4 // v4 only - ignores mymac check
+
 // ----- applies to: outer -----
 #define ETAG_ENABLE
 #define VNTAG_ENABLE
 #define IPINIP
+#undef  GENEVE_ENABLE
 #define VXLAN_ENABLE
 #define NVGRE_ENABLE
 #define GRE_ENABLE
@@ -64,7 +69,7 @@
 #undef  INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID  // populate tunnei_id w/ session_id
 #undef  INGRESS_PARSER_POPULATES_LKP_0
 #define INGRESS_PARSER_POPULATES_LKP_1
-#define INGRESS_PARSER_POPULATES_LKP_2
+#undef  INGRESS_PARSER_POPULATES_LKP_2
 #undef  INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
 #define EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
 #define EGRESS_PARSER_POPULATES_LKP_SCOPED
@@ -109,13 +114,13 @@
 // ----- npb: sfc -----
 #define SFC_NSH_ENABLE
 #define SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE // only valid if TRANSPORT_ENABLE is defined
-#define SFC_TRANSPORT_NETSAP_TABLE_ENABLE        // only valid if TRANSPORT_ENABLE is defined
-#define SFC_OUTER_TUNNEL_TABLE_ENABLE
-#undef  SFC_TIMESTAMP_ENABLE                     // undef for sims, define for real chip
+#undef  SFC_TRANSPORT_NETSAP_TABLE_ENABLE        // only valid if TRANSPORT_ENABLE is defined
+#undef  SFC_OUTER_TUNNEL_TABLE_ENABLE
+#define SFC_TIMESTAMP_ENABLE                     // undef for sims, define for real chip
 
 // ----- npb: sff -----
-#undef  SFF_SCHD_SIMPLE                       // define for selecting simple tables, rather than action_selectors/action_profiles tables.
-#define SFF_SCHD_COMPLEX_TYPE_ACTION_SELECTOR // define for action selector, undef for action_profile -- only used if _SIMPLE is undefined.
+#define SFF_SCHD_SIMPLE                       // define for selecting simple tables, rather than action_selectors/action_profiles tables.
+#undef  SFF_SCHD_COMPLEX_TYPE_ACTION_SELECTOR // define for action selector, undef for action_profile -- only used if _SIMPLE is undefined.
 #define SFF_PREDECREMENTED_SI_ENABLE
 
 // ----- npb: sf #0 -----
@@ -167,11 +172,11 @@
 #define CPU_IG_BYPASS_ENABLE                  // this feature currently doesn't fit
 #define MULTICAST_INGRESS_RID_ENABLE          // this feature currently doesn't fit
 #define LAG_HASH_MASKING_ENABLE               // this feature currently doesn't fit
-#undef  LAG_HASH_IN_NSH_HDR_ENABLE            // this feature currently doesn't fit
+#define LAG_HASH_IN_NSH_HDR_ENABLE            // this feature currently doesn't fit
 #define FIELD_WIDTHS_REDUCED                  // to help w/ fitting
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
-#undef  MIRROR_METERS                         // this feature currently doesn't fit
+#undef  MIRROR_METER_ENABLE                   // this feature currently doesn't fit
 #undef  LAG_TABLE_INDIRECT_COUNTERS           // this feature currently doesn't fit
 #define CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
 #define INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit

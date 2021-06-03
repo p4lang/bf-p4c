@@ -31,7 +31,6 @@ parser NpbIngressParser(
 #else
         ig_md.timestamp = ig_intr_md.ingress_mac_tstamp[31:0];
 #endif
-//      ig_md.flags.rmac_hit = false;
 
         // Check for resubmit flag if packet is resubmitted.
         // transition select(ig_intr_md.resubmit_flag) {
@@ -45,12 +44,15 @@ parser NpbIngressParser(
 */
 /*
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
-*/
         ig_md.lkp_1.tunnel_id = 0; // Derek: for some reason we don't fit unless this is here.
+*/
 /*
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_NONE;
         ig_md.lkp_2.tunnel_id = 0;
 */
+        //ig_md.flags.rmac_hit = false;
+        ig_md.flags.transport_valid = false;
+        ig_md.flags.outer_enet_in_transport = false;
 
 #ifdef PA_NO_INIT
         ig_md.tunnel_0.terminate = false;
@@ -200,7 +202,11 @@ parser NpbIngressParser(
     state check_my_mac_lo {
         transition select(pkt.lookahead<snoop_enet_my_mac_h>().dst_addr_lo) {
             my_mac_lo: check_my_mac_hi;
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+            default:   snoop_head_unsure_tunnel; // Bridging path
+#else
             default:   parse_outer_ethernet; // Bridging path
+#endif
         }
     }
 
@@ -214,18 +220,139 @@ parser NpbIngressParser(
     state check_my_mac_hi {
         transition select(pkt.lookahead<snoop_enet_my_mac_h>().dst_addr_hi) {
             my_mac_hi: parse_transport_ethernet; // SFC Network-Tap / SFC Bypass Path
-            default:   parse_outer_ethernet;     // Bridging path
-        }
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+            default:   snoop_head_unsure_tunnel; // Bridging path
+#else
+            default:   parse_outer_ethernet; // Bridging path       
+#endif
+       }
     }
 
     state check_my_mac_hi_cpu {
         transition select(pkt.lookahead<snoop_enet_my_mac_h>().dst_addr_hi) {
             my_mac_hi: parse_transport_ethernet_cpu; // SFC Network-Tap / SFC Bypass Path
+//#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+//            default:   snoop_head_unsure_tunnel_cpu;  // Bridging path
+//#else
             default:   parse_outer_ethernet_cpu;     // Bridging path
+//#endif
         }
     }
 
     
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4)
+    ///////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+    // "Transport and Outer" Headers / Stack - Unsure if tunnel-of-interest
+    ///////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+
+    // state snoop_head_unsure_tunnel {  // compile errors w/ vlan tag case
+    //     transition select(
+    //         pkt.lookahead<snoop_head_enet_vlan_ipv4_h>().enet_ether_type,
+    //         pkt.lookahead<snoop_head_enet_vlan_ipv4_h>().vlan_ether_type,
+    //         pkt.lookahead<snoop_head_enet_vlan_ipv4_h>().ipv4_protocol) {
+    // 
+    //         (ETHERTYPE_VLAN, ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_vlan_unsure_vxlan;
+    //         (ETHERTYPE_QINQ, ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_vlan_unsure_vxlan;
+    //         default                                           : parse_outer_ethernet;
+    //     }
+    // }
+    
+    state snoop_head_unsure_tunnel {
+        transition select(
+            pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
+            pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {
+    
+#ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
+            (ETHERTYPE_MPLS, _               ): parse_transport_ethernet;
+#endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
+            (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_unsure_tunnel;
+            default                           : parse_outer_ethernet;
+        }
+    }
+
+    // state snoop_head_unsure_tunnel_cpu {
+    //     transition select(
+    //         pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
+    //         pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {
+    // 
+    //         (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_unsure_tunnel_cpu;
+    //         default                           : parse_outer_ethernet_cpu;
+    //     }
+    // }
+    
+    state parse_ethernet_unsure_tunnel {
+        pkt.extract(hdr.transport.ethernet);
+
+        hdr.outer.ethernet.setValid();
+        // THESE CAUSE PARSER TESTS TO FAIL - GUESS WE"LL NEED TO MOVE HEADER IN MAU
+        hdr.outer.ethernet.dst_addr = hdr.transport.ethernet.dst_addr;
+        hdr.outer.ethernet.src_addr = hdr.transport.ethernet.src_addr;
+        // hdr.outer.ethernet.ether_type = hdr.transport.ethernet.ether_type;
+/*
+            hdr.outer.ethernet = {
+                dst_addr   = hdr.transport.ethernet.dst_addr,
+                src_addr   = hdr.transport.ethernet.src_addr,
+                ether_type = hdr.transport.ethernet.ether_type
+            };
+*/
+        
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+        ig_md.lkp_0.mac_src_addr = hdr.transport.ethernet.src_addr;
+        ig_md.lkp_0.mac_dst_addr = hdr.transport.ethernet.dst_addr;
+        ig_md.lkp_0.mac_type     = hdr.transport.ethernet.ether_type;
+#endif // INGRESS_PARSER_POPULATES_LKP_0
+
+#ifdef INGRESS_PARSER_POPULATES_LKP_1
+        ig_md.lkp_1.mac_src_addr = hdr.transport.ethernet.src_addr;
+        ig_md.lkp_1.mac_dst_addr = hdr.transport.ethernet.dst_addr;
+        ig_md.lkp_1.mac_type     = hdr.transport.ethernet.ether_type;
+#endif // INGRESS_PARSER_POPULATES_LKP_1
+
+        // error: Ran out of parser match registers
+        // transition select(pkt.lookahead<snoop_ipv4_udp_geneve_h>().udp_dst_port,
+        //               pkt.lookahead<snoop_ipv4_udp_geneve_h>().geneve_ver,
+        //               pkt.lookahead<snoop_ipv4_udp_geneve_h>().geneve_opt_len,
+        //               pkt.lookahead<snoop_ipv4_udp_geneve_h>().geneve_O,
+        //               pkt.lookahead<snoop_ipv4_udp_geneve_h>().geneve_C,
+        //               pkt.lookahead<snoop_ipv4_udp_geneve_h>().geneve_proto_type) {
+        // 
+        //   // udp_dst_port   v l O C proto_type 
+        //     (UDP_PORT_VXLAN,_,_,_,_,_             ): parse_transport_ipv4;
+        //     (UDP_PORT_GENV, 0,0,0,0,ETHERTYPE_ENET): parse_transport_ipv4;
+        //     (UDP_PORT_GENV, 0,0,0,0,ETHERTYPE_IPV4): parse_transport_ipv4;
+        //     (UDP_PORT_GENV, 0,0,0,0,ETHERTYPE_IPV6): parse_transport_ipv4;
+        //     default: no_tunnel_jump_to_outer;
+        //     //default: accept;
+        // }
+        transition select(pkt.lookahead<snoop_ipv4_udp_h>().udp_dst_port) {
+            UDP_PORT_VXLAN: parse_transport_ipv4;
+            UDP_PORT_GENV : parse_transport_ipv4;
+            default: no_tunnel_jump_to_outer;
+            //default: accept;
+        }
+    }
+
+    state no_tunnel_jump_to_outer {
+//      hdr.transport.ethernet.setInvalid();
+        ig_md.flags.outer_enet_in_transport = true;
+
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+        ig_md.lkp_0.mac_src_addr = 0;
+        ig_md.lkp_0.mac_dst_addr = 0;
+        ig_md.lkp_0.mac_type     = 0;
+#endif // INGRESS_PARSER_POPULATES_LKP_0
+        
+        transition parse_outer_ipv4;
+    }
+
+#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4)   
+
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // "Transport" Headers / Stack (L2-U)
@@ -238,7 +365,7 @@ parser NpbIngressParser(
     // todo: explore implementing a fanout state here to save tcam
     
     state parse_transport_ethernet {
-        ig_md.flags.rmac_hit = true;
+        ig_md.flags.transport_valid = true;
         pkt.extract(hdr.transport.ethernet);
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
@@ -254,12 +381,12 @@ parser NpbIngressParser(
         ig_md.lkp_1.mac_type     = hdr.transport.ethernet.ether_type;
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         // populate for L3-tunnel case (where there's no L2 present)
         ig_md.lkp_2.mac_src_addr = hdr.transport.ethernet.src_addr;
         ig_md.lkp_2.mac_dst_addr = hdr.transport.ethernet.dst_addr;
         ig_md.lkp_2.mac_type     = hdr.transport.ethernet.ether_type;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.transport.ethernet.ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
@@ -271,13 +398,16 @@ parser NpbIngressParser(
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
-           default: accept;
+#ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
+            ETHERTYPE_MPLS: parse_transport_mpls;
+#endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4       
+            default: accept;
         }
     }
         
     // -------------------------------------------------------------------------
     state parse_transport_ethernet_cpu {
-        ig_md.flags.rmac_hit = true;
+        ig_md.flags.transport_valid = true;
         pkt.extract(hdr.transport.ethernet);
 
 #ifdef CPU_FABRIC_HEADER_ENABLE
@@ -291,7 +421,7 @@ parser NpbIngressParser(
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
 		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
-		ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
+//		ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
 		hdr.transport.ethernet.ether_type = hdr.cpu.ether_type;
 // #ifdef PTP_ENABLE
 //         ig_md.flags.capture_ts = (bool) hdr.cpu.capture_ts;  // todo
@@ -311,11 +441,11 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)        
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.mac_src_addr = hdr.transport.ethernet.src_addr;
         ig_md.lkp_2.mac_dst_addr = hdr.transport.ethernet.dst_addr;
         ig_md.lkp_2.mac_type     = hdr.cpu.ether_type;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
         
         transition select(hdr.cpu.ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
@@ -337,9 +467,11 @@ parser NpbIngressParser(
 
 	    pkt.extract(hdr.transport.vlan_tag[0]);
         
-#ifndef SF_0_L2_VLAN_ID_ENABLE
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+  #ifndef SF_0_L2_VLAN_ID_ENABLE
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;        
-#endif // SF_0_L2_VLAN_ID_ENABLE
+  #endif // SF_0_L2_VLAN_ID_ENABLE
+#endif
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
         ig_md.lkp_0.pcp = hdr.transport.vlan_tag[0].pcp;
@@ -359,13 +491,13 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.pcp = hdr.transport.vlan_tag[0].pcp;
   #ifdef SF_0_L2_VLAN_ID_ENABLE
         ig_md.lkp_2.vid = hdr.transport.vlan_tag[0].vid;
   #endif // SF_0_L2_VLAN_ID_ENABLE
         ig_md.lkp_2.mac_type = hdr.transport.vlan_tag[0].ether_type;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
         
         transition select(hdr.transport.vlan_tag[0].ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
@@ -380,17 +512,19 @@ parser NpbIngressParser(
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // Layer3 - Transport
     ///////////////////////////////////////////////////////////////////////////
 
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
-    
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || \
+    defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
     state parse_transport_ipv4 {    
+        ig_md.flags.transport_valid = true;
 	    pkt.extract(hdr.transport.ipv4);
 
-        ipv4_checksum_transport.add(hdr.transport.ipv4);
-        ig_md.flags.ipv4_checksum_err_0 = ipv4_checksum_transport.verify();
+//      ipv4_checksum_transport.add(hdr.transport.ipv4);
+//      ig_md.flags.ipv4_checksum_err_0 = ipv4_checksum_transport.verify();
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
         // todo: should the lkp struct be set in state parse_transport_ipv4_no_options_frags instead?
@@ -405,12 +539,16 @@ parser NpbIngressParser(
 
         transition select(hdr.transport.ipv4.protocol) {
            IP_PROTOCOLS_GRE: parse_transport_gre;
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+           IP_PROTOCOLS_UDP: parse_transport_udp_tunnel;
+#endif
            default : accept;
         }
     }
 
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
-    
+#endif // #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || \
+       //     defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
 
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
@@ -433,23 +571,169 @@ parser NpbIngressParser(
     }
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
+
     
+    ///////////////////////////////////////////////////////////////////////////
+    // Layer4 - UDP
+    ///////////////////////////////////////////////////////////////////////////
+
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
+    state parse_transport_udp_tunnel {
+        // hdr.outer.ethernet.setInvalid();
+// Let's assume lkp1 L2 data will be overwritten properly.
+// #ifdef INGRESS_PARSER_POPULATES_LKP_1
+//         ig_md.lkp_1.mac_src_addr = 0;
+//         ig_md.lkp_1.mac_dst_addr = 0;
+//         ig_md.lkp_1.mac_type     = 0;
+// #endif // INGRESS_PARSER_POPULATES_LKP_1
+        
+        pkt.extract(hdr.transport.udp);
+#ifdef INGRESS_PARSER_POPULATES_LKP_0        
+        ig_md.lkp_0.l4_src_port = hdr.transport.udp.src_port;
+        ig_md.lkp_0.l4_dst_port = hdr.transport.udp.dst_port;       
+#endif // INGRESS_PARSER_POPULATES_LKP_0
+
+        transition select(hdr.transport.udp.dst_port) {
+            
+#ifdef GENEVE_TRANSPORT_INGRESS_ENABLE_V4
+            UDP_PORT_GENV: parse_transport_geneve;
+#endif // GENEVE_ENABLE
+        
+#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
+            UDP_PORT_VXLAN: parse_transport_vxlan;
+#endif // VXLAN_ENABLE
+            default: accept;
+        }
+    }
+
+#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Layer X - Transport
+    ///////////////////////////////////////////////////////////////////////////////
+
+    //-------------------------------------------------------------------------
+    // Multi-Protocol Label Switching Segment Routing (MPLS-SR) - Transport
+    //-------------------------------------------------------------------------
+
+#ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
+
+    // Set tunnel info for outermost label only
+    state parse_transport_mpls {
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+        ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        // ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
+        // error: Inferred incompatible container alignments for field
+        // ingress::ig_md.lkp_1.tunnel_id: alignment = 0 != alignment = 4 (little endian)       
+        ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)pkt.lookahead<mpls_h>().label;
+#endif
+        transition extract_transport_mpls;
+    }
+
+    state extract_transport_mpls {
+    	pkt.extract(hdr.transport.mpls.next);
+        transition select(hdr.transport.mpls.last.bos) {
+            0: extract_transport_mpls;
+            1: parse_outer_ethernet;
+        }
+    }
+
+#endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
+
+
 
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Transport
     ///////////////////////////////////////////////////////////////////////////    
 
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+    //-------------------------------------------------------------------------
+    // Generic Network Virtualization Encapsulation (GENEVE) - Transport
+    //-------------------------------------------------------------------------
+
+#ifdef GENEVE_TRANSPORT_INGRESS_ENABLE_V4
     
+    state parse_transport_geneve {
+        geneve_h snoop_geneve = pkt.lookahead<geneve_h>();
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+        ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#endif
+        transition select(
+            snoop_geneve.ver,
+            snoop_geneve.opt_len,
+            snoop_geneve.O,
+            snoop_geneve.C,
+            snoop_geneve.proto_type) {
+        
+          //     O C 
+            (0,0,0,0,ETHERTYPE_ENET): parse_transport_geneve_qualified;
+            (0,0,0,0,ETHERTYPE_IPV4): parse_transport_geneve_qualified;
+            (0,0,0,0,ETHERTYPE_IPV6): parse_transport_geneve_qualified;
+            default: accept;
+        }
+
+        // pkt.extract(hdr.transport.geneve);
+        // ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
+        // ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
+        // 
+        // transition select(hdr.transport.geneve.proto_type) {
+        //     ETHERTYPE_ENET: parse_outer_ethernet;
+        //     ETHERTYPE_IPV4: parse_outer_ipv4;
+        //     ETHERTYPE_IPV6: parse_outer_ipv6;
+        //     default: accept;
+        // }
+    }
+
+    state parse_transport_geneve_qualified {    
+        pkt.extract(hdr.transport.geneve);
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+        ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
+        ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
+#endif    
+        transition select(hdr.transport.geneve.proto_type) {
+            ETHERTYPE_ENET: parse_outer_ethernet;
+            ETHERTYPE_IPV4: parse_outer_ipv4;
+            ETHERTYPE_IPV6: parse_outer_ipv6;
+            default: accept;
+        }
+    }
+
+#endif // GENEVE_TRANSPORT_INGRESS_ENABLE_V4
+
+
+    //-------------------------------------------------------------------------
+    // Virtual Extensible Local Area Network (VXLAN) - Transport
+    //-------------------------------------------------------------------------
+
+#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
+
+    state parse_transport_vxlan {
+        pkt.extract(hdr.transport.vxlan);
+    
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
+        ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_VXLAN;
+        ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.transport.vxlan.vni;
+#endif
+        transition parse_outer_ethernet;
+    }
+#endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
+
+
+
     //-------------------------------------------------------------------------
     // GRE - Transport
     //-------------------------------------------------------------------------
+
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || \
+    defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
     
     state parse_transport_gre {    
         pkt.extract(hdr.transport.gre);
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         ig_md.lkp_0.tunnel_id = 0;
-        
+#endif        
         transition select(
             hdr.transport.gre.C,
             hdr.transport.gre.R,
@@ -472,7 +756,8 @@ parser NpbIngressParser(
         }
     }
 
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) ||
+       //    defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
     
     //-------------------------------------------------------------------------
@@ -484,12 +769,14 @@ parser NpbIngressParser(
     state parse_transport_erspan_t2 {
         pkt.extract(hdr.transport.gre_sequence);
         pkt.extract(hdr.transport.erspan_type2);
+#ifdef INGRESS_PARSER_POPULATES_LKP_0
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_ERSPAN;
-#ifdef INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID
+  #ifdef INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID
         ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.transport.erspan_type2.session_id;
-#else
+  #else
         ig_md.lkp_0.tunnel_id = 0;
-#endif // INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID    
+  #endif // INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID    
+#endif
         transition parse_outer_ethernet;
     }
     
@@ -557,13 +844,13 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.mac_src_addr = hdr.outer.ethernet.src_addr;
         ig_md.lkp_2.mac_dst_addr = hdr.outer.ethernet.dst_addr;
         ig_md.lkp_2.mac_type     = hdr.outer.ethernet.ether_type;
         ig_md.lkp_2.pcp = 0;
         ig_md.lkp_2.vid = 0;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.outer.ethernet.ether_type) {
 
@@ -599,7 +886,7 @@ parser NpbIngressParser(
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
 		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
-		ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
+//		ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
 		hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;
 // #ifdef PTP_ENABLE
 //         ig_md.flags.capture_ts = (bool) hdr.cpu.capture_ts;  // todo
@@ -614,13 +901,13 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.mac_src_addr = hdr.outer.ethernet.src_addr;
         ig_md.lkp_2.mac_dst_addr = hdr.outer.ethernet.dst_addr;
         ig_md.lkp_2.mac_type     = hdr.cpu.ether_type;
         ig_md.lkp_2.pcp = 0;
         ig_md.lkp_2.vid = 0;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.cpu.ether_type) {
             
@@ -653,10 +940,10 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.mac_type = hdr.outer.e_tag.ether_type;        
         //ig_md.lkp_2.pcp = hdr.outer.e_tag.pcp;  // do not populate w/ e-tag
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.outer.e_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_0;
@@ -681,9 +968,9 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.mac_type = hdr.outer.vn_tag.ether_type;        
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.outer.vn_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_0;
@@ -717,13 +1004,13 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.pcp = hdr.outer.vlan_tag[0].pcp;        
   #ifdef SF_0_L2_VLAN_ID_ENABLE
         ig_md.lkp_2.vid = hdr.outer.vlan_tag[0].vid;
   #endif // SF_0_L2_VLAN_ID_ENABLE
         ig_md.lkp_2.mac_type = hdr.outer.vlan_tag[0].ether_type;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.outer.vlan_tag[0].ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_1;
@@ -747,9 +1034,9 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_1
 
 // populate for L3-tunnel case (where there's no L2 present)
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.mac_type = hdr.outer.vlan_tag[1].ether_type;
-#endif // INGRESS_PARSER_POPULATES_LKP_2
+//#endif // INGRESS_PARSER_POPULATES_LKP_2
 
         transition select(hdr.outer.vlan_tag[1].ether_type) {
 #if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
@@ -823,7 +1110,7 @@ parser NpbIngressParser(
         ig_md.lkp_1.ip_len        = hdr.outer.ipv4.total_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_1
         // Flag packet (to be sent to host) if it's a frag or has options.
-        ipv4_checksum_outer.add(hdr.outer.ipv4);
+//      ipv4_checksum_outer.add(hdr.outer.ipv4);
         transition select(hdr.outer.ipv4.ihl, hdr.outer.ipv4.frag_offset) {
             (5, 0): parse_outer_ipv4_no_options_frags;
             default : accept;
@@ -831,7 +1118,7 @@ parser NpbIngressParser(
     }
 
     state parse_outer_ipv4_no_options_frags {
-        ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
+//      ig_md.flags.ipv4_checksum_err_1 = ipv4_checksum_outer.verify();
         transition select(hdr.outer.ipv4.protocol, hdr.outer.ipv4.total_len) {
             (IP_PROTOCOLS_IPV4, _                                      ): parse_outer_ipinip_set_tunnel_type;
             (IP_PROTOCOLS_IPV6, _                                      ): parse_outer_ipv6inip_set_tunnel_type;
@@ -948,6 +1235,10 @@ parser NpbIngressParser(
             hdr.outer.udp.src_port,
             hdr.outer.udp.dst_port) {
             
+#ifdef GENEVE_ENABLE
+            (_, UDP_PORT_GENV): parse_outer_geneve;
+#endif // GENEVE_ENABLE
+
 #ifdef VXLAN_ENABLE
             (_, UDP_PORT_VXLAN): parse_outer_vxlan;
 #endif // VXLAN_ENABLE
@@ -975,7 +1266,11 @@ parser NpbIngressParser(
         transition select(
             hdr.outer.udp.src_port,
             hdr.outer.udp.dst_port) {
-            
+
+#ifdef GENEVE_ENABLE
+            (_, UDP_PORT_GENV): parse_outer_geneve;
+#endif // GENEVE_ENABLE
+        
 #ifdef VXLAN_ENABLE
             (_, UDP_PORT_VXLAN): parse_outer_vxlan;
 #endif // VXLAN_ENABLE
@@ -1089,7 +1384,7 @@ parser NpbIngressParser(
     state extract_outer_mpls {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_mpls;
+            0: extract_outer_mpls;
             1: parse_inner_ethernet;
         }
     }
@@ -1099,7 +1394,7 @@ parser NpbIngressParser(
     state extract_outer_mpls {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_mpls;
+            (0, _): extract_outer_mpls;
             (1, 4): parse_inner_ipv4;
             (1, 6): parse_inner_ipv6;
             default: parse_outer_eompls;
@@ -1123,15 +1418,15 @@ parser NpbIngressParser(
 
     state parse_outer_eompls {
         pkt.extract(hdr.outer.mpls_pw_cw); 
-        transition  parse_inner_ethernet;
-    }    
+        transition parse_inner_ethernet;
+    }
     
 #elif defined(MPLS_L3VPN_ENABLE)
     
     state extract_outer_mpls {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_mpls;
+            (0, _): extract_outer_mpls;
             (1, 4): parse_inner_ipv4;
             (1, 6): parse_inner_ipv6;
             default: accept; // todo: unexpected - flag this as error?
@@ -1146,6 +1441,53 @@ parser NpbIngressParser(
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
+
+    //-------------------------------------------------------------------------
+    // Generic Network Virtualization Encapsulation (GENEVE) - Outer
+    //-------------------------------------------------------------------------
+
+#ifdef GENEVE_ENABLE
+    
+    state parse_outer_geneve {
+        geneve_h snoop_geneve = pkt.lookahead<geneve_h>();
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#ifdef INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#endif // INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD   
+
+        transition select(
+            snoop_geneve.ver,
+            snoop_geneve.opt_len,
+            snoop_geneve.O,
+            snoop_geneve.C,
+            snoop_geneve.proto_type) {
+
+          //     O C 
+            (0,0,0,0,ETHERTYPE_ENET): parse_outer_geneve_qualified;
+            (0,0,0,0,ETHERTYPE_IPV4): parse_outer_geneve_qualified;
+            (0,0,0,0,ETHERTYPE_IPV6): parse_outer_geneve_qualified;
+            default: accept;
+        }
+    }
+
+    state parse_outer_geneve_qualified {    
+        pkt.extract(hdr.outer.geneve);
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
+        ig_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
+#ifdef INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
+        ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
+        ig_md.lkp_2.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
+#endif // INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD   
+        transition select(hdr.outer.geneve.proto_type) {
+            ETHERTYPE_ENET: parse_inner_ethernet;
+            ETHERTYPE_IPV4: parse_inner_ipv4;
+            ETHERTYPE_IPV6: parse_inner_ipv6;
+            default: accept;
+        }
+    }
+
+#endif // GENEVE_ENABLE
+
 
     //-------------------------------------------------------------------------
     // Virtual Extensible Local Area Network (VXLAN) - Outer
@@ -1534,7 +1876,7 @@ parser NpbIngressParser(
 #endif // INGRESS_PARSER_POPULATES_LKP_2        
         
         // Flag packet (to be sent to host) if it's a frag or has options.
-        ipv4_checksum_inner.add(hdr.inner.ipv4);
+//      ipv4_checksum_inner.add(hdr.inner.ipv4);
         transition select(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset) {
@@ -1544,7 +1886,7 @@ parser NpbIngressParser(
     }
 
     state parse_inner_ipv4_no_options_frags {
-        ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
+//      ig_md.flags.ipv4_checksum_err_2 = ipv4_checksum_inner.verify();
         transition select(hdr.inner.ipv4.protocol, hdr.inner.ipv4.total_len) {
             (IP_PROTOCOLS_IPV4, _): parse_inner_ipinip_set_tunnel_type;
             (IP_PROTOCOLS_IPV6, _): parse_inner_ipv6inip_set_tunnel_type;
@@ -1775,8 +2117,10 @@ parser NpbIngressParser(
 
     state parse_inner_ipinip_set_tunnel_type {
 #ifdef IPINIP
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         ig_md.lkp_2.tunnel_id = 0;
+#endif
         transition parse_inner_inner_ipv4;
 #else
         transition accept;
@@ -1785,8 +2129,10 @@ parser NpbIngressParser(
 
     state parse_inner_ipv6inip_set_tunnel_type {
 #ifdef IPINIP
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         ig_md.lkp_2.tunnel_id = 0;
+#endif
         transition parse_inner_inner_ipv6;
 #else
         transition accept;
@@ -1815,7 +2161,9 @@ parser NpbIngressParser(
 
     state parse_inner_gre {  
         gre_h snoop_gre = pkt.lookahead<gre_h>();
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#endif
 
         transition select(
             snoop_gre.C,
@@ -1838,8 +2186,10 @@ parser NpbIngressParser(
 
     state parse_inner_gre_qualified {    
         pkt.extract(hdr.inner.gre);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         ig_md.lkp_2.tunnel_id = 0;
+#endif
 
         transition select(
             hdr.inner.gre.C,
@@ -1885,7 +2235,9 @@ parser NpbIngressParser(
         //    snoop_inner_gtp_v2_base.version,
         //    snoop_inner_gtp_v2_base.T) {
 
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#endif
                 
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
@@ -1898,11 +2250,13 @@ parser NpbIngressParser(
 
     state parse_inner_gtp_c_qualified {
         //pkt.extract(hdr.inner.gtp_v2_base);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         //ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         //ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v2_base.teid;
 
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         ig_md.lkp_2.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
+#endif
         transition accept;
     }
 
@@ -1913,7 +2267,9 @@ parser NpbIngressParser(
 
     state parse_inner_gtp_u {
         gtp_v1_base_h snoop_inner_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#endif
 
         transition select(
             snoop_inner_gtp_v1_base.version,
@@ -1930,8 +2286,10 @@ parser NpbIngressParser(
 
     state parse_inner_gtp_u_qualified {
         pkt.extract(hdr.inner.gtp_v1_base);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v1_base.teid;
+#endif
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_inner_ipv4;
             6: parse_inner_inner_ipv6;
@@ -1942,8 +2300,10 @@ parser NpbIngressParser(
     state parse_inner_gtp_u_with_optional {
         pkt.extract(hdr.inner.gtp_v1_base);
         pkt.extract(hdr.inner.gtp_v1_optional);
+#ifdef INGRESS_PARSER_POPULATES_LKP_2
         ig_md.lkp_2.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         ig_md.lkp_2.tunnel_id = hdr.inner.gtp_v1_base.teid;
+#endif
         transition select(
             hdr.inner.gtp_v1_base.E,
             pkt.lookahead<bit<4>>()) {

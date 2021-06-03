@@ -26,6 +26,7 @@
 // ----------------------------------------------------------------------------
 // Common protocols/types
 //-----------------------------------------------------------------------------
+#define ETHERTYPE_ENET 0x6558  // geneve defined (rfc-8926) 
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_ARP  0x0806
 #define ETHERTYPE_VLAN 0x8100
@@ -214,33 +215,30 @@ const switch_ip_frag_t SWITCH_IP_FRAG_NON_HEAD = 0b11; // Fragment with non-zero
                                           // my trials with no chnage packet:        fal tru
                                           // --------------------------------------- --- ---
 const int EGRESS_ACL_ADJUST_NORMAL = -34; // DO NOT DELETE -- FIRMWARE CONSUMES THIS 138 104
-const int EGRESS_ACL_ADJUST_DROP   =   4; // DO NOT DELETE -- FIRMWARE CONSUMES THIS 138 142
+//const int EGRESS_ACL_ADJUST_DROP   =   4; // DO NOT DELETE -- FIRMWARE CONSUMES THIS 138 142
+const int EGRESS_ACL_ADJUST_DROP   = -34; // DO NOT DELETE -- FIRMWARE CONSUMES THIS 138 142
 
 // Bypass flags ---------------------------------------------------------------
 
 typedef bit<8> switch_ingress_bypass_t;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_L2            = 8w0x01;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_ACL        = 8w0x02;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_MCAST      = 8w0x04;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFF           = 8w0x08;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE       = 8w0x10;
-
-// Add more ingress bypass flags here.
-
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFC           = 8w0x02;
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_ACL        = 8w0x04;
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_MCAST      = 8w0x08;
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFF           = 8w0x10;
+const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE       = 8w0x20;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_ALL           = 8w0xff;
+
 #define INGRESS_BYPASS(t) (ig_md.bypass & SWITCH_INGRESS_BYPASS_##t != 0)
 //#define INGRESS_BYPASS(t) (false)
 
 typedef bit<8> switch_egress_bypass_t;
-//const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE         = 8w0x01;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SF_ACL          = 8w0x02;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SFF             = 8w0x04;
-const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE         = 8w0x10;
+const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SF_ACL          = 8w0x04;
+const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_SFF             = 8w0x08;
+const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_REWRITE         = 8w0x20;
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_MTU             = 8w0x80;
-
-// Add more egress bypass flags here.
-
 const switch_egress_bypass_t SWITCH_EGRESS_BYPASS_ALL             = 8w0xff;
+
 #define EGRESS_BYPASS(t) (eg_md.bypass & SWITCH_EGRESS_BYPASS_##t != 0)
 //#define EGRESS_BYPASS(t) (false)
 
@@ -379,6 +377,7 @@ const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GRE    = 8;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_VLAN   = 9;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_MPLS   = 10;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_UNSUPPORTED = 11;
+const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GENEVE = 12;
 
 //#ifndef switch_tunnel_index_width
 //#define switch_tunnel_index_width 16
@@ -523,7 +522,7 @@ header switch_dtel_drop_mirror_metadata_h {
     bit<1> _pad4;
 #endif
     switch_qid_t qid;
-    switch_drop_reason_t drop_reason;
+//  switch_drop_reason_t drop_reason;
 }
 
 // Used for dtel truncate_only and ifa_clone mirror sessions
@@ -603,11 +602,13 @@ struct switch_ingress_flags_t {
     bool ipv4_checksum_err_2;
     //  bool acl_deny;
 //  bool port_vlan_miss;
-    bool rmac_hit;
+//  bool rmac_hit;
+    bool transport_valid;
 //	bool dmac_miss;
 //  bool glean;
 	bool bypass_egress;
     // Add more flags here.
+	bool outer_enet_in_transport;
 }
 
 struct switch_egress_flags_t {
@@ -616,7 +617,8 @@ struct switch_egress_flags_t {
 //  bool ipv4_checksum_err_1;
 //  bool ipv4_checksum_err_2;
 //  bool acl_deny;
-    bool rmac_hit;
+//  bool rmac_hit;
+    bool transport_valid;
     // Add more flags here.
 }
 
@@ -649,8 +651,10 @@ struct switch_lookup_fields_t {
 	bit<32>           ip_dst_addr_v4;
     @pa_alias("ingress" , "ig_md.lkp_1.ip_src_addr[31:0]", "ig_md.lkp_1.ip_src_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_1.ip_dst_addr[31:0]", "ig_md.lkp_1.ip_dst_addr_v4" )
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
     @pa_alias("ingress" , "ig_md.lkp_2.ip_src_addr[31:0]", "ig_md.lkp_2.ip_src_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_2.ip_dst_addr[31:0]", "ig_md.lkp_2.ip_dst_addr_v4" )
+//#endif
     @pa_alias("egress" ,  "eg_md.lkp_1.ip_src_addr[31:0]", "eg_md.lkp_1.ip_src_addr_v4" )
     @pa_alias("egress" ,  "eg_md.lkp_1.ip_dst_addr[31:0]", "eg_md.lkp_1.ip_dst_addr_v4" )
     bit<16>           ip_len;
@@ -669,7 +673,6 @@ struct switch_lookup_fields_t {
 
 	// misc
 	bool                 next_lyr_valid;
-    switch_drop_reason_t drop_reason;
 }
 
 // --------------------------------------------------------------------------------
@@ -696,7 +699,8 @@ struct switch_bridged_metadata_t {
     bit<32> timestamp;
 #endif
     bit<switch_lag_hash_width> hash;
-	bool rmac_hit;
+//	bool rmac_hit;
+	bool transport_valid;
 	bool bypass_egress;
 
     // Add more fields here.
@@ -871,14 +875,18 @@ struct switch_ingress_metadata_t {
 	switch_ingress_bypass_t bypass;
 
 	switch_cpu_reason_t cpu_reason;
-    switch_drop_reason_t drop_reason;
+//  switch_drop_reason_t drop_reason;
 //  switch_drop_reason_t drop_reason_0;
 //  switch_drop_reason_t drop_reason_1;
 //  switch_drop_reason_t drop_reason_2;
 
+//#ifdef INGRESS_PARSER_POPULATES_LKP_0
     switch_lookup_fields_t              lkp_0;
+//#endif
     switch_lookup_fields_t              lkp_1;    // initially non-scoped, later scoped, version of fields
+//#ifdef INGRESS_PARSER_POPULATES_LKP_2
     switch_lookup_fields_t              lkp_2;    // non-scoped version of fields
+//#endif
 
     switch_multicast_metadata_t multicast;
 	switch_mirror_metadata_t mirror;
@@ -938,7 +946,7 @@ struct switch_egress_metadata_t {
 	switch_egress_bypass_t bypass;
 
 	switch_cpu_reason_t cpu_reason;
-    switch_drop_reason_t drop_reason;
+//  switch_drop_reason_t drop_reason;
 //  switch_drop_reason_t drop_reason_0;
 //  switch_drop_reason_t drop_reason_1;
 //  switch_drop_reason_t drop_reason_2;
@@ -987,6 +995,9 @@ struct switch_header_transport_t {
     nsh_type1_h nsh_type1;
     nsh_type1_internal_h nsh_type1_internal;
 
+#ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
+    mpls_h[MPLS_DEPTH] mpls;
+#endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4    
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
     ipv4_h ipv4;
 #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
@@ -1005,6 +1016,16 @@ struct switch_header_transport_t {
     //erspan_type3_h erspan_type3;
 #endif /* defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) */
 
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+    udp_h udp;
+#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#ifdef GENEVE_TRANSPORT_INGRESS_ENABLE_V4
+    geneve_h geneve;
+#endif // GENEVE_TRANSPORT_INGRESS_ENABLE_V4
+#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
+    vxlan_h vxlan;
+#endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
+    
 }
 
 // -----------------------------------------------------------------------------
@@ -1013,12 +1034,12 @@ struct switch_header_outer_t {
 
     ethernet_h ethernet;
 
-#ifdef ETAG_ENABLE
+//#ifdef ETAG_ENABLE
     e_tag_h e_tag;
-#endif // ETAG_ENABLE
-#ifdef VNTAG_ENABLE
+//#endif // ETAG_ENABLE
+//#ifdef VNTAG_ENABLE
     vn_tag_h vn_tag;
-#endif // VNTAG_ENABLE
+//#endif // VNTAG_ENABLE
     vlan_tag_h[VLAN_DEPTH] vlan_tag;
 #if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
     mpls_h[MPLS_DEPTH] mpls;
@@ -1033,6 +1054,9 @@ struct switch_header_outer_t {
     udp_h udp;
     tcp_h tcp;
     sctp_h sctp;
+#ifdef GENEVE_ENABLE
+    geneve_h geneve;
+#endif // GENEVE_ENABLE
 #ifdef VXLAN_ENABLE
     vxlan_h vxlan;
 #endif // VXLAN_ENABLE
@@ -1044,6 +1068,7 @@ struct switch_header_outer_t {
 #ifdef GTP_ENABLE
     gtp_v1_base_h gtp_v1_base;
     gtp_v1_optional_h gtp_v1_optional;
+	gtp_v2_base_h gtp_v2_base;
 #endif  /* GTP_ENABLE */
 
 #ifdef INT_V2
@@ -1086,6 +1111,7 @@ struct switch_header_inner_t {
 #ifdef INNER_GTP_ENABLE
     gtp_v1_base_h gtp_v1_base;
     gtp_v1_optional_h gtp_v1_optional;
+	gtp_v2_base_h gtp_v2_base;
 #endif
 
 }

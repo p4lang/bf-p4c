@@ -88,6 +88,7 @@ class test(BfRuntimeTest):
 		si                      = 5 # Arbitrary value (ttl)
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
+		ta                      = 8 # Arbitrary value
 
 		sf_bitmask_0            = 4 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 		sf_bitmask_1            = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
@@ -115,7 +116,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, 0,           spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_1], 0, dsap
+			[ig_port_1], ig_lag_ptr+1, 0,    ta,        spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_1], 0, dsap
 			#egress
 		)
 
@@ -156,14 +157,14 @@ class test(BfRuntimeTest):
 		########################################################################
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN / GRE)
+		# Create / Send / Verify the packet (NVGRE / GRE)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_3lyr_vxlan_gre_ip(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+		src_pkt, exp_pkt = npb_simple_3lyr_nvgre_gre_ip(
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_0, start_of_chain=True, end_of_chain=False, scope_term_list=[0],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si, ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		'''
@@ -187,6 +188,7 @@ class test(BfRuntimeTest):
 
 		# -----------------
 
+
 		exp_pkt = \
 			testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac_0, eth_type=0x894f) / \
 			scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si-(popcount(sf_bitmask_0)), TTL=63, \
@@ -198,7 +200,6 @@ class test(BfRuntimeTest):
 			base_pkt
 		print(type(exp_pkt))
 		'''
-
 		# -----------------------------------------------------------
 
 		logger.info("Sending packet on port %d", ig_port_0)
@@ -223,10 +224,10 @@ class test(BfRuntimeTest):
 		exp_pkt_saved = exp_pkt
 
 		src_pkt, exp_pkt = npb_simple_3lyr_vxlan_gre_ip(
-			spi=spi, si=si, sap=sap, vpn=vpn+1, ttl=63, scope=1,
+			spi=spi, si=si, sap=sap, vpn=vpn+1, ttl=63, scope=2,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_1, start_of_chain=False, end_of_chain=True, scope_term_list=[1],
-			spi_exp=spi, si_exp=si-(popcount(sf_bitmask_0)), sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si-(popcount(sf_bitmask_0)), ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		src_pkt = exp_pkt_saved.exp_pkt
@@ -270,7 +271,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_1]
+			[ig_port_1], ig_lag_ptr+1, ta, spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_1]
 			#egress
 		)
 

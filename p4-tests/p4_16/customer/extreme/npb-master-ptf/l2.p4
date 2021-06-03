@@ -39,7 +39,8 @@
 
 control DMAC(
 	in mac_addr_t dst_addr,
-	inout switch_ingress_metadata_t ig_md
+	inout switch_ingress_metadata_t ig_md,
+	inout switch_header_t hdr
 ) (
 	switch_uint32_t table_size
 ) {
@@ -60,6 +61,8 @@ control DMAC(
 
 //		copp_enable_ = copp_enable;
 //		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
 	}
 
 	action dmac_hit(switch_port_lag_index_t port_lag_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
@@ -70,6 +73,8 @@ control DMAC(
 
 //		copp_enable_ = copp_enable;
 //		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
 	}
 
 	action dmac_multicast(switch_mgid_t index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
@@ -81,6 +86,8 @@ control DMAC(
 
 //		copp_enable_ = copp_enable;
 //		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
 	}
 
 	action dmac_redirect(switch_nexthop_t nexthop_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
@@ -91,12 +98,26 @@ control DMAC(
 
 //		copp_enable_ = copp_enable;
 //		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
+	}
+
+	action dmac_npb(
+	) {
+		stats.count();
+
+		ig_md.nsh_md.l2_fwd_en = false;
 	}
 
 	table dmac {
 		key = {
-			ig_md.bd : exact;
-			dst_addr : exact;
+//			ig_md.bd : exact;
+//			dst_addr : exact;
+
+			ig_md.lkp_1.mac_dst_addr : exact @name("mac_dst_addr");
+			ig_md.lkp_1.vid          : exact @name("vid");
+			ig_md.lkp_1.mac_type     : exact @name("mac_type");
+			ig_md.port_lag_index     : exact @name("port_lag_index");
 		}
 
 		actions = {
@@ -104,10 +125,13 @@ control DMAC(
 			dmac_hit;
 			dmac_multicast;
 			dmac_redirect;
+
+			dmac_npb;
 		}
 
 //		const default_action = dmac_miss(false, 0);
-		const default_action = dmac_miss;
+//		const default_action = dmac_miss;
+		const default_action = dmac_npb;
 		size = table_size;
 		counters = stats;
 	}

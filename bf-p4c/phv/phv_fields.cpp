@@ -1425,7 +1425,9 @@ class CollectPhvFields : public Inspector {
         if (findContext<IR::BFN::MatchLVal>()) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
-            f->set_avoid_alloc(true);
+            // TODO: Enable this once we understand the root cause for P4C-3481 failing due
+            // to this change. See P4C-3835 for more info.
+            // f->set_avoid_alloc(true);
         }
         // bridged_metadata_indicator must be placed in 8-bit container
         if (tv->name.endsWith(BFN::BRIDGED_MD_INDICATOR)) {

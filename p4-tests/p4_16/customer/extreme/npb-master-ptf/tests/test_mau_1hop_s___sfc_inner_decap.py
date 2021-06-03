@@ -85,6 +85,7 @@ class test(BfRuntimeTest):
 		si                      = 5 # Arbitrary value (ttl)
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
+		ta                      = 8 # Arbitrary value
 
 		sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
@@ -128,11 +129,11 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 		# Create / Send / Verify the packet (VXLAN)
 		# -----------------------------------------------------------
-
+		'''
 		src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, ta=ta, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si, ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -147,15 +148,15 @@ class test(BfRuntimeTest):
 
 		logger.info("Verify no other packets")
 		testutils.verify_no_other_packets(self, 0, 1)
-
+		'''
 		# -----------------------------------------------------------
 		# Create / Send / Verify the packet (NVGRE)
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_2lyr_nvgre_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, ta=ta, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si,  ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -176,9 +177,9 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, ta=ta, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si, ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -199,9 +200,9 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_2lyr_ipinip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, ta=ta, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si,  ta_exp=ta, nshtype_exp=2,sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -222,9 +223,9 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_2lyr_gtpc_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, ta=ta, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si,  ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -245,9 +246,9 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_2lyr_gtpu_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, ta=ta, nshtype=2, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[1],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si,  ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------

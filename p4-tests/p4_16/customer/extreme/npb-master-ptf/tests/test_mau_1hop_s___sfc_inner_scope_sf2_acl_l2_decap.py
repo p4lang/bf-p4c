@@ -142,11 +142,11 @@ class test(BfRuntimeTest):
 #		time.sleep(1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN / GRE / IP)
+		# Create / Send / Verify the packet (NVGRE / GRE / IP)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_3lyr_vxlan_gre_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+		src_pkt, exp_pkt = npb_simple_3lyr_nvgre_gre_ip(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -169,7 +169,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_gre_ip_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -192,7 +192,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_gre_ip_ipv6(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -215,7 +215,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_vxlanv6_gre_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -238,7 +238,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_grev6_ip_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -261,7 +261,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_grev6_ip_ipv6(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -280,11 +280,11 @@ class test(BfRuntimeTest):
 		testutils.verify_no_other_packets(self, 0, 1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN / GTP-C / UDP)
+		# Create / Send / Verify the packet (NVGRE / GTP-C / UDP)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_3lyr_vxlan_gtpc_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+		src_pkt, exp_pkt = npb_simple_3lyr_nvgre_gtpc_udp(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -303,11 +303,11 @@ class test(BfRuntimeTest):
 		testutils.verify_no_other_packets(self, 0, 1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN / GTP-U / IP)
+		# Create / Send / Verify the packet (NVGRE / GTP-U / IP)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_3lyr_vxlan_gtpu_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+		src_pkt, exp_pkt = npb_simple_3lyr_nvgre_gtpu_ip(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -350,7 +350,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_gre_ipv6_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
@@ -373,7 +373,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_3lyr_grev6_ipv6_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[0, 1],
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)

@@ -32,7 +32,7 @@
 //-----------------------------------------------------------------------------
 // Ingress Tunnel RMAC: Transport
 //-----------------------------------------------------------------------------
-
+/*
 control IngressTunnelRMAC(
 	inout switch_header_transport_t hdr_0,
 	inout switch_lookup_fields_t lkp_0,
@@ -96,7 +96,7 @@ control IngressTunnelRMAC(
 #endif // BRIDGING_ENABLE
 	}
 }
-
+*/
 //-----------------------------------------------------------------------------
 // Ingress Tunnel Decap: Transport (does not alter packet!)
 //-----------------------------------------------------------------------------
@@ -151,13 +151,13 @@ control IngressTunnel(
 		key = {
 #ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
   #ifdef INGRESS_PARSER_POPULATES_LKP_0
-			lkp_0.ip_src_addr[31:0] : ternary @name("src_addr");
+			lkp_0.ip_src_addr_v4    : ternary @name("src_addr");
   #else
 			hdr_0.ipv4.src_addr     : ternary @name("src_addr");
   #endif
 #endif
-//			tunnel_0.type           : exact @name("tunnel_type");
-			lkp_0.tunnel_type       : exact @name("tunnel_type");
+//			tunnel_0.type           : ternary @name("tunnel_type");
+			lkp_0.tunnel_type       : ternary @name("tunnel_type");
 		}
 
 		actions = {
@@ -205,8 +205,8 @@ control IngressTunnel(
 			hdr_0.ipv6.src_addr : ternary @name("src_addr");
   #endif
 #endif
-//			tunnel_0.type       : exact @name("tunnel_type");
-			lkp_0.tunnel_type   : exact @name("tunnel_type");
+//			tunnel_0.type       : ternary @name("tunnel_type");
+			lkp_0.tunnel_type   : ternary @name("tunnel_type");
 		}
 
 		actions = {
@@ -237,6 +237,14 @@ control IngressTunnel(
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
   #endif
+//		,
+//		bit<24>                    spi,
+//		bit<8>                     si,
+//		bit<8>                     si_predec
+		,
+		bool mirror_enable,
+        switch_mirror_session_t mirror_session_id,
+        switch_mirror_meter_id_t mirror_meter_index // derek added
 	) {
 		stats_dst_vtep.count();
 
@@ -250,6 +258,18 @@ control IngressTunnel(
 		ig_md.nsh_md.sap     = (bit<16>)sap;
 		ig_md.nsh_md.vpn     = (bit<16>)vpn;
   #endif
+//		ig_md.nsh_md.spi     = spi;
+//		ig_md.nsh_md.si      = si;
+//		ig_md.nsh_md.si_predec  = si_predec;
+
+		if(mirror_enable) {
+			ig_md.mirror.type = SWITCH_MIRROR_TYPE_PORT;
+			ig_md.mirror.src = SWITCH_PKT_SRC_CLONED_INGRESS;
+			ig_md.mirror.session_id = mirror_session_id;
+#ifdef MIRROR_METER_ENABLE
+			ig_md.mirror.meter_index = mirror_meter_index; // derek added
+#endif
+		}
 	}
 
 	// -------------------------------------
@@ -271,24 +291,42 @@ control IngressTunnel(
 	table dst_vtep {
 		key = {
 #ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
+  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+			ig_md.nsh_md.sap        : ternary @name("sap");
+  #endif
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
     #ifdef INGRESS_PARSER_POPULATES_LKP_0
-			lkp_0.ip_src_addr[31:0] : ternary @name("src_addr");
+			lkp_0.ip_src_addr_v4    : ternary @name("src_addr");
     #else
 			hdr_0.ipv4.src_addr     : ternary @name("src_addr");
     #endif
   #endif
     #ifdef INGRESS_PARSER_POPULATES_LKP_0
-			lkp_0.ip_dst_addr[31:0] : ternary @name("dst_addr");
+			// l3
+			lkp_0.ip_type           : ternary @name("type");
+			lkp_0.ip_dst_addr_v4    : ternary @name("dst_addr");
+			lkp_0.ip_proto          : ternary @name("proto");
+
+			// l4
+			lkp_0.l4_src_port       : ternary @name("src_port");
+			lkp_0.l4_dst_port       : ternary @name("dst_port");
     #else
+			// l3
+			lkp_0.ip_type           : ternary @name("type");
 			hdr_0.ipv4.dst_addr     : ternary @name("dst_addr");
+			hdr_0.ipv4.protocol     : ternary @name("proto");
+#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
+			// l4
+			hdr_0.udp.src_port      : ternary @name("src_port");
+			hdr_0.udp.dst_port      : ternary @name("dst_port");
+#endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
     #endif
 #endif
-//			tunnel_0.type           : exact @name("tunnel_type");
-			lkp_0.tunnel_type       : exact @name("tunnel_type");
+			// tunnel
+//			tunnel_0.type           : ternary @name("tunnel_type");
+			lkp_0.tunnel_type       : ternary @name("tunnel_type");
   #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
-			ig_md.nsh_md.sap    : exact @name("sap");
-			lkp_0.tunnel_id        : exact @name("tunnel_id");
+			lkp_0.tunnel_id         : ternary @name("tunnel_id");
   #endif
 		}
 
@@ -318,6 +356,14 @@ control IngressTunnel(
 //		switch_port_lag_index_t port_lag_index,
 		bit<SSAP_ID_WIDTH> sap,
 		bit<VPN_ID_WIDTH>  vpn
+//		,
+//		bit<24>                    spi,
+//		bit<8>                     si,
+//		bit<8>                     si_predec
+		,
+		bool mirror_enable,
+        switch_mirror_session_t mirror_session_id,
+        switch_mirror_meter_id_t mirror_meter_index // derek added
   #endif
 	) {
 		stats_dst_vtepv6.count();
@@ -332,6 +378,18 @@ control IngressTunnel(
 		ig_md.nsh_md.sap     = (bit<16>)sap;
 		ig_md.nsh_md.vpn     = (bit<16>)vpn;
   #endif
+//		ig_md.nsh_md.spi     = spi;
+//		ig_md.nsh_md.si      = si;
+//		ig_md.nsh_md.si_predec  = si_predec;
+
+		if(mirror_enable) {
+			ig_md.mirror.type = SWITCH_MIRROR_TYPE_PORT;
+			ig_md.mirror.src = SWITCH_PKT_SRC_CLONED_INGRESS;
+			ig_md.mirror.session_id = mirror_session_id;
+#ifdef MIRROR_METER_ENABLE
+			ig_md.mirror.meter_index = mirror_meter_index; // derek added
+#endif
+		}
 	}
 
 	// -------------------------------------
@@ -353,24 +411,41 @@ control IngressTunnel(
 	table dst_vtepv6 {
 		key = {
 #ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
+  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+			ig_md.nsh_md.sap        : ternary @name("sap");
+  #endif
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
     #ifdef INGRESS_PARSER_POPULATES_LKP_0
-			lkp_0.ip_src_addr   : ternary @name("src_addr");
+			lkp_0.ip_src_addr       : ternary @name("src_addr");
     #else
-			hdr_0.ipv6.src_addr : ternary @name("src_addr");
+			hdr_0.ipv6.src_addr     : ternary @name("src_addr");
     #endif
   #endif
     #ifdef INGRESS_PARSER_POPULATES_LKP_0
-			lkp_0.ip_dst_addr   : ternary @name("dst_addr");
+			// l3
+			lkp_0.ip_type           : ternary @name("ip_type");
+			lkp_0.ip_dst_addr       : ternary @name("dst_addr");
+			lkp_0.ip_proto          : ternary @name("proto");
+
+			// l4
+			lkp_0.l4_src_port       : ternary @name("src_port");
+			lkp_0.l4_dst_port       : ternary @name("dst_port");
     #else
-			hdr_0.ipv6.dst_addr : ternary @name("dst_addr");
+			// l3
+			lkp_0.ip_type           : ternary @name("ip_type");
+			hdr_0.ipv6.dst_addr     : ternary @name("dst_addr");
+			hdr_0.ipv6.next_hdr     : ternary @name("proto");
+
+			// l4
+			hdr_0.udp.src_port      : ternary @name("src_port");
+			hdr_0.udp.dst_port      : ternary @name("dst_port");
     #endif
 #endif
-//			tunnel_0.type       : exact @name("tunnel_type");
-			lkp_0.tunnel_type   : exact @name("tunnel_type");
+			// tunnel
+//			tunnel_0.type           : ternary @name("tunnel_type");
+			lkp_0.tunnel_type       : ternary @name("tunnel_type");
   #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
-			ig_md.nsh_md.sap    : exact @name("sap");
-			lkp_0.tunnel_id        : exact @name("tunnel_id");
+			lkp_0.tunnel_id         : ternary @name("tunnel_id");
   #endif
 		}
 
@@ -490,9 +565,7 @@ control IngressTunnel(
 control IngressTunnelNetwork(
 	inout switch_ingress_metadata_t ig_md,
 	inout switch_lookup_fields_t    lkp_0,
-	inout switch_header_transport_t hdr_0,
-
-	inout switch_tunnel_metadata_t  tunnel_0
+	inout switch_header_transport_t hdr_0
 ) (
 	switch_uint32_t sap_table_size=32w1024
 ) {
@@ -528,8 +601,8 @@ control IngressTunnelNetwork(
 			ig_md.nsh_md.sap    : exact @name("sap");
 
 			// tunnel
-//			tunnel_0.type          : exact @name("tunnel_type");
-//			tunnel_0.id            : exact @name("tunnel_id");
+//			ig_md.tunnel_0.type    : exact @name("tunnel_type");
+//			ig_md.tunnel_0.id      : exact @name("tunnel_id");
 			lkp_0.tunnel_type      : exact @name("tunnel_type");
 			lkp_0.tunnel_id        : exact @name("tunnel_id");
 		}
@@ -566,12 +639,14 @@ control IngressTunnelNetwork(
 
 control IngressTunnelOuter(
 	inout switch_ingress_metadata_t ig_md,
-	inout switch_lookup_fields_t    lkp_1,
-	inout switch_header_transport_t hdr_0,
+	inout switch_lookup_fields_t    lkp,
 
+	in    switch_lookup_fields_t    lkp_0,
+//	in    switch_lookup_fields_t    lkp_1,
 	in    switch_lookup_fields_t    lkp_2,
-	in    switch_header_inner_t     hdr_2,
-	inout switch_tunnel_metadata_reduced_t tunnel_2
+
+	inout bool scope_,
+	inout bool terminate_
 ) (
 	switch_uint32_t sap_exm_table_size=32w1024,
 	switch_uint32_t sap_tcam_table_size=32w1024
@@ -583,8 +658,8 @@ control IngressTunnelOuter(
 	// Table: SAP
 	// -------------------------------------
 
-	bool terminate_ = false;
-	bool scope_     = false;
+//	bool terminate_ = false;
+//	bool scope_     = false;
 /*
 	action NoAction_exm (
 	) {
@@ -596,6 +671,10 @@ control IngressTunnelOuter(
 		bit<VPN_ID_WIDTH>  vpn,
 		bool               scope,
 		bool               terminate
+//		,
+//		bit<24>                    spi,
+//		bit<8>                     si,
+//		bit<8>                     si_predec
 	) {
 		stats_exm.count();
 
@@ -603,6 +682,9 @@ control IngressTunnelOuter(
 		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
+//		ig_md.nsh_md.spi     = spi;
+//		ig_md.nsh_md.si      = si;
+//		ig_md.nsh_md.si_predec  = si_predec;
 	}
 
 	// -------------------------------------
@@ -612,13 +694,13 @@ control IngressTunnelOuter(
 			ig_md.nsh_md.sap : exact @name("sap");
 
 			// l3
-			lkp_1.ip_type         : exact @name("ip_type");
-			lkp_1.ip_src_addr     : exact @name("ip_src_addr");
-			lkp_1.ip_dst_addr     : exact @name("ip_dst_addr");
+			lkp.ip_type         : exact @name("ip_type");
+			lkp.ip_src_addr     : exact @name("ip_src_addr");
+			lkp.ip_dst_addr     : exact @name("ip_dst_addr");
 
 			// tunnel
-			lkp_1.tunnel_type     : exact @name("tunnel_type");
-			lkp_1.tunnel_id       : exact @name("tunnel_id");
+			lkp.tunnel_type     : exact @name("tunnel_type");
+			lkp.tunnel_id       : exact @name("tunnel_id");
 		}
 
 		actions = {
@@ -644,6 +726,10 @@ control IngressTunnelOuter(
 		bit<VPN_ID_WIDTH>  vpn,
 		bool               scope,
 		bool               terminate
+//		,
+//		bit<24>                    spi,
+//		bit<8>                     si,
+//		bit<8>                     si_predec
 	) {
 		stats_tcam.count();
 
@@ -651,6 +737,9 @@ control IngressTunnelOuter(
 		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
+//		ig_md.nsh_md.spi     = spi;
+//		ig_md.nsh_md.si      = si;
+//		ig_md.nsh_md.si_predec  = si_predec;
 	}
 
 	// -------------------------------------
@@ -660,13 +749,18 @@ control IngressTunnelOuter(
 			ig_md.nsh_md.sap : ternary @name("sap");
 
 			// l3
-			lkp_1.ip_type         : ternary @name("ip_type");
-			lkp_1.ip_src_addr     : ternary @name("ip_src_addr");
-			lkp_1.ip_dst_addr     : ternary @name("ip_dst_addr");
+			lkp.ip_type         : ternary @name("ip_type");
+			lkp.ip_src_addr     : ternary @name("ip_src_addr");
+			lkp.ip_dst_addr     : ternary @name("ip_dst_addr");
+			lkp.ip_proto        : ternary @name("ip_proto");
+
+			// l4
+			lkp.l4_src_port     : ternary @name("l4_src_port");
+			lkp.l4_dst_port     : ternary @name("l4_dst_port");
 
 			// tunnel
-			lkp_1.tunnel_type     : ternary @name("tunnel_type");
-			lkp_1.tunnel_id       : ternary @name("tunnel_id");
+			lkp.tunnel_type     : ternary @name("tunnel_type");
+			lkp.tunnel_id       : ternary @name("tunnel_id");
 		}
 
 		actions = {
@@ -706,35 +800,32 @@ control IngressTunnelOuter(
 	// -------------------------------------
 
 	apply {
-
 //		if(!sap_exm.apply().hit) {
 			sap_tcam.apply();
 //		}
 /*
-		if(lkp_1.next_lyr_valid == true) {
+		if(lkp.next_lyr_valid == true) {
 			if(terminate_ == true) {
 				ig_md.tunnel_1.terminate           = true;
-				if(ig_md.nsh_md.scope == 1) {
+				if(ig_md.nsh_md.scope == 2) {
 					ig_md.tunnel_2.terminate           = true;
 				}
 			}
 
 			if(scope_ == true) {
-				if(ig_md.nsh_md.scope == 0) {
+				if(ig_md.nsh_md.scope == 1) {
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
 					Scoper.apply(
 						lkp_2,
 //						ig_md.drop_reason_2,
 
-						lkp_1
+						lkp
 					);
 #else
 					ScoperInner.apply(
 						hdr_2,
-						tunnel_2,
-//						ig_md.drop_reason_2,
 
-						lkp_1
+						lkp
 					);
 #endif
 				}
@@ -744,7 +835,22 @@ control IngressTunnelOuter(
 			}
 		}
 */
-		Scoper_ScopeAndTerm.apply(lkp_2, lkp_1, terminate_, scope_, ig_md.nsh_md.scope, ig_md.tunnel_1.terminate, ig_md.tunnel_2.terminate);
+/*
+		Scoper_ScopeAndTermAndData.apply(
+			lkp_0,
+//			lkp_1,
+			lkp_2,
+
+			lkp,
+
+			terminate_,
+			scope_,
+			ig_md.nsh_md.scope,
+			ig_md.tunnel_0.terminate,
+			ig_md.tunnel_1.terminate,
+			ig_md.tunnel_2.terminate
+		);
+*/
 	}
 }
 
@@ -754,12 +860,11 @@ control IngressTunnelOuter(
 
 control IngressTunnelInner(
 	inout switch_ingress_metadata_t ig_md,
-	inout switch_lookup_fields_t    lkp_1,
-	inout switch_header_transport_t hdr_0,
+	inout switch_lookup_fields_t    lkp,
 
-	in    switch_lookup_fields_t    lkp_2,
-	in    switch_header_inner_t     hdr_2,
-	inout switch_tunnel_metadata_reduced_t tunnel_2
+	in    switch_lookup_fields_t    lkp_0,
+//	in    switch_lookup_fields_t    lkp_1,
+	in    switch_lookup_fields_t    lkp_2
 ) (
 	switch_uint32_t sap_exm_table_size=32w1024,
 	switch_uint32_t sap_tcam_table_size=32w1024
@@ -784,6 +889,10 @@ control IngressTunnelInner(
 		bit<VPN_ID_WIDTH>  vpn,
 		bool               scope,
 		bool               terminate
+//		,
+//		bit<24>                    spi,
+//		bit<8>                     si,
+//		bit<8>                     si_predec
 	) {
 		stats_exm.count();
 
@@ -791,6 +900,9 @@ control IngressTunnelInner(
 		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
+//		ig_md.nsh_md.spi     = spi;
+//		ig_md.nsh_md.si      = si;
+//		ig_md.nsh_md.si_predec  = si_predec;
 	}
 
 	// -------------------------------------
@@ -799,9 +911,19 @@ control IngressTunnelInner(
 		key = {
 			ig_md.nsh_md.sap : exact @name("sap");
 
+			// l3
+			lkp.ip_type         : ternary @name("ip_type");
+			lkp.ip_src_addr     : ternary @name("ip_src_addr");
+			lkp.ip_dst_addr     : ternary @name("ip_dst_addr");
+			lkp.ip_proto        : ternary @name("ip_proto");
+
+			// l4
+			lkp.l4_src_port     : ternary @name("l4_src_port");
+			lkp.l4_dst_port     : ternary @name("l4_dst_port");
+
 			// tunnel
-			lkp_1.tunnel_type     : exact @name("tunnel_type");
-			lkp_1.tunnel_id       : exact @name("tunnel_id");
+			lkp.tunnel_type     : exact @name("tunnel_type");
+			lkp.tunnel_id       : exact @name("tunnel_id");
 		}
 
 		actions = {
@@ -827,6 +949,10 @@ control IngressTunnelInner(
 		bit<VPN_ID_WIDTH>  vpn,
 		bool               scope,
 		bool               terminate
+//		,
+//		bit<24>                    spi,
+//		bit<8>                     si,
+//		bit<8>                     si_predec
 	) {
 		stats_tcam.count();
 
@@ -834,6 +960,9 @@ control IngressTunnelInner(
 		ig_md.nsh_md.vpn     = (bit<16>)vpn;
 		scope_                  = scope;
 		terminate_              = terminate;
+//		ig_md.nsh_md.spi     = spi;
+//		ig_md.nsh_md.si      = si;
+//		ig_md.nsh_md.si_predec  = si_predec;
 	}
 
 	// -------------------------------------
@@ -842,9 +971,19 @@ control IngressTunnelInner(
 		key = {
 			ig_md.nsh_md.sap : ternary @name("sap");
 
+			// l3
+			lkp.ip_type         : ternary @name("ip_type");
+			lkp.ip_src_addr     : ternary @name("ip_src_addr");
+			lkp.ip_dst_addr     : ternary @name("ip_dst_addr");
+			lkp.ip_proto        : ternary @name("ip_proto");
+
+			// l4
+			lkp.l4_src_port     : ternary @name("l4_src_port");
+			lkp.l4_dst_port     : ternary @name("l4_dst_port");
+
 			// tunnel
-			lkp_1.tunnel_type     : ternary @name("tunnel_type");
-			lkp_1.tunnel_id       : ternary @name("tunnel_id");
+			lkp.tunnel_type     : ternary @name("tunnel_type");
+			lkp.tunnel_id       : ternary @name("tunnel_id");
 		}
 
 		actions = {
@@ -884,35 +1023,32 @@ control IngressTunnelInner(
 	// -------------------------------------
 
 	apply {
-
 		if(!sap_exm.apply().hit) {
 			sap_tcam.apply();
 		}
 /*
-		if(lkp_1.next_lyr_valid == true) {
+		if(lkp.next_lyr_valid == true) {
 			if(terminate_ == true) {
 				ig_md.tunnel_1.terminate           = true;
-				if(ig_md.nsh_md.scope == 1) {
+				if(ig_md.nsh_md.scope == 2) {
 					ig_md.tunnel_2.terminate           = true;
 				}
 			}
 
 			if(scope_ == true) {
-				if(ig_md.nsh_md.scope == 0) {
+				if(ig_md.nsh_md.scope == 1) {
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
 					Scoper.apply(
 						lkp_2,
 //						ig_md.drop_reason_2,
 
-						lkp_1
+						lkp
 					);
 #else
 					ScoperInner.apply(
 						hdr_2,
-						tunnel_2,
-//						ig_md.drop_reason_2,
 
-						lkp_1
+						lkp
 					);
 #endif
 				}
@@ -922,7 +1058,20 @@ control IngressTunnelInner(
 			}
 		}
 */
-		Scoper_ScopeAndTerm.apply(lkp_2, lkp_1, terminate_, scope_, ig_md.nsh_md.scope, ig_md.tunnel_1.terminate, ig_md.tunnel_2.terminate);
+		Scoper_ScopeAndTermAndData.apply(
+			lkp_0,
+//			lkp_1,
+			lkp_2,
+
+			lkp,
+
+			terminate_,
+			scope_,
+			ig_md.nsh_md.scope,
+			ig_md.tunnel_0.terminate,
+			ig_md.tunnel_1.terminate,
+			ig_md.tunnel_2.terminate
+		);
 	}
 }
 
@@ -964,12 +1113,21 @@ control TunnelDecapTransportIngress(
 		}
 
 		actions = {
+			NoAction;
 			decap_l234_update_eth;
 		}
 
 		const entries = {
-			(true, false, true ) : decap_l234_update_eth(ETHERTYPE_IPV4);
-			(true, false, false) : decap_l234_update_eth(ETHERTYPE_IPV6);
+			// hdr hdr_1
+			// --- ------------
+			(false, false, false) : NoAction();
+			(false, false, true ) : NoAction();
+			(false, true,  false) : NoAction();
+			(false, true,  true ) : NoAction();
+			(true,  false, false) : decap_l234_update_eth(ETHERTYPE_IPV6);
+			(true,  false, true ) : decap_l234_update_eth(ETHERTYPE_IPV4);
+			(true,  true,  false) : NoAction(); // next layer already has an ethernet header
+			(true,  true,  true ) : NoAction(); // next layer already has an ethernet header
 		}
 	}
 
@@ -978,8 +1136,8 @@ control TunnelDecapTransportIngress(
 	// -------------------------------------
 
 	apply {
-//		decap.apply();
-
+		decap.apply();
+/*
         if(tunnel_0.terminate) {
   #ifndef FIX_L3_TUN_ALL_AT_ONCE
             if(!hdr_1.ethernet.isValid()) {
@@ -991,6 +1149,7 @@ control TunnelDecapTransportIngress(
             }
   #endif
 		}
+*/
 	}
 }
 
@@ -1075,28 +1234,36 @@ control TunnelDecapOuter(
 
 	action decap_l_34_update_vlan1(bit<16> new_eth) { hdr_1.vlan_tag[1].ether_type = new_eth;             decap_l34(); }
 	action decap_l_34_update_vlan0(bit<16> new_eth) { hdr_1.vlan_tag[0].ether_type = new_eth;             decap_l34(); }
-	action decap_l_34_update_vn   (bit<16> new_eth) { hdr_1.vn_tag.ether_type      = new_eth;             decap_l34(); }
+#ifdef ETAG_ENABLE
 	action decap_l_34_update_e    (bit<16> new_eth) { hdr_1.e_tag.ether_type       = new_eth;             decap_l34(); }
+#endif
+#ifdef VNTAG_ENABLE
+	action decap_l_34_update_vn   (bit<16> new_eth) { hdr_1.vn_tag.ether_type      = new_eth;             decap_l34(); }
+#endif
 	action decap_l_34_update_eth  (bit<16> new_eth) { hdr_1.ethernet.ether_type    = new_eth;             decap_l34(); }
 
 	action decap_l234_update_vlan1(bit<16> new_eth) { hdr_1.vlan_tag[1].ether_type = new_eth; decap_l2(); decap_l34(); }
 	action decap_l234_update_vlan0(bit<16> new_eth) { hdr_1.vlan_tag[0].ether_type = new_eth; decap_l2(); decap_l34(); }
-	action decap_l234_update_vn   (bit<16> new_eth) { hdr_1.vn_tag.ether_type      = new_eth; decap_l2(); decap_l34(); }
+#ifdef ETAG_ENABLE
 	action decap_l234_update_e    (bit<16> new_eth) { hdr_1.e_tag.ether_type       = new_eth; decap_l2(); decap_l34(); }
+#endif
+#ifdef VNTAG_ENABLE
+	action decap_l234_update_vn   (bit<16> new_eth) { hdr_1.vn_tag.ether_type      = new_eth; decap_l2(); decap_l34(); }
+#endif
 	action decap_l234_update_eth  (bit<16> new_eth) { hdr_1.ethernet.ether_type    = new_eth; decap_l2(); decap_l34(); }
 
 	table decap {
 		key = {
 			tunnel_1.terminate          : exact;
-
-			hdr_1.vlan_tag[1].isValid() : ternary;
-			hdr_1.vlan_tag[0].isValid() : ternary;
-			hdr_1.vn_tag.isValid()      : ternary;
 			hdr_1.e_tag.isValid()       : ternary;
+			hdr_1.vn_tag.isValid()      : ternary;
+			hdr_1.vlan_tag[0].isValid() : exact;
+			hdr_1.vlan_tag[1].isValid() : exact;
 
 			tunnel_2.terminate          : exact;
 			hdr_2.ethernet.isValid()    : ternary;
 			hdr_2.ipv4.isValid()        : ternary;
+
 			hdr_3.ethernet.isValid()    : ternary;
 			hdr_3.ipv4.isValid()        : ternary;
 		}
@@ -1104,14 +1271,22 @@ control TunnelDecapOuter(
 		actions = {
 			decap_l_34_update_vlan1;
 			decap_l_34_update_vlan0;
-			decap_l_34_update_vn;
+#ifdef ETAG_ENABLE
 			decap_l_34_update_e;
+#endif
+#ifdef VNTAG_ENABLE
+			decap_l_34_update_vn;
+#endif
 			decap_l_34_update_eth;
 
 			decap_l234_update_vlan1;
 			decap_l234_update_vlan0;
-			decap_l234_update_vn;
+#ifdef ETAG_ENABLE
 			decap_l234_update_e;
+#endif
+#ifdef VNTAG_ENABLE
+			decap_l234_update_vn;
+#endif
 			decap_l234_update_eth;
 		}
 
@@ -1120,61 +1295,82 @@ control TunnelDecapOuter(
 		// only remove l2 when the next layer's is valid
 		// if(hdr_2.ethernet.isValid() || (tunnel_2.terminate && hdr_3.ethernet.isValid())) {
 		// }
-		//                                      2      1             3
 
+			// hdr_1                            hdr__2               hdr_3
+			// -------------------------------- -------------------- ------------
 		const entries = {
-			(true,  true,  _,     _,     _,     false, false, true,  _,     _    ) : decap_l_34_update_vlan1(ETHERTYPE_IPV4);
-			(true,  true,  _,     _,     _,     false, false, false, _,     _    ) : decap_l_34_update_vlan1(ETHERTYPE_IPV6);
-			(true,  false, true,  _,     _,     false, false, true,  _,     _    ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
-			(true,  false, true,  _,     _,     false, false, false, _,     _    ) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
-			(true,  false, false, true,  _,     false, false, true,  _,     _    ) : decap_l_34_update_vn   (ETHERTYPE_IPV4);
-			(true,  false, false, true,  _,     false, false, false, _,     _    ) : decap_l_34_update_vn   (ETHERTYPE_IPV6);
-			(true,  false, false, false, true,  false, false, true,  _,     _    ) : decap_l_34_update_e    (ETHERTYPE_IPV4);
-			(true,  false, false, false, true,  false, false, false, _,     _    ) : decap_l_34_update_e    (ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  false, false, false, true,  _,     _    ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  false, false, false, false, _,     _    ) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  true,  false, false, true,  _,     _    ) : decap_l_34_update_vlan1(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  true,  false, false, false, _,     _    ) : decap_l_34_update_vlan1(ETHERTYPE_IPV6);
+#ifdef ETAG_ENABLE
+			(true,  true,  false, false, false, false, false, true,  _,     _    ) : decap_l_34_update_e    (ETHERTYPE_IPV4);
+			(true,  true,  false, false, false, false, false, false, _,     _    ) : decap_l_34_update_e    (ETHERTYPE_IPV6);
+#endif
+#ifdef VNTAG_ENABLE
+			(true,  false, true,  false, false, false, false, true,  _,     _    ) : decap_l_34_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, true,  false, false, false, false, false, _,     _    ) : decap_l_34_update_vn   (ETHERTYPE_IPV6);
+#endif
 			(true,  false, false, false, false, false, false, true,  _,     _    ) : decap_l_34_update_eth  (ETHERTYPE_IPV4);
 			(true,  false, false, false, false, false, false, false, _,     _    ) : decap_l_34_update_eth  (ETHERTYPE_IPV6);
 
-			(true,  true,  _,     _,     _,     false, true,  true,  _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
-			(true,  true,  _,     _,     _,     false, true,  false, _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
-			(true,  false, true,  _,     _,     false, true,  true,  _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
-			(true,  false, true,  _,     _,     false, true,  false, _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
-			(true,  false, false, true,  _,     false, true,  true,  _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
-			(true,  false, false, true,  _,     false, true,  false, _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV6);
-			(true,  false, false, false, true,  false, true,  true,  _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV4);
-			(true,  false, false, false, true,  false, true,  false, _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  false, false, true,  true,  _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  false, false, true,  false, _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  true,  false, true,  true,  _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  true,  false, true,  false, _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
+#ifdef ETAG_ENABLE
+			(true,  true,  false, false, false, false, true,  true,  _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV4);
+			(true,  true,  false, false, false, false, true,  false, _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV6);
+#endif
+#ifdef VNTAG_ENABLE
+			(true,  false, true,  false, false, false, true,  true,  _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, true,  false, false, false, true,  false, _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV6);
+#endif
 			(true,  false, false, false, false, false, true,  true,  _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
 			(true,  false, false, false, false, false, true,  false, _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV6);
 
-			(true,  true,  _,     _,     _,     true,  true,  true,  _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
-			(true,  true,  _,     _,     _,     true,  true,  false, _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
-			(true,  false, true,  _,     _,     true,  true,  true,  _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
-			(true,  false, true,  _,     _,     true,  true,  false, _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
-			(true,  false, false, true,  _,     true,  true,  true,  _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
-			(true,  false, false, true,  _,     true,  true,  false, _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV6);
-			(true,  false, false, false, true,  true,  true,  true,  _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV4);
-			(true,  false, false, false, true,  true,  true,  false, _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  false, true,  true,  true,  _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  false, true,  true,  false, _,     _    ) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  true,  true,  true,  true,  _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  true,  true,  true,  false, _,     _    ) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
+#ifdef ETAG_ENABLE
+			(true,  true,  false, false, false, true,  true,  true,  _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV4);
+			(true,  true,  false, false, false, true,  true,  false, _,     _    ) : decap_l234_update_e    (ETHERTYPE_IPV6);
+#endif
+#ifdef VNTAG_ENABLE
+			(true,  false, true,  false, false, true,  true,  true,  _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, true,  false, false, true,  true,  false, _,     _    ) : decap_l234_update_vn   (ETHERTYPE_IPV6);
+#endif
 			(true,  false, false, false, false, true,  true,  true,  _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
 			(true,  false, false, false, false, true,  true,  false, _,     _    ) : decap_l234_update_eth  (ETHERTYPE_IPV6);
 
-			(true,  true,  _,     _,     _,     true,  _,     _,     false, true ) : decap_l_34_update_vlan1(ETHERTYPE_IPV4);
-			(true,  true,  _,     _,     _,     true,  _,     _,     false, false) : decap_l_34_update_vlan1(ETHERTYPE_IPV6);
-			(true,  false, true,  _,     _,     true,  _,     _,     false, true ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
-			(true,  false, true,  _,     _,     true,  _,     _,     false, false) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
-			(true,  false, false, true,  _,     true,  _,     _,     false, true ) : decap_l_34_update_vn   (ETHERTYPE_IPV4);
-			(true,  false, false, true,  _,     true,  _,     _,     false, false) : decap_l_34_update_vn   (ETHERTYPE_IPV6);
-			(true,  false, false, false, true,  true,  _,     _,     false, true ) : decap_l_34_update_e    (ETHERTYPE_IPV4);
-			(true,  false, false, false, true,  true,  _,     _,     false, false) : decap_l_34_update_e    (ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  false, true,  _,     _,     false, true ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  false, true,  _,     _,     false, false) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  true,  true,  _,     _,     false, true ) : decap_l_34_update_vlan1(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  true,  true,  _,     _,     false, false) : decap_l_34_update_vlan1(ETHERTYPE_IPV6);
+#ifdef ETAG_ENABLE
+			(true,  true,  false, false, false, true,  _,     _,     false, true ) : decap_l_34_update_e    (ETHERTYPE_IPV4);
+			(true,  true,  false, false, false, true,  _,     _,     false, false) : decap_l_34_update_e    (ETHERTYPE_IPV6);
+#endif
+#ifdef VNTAG_ENABLE
+			(true,  false, true,  false, false, true,  _,     _,     false, true ) : decap_l_34_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, true,  false, false, true,  _,     _,     false, false) : decap_l_34_update_vn   (ETHERTYPE_IPV6);
+#endif
 			(true,  false, false, false, false, true,  _,     _,     false, true ) : decap_l_34_update_eth  (ETHERTYPE_IPV4);
 			(true,  false, false, false, false, true,  _,     _,     false, false) : decap_l_34_update_eth  (ETHERTYPE_IPV6);
 
-			(true,  true,  _,     _,     _,     true,  _,     _,     true,  true ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
-			(true,  true,  _,     _,     _,     true,  _,     _,     true,  false) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
-			(true,  false, true,  _,     _,     true,  _,     _,     true,  true ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
-			(true,  false, true,  _,     _,     true,  _,     _,     true,  false) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
-			(true,  false, false, true,  _,     true,  _,     _,     true,  true ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
-			(true,  false, false, true,  _,     true,  _,     _,     true,  false) : decap_l234_update_vn   (ETHERTYPE_IPV6);
-			(true,  false, false, false, true,  true,  _,     _,     true,  true ) : decap_l234_update_e    (ETHERTYPE_IPV4);
-			(true,  false, false, false, true,  true,  _,     _,     true,  false) : decap_l234_update_e    (ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  false, true,  _,     _,     true,  true ) : decap_l234_update_vlan0(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  false, true,  _,     _,     true,  false) : decap_l234_update_vlan0(ETHERTYPE_IPV6);
+			(true,  _,     _,     true,  true,  true,  _,     _,     true,  true ) : decap_l234_update_vlan1(ETHERTYPE_IPV4);
+			(true,  _,     _,     true,  true,  true,  _,     _,     true,  false) : decap_l234_update_vlan1(ETHERTYPE_IPV6);
+#ifdef ETAG_ENABLE
+			(true,  true,  false, false, false, true,  _,     _,     true,  true ) : decap_l234_update_e    (ETHERTYPE_IPV4);
+			(true,  true,  false, false, false, true,  _,     _,     true,  false) : decap_l234_update_e    (ETHERTYPE_IPV6);
+#endif
+#ifdef VNTAG_ENABLE
+			(true,  false, true,  false, false, true,  _,     _,     true,  true ) : decap_l234_update_vn   (ETHERTYPE_IPV4);
+			(true,  false, true,  false, false, true,  _,     _,     true,  false) : decap_l234_update_vn   (ETHERTYPE_IPV6);
+#endif
 			(true,  false, false, false, false, true,  _,     _,     true,  true ) : decap_l234_update_eth  (ETHERTYPE_IPV4);
 			(true,  false, false, false, false, true,  _,     _,     true,  false) : decap_l234_update_eth  (ETHERTYPE_IPV6);
 		}
@@ -1248,7 +1444,6 @@ control TunnelDecapInner(
 	table decap {
 		key = {
 			tunnel_2.terminate          : exact;
-
 			hdr_2.vlan_tag[0].isValid() : exact;
 
 			hdr_3.ethernet.isValid()    : exact;
@@ -1264,6 +1459,8 @@ control TunnelDecapInner(
 		}
 
 		const entries = {
+			// hdr_2       hdr_3
+			// ----------- ------------
 			(true,  true,  false, true ) : decap_l_34_update_vlan0(ETHERTYPE_IPV4);
 			(true,  true,  false, false) : decap_l_34_update_vlan0(ETHERTYPE_IPV6);
 			(true,  false, false, true ) : decap_l_34_update_eth  (ETHERTYPE_IPV4);
@@ -1529,217 +1726,185 @@ control TunnelDecapScopeDecrement (
 }
 
 //-----------------------------------------------------------------------------
+// IP Tunnel Encapsulation - Step 1
 //
+// Tunnel Nexthop
 //-----------------------------------------------------------------------------
 
-control TunnelRewrite(
-	inout switch_header_transport_t hdr_0,
-	inout switch_egress_metadata_t eg_md,
-	in    switch_tunnel_metadata_t tunnel
+control TunnelNexthop(inout switch_header_outer_t hdr,
+				inout switch_egress_metadata_t eg_md,
+				inout switch_tunnel_metadata_t tunnel
 ) (
-	switch_uint32_t ipv4_dst_addr_rewrite_table_size=1024,
-	switch_uint32_t ipv6_dst_addr_rewrite_table_size=1024,
-	switch_uint32_t nexthop_rewrite_table_size=512,
-	switch_uint32_t src_addr_rewrite_table_size=1024,
-	switch_uint32_t smac_rewrite_table_size=1024
+				switch_uint32_t nexthop_table_size
 ) {
 
-	EgressBd(BD_TABLE_SIZE) egress_bd;
-	switch_smac_index_t smac_index;
+	// ---------------------------------------------
+	// Table: Nexthop Rewrite
+	// ---------------------------------------------
 
-	// -------------------------------------
-	// Table: Nexthop Rewrite (DMAC & BD)
-	// -------------------------------------
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
 
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_nexthop;  // direct counter
+	action rewrite_l2_with_tunnel(    // ---- + -- + tun type + -------
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
 
-	// Outer nexthop rewrite
-	action rewrite_tunnel(switch_bd_t bd, mac_addr_t dmac) {
-		stats_nexthop.count();
+		switch_tunnel_type_t type
+	) {
+		stats.count();
 
-		eg_md.bd = bd;
-		hdr_0.ethernet.dst_addr = dmac;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+
+#ifdef TUNNEL_ENABLE
+		tunnel.type = type;
+#endif
 	}
 
-	action no_action_nexthop() {
-		stats_nexthop.count();
+	// ---------------------------------------------
 
+	action rewrite_l3(                // dmac + bd + -------- + -------
+//		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
+		switch_bd_t bd
+	) {
+		stats.count();
+
+//		hdr.ethernet.dst_addr = dmac;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = bd; // derek: add in later
 	}
+
+	// ---------------------------------------------
+
+	action rewrite_l3_with_tunnel_id( // dmac + bd + tun type + tun id
+//		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
+
+		switch_tunnel_type_t type,
+		switch_tunnel_id_t id
+	) {
+		stats.count();
+
+#ifdef TUNNEL_ENABLE
+//		hdr.ethernet.dst_addr = dmac;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = SWITCH_BD_DEFAULT_VRF; // derek: add in later
+
+		tunnel.type = type;
+		tunnel.id = id;
+#endif
+	}
+
+	// ---------------------------------------------
+
+	action rewrite_l3_with_tunnel_bd( // dmac + bd + tun type + -------
+//		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
+		switch_bd_t bd,
+
+		switch_tunnel_type_t type
+	) {
+		stats.count();
+
+#ifdef TUNNEL_ENABLE
+//		hdr.ethernet.dst_addr = dmac;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = bd; // derek: add in later
+
+		tunnel.type = type;
+#endif
+	}
+
+	// ---------------------------------------------
+
+	action rewrite_l3_with_tunnel( // dmac + bd(vrf) + tun type + -------
+//		mac_addr_t dmac,
+//		bool strip_tag_e,
+//		bool strip_tag_vn,
+//		bool strip_tag_vlan,
+
+		switch_tunnel_type_t type
+	) {
+		stats.count();
+
+#ifdef TUNNEL_ENABLE
+//		hdr.ethernet.dst_addr = dmac;
+//		eg_md.strip_tag_e    = strip_tag_e; // derek: add in later
+//		eg_md.strip_tag_vn   = strip_tag_vn; // derek: add in later
+//		eg_md.strip_tag_vlan = strip_tag_vlan; // derek: add in later
+//		eg_md.bd = (switch_bd_t) eg_md.vrf;
+
+		tunnel.type = type;
+#endif
+	}
+
+	// ---------------------------------------------
+
+	action no_action(
+	) {
+		stats.count();
+	}
+
+	// ---------------------------------------------
 
 	table nexthop_rewrite {
-		key = {
-			eg_md.outer_nexthop : exact;
-		}
-
+		key = { eg_md.nexthop : exact; }
 		actions = {
-			no_action_nexthop;
-			rewrite_tunnel;
+#if defined(TUNNEL_ENABLE) || defined(MULTICAST_ENABLE)
+//			NoAction;
+			no_action;
+#endif
+#ifdef TUNNEL_ENABLE
+			rewrite_l2_with_tunnel;
+			rewrite_l3;
+			rewrite_l3_with_tunnel;
+			rewrite_l3_with_tunnel_bd;
+			rewrite_l3_with_tunnel_id;
+#else
+			rewrite_l3;
+#endif
 		}
 
-		const default_action = no_action_nexthop;
-		size = nexthop_rewrite_table_size;
-		counters = stats_nexthop;
-	}
-
-	// -------------------------------------
-	// Table: SIP Rewrite
-	// -------------------------------------
-
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_src_addr;  // direct counter
-
-	// Tunnel source IP rewrite
-	action rewrite_ipv4_src(ipv4_addr_t src_addr) {
-		stats_src_addr.count();
-
-#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
-		hdr_0.ipv4.src_addr = src_addr;
+#if defined(TUNNEL_ENABLE) || defined(MULTICAST_ENABLE)
+//		const default_action = NoAction;
+		const default_action = no_action;
+#else
+		const default_action = rewrite_l3(0, 0);
 #endif
+		size = nexthop_table_size;
+		counters = stats;
 	}
 
-	action rewrite_ipv6_src(ipv6_addr_t src_addr) {
-		stats_src_addr.count();
-
-#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
-		hdr_0.ipv6.src_addr = src_addr;
-#endif
-	}
-
-	table src_addr_rewrite {
-		key = { eg_md.bd : exact; }
-		actions = {
-			rewrite_ipv4_src;
-			rewrite_ipv6_src;
-		}
-
-		size = src_addr_rewrite_table_size;
-		counters = stats_src_addr;
-	}
-
-	// -------------------------------------
-	// Table: DIP Rewrite
-	// -------------------------------------
-
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ipv4_dst_addr;  // direct counter
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ipv6_dst_addr;  // direct counter
-
-	// Tunnel destination IP rewrite
-#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V4
-	action rewrite_ipv4_dst(ipv4_addr_t dst_addr) {
-		stats_ipv4_dst_addr.count();
-
-		hdr_0.ipv4.dst_addr = dst_addr;
-	}
-#endif
-
-#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
-	action rewrite_ipv6_dst(ipv6_addr_t dst_addr) {
-		stats_ipv6_dst_addr.count();
-
-		hdr_0.ipv6.dst_addr = dst_addr;
-	}
-#endif
-
-#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
-	table ipv4_dst_addr_rewrite {
-		key = { tunnel.index : exact; }
-		actions = { rewrite_ipv4_dst; }
-//		const default_action = rewrite_ipv4_dst(0); // extreme modified!
-		size = ipv4_dst_addr_rewrite_table_size;
-		counters = stats_ipv4_dst_addr;
-	}
-#endif
-
-#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
-	table ipv6_dst_addr_rewrite {
-		key = { tunnel.index : exact; }
-		actions = { rewrite_ipv6_dst; }
-//		const default_action = rewrite_ipv6_dst(0); // extreme modified!
-		size = ipv6_dst_addr_rewrite_table_size;
-		counters = stats_ipv6_dst_addr;
-	}
-#endif
-
-	// -------------------------------------
-	// Table: SMAC Rewrite
-	// -------------------------------------
-
-	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_smac_rewrite;  // direct counter
-
-	// Tunnel source MAC rewrite
-	action rewrite_smac(mac_addr_t smac) {
-		stats_smac_rewrite.count();
-
-		hdr_0.ethernet.src_addr = smac;
-	}
-
-	action no_action_smac() {
-		stats_smac_rewrite.count();
-
-	}
-
-	table smac_rewrite {
-		key = { smac_index : exact; }
-		actions = {
-			no_action_smac;
-			rewrite_smac;
-		}
-
-		const default_action = no_action_smac;
-		size = smac_rewrite_table_size;
-		counters = stats_smac_rewrite;
-	}
-
-	// -------------------------------------
+	// ---------------------------------------------
 	// Apply
-	// -------------------------------------
+	// ---------------------------------------------
 
 	apply {
-#ifdef TUNNEL_ENABLE
-		if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
+		if (!EGRESS_BYPASS(REWRITE)) {
 			nexthop_rewrite.apply();
-
-		if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
-			egress_bd.apply(hdr_0, eg_md.bd, eg_md.pkt_src,
-				smac_index);
-
-#if defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
-		if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
-			src_addr_rewrite.apply();
-
-		if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
-  #if defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
-			if (hdr_0.ipv4.isValid()) {
-				ipv4_dst_addr_rewrite.apply();
-			 }
-  #endif
-  #if (defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4)) && (defined(GRE_TRANSPORT_EGRESS_ENABLE_V6))
-			else
-  #endif
-  #if defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
-			if (hdr_0.ipv6.isValid()) {
-				ipv6_dst_addr_rewrite.apply();
-			}
-  #endif
 		}
-#endif /* ERSPAN_TRANSPORT_EGRESS_ENABLE */
-
-		smac_rewrite.apply();
-#endif /* TUNNEL_ENABLE */
 	}
 }
 
 //-----------------------------------------------------------------------------
-// Tunnel encapsulation
-//
-// @param hdr : Parsed headers.
-// @param eg_md : Egress metadata fields.
-// @param mode :  Specify the model for tunnel encapsulation. In the UNIFORM model, ttl and dscp
-// fields are preserved by copying into the outer header on encapsulation. This results in 'normal'
-// behaviour for ECN field (See RFC 6040 secion 4.1). In the PIPE model, outer header ttl and dscp
-// fields are independent of that in the inner header and are set to user-defined values on
-// encapsulation.
-// @param vni_mapping_table_size : Number of VNIs.
-//
+// IP/MPLS Tunnel encapsulation - Step 2
+//         -- Copy Outer Headers to inner
+//         -- Tunnel Header (VXLAN, GRE etc)Rewrite
+//         -- MPLS Label Push
 //-----------------------------------------------------------------------------
 
 control TunnelEncap(
@@ -1843,6 +2008,8 @@ control TunnelEncap(
 		}
 
 		const entries = {
+			// hdr_1       hdr_2         hdr_3
+			// ----------- ------------- ------------
 /*
 			(true,  false, _,     _,     _,     _    ) : rewrite_inner_ipv4_hdr1(); // outer v4       (note: hdr_2 and hdr_3 are don't care)
 			(false, false, true,  false, _,     _    ) : rewrite_inner_ipv4_hdr2(); // inner v4       (note:           hdr_3 are don't care)
@@ -2157,8 +2324,12 @@ control TunnelEncap(
 	action decap_l2_outer() {
 		// ----- l2 -----
 		hdr_1.ethernet.setInvalid();
+#ifdef ETAG_ENABLE
 		hdr_1.e_tag.setInvalid();
+#endif
+#ifdef VNTAG_ENABLE
 		hdr_1.vn_tag.setInvalid();
+#endif
 		hdr_1.vlan_tag[0].setInvalid();
 		hdr_1.vlan_tag[1].setInvalid();
 #if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
@@ -2191,7 +2362,7 @@ control TunnelEncap(
 	// Remove the first valid l2.  This could be in any layer(s) prior to the first
 	// valid l3, because we could have decapped l3 tunnel(s) and had to leave the
 	// l2 from a previous layer.
-/*
+
 	table decap_l2 {
 		key = {
 			hdr_1.ethernet.isValid() : exact;
@@ -2199,6 +2370,7 @@ control TunnelEncap(
 		}
 
 		actions = {
+			NoAction;
 			decap_l2_outer;
 			decap_l2_inner;
 			decap_l2_inner_inner;
@@ -2210,8 +2382,8 @@ control TunnelEncap(
 			(false, true ) : decap_l2_inner;
 			(false, false) : decap_l2_inner_inner;
 		}
+		const default_action = NoAction;
 	}
-*/
 
 	//=============================================================================
 	// Apply
@@ -2267,6 +2439,214 @@ control TunnelEncap(
 				}
 			}
 		}
+#endif /* TUNNEL_ENABLE */
+	}
+}
+
+//-----------------------------------------------------------------------------
+// IP Tunnel Encapsulation - Step 3
+//         -- Outer SIP Rewrite
+//         -- Outer DIP Rewrite
+//         -- TTL QoS Rewrite
+//         -- MPLS Rewrite 
+//-----------------------------------------------------------------------------
+
+control TunnelRewrite(
+	inout switch_header_transport_t hdr_0,
+	inout switch_egress_metadata_t eg_md,
+	in    switch_tunnel_metadata_t tunnel
+) (
+	switch_uint32_t ipv4_dst_addr_rewrite_table_size=1024,
+	switch_uint32_t ipv6_dst_addr_rewrite_table_size=1024,
+	switch_uint32_t nexthop_rewrite_table_size=512,
+	switch_uint32_t src_addr_rewrite_table_size=1024,
+	switch_uint32_t smac_rewrite_table_size=1024
+) {
+
+	EgressBd(BD_TABLE_SIZE) egress_bd;
+	switch_smac_index_t smac_index;
+
+	// -------------------------------------
+	// Table: Nexthop Rewrite (DMAC & BD)
+	// -------------------------------------
+
+	// DEREK: As best as I can tell, most of this table has moved to nexthop.p4 in the latest switch.p4 code....
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_nexthop;  // direct counter
+
+	// Outer nexthop rewrite
+	action rewrite_tunnel(switch_bd_t bd, mac_addr_t dmac) {
+		stats_nexthop.count();
+
+		eg_md.bd = bd;
+		hdr_0.ethernet.dst_addr = dmac;
+	}
+
+	action no_action_nexthop() {
+		stats_nexthop.count();
+
+	}
+
+	table nexthop_rewrite {
+		key = {
+			eg_md.outer_nexthop : exact;
+		}
+
+		actions = {
+			no_action_nexthop;
+			rewrite_tunnel;
+		}
+
+		const default_action = no_action_nexthop;
+		size = nexthop_rewrite_table_size;
+		counters = stats_nexthop;
+	}
+
+	// -------------------------------------
+	// Table: SIP Rewrite
+	// -------------------------------------
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_src_addr;  // direct counter
+
+	// Tunnel source IP rewrite
+	action rewrite_ipv4_src(ipv4_addr_t src_addr) {
+		stats_src_addr.count();
+
+#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+		hdr_0.ipv4.src_addr = src_addr;
+#endif
+	}
+
+	action rewrite_ipv6_src(ipv6_addr_t src_addr) {
+		stats_src_addr.count();
+
+#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
+		hdr_0.ipv6.src_addr = src_addr;
+#endif
+	}
+
+	table src_addr_rewrite {
+		key = { eg_md.bd : exact; }
+		actions = {
+			rewrite_ipv4_src;
+			rewrite_ipv6_src;
+		}
+
+		size = src_addr_rewrite_table_size;
+		counters = stats_src_addr;
+	}
+
+	// -------------------------------------
+	// Table: DIP Rewrite
+	// -------------------------------------
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ipv4_dst_addr;  // direct counter
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ipv6_dst_addr;  // direct counter
+
+	// Tunnel destination IP rewrite
+#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V4
+	action rewrite_ipv4_dst(ipv4_addr_t dst_addr) {
+		stats_ipv4_dst_addr.count();
+
+		hdr_0.ipv4.dst_addr = dst_addr;
+	}
+#endif
+
+#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
+	action rewrite_ipv6_dst(ipv6_addr_t dst_addr) {
+		stats_ipv6_dst_addr.count();
+
+		hdr_0.ipv6.dst_addr = dst_addr;
+	}
+#endif
+
+#if defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+	table ipv4_dst_addr_rewrite {
+		key = { tunnel.index : exact; }
+		actions = { rewrite_ipv4_dst; }
+//		const default_action = rewrite_ipv4_dst(0); // extreme modified!
+		size = ipv4_dst_addr_rewrite_table_size;
+		counters = stats_ipv4_dst_addr;
+	}
+#endif
+
+#ifdef GRE_TRANSPORT_EGRESS_ENABLE_V6
+	table ipv6_dst_addr_rewrite {
+		key = { tunnel.index : exact; }
+		actions = { rewrite_ipv6_dst; }
+//		const default_action = rewrite_ipv6_dst(0); // extreme modified!
+		size = ipv6_dst_addr_rewrite_table_size;
+		counters = stats_ipv6_dst_addr;
+	}
+#endif
+
+	// -------------------------------------
+	// Table: SMAC Rewrite
+	// -------------------------------------
+
+	// DEREK: As best as I can tell, this table has been absorbed into the EgressBd table in l2.p4 in the lastest swtich.p4 code....
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_smac_rewrite;  // direct counter
+
+	// Tunnel source MAC rewrite
+	action rewrite_smac(mac_addr_t smac) {
+		stats_smac_rewrite.count();
+
+		hdr_0.ethernet.src_addr = smac;
+	}
+
+	action no_action_smac() {
+		stats_smac_rewrite.count();
+
+	}
+
+	table smac_rewrite {
+		key = { smac_index : exact; }
+		actions = {
+			no_action_smac;
+			rewrite_smac;
+		}
+
+		const default_action = no_action_smac;
+		size = smac_rewrite_table_size;
+		counters = stats_smac_rewrite;
+	}
+
+	// -------------------------------------
+	// Apply
+	// -------------------------------------
+
+	apply {
+#ifdef TUNNEL_ENABLE
+		if (tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
+			// DEREK: As best as I can tell, this table is now instantiated in the top level in the latest switch.p4 code....
+			nexthop_rewrite.apply();
+
+			// DEREK: As best as I can tell, this table is now instantiated in the top level in the latest switch.p4 code....
+			egress_bd.apply(hdr_0, eg_md.bd, eg_md.pkt_src, smac_index);
+
+#if defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
+			src_addr_rewrite.apply();
+
+			// DEREK: As best as I can tell, these two tables have been combined into a single table in the lastest swtich.p4 code....
+  #if defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+			if (hdr_0.ipv4.isValid()) {
+				ipv4_dst_addr_rewrite.apply();
+			}
+  #endif
+  #if (defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4)) && (defined(GRE_TRANSPORT_EGRESS_ENABLE_V6))
+			else
+  #endif
+  #if defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
+			if (hdr_0.ipv6.isValid()) {
+				ipv6_dst_addr_rewrite.apply();
+			}
+  #endif
+		}
+#endif /* ERSPAN_TRANSPORT_EGRESS_ENABLE */
+
+		// DEREK: As best as I can tell, this table has been absorbed into the EgressBd table in l2.p4 in the lastest swtich.p4 code....
+		smac_rewrite.apply();
 #endif /* TUNNEL_ENABLE */
 	}
 }

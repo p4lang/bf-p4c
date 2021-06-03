@@ -247,6 +247,9 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.outer.udp);
         pkt.emit(hdr.outer.tcp);
         pkt.emit(hdr.outer.sctp);
+#ifdef GENEVE_ENABLE
+        pkt.emit(hdr.outer.geneve);
+#endif // GENEVE_ENABLE
 #ifdef VXLAN_ENABLE
         pkt.emit(hdr.outer.vxlan);
 #endif // VXLAN_ENABLE

@@ -33,7 +33,8 @@ import re
 if 'vagrant' in os.environ['HOME']:
 	sys.path.append('/home/vagrant/barefoot/bf-sde-8.9.0/pkgsrc/ptf-modules/ptf/src/ptf')
 else: # docker
-	sys.path.append('/bf-sde/pkgsrc/ptf-modules/ptf/src/ptf')
+	#sys.path.append('/bf-sde/pkgsrc/ptf-modules/ptf/src/ptf')
+	sys.path.append('/bf-sde/install/lib/python2.7/site-packages/ptf')
 
 import packet as scapy
 

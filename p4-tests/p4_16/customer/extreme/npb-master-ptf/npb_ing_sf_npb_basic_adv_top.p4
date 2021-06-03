@@ -3,6 +3,7 @@
 #ifdef SF_0_DEDUP_ENABLE
   #include "npb_ing_sf_npb_basic_adv_dedup.p4"
 #endif
+#include "table_sizes.p4"
 
 control npb_ing_sf_npb_basic_adv_top (
 	inout switch_header_transport_t                 hdr_0,
@@ -18,9 +19,10 @@ control npb_ing_sf_npb_basic_adv_top (
 ) {
 
 	IngressAcl(
-		INGRESS_IPV4_ACL_TABLE_SIZE,
 #if defined(SF_0_ACL_SHARED_IP_ENABLE)
+		INGRESS_IPV4_ACL_TABLE_SIZE,
 #else
+		INGRESS_IPV4_ACL_TABLE_SIZE,
 		INGRESS_IPV6_ACL_TABLE_SIZE,
 #endif
 		INGRESS_MAC_ACL_TABLE_SIZE,
@@ -311,8 +313,6 @@ control npb_ing_sf_npb_basic_adv_top (
 				l4_dst_port,
 				l4_dst_port_is_rng_bitmask,
 				hdr_0,
-				hdr_1,
-				hdr_2,
 				hdr_udf,
 				int_ctrl_flags
 			);

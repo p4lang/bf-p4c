@@ -92,6 +92,7 @@ class test(BfRuntimeTest):
 		si                      = 5 # Arbitrary value (ttl)
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
+		ta                      = 8 # Arbitrary value
 
 		sf_bitmask_0            = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 		sf_bitmask_1            = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
@@ -120,7 +121,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, 0,           spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_0], 0, dsap
+			[ig_port_1], ig_lag_ptr+1, 0,  ta,         spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_0], 0, dsap
 			#egress
 		)
 
@@ -161,10 +162,10 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+0, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+0, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_0, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi+0, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi+0, si_exp=si, ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn
 		)
 
 		'''
@@ -216,10 +217,10 @@ class test(BfRuntimeTest):
 		exp_pkt_saved = exp_pkt
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			spi=spi+0, si=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), sap=sap, vpn=vpn, ttl=62, scope=0,
+			spi=spi+0, si=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), sap=sap, vpn=vpn, ttl=62, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_2, start_of_chain=False, end_of_chain=True, scope_term_list=[],
-			spi_exp=spi+0, si_exp=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi+0, si_exp=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn
 		)
 
 		src_pkt = exp_pkt_saved.exp_pkt
@@ -257,10 +258,10 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+1, si=si, sap=sap, vpn=vpn, ttl=63, scope=0,
+			dmac_nsh=dmac_0, smac_nsh=smac, spi=spi+1, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_0, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi+1, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi+1, si_exp=si, ta_exp=ta, nshtype_exp=2, sap_exp=sap, vpn_exp=vpn
 		)
 
 		'''
@@ -313,9 +314,9 @@ class test(BfRuntimeTest):
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
 			dmac=dmac, smac=smac,
-			spi=spi+1, si=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), sap=sap, vpn=vpn, ttl=62, scope=0,
+			spi=spi+1, si=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), sap=sap, vpn=vpn, ttl=62, scope=1,
 			sf_bitmask=sf_bitmask_2, start_of_chain=False, end_of_chain=True, scope_term_list=[],
-			spi_exp=spi+1, si_exp=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi+1, si_exp=si-(popcount(sf_bitmask_0))-(popcount(sf_bitmask_1)), ta_exp=ta, nshtype_exp=2,sap_exp=sap, vpn_exp=vpn
 		)
 
 		src_pkt = exp_pkt_saved.exp_pkt
@@ -358,7 +359,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_0]
+			[ig_port_1], ig_lag_ptr+1, ta, spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_0]
 			#egress
 		)
 

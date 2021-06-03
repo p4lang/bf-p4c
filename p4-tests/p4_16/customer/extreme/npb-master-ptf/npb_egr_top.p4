@@ -75,7 +75,7 @@ control npb_egr_top (
 		// Set Initial Scope
 		// -------------------------------------
 
-		if(eg_md.nsh_md.scope == 0) {
+		if(eg_md.nsh_md.scope == 1) {
 #ifdef EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
 			// do nothing
 #else

@@ -9,7 +9,7 @@ parser NpbEgressParser(
 
     bit<8> scope;
     bool   l2_fwd_en;
-    bool   rmac_hit;
+    bool   transport_valid;
 
 	bit<8>  protocol_outer;
 	bit<8>  protocol_inner;
@@ -95,7 +95,7 @@ parser NpbEgressParser(
         eg_md.cpu_reason           = hdr.bridged_md.base.cpu_reason;
         eg_md.ingress_timestamp    = hdr.bridged_md.base.timestamp;
 		eg_md.hash                 = hdr.bridged_md.base.hash;
-        eg_md.flags.rmac_hit       = hdr.bridged_md.base.rmac_hit;
+        eg_md.flags.transport_valid= hdr.bridged_md.base.transport_valid;
 		eg_md.flags.bypass_egress  = hdr.bridged_md.base.bypass_egress;
 #ifdef TUNNEL_ENABLE
         eg_md.outer_nexthop        = hdr.bridged_md.tunnel.outer_nexthop;
@@ -138,7 +138,7 @@ parser NpbEgressParser(
 
         transition select(
             (bit<1>)hdr.bridged_md.nsh.nsh_md_l2_fwd_en,
-            (bit<1>)hdr.bridged_md.base.rmac_hit) {
+            (bit<1>)hdr.bridged_md.base.transport_valid) {
 
             (1, 0):  parse_outer_ethernet_scope0; // SFC Optical-Tap / Bridging Path
 //          default: parse_transport_ethernet;    // SFC Network-Tap / SFC Bypass Path
@@ -490,12 +490,12 @@ parser NpbEgressParser(
 		eg_md.nsh_md.sap           = hdr.transport.nsh_type1_internal.sap;
 
         transition select(scope) {
-            (0): parse_outer_ethernet_scope0;
+            (1): parse_outer_ethernet_scope0;
 
 #ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
-            (1): parse_outer_ethernet_scope1;
+            (2): parse_outer_ethernet_scope1;
 #else
-            (1): parse_outer_ethernet_scope0;
+            (2): parse_outer_ethernet_scope0;
 #endif // EGRESS_PARSER_POPULATES_LKP_SCOPED
             
             default: reject;  // todo: support ipv4? ipv6?
@@ -910,6 +910,10 @@ parser NpbEgressParser(
 
         transition select(hdr.outer.udp.src_port, hdr.outer.udp.dst_port) {
 
+#ifdef GENEVE_ENABLE
+            (_, UDP_PORT_GENV): parse_outer_geneve_scope0;
+#endif // GENEVE_ENABLE
+        
 #ifdef VXLAN_ENABLE
             (_, UDP_PORT_VXLAN): parse_outer_vxlan_scope0;
 #endif // VXLAN_ENABLE
@@ -929,7 +933,11 @@ parser NpbEgressParser(
     state parse_outer_udp_scope1 {
         pkt.extract(hdr.outer.udp);
         transition select(hdr.outer.udp.src_port, hdr.outer.udp.dst_port) {
-            
+
+#ifdef GENEVE_ENABLE
+            (_, UDP_PORT_GENV): parse_outer_geneve_scope1;
+#endif // GENEVE_ENABLE
+        
 #ifdef VXLAN_ENABLE
             (_, UDP_PORT_VXLAN): parse_outer_vxlan_scope1;
 #endif // VXLAN_ENABLE
@@ -1144,11 +1152,88 @@ parser NpbEgressParser(
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
 
-#ifdef VXLAN_ENABLE
+    //-------------------------------------------------------------------------
+    // Generic Network Virtualization Encapsulation (GENEVE) - Outer
+    //-------------------------------------------------------------------------
+
+#ifdef GENEVE_ENABLE
+    
+    state parse_outer_geneve_scope0 {
+        geneve_h snoop_geneve = pkt.lookahead<geneve_h>();
+
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)   
+
+        transition select(
+            snoop_geneve.ver,
+            snoop_geneve.opt_len,
+            snoop_geneve.O,
+            snoop_geneve.C,
+            snoop_geneve.proto_type) {
+
+          //     O C 
+            (0,0,0,0,ETHERTYPE_ENET): parse_outer_geneve_qualified_scope0;
+            (0,0,0,0,ETHERTYPE_IPV4): parse_outer_geneve_qualified_scope0;
+            (0,0,0,0,ETHERTYPE_IPV6): parse_outer_geneve_qualified_scope0;
+            default: accept;
+        }
+    }
+
+    state parse_outer_geneve_scope1 {
+        geneve_h snoop_geneve = pkt.lookahead<geneve_h>();
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+
+        transition select(
+            snoop_geneve.ver,
+            snoop_geneve.opt_len,
+            snoop_geneve.O,
+            snoop_geneve.C,
+            snoop_geneve.proto_type) {
+
+          //     O C 
+            (0,0,0,0,ETHERTYPE_ENET): parse_outer_geneve_qualified_scope1;
+            (0,0,0,0,ETHERTYPE_IPV4): parse_outer_geneve_qualified_scope1;
+            (0,0,0,0,ETHERTYPE_IPV6): parse_outer_geneve_qualified_scope1;
+            default: accept;
+        }
+    }
+
+    state parse_outer_geneve_qualified_scope0 {
+        pkt.extract(hdr.outer.geneve);
+
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
+        eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
+#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+    
+        transition select(hdr.outer.geneve.proto_type) {
+            ETHERTYPE_ENET: parse_inner_ethernet_scope0;
+            ETHERTYPE_IPV4: parse_inner_ipv4_scope0;
+            ETHERTYPE_IPV6: parse_inner_ipv6_scope0;
+            default: accept;
+        }
+    }
+
+    state parse_outer_geneve_qualified_scope1 {
+        pkt.extract(hdr.outer.geneve);
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GENEVE; // note: inner here means "current scope - 1"
+        transition select(hdr.outer.geneve.proto_type) {
+            ETHERTYPE_ENET: parse_inner_ethernet_scope1;
+            ETHERTYPE_IPV4: parse_inner_ipv4_scope1;
+            ETHERTYPE_IPV6: parse_inner_ipv6_scope1;
+            default: accept;
+        }
+    }
+
+#endif // GENEVE_ENABLE
+
     
     //-------------------------------------------------------------------------
     // Virtual Extensible Local Area Network (VXLAN) - Outer
     //-------------------------------------------------------------------------
+
+#ifdef VXLAN_ENABLE
 
     state parse_outer_vxlan_scope0 {
         pkt.extract(hdr.outer.vxlan);
