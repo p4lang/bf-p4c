@@ -1817,12 +1817,6 @@ p4c_add_xfail_reason("tofino"
   p4c_2249
 )
 
-# P4C-3208
-p4c_add_xfail_reason("tofino"
-  "Unexpected type _"
-  ba102_simple_l3_meter
-)
-
 # p4_16/errors Always fail tests
 p4c_add_xfail_reason("tofino"
   "error: Wrong port metadata field packing size, should be exactly 64 bits, is .* bits"
@@ -1929,7 +1923,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-3720 - PTF tests to be fixed and removed from Xfails
 p4c_add_xfail_reason("tofino"
   "ERROR:PTF runner:Error when running PTF tests"
-   ba102_simple_l3_mirror
    ba102_simple_l3_nexthop_hash_action
    ba102_simple_l3_rewrite_920
    ba102_simple_l3_rewrite_930
