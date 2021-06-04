@@ -282,6 +282,11 @@ struct header_t {
     pktgen_ethernet_t pktgen_eth;
     vlan_tag_t[2] vlan_tag;
 }
+
+@pa_container_size("ingress", "ig_md.rx_packet_timestamp.lower", 32)
+@pa_container_size("ingress", "ig_md.rx_packet_timestamp.upper", 32)
+@pa_container_size("ingress", "ig_md.pgid_pipe_port_index", 16)
+
 # 51 "../pktgen9/pktgen9_16.p4" 2
 # 1 "../pktgen9/bank_select.p4" 1
 /*------------------------------------------------------------------------

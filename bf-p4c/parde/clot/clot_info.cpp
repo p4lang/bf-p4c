@@ -373,6 +373,30 @@ bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
     return true;
 }
 
+bool ClotInfo::is_slice_below_min_offset(const PHV::FieldSlice* slice,
+                                         int max_packet_bit_offset) const {
+    if (slice->field()->gress == INGRESS) {
+        if (max_packet_bit_offset < Device::pardeSpec().byteTotalIngressMetadataSize()*8) {
+            // If the size of the slice is greater than difference between HDR_LEN_ADJ and
+            // max_packet_bit_offset, then the slice can be trimed later
+            if (slice->size() < (Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
+                                                             max_packet_bit_offset)) {
+                return true;
+            }
+        }
+    } else {
+        // Hdr_Len_Adj for Egress is 28
+        if (max_packet_bit_offset < 28*8) {
+            // If the size of the slice is greater than difference between HDR_LEN_ADJ and
+            // max_packet_bit_offset, then the slice can be trimed later
+            if (slice->size() < 28*8 - max_packet_bit_offset) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool ClotInfo::can_start_clot(const FieldSliceExtractInfo* extract_info) const {
     auto slice = extract_info->slice();
 
@@ -396,6 +420,11 @@ bool ClotInfo::can_start_clot(const FieldSliceExtractInfo* extract_info) const {
         return false;
     }
 
+    if (is_slice_below_min_offset(slice, extract_info->max_packet_bit_offset())) {
+        LOG6("  Can't start CLOT with " << slice->field()->name << " : max offset"
+             " is less than hdr_len_adj");
+        return false;
+    }
     return true;
 }
 

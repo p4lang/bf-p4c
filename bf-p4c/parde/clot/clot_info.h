@@ -227,6 +227,11 @@ class ClotInfo {
         return is_unused(field) ? slice_clots(field) : nullptr;
     }
 
+    /// Returns false if packet offset of the slice is less than hdr_len_adj and if the slice
+    /// cannot be trimmed to increase its offset.
+    bool is_slice_below_min_offset(const PHV::FieldSlice* slice,
+                                   int max_packet_bit_offset) const;
+
     /// @return nullptr if the field containing the @arg slice is read-only or modified. Otherwise,
     /// if the field containing the @arg slice is unused, returns each CLOT-allocated slice that
     /// overlaps with the given @arg slice, mapped to its corresponding CLOT.

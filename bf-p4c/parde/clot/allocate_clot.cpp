@@ -641,6 +641,21 @@ class GreedyClotAllocator : public Visitor {
         const auto& extracts = candidate->extracts();
         for (auto start_idx : candidate->can_start_indices()) {
             auto start = extracts.at(start_idx)->trim_head_to_byte();
+            if (start->slice()->field()->gress == INGRESS &&
+                start->max_packet_bit_offset() <
+                           Device::pardeSpec().byteTotalIngressMetadataSize()*8) {
+                if (start->slice()->size() >
+                   (Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
+                    start->max_packet_bit_offset())) {
+                    start->trim(0, Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
+                                                      start->max_packet_bit_offset());
+                }
+            } else if (start->slice()->field()->gress == EGRESS &&
+                       start->max_packet_bit_offset() < 28 * 8) {
+                if (start->slice()->size() > 28 * 8 - start->max_packet_bit_offset()) {
+                    start->trim(0, 28*8 - start->max_packet_bit_offset());
+                }
+            }
 
             // Find the rightmost end_idx that fits in the maximum CLOT size.
             //

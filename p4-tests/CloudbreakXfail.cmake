@@ -509,3 +509,9 @@ p4c_add_xfail_reason("tofino3"
   "error: You can only have more than one binary operator in a statement"
   extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
 )
+
+p4c_add_xfail_reason("tofino3"
+  "error: Tofino3 requires byte-aligned headers, but header bridge_h is not byte-aligned"
+  extensions/p4_tests/p4_16/stf/p4c-3761.p4 
+)
+
