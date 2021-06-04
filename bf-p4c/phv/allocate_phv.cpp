@@ -1481,6 +1481,9 @@ CoreAllocation::tryAllocSliceList(
         bool canDarkInitUseARA = checkDarkOverlay(candidate_slices, perContainerAlloc);
         PHV::Allocation::LiveRangeShrinkingMap initActions;
         // Check that the placement can be done through metadata initialization.
+        // Process dark overlays only after processing the parser/metadata overlays to ensure that
+        // the validation sees all other slices that might be allocated to the container.
+        std::vector<PHV::AllocSlice> dark_slices;
         for (auto& slice : candidate_slices) {
             if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField()) continue;
             // Skip slices that have already been allocated.
@@ -1585,50 +1588,80 @@ CoreAllocation::tryAllocSliceList(
                         LOG_DEBUG5(TAB1 "Failed: Live range shrinking requiring metadata "
                                    "initialization is disabled in this round");
                         can_place = false;
-                        break; }
-
-                } else if (!c.is(PHV::Kind::dark) && can_overlay(phv_i.dark_mutex(), slice.field(),
-                            alloced_slices)) {
-                    LOG5("    ...and can overlay " << slice << " on " << alloced_slices <<
-                         " by pushing one of them into a dark container.");
-                    auto darkInitNodes = dark_init_i.findInitializationNodes(
-                        group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA);
-                    if (!darkInitNodes) {
-                        LOG_DEBUG5(TAB1 "Failed: Cannot find initialization points for dark "
-                                   "containers.");
-                        can_place = false;
                         break;
-                    } else {
-                        // Create initialization points for the dark container.
-                        if (!generateNewAllocSlices(slice, alloced_slices, *darkInitNodes,
-                                                    new_candidate_slices, perContainerAlloc,
-                                                    actual_cntr_state)) {
-                            LOG_DEBUG5(TAB1 "Failed: New dark primitives extend previously defined "
-                                       "slice live ranges; thus skipping container " << c);
-                            can_place = false;
-                            break; }
-
-                        can_place = true;
-                        LOG_DEBUG5(TAB1 "Found " << darkInitNodes->size() <<
-                                   " initialization points for dark containers.");
-                        unsigned primNum = 0;
-                        for (auto& prim : *darkInitNodes) {
-                            LOG_DEBUG5(TAB2 << prim);
-                            if (primNum++ == 0) continue;
-                            metaInitSlices.insert(prim.getDestinationSlice());
-                        }
-                        new_overlay_container = true;
-
-                        // XXX(ALEX) We should  populate InitNodes with darkInitNodes to later
-                        // properly populate initActions
-                        // TODO(ALEX)
                     }
+                } else if (!c.is(PHV::Kind::dark) && darkOverlay) {
+                    // Process dark overlays after processing all other overlays.
+                    // Push into a list and process immediately after this loop completes.
+                    LOG5("    ...and can overlay " << slice << " on " << alloced_slices <<
+                         " by pushing one of them into a dark container."
+                         " Will try after placing other candidates...");
+                    dark_slices.push_back(slice);
                 } else {
                     LOG_DEBUG5(TAB1 "Failed: " << c << " already contains slices at this position");
                     can_place = false;
                     break; }
             } else {
                 new_candidate_slices.push_back(slice);
+            }
+        }
+        // Now place dark overlay slices that were deferred
+        if (can_place) {
+            for (auto& slice : dark_slices) {
+                const auto& alloced_slices =
+                    perContainerAlloc.slices(slice.container(), slice.container_slice());
+                LOG5("    Attempting to overlay "
+                     << slice.field() << " on " << alloced_slices
+                     << " by pushing one of them into a dark container.");
+
+                // Get non parser-mutually-exclusive slices allocated in container c
+                PHV::Allocation::MutuallyLiveSlices container_state =
+                    perContainerAlloc.slicesByLiveness(c, candidate_slices);
+                // Actual slices in the container, after accounting for metadata overlay.
+                PHV::Allocation::MutuallyLiveSlices actual_cntr_state;
+                for (auto& field_slice : container_state) {
+                    bool sliceOverlaysAllCandidates = true;
+                    for (auto& candidate_slice : candidate_slices) {
+                        if (!phv_i.metadata_mutex()(
+                                field_slice.field()->id, candidate_slice.field()->id))
+                                sliceOverlaysAllCandidates = false;
+                    }
+                    if (sliceOverlaysAllCandidates) continue;
+                    actual_cntr_state.insert(field_slice);
+                }
+
+                auto darkInitNodes = dark_init_i.findInitializationNodes(
+                    group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA);
+                if (!darkInitNodes) {
+                    LOG_DEBUG5(TAB1 "Failed: Cannot find initialization points for dark "
+                               "containers.");
+                    can_place = false;
+                    break;
+                } else {
+                    // Create initialization points for the dark container.
+                    if (!generateNewAllocSlices(slice, alloced_slices, *darkInitNodes,
+                                                new_candidate_slices, perContainerAlloc,
+                                                actual_cntr_state)) {
+                        LOG_DEBUG5(TAB1 "Failed: New dark primitives extend previously defined "
+                                   "slice live ranges; thus skipping container " << c);
+                        can_place = false;
+                        break; }
+
+                    can_place = true;
+                    LOG_DEBUG5(TAB1 "Found " << darkInitNodes->size() <<
+                               " initialization points for dark containers.");
+                    unsigned primNum = 0;
+                    for (auto& prim : *darkInitNodes) {
+                        LOG_DEBUG5(TAB2 << prim);
+                        if (primNum++ == 0) continue;
+                        metaInitSlices.insert(prim.getDestinationSlice());
+                    }
+                    new_overlay_container = true;
+
+                    // XXX(ALEX) We should  populate InitNodes with darkInitNodes to later
+                    // properly populate initActions
+                    // TODO(ALEX)
+                }
             }
         }
         if (!can_place) continue;  // try next container
@@ -2129,6 +2162,11 @@ bool CoreAllocation::generateNewAllocSlices(
     LOG_DEBUG5(TAB2 "Original candidate slice: " << origSlice);
     bool foundAnyNewSliceForThisOrigSlice = false;
     PHV::Container dstCntr = origSlice.container();
+    std::vector<PHV::AllocSlice> new_container_state(container_state.begin(),
+                                                     container_state.end());
+    for (auto sl : new_candidate_slices)
+        if (sl.container() == dstCntr)
+            new_container_state.push_back(sl);
     // Create mapping from sources of writes to bitranges for each stage
     std::map<int, std::map<PHV::Container, bitvec> > perStageSources2Ranges;
     for (auto& newSlice : initializedAllocSlices) {
@@ -2159,17 +2197,26 @@ bool CoreAllocation::generateNewAllocSlices(
         if (!origSlice.representsSameFieldSlice(newSlice)) continue;
         LOG_DEBUG5(TAB2 "Found new slice: " << newSlice);
 
-        if (container_state.size() > 1) {
-            for (auto mls : container_state) {
+        perStageSources2Ranges[initStg][srcCntr].setrange(cBits.lo,
+                                                          cBits.size());
+
+        if (new_container_state.size() > 1) {
+            for (auto mls : new_container_state) {
                 le_bitrange mlsBits = mls.container_slice();
 
                 // If mls is overlaid with origSlice then skip mls
                 // because this is the slice prior to overlay
                 if (mlsBits.intersectWith(cBits).size() > 0) continue;
 
+                bool disjoint_lr = isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
+                                                       newSlice.getEarliestLiveness(),
+                                                       mls.getEarliestLiveness(),
+                                                       mls.getLatestLiveness());
+                if (disjoint_lr) continue;
+
                 PHV::Container mlsCntr = PHV::Container();
                 bool hasPrim = mls.hasInitPrimitive();
-                LOG_DEBUG5(TAB2 "Checking slice " << mls << " for common init stages (has Dark "
+                LOG_DEBUG5(TAB2 "Checking slice " << mls << " for common init stages (has dark "
                            "primitive :" << hasPrim << ")");
                 if (hasPrim && mls.getInitPrimitive()->getSourceSlice()) {
                     LOG_DEBUG6(TAB3 "with source " << mls.getInitPrimitive()->getSourceSlice());
@@ -2177,28 +2224,21 @@ bool CoreAllocation::generateNewAllocSlices(
                     LOG_DEBUG6(TAB3 "isNop: " << mls.getInitPrimitive()->isNOP() <<
                                " zeroInit: " << mls.getInitPrimitive()->destAssignedToZero());
                 } else {
-                    bool disjoint_lr = isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
-                                                           newSlice.getEarliestLiveness(),
-                                                           mls.getEarliestLiveness(),
-                                                           mls.getLatestLiveness());
-                    LOG_DEBUG6(TAB3 "disjoint liveranges " << disjoint_lr);
                     LOG_DEBUG6(TAB3 "empty: " << mls.getInitPrimitive()->isEmpty());
                 }
 
                 // Account for bits from source container
-                if (hasPrim && mls.getInitPrimitive()->getSourceSlice() &&
+                if (hasPrim &&
                     mls.getEarliestLiveness().second.isWrite() &&
                     newSlice.getEarliestLiveness().second.isWrite() &&
                     (mls.getEarliestLiveness().first == initStg)) {
-                    mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
-                    LOG_DEBUG6(TAB2 "A. mls container: " << mlsCntr);
-                    LOG_DEBUG6(TAB3 "Primitive: " << mls.getInitPrimitive());
+                    if (mls.getInitPrimitive()->getSourceSlice()) {
+                        mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
+                        LOG_DEBUG6(TAB2 "A. mls container: " << mlsCntr);
+                        LOG_DEBUG6(TAB3 "Primitive: " << mls.getInitPrimitive());
+                    }
                 // Else account for previously allocated alive bits in destination container
-                } else if (!hasPrim &&
-                           !isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
-                                                newSlice.getEarliestLiveness(),
-                                                mls.getEarliestLiveness(),
-                                                mls.getLatestLiveness())) {
+                } else {
                     mlsCntr = mls.container();
                     LOG_DEBUG6(TAB2 "B. mls container: " << mlsCntr);
                 }
@@ -2212,7 +2252,7 @@ bool CoreAllocation::generateNewAllocSlices(
                                    " from zero init");
                     } else {
                         LOG_DEBUG6(TAB2 "Adding bits "  << mlsBits << " for stage " << initStg <<
-                                   " from container" << mlsCntr);
+                                   " from container " << mlsCntr);
                     }
                 }
 
@@ -2221,6 +2261,35 @@ bool CoreAllocation::generateNewAllocSlices(
                                << perStageSources2Ranges[initStg].size());
                     return false;
                 }
+            }
+        }
+
+        // Verify the number of sources in initialization actions
+        ordered_set<const IR::MAU::Action*> initActions;
+        initActions.insert(newSlice.getInitPoints().begin(), newSlice.getInitPoints().end());
+        initActions.insert(newSlice.getInitPrimitive()->getInitPoints().begin(),
+                           newSlice.getInitPrimitive()->getInitPoints().end());
+
+        for (auto* act : initActions) {
+            auto action_sources =
+                actions_i.getActionSources(act, dstCntr, new_candidate_slices, alloc_attempt);
+            std::set<PHV::Container> sources;
+            for (auto s2r : perStageSources2Ranges[initStg]) {
+                if (s2r.first == dstCntr) {
+                    bitvec b(s2r.second);
+                    b -= action_sources.dest_bits;
+                    if (b.empty()) continue;
+                }
+                sources.emplace(s2r.first);
+            }
+            for (auto c : action_sources.phv) sources.emplace(c);
+            int srcCnt =
+                sources.size() + (action_sources.has_ad || action_sources.has_const ? 1 : 0);
+
+            if (srcCnt > 2) {
+                LOG_DEBUG5(TAB2 "Failed: Too many sources in action " << act->name << ": "
+                                                                      << srcCnt);
+                return false;
             }
         }
 

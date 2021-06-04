@@ -3526,6 +3526,51 @@ ordered_map<const PHV::Field*, int> ActionPhvConstraints::compute_sources_first_
     return rst;
 }
 
+ActionPhvConstraints::ActionSources ActionPhvConstraints::getActionSources(
+        const IR::MAU::Action* act, const PHV::Container& c,
+        std::vector<PHV::AllocSlice>& new_slices,
+        const PHV::Allocation& alloc) const {
+    ActionSources rv;
+
+    LOG5("Finding action sources for " << act->name << " writing to " << c);
+    for (auto fs : actionWritesSlices(act)) {
+        std::set<PHV::AllocSlice> dstSlices;
+        for (auto& sl : new_slices) {
+            if (sl.field() == fs.field() && sl.field_slice().overlaps(fs.range()) &&
+                    sl.container() == c) {
+                dstSlices.emplace(sl);
+                rv.dest_bits.setrange(sl.container_slice().lo, sl.container_slice().size());
+            }
+        }
+        for (auto sl : alloc.slices(fs.field(), fs.range(), min_stage(act),
+                                    PHV::FieldUse(PHV::FieldUse::WRITE))) {
+            if (sl.container() == c) {
+                dstSlices.emplace(sl);
+                rv.dest_bits.setrange(sl.container_slice().lo, sl.container_slice().size());
+            }
+        }
+
+        if (dstSlices.size() == 0) continue;
+
+        for (auto op : constraint_tracker.sources(fs, act)) {
+            rv.has_ad |= op.ad;
+            rv.has_const |= op.constant;
+            if (op.phv_used) {
+                for (auto sl : alloc.slices(op.phv_used->field(), op.phv_used->range(),
+                                            min_stage(act), PHV::FieldUse(PHV::FieldUse::READ))) {
+                    if (sl.container()) {
+                        rv.phv.emplace(sl.container());
+                    } else {
+                        rv.unalloc++;
+                    }
+                }
+            }
+        }
+    }
+
+    return rv;
+}
+
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src) {
     out << (boost::format("{ exist: %1%, container: %2%, aligned: %3%, offset: %4%, ") %
             src.exist % src.container % src.aligned % src.offset);

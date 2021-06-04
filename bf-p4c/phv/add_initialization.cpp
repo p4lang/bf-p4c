@@ -243,10 +243,11 @@ bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
         LOG4("\t\tSame dest container");
 
         // Check source container
+        // Note: The second condition should also match on has_src, but this causes cycles
+        // in what should be a DAG.
         if ((drkInit.first.getInitPrimitive().getSourceSlice() &&
              src_cntr != drkInit.first.getInitPrimitive().getSourceSlice()->container()) ||
-            (!drkInit.first.getInitPrimitive().getSourceSlice() &&
-             (!has_src)))
+            (!drkInit.first.getInitPrimitive().getSourceSlice() && has_src))
             continue;
         LOG4("\t\tSame source container");
 
@@ -340,6 +341,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     //     Also check if source/dest container is also used by previous or subsequent dark overlays
     //     and update prior/post_tables
     // ---
+    IR::MAU::Table* prev_ara_tbl = ara_tbl;
     same_dst_src_cont = use_same_containers(alloc_sl, ara_tbl);
 
     if (same_dst_src_cont) {
@@ -360,6 +362,10 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
 
             use_existing_ara = true;
             BUG_CHECK(0, "Need to update liveranges");
+        } else if (!alloc_sl.getInitPrimitive()->getSourceSlice()) {
+            // Zero-inits shouldn't always be combined since they may occur at different stages
+            LOG4("\tRestoring previous ARA table");
+            ara_tbl = prev_ara_tbl;
         } else {
             LOG4("\tWARNING: Action Analysis may fail for slice " << alloc_sl);
         }

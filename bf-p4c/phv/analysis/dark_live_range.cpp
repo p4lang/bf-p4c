@@ -1293,9 +1293,9 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     LOG_DEBUG5(TAB4 "Created destination slice " << dstSlice);
     // ALEX: Use initAction for non-ARA primitives
     if (useARA) {
-        return new PHV::DarkInitEntry(dstSlice);
+        return new PHV::DarkInitEntry(dstSlice, PHV::Allocation::ActionSet());
     } else {
-        BUG_CHECK((initActions->size() > 0), "No actions found to zero init darl overlay!");
+        BUG_CHECK((initActions->size() > 0), "No actions found to zero init dark overlay!");
         return new PHV::DarkInitEntry(dstSlice, *initActions);
     }
 }

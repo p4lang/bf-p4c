@@ -968,7 +968,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 /// whole pipeline?
                 // Consider actual field slices instead of entire fields when calculating
                 // container conflicts.
-                field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
+                static PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
+                field->foreach_alloc(range, table, &WRITE, [&](const PHV::AllocSlice &sl) {
                     bitvec cont_range(sl.container_slice().lo, sl.width());
                     cont_writes[sl.container()].insert(
                         {PHV::FieldSlice(sl.field(), sl.field_slice()), cont_range});
@@ -1083,10 +1084,12 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
             }
 
             if (self.phv.alloc_done()) {
+              static PHV::FieldUse READ(PHV::FieldUse::READ);
+              static PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
               if (isWrite()) {
                   /// FIXME(cc): Do we need to restrict the context here, or is it always the
                   /// whole pipeline?
-                  field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
+                  field->foreach_alloc(range, table, &WRITE, [&](const PHV::AllocSlice &sl) {
                       bitvec cont_range(sl.container_slice().lo, sl.width());
                       cont_writes[sl.container()].insert(
                           {PHV::FieldSlice(sl.field(), sl.field_slice()), cont_range});
@@ -1094,11 +1097,11 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                   });
               }
               if (isIxbarRead() || gateway_context) {
-                field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
+                field->foreach_alloc(range, table, &READ, [&](const PHV::AllocSlice &sl) {
                     self.dg.containers_read_xbar_[table][sl.container()] = true;
                 });
               } else if (isRead()) {
-                field->foreach_alloc(range, [&](const PHV::AllocSlice &sl) {
+                field->foreach_alloc(range, table, &READ, [&](const PHV::AllocSlice &sl) {
                     self.dg.containers_read_alu_[table][sl.container()] = true;
                 });
               }

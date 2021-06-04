@@ -759,6 +759,21 @@ class ActionPhvConstraints : public Inspector {
     int min_stage(const IR::MAU::Action* action) const;
 
  public:
+    // Summary of sources for an action
+    struct ActionSources {
+        bool has_ad = false;
+        bool has_const = false;
+
+        // Allocated sources
+        ordered_set<PHV::Container> phv;
+
+        // Number of unallocated sources
+        int unalloc = 0;
+
+        // Destinations
+        bitvec dest_bits;
+    };
+
     explicit ActionPhvConstraints(
             const PhvInfo &p,
             const PhvUse& u,
@@ -1024,6 +1039,23 @@ class ActionPhvConstraints : public Inspector {
      */
     ordered_map<const PHV::Field*, int> compute_sources_first_order(
         const ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>>& fields) const;
+
+    /** Find all sources of an action that write to a given container
+     *
+     * @param act action for which to find the sources
+     * @param c destination container of interest for the action
+     * @param new_slices slices to be added to the allocation
+     * @param alloc current Allocation object containing allocated slices
+     *
+     * @returns an ActionSources struct with the source information
+     *
+     * FIXME: This function can be made non-public once live range shrinking/dark overlay
+     * functionality is merged and all initialization points are correctly exposed.
+     */
+    ActionSources getActionSources(
+            const IR::MAU::Action* act, const PHV::Container& c,
+            std::vector<PHV::AllocSlice>& new_slices,
+            const PHV::Allocation& alloc) const;
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
