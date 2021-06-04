@@ -1,6 +1,6 @@
 #include <config.h>
-#include <boost/optional.hpp>
 #include <cstring>
+#include <boost/optional.hpp>
 
 #include "instruction.h"
 #include "phv.h"
@@ -36,7 +36,7 @@ struct operand {
     };
     // Operand representing a constant stored in the register file
     struct Regfile : public Base {
-        int index;
+        int index = -1;
         Regfile *clone() const override { return new Regfile(*this); }
         Regfile(int line, int index) : Base(line), index(index) {}
         Regfile(int line, const value_t &n) : Base(line) {
@@ -464,8 +464,7 @@ Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
         if (v1 >= (INT64_C(1) << tbl->alu_size()) ||
             v1 < (INT64_C(-1) << (tbl->alu_size() - 1))) {
             error(lineno, "initial value %" PRIi64 " of the register file operand"
-                  " out of range for %d bit stateful ALU",
-                  k1->value, tbl->alu_size());
+                  " out of range for %d bit stateful ALU", v1, tbl->alu_size());
         }
     }
     if (k1 && r1)
@@ -871,12 +870,12 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
 #endif  // HAVE_JBAY
     return this; }
 
-#include "tofino/salu_inst.cpp"
+#include "tofino/salu_inst.cpp"  // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/salu_inst.cpp"
+#include "jbay/salu_inst.cpp"  // NOLINT(build/include)
 #endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/salu_inst.cpp"
+#include "cloudbreak/salu_inst.cpp"  // NOLINT(build/include)
 #endif  // HAVE_CLOUDBREAK
 
 }  // end namespace StatefulAlu

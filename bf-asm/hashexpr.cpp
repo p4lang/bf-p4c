@@ -526,6 +526,7 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
         input.ixbar_bit_position = group_bit_position + (hash_table / 2) * 128;
         input.bit_size = what->size();
         input.u.valid = true;
+        input.symmetric_info.is_symmetric = false;
         inputs.push_back(input);
         found = true;
         break;

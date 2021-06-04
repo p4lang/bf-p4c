@@ -116,6 +116,7 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::comp
         hash_input.u.constant = comp_expr->asUint64();
         hash_input.ixbar_bit_position = 0;
         hash_input.bit_size = comp_expr->type->width_bits();
+        hash_input.symmetric_info.is_symmetric = false;
         total_input_bits += hash_input.bit_size;
         hash_inputs.push_back(hash_input);
     }

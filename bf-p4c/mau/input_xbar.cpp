@@ -3911,6 +3911,7 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
         // This is completely irrelevant for any seed calculation.  All field inputs are invalid
         hash_input.ixbar_bit_position = 0;
         hash_input.bit_size = entry->type->width_bits();
+        hash_input.symmetric_info.is_symmetric = false;
         hash_inputs.push_back(hash_input);
     }
     determine_seed(hash_outputs.data(), hash_outputs.size(),
