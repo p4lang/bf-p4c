@@ -1938,3 +1938,9 @@ p4c_add_xfail_reason("tofino"
   "error: You can only have more than one binary operator in a statement"
   extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
 )
+
+# Fail introduced by p4c update on 2021-06-07
+p4c_add_xfail_reason("tofino"
+  "IR structure not yet handled by the ActionAnalysis pass"
+  testdata/p4_16_samples/psa-conditional_operator.p4
+)
