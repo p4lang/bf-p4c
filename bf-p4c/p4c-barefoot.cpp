@@ -277,9 +277,14 @@ int main(int ac, char **av) {
     }
 
     // Initialize EventLogger
-    if (BackendOptions().enable_event_logger) {
+    if (BackendOptions().debugInfo) {
+        // At least skeleton of events.json should be emitted alongside with other JSON files
+        // so P4I knows what is the setup of the system.
+        // Only enable actual events per user demand
         EventLogger::get().init(BFNContext::get().getOutputDirectory().c_str(), "events.json");
+        if (BackendOptions().enable_event_logger) EventLogger::get().enable();
     }
+
 
 #if BFP4C_CATCH_EXCEPTIONS
     try {
@@ -354,7 +359,7 @@ int main(int ac, char **av) {
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
 
     // Register event logger in manifest
-    if (BackendOptions().enable_event_logger) {
+    if (BackendOptions().debugInfo) {
         manifest.setEventLog("events.json");
     }
 

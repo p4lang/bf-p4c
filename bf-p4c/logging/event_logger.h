@@ -3,6 +3,9 @@
 
 #include <functional>
 #include <string>
+#include <map>
+#include <vector>
+#include <ctime>
 #include "lib/log.h"
 
 namespace IR {
@@ -26,10 +29,27 @@ typedef std::function<void(const char*, unsigned, const char*, const IR::Node*)>
  */
 class EventLogger {
  protected:
+    const time_t BEGIN_TIME = std::time(nullptr);
+
+    bool enabled = false;
+    bool initialized = false;
+
     // Used for deduplicating passChange messages
     std::string lastManager = "";
     std::string lastPass = "";
     unsigned lastSeq = 0;
+
+    // Used to form JSON mapping of names to ids and back
+    // Used from pass change event
+    int managerId = 0;
+    std::map<std::string, int> managerNameToIds;
+    std::vector<std::string> managerNames;
+
+    // Used to form JSON mapping of filenames to ids and back
+    // Used from debug and decision events
+    int fileId = 0;
+    std::map<std::string, int> fileNameToIds;
+    std::vector<std::string> fileNames;
 
     EventLogger();
     EventLogger(EventLogger &&other) = delete;
@@ -40,10 +60,32 @@ class EventLogger {
     void nullInit();
 
     /**
+     *  Returns index of name in managerNames array
+     *
+     *  If name is not in the array yet, it adds it to the end.
+     *  Uses managerNameToIds to do the lookup in constant time.
+     */
+    int getManagerId(const std::string &name);
+
+    /**
+     *  Returns index of name in fileNames array
+     *
+     *  If name is not in the array yet, it adds it to the end.
+     *  Uses fileNameToIds to do the lookup in constant time.
+     */
+    int getFileNameId(const std::string &name);
+
+    /**
      *  Each message requires current timestamp in form of number of seconds
      *  since 1970-01-01 00:00
      */
-    virtual std::string getCurrentTimestamp() const;
+    virtual int getTimeDifference() const;
+
+    /**
+     * Serializes BEGIN_TIME to string
+     * Placed into method because of testing
+     */
+    virtual std::string getStartTimestamp() const;
 
     /**
      *  Gets output stream to which LOGn messages are normally emitted
@@ -63,7 +105,7 @@ class EventLogger {
      *  This function is called from constructor, bootstrapping event log with
      *  schema version so P4I can use correct parser
      */
-    void logStart();
+    void logProperties();
 
     /**
      *  This function is called through debug hooks from each pass manager
@@ -78,7 +120,7 @@ class EventLogger {
     static EventLogger &get();
 
     /**
-     *  This function initializes the logger and emits EventLogStart to logfile
+     *  This function initializes the logger to emit messages to a file
      *
      * \p outdir    Path to directory in which manifest.json is located
      * \p filename  Path to logfile, relative to manifest.json
@@ -86,6 +128,15 @@ class EventLogger {
      * \note Until this function is called, all events go to null sink
      */
     void init(const std::string &outdir, const std::string &filename);
+
+    /**
+     *  Enable logging to events into output file
+     *
+     *  Without this call, only properties and schema version are emitted.
+     *  Logger should be initialized each time other jsons are emitted but
+     *  should be enabled only if such option is set to TRUE.
+     */
+    void enable() { enabled = true; }
 
     /**
      *  Used in testing to manually reset spdlog at will
