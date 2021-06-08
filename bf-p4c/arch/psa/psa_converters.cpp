@@ -606,6 +606,7 @@ const IR::Node* TypeNameExpressionConverter::postorder(IR::Member* member) {
 }
 
 const IR::Node* TypeNameConverter::postorder(IR::Type_Name* node) {
+    LOG3("TypeNameConverter postorder Type_Name: " << node);
     auto path = node->path->to<IR::Path>();
     auto mapped = enumsToTranslate.find(path->name);
     if (mapped != enumsToTranslate.end()) {

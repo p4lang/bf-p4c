@@ -61,6 +61,7 @@ type PacketLengthUint_t   PacketLength_t;
 type EgressInstanceUint_t EgressInstance_t;
 @p4runtime_translation("p4.org/psa/v1/Timestamp_t", 64)
 type TimestampUint_t      Timestamp_t;
+
 typedef error   ParserError_t;
 
 const PortId_t PSA_PORT_RECIRCULATE = (PortId_t) 0x44;
@@ -619,7 +620,25 @@ enum PSA_MeterType_t {
 // END:MeterType_defn
 
 // BEGIN:MeterColor_defn
-enum PSA_MeterColor_t { RED, GREEN, YELLOW }
+#ifdef PSA_ON_TOFINO_CORE_TYPES
+typedef bit<8>  PSA_MeterColorUint_t;
+@p4runtime_translation("p4.org/psa/v1/PSA_MeterColor_t", 8)
+type PSA_MeterColorUint_t PSA_MeterColor_t;
+
+const PSA_MeterColor_t PSA_METERCOLOR_GREEN   = (PSA_MeterColor_t) 8w0;
+const PSA_MeterColor_t PSA_METERCOLOR_YELLOW  = (PSA_MeterColor_t) 8w1;
+const PSA_MeterColor_t PSA_METERCOLOR_RED     = (PSA_MeterColor_t) 8w3;
+#endif
+
+#ifndef PSA_ON_TOFINO_CORE_TYPES
+typedef bit<unspecified>  PSA_MeterColorUint_t;
+@p4runtime_translation("p4.org/psa/v1/PSA_MeterColor_t", 8)
+type PSA_MeterColorUint_t PSA_MeterColor_t;
+
+const PSA_MeterColor_t PSA_METERCOLOR_GREEN   = (PSA_MeterColor_t) 8w0;
+const PSA_MeterColor_t PSA_METERCOLOR_YELLOW  = (PSA_MeterColor_t) 8w1;
+const PSA_MeterColor_t PSA_METERCOLOR_RED     = (PSA_MeterColor_t) 8w3;
+#endif
 // END:MeterColor_defn
 
 // BEGIN:Meter_extern

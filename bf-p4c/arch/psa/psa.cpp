@@ -33,16 +33,35 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
     unsigned enumSize(unsigned /* size */) const override { return 8; }
 };
 
-class MeterColorTo8Bits: public P4::ChooseEnumRepresentation {
-    bool convert(const IR::Type_Enum *type) const override {
-        if (type->name != "PSA_MeterColor_t") {
-            return false;
+// L-value of MeterColor_t is not deduced during an assignment
+// E.g.
+// struct metadata_t {
+//    PSA_MeterColor_t color_value;
+// }
+// gets converted to,
+// struct metadata_t {
+//    MeterColor_t color_value;
+// }
+//
+// Usage is an assignment,
+//
+// user_meta.color_value = meter0.execute(idx);
+//
+// Output of meter is bit<8> which cannot be unified to MeterColor_t
+// To overcome this issue, 'MeterColor_t' assignments occurring in Structs and
+// Headers must be explicitly converted to an 8 bit value
+class MeterColorTypeTo8Bits: public Transform {
+    IR::Node* postorder(IR::Type_Name *t) override {
+        auto parent = getContext()->node;
+        if (!findContext<IR::Type_Struct>() && !findContext<IR::Type_Header>())
+            return t;
+        auto path = t->path->to<IR::Path>();
+        if (path->name != "MeterColor_t") {
+            return t;
         }
-        LOG3("Convert Enum to Bits " << type->name.toString());
-        return true;
+        LOG3("Convert L-Value of MeterColor_t to 8 Bits " << path);
+        return new IR::Type_Bits(8, false);
     }
-
-    unsigned enumSize(unsigned /* size */) const override { return 8; }
 };
 
 class AnalyzeProgram : public Inspector {
@@ -940,6 +959,7 @@ struct ConvertNames : public PassManager {
         addPasses({new BFN::PSA::PathExpressionConverter(structure),
                    new BFN::PSA::TypeNameExpressionConverter(structure),
                    new BFN::PSA::TypeNameConverter(structure),
+                   new BFN::PSA::MeterColorTypeTo8Bits(),
                    new P4::ClearTypeMap(typeMap),
                    new P4::TypeChecking(refMap, typeMap, true),
                    new P4::EliminateSerEnums(refMap, typeMap)});
@@ -1053,7 +1073,6 @@ PortableSwitchTranslation::PortableSwitchTranslation(
                                          "psa_direct_meter", "psa_idle_timeout",
                                          "psa_empty_group_action"}),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
-        new P4::ConvertEnums(refMap, typeMap, new PSA::MeterColorTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
         evaluator,

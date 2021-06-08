@@ -731,17 +731,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2303.p4
 )
 
-# psa.p4 bug, frontend failure
-p4c_add_xfail_reason("tofino"
-  "Action parameter color has a type which is not bit<>, int<>, bool, type or serializable enum"
-  testdata/p4_16_samples/psa-meter1.p4
-)
-
-# p4c_add_xfail_reason("tofino"
-#   "direct attached objects must be enabled in all hit actions"
-#   testdata/p4_16_samples/psa-meter6.p4
-# )
-
 # P4C-1499
 p4c_add_xfail_reason("tofino"
   "Direct Extern .* of type .* is used in action .*"
@@ -1755,11 +1744,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/stf/arith_compare.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error -2 thrown"
-  testdata/p4_16_samples/psa-meter7-bmv2.p4
-)
-
 # Negative test, expected xfail
 p4c_add_xfail_reason("tofino"
   "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
@@ -1943,4 +1927,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "IR structure not yet handled by the ActionAnalysis pass"
   testdata/p4_16_samples/psa-conditional_operator.p4
+)
+
+# P4C-3803 - Update open source psa.p4 to use type instead of enum for
+# PSA_MeterColor_t
+p4c_add_xfail_reason("tofino"
+  "error: Cannot extract field .* from PSA_MeterColor_t which has type Type"
+  testdata/p4_16_samples/psa-meter7-bmv2.p4
+  testdata/p4_16_samples/psa-meter3.p4
 )

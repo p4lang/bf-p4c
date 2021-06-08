@@ -160,7 +160,7 @@ type bit<8> qos_queue_t;
 
 // -- Meters -------------------------------------------------------------------
 
-enum MeterColor_t { GREEN, YELLOW, RED };
+// enum MeterColor_t { GREEN, YELLOW, RED };
 
 // -- Packet IO headers --------------------------------------------------------
 
@@ -343,7 +343,7 @@ parser packet_parser(packet_in packet, out headers_t headers,
     local_metadata.l4_dst_port = 0;
     local_metadata.wcmp_selector_input = 0;
     local_metadata.mirror_session_id_valid = false;
-    local_metadata.color = PSA_MeterColor_t.GREEN;
+    local_metadata.color = PSA_METERCOLOR_GREEN;
     // local_metadata.ingress_port = (port_id_t)(PortIdUint_t)abcd.ingress_port;
 
     transition parse_ethernet;
