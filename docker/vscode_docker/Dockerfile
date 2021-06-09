@@ -1,5 +1,5 @@
 # Dockerfile
-ARG DOCKER_BASE_IMAGE=barefootnetworks/jarvis:tofino
+ARG DOCKER_BASE_IMAGE=amr-registry.caas.intel.com/bxd-sw/jarvis:tofino
 FROM $DOCKER_BASE_IMAGE
 
 ARG USER=user
@@ -22,7 +22,7 @@ ARG PW=docker
 RUN echo "Acquire::http::proxy \"${HTTP_PROXY}\"; Acquire::https::proxy \"${HTTPS_PROXY}\";" > /etc/apt/apt.conf.d/99HttpProxy
 
 # Install useful packages
-RUN apt-get update && apt-get install -y graphviz openssh-server sudo htop mc clang-format clang-tidy clang-format-8 clang-tidy-8
+RUN apt-get update && apt-get install -y graphviz openssh-server sudo htop mc clang-format clang-tidy clang-format-8 clang-tidy-8 bash-completion
 
 RUN python3 -m pip --proxy ${HTTPS_PROXY} install cpplint pylint autopep8
 
