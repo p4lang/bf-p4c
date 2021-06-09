@@ -45,7 +45,7 @@ jobs:
       script:
         - export DOCKER_TAG=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_COMMIT; else echo $TRAVIS_PULL_REQUEST_SHA; fi)
         - echo "DOCKER_TAG=$DOCKER_TAG"
-        - ./docker/docker_wait.py --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG --timeout $PULL_TIMEOUT --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        - ./docker/docker_wait.py --image amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:$DOCKER_TAG --timeout $PULL_TIMEOUT --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
     - stage: test
       # Run all tofino tests excluding smoketests
       script: ./docker/docker_ctest.sh --suite "$TOFINO_TESTS_1" --exclude "$TOFINO_EXCLUDE_1" --exclude_label "$TOFINO_EXCLUDE_LABEL_1"

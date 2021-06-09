@@ -19,7 +19,7 @@ Development VM:
   * [Visual Studio Code](https://code.visualstudio.com/)
   * SSH: SSH in WSL or native SSH in Windows/MacOS
 * Server
-  * Docker with pulled `barefootnetworks/jarvis:tofino` image
+  * Docker with pulled `amr-registry.caas.intel.com/bxd-sw/jarvis:tofino` image
 
 ### Main Idea
 
@@ -71,7 +71,7 @@ Steps to build the image:
 1. Pull the standard Jarvis image:
 
 ```bash
-docker pull barefootnetworks/jarvis:tofino)
+docker pull amr-registry.caas.intel.com/bxd-sw/jarvis:tofino)
 ```
 
 2. Optional: Edit the Dockerfile if you wish to add additional packages to install.
@@ -93,7 +93,7 @@ known\_hosts file every time you rebuild the image.
 
 Check with the docker image command if the `jarvis-ssh` image is available. The default path for your repos is `~/reps` but you can
 change the path if you need (edit the `run-jarvis-ssh` script, or see the exmaples in the `examples` directory).
-The default `run-jarvis-ssh` script mounts the local `~/reps` intowill be mounted to `/mnt/reps` folder inside the docker image. 
+The default `run-jarvis-ssh` script mounts the local `~/reps` intowill be mounted to `/mnt/reps` folder inside the docker image.
 The set username is the part of the `sudo` group inside the image, default password is `docker` (if you don't change it).
 The build script also takes care about the permission and proxy setup.
 
@@ -112,10 +112,10 @@ Update process is as similar as the build image but you need to pull the image b
 
 ## Local Configuration
 
-The ssh connection to docker image is working. We need to setup our local environment now. 
+The ssh connection to docker image is working. We need to setup our local environment now.
 
-1. Install the Visual Studio Code, start it, click on extensions and install the Remote - SSH (more details [here](https://code.visualstudio.com/docs/remote/ssh). 
-Restart the Visual Studio Code, press CTRL+P and select connect to the host, click on Configure SSH hosts. Configure the proxy: 
+1. Install the Visual Studio Code, start it, click on extensions and install the Remote - SSH (more details [here](https://code.visualstudio.com/docs/remote/ssh).
+Restart the Visual Studio Code, press CTRL+P and select connect to the host, click on Configure SSH hosts. Configure the proxy:
 `File` --> `Preferences` --> `Settings`, type `proxy` and insert the proxy settings.
 
 2. We need to setup a port forwarding which forwards the local port 2222 to remote port 2222 where the ssh in jarvis-ssh image will be
@@ -130,7 +130,7 @@ host SSHToDockerImage
 <TAB>ServerAliveInterval 60
 ```
 
-3. You need to have an option for login to your VM with forwarded ports, another configuration (let’s say from the WSL or your favorite SSH client): 
+3. You need to have an option for login to your VM with forwarded ports, another configuration (let’s say from the WSL or your favorite SSH client):
 
 ```
 host HostForRemoteVScode
@@ -141,10 +141,10 @@ host HostForRemoteVScode
 <TAB>Compression y
 ```
 
-After adding both hosts to your local ssh config file, use the console (I am using the WSL) and login to your VM. This creates the 
+After adding both hosts to your local ssh config file, use the console (I am using the WSL) and login to your VM. This creates the
 SSH tunnel from your local machine to the docker image. For example:
 
-_Terminal 1:_ 
+_Terminal 1:_
 
 ```bash
 ssh HostForRemoteVScode
@@ -157,10 +157,10 @@ ssh SSHToDockerImage
 ```
 
 4. The connection from a local machine to docker image should be working now. Back to the Visual Studio Code, press `CTRL+P`, select
-`Connect to remote host` and select the host with `SSHToDockerImage`. You should be connected to SSH inside the Docker - it will take 
+`Connect to remote host` and select the host with `SSHToDockerImage`. You should be connected to SSH inside the Docker - it will take
 some time until the vscode server is downloaded. The next step is to download several plugins to be able
 to program in C++ & use cmake (you can also tune & share your own set of required plugins) - all plugins needs to be installed
-on remote machine:  
+on remote machine:
 
     - https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools
     - https://marketplace.visualstudio.com/items?itemName=twxs.cmake
@@ -179,4 +179,4 @@ the following configuration:
 That’s it, no additional configuration of the build system is needed if you are fine with default options. You will also need to
 reconfigure the image if you are using it for the first time (we have different paths, etc.).
 
-We are done. Compilation, debugging and tests should be working now. 
+We are done. Compilation, debugging and tests should be working now.

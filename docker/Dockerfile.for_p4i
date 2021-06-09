@@ -1,5 +1,5 @@
-# 'amr-registry.caas.intel.com/bxd-sw' for CaaS (AMR)
-ARG DOCKER_PROJECT=barefootnetworks
+# Intel CaaS (AMR)
+ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 
 FROM ${DOCKER_PROJECT}/scratch:latest
 COPY --from=bf-p4c-compilers_for_p4i:latest /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/results results

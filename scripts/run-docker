@@ -13,7 +13,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-docker pull barefootnetworks/jarvis:$tag
+docker pull amr-registry.caas.intel.com/bxd-sw/jarvis:$tag
 docker system prune -f
 docker images -f "dangling=true" -q | xargs -r docker rmi
-exec docker run --privileged -w /mnt -v $(pwd):/mnt -v $HOME:/root -it barefootnetworks/jarvis:$tag /bin/bash
+exec docker run --privileged -w /mnt -v $(pwd):/mnt -v $HOME:/root -it amr-registry.caas.intel.com/bxd-sw/jarvis:$tag /bin/bash

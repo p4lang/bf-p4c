@@ -53,9 +53,9 @@ export DOCKER_TAG=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then \
 echo "DOCKER_TAG=$DOCKER_TAG"
 # Can directly pull, because the image will be available, we already waited
 #/bfn/bf-p4c-compilers/docker/docker_pull.py \
-#    --image barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
+#    --image amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:$DOCKER_TAG \
 #    --timeout $PULL_TIMEOUT
-docker pull barefootnetworks/bf-p4c-compilers:$DOCKER_TAG
+docker pull amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:$DOCKER_TAG
 
 ctest_with_opts="ctest -R $TEST_SUITE -E $TEST_EXCLUDE"
 if [[ $TEST_EXCLUDE_LABEL != "none" ]]; then
@@ -65,10 +65,10 @@ fi
 echo "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c \
        -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE=true -e MAKEFLAGS \
        -e HUGE_PAGE_SETUP=true \
-       barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
+       amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:$DOCKER_TAG \
        $ctest_with_opts"
 docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c \
        -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE=true -e MAKEFLAGS \
        -e TRAVIS \
-       barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
+       amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:$DOCKER_TAG \
        $ctest_with_opts
