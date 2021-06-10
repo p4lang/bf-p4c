@@ -215,7 +215,8 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
 
     LOG3("\tadding resource table: " << name);
 
-    stageResources[stage].memories.push_back(MemoriesResource(name, alloc));
+    stageResources[stage].memories.push_back(
+        MemoriesResource(name.c_str(), table->build_gateway_name().c_str(), alloc));
 
     collectXbarBytesUsage(stage, alloc->match_ixbar);
     collectXbarBytesUsage(stage, alloc->salu_ixbar);
@@ -724,7 +725,9 @@ ResourcesLogging::logExactMemSearchBuses(unsigned int stageNo) const {
                     idToUsages[id] = new ExactMatchSearchBusUsage(id);
                 }
 
-                auto usedBy = res.tableName.substr(res.tableName[0] == '.' ? 1 : 0);
+                const auto tableName = (memuse.type == Memories::Use::GATEWAY)
+                                        ? res.gatewayName : res.tableName;
+                auto usedBy = tableName.substr(tableName[0] == '.' ? 1 : 0);
                 auto eu = new ElementUsage(usedBy, "", usedFor);
                 idToUsages[id]->append(eu);
                 break;
@@ -846,7 +849,7 @@ ResourcesLogging::logTindResultBuses(unsigned int stageNo) const {
                         idToUsages[id] = new TindResultBusUsage(id);
                     }
 
-                    auto usedBy = res.tableName.substr(res.tableName[0] == '.' ? 1 : 0);
+                    auto usedBy = res.gatewayName.substr(res.gatewayName[0] == '.' ? 1 : 0);
                     auto eu = new ElementUsage(usedBy, "", usedFor);
                     idToUsages[id]->append(eu);
                 }

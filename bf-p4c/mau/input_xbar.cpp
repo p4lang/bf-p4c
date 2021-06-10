@@ -2625,7 +2625,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     }
 
     alloc.type = Use::GATEWAY;
-    alloc.used_by = tbl->name;
+    alloc.used_by = tbl->build_gateway_name();
 
     if (collect->bits > 0) {
         // Per use hash table information vs. potential shared across the hash function

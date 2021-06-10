@@ -3720,7 +3720,7 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
         for (auto u_id : u_ids) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
-            alloc.used_by = ta->table->name + "";
+            alloc.used_by = ta->table->build_gateway_name();
             if (alloc_search_bus != ta->match_ixbar->search_data())
                 continue;
 
@@ -3755,7 +3755,7 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
         safe_vector<UniqueId> u_ids = ta->table_link
                                           ? ta->table_link->allocation_units(nullptr, true)
                                           : ta->allocation_units(nullptr, true);
-        std::string used_by = ta->table->name + "";
+        std::string used_by = ta->table->build_gateway_name() + "";
         for (auto u_id : u_ids) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
@@ -3788,7 +3788,7 @@ bool Memories::allocate_all_no_match_gw() {
         for (auto u_id : ta->allocation_units(nullptr, true)) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
-            alloc.used_by = ta->table->externalName();
+            alloc.used_by = ta->table->build_gateway_name();
             bool unit_found = find_unit_gw(alloc, u_id.build_name(), false);
             bool result_bus_found = find_result_bus_gw(alloc, 0ULL, u_id.build_name(), ta,
                                                        u_id.logical_table);

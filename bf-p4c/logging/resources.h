@@ -98,10 +98,12 @@ class ResourcesLogging : public Inspector {
 
     struct MemoriesResource {
         std::string              tableName;
+        std::string              gatewayName;
         const TableResourceAlloc *use;
 
-        MemoriesResource(cstring name, const TableResourceAlloc *use) :
-            tableName(name), use(use) {}
+        MemoriesResource(const std::string &name, const std::string &gwname,
+                         const TableResourceAlloc *use) :
+            tableName(name), gatewayName(gwname), use(use) {}
     };
 
     struct IMemColorResource {
