@@ -1233,6 +1233,7 @@ p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
+  testdata/p4_16_samples/table-entries-optional-bmv2.p4
 
   extensions/p4_tests/p4_16/stf/extract_slice.p4
 )
@@ -1377,12 +1378,6 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: No PhvInfo::header for header|Compiler Bug.*Exiting with SIGSEGV"
   testdata/p4_16_samples/runtime-index-bmv2.p4
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
-)
-
-# optional match type not supported
-p4c_add_xfail_reason("tofino"
-  "error: optional: declaration not found"
-  testdata/p4_16_samples/table-entries-optional-bmv2.p4
 )
 
 # select ranges not supported

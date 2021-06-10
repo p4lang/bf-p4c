@@ -69,6 +69,35 @@
 namespace BFN {
 
 /**
+ * This class implements a pass to convert optional match type to ternary.
+ * Optional is a special case of ternary which allows for 2 cases
+ *
+ * 1) Is Valid = true , mask = all 1's (Exact Match)
+ * 2) Is Valid = false, mask = dont care (Any value) 
+ *
+ * The control plane API does the necessary checks for valid use cases and
+ * programs the ternary accordingly.
+ *
+ * Currently the support exists in PSA & V1Model. But as the pass is common to
+ * all archs, in future if TNA needs this simply add 'optional' to tofino.p4
+ * JIRAs - P4C-3592 / DRV-4743
+ *
+ * BF-RT API Additions:
+ * https://wiki.ith.intel.com/display/BXDHOME/BFRT+Optional+match+support
+ */
+class OptionalToTernaryMatchTypeConverter: public Transform {
+ public:
+    const IR::Node* postorder(IR::PathExpression *path) {
+        auto *key = findContext<IR::KeyElement>();
+        if (!key) return path;
+        LOG3("OptionalToTernaryMatchTypeConverter postorder : " << path);
+        if (path->toString() != "optional") return path;
+        return new IR::PathExpression("ternary");
+    }
+};
+
+
+/**
 This class implements a policy suitable for the ConvertEnums pass.
 The policy is: convert all enums that are not part of the architecture files, and
 are not used as the output type from a RegisterAction.  These latter enums will get
@@ -215,6 +244,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CheckUnsupported(&refMap, &typeMap),
         new BFN::RemoveActionParameters(&refMap, &typeMap, typeChecking),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
+        new BFN::OptionalToTernaryMatchTypeConverter(),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.

@@ -357,6 +357,8 @@ static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchT
             return cstring("Ternary");
         case p4configv1::MatchField_MatchType_RANGE:
             return cstring("Range");
+        case p4configv1::MatchField_MatchType_OPTIONAL:
+            return cstring("Optional");
         default:
             return boost::none;
     }
@@ -2418,7 +2420,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         tableJson->emplace("has_const_default_action", table.const_default_action_id() != 0);
 
         // will be set to true by the for loop if the match key includes a
-        // ternary or range match
+        // ternary, range or optional match
         bool needsPriority = false;
         auto* keyJson = new Util::JsonArray();
         for (const auto& mf : table.match_fields()) {
@@ -2438,7 +2440,8 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                 ::error("Unsupported match type for BF-RT: %1%", int(mf.match_type()));
                 continue;
             }
-            if (*matchType == "Ternary" || *matchType == "Range") needsPriority = true;
+            if (*matchType == "Ternary" || *matchType == "Range" || *matchType == "Optional")
+                needsPriority = true;
             auto* annotations = transformAnnotations(
                 mf.annotations().begin(), mf.annotations().end());
 
