@@ -53,12 +53,14 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
 class MeterColorTypeTo8Bits: public Transform {
     IR::Node* postorder(IR::Type_Name *t) override {
         auto parent = getContext()->node;
-        if (!findContext<IR::Type_Struct>() && !findContext<IR::Type_Header>())
-            return t;
         auto path = t->path->to<IR::Path>();
         if (path->name != "MeterColor_t") {
             return t;
         }
+        if (!findContext<IR::Type_Struct>()
+                && !findContext<IR::Type_Header>()
+                && !findContext<IR::Declaration_Variable>())
+            return t;
         LOG3("Convert L-Value of MeterColor_t to 8 Bits " << path);
         return new IR::Type_Bits(8, false);
     }
