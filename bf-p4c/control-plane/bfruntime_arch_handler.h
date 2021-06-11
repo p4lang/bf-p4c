@@ -238,6 +238,9 @@ class SymbolType final : public P4RuntimeSymbolType {
     static P4RuntimeSymbolType REGISTER() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::REGISTER);
     }
+    static P4RuntimeSymbolType REGISTER_PARAM() {
+        return P4RuntimeSymbolType::make(barefoot::P4Ids::REGISTER_PARAM);
+    }
     static P4RuntimeSymbolType PORT_METADATA() {
         return P4RuntimeSymbolType::make(barefoot::P4Ids::PORT_METADATA);
     }
@@ -436,6 +439,45 @@ struct Register {
         CHECK_NULL(typeSpec);
 
         return Register{*instance.name, typeSpec, 0, instance.annotations};
+    }
+};
+
+/// The information about a register parameter instance which is needed to serialize it.
+struct RegisterParam {
+    const cstring name;           // The fully qualified external name of the register parameter
+    const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the packed data.
+    int64_t initial_value;
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this register
+                                        // declaration.
+
+    /// @return the information required to serialize an @instance of register parameter
+    /// or boost::none in case of error.
+    static boost::optional<RegisterParam>
+    from(const IR::ExternBlock* instance,
+         const ReferenceMap* refMap,
+         const TypeMap* typeMap,
+         p4configv1::P4TypeInfo* p4RtTypeInfo) {
+        CHECK_NULL(instance);
+        auto declaration = instance->node->to<IR::Declaration_Instance>();
+
+        auto initial_value = instance->getParameterValue("initial_value");
+
+        // retrieve type parameter for the register parameter instance
+        // and convert it to P4DataTypeSpec
+        BUG_CHECK(declaration->type->is<IR::Type_Specialized>(),
+                  "%1%: expected Type_Specialized", declaration->type);
+        auto type = declaration->type->to<IR::Type_Specialized>();
+        BUG_CHECK(type->arguments->size() == 1,
+                  "%1%: expected one type argument", instance);
+        // initial value
+        auto typeArg = type->arguments->at(0);
+        auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
+        CHECK_NULL(typeSpec);
+
+        return RegisterParam{declaration->controlPlaneName(),
+                             typeSpec,
+                             initial_value->to<IR::Constant>()->asInt64(),
+                             declaration->to<IR::IAnnotated>()};
     }
 };
 
@@ -1683,6 +1725,8 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             symbols->add(SymbolType::WRED(), symName);
         } else if (externBlock->type->name == "DirectWred") {
             symbols->add(SymbolType::DIRECT_WRED(), symName);
+        } else if (externBlock->type->name == "RegisterParam") {
+            symbols->add(SymbolType::REGISTER_PARAM(), symName);
         }
     }
 
@@ -1964,6 +2008,74 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 }
             });
         });
+
+        class RegisterParamFinder : public Inspector {
+            BFRuntimeArchHandlerTofino &self;
+
+            bool checkExtern(const IR::Declaration_Instance *decl, cstring name) {
+                if (auto *specialized = decl->type->to<IR::Type_Specialized>())
+                    if (auto *name_type = specialized->baseType->to<IR::Type_Name>())
+                        return name_type->path->name == name;
+                return false;
+            }
+
+         public:
+            RegisterParamFinder(BFRuntimeArchHandlerTofino &self) : self(self) {}
+            bool preorder(const IR::MethodCallExpression *mce) override {
+                auto method = P4::MethodInstance::resolve(mce, self.refMap, self.typeMap);
+                CHECK_NULL(method);
+                if (method->object == nullptr)  // extern functions
+                    return true;
+                auto *reg_param = method->object->to<IR::Declaration_Instance>();
+                if (reg_param == nullptr)  // packet_in packet
+                    return true;
+                if (!checkExtern(reg_param, "RegisterParam"))
+                    return true;
+                // Find the declaration of RegisterAction
+                auto *reg_action = findContext<IR::Declaration_Instance>();
+                if (reg_action == nullptr)
+                    return true;
+                if (!checkExtern(reg_action, "DirectRegisterAction")
+                        && !checkExtern(reg_action, "RegisterAction"))
+                    return true;
+                BUG_CHECK(reg_action->arguments->size() > 0, "%1%: Missing argument", reg_action);
+                auto *rap = reg_action->arguments->at(0)->expression->to<IR::PathExpression>();
+                if (rap == nullptr)
+                    return true;
+                // Find the declaration of Register or DirectRegister
+                auto *rap_decl = getDeclInst(self.refMap, rap);
+                if (rap_decl == nullptr)
+                    return true;
+                if (checkExtern(rap_decl, "Register"))
+                    self.registerParam2register[reg_param->controlPlaneName()]
+                        = rap_decl->controlPlaneName();
+                if (checkExtern(rap_decl, "DirectRegister"))
+                    self.registerParam2table[reg_param->controlPlaneName()]
+                        = rap_decl->controlPlaneName();
+                return true;
+            }
+            void postorder(const IR::P4Table *table) override {
+                // Find the M/A table with attached direct register that uses a register parameter
+                auto *registers = table->properties->getProperty("registers");
+                if (registers == nullptr)
+                    return;
+                auto *registers_value = registers->value->to<IR::ExpressionValue>();
+                CHECK_NULL(registers_value);
+                auto *registers_path = registers_value->expression->to<IR::PathExpression>();
+                CHECK_NULL(registers_path);
+                auto *registers_decl = getDeclInst(self.refMap, registers_path);
+                CHECK_NULL(registers_decl);
+                // Replace a direct register with a M/A table it is attached to
+                for (auto r : self.registerParam2table) {
+                    if (r.second == registers_decl->controlPlaneName()) {
+                        self.registerParam2table[r.first] = table->controlPlaneName();
+                        break;
+                    }
+                }
+            }
+        };
+
+        evaluatedProgram->getProgram()->apply(RegisterParamFinder(*this));
     }
 
     void addTableProperties(const P4RuntimeSymbolTableIface& symbols,
@@ -2041,6 +2153,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
 
         addExternInstanceCommon(symbols, p4info, externBlock, pipeName);
 
+        auto p4RtTypeInfo = p4info->mutable_type_info();
         // Direct resources are handled by addTableProperties.
         if (externBlock->type->name == "Lpf") {
             auto lpf = Lpf::from(externBlock);
@@ -2048,6 +2161,9 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         } else if (externBlock->type->name == "Wred") {
             auto wred = Wred::from(externBlock);
             if (wred) addWred(symbols, p4info, *wred, pipeName);
+        } else if (externBlock->type->name == "RegisterParam") {
+            auto register_param_ = RegisterParam::from(externBlock, refMap, typeMap, p4RtTypeInfo);
+            if (register_param_) addRegisterParam(symbols, p4info, *register_param_, pipeName);
         }
     }
 
@@ -2267,6 +2383,32 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         }
     }
 
+    // For RegisterParams, the table name should have the associated pipe prefix but
+    // the data field names should not since they have local scope.
+    void addRegisterParam(const P4RuntimeSymbolTableIface& symbols,
+                          p4configv1::P4Info* p4Info,
+                          const RegisterParam& registerParamInstance,
+                          cstring pipeName = "") {
+        p4rt_id_t tableId = 0;
+        if (registerParam2register.count(registerParamInstance.name) > 0)
+            tableId = symbols.getId(SymbolType::REGISTER(),
+                prefix(pipeName, registerParam2register[registerParamInstance.name]));
+        else if (registerParam2table.count(registerParamInstance.name) > 0)
+            tableId = symbols.getId(P4RuntimeSymbolType::TABLE(),
+                prefix(pipeName, registerParam2table[registerParamInstance.name]));
+        // If a register parameter is not used, it will show up in neither of the maps.
+        ::barefoot::RegisterParam register_param_;
+        register_param_.mutable_type_spec()->CopyFrom(*registerParamInstance.typeSpec);
+        register_param_.set_table_id(tableId);
+        register_param_.set_initial_value(registerParamInstance.initial_value);
+        register_param_.set_data_field_name(registerParamInstance.name);
+        auto registerParamName = prefix(pipeName, registerParamInstance.name);
+        addP4InfoExternInstance(
+            symbols, SymbolType::REGISTER_PARAM(), "RegisterParam",
+            registerParamName, registerParamInstance.annotations, register_param_,
+            p4Info);
+    }
+
  private:
     /// The set of snapshots in the program.
     std::unordered_set<cstring> snapshots;
@@ -2285,6 +2427,11 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     std::map<cstring, ::barefoot::ParserChoices> parserConfiguration;
 
     bool isMultiParser;
+
+    /// Maps a register parameter to a register (indirect registers)
+    std::unordered_map<cstring, cstring> registerParam2register;
+    /// Maps a register parameter to a match table (direct registers)
+    std::unordered_map<cstring, cstring> registerParam2table;
 };
 
 /// Implements @ref BFRuntimeArchHandlerCommon interface for PSA architectures. The

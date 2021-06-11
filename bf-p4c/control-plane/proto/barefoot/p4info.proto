@@ -140,6 +140,9 @@ message DirectRegister {
 
 message RegisterParam {
   p4.config.v1.P4DataTypeSpec type_spec = 1;
+  uint32 table_id = 2;
+  int64 initial_value = 3;
+  string data_field_name = 4;
 }
 
 message Digest {

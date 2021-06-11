@@ -1296,8 +1296,20 @@ void AttachTables::InitializeRegisterParams::end_apply() {
                 "%1%: the number of available slots for register "
                 "action parameters exceeded; maximum number is %2%",
                 salu, Device::statefulAluSpec().MaxRegfileRows);
+        BUG_CHECK(!decl->arguments->empty(), "RegisterParam misses an argument");
+        auto *initial_expr = decl->arguments->at(0)->expression;
+        auto *initial_expr_type = self.typeMap->getType(initial_expr);
+        BUG_CHECK(initial_expr_type != nullptr,
+            "Missing type information about RegisterParam argument");
+        auto *bits = initial_expr_type->to<IR::Type_Bits>();
+        if (!bits || (bits->width_bits() != 8 && bits->width_bits() != 16
+                      && bits->width_bits() != 32)) {
+            ::error(ErrorType::ERR_UNSUPPORTED, "%1%: Unsupported RegisterParam type %2%. "
+                "Supported types are bit<8>, int<8>, bit<16>, int<16>, bit<32>, and int<32>.",
+                decl, initial_expr_type);
+        }
         int64_t initial_value = 0;
-        if (auto *k = decl->arguments->at(0)->expression->to<IR::Constant>())
+        if (auto *k = initial_expr->to<IR::Constant>())
             initial_value = k->asInt64();
         auto *row = new IR::MAU::SaluRegfileRow(
             decl->srcInfo, index, initial_value, decl->name, decl->externalName());

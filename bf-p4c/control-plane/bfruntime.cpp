@@ -200,6 +200,8 @@ class BfRtSchemaGenerator {
 
     struct ParserChoices;
 
+    struct RegisterParam;
+
     void addMatchTables(Util::JsonArray* tablesJson) const;
     void addActionProfs(Util::JsonArray* tablesJson) const;
     void addCounters(Util::JsonArray* tablesJson) const;
@@ -214,6 +216,7 @@ class BfRtSchemaGenerator {
     void addCounterCommon(Util::JsonArray* tablesJson, const Counter& counter) const;
     void addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const;
     void addRegisterCommon(Util::JsonArray* tablesJson, const Register& meter) const;
+    void addRegisterParam(Util::JsonArray* tablesJson, const RegisterParam&) const;
     void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
     void addActionSelectorCommon(Util::JsonArray* tablesJson,
                                  const ActionSelector& actionProf) const;
@@ -296,6 +299,13 @@ class BfRtSchemaGenerator {
     void addRegisterDataFields(Util::JsonArray* dataJson,
                                const Register& register_,
                                P4Id idOffset = 1) const;
+
+    /// Add register parameter data fields to the JSON data array for a BFRT table. Field
+    /// ids are assigned incrementally starting at @idOffset, which is 1 by
+    /// default.
+    void addRegisterParamDataFields(Util::JsonArray* dataJson,
+                                    const RegisterParam& register_param_,
+                                    P4Id idOffset = 1) const;
 
     const p4configv1::P4Info& p4info;
 };
@@ -473,7 +483,7 @@ static Util::JsonObject* makeTypeBool(boost::optional<bool> defaultValue = boost
 }
 
 static Util::JsonObject* makeTypeBytes(int width,
-                                       boost::optional<cstring> defaultValue = boost::none) {
+                                       boost::optional<int64_t> defaultValue = boost::none) {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "bytes");
     typeObj->emplace("width", width);
@@ -619,7 +629,16 @@ class TypeSpecParser {
         } else if (typeSpec.has_bitstring()) {
             // TODO(antonin): same as above, we need a way to pass name
             // annotations
-            addField(idOffset, "f1", typeSpec);
+            std::string fName;
+            if (fieldNames && fieldNames->size() > 0) {
+                fName = (*fieldNames)[0];
+            } else {
+                // TODO(antonin): we do not really have better names for now, do
+                // we need to add support for annotations of tuple members in
+                // P4Info?
+                fName = "f1";
+            }
+            addField(idOffset, fName, typeSpec);
         } else if (typeSpec.has_header()) {
             auto headerName = typeSpec.header().name();
             auto p_it = typeInfo.headers().find(headerName);
@@ -924,6 +943,33 @@ struct BfRtSchemaGenerator::Register {
         }
         return Register{pre.name(), register_.data_field_name(), pre.id(), 0,
                 register_.type_spec(), transformAnnotations(pre)};
+    }
+};
+
+struct BfRtSchemaGenerator::RegisterParam {
+    std::string name;
+    std::string dataFieldName;
+    P4Id id;
+    P4Id tableId;
+    int64_t initial_value;
+    p4configv1::P4DataTypeSpec typeSpec;
+    Util::JsonArray* annotations;
+
+    static boost::optional<RegisterParam>
+    fromTofino(const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::RegisterParam register_param_;
+        if (!externInstance.info().UnpackTo(&register_param_)) {
+            ::error("Extern instance %1% does not pack a RegisterParam object", pre.name());
+            return boost::none;
+        }
+        return RegisterParam{pre.name(),
+                             register_param_.data_field_name(),
+                             pre.id(),
+                             register_param_.table_id(),
+                             register_param_.initial_value(),
+                             register_param_.type_spec(),
+                             transformAnnotations(pre)};
     }
 };
 
@@ -1456,6 +1502,49 @@ BfRtSchemaGenerator::addRegisterCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("supported_operations", operationsJson);
 
     tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
+}
+
+void
+BfRtSchemaGenerator::addRegisterParamDataFields(Util::JsonArray* dataJson,
+                                                const RegisterParam& register_param_,
+                                                P4Id idOffset) const {
+    auto typeSpec = register_param_.typeSpec;
+    Util::JsonObject *type = nullptr;
+    if (typeSpec.has_bitstring()) {
+        if (typeSpec.bitstring().has_bit()) {
+            type = makeTypeBytes(typeSpec.bitstring().bit().bitwidth(),
+                register_param_.initial_value);
+        } else if (typeSpec.bitstring().has_int_()) {
+            type = makeTypeBytes(typeSpec.bitstring().int_().bitwidth(),
+                register_param_.initial_value);
+        }
+    }
+    if (type == nullptr) return;
+    auto *f = makeCommonDataField(idOffset, "value", type, false /* repeated */);
+    addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
+}
+
+void
+BfRtSchemaGenerator::addRegisterParam(Util::JsonArray* tablesJson,
+                                      const RegisterParam& register_param_) const {
+    auto* tableJson = initTableJson(register_param_.name, register_param_.id,
+        "RegisterParam", 1 /* size */, register_param_.annotations);
+
+    // The register or M/A table the register parameter is attached to
+    // The zero value means it is not used anywhere and hasn't been optimized out.
+    if (register_param_.tableId != 0)
+        addToDependsOn(tableJson, register_param_.tableId);
+
+    tableJson->emplace("key", new Util::JsonArray());
+
+    auto* dataJson = new Util::JsonArray();
+    addRegisterParamDataFields(dataJson, register_param_);
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations", new Util::JsonArray());
 
     tablesJson->append(tableJson);
 }
@@ -2668,6 +2757,12 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                 auto register_ = Register::fromTofino(externInstance);
                 if (register_ != boost::none)
                     addRegisterCommon(tablesJson, *register_);
+            }
+        } else if (externTypeId == ::barefoot::P4Ids::REGISTER_PARAM) {
+            for (const auto& externInstance : externType.instances()) {
+                auto register_param_ = RegisterParam::fromTofino(externInstance);
+                if (register_param_ != boost::none)
+                    addRegisterParam(tablesJson, *register_param_);
             }
         } else if (externTypeId == ::barefoot::P4Ids::LPF) {
             for (const auto& externInstance : externType.instances()) {

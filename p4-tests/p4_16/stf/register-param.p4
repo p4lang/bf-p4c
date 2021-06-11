@@ -17,10 +17,12 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    RegisterParam<bit<32>>(0x01ABCDEF) reg1param1;
-    RegisterParam<bit<32>>(0x0000FFFF) reg1param2;
+    // Register parameters attached to an indirect register
 
     Register<bit<32>, bit<10>>(1024) reg1;
+
+    RegisterParam<bit<32>>(0x01ABCDEF) reg1param1;
+    RegisterParam<bit<32>>(0x0000FFFF) reg1param2;
 
     RegisterAction<bit<32>, bit<10>, bit<32>>(reg1) reg1action1 = {
         void apply(inout bit<32> value, out bit<32> read_value) {
@@ -48,6 +50,33 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     };
 
+    // Register parameters attached to a direct register
+
+    DirectRegister<bit<32>>() dirreg1;
+
+    RegisterParam<bit<32>>(1) dirreg1param1;
+
+    DirectRegisterAction<bit<32>, bit<32>>(dirreg1) dirreg1action1 = {
+        void apply(inout bit<32> value) {
+            if (hdr.data.f1 - value > dirreg1param1.read())
+                value = hdr.data.f1;
+        }
+    };
+
+    action table1action1() {
+        dirreg1action1.execute();
+    }
+
+    table table1 {
+        key = {
+            hdr.data.f1 : exact;
+        }
+        actions = {
+            table1action1;
+        }
+        registers = dirreg1;
+    }
+
     apply {
         ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
         if (hdr.data.b1 == 0) {
@@ -58,6 +87,8 @@ control ingress(inout headers hdr, inout metadata meta,
             reg1action3.execute((bit<10>)ig_intr_md.ingress_port);
         } else if (hdr.data.b1 == 3) {
             reg1action4.execute((bit<10>)ig_intr_md.ingress_port);
+        } else if (hdr.data.b1 == 4) {
+            table1.apply();
         }
     }
 }
