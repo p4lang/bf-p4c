@@ -69,13 +69,12 @@ class FindDirectExterns : public Inspector {
 
 class CheckDirectExternsOnTables: public Modifier {
     P4::ReferenceMap* refMap;
-    P4::TypeMap* typeMap;
     ActionExterns &directExterns;
 
  public:
-     CheckDirectExternsOnTables(P4::ReferenceMap *refMap, P4::TypeMap* typeMap,
+     CheckDirectExternsOnTables(P4::ReferenceMap *refMap, P4::TypeMap*,
                         ActionExterns &directExterns) :
-        refMap(refMap), typeMap(typeMap), directExterns(directExterns) {}
+        refMap(refMap), directExterns(directExterns) {}
      bool preorder(IR::P4Table*) override;
 };
 

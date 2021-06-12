@@ -2967,11 +2967,11 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     }
     bool preorder_binop(const IR::Operation::Binary *bin, const char *op) {
         bool add_paren = false;
-        if (add_paren = check_add_paren(bin->left, bin)) out << " (";
+        if ((add_paren = check_add_paren(bin->left, bin))) out << " (";
         visit(bin->left);
         if (add_paren) out << ") ";
         sep = op;
-        if (add_paren = check_add_paren(bin->right, bin)) {
+        if ((add_paren = check_add_paren(bin->right, bin))) {
             out << op << "(";
             sep = "";
         }

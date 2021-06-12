@@ -305,6 +305,7 @@ class FlatrockDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return true; }
     int getUniqueGatewayShifts() const override { return 5; }
     bool getHasCompareInstructions() const override { return true; }
+    int getNumLogTablesPerStage() const override { return 16; }
 };
 #endif /* HAVE_FLATROCK */
 

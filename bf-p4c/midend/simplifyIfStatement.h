@@ -26,11 +26,9 @@ namespace P4 {
 
 class ElimCallExprInIfCond : public Transform {
     ReferenceMap* refMap;
-    TypeMap*      typeMap;
 
  public:
-    ElimCallExprInIfCond(ReferenceMap* refMap, TypeMap* typeMap) :
-            refMap(refMap), typeMap(typeMap) {}
+    ElimCallExprInIfCond(ReferenceMap* refMap, TypeMap*) : refMap(refMap) {}
     const IR::Node* preorder(IR::IfStatement* statement) override;
     const IR::Node* postorder(IR::MethodCallExpression* methodCall) override;
 

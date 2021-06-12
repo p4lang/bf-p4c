@@ -52,7 +52,6 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
 // Headers must be explicitly converted to an 8 bit value
 class MeterColorTypeTo8Bits: public Transform {
     IR::Node* postorder(IR::Type_Name *t) override {
-        auto parent = getContext()->node;
         auto path = t->path->to<IR::Path>();
         if (path->name != "MeterColor_t") {
             return t;

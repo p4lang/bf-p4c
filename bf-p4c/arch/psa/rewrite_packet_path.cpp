@@ -386,7 +386,7 @@ struct PacketPath : public Transform {
         state->components = *statements;
     }
 
-    void skip_to_phase0(IR::ParserState* state, const IR::BFN::TnaParser* parser) {
+    void skip_to_phase0(IR::ParserState* state, const IR::BFN::TnaParser*) {
         auto select = new IR::PathExpression("__phase0");
         state->selectExpression = select;
     }
