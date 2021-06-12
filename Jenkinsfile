@@ -8,12 +8,7 @@ node {
     stopPreviousRuns(this)
 }
 
-/// Docker registry to be used
-// Docker Hub
-// DOCKER_CREDENTIALS = "bfndocker"
-// DOCKER_REGISTRY = ""
-// DOCKER_PROJECT = "barefootnetworks"
-// CaaS (AMR)
+// Intel CaaS (AMR)
 DOCKER_CREDENTIALS = "bfndocker-caas"
 DOCKER_REGISTRY = "amr-registry.caas.intel.com"
 DOCKER_PROJECT = "${DOCKER_REGISTRY}/bxd-sw"
@@ -199,38 +194,7 @@ node ('compiler-travis') {
                 stage ('Push image') {
                     echo "Pushing the built Docker image bf-p4c-compilers:${image_tag}"
                     try {
-                        // sh "docker push ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
-                        // While migrating images, push to both barefootnetworks and bxd-sw @ CaaS
-                        parallel (
-                            'barefootnetworks': {
-                                withCredentials([usernamePassword(
-                                credentialsId: "bfndocker",
-                                usernameVariable: "DOCKER_USERNAME",
-                                passwordVariable: "DOCKER_PASSWORD"
-                                )]) {
-                                    sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
-                                }
-                                sh """
-                                    docker tag  ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
-                                                barefootnetworks/bf-p4c-compilers:${image_tag}
-                                    docker push barefootnetworks/bf-p4c-compilers:${image_tag}
-                                """
-                            },
-                            'bxd-sw @ CaaS': {
-                                withCredentials([usernamePassword(
-                                credentialsId: "bfndocker-caas",
-                                usernameVariable: "DOCKER_USERNAME",
-                                passwordVariable: "DOCKER_PASSWORD"
-                                )]) {
-                                    sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} amr-registry.caas.intel.com"
-                                }
-                                sh """
-                                    docker tag  ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
-                                                amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:${image_tag}
-                                    docker push amr-registry.caas.intel.com/bxd-sw/bf-p4c-compilers:${image_tag}
-                                """
-                            }
-                        )
+                        sh "docker push ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
                     } catch (err) {
                         echo "Pushing of the built Docker image failed. Notifying the maintainers and continuing."
                         emailext subject: "${env.JOB_NAME} failed to push build Docker image",
