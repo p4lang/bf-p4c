@@ -10,6 +10,8 @@
 #include "stage.h"
 #include "tables.h"
 
+unsigned StatefulTable::const_info_t::unique_register_param_handle = REGISTER_PARAM_HANDLE_START;
+
 std::map<std::string, Table *> Table::all;
 std::map<std::string, Table::Type *> *Table::Type::all;
 

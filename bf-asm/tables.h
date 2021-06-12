@@ -1,5 +1,5 @@
-#ifndef BF_ASM_TABLES_H_
-#define BF_ASM_TABLES_H_
+#ifndef TABLES_H_
+#define TABLES_H_
 
 #include <config.h>
 #include <bitops.h>
@@ -1794,9 +1794,18 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
         int64_t     value;
         bool        is_param;
         std::string param_name;
+        unsigned    param_handle;
+        static unsigned unique_register_param_handle;
         const_info_t() = default;
-        const_info_t(int lineno, int64_t value, bool is_param = false, std::string param_name = "")
-            : lineno(lineno), value(value), is_param(is_param), param_name(param_name) {}
+        const_info_t(int lineno,
+                     int64_t value,
+                     bool is_param = false,
+                     std::string param_name = "",
+                     unsigned param_handle = 0)
+            : lineno(lineno), value(value), is_param(is_param),
+              param_name(param_name), param_handle(param_handle) {
+                if (is_param) this->param_handle = unique_register_param_handle++;
+            }
     };
     std::vector<const_info_t> const_vals;
     struct MathTable {
@@ -1867,4 +1876,4 @@ public:
 #endif
 )
 
-#endif /* BF_ASM_TABLES_H_ */
+#endif /* TABLES_H_ */

@@ -1,5 +1,5 @@
-#ifndef BF_ASM_CONSTANTS_H_
-#define BF_ASM_CONSTANTS_H_
+#ifndef CONSTANTS_H_
+#define CONSTANTS_H_
 
 enum {
     /* global constants related to MAU stage */
@@ -72,7 +72,9 @@ enum {
     STATEFUL_PREDICATION_ENCODE_CMP3 = 0xff00,
     STATEFUL_PREDICATION_ENCODE_UNCOND = 0xffff,
     STATEFUL_PREDICATION_OUTPUT = 6,
+    // See bf-drivers/include/pipe_mgr/pipe_mgr_intf.h for the definitions
     TYPE_ENUM_SHIFT = 24,
+    REGISTER_PARAM_HANDLE_START = (0x08 << TYPE_ENUM_SHIFT),
     ACTION_HANDLE_START = (0x20 << TYPE_ENUM_SHIFT),
     FIELD_HANDLE_START = (0x21 << TYPE_ENUM_SHIFT),
     PER_FLOW_ENABLE_BITS = 1,
@@ -221,4 +223,4 @@ enum {
     IDLE = 2,
 };
 }  // namespace MoveReg
-#endif /* BF_ASM_CONSTANTS_H_ */
+#endif /* CONSTANTS_H_ */

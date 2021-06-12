@@ -317,12 +317,12 @@ unsigned StatefulTable::determine_shiftcount(Table::Call &call, int group, unsig
     return determine_meter_shiftcount(call, group, word, tcam_shift);
 }
 
-#include "tofino/stateful.cpp"
+#include "tofino/stateful.cpp"  // NOLINT(build/include)
 #if HAVE_JBAY || HAVE_CLOUDBREAK
-#include "jbay/stateful.cpp"
+#include "jbay/stateful.cpp"  // NOLINT(build/include)
 #endif /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/stateful.cpp"
+#include "cloudbreak/stateful.cpp"  // NOLINT(build/include)
 #endif /* HAVE_JBAY */
 
 template<class REGS> void StatefulTable::write_action_regs(REGS &regs, const Actions::Action *act) {
@@ -594,6 +594,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
         register_file_row["register_file_index"] = i;
         register_file_row["initial_value"] = const_vals[i].value;
         register_file_row["name"] = const_vals[i].param_name;
+        register_file_row["handle"] = const_vals[i].param_handle;
         register_file.push_back(std::move(register_file_row));
     }
     if (bound_selector)
