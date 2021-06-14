@@ -343,7 +343,7 @@ std::list<PHV::SuperCluster*> BruteForceOptimizationStrategy::optimize(
         Logging::FileLog::close(logfile);
     }
 
-    if (best_partial)
+    if (best_partial && !allocated_sc.empty())
         rst.commit(*best_partial);
 
     PhvInfo::darkSpillARA = initial_ara;

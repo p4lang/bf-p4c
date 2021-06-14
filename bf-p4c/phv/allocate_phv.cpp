@@ -4729,6 +4729,8 @@ BruteForceAllocationStrategy::allocLoop(
         opt_strategy.printContDependency();
         std::list<PHV::SuperCluster*> alloc_by_opt;
         alloc_by_opt = opt_strategy.optimize(cluster_groups, rst);
+        if (alloc_by_opt.empty())
+            rst.commit(try_alloc);
         for (auto cluster_group : alloc_by_opt)
             allocated.push_back(cluster_group);
     }
