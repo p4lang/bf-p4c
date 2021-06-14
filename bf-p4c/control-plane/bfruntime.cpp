@@ -120,7 +120,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_HASH_ALGORITHM_EXTEND,
         BF_RT_DATA_HASH_ALGORITHM_PRE_DEFINED,
         BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED,
-        BF_RT_DATA_HASH_RESULT,
+        BF_RT_DATA_HASH_VALUE,
         BF_RT_DATA_HASH_CONFIGURE_START_BIT,
         BF_RT_DATA_HASH_CONFIGURE_LENGTH,
         BF_RT_DATA_HASH_CONFIGURE_ORDER,
@@ -220,6 +220,8 @@ class BfRtSchemaGenerator {
     void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
     void addActionSelectorCommon(Util::JsonArray* tablesJson,
                                  const ActionSelector& actionProf) const;
+    void addActionSelectorGetMemberCommon(Util::JsonArray* tablesJson,
+                                          const ActionSelector& actionProf) const;
     void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
     void addPortMetadata(Util::JsonArray* tablesJson, const PortMetadata& portMetadata) const;
     void addDynHash(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
@@ -812,9 +814,11 @@ static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,
 
 struct BfRtSchemaGenerator::ActionSelector {
     std::string name;
+    std::string get_mem_name;
     P4Id id;
+    P4Id get_mem_id;
     int64_t max_group_size;
-    int64_t num_groups;  // aka size
+    int64_t num_groups;  // aka size of selector
     std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
 
@@ -824,9 +828,11 @@ struct BfRtSchemaGenerator::ActionSelector {
         if (!actionProfile.with_selector())
             return boost::none;
         auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
+        auto selectorGetMemId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR_GET_MEMBER);
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionSelector{pre.name(), selectorId,
+        return ActionSelector{pre.name(), pre.name() + "_get_member",
+                              selectorId, selectorGetMemId,
                               actionProfile.max_group_size(), actionProfile.size(),
                               tableIds, transformAnnotations(pre)};
     }
@@ -840,9 +846,11 @@ struct BfRtSchemaGenerator::ActionSelector {
             return boost::none;
         }
         auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
+        auto selectorGetMemId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR_GET_MEMBER);
         auto tableIds = collectTableIds(
             p4info, actionSelector.table_ids().begin(), actionSelector.table_ids().end());
-        return ActionSelector{pre.name(), selectorId,
+        return ActionSelector{pre.name(), pre.name() + "_get_member",
+                              selectorId, selectorGetMemId,
                               actionSelector.max_group_size(), actionSelector.num_groups(),
                               tableIds, transformAnnotations(pre)};
     }
@@ -1000,7 +1008,7 @@ struct BfRtSchemaGenerator::DynHash {
     const std::string getConfigTableName() const {
         return name + ".configure"; }
     const std::string getComputeTableName() const {
-        return name + ".$COMPUTE"; }
+        return name + ".compute"; }
 
     const cstring name;
     const P4Id cfgId;
@@ -1679,6 +1687,35 @@ BfRtSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
     tablesJson->append(tableJson);
 }
 
+void
+BfRtSchemaGenerator::addActionSelectorGetMemberCommon(Util::JsonArray* tablesJson,
+                                             const ActionSelector& actionSelector) const {
+    auto* tableJson = initTableJson(
+        actionSelector.get_mem_name, actionSelector.get_mem_id, "SelectorGetMember",
+        1 /* size */, actionSelector.annotations);
+
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
+            true /* mandatory */, "Exact", makeTypeInt("uint64"));
+    addKeyField(keyJson, BF_RT_DATA_HASH_VALUE, "hash_value",
+            true /* mandatory */, "Exact", makeTypeInt("uint64"));
+    tableJson->emplace("key", keyJson);
+
+    auto* dataJson = new Util::JsonArray();
+    {
+        auto* f = makeCommonDataField(
+                BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
+                makeTypeInt("uint64"), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+    addToDependsOn(tableJson, actionSelector.id);
+
+    tablesJson->append(tableJson);
+}
 
 void
 BfRtSchemaGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
@@ -1737,9 +1774,7 @@ BfRtSchemaGenerator::addDynHash(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
     addDynHashAlgorithm(tablesJson, dynHash);
     addDynHashConfig(tablesJson, dynHash);
-    // TODO: Disabling compute generation for now, will be enabled once driver
-    // support is tested
-    // addDynHashCompute(tablesJson, dynHash);
+    addDynHashCompute(tablesJson, dynHash);
 }
 
 void
@@ -1775,6 +1810,7 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
             addSingleton(containerItemsJson, f, true /* mandatory */, false /* read-only */);
         }
         cstring field_prefix = "";
+        Util::JsonArray *annotations = nullptr;
         if (dynHash.is_constant(field.name)) {
             // Constant fields have unique field names with the format
             // constant<id>_<size>_<value>
@@ -1782,9 +1818,13 @@ BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
             // Should match names generated in context.json (mau/dynhash.cpp)
             field_prefix = "constant" + std::to_string(numConstants++)
                             + "_" + std::to_string(fLength) + "_";
+            auto *constantAnnot = new Util::JsonObject();
+            constantAnnot->emplace("name", "bfrt_p4_constant");
+            annotations = new Util::JsonArray();
+            annotations->append(constantAnnot);
         }
         auto* fJson = makeContainerDataField(field.id, field_prefix + field.name,
-                containerItemsJson, true /* repeated */);
+                containerItemsJson, true /* repeated */, annotations);
         addSingleton(dataJson, fJson, false /* mandatory */, false /* read-only */);
     }
     tableJson->emplace("data", dataJson);
@@ -1898,6 +1938,7 @@ BfRtSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
     userDefinedJson->emplace("data", userDefinedDataJson);
 
     actionSpecsJson->append(userDefinedJson);
+    addToDependsOn(tableJson, dynHash.cfgId);
 
     tableJson->emplace("action_specs", actionSpecsJson);
     tableJson->emplace("supported_operations", new Util::JsonArray());
@@ -1909,36 +1950,38 @@ BfRtSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
 void
 BfRtSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
-    // Add <hash>.$COMPUTE Table
+    // Add <hash>.compute Table
     auto* tableJson = initTableJson(
         dynHash.getComputeTableName(), dynHash.cmpId, "DynHashCompute",
         1 /* size */, dynHash.annotations);
 
     P4Id id = 1;
-    size_t hashNameIdx = 0;
     auto* keyJson = new Util::JsonArray();
-    for (const auto& member : dynHash.typeSpec.tuple().members()) {
-        auto* type = makeTypeBytes(member.bitstring().bit().bitwidth());
-        auto hashFieldNames = dynHash.getHashFieldNames();
-        if (hashFieldNames.size() > hashNameIdx) {
-            addKeyField(keyJson, id++, hashFieldNames[hashNameIdx++],
-                    true /* mandatory */, "Exact", type);
+    auto hashFieldNames = dynHash.getHashFieldNames();
+    auto parser = TypeSpecParser::make(
+        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &hashFieldNames, "", "");
+    for (const auto &field : parser) {
+        if (dynHash.is_constant(field.name)) {
+          // If this is a constant field, then skip adding a field
+          // in compute table
+          continue;
         }
+        auto* type = makeTypeBytes(field.type->get("width")->to<Util::JsonValue>()->getInt());
+        addKeyField(keyJson, id++, field.name, false /* mandatory */, "Exact", type);
     }
     tableJson->emplace("key", keyJson);
 
     auto* dataJson = new Util::JsonArray();
     auto* f = makeCommonDataField(
-        BF_RT_DATA_HASH_RESULT, "$HASH_RESULT",
+        BF_RT_DATA_HASH_VALUE, "hash_value",
         makeTypeBytes(dynHash.hashWidth), false /* repeated */);
-    addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    addSingleton(dataJson, f, false /* mandatory */, true /* read-only */);
     tableJson->emplace("data", dataJson);
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
-    auto* attributes = new Util::JsonArray();
-    attributes->append("DynamicHashing");
-    tableJson->emplace("attributes", attributes);
+    tableJson->emplace("attributes", new Util::JsonArray());
     tableJson->emplace("read_only", true);
+    addToDependsOn(tableJson, dynHash.cfgId);
 
     tablesJson->append(tableJson);
 }
@@ -2690,6 +2733,7 @@ BfRtSchemaGenerator::addActionProfs(Util::JsonArray* tablesJson) const {
         auto actionSelectorInstance = ActionSelector::from(p4info, actionProf);
         if (actionSelectorInstance == boost::none) continue;
         addActionSelectorCommon(tablesJson, *actionSelectorInstance);
+        addActionSelectorGetMemberCommon(tablesJson, *actionSelectorInstance);
     }
 }
 
@@ -2736,6 +2780,7 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
                     ActionSelector::fromTofinoActionSelector(p4info, externInstance);
                 if (actionSelector != boost::none)
                     addActionSelectorCommon(tablesJson, *actionSelector);
+                    addActionSelectorGetMemberCommon(tablesJson, *actionSelector);
             }
         } else if (externTypeId == ::barefoot::P4Ids::COUNTER) {
             for (const auto& externInstance : externType.instances()) {

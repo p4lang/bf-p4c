@@ -32,6 +32,7 @@ message P4Ids {
     HASH_ALGORITHM              = 0x97;  // reserved for BFRT
     PARSER_CHOICES              = 0x98;
     DEBUG_COUNTER               = 0x99;
+    ACTION_SELECTOR_GET_MEMBER  = 0x9A;
     // Temporary, see ValueSet message definition below
     VALUE_SET                   = 0xfe;
   }
@@ -150,7 +151,6 @@ message Digest {
 }
 
 message DynHash {
-  //TODO(msharif): Not sure if hash algorithm is needed?
   p4.config.v1.P4DataTypeSpec type_spec = 1;
   message field_info {
       string field_name = 1;
