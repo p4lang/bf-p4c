@@ -1514,6 +1514,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_one_action_fail_after.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_one_action_fail_before.p4
   testdata/p4_16_samples/psa-table-hit-miss.p4
+  testdata/p4_16_samples/issue2344.p4
 )
 
 # P4C-2115

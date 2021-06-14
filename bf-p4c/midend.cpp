@@ -256,11 +256,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new P4::SimplifyKey(&refMap, &typeMap,
             BFN::KeyIsSimple::getPolicy(refMap, typeMap), typeChecking),
-        new BFN::AlpmImplementation(&refMap, &typeMap),
         Device::currentDevice() != Device::TOFINO || options.disable_direct_exit ?
             new P4::RemoveExits(&refMap, &typeMap, typeChecking) : nullptr,
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new BFN::ElimCasts(&refMap, &typeMap),
+        new BFN::AlpmImplementation(&refMap, &typeMap),
+        new BFN::TypeChecking(&refMap, &typeMap, true),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectCases(&refMap, &typeMap, true, typeChecking),  // constant keysets
         new P4::ExpandLookahead(&refMap, &typeMap, typeChecking),

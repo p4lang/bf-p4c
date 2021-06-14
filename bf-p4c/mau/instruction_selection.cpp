@@ -47,10 +47,20 @@ const IR::Expression *ToFunnelShiftInstruction::preorder(IR::Cast *e) {
             // shifting.
             if (auto *shift = e->expr->to<IR::Shr>()) {
                 if (auto *concat = shift->left->to<IR::Concat>()) {
-                    return new IR::MAU::Instruction(e->srcInfo, "funnel-shift",
-                        { new IR::TempVar(shift->type), concat->left, concat->right,
-                          shift->right });
+                    if (shift->right->to<IR::Constant>()->value ==
+                            concat->right->type->width_bits()) {
+                        return new IR::MAU::Instruction(e->srcInfo, "set",
+                                { new IR::TempVar(shift->type), concat->left });
+                    } else {
+                        return new IR::MAU::Instruction(e->srcInfo, "funnel-shift",
+                                { new IR::TempVar(shift->type), concat->left, concat->right,
+                                shift->right });
+                    }
                 }
+            } else if (auto *concat = e->expr->to<IR::Concat>()) {
+                    return new IR::MAU::Instruction(e->srcInfo, "funnel-shift",
+                        { new IR::TempVar(concat->type), concat->left, concat->right,
+                          new IR::Constant(0) });
             }
         }
     }

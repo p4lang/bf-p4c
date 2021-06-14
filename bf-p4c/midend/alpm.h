@@ -122,7 +122,8 @@ class SplitAlpm : public Transform {
     const IR::Node* postorder(IR::IfStatement*) override;
 
     const IR::IndexedVector<IR::Declaration>* create_temp_var(
-            const IR::P4Table*, unsigned, unsigned, unsigned, unsigned);
+            const IR::P4Table*, unsigned, unsigned, unsigned, unsigned,
+            const IR::Expression*);
     const IR::IndexedVector<IR::Declaration>* create_preclassifer_actions(
             const IR::P4Table*, unsigned, unsigned, unsigned,
             unsigned, unsigned, const IR::Expression*);
@@ -130,10 +131,13 @@ class SplitAlpm : public Transform {
             unsigned, unsigned, unsigned);
     const IR::P4Table* create_atcam_table(const IR::P4Table*, unsigned,
             unsigned, unsigned, int, int,
-            ordered_map<cstring, int>& fields_to_exclude);
+            ordered_map<cstring, int>& fields_to_exclude,
+            const IR::Expression*);
     void apply_pragma_exclude_msbs(const IR::P4Table* tbl,
             const ordered_map<cstring, int>* fields_to_exclude,
             IR::Vector<IR::KeyElement>& keys);
+    const IR::StatOrDecl* synth_funnel_shift_ops(const IR::P4Table*, const IR::Expression*, int);
+    bool use_funnel_shift(int);
 
  public:
     static const cstring ALGORITHMIC_LPM_PARTITIONS;

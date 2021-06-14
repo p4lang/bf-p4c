@@ -5,6 +5,7 @@
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/methodInstance.h"
+#include "frontends/p4/typeChecking/bindVariables.h"
 #include "lib/error_catalog.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
@@ -18,11 +19,52 @@ const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION =
 const cstring SplitAlpm::ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS =
     PragmaAlpmAtcamExcludeFieldMsbs::name;
 
+bool SplitAlpm::use_funnel_shift(int lpm_key_width) {
+    return lpm_key_width > 32 && lpm_key_width <= 64;
+}
+/* syntheisze a funnel_shift_operation that takes two 32-bit fields
+ * and right_shift by shift_amt and return a 32-bit output
+ */
+const IR::StatOrDecl* SplitAlpm::synth_funnel_shift_ops(
+        const IR::P4Table* tbl, const IR::Expression* lpm_key, int shift_amt) {
+    int lpm_key_width = lpm_key->type->width_bits();
+
+    if (shift_amt >= 32) {
+        shift_amt -= 32;
+        return new IR::AssignmentStatement(
+                    new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
+                        new IR::Shr(
+                            new IR::Slice(lpm_key, lpm_key_width - 1, 32),
+                            new IR::Constant(shift_amt)));
+    } else if (shift_amt == 32) {
+        return new IR::AssignmentStatement(
+                    new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
+                        new IR::Slice(lpm_key, lpm_key_width - 1, 32));
+    } else {
+        auto typeArguments = new IR::Vector<IR::Type>({IR::Type_Bits::get(32)});
+        auto arguments = new IR::Vector<IR::Argument>();
+        arguments->push_back(new IR::Argument(
+                    new IR::PathExpression(IR::ID(tbl->name + "_partition_key"))));
+
+        // cast to bit<32> if the upper half is less than 32 bit wide
+        IR::Expression* upper = new IR::Slice(lpm_key, lpm_key_width - 1, 32);
+        if (lpm_key_width != 64)
+            upper = new IR::Cast(new IR::Type_Bits(32), upper);
+        arguments->push_back(new IR::Argument(upper));
+        arguments->push_back(new IR::Argument(new IR::Slice(lpm_key, 31, 0)));
+        arguments->push_back(new IR::Argument(new IR::Constant(shift_amt)));
+        return new IR::MethodCallStatement(new IR::MethodCallExpression(
+                    new IR::PathExpression(new IR::Path(IR::ID("funnel_shift_right"))),
+                    typeArguments, arguments));
+    }
+}
+
 const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
         const IR::P4Table* tbl, unsigned number_actions,
         unsigned partition_index_bits,
         unsigned atcam_subset_width,
-        unsigned subtrees_per_partition) {
+        unsigned subtrees_per_partition,
+        const IR::Expression* lpm_key) {
     auto tempvar = new IR::IndexedVector<IR::Declaration>();
 
     tempvar->push_back(new IR::Declaration_Variable(
@@ -30,9 +72,12 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
                 IR::Type_Bits::get(partition_index_bits)));
 
     if (number_actions > 1) {
+        int partition_key_width = atcam_subset_width;
+        if (use_funnel_shift(lpm_key->type->width_bits()))
+            partition_key_width = 32;
         tempvar->push_back(new IR::Declaration_Variable(
                     IR::ID(tbl->name + "_partition_key"),
-                    IR::Type_Bits::get(atcam_subset_width)));
+                    IR::Type_Bits::get(partition_key_width)));
         if (subtrees_per_partition > 1) {
             auto subtree_id_bits = ::ceil_log2(subtrees_per_partition);
             tempvar->push_back(new IR::Declaration_Variable(
@@ -42,6 +87,38 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_temp_var(
     return tempvar;
 }
 
+/**
+ * create pre-classifier actions based on parameters in Alpm constructors.
+ *
+ * The Alpm constructors takes 4 arguments:
+ * 1. number_partitions : only support 1024, 2048, 4096 and 8192, which corresponds to
+ *                        partition_index of log2(number_partitions) bits.
+ * 2. subtrees_per_partition : if more than 1, the action data would contain extra
+ *                        bit to identify which subtree to search for during lookup
+ *
+ * A further optimization requires two more parameters: atcam_subset_width and
+ * shift_granularity.
+ *
+ * 3. atcam_subset_width : further divide partition according to the subset_width
+ *                        and shift_granularity into smaller chunks.
+ * 4. shift_granularity : used in combination with atcam_subset_width
+ *
+ * Together, these two parameters allows the programmer to control the key size
+ * used in the exact match portion of the atcam. The formulae for the
+ * optimization is:
+ *
+ * for n in range 0 .. lpm_key_width / shift_granularity:
+ *   tmp = (lpm_key >> n)
+ *   partition_key = tmp[atcam_subset_width - 1, 0]
+ *
+ * The shift operation can be more optimally implemented with the
+ * funnel_shift_right operation to reduce constraints on phv.
+ *
+ * At this stage, the funnel_shift_right operation is only synthesized for
+ * lpm_key that is more than 32 bit. lpm_key that is <= 32 bit can be
+ * efficiently implemented with a single PHV container.
+ *
+ */
 const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions(
         const IR::P4Table* tbl,
         unsigned number_actions,
@@ -68,14 +145,23 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_index")),
                     new IR::PathExpression(IR::ID("index"))));
 
+        LOG1("number of action " << number_actions);
         if (number_actions > 1) {
-            body->push_back(new IR::AssignmentStatement(
-                        new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
-                        new IR::Slice(
-                            new IR::Shr(lpm_key,
-                                new IR::Constant(lpm_key->type->width_bits() -
-                                    atcam_subset_width - n * shift_granularity)),
-                            atcam_subset_width-1, 0))); }
+            if (use_funnel_shift(lpm_key->type->width_bits())) {
+                int shift_amt =
+                    lpm_key->type->width_bits() - atcam_subset_width - n * shift_granularity;
+                auto stmt = synth_funnel_shift_ops(tbl, lpm_key, shift_amt);
+                body->push_back(stmt);
+            } else {
+                body->push_back(new IR::AssignmentStatement(
+                            new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
+                            new IR::Slice(
+                                new IR::Shr(lpm_key,
+                                    new IR::Constant(lpm_key->type->width_bits() -
+                                        atcam_subset_width - n * shift_granularity)),
+                                atcam_subset_width-1, 0)));
+            }
+        }
 
         if (number_actions > 1 && subtrees_per_partition > 1) {
             body->push_back(new IR::AssignmentStatement(
@@ -110,7 +196,8 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
         unsigned partition_count,
         unsigned subtrees_per_partition, unsigned number_actions,
         int atcam_subset_width, int shift_granularity,
-        ordered_map<cstring, int>& fields_to_exclude) {
+        ordered_map<cstring, int>& fields_to_exclude,
+        const IR::Expression* lpm_key) {
     auto properties = new IR::IndexedVector<IR::Property>;
 
     // create partition_index
@@ -121,8 +208,13 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
             keys.push_back(new IR::KeyElement(
                         new IR::PathExpression(IR::ID(tbl->name + "_subtree_id")),
                         new IR::PathExpression(IR::ID("exact")))); }
+        IR::Expression* partition_key =
+            new IR::PathExpression(IR::ID(tbl->name + "_partition_key"));
+        if (use_funnel_shift(lpm_key->type->width_bits())) {
+            partition_key = new IR::Slice(partition_key, atcam_subset_width - 1, 0);
+        }
         keys.push_back(new IR::KeyElement(
-                    new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
+                    partition_key,
                     new IR::PathExpression(IR::ID("lpm"))));
     } else {
         apply_pragma_exclude_msbs(tbl, &fields_to_exclude, keys);
@@ -530,7 +622,7 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
 
     auto decls = new IR::IndexedVector<IR::Declaration>();
     decls->append(*create_temp_var(tbl, number_actions, partition_index_bits, atcam_subset_width,
-                number_subtrees_per_partition));
+                number_subtrees_per_partition, lpm_key));
 
     auto classifier_actions = create_preclassifer_actions(tbl,
             number_actions, partition_index_bits, atcam_subset_width, shift_granularity,
@@ -545,7 +637,7 @@ const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
     // create atcam
     auto atcam_table = create_atcam_table(tbl, number_partitions,
             number_subtrees_per_partition, number_actions,
-            atcam_subset_width, shift_granularity, fields_to_exclude);
+            atcam_subset_width, shift_granularity, fields_to_exclude, lpm_key);
     decls->push_back(atcam_table);
 
     return decls;
@@ -590,7 +682,7 @@ AlpmImplementation::AlpmImplementation(P4::ReferenceMap* refMap, P4::TypeMap* ty
     auto collectAlpmInfo = new CollectAlpmInfo(refMap, typeMap);
     addPasses({
         collectAlpmInfo,
-        new SplitAlpm(collectAlpmInfo, refMap, typeMap)
+        new SplitAlpm(collectAlpmInfo, refMap, typeMap),
     });
 }
 
