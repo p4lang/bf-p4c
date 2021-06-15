@@ -11,6 +11,9 @@
 
 */
 
+#define PACK_VERSION(a, b, c) (((a) << 24) + ((b) << 12) + (c))
+#define COMPILER_VERSION PACK_VERSION(__p4c_major__, __p4c_minor__, __p4c_patchlevel)
+
 #include<core.p4>
 
 //XXX Open issues:
