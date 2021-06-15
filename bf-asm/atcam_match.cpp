@@ -463,6 +463,9 @@ void AlgTcamMatchTable::gen_alpm_cfg(json::map &tbl) const {
     alpm_match_attributes["bins_per_partition"] = bins_per_partition;
     alpm_match_attributes["atcam_subset_width"] = atcam_subset_width;
     alpm_match_attributes["shift_granularity"] = shift_granularity;
+    if (context_json) {
+        add_json_node_to_table(alpm_match_attributes, "excluded_field_msb_bits");
+    }
     auto pa_hdl = get_partition_action_handle();
     // Throw an error if partition action handle is not set. The alpm
     // pre-classifier should have a single action which sets the partition

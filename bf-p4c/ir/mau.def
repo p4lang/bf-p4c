@@ -131,6 +131,7 @@ class Table : BFN::Unit, IAnnotated  {
         int             subtrees_per_partition = 0;
         int             atcam_subset_width = 0;
         int             shift_granularity = 0;
+        std::map<cstring, int> excluded_field_msb_bits = {};
         int             total_actions = 0;
         int             sel_len_bits = 0;
         int             proxy_hash_width = 0;

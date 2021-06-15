@@ -276,6 +276,22 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
                     new IR::ExpressionValue(new IR::Constant(shift_granularity)), false));
     }
 
+    // Used a list of lists to save the excluded_field_msb_bits due to the limitation in
+    // P4 frontend that does not support 'map' as table properties.
+    if (fields_to_exclude.size() != 0) {
+        IR::Vector<IR::Expression> property;
+        for (auto f : fields_to_exclude) {
+            IR::Vector<IR::Expression> entry;
+            entry.push_back(new IR::StringLiteral(f.first));
+            entry.push_back(new IR::Constant(f.second));
+            auto elem = new IR::ListExpression(entry);
+            property.push_back(elem);
+        }
+        properties->push_back(new IR::Property("excluded_field_msb_bits",
+                    new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
+                    new IR::ExpressionValue(new IR::ListExpression(property)), false));
+    }
+
     auto table_property = new IR::TableProperties(*properties);
     auto table = new IR::P4Table(tbl->srcInfo, IR::ID(tbl->name), tbl->annotations, table_property);
     return table;

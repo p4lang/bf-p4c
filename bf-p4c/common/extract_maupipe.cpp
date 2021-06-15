@@ -1006,6 +1006,22 @@ class FixP4Table : public Inspector {
             auto int_lit = (*shift_granularity)->expression->to<IR::Constant>()->asInt();
             tt->layout.shift_granularity = int_lit;
         }
+
+        // table property to pass the excluded_field_msb_bits pragma info to backend
+        // the syntax is excluded_field_msb = { {name, msb}, {name, msb} };
+        auto exclude_field_msb = getExpressionFromProperty(tc, "excluded_field_msb_bits");
+        if (exclude_field_msb != boost::none) {
+            if (auto all_excluded_fields =
+                    (*exclude_field_msb)->expression->to<IR::ListExpression>()) {
+                for (auto excluded_field : all_excluded_fields->components) {
+                    if (auto name_and_msb = excluded_field->to<IR::ListExpression>()) {
+                        auto name = name_and_msb->components.at(0)->to<IR::StringLiteral>()->value;
+                        auto msb = name_and_msb->components.at(1)->to<IR::Constant>()->asInt();
+                        tt->layout.excluded_field_msb_bits[name] = msb;
+                    }
+                }
+            }
+        }
         // END:: ALPM_OPT
 
         auto hash = getExternInstanceFromProperty(tc, "proxy_hash", refMap, typeMap);
