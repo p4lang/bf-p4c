@@ -14,6 +14,7 @@ int ActionPhvConstraints::ConstraintTracker::current_action = 0;
 Visitor::profile_t ActionPhvConstraints::init_apply(const IR::Node *root) {
     profile_t rv = Inspector::init_apply(root);
     meter_color_destinations.clear();
+    meter_color_destinations_8bit.clear();
     special_no_pack.clear();
     constraint_tracker.clear();
     prelim_constraints_ok = true;
@@ -108,10 +109,21 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
             } else {
                 BUG("Read must either be of a PHV, action data, or constant."); }
 
-            // xxx(Deep): This condition is to satisfy the current table placement requirement that
-            // any destination written by meter colors must be allocated to an 8-bit PHV
-            if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR)
+            // Originally this condition was to satisfy the current table placement requirement that
+            // any destination written by meter colors must be allocated to an 8-bit PHV. This
+            // constraint is now relaxed as part of P4C-3019 by only enforcing this destination to
+            // an 8-bit container if the operation can't be rotated. This is to work around the
+            // limitation from which the color is automatically being set as part of the bit 24..31
+            // of the immediate which can also only be alligned to the high part of an 16-bit or
+            // 32-bit container. To simplify things, we are actually only enforcing strict alignment
+            // operation on 8-bit container. Using a deposit-field instruction to copy the
+            // meter color to any container size should work fine.
+            if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
+                if (fw.flags != OperandInfo::MOVE)
+                    self.meter_color_destinations_8bit.insert(write.field());
+
                 self.meter_color_destinations.insert(write.field());
+            }
 
             // xxx(Deep): This condition is to satisfy the current table placement requirement that
             // any destination written by METER_ALU, METER_COLOR, HASH_DIST, or RANDOM must not be

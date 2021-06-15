@@ -45,6 +45,7 @@ const MetricName n_bitmasked_set = "n_bitmasked_set";
 const MetricName n_wasted_pov_bits = "wasted_pov_bits";
 const MetricName parser_extractor_balance = "parser_extractor_balance";
 const MetricName n_inc_tphv_collections = "n_inc_tphv_collections";
+const MetricName n_prefer_bits = "n_prefer_bits";
 
 // by kind
 const MetricName n_set_gress = "n_set_gress";
@@ -208,6 +209,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
     if (Device::currentDevice() != Device::TOFINO) {
         conds = {
             {n_clot_bits, weighted_delta[n_clot_bits], false},
+            {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_overlay_bits, weighted_delta[n_overlay_bits], true},  // if !tofino
             {"container_type_score",
              // XXX(yumin):
@@ -231,6 +233,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
         conds = {
             {parser_extractor_balance, delta.general[parser_extractor_balance], true},
             {n_clot_bits, weighted_delta[n_clot_bits], false},
+            {n_prefer_bits, delta.general[n_prefer_bits], true},
             {"container_type_score", container_type_score, false},
             {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
             {n_bitmasked_set, delta.general[n_bitmasked_set], false},
@@ -268,6 +271,7 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
     if (Device::currentDevice() == Device::TOFINO) {
         conds = {
             {n_tphv_on_phv_bits, delta.general[n_tphv_on_phv_bits], false},
+            {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_wasted_bits, weighted_delta[n_wasted_bits], false},
             {n_inc_small_containers, weighted_delta[n_inc_small_containers], false},
             {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
@@ -292,6 +296,7 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
         conds = {
             {n_clot_bits, weighted_delta[n_clot_bits], false},
             {"bad_container_bits", bad_container_bits, false},
+            {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_wasted_pov_bits, delta.general[n_wasted_pov_bits], false},
             {n_wasted_bits, weighted_delta[n_wasted_bits], false},
             // XXX(yumin): Starting with Tofino2, because of dark containers, we have to
@@ -360,6 +365,7 @@ const std::vector<MetricName> AllocScore::g_general_metrics = {
     n_mocha_on_phv_bits,
     n_dark_on_phv_bits,
     n_dark_on_mocha_bits,
+    n_prefer_bits,
     n_bitmasked_set,
     n_wasted_pov_bits,
     parser_extractor_balance,
@@ -453,6 +459,12 @@ AllocScore::AllocScore(
         if (n_pov_bits != 0)
             general[n_wasted_pov_bits] +=
                 (container.size() > n_pov_bits ? (container.size() - n_pov_bits) : 0);
+
+        // Calculate number of prefer container size bits.
+        for (const auto& slice : slices)
+            if (slice.field()->prefer_container_size() != PHV::Size::null)
+                if (container.is(slice.field()->prefer_container_size()))
+                    general[n_prefer_bits] += slice.width();
 
         // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {
@@ -3627,7 +3639,7 @@ BruteForceAllocationStrategy::preslice_clusters(
         const std::list<PHV::ContainerGroup *>& container_groups,
         std::list<PHV::SuperCluster*>& unsliceable) {
     auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
-    auto& meter_color_dests = core_alloc_i.actionConstraints().meter_color_dests();
+    auto& meter_color_dests_8bit = core_alloc_i.actionConstraints().meter_color_dests_8bit();
     auto throw_failure = [&](PHV::SuperCluster* sc, int n_tried) {
         unsliceable.push_back(sc);
         ordered_set<const PHV::Field*> unsat_fields;
@@ -3635,21 +3647,25 @@ BruteForceAllocationStrategy::preslice_clusters(
             const auto* f = fs.field();
             if (!unsat_fields.count(f) && pa_container_sizes.field_to_layout().count(f)) {
                 unsat_fields.insert(f);
-                if (meter_color_dests.count(f)) {
+                if (meter_color_dests_8bit.count(f)) {
                     if (f->size > 8) {
                         P4C_UNIMPLEMENTED(
                             "Currently the compiler only supports allocation "
-                            "of meter color destination field %1% to an 8-bit container. "
-                            "However, meter color destination %1% with size %2% bits "
-                            "cannot be split based on its use. Therefore, it cannot be "
+                            "of meter color destination field %1% to an 8-bit container when "
+                            "the meter color is also part of a larger operation (e.g. arithmetic, "
+                            "bit operation). However, meter color destination %1% with size %2% "
+                            "bits cannot be split based on its use. Therefore, it cannot be "
                             "allocated to an 8-bit container. Suggest using a meter color "
-                            "destination that is less than or equal to 8b in size.",
+                            "destination that is less than or equal to 8b in size or simplify the "
+                            "instruction relative to the meter color to a basic set.",
                             f->name, f->size);
                     } else {
                         P4C_UNIMPLEMENTED(
                             "Currently the compiler only supports allocation of "
-                            "meter color destination field %1% to an 8-bit container. "
-                            "However, %1% cannot be allocated to an 8-bit container.",
+                            "meter color destination field %1% to an 8-bit container when "
+                            "the meter color is also part of a larger operation (e.g. arithmetic, "
+                            "bit operation). However, %1% cannot be allocated to an 8-bit "
+                            "container.",
                             f->name);
                     }
                 }
@@ -3988,6 +4004,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     // auto critical_clusters = critical_path_clusters_i.calc_critical_clusters(cluster_groups);
     std::set<const PHV::SuperCluster*> has_solitary;
     std::set<const PHV::SuperCluster*> has_no_split;
+    std::set<const PHV::SuperCluster*> has_prefer_container_size;
     std::map<const PHV::SuperCluster*, int> n_valid_starts;
     std::map<const PHV::SuperCluster*, int> n_required_length;
     std::set<const PHV::SuperCluster*> pounder_clusters;
@@ -4058,7 +4075,9 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                     if (slice.field()->is_solitary()) {
                         has_solitary.insert(super_cluster); }
                     if (slice.field()->no_split() || slice.field()->has_no_split_at_pos()) {
-                        has_no_split.insert(super_cluster); } }
+                        has_no_split.insert(super_cluster); }
+                    if (slice.field()->prefer_container_size() != PHV::Size::null) {
+                        has_prefer_container_size.insert(super_cluster); } }
             } } }
 
     // calc pounder-able clusters.
@@ -4165,6 +4184,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             //     return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
             if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
                 return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
+            if (has_prefer_container_size.count(l) != has_prefer_container_size.count(r))
+                return has_prefer_container_size.count(l) > has_prefer_container_size.count(r);
             if (has_pov.count(l) != has_pov.count(r))
                 return has_pov.count(l) > has_pov.count(r);
         }
@@ -4211,6 +4232,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         for (const auto& v : cluster_groups) {
             ++i;
             logs << i << "th "<< " [";
+            logs << "n_prefer_cnt_size: "     << has_prefer_container_size.count(v) << ", ";
             logs << "is_solitary: "           << has_solitary.count(v) << ", ";
             logs << "is_no_split: "           << has_no_split.count(v) << ", ";
             logs << "is_non_sliceable: "      << non_sliceable.count(v) << ", ";

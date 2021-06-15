@@ -65,13 +65,19 @@ void AddSpecialConstraints::end_apply() {
         }
     }
 
-    // HACK WARNING:
-    // The meter hack, all destination of meter color go to 8-bit container.
-    // TODO(yumin): remove this once this hack is removed in mau.
+    // The meter hack, all destination of meter color go to 8-bit container if they can't be
+    // rotated. This was relaxed from the original constraint, see P4C-3019.
     for (const auto* f : actions_i.meter_color_dests()) {
         auto* meter_color_dest = phv_i.field(f->id);
         meter_color_dest->set_no_split(true);
-        pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 });
+
+        // Meter color destination have constraint relative to immediate position which make it
+        // difficult to allocate them on 16-bit or 32-bit PHV.
+        meter_color_dest->set_prefer_container_size(PHV::Size::b8);
+        if (actions_i.is_meter_color_destination_8bit(f))
+            pragmas_i.pa_container_sizes().add_constraint(f, { PHV::Size::b8 });
+        else
+            meter_color_dest->set_prefer_container_size(PHV::Size::b8);
     }
 
     // Force Ghost metadata field on 32-bit container for now until we have a way to define

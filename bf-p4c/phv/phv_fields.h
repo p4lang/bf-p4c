@@ -330,6 +330,9 @@ class Field : public LiftLess<Field> {
                                                        /// field must be part of the same container
                                                        /// group.
 
+    /// Used to compute the alloc score. This is not a hard constraint.
+    PHV::Size       prefer_container_size_i = PHV::Size::null;
+
     /// true if the field can either be located entirely on a single container or splitted across
     /// multiple of them as long as all of the slices fit with no holes. This can be seen as a
     /// way to relaxe the exact_containers constraints by also allowing a field to be split under
@@ -470,6 +473,9 @@ class Field : public LiftLess<Field> {
 
     bool no_holes() const                                  { return no_holes_i; }
     void set_no_holes(bool b)                              { no_holes_i = b; }
+
+    void set_prefer_container_size(PHV::Size cnt_size)     { prefer_container_size_i = cnt_size; }
+    PHV::Size prefer_container_size() const                { return prefer_container_size_i; }
 
     bool used_in_wide_arith() const { return wide_arith_start_bit_.size() > 0; }
 

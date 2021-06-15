@@ -211,7 +211,8 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
 # p4_16/compile_only/p4c-3254.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-3254.p4"
-    "-Xp4c=\"--disable-power-check\"")
+    "-to 1200 -Xp4c=\"--disable-power-check\"")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/p4c-3254.p4" PROPERTIES TIMEOUT 1200)
 
 #p4_16/compile_only/p4c-3255.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"

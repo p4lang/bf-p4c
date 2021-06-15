@@ -158,12 +158,6 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "Unimplemented compiler support.*: Currently the compiler only supports allocation of meter color"
-  testdata/p4_14_samples/meter.p4
-  testdata/p4_14_samples/meter1.p4
-)
-
-p4c_add_xfail_reason("tofino3"
     "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
     extensions/p4_tests/p4_14/stf/stateful5-psa.p4
 )

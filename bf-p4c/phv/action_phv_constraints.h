@@ -620,10 +620,13 @@ class ActionPhvConstraints : public Inspector {
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
             const ordered_set<PHV::FieldSlice>& container_state) const;
 
-    /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
-    /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
-    /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
+    /// Track all the meter color destination to prioritize 8-bit PHV for such field.
     ordered_set<const PHV::Field*> meter_color_destinations;
+
+    /// [Relaxed Artificial Constraint]: Right now action bus allocation requires any destination
+    /// written by meter colors to be allocated to a 8-bit PHV if the result of the operation can't
+    /// be rotated. This set keeps a track of all such destinations.
+    ordered_set<const PHV::Field*> meter_color_destinations_8bit;
 
     /// (xxx)Deep [Artificial Constraint]: Right now, table placement requires that any field that
     /// gets its value from METER_ALU, HASH_DIST, RANDOM, or METER_COLOR, then it cannot be packed
@@ -783,11 +786,16 @@ class ActionPhvConstraints : public Inspector {
     : phv(p), uses(u), conflicts(c), tableActionsMap(m), dg(d),
       constraint_tracker(ConstraintTracker(p, *this)) { }
 
-    /// (xxx)Deep [HACK WARNING]: Right now action bus allocation requires any destination written
-    /// by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
-    /// destinations. To be removed when Evan lands his patch relaxing the above requirement.
+    /// Track all the meter color destination to prioritize 8-bit PHV for such field.
     bool is_meter_color_destination(const PHV::Field* f) const {
         return meter_color_destinations.count(f) > 0;
+    }
+
+    /// [Relaxed Artificial Constraint]: Right now action bus allocation requires any destination
+    /// written by meter colors to be allocated to a 8-bit PHV if the result of the operation can't
+    /// be rotated. This set keeps a track of all such destinations.
+    bool is_meter_color_destination_8bit(const PHV::Field* f) const {
+        return meter_color_destinations_8bit.count(f) > 0;
     }
 
     /// @returns true if the fields @f1 and @f2 have a pack conflict.
@@ -798,7 +806,7 @@ class ActionPhvConstraints : public Inspector {
     /// @returns true if the field @f is written using a speciality read (METER_ALU, HASH_DIST,
     /// RANDOM, or METER_COLOR).
     bool hasSpecialityReads(const PHV::Field* f) const {
-        return (special_no_pack.count(f) || is_meter_color_destination(f));
+        return special_no_pack.count(f) > 0;
     }
 
     /// @returns all the fields that are written using meter color fields.
@@ -809,6 +817,16 @@ class ActionPhvConstraints : public Inspector {
     /// @returns all the fields that are written using meter color fields.
     const ordered_set<const PHV::Field*>& meter_color_dests() const {
         return meter_color_destinations;
+    }
+
+    /// @returns all the fields that are written using meter color fields that cannot be rotated.
+    ordered_set<const PHV::Field*>& meter_color_dests_8bit() {
+        return meter_color_destinations_8bit;
+    }
+
+    /// @returns all the fields that are written using meter color fields that cannot be rotated.
+    const ordered_set<const PHV::Field*>& meter_color_dests_8bit() const {
+        return meter_color_destinations_8bit;
     }
 
     /// @returns the set of all the actions which write field @f.

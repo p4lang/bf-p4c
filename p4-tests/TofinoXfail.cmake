@@ -612,12 +612,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*: Currently the compiler only supports allocation of meter color destination field"
-  testdata/p4_14_samples/meter.p4
-  testdata/p4_14_samples/meter1.p4
-  )
-
-p4c_add_xfail_reason("tofino"
     "error: : Currently in p4c, the table sucker_0 cannot perform a range match on key ingress::suitably.litheness as the key does not fit in under 5 PHV nibbles"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
 )

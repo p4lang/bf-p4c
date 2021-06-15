@@ -2470,9 +2470,6 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
                     rand_num_write_bits.setrange(container_bits.lo, container_bits.size());
                     contains_speciality = true;
                 } else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
-                    // Currently the action bus handling in assembly forces this
-                    ERROR_CHECK(container.size() == 8, "Currently PHVs with ALU operations "
-                        "on meter color are only able to be allocated to 8 bit containers");
                     create_meter_color(*alu, read, container_bits);
                     contains_speciality = true;
                 } else if (read.is_conditional) {
