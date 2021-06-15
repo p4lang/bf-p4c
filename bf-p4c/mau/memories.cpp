@@ -355,9 +355,11 @@ bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
 bool Memories::allocate_all() {
     mem_info mi;
 
+    failure_reason = cstring();
     LOG3("Analyzing tables " << tables << IndentCtl::indent);
     if (!analyze_tables(mi)) {
         LOG3_UNINDENT;
+        if (!failure_reason) failure_reason = "analyze_tables failed";
         return false;
     }
     unsigned row = 0;
@@ -381,6 +383,7 @@ bool Memories::allocate_all() {
 
     LOG3_UNINDENT;
     if (!finished) {
+        if (!failure_reason) failure_reason = "unknown failure";
         return false;
     }
 
@@ -402,6 +405,7 @@ class SetupAttachedTables : public MauInspector {
     Memories &mem;
     Memories::table_alloc *ta;
     int entries;
+    const attached_entries_t &attached_entries;
     Memories::mem_info &mi;
     bool stats_pushed = false, meter_pushed = false, stateful_pushed = false;
 
@@ -503,7 +507,8 @@ class SetupAttachedTables : public MauInspector {
         mem.shared_attached[ad] = ta;
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = mem.mems_needed(ad->size, Memories::SRAM_DEPTH, per_row, false);
+        int depth = mem.mems_needed(attached_entries.at(ad).entries,
+                                    Memories::SRAM_DEPTH, per_row, false);
         mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
@@ -523,7 +528,8 @@ class SetupAttachedTables : public MauInspector {
         if (mtr->direct)
             mi.meter_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, true);
         else
-            mi.meter_RAMs += mem.mems_needed(mtr->size, Memories::SRAM_DEPTH, 1, true);
+            mi.meter_RAMs += mem.mems_needed(attached_entries.at(mtr).entries,
+                                             Memories::SRAM_DEPTH, 1, true);
 
         if (!meter_pushed) {
             mem.meter_tables.push_back(ta);
@@ -546,7 +552,8 @@ class SetupAttachedTables : public MauInspector {
         if (cnt->direct)
             mi.stats_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, true);
         else
-            mi.stats_RAMs += mem.mems_needed(cnt->size, Memories::SRAM_DEPTH, per_row, true);
+            mi.stats_RAMs += mem.mems_needed(attached_entries.at(cnt).entries,
+                                             Memories::SRAM_DEPTH, per_row, true);
 
         if (!stats_pushed) {
             mem.stats_tables.push_back(ta);
@@ -592,7 +599,8 @@ class SetupAttachedTables : public MauInspector {
         if (salu->direct)
             mi.stateful_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, true);
         else
-            mi.stateful_RAMs += mem.mems_needed(salu->size, Memories::SRAM_DEPTH, per_row, true);
+            mi.stateful_RAMs += mem.mems_needed(attached_entries.at(salu).entries,
+                                                Memories::SRAM_DEPTH, per_row, true);
 
         if (!stateful_pushed) {
             mem.stateful_tables.push_back(ta);
@@ -635,7 +643,8 @@ class SetupAttachedTables : public MauInspector {
 
  public:
      explicit SetupAttachedTables(Memories &m, Memories::table_alloc *t, int e,
-         Memories::mem_info &i) : mem(m), ta(t), entries(e), mi(i) {}
+                                  const attached_entries_t &ae, Memories::mem_info &i)
+    : mem(m), ta(t), entries(e), attached_entries(ae), mi(i) {}
 };
 
 void Memories::set_logical_memuse_type(table_alloc *ta, Use::type_t type) {
@@ -734,35 +743,39 @@ bool Memories::analyze_tables(mem_info &mi) {
            int depth = mems_needed(entries, TCAM_DEPTH, 1, false);
            mi.ternary_TCAMs += TCAMs_needed * depth;
         }
-        SetupAttachedTables setup(*this, ta, entries, mi);
+        SetupAttachedTables setup(*this, ta, entries, ta->attached_entries, mi);
         ta->table->apply(setup);
     }
-    return mi.constraint_check(logical_tables_allowed);
+    return mi.constraint_check(logical_tables_allowed, failure_reason);
 }
 
-bool Memories::mem_info::constraint_check(int lt_allowed) const {
+bool Memories::mem_info::constraint_check(int lt_allowed, cstring &failure_reason) const {
     if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
         Memories::TABLES_MAX) {
         LOG6(" match_tables(" << match_tables << ") + no_match_tables(" <<
             no_match_tables << ") + ternary_tables(" << ternary_tables <<
             ") + independent_gw_tables(" << independent_gw_tables <<
             ") > Memories::TABLES_MAX(" << Memories::TABLES_MAX << ")");
+        failure_reason = "too many tables total";
         return false; }
 
     if (tind_tables > Memories::TERNARY_TABLES_MAX) {
         LOG6(" tind_tables(" << tind_tables << ") > Memories::TERNARY_TABLES_MAX("
             << Memories::TERNARY_TABLES_MAX << ")");
+        failure_reason = "too many tind tables";
         return false; }
 
     if (action_tables > Memories::ACTION_TABLES_MAX) {
         LOG6(" action_tables(" << action_tables << ") > Memories::ACTION_TABLES_MAX("
             << Memories::ACTION_TABLES_MAX << ")");
+        failure_reason = "too many action tables";
         return false; }
 
     if (action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT) {
         LOG6(" action_bus_min(" << action_bus_min << ") > Memories::SRAM_ROWS("
             << Memories::SRAM_ROWS << ") * Memories::BUS_COUNT(" <<
             Memories::BUS_COUNT << ")");
+        failure_reason = "too many action busses";
         return false; }
 
     if (match_RAMs + action_RAMs + tind_RAMs > Memories::SRAM_ROWS * Memories::SRAM_COLUMNS) {
@@ -770,22 +783,26 @@ bool Memories::mem_info::constraint_check(int lt_allowed) const {
             << ") + tind_RAMs(" << tind_RAMs << ") > Memories::SRAM_ROWS(" <<
             Memories::SRAM_ROWS << ") * Memories::SRAM_COLUMNS(" << Memories::SRAM_COLUMNS
             << ")");
+        failure_reason = "too many srams";
         return false; }
 
     if (ternary_tables > Memories::TERNARY_TABLES_MAX) {
         LOG6(" ternary_tables(" << ternary_tables << ") > Memories::TERNARY_TABLES_MAX("
             << Memories::TERNARY_TABLES_MAX << ")");
+        failure_reason = "too many ternary tables";
         return false; }
 
     if (stats_tables > Memories::STATS_ALUS) {
         LOG6(" stats_tables(" << stats_tables << ") > Memories::STATS_ALUS("
             << Memories::STATS_ALUS << ")");
+        failure_reason = "too many stats tables";
         return false; }
 
     if (meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS) {
         LOG6(" meter_tables(" << meter_tables << ") + stateful_tables(" <<
             stateful_tables << ") + selector_tables(" << selector_tables <<
             ") > Memories::METER_ALUS(" << Memories::METER_ALUS << ")");
+        failure_reason = "too many meter alu users";
         return false; }
 
     if (meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
@@ -795,11 +812,13 @@ bool Memories::mem_info::constraint_check(int lt_allowed) const {
             << ") + idletime_RAMs(" << idletime_RAMs << ") > Memories::MAPRAM_COLUMNS("
             << Memories::MAPRAM_COLUMNS << ") * Memories::SRAM_ROWS(" <<
             Memories::SRAM_ROWS << ")");
+        failure_reason = "too many map rams";
         return false; }
 
     if (logical_tables > lt_allowed) {
         LOG6(" logical_tables(" << logical_tables << ") > lt_allowed(" <<
            lt_allowed << ")");
+        failure_reason = "too many logical tables";
         return false; }
 
     return true;
@@ -1090,13 +1109,15 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     safe_vector<std::pair<int, int>> available_rams
         = available_SRAMs_per_row(column_mask, way, way->width - 1);
     // No memories left to place anything
-    if (available_rams.size() == 0)
-        return false;
+    if (available_rams.size() == 0) {
+        failure_reason = "no rams left in exact_match.find_best_row";
+        return false; }
 
     int row = available_rams[0].first;
     match_selection match_select;
-    if (available_rams[0].second == 0)
-        return false;
+    if (available_rams[0].second == 0) {
+        failure_reason = "empty row in exact_match.find_best_row";
+        return false; }
     if (!determine_match_rows_and_cols(way, row, column_mask, match_select, false))
         return false;
     fill_out_match_alloc(way, match_select, false);
@@ -1444,8 +1465,9 @@ bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigne
         safe_vector<int> matching_rows =
             available_match_SRAMs_per_row(match_select.column_mask, column_mask,
                                           determined_rows, group, i);
-        if (matching_rows.size() == 0)
-            return false;
+        if (matching_rows.size() == 0) {
+            failure_reason = "empty row for wide match in determine_match_rows_and_cols";
+            return false; }
         int wide_row = matching_rows[0];
         match_select.rows.push_back(wide_row);
         search_bus = select_search_bus(group, i, wide_row);
@@ -1460,8 +1482,9 @@ bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigne
 
     // A logical table partition must be fully placed
     if (atcam &&
-        bitcount(match_select.column_mask) != static_cast<size_t>(group->left_to_place()))
-        return false;
+        bitcount(match_select.column_mask) != static_cast<size_t>(group->left_to_place())) {
+        failure_reason = "atcam fail in determine_match_rows_and_cols";
+        return false; }
 
     std::sort(match_select.rows.begin(), match_select.rows.end());
     std::reverse(match_select.rows.begin(), match_select.rows.end());
@@ -1675,8 +1698,9 @@ bool Memories::allocate_all_atcam(mem_info &mi) {
                 break;
             }
         }
-        if (!found)
-            return false;
+        if (!found) {
+            failure_reason = "atcam partition failure";
+            return false; }
     }
     compress_ways(true);
     return true;
@@ -1726,6 +1750,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
             }
         }
     }
+    failure_reason = "find_ternary_stretch failed";
     return false;
 }
 
@@ -1914,7 +1939,9 @@ bool Memories::allocate_all_tind() {
         auto *tg = tind_groups[0];
         int best_bus = 0;
         int best_row = find_best_tind_row(tg, best_bus);
-        if (best_row == -1) return false;
+        if (best_row == -1) {
+            failure_reason = "no tind row available";
+            return false; }
         for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
             if (~sram_inuse[best_row] & (1 << i)) {
                 auto unique_id = tg->build_unique_id();
@@ -3440,6 +3467,7 @@ bool Memories::allocate_all_swbox_users() {
                     // consider interactions between multiple tables.  The example in
                     // P4C-3205 has both a selector and a register in the stage.
                     // As a stopgap, we just fail memory allocation instead of aborting
+                    failure_reason = "syth2port failed over center on jbay";
                     return false;
                 }
             }
@@ -3458,6 +3486,7 @@ bool Memories::allocate_all_swbox_users() {
         for (auto sbu : synth_bus_users)
             sup_unused += sbu->left_to_place();
 
+        failure_reason = "allocate_all_swbox_users failed";
         return false;
     }
     action_bus_users_log();
@@ -3739,6 +3768,8 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
             if (!(gw_found && result_bus_found)) {
                 if (!gw_found) LOG3("  failed to find gw for " << u_id);
                 if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
+                failure_reason = "failed to place payload gw " + u_id.build_name()
+                               + (alloc_search_bus ? " with search bus" : " no search bus");
                 return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me payload");
         }
@@ -3772,6 +3803,8 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
             alloc.gateway.payload_row = -1;
             if (!gw_found) {
                 LOG3("  failed to find gw for " << u_id);
+                failure_reason = "failed to place normal gw " + u_id.build_name()
+                               + (alloc_search_bus ? " with search bus" : " no search bus");
                 return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me normal");
         }
@@ -3795,6 +3828,7 @@ bool Memories::allocate_all_no_match_gw() {
             if (!(unit_found && result_bus_found)) {
                 if (!unit_found) LOG3("  failed to find gw for " << u_id);
                 if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
+                failure_reason = "failed to place no_match gw " + u_id.build_name();
                 return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me no match");
         }
@@ -3945,10 +3979,11 @@ bool Memories::allocate_all_no_match_miss() {
                 if (found) break;
             }
 
-            if (!found)
+            if (!found) {
+                failure_reason = "failed to place no match miss " + u_id.build_name();
                 return false;
-            else
-                no_match_tables_allocated++;
+            } else {
+                no_match_tables_allocated++; }
         }
     }
     return true;
@@ -3985,8 +4020,9 @@ bool Memories::allocate_all_tind_result_bus_tables() {
                 if (found) break;
             }
 
-            if (!found)
-                return false;
+            if (!found) {
+                failure_reason = "failed to place tind result bus " + u_id.build_name();
+                return false; }
         }
     }
     return true;
@@ -4085,6 +4121,7 @@ bool Memories::allocate_idletime(SRAM_group* idletime_group) {
         return true;
     if (allocate_idletime_in_top_or_bottom_half(idletime_group, !in_top_half))
         return true;
+    failure_reason = "allocate_idletime failed";
     return false;
 }
 

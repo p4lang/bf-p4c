@@ -790,6 +790,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             int delta = 1 << std::max(10, ceil_log2(next->attached_entries.at(att).entries) - 4);
             if (delta <= next->attached_entries.at(att).entries) {
                 next->attached_entries.at(att).entries -= delta;
+                next->use.format_type.invalidate();
                 if (!next->attached_entries.at(att).need_more) {
                     next->use.format_type.invalidate();
                     next->attached_entries.at(att).need_more = true; }
@@ -969,6 +970,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                                  ae.first->toString();
                 sep = " and "; } }
         LOG3("    " << error_message);
+        LOG3("    " << current_mem.last_failure());
         next->stage_advance_log = "ran out of memories";
         next->resources.memuse.clear();
         for (auto *p : whole_stage)
@@ -1137,6 +1139,17 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
 
     if (no_memory) return true;
     if (auto ran_out = get_current_stage_use(next).ran_out()) {
+        if (error_message == "") {
+            error_message = next->table->toString() + " could not fit in stage " +
+                            std::to_string(next->stage) + " with " + std::to_string(next->entries)
+                            + " entries";
+            const char *sep = " along with ";
+            for (auto &ae : next->attached_entries) {
+                if (ae.second.entries > 0) {
+                    error_message += sep + std::to_string(ae.second.entries) + " entries of " +
+                                     ae.first->toString();
+                    sep = " and "; } }
+            error_message += ", ran out of " + ran_out; }
         LOG3("    " << what << " of memory allocation ran out of " << ran_out);
         next->stage_advance_log = "ran out of " + ran_out;
         return false;

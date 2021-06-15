@@ -4379,12 +4379,12 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     for (auto back_at : tbl->attached) {
         auto at_mem = back_at->attached;
         if (auto as = at_mem->to<IR::MAU::Selector>()) {
-            if (!attached_tables.count(as) &&
+            if (!attached_tables.count(as) && attached_entries.at(as).entries > 0 &&
                 !allocSelector(as, tbl, phv, alloc.selector_ixbar, tbl->name)) {
                 alloc.clear_ixbar();
                 return false; } }
         if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
-            if (!attached_tables.count(mtr)
+            if (!attached_tables.count(mtr) && attached_entries.at(mtr).entries > 0
                 && !(allocMeter(mtr, tbl, phv, alloc.meter_ixbar, true)
                      || allocMeter(mtr, tbl, phv, alloc.meter_ixbar, false))) {
                 alloc.clear_ixbar();
@@ -4392,7 +4392,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             }
         }
         if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-            if (!attached_tables.count(salu)
+            if (!attached_tables.count(salu) && attached_entries.at(salu).entries > 0
                 && !(allocStateful(salu, tbl, phv, alloc.salu_ixbar, true)
                      || allocStateful(salu, tbl, phv, alloc.salu_ixbar, false))) {
                 alloc.clear_ixbar();

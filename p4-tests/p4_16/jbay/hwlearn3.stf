@@ -13,7 +13,7 @@ expect 3  # packets come out port 3
 # most of the ethernet + the ipv4 header.  We leave off the first 2 bytes so we can make them
 # different for every packet (easier to track where a packet came from if it comes out somewhere
 # unexpected.  Also matches packet #s in verbose model trace)
-#        | ethernet header            | | IPv4 header                                  | 
+#        | ethernet header            | | IPv4 header                                  |
 #        dstAddr      srcAddr      type VL   len  id       ttl    csum                 |
 setenv FIXED aaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002
 
@@ -82,4 +82,6 @@ check_register flow_counter(10) lo = 6
 packet 1 0023 $FIXED 0064 006b 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(16) lo = 1
+check_register output_fifo(6) lo = 0x64006b
+check_register output_fifo(6) hi = 2
 

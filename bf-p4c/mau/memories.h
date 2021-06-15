@@ -185,7 +185,7 @@ struct Memories {
                                              + stateful_RAMs; }
         int non_SRAM_RAMs() const { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
         int columns(int RAMs) const { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
-        bool constraint_check(int lt_allowed) const;
+        bool constraint_check(int lt_allowed, cstring &failure_reason) const;
     };
 
     friend class SetupAttachedTables;
@@ -600,6 +600,7 @@ struct Memories {
     safe_vector<table_alloc *>       idletime_tables;
     safe_vector<SRAM_group *>        idletime_groups;
 
+    cstring     failure_reason;
 
     // Switchbox Related Helper functions
     int phys_to_log_row(int physical_row, RAM_side_t side) const;
@@ -753,6 +754,7 @@ struct Memories {
     void shrink_allowed_lts() { logical_tables_allowed--; }
     friend std::ostream &operator<<(std::ostream &, const Memories &);
     friend std::ostream &operator<<(std::ostream &, const safe_vector<Memories::table_alloc *> &);
+    cstring last_failure() const { return failure_reason ? failure_reason : ""; }
 };
 
 template<int R, int C>
