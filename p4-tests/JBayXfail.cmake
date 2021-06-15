@@ -288,14 +288,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation creates an invalid container action within a Tofino ALU"
-
-  # P4C-3158
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2490.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Field .* is not a member of structure header .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
 )

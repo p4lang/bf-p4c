@@ -538,6 +538,8 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/slicing/phv_slicing_split.cpp
   phv/slicing/phv_slicing_iterator.cpp
   phv/slicing/phv_slicing_dfs_iterator.cpp
+  phv/solver/action_constraint_solver.cpp
+  phv/solver/symbolic_bitvec.cpp
   phv/transforms/auto_alias.cpp
   phv/utils/live_range_report.cpp
   phv/utils/report.cpp
@@ -609,6 +611,8 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/slicing/phv_slicing_split.h
   phv/slicing/phv_slicing_iterator.h
   phv/slicing/phv_slicing_dfs_iterator.h
+  phv/solver/symbolic_bitvec.h
+  phv/solver/action_constraint_solver.h
   phv/transforms/auto_alias.h
   phv/utils/live_range_report.h
   phv/utils/report.h
@@ -1356,6 +1360,8 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/custom_header_stack_name.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/action_constraint_solver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/symbolic_bitvec.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

@@ -205,11 +205,10 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     PHV::Allocation::MutuallyLiveSlices rs;
     auto slices = this->slices(c);
     for (auto& slice : slices) {
-        LOG1("\t\t\tChecking slice " << slice);
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
-        LOG1("\t\t\t  mutex: " << mutex << ", live range mutex: " << liverange_mutex);
-        if (!mutex && !liverange_mutex) rs.insert(slice); }
+        if (!mutex && !liverange_mutex) rs.insert(slice);
+    }
     return rs;
 }
 
@@ -218,11 +217,15 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c,
                                   std::vector<AllocSlice>& slices) const {
     PHV::Allocation::MutuallyLiveSlices rs;
     auto existingSlices = this->slices(c);
+    // TODO(yumin): discrepancy with ^ slicesByLiveness function
+    // liveRangeDisjoint not check in this function.
     for (auto& slice : existingSlices) {
-        for (auto sl : slices) {
-            bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
-            if (!mutex)
-                rs.insert(slice); } }
+        if (std::any_of(slices.begin(), slices.end(), [&](const AllocSlice& sl) {
+                return !phv_i->field_mutex()(slice.field()->id, sl.field()->id);
+            })) {
+            rs.insert(slice);
+        }
+    }
     return rs;
 }
 

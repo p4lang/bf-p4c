@@ -1,12 +1,14 @@
 #include <tuple>
 #include <boost/optional/optional_io.hpp>
 
-#include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/scc_toposort.h"
+#include "bf-p4c/phv/solver/action_constraint_solver.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
+#include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/phv.h"
 #include "lib/exceptions.h"
 
 int ActionPhvConstraints::ConstraintTracker::current_action = 0;
@@ -713,94 +715,15 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
     return rv;
 }
 
-CanPackErrorCode ActionPhvConstraints::can_pack_verify_read(
-        const PHV::Allocation &alloc,
-        PHV::Allocation::MutuallyLiveSlices container_state,
-        const IR::MAU::Action* action) const {
-    ordered_set<PHV::Container> containerList;
-    ordered_map<PHV::FieldSlice, PHV::FieldSlice> readSlices;
-    ordered_set<PHV::Container> writeContainers;
-    int stage = min_stage(action);
-    auto use = PHV::FieldUse(PHV::FieldUse::WRITE);
-
-    // Gather all containers written by any of the slices in container_state
-    //
-    // A destination field won't be checked _in this function_ if it's not placed yet.
-    // However, an unplaced destination field _will_ be checked in can_pack when they are finally
-    // placed. In that case, can_pack looks at all the writes into that container.
-    for (auto slice : container_state)
-        for (auto write : constraint_tracker.destinations(slice, action))
-            for (auto writeSlice : alloc.slices(write.field(), write.range(), stage, use))
-                if (writeSlice.container()) writeContainers.emplace(writeSlice.container());
-
-    // Walk through the destination containers one-by-one and check their validity
-    for (auto c : writeContainers) {
-        bool mocha_or_dark = c.is(PHV::Kind::mocha) || c.is(PHV::Kind::dark);
-        auto writeSlices = alloc.slices(c, stage, use);
-        size_t num_adc = 0;
-        ordered_set<PHV::Container> containerList;
-        for (auto sl : writeSlices) {
-            LOG5("\tProcessing write to " << sl.field()->name << " " << sl.field_slice() << " "
-                                          << sl.container());
-            auto reads = constraint_tracker.sources(sl, action);
-            for (auto operand : reads) {
-                if (operand.ad || operand.constant) {
-                    LOG6("\t\t\t\t" << operand << " is action data/constant source");
-                    num_adc = 1;
-                    continue;
-                }
-                const PHV::Field* fieldRead = operand.phv_used->field();
-                le_bitrange rangeRead = operand.phv_used->range();
-                ordered_set<PHV::Container> per_source_containers;
-                ordered_set<PHV::AllocSlice> per_source_slices =
-                    alloc.slices(fieldRead, rangeRead, stage, PHV::FieldUse(PHV::FieldUse::READ));
-                for (auto source : container_state) {
-                    if (source.field() == fieldRead && source.field_slice().overlaps(rangeRead) &&
-                            source.getEarliestLiveness().first < stage &&
-                            source.getLatestLiveness().first >= stage) {
-                        per_source_slices.insert(source);
-                    }
-                }
-
-                for (auto source_slice : per_source_slices) {
-                    per_source_containers.insert(source_slice.container());
-                    LOG5("\t\t\t\t\tSource slice for " << sl << " : " << source_slice); }
-
-                if (per_source_containers.size() == 0) {
-                    LOG1("\t\t\t\tSource " << *(operand.phv_used)
-                                           << " has not been allocated yet.");
-                } else {
-                    containerList.insert(per_source_containers.begin(),
-                                         per_source_containers.end());
-                }
-            }
-        }
-
-        size_t total_sources = num_adc + containerList.size();
-        if (total_sources > 2) {
-            LOG5("\t\t\t\tAction " << action->name
-                                   << " uses more than two PHV sources to write to container " << c
-                                   << ".");
-            return CanPackErrorCode::MORE_THAN_TWO_SOURCES;
-        } else if (mocha_or_dark && total_sources > 1) {
-            LOG5("\t\t\t\tAction " << action->name
-                                   << " uses more than one PHV source to write to container " << c
-                                   << ".");
-            return CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE;
-        }
-    }
-    return CanPackErrorCode::NO_ERROR;
-}
-
 boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
         const PHV::Allocation &alloc,
         const std::vector<PHV::AllocSlice>& slices,
-        PHV::AllocSlice& slice,
+        const PHV::AllocSlice& dst,
         const IR::MAU::Action* action) const {
-    LOG5("\t\t\t\tgetSourcePHVSlices for action: " << action->name << " and slice " << slice);
+    LOG5("\t\t\t\tgetSourcePHVSlices for action: " << action->name << " and slice " << dst);
     int stage = min_stage(action);
-    auto *field = slice.field();
-    auto reads = constraint_tracker.sources(slice, action);
+    auto *field = dst.field();
+    auto reads = constraint_tracker.sources(dst, action);
 
     if (reads.size() == 0)
         LOG5("\t\t\t\tField " << field->name << " is not written in action " << action->name);
@@ -1776,36 +1699,35 @@ bool ActionPhvConstraints::check_speciality_read_and_bitmask(
     return false;
 }
 
-CanPackErrorCode ActionPhvConstraints::check_container_read(
-        const PHV::Allocation& alloc,
-        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
-    ordered_set<const IR::MAU::Action*> set_of_read_actions;
-    for (auto slice : container_state) {
-        const auto& reading_actions = constraint_tracker.read_in(slice);
-        set_of_read_actions.insert(reading_actions.begin(), reading_actions.end());
-    }
-    // Verify read actions
-    for (const auto* action : set_of_read_actions) {
-        LOG5("\t\t\tNeed to check container destinations now for read action " << action->name);
-        CanPackErrorCode err =
-            can_pack_verify_read(alloc, container_state, action);
-        if (err != CanPackErrorCode::NO_ERROR) return err;
-    }
-    return CanPackErrorCode::NO_ERROR;
-}
-
 ordered_set<const IR::MAU::Action*> ActionPhvConstraints::make_writing_action_set(
-    const PHV::Allocation::MutuallyLiveSlices& container_state,
+    const PHV::Allocation& alloc, const PHV::Allocation::MutuallyLiveSlices& container_state,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     ordered_set<const IR::MAU::Action*> set_of_actions;
     for (auto slice : container_state) {
         const auto& writing_actions = constraint_tracker.written_in(slice);
         set_of_actions.insert(writing_actions.begin(), writing_actions.end());
-        // Add initialization actions to this set.
+        // Add metaInit actions of this candidate set.
         if (initActions.count(slice.field())) {
             for (const auto* a : initActions.at(slice.field())) {
                 set_of_actions.insert(a);
             }
+        }
+        // add darkInit actions of this candidate set and previously allocated slices.
+        const auto* dark_prim = slice.getInitPrimitive();
+        if (dark_prim && !dark_prim->isAlwaysRunActionPrim()) {
+            for (const auto* action : dark_prim->getInitPoints()) {
+                set_of_actions.insert(action);
+            }
+        }
+        //// XXX(yumin): not sure whether the two below were duplicated, keep them
+        //// both here to be defensive.
+        // add metaInit actions of this candidate set and previously allocated slices.
+        for (const auto* dark_init : slice.getInitPoints()) {
+            set_of_actions.insert(dark_init);
+        }
+        // add metaInit actions added before this allocation.
+        if (const auto init_actions = alloc.getInitPoints(slice)) {
+            set_of_actions.insert(init_actions->begin(), init_actions->end());
         }
     }
     return set_of_actions;
@@ -2319,7 +2241,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     if (!check_speciality_packing(container_state))
         return std::make_tuple(CanPackErrorCode::SPECIALTY_DATA, boost::none);
 
-    const auto actions = make_writing_action_set(container_state, initActions);
+    const auto actions = make_writing_action_set(alloc, container_state, initActions);
     auto action_props = make_action_container_properties(alloc, actions, container_state,
                                                          initActions, mocha_or_dark);
     auto copack_constraints = make_initial_copack_constraints(actions, container_state);
@@ -2332,10 +2254,12 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     }
     LOG1("after check bitwise_or_move copacking constraint " << copack_constraints.size());
 
-    // check constraints from container reading's perspective.
-    err = check_container_read(alloc, container_state);
-    if (err != CanPackErrorCode::NO_ERROR) {
-        return std::make_tuple(err, boost::none);
+    // TODO(yumin): we use solver to check move-based actions as a safe net to ensure
+    // we don't create invalid packing.
+    auto move_err = check_move_constraints(
+            alloc, actions, action_props, slices, container_state, c, initActions);
+    if (move_err != CanPackErrorCode::NO_ERROR) {
+        return std::make_tuple(move_err, boost::none);
     }
 
     // depending on ^check_and_generate_constraints_for_bitwise_or_move.
@@ -3517,12 +3441,10 @@ ordered_map<const PHV::Field*, int> ActionPhvConstraints::compute_sources_first_
     for (const auto& kv : fields) {
         const auto* f = kv.first;
         const auto& slices = kv.second;
-        LOG1("checking " << f);
         if (!field_to_nodes.count(f)) {
             field_to_nodes[f] = topo_sorter.new_node();
         }
         for (const auto* src : slices_sources(f, slices)) {
-            LOG1(f << " is written by " << src);
             if (!field_to_nodes.count(src)) {
                 field_to_nodes[src] = topo_sorter.new_node();
             }
@@ -3581,6 +3503,265 @@ ActionPhvConstraints::ActionSources ActionPhvConstraints::getActionSources(
     }
 
     return rv;
+}
+
+CanPackErrorCode ActionPhvConstraints::check_move_constraints_with_solver(
+    const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+    const ActionPropertyMap& action_props, const std::vector<PHV::AllocSlice>& slices,
+    const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
+    const PHV::Allocation::LiveRangeShrinkingMap& initActions,
+    solver::ActionSolverBase* solver) const {
+    using namespace solver;
+
+    // check metaInit for dest slice, if found, add assignment to solver.
+    const auto add_meta_init_assign = [&](const IR::MAU::Action* action,
+                                          const PHV::AllocSlice& slice,
+                                          const Operand& dest) {
+        if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action)) {
+            LOG5("add metadata init to " << dest);
+            solver->add_assign(dest, make_ad_or_const_operand());
+        } else if (alloc.getMetadataInits(action).count(slice.field())) {
+            LOG5("add metadata init to " << dest);
+            solver->add_assign(dest, make_ad_or_const_operand());
+        }
+    };
+
+    // check dark swap slices. AlwaysRun inits in getInitPrimitive are ignored here
+    // because those slices were not initialized through actions.
+    const auto add_dark_init_assign = [&](const IR::MAU::Action* action,
+                                          const PHV::AllocSlice& slice,
+                                          const Operand& dest) {
+        const auto& dark_prim = slice.getInitPrimitive();
+        if (dark_prim && !dark_prim->isAlwaysRunActionPrim()) {
+            if (dark_prim->getInitPoints().count(action)) {
+                auto src_slice = dark_prim->getSourceSlice();
+                if (src_slice) {
+                    const auto src_container = src_slice->container();
+                    const auto src = make_container_operand(
+                            src_container.toString(), src_slice->container_slice());
+                    if (src_container != c) {
+                        solver->set_container_spec(
+                                src_container.toString(), src_container.size(), bitvec());
+                    }
+                    LOG5("add dark container move to " << dest << " from " << src);
+                    solver->add_assign(dest, src);
+                } else if (dark_prim->destAssignedToZero()) {
+                    LOG5("add dark container init from zero");
+                    solver->add_assign(dest, make_ad_or_const_operand());
+                }
+            }
+        }
+    };
+
+    // add assignment to dest in the action.
+    const auto add_action_assign = [&](const IR::MAU::Action* action,
+                                       const PHV::AllocSlice& slice,
+                                       const Operand& dest) {
+        const int stage = min_stage(action);
+        // ignore slices that are not live for this action.
+        // earliest is always a write, if write after this stage, ignore
+        // latest is always a read, if read at or before this stage, ignore
+        if (slice.getEarliestLiveness().first > stage
+            || slice.getLatestLiveness().first <= stage) {
+            return;
+        }
+        const auto operand = constraint_tracker.is_written(slice, action);
+        if (!operand) {
+            return;
+        }
+        LOG5("has op: " << operand);
+        if (operand->ad || operand->constant) {
+            LOG5("add ad_or_const move to " << dest);
+            solver->add_assign(dest, make_ad_or_const_operand());
+        } else {
+            const auto src_phv = getSourcePHVSlice(alloc, slices, slice, action);
+            if (!src_phv) {
+                // src might have not been allocatd yet.
+                return;
+            }
+            const auto src_container = (*src_phv).container();
+            const auto src =
+                make_container_operand(src_container.toString(), (*src_phv).container_slice());
+            LOG5("add container move to " << dest << " from " << src);
+            if (src_container != c) {
+                solver->set_container_spec(src_container.toString(), src_container.size(),
+                                           bitvec());
+            }
+            solver->add_assign(dest, src);
+        }
+    };
+
+    // compute bits that are live after applying a action @stage to contaienr @p c.
+    const auto compute_dest_live_bv = [&](const int stage, const IR::MAU::Action* action) {
+        bitvec dest_live;
+        for (const auto& slice : container_state) {
+            const auto* field = slice.field();
+            if (!uses.is_referenced(field) || field->padding) continue;
+            // earliest is always a write, write before or at this stage, live.
+            // latest is always a read, if read after this stage, live.
+            if (slice.getEarliestLiveness().first <= stage &&
+                slice.getLatestLiveness().first > stage) {
+                dest_live.setrange(slice.container_slice().lo, slice.container_slice().size());
+            }
+            // XXX(yumin): there seems to be a bug that a field @f is initialized in action @a
+            // but the earligest liverange of @f is somehow wrongly later then min_stage of @a;
+            // Add this additional check here to avoid compiler bug.
+            // We can remove this after we fix this bug.
+            if (action && ((initActions.count(field) && initActions.at(field).count(action)) ||
+                           alloc.getMetadataInits(action).count(field))) {
+                dest_live.setrange(slice.container_slice().lo, slice.container_slice().size());
+            }
+        }
+        return dest_live;
+    };
+
+    for (const auto* action : actions) {
+        if (action_props.at(action).op_type != OperandInfo::MOVE) {
+            LOG3("non-move action on container " << c << ": " << action->name);
+            continue;
+        }
+        solver->clear();
+        LOG5("check action " << action->name << " for " << c);
+        const auto dest_live = compute_dest_live_bv(min_stage(action), action);
+        LOG5("dest after action live bitvec: " << dest_live);
+        solver->set_container_spec(c.toString(), c.size(), dest_live);
+        for (const auto& slice : container_state) {
+            // There can be dark slices in container state even if c is a normal container,
+            // because of the current implementation of container_states. Those slice
+            // should be just ignored. TODO(yumin): split them out to dark solver?
+            if (slice.container() != c) {
+                continue;
+            }
+            if (!uses.is_referenced(slice.field()) || slice.field()->padding) {
+                continue;
+            }
+            const auto dest = make_container_operand(c.toString(), slice.container_slice());
+            LOG5("check dest slice: " << slice << " as " << dest);
+            add_meta_init_assign(action, slice, dest);
+            add_dark_init_assign(action, slice, dest);
+            add_action_assign(action, slice, dest);
+        }
+        auto err = solver->solve();
+        if (err) {
+            LOG1("Solver Error Reason: " << err->msg);
+            return CanPackErrorCode::CONSTRAINT_CHECKER_FALIED;
+        }
+    }
+
+    // besides actual actions, we need to check always run actions:
+    // (1) always run action does not overwrite other fields. For example, if we
+    //     have two sources to one destination in one ARA, we need verify there's
+    //     no other field in destination that are not mutex.
+    // (2) TODO(yumin): always run action can be synthesized: we cannot do it now
+    //     because we don't have a way to get all ARA instructions for a specific point.
+    // Note that currently, because we do table placement after PHV, it's always possible
+    // to have any ARA, so the check here is trying to avoid introducing new dependencies.
+    // Unfornately, due to the current implementation, there can be non-mutex alloc slices
+    // in container_state, when dark overlay is involved. For example, you might see
+    // MH10 bit[15..0] <--f1<16> mocha [0:15] live at [9w, 11r] { always_run; 0 actions }
+    // MH10 bit[0]     <--f2<1>  mocha [0:0] live at [5w, 9r]
+    // DH9 bit[15..0]  <--f1<16> mocha [0:15] live at [5w, 9r]
+    // in container_state when we dark swap out f1 to DH9.
+    // So, we need to filter out all ara actions and check fields that lives.
+    ordered_set<const PHV::AllocSlice*> ara_slices;
+    for (const auto& slice : container_state) {
+        const auto* prim = slice.getInitPrimitive();
+        // alloc slice without source slices are slices that was swapped out, e.g.,
+        // DH9 bit[15..0] <-- f1 live at [5w, 9r] = MH10 f2 live at [-1w, 5r].
+        if (prim && prim->isAlwaysRunActionPrim() && prim->getSourceSlice()) {
+            ara_slices.insert(&slice);
+        }
+    }
+    for (const auto* ara_slice : ara_slices) {
+        LOG3("check ARA on slice: " << ara_slice);
+        solver->clear();
+        const auto dest_live =
+            compute_dest_live_bv(ara_slice->getEarliestLiveness().first, nullptr);
+        LOG5("dest live bits bitvec after ARA: " << dest_live);
+        solver->set_container_spec(c.toString(), c.size(), dest_live);
+        for (const auto& slice : container_state) {
+            // TODO(yumin): It seems that we are adding dark init for pure padding fields.
+            // We should fix it in darkInit and change this to a bug check?.
+            if (!uses.is_referenced(slice.field()) || slice.field()->padding) {
+                continue;
+            }
+            // Because we do not have a fixed ARA stage, we have to use earliest liveness
+            // as a guess of the actual stage of ARA.
+            if (slice.getEarliestLiveness() != ara_slice->getEarliestLiveness()) {
+                continue;
+            }
+            const auto* prim = slice.getInitPrimitive();
+            if (!prim) {
+                continue;
+            }
+            const auto dest = make_container_operand(c.toString(), slice.container_slice());
+            if (prim->isAlwaysRunActionPrim()) {
+                if (auto src_slice = prim->getSourceSlice()) {
+                    const auto src_container = src_slice->container();
+                    const auto src = make_container_operand(
+                            src_container.toString(), src_slice->container_slice());
+                    if (src_container != c) {
+                        solver->set_container_spec(
+                                src_container.toString(), src_container.size(), bitvec());
+                    }
+                    LOG5("add ARA dark container move to " << c << " from " << src);
+                    solver->add_assign(dest, src);
+                } else if (prim->destAssignedToZero()) {
+                    LOG5("add dark container init from zero");
+                    solver->add_assign(dest, make_ad_or_const_operand());
+                }
+            }
+        }
+        auto err = solver->solve();
+        if (err) {
+            LOG1("ARA Solver Error Reason: " << err->msg);
+            return CanPackErrorCode::CONSTRAINT_CHECKER_FALIED;
+        }
+    }
+
+    return CanPackErrorCode::NO_ERROR;
+}
+
+CanPackErrorCode ActionPhvConstraints::check_move_constraints(
+    const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+    const ActionPropertyMap& action_props,
+    const std::vector<PHV::AllocSlice>& slices,
+    const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
+    const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
+    if (LOGGING(5)) {
+        LOG5("check_move_constraints:");
+        for (const auto& slice : container_state) {
+            LOG5("slice: " << slice);
+        }
+        for (const auto* a : actions) {
+            LOG5("action: " << a->name);
+        }
+    }
+    solver::ActionSolverBase* solver;
+    switch (c.type().kind()) {
+        case PHV::Kind::normal: {
+            LOG3("initializing normal container move solver");
+            solver = new solver::ActionMoveSolver();
+            break;
+        }
+        case PHV::Kind::mocha: {
+            LOG3("initializing mocha container move solver");
+            solver = new solver::ActionMochaSolver();
+            break;
+        }
+        case PHV::Kind::dark: {
+            LOG3("initializing dark container move solver");
+            solver = new solver::ActionDarkSolver();
+            break;
+        }
+        case PHV::Kind::tagalong: {
+            return CanPackErrorCode::NO_ERROR;
+        }
+        default:
+            BUG("unknown container type: %1%", c);
+    }
+    return check_move_constraints_with_solver(
+            alloc, actions, action_props, slices, container_state, c, initActions, solver);
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src) {

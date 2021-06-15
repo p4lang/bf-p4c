@@ -13,6 +13,11 @@
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/utils/utils.h"
 
+// forward declaration for solver base.
+namespace solver {
+class ActionSolverBase;
+}
+
 struct ActionPhvConstraintLogging {
     int error;
 };
@@ -50,6 +55,7 @@ enum class CanPackErrorCode : unsigned {
     COPACK_UNSATISFIED = 20,
     MULTIPLE_ALIGNMENTS = 21,
     OVERLAPPING_SLICES = 22,
+    CONSTRAINT_CHECKER_FALIED = 23,
 };
 
 std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& info);
@@ -447,19 +453,6 @@ class ActionPhvConstraints : public Inspector {
                                         const PHV::Allocation::MutuallyLiveSlices& container_state,
                                         const IR::MAU::Action* action) const;
 
-    /** Verify whether packing the fields in \p container_state causes any read
-      * violations in \p action
-      *
-      * \param alloc the current Allocation
-      * \param container_state the proposed field packing
-      * \param action the action to evaluate
-      *
-      * \returns \c CanPackErrorCode value indicating violation type (if any)
-      */
-    CanPackErrorCode can_pack_verify_read(const PHV::Allocation& alloc,
-            PHV::Allocation::MutuallyLiveSlices container_state,
-            const IR::MAU::Action* action) const;
-
     /** Return the first allocated (in @alloc) or proposed (in @slices) source
      * of an instruction in @action that writes to @slice, if any.  There may
      * be up to two PHV sources per destination in any action, as each
@@ -468,7 +461,7 @@ class ActionPhvConstraints : public Inspector {
     boost::optional<PHV::AllocSlice> getSourcePHVSlice(
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& slices,
-        PHV::AllocSlice& dst,
+        const PHV::AllocSlice& dst,
         const IR::MAU::Action* action) const;
 
     /** @returns true if @slices packed in the same container read from action
@@ -735,16 +728,10 @@ class ActionPhvConstraints : public Inspector {
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
-    /// @returns an error code if allocation violates any constraints by checking from
-    /// the container reading side.
-    CanPackErrorCode check_container_read(
-        const PHV::Allocation& alloc,
-        const PHV::Allocation::MutuallyLiveSlices& container_state) const;
-
     /// Merge actions for all the candidate fields into a set, including initialization actions for
     /// any metadata fields overlaid due to live range shrinking.
     ordered_set<const IR::MAU::Action*> make_writing_action_set(
-        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const PHV::Allocation& alloc, const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// generate action container properties for @p actions.
@@ -1074,6 +1061,29 @@ class ActionPhvConstraints : public Inspector {
             const IR::MAU::Action* act, const PHV::Container& c,
             std::vector<PHV::AllocSlice>& new_slices,
             const PHV::Allocation& alloc) const;
+
+    /** Checks whether packing @slices into a container will violate MAU action constraints for
+     *  all move-based instructions, using an action move constraint solver for normal container
+     *  destination. For mocha and dark container, check basic constraints that:
+     *  (1) mocha container can only be written in whole by ad/constant/container.
+     *  (2) dark container can only be written in while by container.
+     */
+    CanPackErrorCode check_move_constraints(
+        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+        const ActionPropertyMap& action_props,
+        const std::vector<PHV::AllocSlice>& slices,
+        const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+
+    /** Checks whether packing @slices into a container will violate MAU action constraints for
+     *  all move-based instructions, using an action constraint solver.
+     */
+    CanPackErrorCode check_move_constraints_with_solver(
+        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+        const ActionPropertyMap& action_props, const std::vector<PHV::AllocSlice>& slices,
+        const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions,
+        solver::ActionSolverBase* solver) const;
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
