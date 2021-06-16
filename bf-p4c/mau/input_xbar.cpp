@@ -417,8 +417,8 @@ int inline IXBar::bytes_per_group(bool ternary) const {
 
 void IXBar::increase_ternary_ixbar_space(int &groups_needed, int &nibbles_needed,
         bool requires_versioning) {
-    bool nibble_add_diff = requires_versioning ? 2 : 1;
-    if (groups_needed - nibbles_needed == nibble_add_diff)
+    // (TODO): Try to optimize it in the future.
+    if (groups_needed > nibbles_needed)
         nibbles_needed++;
     else
         groups_needed++;
