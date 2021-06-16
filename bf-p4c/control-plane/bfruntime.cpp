@@ -2778,9 +2778,10 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
             for (const auto& externInstance : externType.instances()) {
                 auto actionSelector =
                     ActionSelector::fromTofinoActionSelector(p4info, externInstance);
-                if (actionSelector != boost::none)
+                if (actionSelector != boost::none) {
                     addActionSelectorCommon(tablesJson, *actionSelector);
                     addActionSelectorGetMemberCommon(tablesJson, *actionSelector);
+                }
             }
         } else if (externTypeId == ::barefoot::P4Ids::COUNTER) {
             for (const auto& externInstance : externType.instances()) {
