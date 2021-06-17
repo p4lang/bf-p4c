@@ -2227,6 +2227,18 @@ bool Format::Use::if_action_has_action_data(cstring action_name) const {
     return false;
 }
 
+bool Format::Use::if_action_has_action_data_table(cstring action_name) const {
+    if (alu_positions.count(action_name) == 0) return false;
+    if (if_action_has_action_data(action_name)) {
+        auto act_alu_positions = alu_positions.at(action_name);
+        for (auto act_alu_pos : act_alu_positions) {
+            if (act_alu_pos.loc == ActionData::ACTION_DATA_TABLE)
+                return true;
+        }
+    }
+    return false;
+}
+
 const RamSection *Format::Use::build_locked_in_sect() const {
     const RamSection *rv = new RamSection(IMMEDIATE_BITS);
     for (auto &alu_pos : locked_in_all_actions_alu_positions) {

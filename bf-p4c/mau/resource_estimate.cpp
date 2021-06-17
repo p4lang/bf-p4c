@@ -372,28 +372,44 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * In the future, when this is supported, a table with a direct resource can still use this
  * identity optimization if and only if the miss-entry never uses that resource, which is
  * a more complex check, but not hard to add
+ *
+ * UPDATE: 
+ * (P4C-3656) Based on driver fixes in DRV-4341, driver checks if the EXM table
+ * requires a table location to be reserved for the default (miss) entry.
+ * Originally the check was simply whether or not the table used direct
+ * resources (action, idle, counter, meter, stful). Now, the check is whether
+ * any of the possible default actions use the direct resources.
+ *
+ * With this change, compiler check will mimic driver checks and use identity
+ * hash for cases where default actions do not have an attached resource.
  */
 bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOption *lo,
         int &calculated_depth) {
-    // In order for the default entry to be safely added, the driver currently uses the largest
-    // hash address always.  With a standard exact match, this is not a problem due to ease of
-    // movement, but with an identity it is unclear if the last hash address.  The fix is to
-    // allow a dynamic hash movement
-    bool action_profile = false;
-    bool direct_attached = false;
-    for (auto back_at : tbl->attached) {
-        if (back_at->attached->is<IR::MAU::ActionData>())
-            action_profile = true;
-        if (back_at->attached->direct)
-            direct_attached = true;
+    // Check if idletime is used on table
+    if (tbl->uses_idletime()) return false;
+
+    // Check if default action(s) have a direct resource
+    // See comments in UPDATE above
+    bool default_action_has_attached_resource = false;
+    for (auto act : Values(tbl->actions)) {
+        if (act->default_allowed || act->is_constant_action) {
+            if (!act->stateful_calls.empty()) {
+                default_action_has_attached_resource = true;
+                break;
+            }
+            // Table does not have any resources node populated at this stage,
+            // we use the action format referred to by the action_format_index
+            auto &format = action_formats[lo->action_format_index];
+            if (format.if_action_has_action_data_table(act->name)) {
+                default_action_has_attached_resource = true;
+                break;
+            }
+        }
+        if (act->is_constant_action) break;
     }
 
-    if (direct_attached)
+    if (default_action_has_attached_resource)
         return false;
-
-    if (!action_profile && lo->layout.action_data_bytes_in_table) {
-        return false;
-    }
 
     int extra_identity_bits = lo->layout.ixbar_width_bits - ceil_log2(Memories::SRAM_DEPTH);
     // Generally the limit becomes around 18 bits: 4 way pack plus 64 bits of entries
@@ -407,6 +423,7 @@ bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOpt
             lo->way_sizes = { RAMs_needed };
             lo->identity = true;
             calculated_depth = RAMs_needed;
+            LOG3("\t Table " << tbl->name << " can have an identity hash");
             return true;
         }
     }

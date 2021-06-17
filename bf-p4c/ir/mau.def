@@ -280,6 +280,10 @@ class Table : BFN::Unit, IAnnotated  {
         // Add '-gateway' suffix to table name if gateway_name is not unique
         if (!gName.startsWith("cond")) gName = gName + "-gateway";
         return gName; }
+    bool uses_idletime() const {
+        for (auto back_at : attached)
+            if (back_at->attached->is<IR::MAU::IdleTime>()) return true;
+        return false; }
     int stage() const override { return stage_ ? *stage_ : -1; }
     gress_t thread() const override { return gress; }
     toString { return "table " + externalName(); }

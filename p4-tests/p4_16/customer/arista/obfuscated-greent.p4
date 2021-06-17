@@ -2434,7 +2434,7 @@ control WildRose(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
         default_action = Notus(32w0);
         size = 2;
     }
-    @atcam_partition_index("Jayton.Sublett") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(5 , 16384) @name(".Meyers") table Meyers {
+    @atcam_partition_index("Jayton.Sublett") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Meyers") table Meyers {
         actions = {
             @tableonly Kellner();
             @tableonly McKenney();
@@ -2879,7 +2879,7 @@ control Standard(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
         Wentworth();
         Bostic();
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(".Tocito") @name(".Monse") table Monse {
+    @disable_atomic_modify(1) @name(".Monse") table Monse {
         actions = {
             Danbury();
         }
@@ -3238,7 +3238,7 @@ control LaJara(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
         Lemont.Swisshome.McGonigle = McGonigle;
         Lemont.Swisshome.Rains = Rains;
     }
-    @disable_atomic_modify(1) @name(".Mendoza") table Mendoza {
+    @disable_atomic_modify(1) @placement_priority(-1) @name(".Mendoza") table Mendoza {
         actions = {
             Bammel();
         }
@@ -3715,7 +3715,7 @@ control Snook(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
         Lemont.Yerington.Littleton = Littleton;
         Lemont.Yerington.Oilmont = (bit<1>)1w0;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Haugen") table Haugen {
+    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Haugen") table Haugen {
         actions = {
             OjoFeliz();
             Havertown();
@@ -3738,7 +3738,7 @@ control Goldsmith(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
     @name(".Encinitas") action Encinitas(bit<10> Goodwin) {
         Lemont.Aniak.Pinole = Goodwin;
     }
-    @disable_atomic_modify(1) @name(".Issaquah") table Issaquah {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Issaquah") table Issaquah {
         actions = {
             Encinitas();
         }
@@ -3786,7 +3786,7 @@ control PawCreek(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
     @name(".Comobabi") action Comobabi() {
         Lemont.Aniak.Corydon = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(8) @name(".Bovina") table Bovina {
+    @disable_atomic_modify(1) @name(".Bovina") table Bovina {
         actions = {
             Langhorne();
             Comobabi();
@@ -4050,7 +4050,7 @@ control Gwynn(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
     @name(".Capitola") action Capitola() {
         Lemont.Yerington.Vergennes = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @placement_priority(".Barnsboro" , ".Ranburne" , ".Asharoken" , ".Mendoza") @name(".Liberal") table Liberal {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Liberal") table Liberal {
         actions = {
             Rolla();
         }
@@ -4916,7 +4916,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
     @name(".Almeria") action Almeria(bit<16> Kahaluu) {
         Lemont.Hallwood.Ankeny = Kahaluu;
     }
-    @disable_atomic_modify(1) @placement_priority(".Goodlett") @name(".Burgdorf") table Burgdorf {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Burgdorf") table Burgdorf {
         actions = {
             August();
             @defaultonly NoAction();
@@ -4927,7 +4927,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(".Goodlett") @name(".Idylside") table Idylside {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Idylside") table Idylside {
         actions = {
             Kinston();
             Nason();
@@ -5038,7 +5038,7 @@ control Holyoke(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         Lemont.Empire.Welcome = Lemont.Hallwood.Welcome & Welcome;
         Lemont.Empire.Rainelle = Lemont.Hallwood.Rainelle & Rainelle;
     }
-    @disable_atomic_modify(1) @placement_priority(".Bairoil") @name(".DuPont") table DuPont {
+    @disable_atomic_modify(1) @name(".DuPont") table DuPont {
         key = {
             Lemont.Hallwood.Buckhorn: exact @name("Hallwood.Buckhorn") ;
         }
@@ -5059,7 +5059,7 @@ control Shauck(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
     }
     @name(".Quivero") action Quivero() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(5) @name(".Telegraph") table Telegraph {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Telegraph") table Telegraph {
         key = {
             Lemont.Hallwood.Buckhorn: exact @name("Hallwood.Buckhorn") ;
             Lemont.Empire.Solomon   : exact @name("Empire.Solomon") ;
@@ -5358,7 +5358,7 @@ control Marvin(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_me
         Papeton = Ripley.get<tuple<bit<9>, bit<5>>>({ Covert.egress_port, Covert.egress_qid[4:0] });
         Daguao.count((bit<12>)Papeton);
     }
-    @disable_atomic_modify(1) @stage(9) @name(".Nordheim") table Nordheim {
+    @disable_atomic_modify(1) @name(".Nordheim") table Nordheim {
         actions = {
             Conejo();
         }
@@ -5611,7 +5611,7 @@ control Emigrant(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic
     @name(".Clarendon") action Clarendon() {
         Funston.digest_type = (bit<3>)3w4;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Slayden") table Slayden {
+    @disable_atomic_modify(1) @name(".Slayden") table Slayden {
         actions = {
             Ossining();
             Belfalls();
@@ -5639,7 +5639,7 @@ control Edmeston(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
     @name(".Lamar") action Lamar() {
         OldTown.capture_tstamp_on_tx = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(11) @name(".Doral") table Doral {
+    @disable_atomic_modify(1) @name(".Doral") table Doral {
         actions = {
             Lamar();
             Ossining();
@@ -5666,7 +5666,7 @@ control Statham(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
     @name(".LaHoma") action LaHoma() {
         Lemont.Gambrills.Sledge = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @stage(9) @name(".Varna") table Varna {
+    @disable_atomic_modify(1) @placement_priority(-1) @name(".Varna") table Varna {
         key = {
             HighRock.ingress_port  : exact @name("HighRock.Toklat") ;
             Almota.Cotter.Solomon  : ternary @name("Cotter.Solomon") ;
@@ -5951,7 +5951,7 @@ control Albin(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         requires_versioning = false;
         const default_action = Nason();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Tusculum") table Tusculum {
+    @ternary(1) @disable_atomic_modify(1) @name(".Tusculum") table Tusculum {
         actions = {
             Darden();
             McCartys();
