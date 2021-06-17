@@ -143,9 +143,11 @@ set (BF_P4C_MIDEND_SRCS
   midend/check_unsupported.cpp
   midend/copy_block_pragmas.cpp
   midend/copy_header.cpp
+  midend/defuse.cpp
   midend/elim_cast.cpp
   midend/fold_constant_hashes.cpp
   midend/desugar_varbit_extract.cpp
+  midend/move_to_egress.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
   midend/parser_graph.cpp
@@ -172,9 +174,11 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/check_unsupported.h
   midend/copy_block_pragmas.h
   midend/copy_header.h
+  midend/defuse.h
   midend/elim_cast.h
   midend/fold_constant_hashes.h
   midend/desugar_varbit_extract.h
+  midend/move_to_egress.h
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_graph.h

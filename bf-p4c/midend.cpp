@@ -16,6 +16,7 @@
 #include "midend/complexComparison.h"
 #include "midend/convertEnums.h"
 #include "midend/copyStructures.h"
+#include "midend/defuse.h"
 #include "midend/eliminateTuples.h"
 #include "midend/eliminateNewtype.h"
 #include "midend/eliminateSerEnums.h"
@@ -25,6 +26,7 @@
 #include "midend/flattenInterfaceStructs.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
+#include "midend/move_to_egress.h"
 #include "midend/orderArguments.h"
 #include "midend/predication.h"
 #include "midend/remove_action_params.h"
@@ -291,6 +293,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap, typeChecking),
+#if BAREFOOT_INTERNAL
+        new ComputeDefUse,  // otherwise unused; testing for CI coverage
+#endif
+#if HAVE_FLATROCK
+        Device::currentDevice() == Device::FLATROCK ? new MoveToEgress(evaluator) : 0,
+#endif
         evaluator,
         new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {
             auto toplevel = evaluator->getToplevelBlock();
