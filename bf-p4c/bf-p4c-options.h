@@ -4,6 +4,7 @@
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/options.h"
 #include "lib/cstring.h"
+#include "lib/exename.h"
 
 class BFN_Options : public CompilerOptions {
  public:

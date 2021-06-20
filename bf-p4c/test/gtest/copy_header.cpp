@@ -183,7 +183,8 @@ TEST(CopyHeaders, Lower$valid) {
 #if ENABLE_P4C3251
             "if (!(hdr.h[0].$valid == 1w1)) {",
 #else
-            "if (!hdr.h[0].isValid()) {",
+            "if (hdr.h[0].isValid()) { ; }",
+            "else {",
 #endif
                 "hdr.h[0].$valid = 1w0;",
                 "tbl_0.apply();",

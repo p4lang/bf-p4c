@@ -164,8 +164,9 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::AssignmentStatement *) override;
     bool preorder(const IR::IfStatement *) override;
     bool preorder(const IR::BlockStatement *) override { return true; }
+    bool preorder(const IR::EmptyStatement *) override { return true; }
     bool preorder(const IR::Statement *s) override {
-        error("%s: statement too complex for register action", s->srcInfo);
+        error("%s: statement too complex for register action %s", s->srcInfo, s);
         return false; }
 
     void doPrimary(const IR::Expression *, const IR::PathExpression *, cstring);
@@ -276,7 +277,7 @@ class FixupStatefulAlu : public PassManager {
      *   appropriate masked test that will match any one-hot value with its set bit
      *   in the mask computed for that tag
      * - setting a tag value in a VLIW action uses the lowest one-hot matching value.
-     * - other operations involving tags are not supported (should be rejected by 
+     * - other operations involving tags are not supported (should be rejected by
      *   frontend typechecker -- can't d add/subtract or other operations on tags
      * - reading an enum tag from an execute call needs to shift down 4 bits, because
      *   the predicate output is output starting from bit 4.
