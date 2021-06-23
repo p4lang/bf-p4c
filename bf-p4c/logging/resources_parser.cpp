@@ -15,7 +15,7 @@ bool ParserResourcesLogging::preorder(const IR::BFN::LoweredParser* parser) {
         if (parser->phase0) {
             const std::string usedBy = parser->phase0->tableName.c_str();
             const std::string usedFor = parser->phase0->actionName.c_str();
-            const auto eu = new ElementUsage(usedBy, "", usedFor);
+            const auto eu = new ElementUsage(usedBy, usedFor);
 
             parsers[parser->name].phase0 = new Phase0ResourceUsage();
             parsers[parser->name].phase0->append(eu);

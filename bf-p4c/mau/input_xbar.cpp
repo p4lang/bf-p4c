@@ -4830,7 +4830,19 @@ std::string IXBar::FieldInfo::visualization_detail() const {
  *  table.  Unused bits are printed out as unused
  */
 std::string IXBar::Use::Byte::visualization_detail() const {
-    std::string rv = "{";
+    const auto slices = get_slices_for_visualization();
+    return "{" + std::accumulate(
+            slices.begin() + 1,
+            slices.end(),
+            slices.begin()->visualization_detail(),
+            [] (const std::string &str, const FieldInfo &slice) {
+                return str + ", " + slice.visualization_detail();
+            }) + "}";
+}
+
+std::vector<IXBar::FieldInfo> IXBar::Use::Byte::get_slices_for_visualization() const {
+    std::vector<IXBar::FieldInfo> result;
+
     bitvec byte(0, 8);
     bitvec unused_bv = byte - bit_use;
     int unused_start_bit = 0;
@@ -4843,42 +4855,33 @@ std::string IXBar::Use::Byte::visualization_detail() const {
     do {
         int used_end_bit = bit_use.ffz(used_start_bit);
         if (unused_start_bit < unused_end_bit) {
-            if (!first_time)
-                rv += ", ";
-            else
-                first_time = false;
             int lo = 0; int hi = (unused_end_bit - unused_start_bit) - 1;
-            rv += "unused[" + std::to_string(lo) + ":" + std::to_string(hi) + "]";
+            result.push_back(FieldInfo("unused", lo, hi, 0, boost::none));
         }
 
         BUG_CHECK(used_start_bit != used_end_bit, "The bit_use object in %s is incorrectly "
                  "configured", *this);
+
         while (it != field_bytes.end()) {
-            if (it->cont_lo > used_end_bit)
-                break;
-
-            if (!first_time)
-                rv += ", ";
-            else
-                first_time = false;
-
-            rv += it->visualization_detail();
+            if (it->cont_lo > used_end_bit) break;
+            result.push_back(*it);
             it++;
         }
+
         unused_start_bit = used_end_bit;
         used_start_bit = bit_use.ffs(used_end_bit);
         unused_end_bit = used_start_bit;
+        first_time = false;
     } while (used_start_bit >= 0);
 
     if (unused_start_bit < 8) {
         BUG_CHECK(!first_time, "Byte %s has no field slices", *this);
-        rv += ", ";
+
         int lo = 0; int hi = 7 - unused_start_bit;
-        rv += "unused[" + std::to_string(lo) + ":" + std::to_string(hi) + "]";
+        result.push_back(FieldInfo("unused", lo, hi, 0, boost::none));
     }
 
-    rv += "}";
-    return rv;
+    return result;
 }
 
 bool IXBar::Use::Byte::is_subset(const Byte &b) const {

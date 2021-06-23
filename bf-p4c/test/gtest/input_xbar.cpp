@@ -123,4 +123,20 @@ TEST_F(InputXbarAlloc, hello) {
     ASSERT_FALSE(alloced[0]->loc.group == alloced[1]->loc.group);
 }
 
+TEST_F(InputXbarAlloc, TestXbarUseByteVisualizationDetail) {
+    IXBar::Use::Byte byte("W10", 16);
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_ethernet.$valid", 0, 0, 3, boost::none));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_ipv4.$valid", 0, 0, 4, boost::none));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_tcp.$valid", 0, 0, 6, boost::none));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_udp.$valid", 0, 0, 7, boost::none));
+
+    auto detail = byte.visualization_detail();
+    ASSERT_EQ(detail, "{unused[0:2], "
+                      "ingress::hdr.inner_ethernet.$valid[0:0], "
+                      "ingress::hdr.inner_ipv4.$valid[0:0], "
+                      "unused[0:0], "
+                      "ingress::hdr.inner_tcp.$valid[0:0], "
+                      "ingress::hdr.inner_udp.$valid[0:0]}");
+}
+
 }  // namespace Test

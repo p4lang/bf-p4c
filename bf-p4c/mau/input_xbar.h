@@ -356,6 +356,7 @@ struct IXBar {
             bool is_range() const { return is_spec(RANGE_LO) || is_spec(RANGE_HI); }
             void unallocate() { search_bus = -1;  loc.group = -1;  loc.byte = -1; }
             std::string visualization_detail() const;
+            std::vector<FieldInfo> get_slices_for_visualization() const;
             bool is_subset(const Byte &b) const;
             bool only_one_nibble_in_use() const {
                 BUG_CHECK(!bit_use.empty(), "IXBar byte has no data");
