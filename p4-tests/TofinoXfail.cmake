@@ -1592,7 +1592,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1921,4 +1920,10 @@ p4c_add_xfail_reason("tofino"
   "error: Cannot extract field .* from PSA_MeterColor_t which has type Type"
   testdata/p4_16_samples/psa-meter7-bmv2.p4
   testdata/p4_16_samples/psa-meter3.p4
+)
+
+# P4C-3698
+p4c_add_xfail_reason("tofino"
+  "error: PHV allocation produced following overlapping slices of field .* that are simultaneously live in the MAU pipeline"
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
