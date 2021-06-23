@@ -1056,6 +1056,24 @@ static const IR::MAU::Primitive *makeDepositField(IR::MAU::Primitive *prim, long
 
 const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
     if (!af) return prim;
+
+    /*
+     * Checks whether the expression is a reinterpret cast of 0 ++ expression,
+     * i.e. a sign change of a zero-extended expression.
+     * E.g.
+     *      bit<M> a; bit<N> b = (int<N>)(bit<N>)a;  // where M < N
+     * This statement is translated in midend to:
+     *      bit<M> a; bit<N> b = (int<N>)((bit<N - M>)0 ++ a);
+     */
+    auto is_reinterpret_cast_concat_0 = [](const IR::Expression *e) {
+        if (auto *rc = e->to<IR::BFN::ReinterpretCast>())
+            if (auto *cc = rc->expr->to<IR::Concat>())
+                if (auto *k = cc->left->to<IR::Constant>())
+                    if (k->value == 0)
+                        return true;
+        return false;
+    };
+
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     LOG4("DoInstructionSelection::postorder on primitive " << prim->name);
     if (prim->name == "modify_field") {
@@ -1066,6 +1084,21 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
             error(ErrorType::ERR_INVALID, "destination of %1% must be a field", prim);
         } else if (auto *rv = fillInstDest(prim->operands[1], dest)) {
             return rv;
+        } else if (is_reinterpret_cast_concat_0(prim->operands[1])) {
+            /*
+             * Translates a primitive of the form:
+             *   modify_field A, (int<M>)(0 ++ B) where A is bit<M> and B is bit<N>
+             * To two instructions:
+             *   set A[M-1:N], 0
+             *   set A[N-1:0], B
+             */
+            auto *cc = prim->operands[1]->to<IR::BFN::ReinterpretCast>()->expr->to<IR::Concat>();
+            auto *k = cc->left;
+            auto *inst_phv = new IR::MAU::Instruction(prim->srcInfo, "set",
+                MakeSlice(dest, 0, cc->right->type->width_bits() - 1), cc->right);
+            auto *inst_const = new IR::MAU::Instruction(prim->srcInfo, "set",
+                MakeSlice(dest, cc->right->type->width_bits(), dest->type->width_bits() - 1), k);
+            return new IR::Vector<IR::MAU::Primitive>({inst_const, inst_phv});
         } else if (!checkSrc1(prim->operands[1])) {
             /**
              * Converting ternary operands into conditionally-set format:
