@@ -461,10 +461,14 @@ AllocScore::AllocScore(
                 (container.size() > n_pov_bits ? (container.size() - n_pov_bits) : 0);
 
         // Calculate number of prefer container size bits.
-        for (const auto& slice : slices)
-            if (slice.field()->prefer_container_size() != PHV::Size::null)
-                if (container.is(slice.field()->prefer_container_size()))
-                    general[n_prefer_bits] += slice.width();
+        for (const auto& slice : slices) {
+            if (slice.field()->prefer_container_size() != PHV::Size::null) {
+                if (parent->getStatus(slice.field()).empty()) {
+                    if (container.is(slice.field()->prefer_container_size()))
+                        general[n_prefer_bits] += slice.width();
+                }
+            }
+        }
 
         // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {

@@ -4091,7 +4091,7 @@ void IXBar::XBarHashDist::immediate_inputs() {
 void IXBar::XBarHashDist::hash_action() {
     if (tbl->conditional_gateway_only())
         return;
-    if (!lo->layout.hash_action)
+    if (!lo || !lo->layout.hash_action)
         return;
 
     IR::Vector<IR::Expression> components;
@@ -4288,6 +4288,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                        const LayoutOption *lo, const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {
     if (!tbl) return true;
+    if (!lo && !tbl->conditional_gateway_only()) return false;
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");

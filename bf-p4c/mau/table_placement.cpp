@@ -1755,7 +1755,7 @@ const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *
             LOG4("Adding starter pistol for " << current_gress);
             auto *rv = new Placed(*this, t, last_placed);
             rv = try_place_table(rv, current);
-            if (rv->stage != 0) {
+            if (!rv || rv->stage != 0) {
                 error("No table in %s could be placed in stage 0, a requirement for Tofino",
                       toString(current_gress));
                 return last_placed;
