@@ -141,7 +141,6 @@ node ('compiler-travis') {
                             --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
                             --build-arg MAKEFLAGS=j16 \
                             --build-arg BUILD_FOR=jenkins-intermediate \
-                            --build-arg BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
                             .
                     """
                 }
@@ -163,6 +162,7 @@ node ('compiler-travis') {
                                     -e BUILD_GLASS=false \
                                     -e GEN_REF_OUTPUTS=false \
                                     -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                    -e BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
                                 docker commit \
@@ -183,6 +183,7 @@ node ('compiler-travis') {
                                     -e BUILD_GLASS=false \
                                     -e GEN_REF_OUTPUTS=false \
                                     -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                    -e BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
                             """
