@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.5.0 (SHA: 0115db3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
+// p4c 9.5.1 (SHA: 9c1b0ca)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -315,6 +315,10 @@ header Algodones {
     bit<16> Lathrop;
 }
 
+header Devore {
+    bit<8> Melvina;
+}
+
 header Buckeye {
     bit<24> Lacona;
     bit<24> Albemarle;
@@ -460,6 +464,13 @@ header Chugwater {
     bit<8> Charco;
 }
 
+header Seibert {
+    bit<64> Maybee;
+    bit<3>  Tryon;
+    bit<2>  Fairborn;
+    bit<3>  China;
+}
+
 header Sutherlin {
     bit<32> Daphne;
     bit<32> Level;
@@ -590,6 +601,7 @@ struct Latham {
     bit<3>  Wilmore;
     bit<32> Piperton;
     bit<1>  Fairmount;
+    bit<1>  Shorter;
     bit<3>  Guadalupe;
     bit<1>  Buckfield;
     bit<1>  Moquah;
@@ -666,6 +678,7 @@ struct Lecompte {
     bit<1>  Lenexa;
     bit<3>  Rudolph;
     bit<1>  Bufalo;
+    bit<12> Point;
     bit<12> Rockham;
     bit<20> Hiland;
     bit<16> Hammond;
@@ -677,6 +690,7 @@ struct Lecompte {
     bit<3>  Schofield;
     bit<8>  Loring;
     bit<1>  McCammon;
+    bit<1>  McFaddin;
     bit<32> Lapoint;
     bit<32> Wamego;
     bit<24> Brainard;
@@ -986,6 +1000,7 @@ struct McCracken {
     Torrance  Campbell;
     Lilydale  Navarro;
     bool      Duncombe;
+    bit<1>    Jigger;
 }
 
 @pa_mutually_exclusive("egress" , "Jayton.Westville.Suttle" , "Jayton.Mather.Kaluaaha")
@@ -3724,9 +3739,8 @@ control Gowanda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Millstone.Hapeville.Naubinway: ternary @name("Hapeville.Naubinway") ;
             Millstone.Guion.Quogue       : ternary @name("Guion.Quogue") ;
             Millstone.Guion.Weinert      : ternary @name("Guion.Weinert") ;
-            Jayton.Daisytown.Tallassee   : ternary @name("Daisytown.Tallassee") ;
-            Jayton.Daisytown.Irvine      : ternary @name("Daisytown.Irvine") ;
-            Jayton.Daisytown.isValid()   : ternary @name("Daisytown") ;
+            Millstone.Guion.Tallassee    : ternary @name("Guion.Tallassee") ;
+            Millstone.Guion.Irvine       : ternary @name("Guion.Irvine") ;
             Millstone.Hapeville.Luzerne  : ternary @name("Hapeville.Luzerne") ;
             Millstone.Hapeville.Beasley  : ternary @name("Hapeville.Beasley") ;
             Millstone.Guion.Colona       : ternary @name("Guion.Colona") ;
@@ -3741,12 +3755,12 @@ control Gowanda(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
 }
 
 control Onamia(inout Westbury Jayton, inout McCracken Millstone, in ingress_intrinsic_metadata_t Astor, in ingress_intrinsic_metadata_from_parser_t Lookeba, inout ingress_intrinsic_metadata_for_deparser_t Alstown, inout ingress_intrinsic_metadata_for_tm_t Hohenwald) {
-    @name(".Brule") Meter<bit<32>>(32w128, MeterType_t.BYTES) Brule;
+    @name(".Brule") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Brule;
     @name(".Durant") action Durant(bit<32> Kingsdale) {
         Millstone.Lynch.Pittsboro = (bit<2>)Brule.execute((bit<32>)Kingsdale);
     }
     @name(".Tekonsha") action Tekonsha() {
-        Millstone.Lynch.Pittsboro = (bit<2>)2w2;
+        Millstone.Lynch.Pittsboro = (bit<2>)2w1;
     }
     @disable_atomic_modify(1) @name(".Clermont") table Clermont {
         actions = {
@@ -3775,7 +3789,7 @@ control Ardenvoir(inout Westbury Jayton, inout McCracken Millstone, in ingress_i
             Clinchco();
         }
         key = {
-            Millstone.Lynch.Pittsboro & 2w0x2: exact @name("Lynch.Pittsboro") ;
+            Millstone.Lynch.Pittsboro & 2w0x1: exact @name("Lynch.Pittsboro") ;
             Millstone.Lynch.Subiaco          : exact @name("Lynch.Subiaco") ;
             Millstone.Guion.Fairmount        : exact @name("Guion.Fairmount") ;
         }
@@ -3824,7 +3838,7 @@ control Waseca(inout Westbury Jayton, inout McCracken Millstone, in egress_intri
         Millstone.Mickleton.Rudolph = (bit<3>)3w2;
         Millstone.Mickleton.Whitefish = (bit<1>)1w0;
     }
-    @name(".Issaquah") action Issaquah(bit<32> Herring, bit<32> Wattsburg, bit<8> Weinert, bit<6> Grannis, bit<16> DeBeque, bit<12> Chevak, bit<24> Lacona, bit<24> Albemarle, bit<16> Mackville, bit<16> Hillister) {
+    @name(".Issaquah") action Issaquah(bit<32> Herring, bit<32> Wattsburg, bit<8> Weinert, bit<6> Grannis, bit<16> DeBeque, bit<12> Chevak, bit<24> Lacona, bit<24> Albemarle) {
         Millstone.Mickleton.Ipava = (bit<3>)3w0;
         Millstone.Mickleton.Rudolph = (bit<3>)3w4;
         Jayton.Wesson.setValid();
@@ -3989,7 +4003,9 @@ control Blanding(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         requires_versioning = false;
     }
     apply {
-        Chambers.apply();
+        {
+            Chambers.apply();
+        }
     }
 }
 
@@ -4204,6 +4220,7 @@ control Doyline(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
     @name(".Belcourt") action Belcourt(bit<24> Moorman, bit<24> Parmelee, bit<12> Bagwell) {
         Millstone.Mickleton.Raiford = Moorman;
         Millstone.Mickleton.Ayden = Parmelee;
+        Millstone.Mickleton.Point = Millstone.Mickleton.Rockham;
         Millstone.Mickleton.Rockham = Bagwell;
     }
     @use_hash_action(0) @disable_atomic_modify(1) @name(".Wright") table Wright {
@@ -4760,9 +4777,6 @@ control Mapleton(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
 }
 
 control Weimar(inout Westbury Jayton, inout McCracken Millstone, in ingress_intrinsic_metadata_t Astor, in ingress_intrinsic_metadata_from_parser_t Lookeba, inout ingress_intrinsic_metadata_for_deparser_t Alstown, inout ingress_intrinsic_metadata_for_tm_t Hohenwald) {
-    @name(".Starkey") action Starkey() {
-        ;
-    }
     @name(".BigPark") action BigPark(bit<16> Maddock, bit<1> Sublett, bit<1> Wisdom) {
         Millstone.Ocracoke.Maddock = Maddock;
         Millstone.Ocracoke.Sublett = Sublett;
@@ -4771,14 +4785,14 @@ control Weimar(inout Westbury Jayton, inout McCracken Millstone, in ingress_intr
     @disable_atomic_modify(1) @name(".Watters") table Watters {
         actions = {
             BigPark();
-            @defaultonly Starkey();
+            @defaultonly NoAction();
         }
         key = {
             Millstone.Mickleton.Lacona   : exact @name("Mickleton.Lacona") ;
             Millstone.Mickleton.Albemarle: exact @name("Mickleton.Albemarle") ;
             Millstone.Mickleton.Rockham  : exact @name("Mickleton.Rockham") ;
         }
-        const default_action = Starkey();
+        const default_action = NoAction();
         size = 16384;
     }
     apply {
@@ -5158,7 +5172,7 @@ control Robinette(inout Westbury Jayton, inout McCracken Millstone, in egress_in
             TonkaBay();
         }
         key = {
-            Sumner.egress_port & 9w0x7f  : exact @name("Sumner.Matheson") ;
+            Sumner.egress_port & 9w0x7f  : ternary @name("Sumner.Matheson") ;
             Millstone.BealCity.Pinole    : ternary @name("BealCity.Pinole") ;
             Millstone.BealCity.Monahans  : ternary @name("BealCity.Monahans") ;
             Jayton.Sequim.Weinert        : ternary @name("Sequim.Weinert") ;
@@ -5228,6 +5242,11 @@ control Hooks(inout Westbury Jayton, inout McCracken Millstone, in egress_intrin
         if (Millstone.Mickleton.Whitefish == 1w1) {
             DeKalb.apply();
         }
+    }
+}
+
+control Villanova(inout Westbury Jayton, inout McCracken Millstone, in egress_intrinsic_metadata_t Sumner, in egress_intrinsic_metadata_from_parser_t Boring, inout egress_intrinsic_metadata_for_deparser_t Nucla, inout egress_intrinsic_metadata_for_output_port_t Tillson) {
+    apply {
     }
 }
 
@@ -5362,6 +5381,11 @@ control Rendon(inout Westbury Jayton, inout McCracken Millstone, in egress_intri
 }
 
 control Kealia(inout Westbury Jayton, inout McCracken Millstone, in egress_intrinsic_metadata_t Sumner, in egress_intrinsic_metadata_from_parser_t Boring, inout egress_intrinsic_metadata_for_deparser_t Nucla, inout egress_intrinsic_metadata_for_output_port_t Tillson) {
+    apply {
+    }
+}
+
+control Mishawaka(inout Westbury Jayton, inout McCracken Millstone, in egress_intrinsic_metadata_t Sumner, in egress_intrinsic_metadata_from_parser_t Boring, inout egress_intrinsic_metadata_for_deparser_t Nucla, inout egress_intrinsic_metadata_for_output_port_t Tillson) {
     apply {
     }
 }
@@ -6237,6 +6261,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
     @name(".Anniston") Clarkdale() Anniston;
     @name(".Conklin") Plush() Conklin;
     @name(".Mocane") Robinette() Mocane;
+    @name(".Hillcrest") Mishawaka() Hillcrest;
     @name(".Humble") Hooks() Humble;
     @name(".Nashua") Parole() Nashua;
     @name(".Skokomish") Skiatook() Skokomish;
@@ -6244,6 +6269,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
     @name(".Slick") Conejo() Slick;
     @name(".Lansdale") Daguao() Lansdale;
     @name(".Rardin") Canalou() Rardin;
+    @name(".Oskawalik") Villanova() Oskawalik;
     @name(".Blackwood") Waseca() Blackwood;
     @name(".Parmele") Brownson() Parmele;
     @name(".Easley") Bedrock() Easley;
@@ -6277,6 +6303,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
                 Alberta.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
                 Freetown.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
                 Conklin.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
+                Hillcrest.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
                 if (Sumner.egress_rid == 16w0 && !Jayton.Mather.isValid()) {
                     Rardin.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
                 }
@@ -6315,6 +6342,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
             WestLine.apply();
         }
         Patchogue.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
+        Oskawalik.apply(Jayton, Millstone, Sumner, Boring, Nucla, Tillson);
     }
 }
 
@@ -6328,6 +6356,7 @@ parser Hawthorne(packet_in Humeston, out Westbury Jayton, out McCracken Millston
     state Putnam {
         Humeston.extract<Horton>(Jayton.Baudette);
         Humeston.extract<Algodones>(Jayton.Swisshome);
+        Millstone.Mickleton.McFaddin = (bit<1>)1w1;
         transition accept;
     }
     state Hartville {

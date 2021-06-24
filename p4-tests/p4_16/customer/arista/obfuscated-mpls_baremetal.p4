@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MPLS_BAREMETAL=1 -Ibf_arista_switch_mpls_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_mpls_baremetal --bf-rt-schema bf_arista_switch_mpls_baremetal/context/bf-rt.json
-// p4c 9.5.0 (SHA: 0115db3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MPLS_BAREMETAL=1 -Ibf_arista_switch_mpls_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_mpls_baremetal --bf-rt-schema bf_arista_switch_mpls_baremetal/context/bf-rt.json
+// p4c 9.5.1 (SHA: 9c1b0ca)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -288,6 +288,10 @@ header Topanga {
     bit<16> Lathrop;
 }
 
+header Campbell {
+    bit<8> Navarro;
+}
+
 header Allison {
     bit<24> Algodones;
     bit<24> Buckeye;
@@ -433,6 +437,13 @@ header Sutherlin {
     bit<8> Daphne;
 }
 
+header Edgemont {
+    bit<64> Woodston;
+    bit<3>  Neshoba;
+    bit<2>  Ironside;
+    bit<3>  Ellicott;
+}
+
 header Level {
     bit<32> Algoa;
     bit<32> Thayne;
@@ -510,6 +521,7 @@ struct Luzerne {
     bit<3>  Laxon;
     bit<32> Chaffee;
     bit<1>  Brinklow;
+    bit<1>  Parmalee;
     bit<3>  Kremlin;
     bit<1>  TroutRun;
     bit<1>  Bradner;
@@ -588,6 +600,7 @@ struct Quinhagak {
     bit<1>  Scarville;
     bit<3>  Ivyland;
     bit<1>  Edgemoor;
+    bit<12> Donnelly;
     bit<12> Lovewell;
     bit<20> Dolores;
     bit<6>  Atoka;
@@ -600,6 +613,7 @@ struct Quinhagak {
     bit<3>  Poteet;
     bit<8>  Dugger;
     bit<1>  Grassflat;
+    bit<1>  Welch;
     bit<32> Whitewood;
     bit<32> Tilton;
     bit<20> Wetonka;
@@ -910,6 +924,7 @@ struct Buckhorn {
     McKenna   Burtrum;
     Powhatan  Blanchard;
     bool      Compton;
+    bit<1>    Kalvesta;
 }
 
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Readsboro.Levittown")
@@ -3429,19 +3444,18 @@ control Heizer(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            Aniak.Sopris.Goulds         : ternary @name("Sopris.Goulds") ;
-            Aniak.Dozier.Corinth        : ternary @name("Dozier.Corinth") ;
-            Aniak.LaMoille.Rains        : ternary @name("LaMoille.Rains") ;
-            Aniak.ElkNeck.Darien        : ternary @name("ElkNeck.Darien") ;
-            Aniak.ElkNeck.Norma         : ternary @name("ElkNeck.Norma") ;
-            Aniak.Paulding.Dowell       : ternary @name("Paulding.Dowell") ;
-            Aniak.Paulding.Noyes        : ternary @name("Paulding.Noyes") ;
-            Crannell.Gambrills.Antlers  : ternary @name("Gambrills.Antlers") ;
-            Crannell.Gambrills.Kendrick : ternary @name("Gambrills.Kendrick") ;
-            Crannell.Gambrills.isValid(): ternary @name("Gambrills") ;
-            Aniak.ElkNeck.Juneau        : ternary @name("ElkNeck.Juneau") ;
-            Aniak.ElkNeck.Bonney        : ternary @name("ElkNeck.Bonney") ;
-            Aniak.Paulding.Crozet       : ternary @name("Paulding.Crozet") ;
+            Aniak.Sopris.Goulds    : ternary @name("Sopris.Goulds") ;
+            Aniak.Dozier.Corinth   : ternary @name("Dozier.Corinth") ;
+            Aniak.LaMoille.Rains   : ternary @name("LaMoille.Rains") ;
+            Aniak.ElkNeck.Darien   : ternary @name("ElkNeck.Darien") ;
+            Aniak.ElkNeck.Norma    : ternary @name("ElkNeck.Norma") ;
+            Aniak.Paulding.Dowell  : ternary @name("Paulding.Dowell") ;
+            Aniak.Paulding.Noyes   : ternary @name("Paulding.Noyes") ;
+            Aniak.Paulding.Antlers : ternary @name("Paulding.Antlers") ;
+            Aniak.Paulding.Kendrick: ternary @name("Paulding.Kendrick") ;
+            Aniak.ElkNeck.Juneau   : ternary @name("ElkNeck.Juneau") ;
+            Aniak.ElkNeck.Bonney   : ternary @name("ElkNeck.Bonney") ;
+            Aniak.Paulding.Crozet  : ternary @name("Paulding.Crozet") ;
         }
         size = 1024;
         requires_versioning = false;
@@ -3453,12 +3467,12 @@ control Heizer(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
 }
 
 control Miltona(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsic_metadata_t Dozier, in ingress_intrinsic_metadata_from_parser_t Nevis, inout ingress_intrinsic_metadata_for_deparser_t Lindsborg, inout ingress_intrinsic_metadata_for_tm_t Ocracoke) {
-    @name(".Wakeman") Meter<bit<32>>(32w128, MeterType_t.BYTES) Wakeman;
+    @name(".Wakeman") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Wakeman;
     @name(".Chilson") action Chilson(bit<32> Reynolds) {
         Aniak.Corvallis.Barrow = (bit<2>)Wakeman.execute((bit<32>)Reynolds);
     }
     @name(".Kosmos") action Kosmos() {
-        Aniak.Corvallis.Barrow = (bit<2>)2w2;
+        Aniak.Corvallis.Barrow = (bit<2>)2w1;
     }
     @disable_atomic_modify(1) @name(".Ironia") table Ironia {
         actions = {
@@ -3487,7 +3501,7 @@ control Bammel(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
             Mendoza();
         }
         key = {
-            Aniak.Corvallis.Barrow & 2w0x2: exact @name("Corvallis.Barrow") ;
+            Aniak.Corvallis.Barrow & 2w0x1: exact @name("Corvallis.Barrow") ;
             Aniak.Corvallis.Blairsden     : exact @name("Corvallis.Blairsden") ;
             Aniak.Paulding.Brinklow       : exact @name("Paulding.Brinklow") ;
         }
@@ -3536,7 +3550,7 @@ control Cropper(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsi
         Aniak.Dateland.Ivyland = (bit<3>)3w2;
         Aniak.Dateland.Hiland = (bit<1>)1w0;
     }
-    @name(".PellCity") action PellCity(bit<32> Lebanon, bit<32> Siloam, bit<8> Noyes, bit<6> Rains, bit<16> Ozark, bit<12> Eldred, bit<24> Algodones, bit<24> Buckeye, bit<16> Vinemont, bit<16> Geismar) {
+    @name(".PellCity") action PellCity(bit<32> Lebanon, bit<32> Siloam, bit<8> Noyes, bit<6> Rains, bit<16> Ozark, bit<12> Eldred, bit<24> Algodones, bit<24> Buckeye) {
         Aniak.Dateland.LakeLure = (bit<3>)3w0;
         Aniak.Dateland.Ivyland = (bit<3>)3w4;
         Crannell.Sumner.setValid();
@@ -3701,7 +3715,9 @@ control BigFork(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrins
         requires_versioning = false;
     }
     apply {
-        LaJara.apply();
+        {
+            LaJara.apply();
+        }
     }
 }
 
@@ -3920,6 +3936,7 @@ control Durant(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic
     @name(".Kingsdale") action Kingsdale(bit<24> Tekonsha, bit<24> Clermont, bit<12> Blanding) {
         Aniak.Dateland.Lapoint = Tekonsha;
         Aniak.Dateland.Wamego = Clermont;
+        Aniak.Dateland.Donnelly = Aniak.Dateland.Lovewell;
         Aniak.Dateland.Lovewell = Blanding;
     }
     @use_hash_action(0) @disable_atomic_modify(1) @name(".Ocilla") table Ocilla {
@@ -4422,9 +4439,6 @@ control Milltown(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrin
 }
 
 control Alcoma(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsic_metadata_t Dozier, in ingress_intrinsic_metadata_from_parser_t Nevis, inout ingress_intrinsic_metadata_for_deparser_t Lindsborg, inout ingress_intrinsic_metadata_for_tm_t Ocracoke) {
-    @name(".Hookdale") action Hookdale() {
-        ;
-    }
     @name(".Kilbourne") action Kilbourne(bit<16> Knoke, bit<1> McAllen, bit<1> Dairyland) {
         Aniak.Elkville.Knoke = Knoke;
         Aniak.Elkville.McAllen = McAllen;
@@ -4433,14 +4447,14 @@ control Alcoma(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".Bluff") table Bluff {
         actions = {
             Kilbourne();
-            @defaultonly Hookdale();
+            @defaultonly NoAction();
         }
         key = {
             Aniak.Dateland.Algodones: exact @name("Dateland.Algodones") ;
             Aniak.Dateland.Buckeye  : exact @name("Dateland.Buckeye") ;
             Aniak.Dateland.Lovewell : exact @name("Dateland.Lovewell") ;
         }
-        const default_action = Hookdale();
+        const default_action = NoAction();
         size = 16384;
     }
     apply {
@@ -5271,7 +5285,7 @@ control August(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic
             Bosco();
         }
         key = {
-            Lynch.egress_port & 9w0x7f: exact @name("Lynch.Matheson") ;
+            Lynch.egress_port & 9w0x7f: ternary @name("Lynch.Matheson") ;
             Aniak.Belmont.RedElm      : ternary @name("Belmont.RedElm") ;
             Aniak.Belmont.Satolah     : ternary @name("Belmont.Satolah") ;
             Aniak.LaMoille.Belview    : ternary @name("LaMoille.Belview") ;
@@ -5345,6 +5359,11 @@ control Talkeetna(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrin
     }
 }
 
+control GlenRock(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic_metadata_t Lynch, in egress_intrinsic_metadata_from_parser_t Kalaloch, inout egress_intrinsic_metadata_for_deparser_t Papeton, inout egress_intrinsic_metadata_for_output_port_t Yatesboro) {
+    apply {
+    }
+}
+
 control Holyoke(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsic_metadata_t Dozier, in ingress_intrinsic_metadata_from_parser_t Nevis, inout ingress_intrinsic_metadata_for_deparser_t Lindsborg, inout ingress_intrinsic_metadata_for_tm_t Ocracoke) {
     @name(".Rives") DirectMeter(MeterType_t.BYTES) Rives;
     apply {
@@ -5412,6 +5431,11 @@ control Tocito(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic
 }
 
 control Pueblo(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic_metadata_t Lynch, in egress_intrinsic_metadata_from_parser_t Kalaloch, inout egress_intrinsic_metadata_for_deparser_t Papeton, inout egress_intrinsic_metadata_for_output_port_t Yatesboro) {
+    apply {
+    }
+}
+
+control Keenes(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic_metadata_t Lynch, in egress_intrinsic_metadata_from_parser_t Kalaloch, inout egress_intrinsic_metadata_for_deparser_t Papeton, inout egress_intrinsic_metadata_for_output_port_t Yatesboro) {
     apply {
     }
 }
@@ -5827,6 +5851,7 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
     @name(".Supai") Govan() Supai;
     @name(".Sharon") Blakeman() Sharon;
     @name(".Separ") August() Separ;
+    @name(".Colson") Keenes() Colson;
     @name(".Ahmeek") Talkeetna() Ahmeek;
     @name(".Elbing") Turney() Elbing;
     @name(".Waxhaw") Terry() Waxhaw;
@@ -5834,6 +5859,7 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
     @name(".Rodessa") Telegraph() Rodessa;
     @name(".Hookstown") DuPont() Hookstown;
     @name(".Unity") Idylside() Unity;
+    @name(".FordCity") GlenRock() FordCity;
     @name(".LaFayette") Cropper() LaFayette;
     @name(".Carrizozo") Philmont() Carrizozo;
     @name(".Munday") Napanoch() Munday;
@@ -5859,6 +5885,7 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
                 Holcut.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
                 Gerster.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
                 Sharon.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
+                Colson.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
                 if (Lynch.egress_rid == 16w0 && !Crannell.Readsboro.isValid()) {
                     Unity.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
                 }
@@ -5892,6 +5919,7 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
             }
         }
         Chunchula.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
+        FordCity.apply(Crannell, Aniak, Lynch, Kalaloch, Papeton, Yatesboro);
     }
 }
 
@@ -5905,6 +5933,7 @@ parser Penrose(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out eg
     state Almont {
         Talco.extract<Albemarle>(Crannell.Gastonia);
         Talco.extract<Topanga>(Crannell.Westbury);
+        Aniak.Dateland.Welch = (bit<1>)1w1;
         transition accept;
     }
     state SandCity {

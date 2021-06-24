@@ -39,6 +39,7 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-media.p4"
   "obfuscated-mpls_baremetal.p4"
   "obfuscated-nat.p4"
+  "obfuscated-nat_scale.p4"
   "obfuscated-nat_static.p4"
   "obfuscated-packet_filter.p4"
   "obfuscated-small_scale_test.p4"
@@ -153,6 +154,7 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2030.
 # P4C-3039
 set (P16_TNA_ARISTA_SET_MAX_POWER_FILES
   "obfuscated-nat.p4"
+  "obfuscated-nat_scale.p4"
   "obfuscated-nat_static.p4"
 )
 

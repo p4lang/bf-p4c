@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.5.0 (SHA: 0115db3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
+// p4c 9.5.1 (SHA: 9c1b0ca)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
@@ -205,6 +205,10 @@ header Linden {
     bit<16> Basic;
 }
 
+header Scottdale {
+    bit<8> Camargo;
+}
+
 header Conner {
     bit<24> Rains;
     bit<24> SoapLake;
@@ -350,6 +354,13 @@ header Brinkman {
     bit<8> Boerne;
 }
 
+header Pioche {
+    bit<64> Florahome;
+    bit<3>  Newtonia;
+    bit<2>  Waterman;
+    bit<3>  Flynn;
+}
+
 header Alamosa {
     bit<32> Elderon;
     bit<32> Knierim;
@@ -427,6 +438,7 @@ struct Piperton {
     bit<3>  Buckfield;
     bit<32> Moquah;
     bit<1>  Forkville;
+    bit<1>  Algonquin;
     bit<3>  Mayday;
     bit<1>  Randall;
     bit<1>  Sheldahl;
@@ -501,6 +513,7 @@ struct Manilla {
     bit<1>  Hammond;
     bit<3>  Hematite;
     bit<1>  Orrick;
+    bit<12> Beatrice;
     bit<12> Ipava;
     bit<20> McCammon;
     bit<16> Wamego;
@@ -512,6 +525,7 @@ struct Manilla {
     bit<3>  Whitefish;
     bit<8>  Mendocino;
     bit<1>  Ralls;
+    bit<1>  Morrow;
     bit<32> Standish;
     bit<32> Blairsden;
     bit<2>  Clover;
@@ -811,6 +825,7 @@ struct Wildorado {
     LaUnion   Daisytown;
     Cuprum    Balmorhea;
     bool      Earling;
+    bit<1>    Elkton;
 }
 
 struct Udall {
@@ -1622,14 +1637,14 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
     @disable_atomic_modify(1) @name(".Cheyenne") table Cheyenne {
         actions = {
             Lattimore();
-            @defaultonly Hettinger();
+            @defaultonly NoAction();
         }
         key = {
             Millstone.BealCity.Rains   : exact @name("BealCity.Rains") ;
             Millstone.BealCity.SoapLake: exact @name("BealCity.SoapLake") ;
             Millstone.BealCity.Ipava   : exact @name("BealCity.Ipava") ;
         }
-        const default_action = Hettinger();
+        const default_action = NoAction();
         size = 16384;
     }
     @name(".Pacifica.Fabens") Hash<bit<16>>(HashAlgorithm_t.CRC16) Pacifica;
@@ -1707,12 +1722,9 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             switch (Marquand.apply().action_run) {
                 Hettinger: {
                     Millstone.BealCity.McCammon = (bit<20>)20w511;
-                    switch (Cheyenne.apply().action_run) {
-                        Hettinger: {
-                            Nason.apply();
-                        }
+                    if (!Cheyenne.apply().hit) {
+                        Nason.apply();
                     }
-
                 }
             }
 
@@ -1784,7 +1796,7 @@ control FairOaks(inout Udall Jayton, inout Wildorado Millstone, in egress_intrin
             Notus();
         }
         key = {
-            Millhaven.egress_port & 9w0x7f: exact @name("Millhaven.Clarion") ;
+            Millhaven.egress_port & 9w0x7f: ternary @name("Millhaven.Clarion") ;
             Millstone.Westbury.Corydon    : ternary @name("Westbury.Corydon") ;
             Millstone.Westbury.Bells      : ternary @name("Westbury.Bells") ;
         }

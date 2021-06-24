@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_P416_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_p416_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T field_defuse:7,report:4,live_range_report:4,table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_p416_baremetal_tofino2 --bf-rt-schema bf_arista_switch_p416_baremetal_tofino2/context/bf-rt.json
-// p4c 9.5.0 (SHA: 0115db3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_P416_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_p416_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_p416_baremetal_tofino2 --bf-rt-schema bf_arista_switch_p416_baremetal_tofino2/context/bf-rt.json
+// p4c 9.5.1 (SHA: 9c1b0ca)
 
 #include <core.p4>
 #include <t2na.p4>       /* TOFINO2_ONLY */
@@ -365,6 +365,10 @@ header Littleton {
     bit<16> Basic;
 }
 
+header McFaddin {
+    bit<8> Jigger;
+}
+
 header Killen {
     bit<24> Dowell;
     bit<24> Glendevey;
@@ -510,6 +514,13 @@ header Altus {
     bit<8> Merrill;
 }
 
+header Villanova {
+    bit<64> Mishawaka;
+    bit<3>  Hillcrest;
+    bit<2>  Oskawalik;
+    bit<3>  Pelland;
+}
+
 header Hickox {
     bit<32> Tehachapi;
     bit<32> Sewaren;
@@ -587,6 +598,7 @@ struct Sheldahl {
     bit<3>  Chatmoss;
     bit<32> NewMelle;
     bit<1>  Heppner;
+    bit<1>  Gomez;
     bit<3>  Wartburg;
     bit<1>  Lakehills;
     bit<1>  Sledge;
@@ -675,6 +687,7 @@ struct Sardinia {
     bit<1>  Kaaawa;
     bit<3>  Gause;
     bit<1>  Norland;
+    bit<12> Placida;
     bit<12> Pathfork;
     bit<20> Tombstone;
     bit<16> Marcus;
@@ -686,6 +699,7 @@ struct Sardinia {
     bit<3>  Goulds;
     bit<8>  Grannis;
     bit<1>  LaConner;
+    bit<1>  Oketo;
     bit<32> McGrady;
     bit<32> Oilmont;
     bit<24> Tornillo;
@@ -994,6 +1008,7 @@ struct Yerington {
     Ovett     Armagh;
     Murphy    Basco;
     bool      Gamaliel;
+    bit<1>    Lovilia;
 }
 
 @pa_mutually_exclusive("egress" , "Hookdale.Tabler.Westboro" , "Hookdale.Bratt.Westboro")
@@ -2653,9 +2668,9 @@ control Micro(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             Kempton();
         }
         key = {
-            Funston.Empire.Stilwell  : ternary @name("Empire.Stilwell") ;
-            Funston.Millhaven.Soledad: ternary @name("Millhaven.Soledad") ;
-            Funston.Newhalem.Kendrick: ternary @name("Newhalem.Kendrick") ;
+            Funston.Empire.Stilwell   : ternary @name("Empire.Stilwell") ;
+            Funston.Millhaven.Soledad : ternary @name("Millhaven.Soledad") ;
+            Hookdale.Nooksack.Kendrick: ternary @name("Nooksack.Kendrick") ;
         }
         const default_action = Kempton();
         size = 1024;
@@ -2667,7 +2682,7 @@ control Micro(inout Orting Hookdale, inout Yerington Funston, in ingress_intrins
             @defaultonly NoAction();
         }
         key = {
-            Funston.Newhalem.Solomon: exact @name("Newhalem.Solomon") ;
+            Hookdale.Nooksack.Solomon: exact @name("Nooksack.Solomon") ;
         }
         size = 8192;
         const default_action = NoAction();
@@ -4507,9 +4522,8 @@ control Clarkdale(inout Orting Hookdale, inout Yerington Funston, in ingress_int
             Funston.Udall.HillTop      : ternary @name("Udall.HillTop") ;
             Funston.Millhaven.Irvine   : ternary @name("Millhaven.Irvine") ;
             Funston.Millhaven.Woodfield: ternary @name("Millhaven.Woodfield") ;
-            Hookdale.PeaRidge.Galloway : ternary @name("PeaRidge.Galloway") ;
-            Hookdale.PeaRidge.Ankeny   : ternary @name("PeaRidge.Ankeny") ;
-            Hookdale.PeaRidge.isValid(): ternary @name("PeaRidge") ;
+            Funston.Millhaven.Galloway : ternary @name("Millhaven.Galloway") ;
+            Funston.Millhaven.Ankeny   : ternary @name("Millhaven.Ankeny") ;
             Funston.Udall.Doddridge    : ternary @name("Udall.Doddridge") ;
             Funston.Udall.Powderly     : ternary @name("Udall.Powderly") ;
             Funston.Millhaven.Gasport  : ternary @name("Millhaven.Gasport") ;
@@ -4524,12 +4538,12 @@ control Clarkdale(inout Orting Hookdale, inout Yerington Funston, in ingress_int
 }
 
 control Antoine(inout Orting Hookdale, inout Yerington Funston, in ingress_intrinsic_metadata_t Wyndmoor, in ingress_intrinsic_metadata_from_parser_t Mayflower, inout ingress_intrinsic_metadata_for_deparser_t Halltown, inout ingress_intrinsic_metadata_for_tm_t Picabo) {
-    @name(".Romeo") Meter<bit<32>>(32w31, MeterType_t.BYTES) Romeo;
+    @name(".Romeo") Meter<bit<32>>(32w31, MeterType_t.BYTES, 8w1, 8w1, 8w0) Romeo;
     @name(".Caspian") action Caspian(bit<32> Norridge) {
         Funston.Twain.Wellton = (bit<2>)Romeo.execute((bit<32>)Norridge);
     }
     @name(".Lowemont") action Lowemont() {
-        Funston.Twain.Wellton = (bit<2>)2w2;
+        Funston.Twain.Wellton = (bit<2>)2w1;
     }
     @disable_atomic_modify(1) @name(".Wauregan") table Wauregan {
         actions = {
@@ -4558,7 +4572,7 @@ control CassCity(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
             Sanborn();
         }
         key = {
-            Funston.Twain.Wellton & 2w0x2: exact @name("Twain.Wellton") ;
+            Funston.Twain.Wellton & 2w0x1: exact @name("Twain.Wellton") ;
             Funston.Twain.Miranda        : exact @name("Twain.Miranda") ;
             Funston.Millhaven.Heppner    : exact @name("Millhaven.Heppner") ;
         }
@@ -4607,7 +4621,7 @@ control Ivanpah(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         Funston.Baudette.Gause = (bit<3>)3w2;
         Funston.Baudette.Pajaros = (bit<1>)1w0;
     }
-    @name(".Nowlin") action Nowlin(bit<32> Sully, bit<32> Ragley, bit<8> Woodfield, bit<6> Norcatur, bit<16> Dunkerton, bit<12> Comfrey, bit<24> Dowell, bit<24> Glendevey, bit<16> Chugwater, bit<16> China) {
+    @name(".Nowlin") action Nowlin(bit<32> Sully, bit<32> Ragley, bit<8> Woodfield, bit<6> Norcatur, bit<16> Dunkerton, bit<12> Comfrey, bit<24> Dowell, bit<24> Glendevey) {
         Funston.Baudette.Lugert = (bit<3>)3w0;
         Funston.Baudette.Gause = (bit<3>)3w4;
         Hookdale.Bratt.setValid();
@@ -4624,8 +4638,7 @@ control Ivanpah(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         Hookdale.Bratt.Tallassee = (bit<13>)13w0;
         Hookdale.Bratt.Kendrick = Sully;
         Hookdale.Bratt.Solomon = Ragley;
-        Funston.Millstone.Mather = (bit<32>)Chugwater;
-        Hookdale.Bratt.Petrey = Funston.Circle.Aguilita + China;
+        Hookdale.Bratt.Petrey = Funston.Circle.Aguilita + 16w17;
         Hookdale.Milano.setValid();
         Hookdale.Milano.Pridgen = (bit<1>)1w0;
         Hookdale.Milano.Fairland = (bit<1>)1w0;
@@ -4766,15 +4779,17 @@ control Wright(inout Orting Hookdale, inout Yerington Funston, in ingress_intrin
             Milltown();
         }
         key = {
-            Funston.Wyndmoor.Blencoe  : ternary @name("Wyndmoor.Blencoe") ;
-            Funston.Millhaven.NewMelle: ternary @name("Millhaven.NewMelle") ;
+            Funston.Wyndmoor.Blencoe                : ternary @name("Wyndmoor.Blencoe") ;
+            Funston.Millhaven.NewMelle & 32w0xffffff: ternary @name("Millhaven.NewMelle") ;
         }
         const default_action = Milltown();
         size = 128;
         requires_versioning = false;
     }
     apply {
-        TinCity.apply();
+        {
+            TinCity.apply();
+        }
     }
 }
 
@@ -5003,7 +5018,7 @@ control Walland(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
             Edinburgh();
         }
         key = {
-            Funston.Baudette.Pathfork & 12w0xfff: exact @name("Baudette.Pathfork") ;
+            Funston.Baudette.Pathfork: exact @name("Baudette.Pathfork") ;
         }
         const default_action = Edinburgh();
         size = 4096;
@@ -5024,6 +5039,7 @@ control Broadford(inout Orting Hookdale, inout Yerington Funston, in egress_intr
     @name(".Nerstrand") action Nerstrand(bit<24> Konnarock, bit<24> Tillicum, bit<12> Trail) {
         Funston.Baudette.FortHunt = Konnarock;
         Funston.Baudette.Hueytown = Tillicum;
+        Funston.Baudette.Placida = Funston.Baudette.Pathfork;
         Funston.Baudette.Pathfork = Trail;
     }
     @use_hash_action(0) @disable_atomic_modify(1) @name(".Magazine") table Magazine {
@@ -5617,9 +5633,6 @@ control Reading(inout Orting Hookdale, inout Yerington Funston, in ingress_intri
 }
 
 control Sanatoga(inout Orting Hookdale, inout Yerington Funston, in ingress_intrinsic_metadata_t Wyndmoor, in ingress_intrinsic_metadata_from_parser_t Mayflower, inout ingress_intrinsic_metadata_for_deparser_t Halltown, inout ingress_intrinsic_metadata_for_tm_t Picabo) {
-    @name(".Kempton") action Kempton() {
-        ;
-    }
     @name(".Tocito") action Tocito(bit<16> Bergton, bit<1> Cassa, bit<1> Pawtucket) {
         Funston.Magasco.Bergton = Bergton;
         Funston.Magasco.Cassa = Cassa;
@@ -5628,14 +5641,14 @@ control Sanatoga(inout Orting Hookdale, inout Yerington Funston, in ingress_intr
     @disable_atomic_modify(1) @name(".Mulhall") table Mulhall {
         actions = {
             Tocito();
-            @defaultonly Kempton();
+            @defaultonly NoAction();
         }
         key = {
             Funston.Baudette.Dowell   : exact @name("Baudette.Dowell") ;
             Funston.Baudette.Glendevey: exact @name("Baudette.Glendevey") ;
             Funston.Baudette.Pathfork : exact @name("Baudette.Pathfork") ;
         }
-        const default_action = Kempton();
+        const default_action = NoAction();
         size = 16384;
     }
     apply {
@@ -5783,6 +5796,7 @@ control Piedmont(inout Orting Hookdale, inout Yerington Funston, in egress_intri
     @name(".Nerstrand") action Nerstrand(bit<24> Konnarock, bit<24> Tillicum, bit<12> Trail) {
         Funston.Baudette.FortHunt = Konnarock;
         Funston.Baudette.Hueytown = Tillicum;
+        Funston.Baudette.Placida = Funston.Baudette.Pathfork;
         Funston.Baudette.Pathfork = Trail;
     }
     @name(".Camino") action Camino(bit<12> Trail) {
@@ -6497,7 +6511,7 @@ control McCartys(inout Orting Hookdale, inout Yerington Funston, in egress_intri
             Eustis();
         }
         key = {
-            Circle.egress_port & 9w0x7f: exact @name("Circle.Clarion") ;
+            Circle.egress_port & 9w0x7f: ternary @name("Circle.Clarion") ;
             Funston.Talco.Darien       : ternary @name("Talco.Darien") ;
             Funston.Talco.Basalt       : ternary @name("Talco.Basalt") ;
             Funston.Baudette.Townville : ternary @name("Baudette.Townville") ;
@@ -6593,6 +6607,11 @@ control WestLine(inout Orting Hookdale, inout Yerington Funston, in egress_intri
     }
     apply {
         Laney.apply();
+    }
+}
+
+control Simla(inout Orting Hookdale, inout Yerington Funston, in egress_intrinsic_metadata_t Circle, in egress_intrinsic_metadata_from_parser_t Kingsdale, inout egress_intrinsic_metadata_for_deparser_t Tekonsha, inout egress_intrinsic_metadata_for_output_port_t Clermont) {
+    apply {
     }
 }
 
@@ -25117,6 +25136,11 @@ control Gonzalez(inout Orting Hookdale, inout Yerington Funston, in egress_intri
     }
 }
 
+control LaCenter(inout Orting Hookdale, inout Yerington Funston, in egress_intrinsic_metadata_t Circle, in egress_intrinsic_metadata_from_parser_t Kingsdale, inout egress_intrinsic_metadata_for_deparser_t Tekonsha, inout egress_intrinsic_metadata_for_output_port_t Clermont) {
+    apply {
+    }
+}
+
 control Motley(inout Orting Hookdale, inout Yerington Funston, in egress_intrinsic_metadata_t Circle, in egress_intrinsic_metadata_from_parser_t Kingsdale, inout egress_intrinsic_metadata_for_deparser_t Tekonsha, inout egress_intrinsic_metadata_for_output_port_t Clermont) {
     @name(".Monteview") action Monteview(bit<14> Wildell) {
         Tekonsha.mtu_trunc_len = Funston.Circle.Aguilita[13:0] + Wildell;
@@ -25534,6 +25558,7 @@ control Overton(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
     @name(".Newberg") Maury() Newberg;
     @name(".ElMirage") Motley() ElMirage;
     @name(".Amboy") McCartys() Amboy;
+    @name(".Maryville") LaCenter() Maryville;
     @name(".Wiota") Berrydale() Wiota;
     @name(".Minneota") Munday() Minneota;
     @name(".Whitetail") Rodessa() Whitetail;
@@ -25541,6 +25566,7 @@ control Overton(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
     @name(".Tatum") Rawson() Tatum;
     @name(".Croft") Parmele() Croft;
     @name(".Oxnard") Newburgh() Oxnard;
+    @name(".Sidnaw") Simla() Sidnaw;
     @name(".McKibben") Ivanpah() McKibben;
     @name(".Murdock") WestLine() Murdock;
     @name(".Coalton") Shelby() Coalton;
@@ -25568,6 +25594,7 @@ control Overton(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
                 Kinsley.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
                 Paoli.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
                 Newberg.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
+                Maryville.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
                 if (Circle.egress_rid == 16w0 && !Hookdale.Thawville.isValid()) {
                     Oxnard.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
                 }
@@ -25603,6 +25630,7 @@ control Overton(inout Orting Hookdale, inout Yerington Funston, in egress_intrin
         Anaconda.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
         Bothwell.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
         ElMirage.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
+        Sidnaw.apply(Hookdale, Funston, Circle, Kingsdale, Tekonsha, Clermont);
     }
 }
 
@@ -25616,6 +25644,7 @@ parser Caguas(packet_in Palouse, out Orting Hookdale, out Yerington Funston, out
     state Tanner {
         Palouse.extract<Findlay>(Hookdale.Dacono);
         Palouse.extract<Littleton>(Hookdale.Pineville);
+        Funston.Baudette.Oketo = (bit<1>)1w1;
         transition accept;
     }
     state Spindale {
