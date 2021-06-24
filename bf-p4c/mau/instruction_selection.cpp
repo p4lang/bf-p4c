@@ -721,6 +721,11 @@ bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression
         auto cb = b->to<IR::BFN::ReinterpretCast>();
         return ca->type == cb->type && equiv(ca->expr, cb->expr);
     }
+    if (auto sa = a->to<IR::Slice>()) {
+        if (auto sb = b->to<IR::Slice>()) {
+            return sa->getL() == sb->getL() && sa->getH() == sb->getH() && equiv(sa->e0, sb->e0);
+        }
+    }
     return false;
 }
 
