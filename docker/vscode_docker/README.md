@@ -1,6 +1,6 @@
 # Visual Studio Code + Jarvis Docker Image
 
-This is a short howto which helps you to set-up the development environment
+This is a short how-to which helps you to set-up the development environment
 built from the official Jarvis docker image. The development is based on freely
 available tools.
 
@@ -98,8 +98,8 @@ The set username is the part of the `sudo` group inside the image, default passw
 The build script also takes care about the permission and proxy setup.
 
 Start the image with the `./run-jarvis-ssh` script (or your modified version of the script). The script starts the docker image and
-maps the docker image port 22 to localhost port 2222. SSH server inside the docker image is runned automatically.
-Thanks to the provided from mapping localhost:22 to docker:22, ssh to docker image shoold be available now.
+maps the docker image port 22 to localhost port 2222. SSH server inside the docker image is ran automatically.
+Thanks to the provided from mapping localhost:22 to docker:22, ssh to docker image should be available now.
 You can check if the SSH server runs using command (from machine where docker runs):
 
 ```bash
@@ -176,7 +176,120 @@ the following configuration:
 
 6. Open the folder, and enjoy your Visual Studio Code running inside the docker image.
 
-That’s it, no additional configuration of the build system is needed if you are fine with default options. You will also need to
+That's it, no additional configuration of the build system is needed if you are fine with default options. You will also need to
 reconfigure the image if you are using it for the first time (we have different paths, etc.).
 
 We are done. Compilation, debugging and tests should be working now.
+
+## Building projects in VSCode
+
+VSCode allows project building and you can even have multiple build targets for your project.
+
+1. In your workspace (the folder in which your project resides) create `.vscode` folder and inside of it create `tasks.json`. Your file explorer in VSCode should now look similar to this:
+```
+|-- Workspace
+    |-- WorkspaceFolder
+        |-- .vscode
+        |   |-- tasks.json
+        |-- bf-p4c-compilers
+```
+
+2. Inside the `tasks.json` file you can now put your build tasks (exact info is in the [documentation](https://code.visualstudio.com/docs/editor/tasks)), and it can look something like this:
+```
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "standard make -j76",
+            "type": "shell",
+            "command": "make -j76",
+            "group": "build",
+            "options": {
+                "cwd": "${fileDirname}/../bf-p4c-compilers/build"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}
+```
+This configuration file will offer you one build option called `standard make -j76` which will use the command `make -j76` and will execute it in the `bf-p4c-compiler/build` folder. 
+If you'll be using `make -76` just make sure that you have an access to the build pool (otherwise it would take a lot of time).
+
+3. To build your project with this configuration just press `ctrl + shift + b` and after short while a prompt should pop up containing all the builds added to the `tasks.json` file and here you can simply select the one you want to build with right now (build progress should show up in the VSCode terminal).
+
+## Debuging in VSCode
+Just as you can build projects in VSCode, you can also debug right from VSCode.
+
+1. In your workspace (just as in case of building) create `.vscode` folder and inside of it create file `launch.json`. Your file explorer in VSCode should now look similar to this:
+```
+|-- Workspace
+    |-- WorkspaceFolder
+        |-- .vscode
+        |   |-- launch.json
+        |   |-- tasks.json
+        |-- bf-p4c-compilers
+```
+
+2. Inside the `launch.json` file you can now put your configuration (exact info is in the [documentation](https://code.visualstudio.com/docs/editor/debugging) and a tutorial on debugging in VSCode is [here](https://code.visualstudio.com/docs/cpp/introvideos-cpp)). `launch.json` can look something like this:
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) p4c-barefoot",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bf-p4c-compilers/build/p4c/extensions/bf-p4c/p4c-barefoot",
+
+            "args": ["--std=p4-16", "--target=tofino", "--arch=tna", "/home/ubuntu/issueFolder/someP4File.p4pp"],
+            "stopAtEntry": false,
+            "cwd": "/home/ubuntu/issueFolder/folderForOutputsOfP4CBarefoot",
+
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) bfas",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bf-p4c-compilers/build/bf-asm/bfas",
+
+            "args": ["/home/ubuntu/issueFolder/someBFAFile.bfa"],
+            "stopAtEntry": false,
+            "cwd": "/home/ubuntu/issueFolder/folderForOutputsOfBFA",
+
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
+```
+This configuration file sets up 2 debug options -- the first is for `p4c-barefoot` and the second one is for `bfas`. Path to these is specified in the `"program"` attribute and arguments with which it will be executed are in `"args"` attribute. So when you need to debug with different input arguments and files, this attribute has to be changed. Also you'll most likely want to change the `"cwd"` attribute to suit your setup as well.
+
+3. Make sure you have the [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed, otherwise install it.
+
+4. You can now use `F5` which will run the target application or alternatively click the debug icon in the Activity bar (or press `ctrl+shift+d`) and in the top left of the panel next to `RUN AND DEBUG` select one of your debugging configurations. 
+
+5. To run this debug simply click on the green start symbol (after creating some breakpoints by clicking on the space next to line number or by using the `F9` shortcut) and after little while the debug should start and it's output will be visible in the `DEBUG CONSOLE` tab same as additional information. Also a small control panel with debugging control should appear.
