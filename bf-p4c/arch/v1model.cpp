@@ -691,7 +691,7 @@ class AnalyzeProgram : public Inspector {
     }
 
     void postorder(const IR::Type_Enum *node) override {
-        structure->enums.emplace(node->name, node);
+        structure->type_declarations.emplace(node->name, node);
     }
 
     // *** program only declarations ***

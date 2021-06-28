@@ -406,6 +406,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "error: destination of modify_field must be a field"
+  testdata/p4_16_samples/v1model-digest-containing-ser-enum.p4
+  testdata/p4_16_samples/v1model-digest-custom-type.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   # Same Name Conversion Bug
   extensions/p4_tests/p4_14/compile_only/shared_names.p4
@@ -765,12 +771,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1517-bmv2.p4
 )
 
-# v1model translation issue
-p4c_add_xfail_reason("tofino"
-  "error: meter_color_t: declaration not found"
-  testdata/p4_16_samples/issue1989-bmv2.p4
-)
-
 # test program error
 p4c_add_xfail_reason("tofino"
   "The random declaration .* min size must be zero"
@@ -1052,7 +1052,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/p4rt_digest_complex.p4
   # new tests added to p4c
   testdata/p4_16_samples/test-parserinvalidargument-error-bmv2.p4
-  testdata/p4_16_samples/v1model-digest-containing-ser-enum.p4
   # glass testsuite failures
   ../glass/testsuite/p4_tests/arista/BRIG-5/case1715.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-242/case1679.p4
@@ -1644,11 +1643,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: MyPacketTypes: declaration not found"
-  testdata/p4_16_samples/v1model-digest-custom-type.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "error: Tofino requires byte-aligned headers, but header .* is not byte-aligned"
   testdata/p4_16_samples/custom-type-restricted-fields.p4
   testdata/p4_16_samples/parser-unroll-test3.p4
@@ -1861,6 +1855,7 @@ p4c_add_xfail_reason("tofino"
   "No PhvInfo::header for header named"
   extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
   testdata/p4_16_samples/issue2726-bmv2.p4
+  testdata/p4_16_samples/issue1989-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
