@@ -276,16 +276,22 @@ void StatefulTable::pass2() {
             if (logvpn_min < min || logvpn_max > max)
                 error(logvpn_lineno, "log_vpn out of range (%d..%d)", min, max); } }
 
-    if (input_xbar && !data_bytemask && !hash_bytemask) {
-        hash_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse()) & phv_byte_mask;
-        // should we also mask off bits not set in the ixbar of this table?
-        // as long as the compiler explicitly zeroes everything in the hash
-        // that needs to be zero, it should be ok.
-        data_bytemask = phv_byte_mask & ~hash_bytemask;
-    }
-    if (!input_xbar && (data_bytemask || hash_bytemask)) {
-        error(lineno, "No input_xbar in %s, but %s is present", name(),
-              data_bytemask ? "data_bytemask" : "hash_bytemask");
+    if (input_xbar) {
+        if (!data_bytemask && !hash_bytemask) {
+            hash_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse()) & phv_byte_mask;
+            // should we also mask off bits not set in the ixbar of this table?
+            // as long as the compiler explicitly zeroes everything in the hash
+            // that needs to be zero, it should be ok.
+            data_bytemask = phv_byte_mask & ~hash_bytemask;
+        }
+    } else {
+        if (data_bytemask || hash_bytemask) {
+            error(lineno, "No input_xbar in %s, but %s is present", name(),
+                  data_bytemask ? "data_bytemask" : "hash_bytemask");
+        } else if (phv_byte_mask) {
+            error(lineno, "No input_xbar in %s, but raw phv_%s use is present", name(),
+                  (phv_byte_mask & 1) ? "lo" : "hi");
+        }
     }
 }
 
@@ -315,6 +321,63 @@ unsigned StatefulTable::per_flow_enable_bit(MatchTable *match) const {
 unsigned StatefulTable::determine_shiftcount(Table::Call &call, int group, unsigned word,
         int tcam_shift) const {
     return determine_meter_shiftcount(call, group, word, tcam_shift);
+}
+
+/** Determine which stateful action a given table action invokes (if any)
+ *  In theory, the stateful action to run could be an action data param or even come from
+ *  hash_dist (so the action could run any stateful action), but currently the compiler will
+ *  never geneate such code.  If we add that ability, we'll need to revisit this, and need
+ *  to revise the context.json appropriately.  Currently, this code will return a nullptr
+ *  for such bfa code (meter_type_arg would be a Field or HashDist)
+ */
+Table::Actions::Action *StatefulTable::
+action_for_table_action(const MatchTable *tbl, const Actions::Action *act) const {
+    // Check for action args to determine which stateful action is
+    // called. If no args are present skip as the action does not
+    // invoke stateful
+    if (indirect) {
+        for (auto att : act->attached) {
+            if (att != this) continue;
+            if (att.args.size() == 0)
+                continue;
+            auto meter_type_arg = att.args[0];
+            if (meter_type_arg.type == Call::Arg::Name) {
+                // Check if stateful has this called action
+                return actions->action(meter_type_arg.name());
+            } else if (meter_type_arg.type == Call::Arg::Const) {
+                int index = -1;
+                switch (meter_type_arg.value()) {
+                    case STATEFUL_INSTRUCTION_0:
+                        index = 0; break;
+                    case STATEFUL_INSTRUCTION_1:
+                        index = 1; break;
+                    case STATEFUL_INSTRUCTION_2:
+                        index = 2; break;
+                    case STATEFUL_INSTRUCTION_3:
+                        index = 3; break;
+                }
+                if (index == -1)
+                    continue;
+                auto it = actions->begin();
+                while (it != actions->end() && index > 0) {
+                    --index;
+                    ++it; }
+                if (it != actions->end())
+                    return &(*it);
+            }
+        }
+    } else {
+        // If stateful is direct, all user defined actions will
+        // invoke stateful except for the miss action. This is
+        // defined as 'default_only' in p4, if not the compiler
+        // generates a default_only action and adds it
+        // FIXME: Brig should add these generated actions as
+        // default_only in assembly
+        if (!((act->name == tbl->default_action) && tbl->default_only_action)) {
+            // Direct has only one action
+            if (actions)
+                return &*actions->begin(); } }
+    return nullptr;
 }
 
 #include "tofino/stateful.cpp"  // NOLINT(build/include)
@@ -446,7 +509,7 @@ template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     if (!bound_selector) {
         bool first_match = true;
         for (MatchTable *m : match_tables) {
-            adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
+            adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] |= 1 << meter_group;
             adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
                 4 | meter_group, 3*(m->logical_id % 8U), 3);
             if (first_match)
@@ -519,61 +582,8 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
     for (auto *m : match_tables) {
         if (auto *acts = m->get_actions()) {
             for (auto &a : *acts) {
-                // Check for action args to determine which stateful action is
-                // called. If no args are present skip as the action does not
-                // invoke stateful
-                bool action_invokes_stateful = false;
-                Actions::Action * stful_action = nullptr;
-                if (indirect) {
-                    for (auto att : a.attached) {
-                        if (att->table_type() != Table::STATEFUL)
-                            continue;
-                        if (att.args.size() == 0)
-                            continue;
-                        auto meter_type_arg = att.args[0];
-                        if (meter_type_arg.type == Call::Arg::Name) {
-                            // Check if stateful has this called action
-                            stful_action = actions->action(meter_type_arg.name());
-                            if (stful_action) {
-                                action_invokes_stateful = true;
-                                break;
-                            }
-                        } else if (meter_type_arg.type == Call::Arg::Const) {
-                            int index = -1;
-                            switch (meter_type_arg.value()) {
-                                case STATEFUL_INSTRUCTION_0:
-                                    index = 0; break;
-                                case STATEFUL_INSTRUCTION_1:
-                                    index = 1; break;
-                                case STATEFUL_INSTRUCTION_2:
-                                    index = 2; break;
-                                case STATEFUL_INSTRUCTION_3:
-                                    index = 3; break;
-                            }
-                            if (index == -1)
-                                continue;
-                            if (int(actions->size()) < index)
-                                continue;
-                            auto it = actions->begin();
-                            std::advance(it, index);
-                            stful_action = &(*it);
-                            action_invokes_stateful = true;
-                            break;
-                        }
-                    }
-                } else {
-                    // If stateful is direct, all user defined actions will
-                    // invoke stateful except for the miss action. This is
-                    // defined as 'default_only' in p4, if not the compiler
-                    // generates a default_only action and adds it
-                    // FIXME: Brig should add these generated actions as
-                    // default_only in assembly
-                    if (!((a.name == m->default_action) && m->default_only_action)) {
-                        // Direct has only one action
-                        if (actions)
-                            stful_action = &*actions->begin();
-                        action_invokes_stateful = true; } }
-                if (!action_invokes_stateful) continue;
+                Actions::Action *stful_action = action_for_table_action(m, &a);
+                if (!stful_action) continue;
                 bool act_present = false;
                 // Do not add handle if already present, if stateful spans
                 // multiple stages this can happen as action handles are unique

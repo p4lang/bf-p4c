@@ -100,14 +100,17 @@ template<int N> struct ubits : ubits_base {
     const ubits &set_subfield(uint64_t v, unsigned bit, unsigned size) {
         if (disabled_)
             LOG1("ERROR: Overwriting disabled register value in " << this);
-        if (bit + size > N)
+        uint64_t mask = (1ULL << size)-1;
+        uint64_t oldv = (value >> bit) & mask;
+        if (bit + size > N) {
             LOG1("ERROR: subfield " << bit << ".." << (bit+size-1) << " out of range in " << this);
-        else if (write && ((value >> bit) & ((1U << size)-1)))
-            LOG1("WARNING: Overwriting subfield(" << bit << ".." << (bit+size-1) << ") value " <<
-                 ((value >> bit) & ((1U << size)-1)) << " with " << v << " in " << this);
-        if (v >= (1U << size))
+        } else if (write && oldv) {
+            LOG1((v != oldv ? "ERROR" : "WARNING") << ": Overwriting subfield(" << bit << ".." <<
+                 (bit+size-1) << ") value " << oldv << " with " << v << " in " << this); }
+        if (v > mask) {
             LOG1("ERROR: Subfield value " << v << " too large for " << size <<
                   " bits in " << this);
+            v &= mask; }
         value |= v << bit;
         write = true;
         log("|=", v << bit);

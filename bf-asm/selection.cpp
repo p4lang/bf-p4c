@@ -337,7 +337,7 @@ void SelectionTable::write_regs(REGS &regs) {
     auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
     for (MatchTable *m : match_tables) {
-        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
+        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] |= 1 << meter_group;
         // auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
         // icxbar.address_distr_to_logical_rows = 1 << home->row;
         // icxbar.address_distr_to_overflow = push_on_overflow;

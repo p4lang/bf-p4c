@@ -1323,6 +1323,8 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Primitive *prim) {
             use = IR::MAU::StatefulUse::STACK_PUSH;
         } else if (method == "pop") {
             use = IR::MAU::StatefulUse::STACK_POP;
+        } else if (method == "sweep") {
+            use = IR::MAU::StatefulUse::FAST_CLEAR;
         } else {
             BUG("Unknown %s method %s in: %s", objType, method, prim); }
     } else if (method == "execute") {

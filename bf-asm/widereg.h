@@ -113,8 +113,8 @@ template<int N> struct widereg : widereg_base {
                   " out of range in " << this);
         } else if (auto o = value.getrange(bit, size)) {
             if (write)
-                LOG1("WARNING: Overwriting subfield(" << bit << ".." << (bit+size-1) <<
-                        ") value " << o << " with " << v << " in " << this); }
+                LOG1((o != v ? "ERROR" : "WARNING") << ": Overwriting subfield(" << bit << ".." <<
+                     (bit+size-1) << ") value " << o << " with " << v << " in " << this); }
         if (v >= (1U << size))
             LOG1("ERROR: Subfield value " << v << " too large for " << size <<
                   " bits in " << this);

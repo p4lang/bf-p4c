@@ -522,6 +522,10 @@ class StatefulAlu : MeterBus2Port {
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::STATEFUL_ALU; }
     bool alu_output() const;   // has output to VLIW alus via action data bus
     SaluAction calledAction(Table tbl, Action act) const;
+    bool for_dleft() const {
+        for (auto *act : Values(instruction))
+            if (act->learn_action) return true;
+        return false; }
 
     int source_width() const {
         if (dual)
@@ -805,6 +809,13 @@ class SaluAction : VLIWInstruction {
     safe_vector<ActionArg>      args = {};
     optional Annotations        annotations = Annotations::empty;
     NullOK Expression  output_dst = nullptr;  // implicit write of output to this lvalue
+    bool                        learn_action = false;  // comes from LearnAction
+        // FIXME -- the flag is needed to get ixbar alloc right when an SALU is shared
+        // between a dleft and non-dleft table, as the dleft digest hash needs to be in the
+        // SALU ixbar rather than the match table's ixbar.  But the info for the dleft
+        // digest is in the match table's key, so we need to make sure the SALU ixbar is
+        // setup from the dleft table and not the non-dleft table.  Maybe should be
+        // called 'needs_dleft_digest' instead?
 
     // The original P4 function that underwent SaluAction translation. Not
     // visited. This is here so that a higher level representation of the

@@ -146,6 +146,7 @@ void IR::MAU::StatefulCall::dbprint(std::ostream &out) const {
 }
 
 void IR::MAU::SaluAction::dbprint(std::ostream &out) const {
+    if (learn_action) out << "learn ";
     out << "action " << name << "(";
     const char *sep = "";
     for (auto &arg : args) {

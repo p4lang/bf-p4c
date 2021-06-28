@@ -63,6 +63,7 @@
     M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_CMP_UNITS) \
     M(int, STATEFUL_CMP_ADDR_WIDTH) M(int, STATEFUL_CMP_CONST_WIDTH) \
+    M(int, STATEFUL_CMP_CONST_MASK) \
     M(int, STATEFUL_CMP_CONST_MIN) M(int, STATEFUL_CMP_CONST_MAX) \
     M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
     M(int, STATEFUL_REGFILE_CONST_WIDTH) M(int, STATEFUL_REGFILE_ROWS) \
@@ -75,6 +76,7 @@
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
     M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
     M(int, STATEFUL_ALU_ADDR_WIDTH) M(int, STATEFUL_ALU_CONST_WIDTH) \
+    M(int, STATEFUL_ALU_CONST_MASK) \
     M(int, STATEFUL_ALU_CONST_MIN) M(int, STATEFUL_ALU_CONST_MAX) \
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(int, NUM_PARSERS)
@@ -183,6 +185,7 @@ class Target::Tofino : public Target {
         STATEFUL_CMP_UNITS = 2,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 4,
+        STATEFUL_CMP_CONST_MASK = 0xf,
         STATEFUL_CMP_CONST_MIN = -8,
         STATEFUL_CMP_CONST_MAX = 7,
         STATEFUL_TMATCH_UNITS = 0,
@@ -197,6 +200,7 @@ class Target::Tofino : public Target {
         SUPPORT_SALU_FAST_CLEAR = 0,
         STATEFUL_ALU_ADDR_WIDTH = 2,
         STATEFUL_ALU_CONST_WIDTH = 4,
+        STATEFUL_ALU_CONST_MASK = 0xf,
         STATEFUL_ALU_CONST_MIN = -8,  // TODO Is the same as the following one?
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -8,  // TODO
@@ -304,6 +308,7 @@ class Target::JBay : public Target {
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
+        STATEFUL_CMP_CONST_MASK = 0x3f,
         STATEFUL_CMP_CONST_MIN = -32,
         STATEFUL_CMP_CONST_MAX = 31,
         STATEFUL_TMATCH_UNITS = 2,
@@ -318,6 +323,7 @@ class Target::JBay : public Target {
         SUPPORT_SALU_FAST_CLEAR = 1,
         STATEFUL_ALU_ADDR_WIDTH = 2,
         STATEFUL_ALU_CONST_WIDTH = 4,
+        STATEFUL_ALU_CONST_MASK = 0xf,
         STATEFUL_ALU_CONST_MIN = -8,  // TODO Is the same as the following one?
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
@@ -470,6 +476,7 @@ class Target::Cloudbreak : public Target {
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
+        STATEFUL_CMP_CONST_MASK = 0x3f,
         STATEFUL_CMP_CONST_MIN = -32,
         STATEFUL_CMP_CONST_MAX = 31,
         STATEFUL_TMATCH_UNITS = 2,
@@ -484,6 +491,7 @@ class Target::Cloudbreak : public Target {
         SUPPORT_SALU_FAST_CLEAR = 1,
         STATEFUL_ALU_ADDR_WIDTH = 2,
         STATEFUL_ALU_CONST_WIDTH = 4,
+        STATEFUL_ALU_CONST_MASK = 0xf,
         STATEFUL_ALU_CONST_MIN = -8,  // TODO Is the same as the following one?
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO

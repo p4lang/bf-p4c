@@ -22,7 +22,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
         } else if (auto k = srca.to<operand::Const>()) {
             salu.salu_asrc_memory = 0;
             if (k->value >= alu_const_min && k->value <= alu_const_max) {
-                salu.salu_const_src = k->value;
+                salu.salu_const_src = k->value & Target::STATEFUL_ALU_CONST_MASK();
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->lineno, k->value);
@@ -52,7 +52,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
             if (k->value >= alu_const_min && k->value <= alu_const_max) {
-                salu.salu_const_src = k->value;
+                salu.salu_const_src = k->value & Target::STATEFUL_ALU_CONST_MASK();
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->lineno, k->value);
@@ -105,7 +105,7 @@ void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
             const int cmp_const_min = Target::STATEFUL_CMP_CONST_MIN();
             const int cmp_const_max = Target::STATEFUL_CMP_CONST_MAX();
             if (k->value >= cmp_const_min && k->value <=  cmp_const_max) {
-                salu.salu_cmp_const_src = k->value;
+                salu.salu_cmp_const_src = k->value & Target::STATEFUL_CMP_CONST_MASK();
                 salu.salu_cmp_regfile_const = 0;
             } else {
                 salu.salu_cmp_const_src = tbl->get_const(srcc->lineno, k->value);

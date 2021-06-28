@@ -2643,42 +2643,45 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         // required to generate override_full_.*_addr information
         for (auto call : act->stateful_calls) {
             auto *at = call->attached_callee;
-            out << indent << "- " << self.find_attached_name(table, at) << '(';
-            sep = "";
-            auto *salu = at->to<IR::MAU::StatefulAlu>();
-            if (auto *salu_act = salu ? salu->calledAction(table, act) : nullptr) {
-                out << canon_name(salu_act->name);
-                sep = ", ";
-            } else if (act->meter_types.count(at->unique_id()) > 0) {
-                // Currently dumps meter type as number, because the color aware stuff does not
-                // have a name in asm, nor does STFUL_CLEAR
-                IR::MAU::MeterType type = act->meter_types.at(at->unique_id());
-                out << static_cast<int>(type);
-                sep = ", "; }
-            BUG_CHECK((call->index == nullptr) == at->direct, "%s Indexing scheme doesn't match up "
-                      "for %s", at->srcInfo, at->name);
-            if (call->index != nullptr) {
-                if (auto *k = call->index->to<IR::Constant>()) {
-                    out << sep << k->value;
+            for (auto id : self.find_attached_ids(table, at)) {
+                out << indent << "- " << id.build_name() << '(';
+                sep = "";
+                auto *salu = at->to<IR::MAU::StatefulAlu>();
+                if (auto *salu_act = salu ? salu->calledAction(table, act) : nullptr) {
+                    out << canon_name(salu_act->name);
                     sep = ", ";
-                } else if (auto *a = call->index->to<IR::MAU::ActionArg>()) {
-                    out << sep << a->name.toString();
-                    sep = ", ";
-                } else if (call->index->is<IR::MAU::HashDist>()) {
-                    out << sep << "$hash_dist";
-                    sep = ", ";
-                } else if (call->index->is<IR::MAU::StatefulCounter>()) {
-                    out << sep << "$stful_counter";
-                    sep = ", ";
+                } else if (act->meter_types.count(at->unique_id()) > 0) {
+                    // Currently dumps meter type as number, because the color aware stuff does not
+                    // have a name in asm, nor does STFUL_CLEAR
+                    IR::MAU::MeterType type = act->meter_types.at(at->unique_id());
+                    out << static_cast<int>(type);
+                    sep = ", "; }
+                BUG_CHECK((call->index == nullptr) == at->direct,
+                          "%s Indexing scheme doesn't match up for %s", at->srcInfo, at->name);
+                if (call->index != nullptr) {
+                    if (auto *k = call->index->to<IR::Constant>()) {
+                        out << sep << k->value;
+                        sep = ", ";
+                    } else if (auto *a = call->index->to<IR::MAU::ActionArg>()) {
+                        out << sep << a->name.toString();
+                        sep = ", ";
+                    } else if (call->index->is<IR::MAU::HashDist>()) {
+                        out << sep << "$hash_dist";
+                        sep = ", ";
+                    } else if (call->index->is<IR::MAU::StatefulCounter>()) {
+                        out << sep << "$stful_counter";
+                        sep = ", ";
+                    } else {
+                        BUG("%s: Index %s for %s is not supported", at->srcInfo,
+                            call->index, at->name);
+                    }
                 } else {
-                    BUG("%s: Index %s for %s is not supported", at->srcInfo, call->index, at->name);
+                    out << sep << "$DIRECT";
+                    sep = ", ";
                 }
-            } else {
-                out << sep << "$DIRECT";
-                sep = ", ";
+                out << ')' << std::endl;
+                is_empty = false;
             }
-            out << ')' << std::endl;
-            is_empty = false;
         }
         return false; }
     bool preorder(const IR::MAU::SaluAction *act) override {
@@ -4212,8 +4215,22 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
     if (unattached_pos == memuse.unattached_tables.end()) {
         return at_unique_id.build_name();
     } else {
-        // FIXME -- need to deal with mulitple salus from a dleft table, potentially
+        BUG_CHECK(unattached_pos->second.size() == 1, "split table reference");
         return unattached_pos->second.front().build_name();
+    }
+}
+
+ordered_set<UniqueId> MauAsmOutput::find_attached_ids(const IR::MAU::Table *tbl,
+    const IR::MAU::AttachedMemory *at) const {
+    auto unique_id = tbl->unique_id();
+    auto at_unique_id = tbl->unique_id(at);
+    auto &memuse = tbl->resources->memuse.at(unique_id);
+
+    auto unattached_pos = memuse.unattached_tables.find(at_unique_id);
+    if (unattached_pos == memuse.unattached_tables.end()) {
+        return { at_unique_id };
+    } else {
+        return unattached_pos->second;
     }
 }
 
@@ -4225,10 +4242,10 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         if (at_mem->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
         if (at_mem->is<IR::MAU::StatefulAlu>() && back_at->use == IR::MAU::StatefulUse::NO_USE)
             continue;  // synthetic salu for driver to write to selector; not used directly
-        out << indent << at_mem->kind() << ": ";
-        out << find_attached_name(tbl, at_mem);
-        out << build_call(at_mem, back_at, tbl);
-        out << std::endl;
+        for (auto id : find_attached_ids(tbl, at_mem)) {
+            out << indent << at_mem->kind() << ": " << id.build_name()
+                << build_call(at_mem, back_at, tbl) << std::endl; }
+
         if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
             if (mtr->color_output()) {
                 out << indent << "meter_color : ";

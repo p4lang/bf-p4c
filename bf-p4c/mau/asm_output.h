@@ -148,8 +148,9 @@ class MauAsmOutput : public MauInspector {
                        const IR::MAU::IdleTime *id) const;
     void emit_indirect_res_context_json(std::ostream &out, indent_t indent,
                         const IR::MAU::Table *tbl) const;
-    cstring find_attached_name(const IR::MAU::Table *tbl,
-           const IR::MAU::AttachedMemory *am) const;
+    cstring find_attached_name(const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *am) const;
+    ordered_set<UniqueId> find_attached_ids(const IR::MAU::Table *tbl,
+                                            const IR::MAU::AttachedMemory *am) const;
     std::string indirect_address(const IR::MAU::AttachedMemory *) const;
     std::string indirect_pfe(const IR::MAU::AttachedMemory *) const;
     std::string stateful_counter_addr(IR::MAU::StatefulUse use) const;

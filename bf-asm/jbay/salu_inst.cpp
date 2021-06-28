@@ -164,22 +164,30 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - ALU2LO];
+    auto &salu_ext = meter_group.stateful.salu_instr2_state_alu[act->code][slot - ALU2LO];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
     auto &salu_instr_output_alu = meter_group.stateful.salu_instr_output_alu[act->code];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
     salu.salu_pred = predication_encode;
+    bool need_flyover = (tbl->format->size >> tbl->is_dual_mode()) > 32;
     const int alu_const_min = Target::STATEFUL_ALU_CONST_MIN();
     const int alu_const_max = Target::STATEFUL_ALU_CONST_MAX();
     if (srca) {
         if (auto m = srca.to<operand::Memory>()) {
             salu.salu_asrc_input = m->field->bit(0) > 0 ? 1 : 0;
+            if (need_flyover) {
+                salu_ext.salu_flyover_src_sel = 1;
+                need_flyover = false; }
         } else if (auto f = srca.to<operand::Phv>()) {
             salu.salu_asrc_input = f->phv_index(tbl) ? 3 : 2;
+            if (need_flyover) {
+                salu_ext.salu_flyover_src_sel = 1;
+                need_flyover = false; }
         } else if (auto k = srca.to<operand::Const>()) {
             salu.salu_asrc_input = 4;
             if (k->value >= alu_const_min && k->value <= alu_const_max) {
-                salu.salu_const_src = k->value;
+                salu.salu_const_src = k->value & Target::STATEFUL_ALU_CONST_MASK();
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->lineno, k->value);
@@ -196,8 +204,14 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
     if (srcb) {
         if (auto m = srcb.to<operand::Memory>()) {
             salu.salu_bsrc_input = m->field->bit(0) > 0 ? 3 : 2;
+            if (need_flyover) {
+                salu_ext.salu_flyover_src_sel = 0;
+                need_flyover = false; }
         } else if (auto f = srcb.to<operand::Phv>()) {
             salu.salu_bsrc_input = f->phv_index(tbl) ? 1 : 0;
+            if (need_flyover) {
+                salu_ext.salu_flyover_src_sel = 0;
+                need_flyover = false; }
         } else if (auto m = srcb.to<operand::MathFn>()) {
             salu_instr_common.salu_alu2_lo_bsrc_math = 1;
             if (auto b = m->of.to<operand::Phv>()) {
@@ -210,7 +224,7 @@ void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_input = 4;
             if (k->value >= alu_const_min && k->value <= alu_const_max) {
-                salu.salu_const_src = k->value;
+                salu.salu_const_src = k->value & Target::STATEFUL_ALU_CONST_MASK();
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->lineno, k->value);
@@ -275,7 +289,7 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
             bool maska_outside = (maska < uint32_t(min) && maska > max);
             bool maska_equal_inside = (uint32_t(cval) != maska && cval >= min && cval <= max);
              if (!maska_outside && !maska_equal_inside) {
-                salu.salu_cmp_const_src = maska;
+                salu.salu_cmp_const_src = maska & Target::STATEFUL_CMP_CONST_MASK();
                 salu.salu_cmp_mask_input = 0;
             } else {
                 salu.salu_cmp_regfile_adr = tbl->get_const(srca->lineno, maska);
@@ -297,7 +311,7 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
             const int cmp_const_min = Target::STATEFUL_CMP_CONST_MIN();
             const int cmp_const_max = Target::STATEFUL_CMP_CONST_MAX();
             if (k->value >= cmp_const_min && k->value <= cmp_const_max) {
-                salu.salu_cmp_const_src = k->value;
+                salu.salu_cmp_const_src = k->value & Target::STATEFUL_CMP_CONST_MASK();
                 salu.salu_cmp_regfile_const = 0;
             } else {
                 salu.salu_cmp_regfile_adr = tbl->get_const(srcc->lineno, k->value);

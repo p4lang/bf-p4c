@@ -187,6 +187,13 @@ template<class T> void set_raw_instr_bits(checked_array<4, T> &reg, bitvec v) {
     }
 }
 
+static int counter_to_use(MatchTable *m) {
+    for (auto st : m->get_attached()->statefuls)
+        return st->to<StatefulTable>()->meter_group();
+    BUG("no attached stateful table?");
+    return 0;
+}
+
 template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
     auto &adrdist = regs.rams.match.adrdist;
     auto &merge = regs.rams.match.merge;
@@ -197,24 +204,38 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
     vpn_range.meter_vpn_base = minvpn;
     vpn_range.meter_vpn_limit = maxvpn;
     vpn_range.meter_vpn_range_check_enable = 1;
+    int counter_idx = -1;
+    Actions::Action *sweep_action = nullptr;
     for (MatchTable *m : match_tables) {
-        int mode = stateful_counter_mode;
-        if (auto *call = m->get_call(this))
-            if (call->args.at(0).type == Call::Arg::Counter)
+        int mode = 0;
+        if (auto *call = m->get_call(this)) {
+            if (call->args.at(0).type == Call::Arg::Counter) {
                 mode = call->args.at(0).count_mode();
+                if (counter_idx < 0)
+                    counter_idx = counter_to_use(m);
+                else
+                    BUG_CHECK(counter_idx == counter_to_use(m),
+                              "conflicting counter use in %s", name()); }
+            if ((mode & FUNCTION_MASK) == FUNCTION_FAST_CLEAR) {
+                for (auto &a : *m->get_actions()) {
+                    if (auto *sw = action_for_table_action(m, &a)) {
+                        BUG_CHECK(!sweep_action || sw == sweep_action,
+                                  "Inconsistent sweep action for %s", name());
+                        sweep_action = sw; } } } }
         if (address_used) {
             auto &slog_map = adrdist.mau_stateful_log_counter_logical_map[m->logical_id];
             slog_map.stateful_log_counter_logical_map_ctl = meter_group();
             slog_map.stateful_log_counter_logical_map_enable = 1; }
-        merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
-            mode & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
-        merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
-            (mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
-        for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U]) {
-            if (mode & PUSHPOP_MASK)
-                rep[0].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3);
-            if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
-                rep[1].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3); }
+        if (mode) {
+            merge.mau_stateful_log_counter_ctl[m->logical_id/8U][0].set_subfield(
+                mode & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
+            merge.mau_stateful_log_counter_ctl[m->logical_id/8U][1].set_subfield(
+                (mode >> PUSHPOP_BITS) & PUSHPOP_MASK , 4*(m->logical_id % 8U), 4);
+            for (auto &rep : merge.mau_stateful_log_ctl_ixbar_map[m->logical_id/8U]) {
+                if (mode & PUSHPOP_MASK)
+                    rep[0].set_subfield(counter_idx | 0x4, 3*(m->logical_id % 8U), 3);
+                if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
+                    rep[1].set_subfield(counter_idx | 0x4, 3*(m->logical_id % 8U), 3); } }
         if (address_used)
             adrdist.meter_alu_adr_range_check_icxbar_map[meter_group()] |= 1U << m->logical_id;
         if (offset_vpn) {
@@ -229,9 +250,10 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
     case 1: adrdist.meter_adr_shift.meter_adr_shift1 = meter_adr_shift; break;
     case 2: adrdist.meter_adr_shift.meter_adr_shift2 = meter_adr_shift; break;
     case 3: adrdist.meter_adr_shift.meter_adr_shift3 = meter_adr_shift; break; }
-    auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
-    oxbar_map.stateful_log_counter_oxbar_ctl = meter_group();
-    oxbar_map.stateful_log_counter_oxbar_enable = 1;
+    if (counter_idx >= 0) {
+        auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
+        oxbar_map.stateful_log_counter_oxbar_ctl = counter_idx;
+        oxbar_map.stateful_log_counter_oxbar_enable = 1; }
     auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
     auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
     if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != FUNCTION_FAST_CLEAR) {
@@ -269,7 +291,10 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
         if (clear_value) {
             set_raw_instr_bits(salu.salu_instr_state_alu[3], clear_value);
             salu.stateful_ctl.salu_clear_value_ctl = 1; }
-        ctl3.slog_overflow_instruction = 0x6; }
+        if (sweep_action) {
+            ctl3.slog_overflow_instruction = sweep_action->code * 2 + 1;
+        } else {
+            ctl3.slog_overflow_instruction = 0x6; } }
     regs.rams.map_alu.meter_alu_group_phv_hash_shift[meter_group()] = phv_hash_shift;
     unsigned idx = 0;
     for (auto &slice : regs.rams.map_alu.meter_alu_group_phv_hash_mask[meter_group()])

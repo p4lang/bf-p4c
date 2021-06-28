@@ -46,6 +46,14 @@ bool Memories::Use::separate_search_and_result_bus() const {
     return false;
 }
 
+/** When anlyzing tables, the order is occasionally important, so we sort in order of
+ * this priority.  For now the only important one is anaylyzing dleft tables before any
+ * non-dleft table that may share the stateful ALU
+ */
+int Memories::table_alloc::analysis_priority() const {
+    return table->for_dleft() ? 0 : 1;
+}
+
 /** Building a UniqueId per table alloc.  The stage table comes from initialization, all other
  *  data must be provided
  */
@@ -659,6 +667,8 @@ void Memories::set_logical_memuse_type(table_alloc *ta, Use::type_t type) {
 bool Memories::analyze_tables(mem_info &mi) {
     mi.clear();
     clear_table_vectors();
+    std::stable_sort(tables.begin(), tables.end(), [](table_alloc *a, table_alloc *b) {
+        return a->analysis_priority() < b->analysis_priority(); });
     for (auto *ta : tables) {
         auto table = ta->table;
         int entries = ta->provided_entries;

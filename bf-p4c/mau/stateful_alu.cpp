@@ -495,6 +495,11 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     LOG5(func);
     action = new IR::MAU::SaluAction(func->srcInfo, name, func);
     action->annotations = reg_action->annotations;
+    for (auto pt : *param_types) {
+        // maybe this flag should be 'needs_dleft_digest' rather than 'learn_action'?
+        if (pt == param_t::HASH) {
+            action->learn_action = true;
+            break; } }
     salu->instruction.addUnique(name.name, action);
     params = func->type->parameters;
     int out_word = 0;

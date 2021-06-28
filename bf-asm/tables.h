@@ -1,5 +1,5 @@
-#ifndef TABLES_H_
-#define TABLES_H_
+#ifndef BF_ASM_TABLES_H_
+#define BF_ASM_TABLES_H_
 
 #include <config.h>
 #include <bitops.h>
@@ -1860,6 +1860,7 @@ public:
     void set_output_used() override { output_used = true; }
     void parse_register_params(int idx, const value_t &val);
     int64_t get_const_val(int index) const { return const_vals.at(index).value; }
+    Actions::Action *action_for_table_action(const MatchTable *tbl, const Actions::Action *) const;
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         static int parse_counter_mode, (target_type, const value_t &))
     static int parse_counter_mode(const value_t &v) {
@@ -1876,4 +1877,4 @@ public:
 #endif
 )
 
-#endif /* TABLES_H_ */
+#endif /* BF_ASM_TABLES_H_ */

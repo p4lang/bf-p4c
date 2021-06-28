@@ -4595,8 +4595,15 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
         allocated_attached.emplace(mtr, rsrc->meter_ixbar);
     }
     if (salu && (allocated_attached.count(salu) == 0)) {
-        update(name + "$salu", rsrc->salu_ixbar);
-        allocated_attached.emplace(salu, rsrc->salu_ixbar);
+        if (!tbl->for_dleft() && salu->for_dleft()) {
+            // FIXME -- if this SALU is used for dleft, then it must be accounted for
+            // with its dleft match table; otherwise the dleft hash won't be allocated
+            // properly.  So we hack it by simply skipping it when we see it with a
+            // non-dleft table
+        } else {
+            update(name + "$salu", rsrc->salu_ixbar);
+            allocated_attached.emplace(salu, rsrc->salu_ixbar);
+        }
     }
 
     update(name + "$proxy_hash", rsrc->proxy_hash_ixbar);

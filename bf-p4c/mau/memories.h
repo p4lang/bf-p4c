@@ -329,6 +329,7 @@ struct Memories {
               attached_entries(attached_entries), attached_gw_bytes(0), stage_table(st),
               table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
+        int analysis_priority() const;
 
         UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
             bool is_gw = false, int logical_table = -1,

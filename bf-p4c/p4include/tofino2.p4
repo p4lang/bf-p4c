@@ -858,7 +858,9 @@ extern RegisterAction<T, H, U> {
     U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo pop */
     U push(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack push */
     U pop(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack pop */
-    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
+    /// execute the action on every entry in the register
+    void sweep(@optional in U busy);
+    @synchronous(execute, execute_log, enqueue, dequeue, push, pop, sweep)
     abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
                                        @optional out U rv3, @optional out U rv4);
 

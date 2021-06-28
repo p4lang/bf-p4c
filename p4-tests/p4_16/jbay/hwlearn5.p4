@@ -10,6 +10,7 @@ struct metadata {
     bit<30> retire_addr;
     bit<1>  retire_flag;
     bit<3>  retire_stage;
+    bit<1>  age_sweep;
     @pa_container_size("ingress", "learn_result", 32)
     bit<16> learn_result;
     bit<16> flow_id;
@@ -23,6 +24,7 @@ struct metadata {
     M.retire_addr = 0;  \
     M.retire_flag = 0; \
     M.retire_stage = 0; \
+    M.age_sweep = 0; \
     M.learn_result = 0; \
     M.flow_id = 0;
 
@@ -110,6 +112,21 @@ control learn_dleft(inout headers hdr, inout metadata meta)(bit<3> stage) {
         meta.retire_addr = meta.retire_addr | retire_act.execute(addr, meta.retire_flag);
     }
 
+    RegisterAction<pair, bit<14>, void>(learn_cache) age = {
+        void apply(inout pair value) {
+            if ((value.first & 1) == 1) {
+                if ((value.first & 0x1f) == 1)
+                    value.first = 0;
+                else
+                    value.first = value.first - 2; }
+            if ((value.second & 1) == 1) {
+                if ((value.second & 0x1f) == 1)
+                    value.second = 0;
+                else
+                    value.second = value.second - 2; }
+        }
+    };
+
     @hidden  // p4runtime can't deal with dleft tables
     table learn_match {
         key = {
@@ -133,8 +150,17 @@ control learn_dleft(inout headers hdr, inout metadata meta)(bit<3> stage) {
     }
 
     apply {
-        learn_match.apply();
-        if (meta.retire_flag == 1) meta.retire_stage = stage;
+        if (meta.age_sweep == 1) {
+            age.sweep();
+            // DANGER -- sweep() is good on the model as it sweeps all at once (fast), but
+            // on hardware will lock the SALU for 4K cycles (causing any packets that arrive
+            // in the meantime to miss and fail_overflow()).  Need to use
+            //    age.execute_log();
+            // which will sweep one row and need 4K sweeping packets to age the whole table
+        } else {
+            learn_match.apply();
+            if (meta.retire_flag == 1) meta.retire_stage = stage;
+        }
     }
 }
 
@@ -245,14 +271,18 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.flow_id = hdr.ethernet.dst_addr[15:0];
             do_insert_new_fid.apply();
         } else {
-            ig_intr_tm_md.ucast_egress_port = 3;
-            if (cuckoo_match.apply().hit) {
-                cuckoo_hit();;
+            if (hdr.ethernet.ether_type == 0xfffe) {
+                meta.age_sweep = 1;
+            } else {
+                ig_intr_tm_md.ucast_egress_port = 3;
+                if (cuckoo_match.apply().hit) {
+                    cuckoo_hit();;
+                }
             }
             learn_1.apply(hdr, meta);
             learn_2.apply(hdr, meta);
             learn_3.apply(hdr, meta);
-            if (meta.retire_stage == 0) {
+            if (meta.retire_stage == 0 && meta.age_sweep == 0) {
                 if (MATCHED(meta.learn_result)) {
                     old_flow();
                 } else if (LEARNED(meta.learn_result)) {
@@ -262,10 +292,12 @@ control ingress(inout headers hdr, inout metadata meta,
                     failed_overflow();
                 }
             }
-            map_3.apply(hdr, meta);
-            map_2.apply(hdr, meta);
-            map_1.apply(hdr, meta);
-            inc_flow_counter.execute(meta.flow_id);
+            if (meta.age_sweep == 0) {
+                map_3.apply(hdr, meta);
+                map_2.apply(hdr, meta);
+                map_1.apply(hdr, meta);
+                inc_flow_counter.execute(meta.flow_id);
+            }
         }
     }
 }
