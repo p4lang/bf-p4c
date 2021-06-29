@@ -469,9 +469,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
 )
 
+# P4C-3019
 p4c_add_xfail_reason("tofino"
-  "compiler only supports allocation of meter color destination field .* to an 8-bit container"
-  # Expected to fail, which means that constraint conflicts are being correctly detected.
+  "error.*Power worst case estimated budget.*exceeded by.*"
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 )
 
