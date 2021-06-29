@@ -745,8 +745,11 @@ class BarefootBackend(BackendDriver):
             self._arch = "v1model"
             self.backend = target + '-' + 'v1model'
         elif language == "p4-16" and arch == 'default':
-            self._arch = "tna"
-            self.backend = target + '-' + 'tna'
+            match = re.match('tofino([0-9]?)', target)
+            rev = match.group(1) or ''
+            assert rev in ['', '2', '3'], 'Unexpected target {}'.format(target)
+            self._arch = 't' + rev + 'na'
+            self.backend = target + '-' + self._arch
 
     def aggregate_deparser_resources_json(self,pipe):
         """
