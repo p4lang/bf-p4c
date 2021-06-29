@@ -452,7 +452,7 @@ class ArrayDataMember(DataMember):
     def isObjectType(self):
         return False
     def defaultValue(self):
-        return 'nullptr'
+        return '{}'
     def hasArrayOfUnion(self, items):
         return items.get('oneOf', False)
 
@@ -701,8 +701,12 @@ class ClassGenerator:
                         #  - subclass with unique name over whole schema
                         #  - subclass with not unique name, because attribute somewhere else is named the same
                         #  - subclass of class with multiple
+                        # Note that there is a bug where class is using object of globally defined class (so its jsonName startswith 'schemas.')
+                        # and in that case there will be emitted forward declaration of class with the same name inside this class
+                        # and that shadows the globally defined class. Since only forward declaration is emitted, code won't compile.
+                        # To deal with this, following condition prevents forward declaration of classes that are globally defined.
                         if arrayElem.jsonName().startswith("parent.") or arrayElem.jsonName() not in self.generator.classes or \
-                            len(self.superClasses) > 0: # Add subclasses for classes with inheritance
+                            len(self.superClasses) > 0 and not arrayElem.jsonName().startswith("schemas."): # Add subclasses for classes with inheritance
                             if debug > 1: print('appending', arrayElem.jsonName())
                             self.subClasses.insert(0, arrayElem)
                     if forwardClass.isObjectType():

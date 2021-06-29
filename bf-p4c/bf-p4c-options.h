@@ -5,6 +5,7 @@
 #include "frontends/common/options.h"
 #include "lib/cstring.h"
 #include "lib/exename.h"
+#include "logging/bf_error_reporter.h"
 
 class BFN_Options : public CompilerOptions {
  public:
@@ -145,6 +146,8 @@ class BFNContext : public virtual P4CContext {
         return false;
     }
 
+    ErrorReporter& errorReporter() override;
+
  private:
     bool isRecognizedDiagnostic(cstring diagnostic) final;
 
@@ -158,6 +161,8 @@ class BFNContext : public virtual P4CContext {
     /// The pipelines for this compilation: pairs of <pipe_id, pipename>
     /// These are needed for ensuring a consistent output directory
     std::map<int, cstring> _pipes;
+
+    BfErrorReporter bfErrorReporter;
 };
 
 inline BFN_Options& BackendOptions() { return BFNContext::get().options(); }

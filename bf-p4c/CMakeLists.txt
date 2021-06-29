@@ -708,6 +708,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_LOGGING_HDRS
+  logging/bf_error_reporter.h
   logging/constrained_fields.h
   logging/container_size_extractor.h
   logging/event_logger.h
@@ -724,6 +725,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_SRCS
+  logging/bf_error_reporter.cpp
   logging/constrained_fields.cpp
   logging/container_size_extractor.cpp
   logging/event_logger.cpp
@@ -1316,6 +1318,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/elim_cast.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/error_reporter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/event_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp

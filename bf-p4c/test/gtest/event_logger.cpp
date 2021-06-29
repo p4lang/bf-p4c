@@ -1,11 +1,13 @@
 #include <unistd.h>
 #include <fstream>
+#include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "lib/source_file.h"
+#include "frontends/parsers/parserDriver.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace Test {
-
 class EventLoggerTestable : public EventLogger {
  private:
     int getTimeDifference() const override {
@@ -43,9 +45,15 @@ class EventLoggerTest : public ::testing::Test {
     const std::string OUTDIR = "/tmp";
     const std::string FILE = "event-log-gtest.json";
     const std::string PATH = OUTDIR + "/" + FILE;
-    const Util::SourceInfo srcInfo = Util::SourceInfo("file.cpp", 1, 10, "");
 
-    const std::string SCHEMA_VERSION = R"("schema_version":"1.1.0")";
+    // We need random SourceInfo initialized from InputSources object
+    // That is achieved by parsing a piece of code info IR and retrieving
+    // some random SourceInfo
+    std::istringstream inputCode = std::istringstream("header hdr { bit<8> field; }");
+    const IR::P4Program *program = P4::P4ParserDriver::parse(inputCode, "file.cpp", 1);
+    const Util::SourceInfo srcInfo = program->objects[0]->srcInfo;
+
+    const std::string SCHEMA_VERSION = R"("schema_version":"1.2.0")";
     const std::string EVENT_IDS = R"("event_ids":["Properties","Pass Changed","Parse Error","Compilation Error","Compilation Warning","Debug","Decision","Pipe Changed","Iteration Changed"])";
     const std::string DEFAULT_PROPERTIES = R"({"enabled":true,)" + EVENT_IDS + R"(,"file_ids":[],"i":0,"manager_ids":[],)" + SCHEMA_VERSION + R"(,"start_time":"TIMESTAMP"})";
     const std::string DEFAULT_PROPERTIES_DISABLED = R"({"enabled":false,)" + EVENT_IDS + R"(,"file_ids":[],"i":0,"manager_ids":[],)" + SCHEMA_VERSION + R"(,"start_time":"TIMESTAMP"})";
@@ -104,7 +112,7 @@ class EventLoggerTest : public ::testing::Test {
 TEST_F(EventLoggerTest, DoesNothingWithoutInit) {
     // Expecting this logfile doesn't exist because
     // logger was not initialized
-    EventLogger::get2().error("ERROR MSG");
+    EventLogger::get2().debug(6, "file.cpp", "Debug");
 
     std::ifstream load(PATH);
     EXPECT_FALSE(load.good());
@@ -126,12 +134,17 @@ TEST_F(EventLoggerTest, InitializedButDisabled) {
 }
 
 TEST_F(EventLoggerTest, DoesNotExportEventsWhenDisabled) {
+    using Type = ErrorMessage::MessageType;
     auto debugHook = EventLogger::getDebugHook2();
 
+    ParserErrorMessage pemsg(srcInfo, "Parser error");
+    ErrorMessage cemsg(Type::Error, "", "Plain error", {}, "");
+    ErrorMessage cwmsg(Type::Warning, "", "Plain warning", {}, "");
+
     initLogger(false);
-    EventLogger::get2().parserError("Parser error", srcInfo);
-    EventLogger::get2().error("Plain error");
-    EventLogger::get2().warning("Plain warning");
+    EventLogger::get2().parserError(pemsg);
+    EventLogger::get2().error(cemsg);
+    EventLogger::get2().warning(cwmsg);
     EventLogger::get2().debug(6, "file.cpp", "Debug");
     EventLogger::get2().decision(3, "file.cpp", "Description", "Picked decision", "Reason");
     debugHook("mgr", 0, "pass", nullptr);
@@ -166,15 +179,17 @@ TEST_F(EventLoggerTest, ExportsEnabledEventLogProperties) {
 }
 
 TEST_F(EventLoggerTest, ExportsParserError) {
+    ParserErrorMessage msg(srcInfo, "Parser error");
+
     initLogger();
-    EventLogger::get2().parserError("Parser error", srcInfo);
+    EventLogger::get2().parserError(msg);
     deinitLogger();
 
     std::ifstream load(PATH);
     EXPECT_TRUE(load.good());
 
     std::vector<std::string> expectedLines = {
-        R"({"i":2,"m":"Parser error","si":{"c":10,"f":0,"l":1},"t":0})",
+        R"({"i":2,"m":"Parser error","si":{"c":7,"f":0,"l":0,"p":"header hdr { bit<8> field; }\n       ^^^\n"},"t":0})",
         PROPERTIES_WITH_FILE
     };
     compareFileWithExpected(load, expectedLines);
@@ -183,11 +198,20 @@ TEST_F(EventLoggerTest, ExportsParserError) {
 }
 
 TEST_F(EventLoggerTest, ExportsEventCompilationError) {
+    using Type = ErrorMessage::MessageType;
+
+    ErrorMessage msg1(Type::Error, "", "Plain error", {}, "");
+    ErrorMessage msg2(Type::Error, "", "Error with srcinfo", { srcInfo}, "");
+    ErrorMessage msg3(Type::Error, "type", "Error with type", {}, "");
+    ErrorMessage msg4(Type::Error, "type", "Error with type and srcinfo", { srcInfo }, "");
+    ErrorMessage msg5(Type::Error, "", "Error with suffix", {}, "suffix");
+
     initLogger();
-    EventLogger::get2().error("Plain error");
-    EventLogger::get2().error("Error with only src info", "", &srcInfo);
-    EventLogger::get2().error("Error with only type", "type");
-    EventLogger::get2().error("Error with type and src", "type", &srcInfo);
+    EventLogger::get2().error(msg1);
+    EventLogger::get2().error(msg2);
+    EventLogger::get2().error(msg3);
+    EventLogger::get2().error(msg4);
+    EventLogger::get2().error(msg5);
     deinitLogger();
 
     std::ifstream load(PATH);
@@ -195,9 +219,10 @@ TEST_F(EventLoggerTest, ExportsEventCompilationError) {
 
     std::vector<std::string> expectedLines = {
         R"({"i":3,"m":"Plain error","t":0})",
-        R"({"i":3,"m":"Error with only src info","t":0,"si":{"c":10,"f":0,"l":1}})",
-        R"({"i":3,"m":"Error with only type","t":0,"cn":"type"})",
-        R"({"i":3,"m":"Error with type and src","t":0,"cn":"type","si":{"c":10,"f":0,"l":1}})",
+        R"({"i":3,"m":"Error with srcinfo","t":0,"si":[{"c":7,"f":0,"l":0,"p":"header hdr { bit<8> field; }\n       ^^^\n"}]})",
+        R"({"i":3,"m":"Error with type","t":0,"cn":"type"})",
+        R"({"i":3,"m":"Error with type and srcinfo","t":0,"cn":"type","si":[{"c":7,"f":0,"l":0,"p":"header hdr { bit<8> field; }\n       ^^^\n"}]})",
+        R"({"i":3,"m":"Error with suffix","t":0,"a":"suffix"})",
         PROPERTIES_WITH_FILE
     };
     compareFileWithExpected(load, expectedLines);
@@ -206,11 +231,20 @@ TEST_F(EventLoggerTest, ExportsEventCompilationError) {
 }
 
 TEST_F(EventLoggerTest, ExportsEventCompilationWarning) {
+    using Type = ErrorMessage::MessageType;
+
+    ErrorMessage msg1(Type::Warning, "", "Plain warning", {}, "");
+    ErrorMessage msg2(Type::Warning, "", "Warning with srcinfo", { srcInfo}, "");
+    ErrorMessage msg3(Type::Warning, "type", "Warning with type", {}, "");
+    ErrorMessage msg4(Type::Warning, "type", "Warning with type and srcinfo", { srcInfo }, "");
+    ErrorMessage msg5(Type::Warning, "", "Warning with suffix", {}, "suffix");
+
     initLogger();
-    EventLogger::get2().warning("Plain warning");
-    EventLogger::get2().warning("Warning with only src info", "", &srcInfo);
-    EventLogger::get2().warning("Warning with only type", "type");
-    EventLogger::get2().warning("Warning with type and src", "type", &srcInfo);
+    EventLogger::get2().warning(msg1);
+    EventLogger::get2().warning(msg2);
+    EventLogger::get2().warning(msg3);
+    EventLogger::get2().warning(msg4);
+    EventLogger::get2().warning(msg5);
     deinitLogger();
 
     std::ifstream load(PATH);
@@ -218,9 +252,10 @@ TEST_F(EventLoggerTest, ExportsEventCompilationWarning) {
 
     std::vector<std::string> expectedLines = {
         R"({"i":4,"m":"Plain warning","t":0})",
-        R"({"i":4,"m":"Warning with only src info","t":0,"si":{"c":10,"f":0,"l":1}})",
-        R"({"i":4,"m":"Warning with only type","t":0,"cn":"type"})",
-        R"({"i":4,"m":"Warning with type and src","t":0,"cn":"type","si":{"c":10,"f":0,"l":1}})",
+        R"({"i":4,"m":"Warning with srcinfo","t":0,"si":[{"c":7,"f":0,"l":0,"p":"header hdr { bit<8> field; }\n       ^^^\n"}]})",
+        R"({"i":4,"m":"Warning with type","t":0,"cn":"type"})",
+        R"({"i":4,"m":"Warning with type and srcinfo","t":0,"cn":"type","si":[{"c":7,"f":0,"l":0,"p":"header hdr { bit<8> field; }\n       ^^^\n"}]})",
+        R"({"i":4,"m":"Warning with suffix","t":0,"a":"suffix"})",
         PROPERTIES_WITH_FILE
     };
     compareFileWithExpected(load, expectedLines);

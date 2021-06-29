@@ -7,6 +7,7 @@
 #include <vector>
 #include <ctime>
 #include "lib/log.h"
+#include "lib/error_message.h"
 
 namespace IR {
 class Node;  // Forward declare IR::Node for debug hook
@@ -147,21 +148,19 @@ class EventLogger {
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for parser error messages
      */
-    void parserError(const std::string &message, const Util::SourceInfo &info);
+    void parserError(const ParserErrorMessage &msg);
 
     /**
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for error messages
      */
-    void error(const std::string &message, const std::string &type = "",
-               const Util::SourceInfo *info = nullptr);
+    void error(const ErrorMessage &msg);
 
     /**
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for warning messages
      */
-    void warning(const std::string &message, const std::string &type = "",
-                 const Util::SourceInfo *info = nullptr);
+    void warning(const ErrorMessage &msg);
 
     /**
      *  This function is expected to be called from LOG_DEBUGn macros

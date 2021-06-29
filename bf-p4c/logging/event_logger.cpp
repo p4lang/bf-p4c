@@ -46,10 +46,29 @@ namespace std {
 }
 
 using Schema = Logging::Event_Log_Schema_Logger;
+using namespace std::placeholders;
+typedef std::function<int(const std::string &)> IdGenerator;
 
-static Schema::SourceInfo *getSourceInfo(unsigned fileId, const Util::SourceInfo &info) {
-    return new Schema::SourceInfo(info.column, fileId, info.line);
+static Schema::SourceInfo *
+getSourceInfo(IdGenerator getId, const Util::SourceInfo &info) {
+    return new Schema::SourceInfo(
+        info.getStart().getColumnNumber(),
+        getId(info.getSourceFile().c_str()),
+        info.toPosition().sourceLine,
+        info.toSourceFragment().c_str());
 }
+
+static std::vector<Schema::SourceInfo*>
+getSourceInfos(IdGenerator getId, const std::vector<Util::SourceInfo> &locs) {
+    std::vector<Schema::SourceInfo*> result;
+
+    for (auto &loc : locs) {
+        result.push_back(getSourceInfo(getId, loc));
+    }
+
+    return result;
+}
+
 
 /* (de)construction */
 
@@ -181,31 +200,31 @@ void EventLogger::passChange(const std::string &manager, const std::string &pass
     delete pc;  // GC seems to fail to collect on this pointer
 }
 
-void EventLogger::parserError(const std::string &message, const Util::SourceInfo &info) {
+void EventLogger::parserError(const ParserErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::ParseError);
-    auto src = getSourceInfo(getFileNameId(info.filename.c_str()), info);
-    auto pe = new Schema::EventParserError(id, message, src, getTimeDifference());
+    auto src = getSourceInfo(std::bind(&EventLogger::getFileNameId, this, _1), msg.location);
+    auto pe = new Schema::EventParserError(id, msg.message.c_str(), src, getTimeDifference());
     logSink(pe);
     delete pe;  // GC seems to fail to collect on this pointer
 }
 
-void EventLogger::error(const std::string &message, const std::string &type,
-                        const Util::SourceInfo *info) {
+void EventLogger::error(const ErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::Error);
-    auto src = info ? getSourceInfo(getFileNameId(info->filename.c_str()), *info) : nullptr;
-    auto ce = new Schema::EventCompilationError(id, message, getTimeDifference(), type, src);
+    auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, _1), msg.locations);
+    auto ce = new Schema::EventCompilationError(id, msg.message, getTimeDifference(),
+                                                msg.suffix, msg.prefix, locs);
     logSink(ce);
     delete ce;  // GC seems to fail to collect on this pointer
 }
 
-void EventLogger::warning(const std::string &message, const std::string &type,
-                          const Util::SourceInfo *info) {
+void EventLogger::warning(const ErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::Warning);
-    auto src = info ? getSourceInfo(getFileNameId(info->filename.c_str()), *info) : nullptr;
-    auto cw = new Schema::EventCompilationWarning(id, message, getTimeDifference(), type, src);
+    auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, _1), msg.locations);
+    auto cw = new Schema::EventCompilationWarning(id, msg.message, getTimeDifference(),
+                                                  msg.suffix, msg.prefix, locs);
     logSink(cw);
     delete cw;  // GC seems to fail to collect on this pointer
 }

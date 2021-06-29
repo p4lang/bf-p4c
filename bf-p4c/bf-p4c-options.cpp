@@ -503,6 +503,10 @@ void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelB
     for (auto p : _pipes) LOG4("[" << p.first << ", " << p.second << "]");
 }
 
+ErrorReporter& BFNContext::errorReporter() {
+    return bfErrorReporter;
+}
+
 bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
     static const std::unordered_set<cstring> recognizedDiagnostics = {
         "phase0_annotation",
