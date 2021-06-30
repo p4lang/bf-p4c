@@ -9,6 +9,11 @@
 
 struct metadata { }
 
+struct pair {
+    bit<32>     first;
+    bit<32>     second;
+}
+
 #include "trivial_parser.h"
 
 control ingress(inout headers hdr, inout metadata meta,
@@ -50,21 +55,49 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     };
 
+    // Register parameters attached to an indirect register storing pairs of values
+
+    Register<pair, bit<32>>(1024, {0, 0}) reg2;
+
+    RegisterParam<bit<32>>(1) reg2param1;
+    RegisterParam<bit<32>>(100) reg2param2;
+
+    RegisterAction<pair, bit<10>, bit<32>>(reg2) reg2action1 = {
+        void apply(inout pair value, out bit<32> read_value) {
+            read_value = value.first;
+        }
+    };
+
+    RegisterAction<pair, bit<10>, bit<32>>(reg2) reg2action2 = {
+        void apply(inout pair value, out bit<32> read_value) {
+            read_value = value.second;
+        }
+    };
+
+    RegisterAction<pair, bit<10>, bit<32>>(reg2) reg2action3 = {
+        void apply(inout pair value, out bit<32> read_value) {
+            value.first = value.first + reg2param1.read();
+            value.second = value.second + reg2param2.read();
+        }
+    };
+
     // Register parameters attached to a direct register
 
-    DirectRegister<bit<32>>() dirreg1;
+    DirectRegister<pair>({0, 0}) dirreg1;
 
-    RegisterParam<bit<32>>(1) dirreg1param1;
+    RegisterParam<bit<32>>(3) dirreg1param1;
+    RegisterParam<bit<32>>(300) dirreg1param2;
 
-    DirectRegisterAction<bit<32>, bit<32>>(dirreg1) dirreg1action1 = {
-        void apply(inout bit<32> value) {
-            if (hdr.data.f1 - value > dirreg1param1.read())
-                value = hdr.data.f1;
+    DirectRegisterAction<pair, bit<32>>(dirreg1) dirreg1action1 = {
+        void apply(inout pair value, out bit<32> read_value) {
+            read_value = value.first;
+            value.first = value.first + dirreg1param1.read();
+            value.second = value.second + dirreg1param2.read();
         }
     };
 
     action table1action1() {
-        dirreg1action1.execute();
+        hdr.data.f1 = dirreg1action1.execute();
     }
 
     table table1 {
@@ -74,20 +107,27 @@ control ingress(inout headers hdr, inout metadata meta,
         actions = {
             table1action1;
         }
+        default_action = table1action1;
         registers = dirreg1;
     }
 
     apply {
         ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
-        if (hdr.data.b1 == 0) {
+        if (hdr.data.b1 == 0x00) {
             hdr.data.f1 = reg1action1.execute((bit<10>)ig_intr_md.ingress_port);
-        } else if (hdr.data.b1 == 1) {
+        } else if (hdr.data.b1 == 0x01) {
             reg1action2.execute((bit<10>)ig_intr_md.ingress_port);
-        } else if (hdr.data.b1 == 2) {
+        } else if (hdr.data.b1 == 0x02) {
             reg1action3.execute((bit<10>)ig_intr_md.ingress_port);
-        } else if (hdr.data.b1 == 3) {
+        } else if (hdr.data.b1 == 0x03) {
             reg1action4.execute((bit<10>)ig_intr_md.ingress_port);
-        } else if (hdr.data.b1 == 4) {
+        } else if (hdr.data.b1 == 0x10) {
+            hdr.data.f1 = reg2action1.execute((bit<10>)ig_intr_md.ingress_port);
+        } else if (hdr.data.b1 == 0x11) {
+            hdr.data.f1 = reg2action2.execute((bit<10>)ig_intr_md.ingress_port);
+        } else if (hdr.data.b1 == 0x12) {
+            reg2action3.execute((bit<10>)ig_intr_md.ingress_port);
+        } else if (hdr.data.b1 == 0x20) {
             table1.apply();
         }
     }

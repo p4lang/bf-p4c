@@ -2066,12 +2066,9 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 auto *registers_decl = getDeclInst(self.refMap, registers_path);
                 CHECK_NULL(registers_decl);
                 // Replace a direct register with a M/A table it is attached to
-                for (auto r : self.registerParam2table) {
-                    if (r.second == registers_decl->controlPlaneName()) {
+                for (auto r : self.registerParam2table)
+                    if (r.second == registers_decl->controlPlaneName())
                         self.registerParam2table[r.first] = table->controlPlaneName();
-                        break;
-                    }
-                }
             }
         };
 
