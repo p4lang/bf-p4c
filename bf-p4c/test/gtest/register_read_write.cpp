@@ -459,4 +459,30 @@ TEST(RegisterReadWrite, ApplyBlockWriteAfterRead) {
     RUN_CHECK(defs, setup_passes(), input, expected);
 }
 
+TEST(RegisterReadWrite, RegisterParamRegisterReadWrite) {
+    auto input = R"(
+        Register<bit<16>, PortId_t>(1024) reg_16b;
+        RegisterParam<bit<16>>(0x1234) reg_param;
+        apply {
+            reg_16b.write(ig_intr_md.ingress_port, reg_param.read());
+        })";
+    Match::CheckList expected {
+        "RegisterParam<bit<16>>(16w0x1234) reg_param_`(.*)`;",
+        "Register<bit<16>, PortId_t>(32w1024) reg_16b_0;",
+        "RegisterAction<bit<16>, PortId_t, bit<16>>(reg_16b_0)",
+        "reg_16b_0_`(.*)` = {",
+            "void apply(inout bit<16> value) {",
+                "value = reg_param_`\\1`.read();",
+            "}",
+        "};",
+        "action `\\2`() {",
+            "reg_16b_0_`\\2`.execute(ig_intr_md.ingress_port);",
+        "}",
+        "apply {",
+            "`\\2`();",
+        "}"
+    };
+    RUN_CHECK(defs, setup_passes(), input, expected);
+}
+
 }  // namespace Test

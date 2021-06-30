@@ -442,4 +442,20 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
     return false;
 }
 
+bool RegisterReadWrite::MoveRegisterParameters::preorder(IR::P4Control *c) {
+    IR::IndexedVector<IR::Declaration> reg_params;
+    for (auto *decl : c->controlLocals) {
+        auto *type = self.typeMap->getType(decl);
+        if (auto *canonical = type->to<IR::Type_SpecializedCanonical>())
+            type = canonical->baseType;
+        if (auto *ext = type->to<IR::Type_Extern>())
+            if (ext->name == "RegisterParam")
+                reg_params.push_back(decl);
+    }
+    for (auto *decl : reg_params)
+        c->controlLocals.removeByName(decl->getName());
+    c->controlLocals.prepend(reg_params);
+    return true;
+}
+
 }  // namespace BFN

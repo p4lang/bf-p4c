@@ -89,6 +89,23 @@ class RegisterReadWrite : public PassManager {
              self(self) {}
     };
 
+    /**
+     * The pass moves the declarations of register parameters to the very beginning
+     * of a control block. It is necessary for conversion of Register.read/write
+     * to RegisterActions since they are placed right after the declaration of Registers
+     * leaving the register parameters behind causing missing Declaration_Instance.
+     * @pre This sub-pass needs to be run before all other sub-passes
+     * of the RegisterReadWrite pass.
+     */
+    class MoveRegisterParameters : public Modifier {
+        RegisterReadWrite &self;
+        bool preorder(IR::P4Control *c) override;
+
+     public:
+        explicit MoveRegisterParameters(RegisterReadWrite &self) :
+             self(self) {}
+    };
+
  public:
     RegisterReadWrite(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
             BFN::TypeChecking* typeChecking = nullptr) :
@@ -97,6 +114,7 @@ class RegisterReadWrite : public PassManager {
             typeChecking = new BFN::TypeChecking(refMap, typeMap);
         addPasses({
             typeChecking,
+            new MoveRegisterParameters(*this),
             new CollectRegisterReadsWrites(*this),
             new AnalyzeActionWithRegisterCalls(*this),
             new UpdateRegisterActionsAndExecuteCalls(*this),
