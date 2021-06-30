@@ -101,7 +101,7 @@ void output_all() {
     strftime(build_date, 1024, "%c", &lt);
     ctxtJson["build_date"] = build_date;
     ctxtJson["schema_version"] = SCHEMA_VERSION;
-    ctxtJson["compiler_version"] = BF_P4C_VERSION;
+    ctxtJson["compiler_version"] = BF_P4C_VERSION " (" BF_P4C_GIT_SHA ")";
     ctxtJson["target"] = targetName;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();

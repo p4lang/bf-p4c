@@ -98,7 +98,7 @@ void Manifest::serialize() {
     strftime(build_date, 1024, "%c", localtime(&now));
     writer.String(build_date);
     writer.Key("compiler_version");
-    writer.String(BF_P4C_VERSION);
+    writer.String(BF_P4C_VERSION " (" BF_P4C_GIT_SHA ")");
     writer.Key("compilation_succeeded");
     writer.Bool(_success);
     writer.Key("compilation_time");

@@ -55,6 +55,7 @@ endif()
 if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
+add_definitions("-DBF_P4C_GIT_SHA=\"${BFN_P4C_GIT_SHA}\"")
 
 get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
 MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
