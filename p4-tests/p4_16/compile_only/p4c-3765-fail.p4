@@ -1,41 +1,10 @@
-
-# 1 "test_skip.p4"
+# 1 "simple_l3_acl.p4"
 # 1 "<built-in>"
 # 1 "<command-line>"
-# 1 "test_skip.p4"
-/*!
- * @file patch_panel.p4
- * @brief POC implementing patch panel and core routing hashing offload functions for Eagle switch.
- * @author C. Yeh <chiang.yeh@keysight.com>
- * @date 10/22/2019
- */
+# 1 "simple_l3_acl.p4"
+/* -*- P4_16 -*- */
 
-
-
-
-# 1 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/tna.p4" 1
-/*
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
- *
- * All Rights Reserved.
-
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks, Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law. Dissemination of
- * this information or reproduction of this material is strictly forbidden unless
- * prior written permission is obtained from Barefoot Networks, Inc.
-
- * No warranty, explicit or implicit is provided, unless granted under a written
- * agreement with Barefoot Networks, Inc.
- *
- */
-
-
-
-
-# 1 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/core.p4" 1
+# 1 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/core.p4" 1
 /*
 Copyright 2013-present Barefoot Networks, Inc.
 
@@ -104,6 +73,7 @@ extern packet_out {
 extern void verify(in bool check, in error toSignal);
 
 /// Built-in action that does nothing.
+@noWarn("unused")
 action NoAction() {}
 
 /// Standard match kinds for table key fields.
@@ -117,30 +87,38 @@ match_kind {
     /// Longest-prefix match.
     lpm
 }
-# 23 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/tna.p4" 2
-# 1 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/tofino.p4" 1
-/*
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
+# 4 "simple_l3_acl.p4" 2
+# 1 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tna.p4" 1
+/**
+ * Copyright 2013-2021 Intel Corporation.
  *
- * All Rights Reserved.
-
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks, Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law. Dissemination of
- * this information or reproduction of this material is strictly forbidden unless
- * prior written permission is obtained from Barefoot Networks, Inc.
-
- * No warranty, explicit or implicit is provided, unless granted under a written
- * agreement with Barefoot Networks, Inc.
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
  *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+
+# 1 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tofino1arch.p4" 1
+/**
+ * Copyright 2013-2021 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
  */
 
 
 
 
-# 1 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/core.p4" 1
+# 1 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/core.p4" 1
 /*
 Copyright 2013-present Barefoot Networks, Inc.
 
@@ -158,7 +136,52 @@ limitations under the License.
 */
 
 /* This is the P4-16 core library, which declares some built-in P4 constructs using P4 */
-# 23 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/tofino.p4" 2
+# 17 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tofino1arch.p4" 2
+# 1 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tofino.p4" 1
+/**
+ * Copyright 2013-2021 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+
+
+
+/**
+ Version Notes:
+
+ 1.0.1:
+ - Initial release
+ 1.0.2:
+ - Rename PARSER_ERROR_NO_TCAM to PARSER_ERROR_NO_MATCH
+
+*/
+
+# 1 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/core.p4" 1
+/*
+Copyright 2013-present Barefoot Networks, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/* This is the P4-16 core library, which declares some built-in P4 constructs using P4 */
+# 27 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tofino.p4" 2
 
 // ----------------------------------------------------------------------------
 // COMMON TYPES
@@ -166,7 +189,10 @@ limitations under the License.
 typedef bit<9> PortId_t; // Port id -- ingress or egress port
 typedef bit<16> MulticastGroupId_t; // Multicast group id
 typedef bit<5> QueueId_t; // Queue id
+typedef bit<3> MirrorType_t; // Mirror type
 typedef bit<10> MirrorId_t; // Mirror id
+typedef bit<3> ResubmitType_t; // Resubmit type
+typedef bit<3> DigestType_t; // Digest type
 typedef bit<16> ReplicationId_t; // Replication id
 
 typedef error ParserError_t;
@@ -174,7 +200,7 @@ typedef error ParserError_t;
 const bit<32> PORT_METADATA_SIZE = 32w64;
 
 const bit<16> PARSER_ERROR_OK = 16w0x0000;
-const bit<16> PARSER_ERROR_NO_TCAM = 16w0x0001;
+const bit<16> PARSER_ERROR_NO_MATCH = 16w0x0001;
 const bit<16> PARSER_ERROR_PARTIAL_HDR = 16w0x0002;
 const bit<16> PARSER_ERROR_CTR_RANGE = 16w0x0004;
 const bit<16> PARSER_ERROR_TIMEOUT_USER = 16w0x0008;
@@ -248,7 +274,7 @@ header ingress_intrinsic_metadata_t {
 
     @padding bit<3> _pad2;
 
-    bit<9> ingress_port; // Ingress physical port id.
+    PortId_t ingress_port; // Ingress physical port id.
 
     bit<48> ingress_mac_tstamp; // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
@@ -256,7 +282,7 @@ header ingress_intrinsic_metadata_t {
 
 @__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
-    bit<9> ucast_egress_port; // Egress port for unicast packets. must
+    PortId_t ucast_egress_port; // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
     bit<1> bypass_egress; // Request flag for the warp mode
@@ -270,7 +296,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // ingress admission control, PFC,
                                         // etc.
 
-    bit<5> qid; // Egress (logical) queue id into which
+    QueueId_t qid; // Egress (logical) queue id into which
                                         // this packet will be deposited.
 
     bit<3> icos_for_copy_to_cpu; // Ingress cos for the copy to CPU. must
@@ -339,11 +365,11 @@ struct ingress_intrinsic_metadata_for_deparser_t {
                                         //      multicast, and resubmit
                                         //    - bit 1 disables copy-to-cpu
                                         //    - bit 2 disables mirroring
-    bit<3> digest_type;
+    DigestType_t digest_type;
 
-    bit<3> resubmit_type;
+    ResubmitType_t resubmit_type;
 
-    bit<3> mirror_type; // The user-selected mirror field list
+    MirrorType_t mirror_type; // The user-selected mirror field list
                                         // index.
 }
 
@@ -354,7 +380,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 header egress_intrinsic_metadata_t {
     @padding bit<7> _pad0;
 
-    bit<9> egress_port; // Egress port id.
+    PortId_t egress_port; // Egress port id.
                                         // this field is passed to the deparser
 
     @padding bit<5> _pad1;
@@ -399,7 +425,7 @@ header egress_intrinsic_metadata_t {
 
     @padding bit<3> _pad8;
 
-    bit<5> egress_qid; // Egress (physical) queue id via which
+    QueueId_t egress_qid; // Egress (physical) queue id via which
                                         // this packet was served.
 
     @padding bit<5> _pad9;
@@ -434,7 +460,7 @@ struct egress_intrinsic_metadata_for_deparser_t {
                                         //    - bit 1 disables copy-to-cpu
                                         //    - bit 2 disables mirroring
 
-    bit<3> mirror_type;
+    MirrorType_t mirror_type;
 
     bit<1> coalesce_flush; // Flush the coalesced mirror buffer
 
@@ -493,7 +519,7 @@ header pktgen_port_down_header_t {
     bit<2> pipe_id; // Pipe id
     bit<3> app_id; // Application id
     @padding bit<15> _pad2;
-    bit<9> port_num; // Port number
+    PortId_t port_num; // Port number
 
     bit<16> packet_id; // Start at 0 and increment to a
                                         // programmed number
@@ -550,8 +576,15 @@ extern Checksum {
     void subtract<T>(in T data);
 
     /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
-    /// @return : Boolean flag indicating wether the checksum is valid or not.
+    /// @return : Boolean flag indicating whether the checksum is valid or not.
     bool verify();
+
+    /// Subtract all header fields after the current state and
+    /// return the calculated checksum value.
+    /// Marks the end position for residual checksum header.
+    /// All header fields extracted after will be automatically subtracted.
+    /// @param residual: The calculated checksum value for added fields.
+    void subtract_all_and_deposit<T>(out T residual);
 
     /// Get the calculated checksum value.
     /// @return : The calculated checksum value for added fields.
@@ -681,29 +714,31 @@ extern Counter<W, I> {
 
     /// Increment the counter value.
     /// @param index : index of the counter to be incremented.
-    void count(in I index);
+    /// @param adjust_byte_count : optional parameter indicating value to be
+    //                             subtracted from counter value.
+    void count(in I index, @optional in bit<32> adjust_byte_count);
 }
 
 /// DirectCounter
 extern DirectCounter<W> {
     DirectCounter(CounterType_t type);
-    void count();
+    void count(@optional in bit<32> adjust_byte_count);
 }
 
 /// Meter
 extern Meter<I> {
     Meter(bit<32> size, MeterType_t type);
     Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in I index, in MeterColor_t color);
-    bit<8> execute(in I index);
+    bit<8> execute(in I index, in MeterColor_t color, @optional in bit<32> adjust_byte_count);
+    bit<8> execute(in I index, @optional in bit<32> adjust_byte_count);
 }
 
 /// Direct meter.
 extern DirectMeter {
     DirectMeter(MeterType_t type);
     DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in MeterColor_t color);
-    bit<8> execute();
+    bit<8> execute(in MeterColor_t color, @optional in bit<32> adjust_byte_count);
+    bit<8> execute(@optional in bit<32> adjust_byte_count);
 }
 
 /// LPF
@@ -786,16 +821,13 @@ enum MathOp_t {
 extern MathUnit<T> {
     /// Configure a math unit for use in a register action
     MathUnit(bool invert, int<2> shift, int<6> scale,
+             // Note: data tuple contains values in order from 15..0 (reversed)
              tuple< bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8> > data);
-    MathUnit(MathOp_t op, int<6> scale,
-             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8> > data);
-    MathUnit(MathOp_t op, bit<64> factor); // configure as factor * op(x)
+    MathUnit(MathOp_t op, int factor); // configure as factor * op(x)
+    MathUnit(MathOp_t op, int A, int B); // configure as (A/B) * op(x)
     T execute(in T x);
 };
 
@@ -877,13 +909,24 @@ extern ActionSelector {
     ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
 }
 
+extern SelectorAction {
+    SelectorAction(ActionSelector sel);
+    bit<1> execute(@optional in bit<32> index);
+    @synchronous(execute)
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+}
+
 // Tofino supports mirroring both at the ingress and egress. Ingress deparser
 // creates a copy of the original ingress packet and prepends the mirror header.
 // Egress deparser first constructs the output packet and then prepends the
 // mirror header.
 extern Mirror {
     /// Constructor
+    @deprecated("Mirror must be specified with the value of the mirror_type instrinsic metadata")
     Mirror();
+
+    /// Constructor
+    Mirror(MirrorType_t mirror_type);
 
     /// Mirror the packet.
     void emit(in MirrorId_t session_id);
@@ -899,7 +942,11 @@ extern Mirror {
 // ingress buffer, where the packet is enqueued again.
 extern Resubmit {
     /// Constructor
+    @deprecated("Resubmit must be specified with the value of the resubmit_type instrinsic metadata")
     Resubmit();
+
+    /// Constructor
+    Resubmit(ResubmitType_t resubmit_type);
 
     /// Resubmit the packet.
     void emit();
@@ -911,7 +958,11 @@ extern Resubmit {
 
 extern Digest<T> {
     /// define a digest stream to the control plane
+    @deprecated("Digest must be specified with the value of the digest_type instrinsic metadata")
     Digest();
+
+    /// constructor.
+    Digest(DigestType_t digest_type);
 
     /// Emit data into the stream.  The p4 program can instantiate multiple
     /// Digest instances in the same deparser control block, and call the pack
@@ -934,9 +985,10 @@ extern Atcam {
 // instance of the extern to the 'implementation' attribute of the table.
 extern Alpm {
     /// define the parameters for ALPM table.
-    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
+    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition,
+         @optional bit<32> atcam_subset_width, @optional bit<32> shift_granularity);
 }
-# 24 "/home/vgurevich/bf-sde-9.0.0/install/share/p4c/p4include/tna.p4" 2
+# 18 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tofino1arch.p4" 2
 
 // The following declarations provide a template for the programmable blocks in
 // Tofino.
@@ -945,41 +997,47 @@ parser IngressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M ig_md,
-    out ingress_intrinsic_metadata_t ig_intr_md);
+    @optional out ingress_intrinsic_metadata_t ig_intr_md,
+    @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+    @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr);
 
 parser EgressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M eg_md,
-    out egress_intrinsic_metadata_t eg_intr_md);
+    @optional out egress_intrinsic_metadata_t eg_intr_md,
+    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
 
 control IngressT<H, M>(
     inout H hdr,
     inout M ig_md,
-    in ingress_intrinsic_metadata_t ig_intr_md,
-    in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
+    @optional in ingress_intrinsic_metadata_t ig_intr_md,
+    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+    @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
 
 control EgressT<H, M>(
     inout H hdr,
     inout M eg_md,
-    in egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-    inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
+    @optional in egress_intrinsic_metadata_t eg_intr_md,
+    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
 control IngressDeparserT<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr);
+    @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+    @optional in ingress_intrinsic_metadata_t ig_intr_md);
 
 control EgressDeparserT<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
+    @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional in egress_intrinsic_metadata_t eg_intr_md,
+    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
 
 package Pipeline<IH, IM, EH, EM>(
     IngressParserT<IH, IM> ingress_parser,
@@ -989,7 +1047,7 @@ package Pipeline<IH, IM, EH, EM>(
     EgressT<EH, EM> egress,
     EgressDeparserT<EH, EM> egress_deparser);
 
-@pkginfo(arch="TNA", version="1.0.1")
+@pkginfo(arch="TNA", version="1.0.2")
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
                IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
     Pipeline<IH0, IM0, EH0, EM0> pipe0,
@@ -1051,80 +1109,66 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
     @optional MultiParserPipeline<IH1, IM1, EH1, EM1> pipe1,
     @optional MultiParserPipeline<IH2, IM2, EH2, EM2> pipe2,
     @optional MultiParserPipeline<IH3, IM3, EH3, EM3> pipe3);
-# 12 "test_skip.p4" 2
+# 15 "/home/vgurevich/bf-sde-9.5.0/install/share/p4c/p4include/tna.p4" 2
+# 5 "simple_l3_acl.p4" 2
 
-
-# 1 "headers.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2018-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- *
- ******************************************************************************/
-
-
-
-
+/*************************************************************************
+ ************* C O N S T A N T S    A N D   T Y P E S  *******************
+*************************************************************************/
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<128> ipv6_addr_t;
 
-typedef bit<16> ether_type_t;
-const ether_type_t ETHERTYPE_IPV4 = 16w0x0800;
-const ether_type_t ETHERTYPE_ARP = 16w0x0806;
-const ether_type_t ETHERTYPE_IPV6 = 16w0x86dd;
-const ether_type_t ETHERTYPE_VLAN = 16w0x8100;
-const ether_type_t ETHERTYPE_VLAN_INNER = 16w0x9100;
-const ether_type_t ETHERTYPE_SVLAN = 16w0x88a8;
-const ether_type_t ETHERTYPE_MPLS_UNICAST = 16w0x8847;
-const ether_type_t ETHERTYPE_MPLS_MULTICAST = 16w0x8848;
-const ether_type_t ETHERTYPE_SPECIAL = 16w0x9999;
+enum bit<16> ether_type_t {
+    TPID = 0x8100,
+    IPV4 = 0x0800,
+    IPV6 = 0x86DD
+}
 
-typedef bit<8> ip_protocol_t;
-const ip_protocol_t IP_PROTOCOLS_ICMP = 1;
-const ip_protocol_t IP_PROTOCOLS_IGMP = 2;
-const ip_protocol_t IP_PROTOCOLS_TCP = 6;
-const ip_protocol_t IP_PROTOCOLS_UDP = 17;
-const ip_protocol_t IP_PROTOCOLS_OSPF = 89;
-const ip_protocol_t IP_PROTOCOLS_GRE = 47;
-typedef bit<16> udp_port_type_t;
-const udp_port_type_t PORT_GTP = 3386;
+enum bit<8> ip_proto_t {
+    HOPOPT = 0,
+    ICMP = 1,
+    IGMP = 2,
+    TCP = 6,
+    UDP = 17,
+    IPV6_ROUTE = 43,
+    IPV6_FRAGMENT = 44,
+    IPSEC_ESP = 50,
+    IPSEC_AH = 51,
+    IPV6_OPTS = 60,
+    MOBILITY = 135,
+    SHIM6 = 140,
+    RESERVED_FD = 253,
+    RESERVED_FE = 254
+}
+
+struct l4_lookup_t {
+    bit<16> word_1;
+    bit<16> word_2;
+}
+
+/*************************************************************************
+ ***********************  H E A D E R S  *********************************
+ *************************************************************************/
+/*
+ *  Define all the headers the program will recognize             
+ *  The actual sets of headers processed by each gress can potentially differ 
+ * 
+ * In this particular case, the actual set of the processed headers will
+ * be defined in the parser module as packet_headers_t
+*/
 
 header ethernet_h {
     mac_addr_t dst_addr;
     mac_addr_t src_addr;
-    bit<16> ether_type;
+    ether_type_t ether_type;
 }
 
 header vlan_tag_h {
-    bit<4> pcp_cfi; //pcp = (3:1) cfi = 0
-    bit<4> vlan_top;
-    bit<8> vlan_bot;
-    bit<16> ether_type;
-}
-
-header mpls_h {
-    bit<16> label_top;
-    bit<4> label_bot;
-    bit<3> exp;
-    bit<1> bos;
-    bit<8> ttl;
+    bit<3> pcp;
+    bit<1> cfi;
+    bit<12> vid;
+    ether_type_t ether_type;
 }
 
 header ipv4_h {
@@ -1136,10 +1180,22 @@ header ipv4_h {
     bit<3> flags;
     bit<13> frag_offset;
     bit<8> ttl;
-    bit<8> protocol;
+    ip_proto_t protocol;
     bit<16> hdr_checksum;
     ipv4_addr_t src_addr;
     ipv4_addr_t dst_addr;
+}
+
+/* 
+ * Depending on the parser, only one of these two header types will
+ * be used. We could've #ifdef'ed them, but decided not to.
+ */
+header ipv4_option_word_h {
+    bit<32> data;
+}
+
+header ipv4_options_h {
+    varbit<320> data;
 }
 
 header ipv6_h {
@@ -1147,10 +1203,45 @@ header ipv6_h {
     bit<8> traffic_class;
     bit<20> flow_label;
     bit<16> payload_len;
-    bit<8> next_hdr;
+    ip_proto_t next_hdr;
     bit<8> hop_limit;
     ipv6_addr_t src_addr;
     ipv6_addr_t dst_addr;
+}
+
+/* 
+ * Depending on the parser, only one of these two header types will
+ * be used. We could've #ifdef'ed them, but decided not to.
+ */
+header ipv6_ext_hdr_h {
+    ip_proto_t next_hdr;
+    bit<8> ext_len;
+    bit<48> data;
+}
+
+/* 
+ * Depending on the parser, only one of these two header types will
+ * be used. We could've #ifdef'ed them, but decided not to.
+ */
+header ipv6_ext_block_h {
+    bit<64> data;
+}
+
+header ipv6_ext_h {
+    varbit<640> data;
+}
+
+/*
+ * Layer 4 Headers 
+ */
+header icmp_h {
+    bit<16> type_code;
+    bit<16> checksum;
+}
+
+header igmp_h {
+    bit<16> type_code;
+    bit<16> checksum;
 }
 
 header tcp_h {
@@ -1169,634 +1260,677 @@ header tcp_h {
 header udp_h {
     bit<16> src_port;
     bit<16> dst_port;
-    bit<16> hdr_length;
+    bit<16> len;
     bit<16> checksum;
 }
 
-header icmp_h {
-    bit<8> type_;
-    bit<8> code;
-    bit<16> hdr_checksum;
-}
+/*************************************************************************
+ *********** C O M M O N    P A C K E T   P R O C E S S I N G ************
+ *************************************************************************/
 
-// Address Resolution Protocol -- RFC 6747
-header arp_h {
-    bit<16> hw_type;
-    bit<16> proto_type;
-    bit<8> hw_addr_len;
-    bit<8> proto_addr_len;
-    bit<16> opcode;
-    // ...
-}
+/* 
+ * The implementation is supposed to provide a parser (PacketParser) and 
+ * a deparser (PacketDeparser) that parse and deparse packet_headers_t and
+ * also return parser_metadata_t. All are defined in the module.
+ *
+ * Here we provide two implementations: both parse IPv4, Layer 4 Headers and
+ * Layer 4 User-Defined Fields (UDF)
+ */
 
-// Segment Routing Extension (SRH) -- IETFv7
-header ipv6_srh_h {
-    bit<8> next_hdr;
-    bit<8> hdr_ext_len;
-    bit<8> routing_type;
-    bit<8> seg_left;
-    bit<8> last_entry;
-    bit<8> flags;
-    bit<16> tag;
-}
 
-// VXLAN -- RFC 7348
-header vxlan_h {
-    bit<8> flags;
-    bit<24> reserved;
-    bit<24> vni;
-    bit<8> reserved2;
-}
 
-header gtp_h {
-    bit<3> version;
-    bit<1> protocol_type;
-    bit<1> reserved;
-    bit<1> ext_flag;
-    bit<1> seq_num_flag;
-    bit<1> n_pdu_flag;
-    bit<8> message_type;
-    bit<16> message_length;
-    bit<32> teid;
-    bit<16> sequence_number;
-    bit<8> n_pdu;
-    bit<8> next_extension;
-}
+# 1 "parde_no_varbit.p4" 1
+/* -*- P4_16 -*- */
 
-header gre_h {
-    bit<1> checksum_flag;
-    bit<12> reserved;
-    bit<3> ver;
-    bit<16> protocol_type;
-}
-
-header grechecksum_h {
-    bit<16> checksum;
-    bit<16> reserved;
-}
-
-header ospf_h {
-    bit<8> version;
-    bit<8> type;
-    bit<16> pkt_length;
-    bit<64> dont_care;
-    bit<16> checksum;
-    bit<16> autype;
-    bit<64> authentication;
-}
-
-header igmp_v2_h {
-    bit<8> type;
-    bit<8> max_rsp;
-    bit<16> checksum;
-    bit<32> group_address;
-}
-
-header igmp_v3_extra_h {
-    bit<16> dont_care;
-    bit<16> num_sources;
-}
-
-header l23signature_h {
-    bit<32> signature_top;
-    bit<32> signature_bot;
-    bit<32> rx_timestamp;
-    bit<32> pgid;
-    bit<32> sequence;
-    bit<32> txtstamp;
-}
-
-header ixia_compute_node_ov {
-    bit<96> reserved; // 3 MPLS labels
-    bit<4> ts_l3_offset_hi;
-    bit<4> ts_l3_offset_lo;
-    bit<4> l3_offset_hi;
-    bit<4> l3_offset_lo;
-    bit<1> l3_chksum;
-    bit<1> l3_inner_chksum;
-    bit<5> unused1;
-    bit<1> bos1;
-    bit<1> l4_chksum;
-    bit<1> l4_inner_chksum;
-    bit<6> unused;
-    bit<16> etype;
-    bit<7> unused2;
-    bit<1> bos2;
-    bit<8> eg_port;
-}
-
-header skip_bits_chunk {
-    varbit<896> padding;
-}
-
-header skip_bits {
-    varbit<128> padding;
-}
-
-header ixia_compute_node_timestamp {
-    bit<48> timestamp;
-}
+/*************************************************************************
+ * C O M M O N   P A C K E T   P A R S I N G   A N D   D E P A R S I N G *
+ *************************************************************************/
 
 /*
- * Ingress metadata, not used but required to use tna.p4
+ * This is the code for the common parser and deparser, used by simple_l3_acl.p4
+ *
+ * Given that the packet format is tightly couple with the parser code,
+ * it makes sense to keep the structure of recognized headers here as well.
+ *
+ * Here is what the file defines:
+ *
+ * struct packet_headers_t  -- the list of parsed (and deparsed headers)
+ * struct parser_metadata_t -- additional metadata that gets populated as a 
+ *                             direct result of packet parsing
+ * parser  PacketParser     -- the actual packet parsing code
+ * control PacketDeparser   -- packet deparser code
  */
-@flexible
-header example_bridge_h {
-    bit<8> ingress_port;
-    bit<8> queueNo;
-    bit<1> to_frontpanel_from_cpu;
-    bit<8> ts_offset;
-}
 
-struct ingress_metadata_t {
-  bit<8> egress_port;
-  bit<2> port_type;
-  bit<1> signature_match;
-  bit<1> reserved;
-  bit<4> engine_id;
-  example_bridge_h bridge;
-  bit<8> myQRange;
-  bit<8> myOffset;
-  bit<8> maxRange;
-}
-
-/*
- * Egress metadata, currently just stores the result of the core selection hash
- */
-struct egress_metadata_t {
-  bit<16> l3_ethertype;
-  bit<16> l2_ethertype;
-  bit<1> cn_inbound_match;
-  bit<8> queueNo;
-  example_bridge_h bridge;
-}
-
-struct header_t {
+/* The packet headers these parser recognizes */
+struct packet_headers_t {
     ethernet_h ethernet;
     vlan_tag_h[3] vlan_tag;
-    mpls_h[15] mpls;
-    ixia_compute_node_ov overhead;
     ipv4_h ipv4;
+    ipv4_option_word_h[10] ipv4_option_word;
     ipv6_h ipv6;
+    ipv6_ext_hdr_h ipv6_ext_hdr;
+    ipv6_ext_block_h[8] ipv6_ext_block;
+    icmp_h icmp;
+    igmp_h igmp;
     tcp_h tcp;
     udp_h udp;
-    skip_bits_chunk pyld_padding;
-    // Add more headers here.
 }
-# 15 "test_skip.p4" 2
-# 1 "util.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2018-2019 Barefoot Networks, Inc.
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- *
- ******************************************************************************/
 
+/* Additional metadata this parser can populate */
 
+struct parser_metadata_t {
+    ether_type_t l3_protocol;
+    ip_proto_t l4_protocol;
+    l4_lookup_t l4_lookup;
+    bit<1> first_frag;
+}
 
-parser TofinoIngressParser(
-        packet_in pkt,
-        out ingress_intrinsic_metadata_t ig_intr_md) {
+    /***********************  P A R S E R  **************************/
+parser PacketParser(packet_in pkt,
+                    out packet_headers_t hdr,
+                    out parser_metadata_t parser_md)
+{
+
     state start {
-        pkt.extract(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            1 : parse_resubmit;
-            0 : parse_port_metadata;
+        parser_md.l3_protocol = (ether_type_t) 0;
+        parser_md.l4_protocol = (ip_proto_t) 0;
+        parser_md.l4_lookup = { 0, 0 };
+        parser_md.first_frag = 0;
+
+        transition parse_ethernet;
+    }
+
+    state parse_ethernet {
+        pkt.extract(hdr.ethernet);
+        /* 
+         * The explicit cast allows us to use ternary matching on
+         * serializable enum
+         */
+        transition select(hdr.ethernet.ether_type) {
+            ether_type_t.TPID &&& 0xEFFF : parse_vlan_tag;
+            ether_type_t.IPV4 : parse_ipv4;
+            ether_type_t.IPV6 : parse_ipv6;
+            default : accept;
+        }
+    }
+# 84 "parde_no_varbit.p4"
+    state parse_vlan_tag {
+        transition parse_vlan_tag_0;
+    }
+
+    state parse_vlan_tag_0 {
+        pkt.extract(hdr.vlan_tag[0]);
+        transition select(hdr.vlan_tag[0].ether_type) {
+            ether_type_t.TPID : parse_vlan_tag_1;
+            ether_type_t.IPV4 : parse_ipv4;
+            default: accept;
+        }
+    }
+    state parse_vlan_tag_1 {
+        pkt.extract(hdr.vlan_tag[1]);
+        transition select(hdr.vlan_tag[1].ether_type) {
+            ether_type_t.TPID : parse_vlan_tag_2;
+            ether_type_t.IPV4 : parse_ipv4;
+            default: accept;
+        }
+    }
+    state parse_vlan_tag_2 {
+        pkt.extract(hdr.vlan_tag[2]);
+        transition select(hdr.vlan_tag[2].ether_type) {
+            ether_type_t.IPV4 : parse_ipv4;
+            default: accept;
         }
     }
 
-    state parse_resubmit {
-        // Parse resubmitted packet here.
-        transition reject;
+
+    state parse_ipv4 {
+        pkt.extract(hdr.ipv4);
+        parser_md.l4_protocol = hdr.ipv4.protocol;
+
+        transition select(hdr.ipv4.ihl) {
+             5 : parse_ipv4_no_options;
+             6 : parse_ipv4_options_1;
+             7 : parse_ipv4_options_2;
+             8 : parse_ipv4_options_3;
+             9 : parse_ipv4_options_4;
+            10 : parse_ipv4_options_5;
+            11 : parse_ipv4_options_6;
+            12 : parse_ipv4_options_7;
+            13 : parse_ipv4_options_8;
+            14 : parse_ipv4_options_9;
+            15 : parse_ipv4_options_10;
+            /* 
+             * Packets with other values of IHL are illegal and will be
+             * dropped by the parser
+             */
+        }
     }
 
-    state parse_port_metadata {
+    state parse_ipv4_options_1 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_2 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_3 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_4 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_5 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        pkt.extract(hdr.ipv4_option_word[4]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_6 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        pkt.extract(hdr.ipv4_option_word[4]);
+        pkt.extract(hdr.ipv4_option_word[5]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_7 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        pkt.extract(hdr.ipv4_option_word[4]);
+        pkt.extract(hdr.ipv4_option_word[5]);
+        pkt.extract(hdr.ipv4_option_word[6]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_8 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        pkt.extract(hdr.ipv4_option_word[4]);
+        pkt.extract(hdr.ipv4_option_word[5]);
+        pkt.extract(hdr.ipv4_option_word[6]);
+        pkt.extract(hdr.ipv4_option_word[7]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_9 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        pkt.extract(hdr.ipv4_option_word[4]);
+        pkt.extract(hdr.ipv4_option_word[5]);
+        pkt.extract(hdr.ipv4_option_word[6]);
+        pkt.extract(hdr.ipv4_option_word[7]);
+        pkt.extract(hdr.ipv4_option_word[8]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_options_10 {
+        pkt.extract(hdr.ipv4_option_word[0]);
+        pkt.extract(hdr.ipv4_option_word[1]);
+        pkt.extract(hdr.ipv4_option_word[2]);
+        pkt.extract(hdr.ipv4_option_word[3]);
+        pkt.extract(hdr.ipv4_option_word[4]);
+        pkt.extract(hdr.ipv4_option_word[5]);
+        pkt.extract(hdr.ipv4_option_word[6]);
+        pkt.extract(hdr.ipv4_option_word[7]);
+        pkt.extract(hdr.ipv4_option_word[8]);
+        pkt.extract(hdr.ipv4_option_word[9]);
+        transition parse_ipv4_no_options;
+    }
+
+    state parse_ipv4_no_options {
+        parser_md.l4_lookup = pkt.lookahead<l4_lookup_t>();
+
+        transition select(hdr.ipv4.frag_offset, hdr.ipv4.protocol) {
+            ( 0, ip_proto_t.ICMP ) : parse_icmp;
+            ( 0, ip_proto_t.IGMP ) : parse_igmp;
+            ( 0, ip_proto_t.TCP ) : parse_tcp;
+            ( 0, ip_proto_t.UDP ) : parse_udp;
+            ( 0, _ ) : parse_first_fragment;
+            default : accept;
+        }
+    }
+
+    state parse_first_fragment {
+        parser_md.first_frag = 1;
+        transition accept;
+    }
+
+    state parse_ipv6 {
+        pkt.extract(hdr.ipv6);
+
+        parser_md.l4_protocol = hdr.ipv6.next_hdr;
+
+        transition select(hdr.ipv6.next_hdr) {
+            ip_proto_t.HOPOPT : parse_ipv6_ext;
+            ip_proto_t.IPV6_OPTS : parse_ipv6_ext;
+            ip_proto_t.IPV6_FRAGMENT : parse_ipv6_frag_ext;
+            ip_proto_t.IPV6_ROUTE : parse_ipv6_ext;
+            ip_proto_t.RESERVED_FD : parse_ipv6_ext;
+            ip_proto_t.RESERVED_FE : parse_ipv6_ext;
+            default: parse_ipv6_no_ext;
+        }
+    }
+
+    // Running through this branch sets l4_protocol to constant
+    // which is not allowed since l4_protocol is used within
+    // a select statement later
+    state parse_ipv6_frag_ext {
+        pkt.extract(hdr.ipv6_ext_hdr);
+        parser_md.l4_protocol = ip_proto_t.TCP;
+
+        transition select(
+            hdr.ipv6_ext_hdr.ext_len, hdr.ipv6_ext_hdr.data[47:35]) {
+            (0, 0) : parse_ipv6_after_ext;
+            default: accept;
+        }
+    }
+
+    state parse_ipv6_ext {
+        pkt.extract(hdr.ipv6_ext_hdr);
+        parser_md.l4_protocol = hdr.ipv6_ext_hdr.next_hdr;
+
+        transition select(hdr.ipv6_ext_hdr.ext_len) {
+            0 : parse_ipv6_after_ext;
+            1 : parse_ipv6_ext_1;
+            2 : parse_ipv6_ext_2;
+            3 : parse_ipv6_ext_3;
+            4 : parse_ipv6_ext_4;
+            5 : parse_ipv6_ext_5;
+            6 : parse_ipv6_ext_6;
+            7 : parse_ipv6_ext_7;
+            // default: parser-drop();
+        }
+    }
+
+    state parse_ipv6_ext_1 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_ext_2 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        pkt.extract(hdr.ipv6_ext_block[1]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_ext_3 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        pkt.extract(hdr.ipv6_ext_block[1]);
+        pkt.extract(hdr.ipv6_ext_block[2]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_ext_4 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        pkt.extract(hdr.ipv6_ext_block[1]);
+        pkt.extract(hdr.ipv6_ext_block[2]);
+        pkt.extract(hdr.ipv6_ext_block[3]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_ext_5 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        pkt.extract(hdr.ipv6_ext_block[1]);
+        pkt.extract(hdr.ipv6_ext_block[2]);
+        pkt.extract(hdr.ipv6_ext_block[3]);
+        pkt.extract(hdr.ipv6_ext_block[4]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_ext_6 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        pkt.extract(hdr.ipv6_ext_block[1]);
+        pkt.extract(hdr.ipv6_ext_block[2]);
+        pkt.extract(hdr.ipv6_ext_block[3]);
+        pkt.extract(hdr.ipv6_ext_block[4]);
+        pkt.extract(hdr.ipv6_ext_block[5]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_ext_7 {
+        pkt.extract(hdr.ipv6_ext_block[0]);
+        pkt.extract(hdr.ipv6_ext_block[1]);
+        pkt.extract(hdr.ipv6_ext_block[2]);
+        pkt.extract(hdr.ipv6_ext_block[3]);
+        pkt.extract(hdr.ipv6_ext_block[4]);
+        pkt.extract(hdr.ipv6_ext_block[5]);
+        pkt.extract(hdr.ipv6_ext_block[6]);
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_no_ext {
+        transition parse_ipv6_after_ext;
+    }
+
+    state parse_ipv6_after_ext {
+        parser_md.l4_lookup = pkt.lookahead<l4_lookup_t>();
+        /* Note, we cannot get here if this is not a first fragment */
+        transition select(parser_md.l4_protocol) {
+            ip_proto_t.ICMP : parse_icmp;
+            ip_proto_t.IGMP : parse_igmp;
+            ip_proto_t.TCP : parse_tcp;
+            ip_proto_t.UDP : parse_udp;
+            default: parse_first_fragment;
+        }
+    }
+
+    state parse_icmp {
+        pkt.extract(hdr.icmp);
+        transition parse_first_fragment;
+    }
+
+    state parse_igmp {
+        pkt.extract(hdr.igmp);
+        transition parse_first_fragment;
+    }
+
+    state parse_tcp {
+        pkt.extract(hdr.tcp);
+        transition parse_first_fragment;
+    }
+
+    state parse_udp {
+        pkt.extract(hdr.udp);
+        transition parse_first_fragment;
+    }
+}
+
+    /*********************** D E P A R S E R  **************************/
+control PacketDeparser(packet_out pkt,
+                       in packet_headers_t hdr)
+{
+    apply {
+        pkt.emit(hdr);
+    }
+}
+# 174 "simple_l3_acl.p4" 2
 
 
+/*************************************************************************
+ **************  I N G R E S S   P R O C E S S I N G   *******************
+ *************************************************************************/
 
-        pkt.advance(64);
+typedef packet_headers_t my_ingress_headers_t;
+
+struct my_ingress_metadata_t {
+    parser_metadata_t parser_md;
+    /* Add more fields if necessary */
+}
+
+parser IngressParser(packet_in pkt,
+    /* User */
+    out my_ingress_headers_t hdr,
+    out my_ingress_metadata_t meta,
+    /* Intrinsic */
+    out ingress_intrinsic_metadata_t ig_intr_md)
+{
+    /* 
+     * We instantiate the packet parser, since we might also need in Egress.
+     * Otherwise we could have invoked it directly, i.e. PacketParser.apply()
+     */
+    PacketParser() packet_parser;
+
+    /* This is a mandatory state, required by Tofino Architecture */
+    state start {
+        pkt.extract(ig_intr_md);
+        pkt.advance(PORT_METADATA_SIZE);
+
+        /* Invoke Common Packet Parser */
+        packet_parser.apply(pkt, hdr, meta.parser_md);
 
         transition accept;
     }
 }
 
-parser TofinoEgressParser(
-        packet_in pkt,
-        out egress_intrinsic_metadata_t eg_intr_md) {
+    /***************** M A T C H - A C T I O N  *********************/
+
+/* Common drop algorithm for ingress and egress. */
+action set_drop(inout bit<3> drop_ctl) {
+    drop_ctl = drop_ctl | 1;
+}
+
+control Ingress(
+    /* User */
+    inout my_ingress_headers_t hdr,
+    inout my_ingress_metadata_t meta,
+    /* Intrinsic */
+    in ingress_intrinsic_metadata_t ig_intr_md,
+    in ingress_intrinsic_metadata_from_parser_t ig_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t ig_tm_md)
+{
+    action send(PortId_t port) {
+            ig_tm_md.ucast_egress_port = port;
+    }
+
+    action drop() {
+        set_drop(ig_dprsr_md.drop_ctl);
+    }
+
+    table ipv4_host {
+        key = { hdr.ipv4.dst_addr : exact; }
+        actions = {
+            send; drop;
+            @defaultonly NoAction;
+        }
+        const default_action = NoAction();
+        size = 65536;
+    }
+
+    table ipv4_lpm {
+        key = { hdr.ipv4.dst_addr : lpm; }
+        actions = { send; drop; }
+
+        default_action = send(64);
+        size = 1024;
+    }
+
+    action do_acl(bool do_redirect, PortId_t port,
+        bool do_dst_mac, mac_addr_t new_dst_mac,
+        bool do_src_mac, mac_addr_t new_src_mac)
+    {
+        /* 
+         * On Tofino, only a boolean action data parameter can be used
+         * as a condition
+         */
+        if (do_redirect) {
+            send(port);
+        }
+
+        /* Ternary operation is also supported with the same restriction */
+        hdr.ethernet.dst_addr = (do_dst_mac)
+                                    ? new_dst_mac
+                                    : hdr.ethernet.dst_addr;
+
+        hdr.ethernet.src_addr = (do_src_mac)
+                                    ? new_src_mac
+                                    : hdr.ethernet.src_addr;
+    }
+
+    action do_ipmc_ether() {
+        hdr.ethernet.dst_addr[47:24] = 0x01_00_5E;
+        hdr.ethernet.dst_addr[23:0] = hdr.ipv4.dst_addr[23:0] & ~24w0x80_00_00;
+    }
+
+    table ipv4_acl {
+        key = {
+            hdr.ipv4.src_addr : ternary;
+            hdr.ipv4.dst_addr : ternary;
+            hdr.ipv4.protocol : ternary;
+            meta.parser_md.l4_lookup.word_1 : ternary;
+            meta.parser_md.l4_lookup.word_2 : ternary;
+            meta.parser_md.first_frag : ternary;
+            ig_intr_md.ingress_port : ternary;
+            ig_tm_md.ucast_egress_port : ternary;
+        }
+        actions = { NoAction; drop; send; do_acl; do_ipmc_ether; }
+        size = 1024;
+    }
+
+    /* The algorithm */
+    apply {
+        if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1) {
+            if (!ipv4_host.apply().hit) {
+                ipv4_lpm.apply();
+            }
+            ipv4_acl.apply();
+        }
+    }
+}
+
+    /*********************  D E P A R S E R  ************************/
+
+control IngressDeparser(packet_out pkt,
+    /* User */
+    inout my_ingress_headers_t hdr,
+    in my_ingress_metadata_t meta,
+    /* Intrinsic */
+    in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md)
+{
+    PacketDeparser() packet_deparser;
+
+    apply {
+        packet_deparser.apply(pkt, hdr);
+    }
+}
+
+/*************************************************************************
+ ****************  E G R E S S   P R O C E S S I N G   *******************
+ *************************************************************************/
+
+    /***********************  H E A D E R S  ************************/
+
+typedef packet_headers_t my_egress_headers_t;
+
+    /********  G L O B A L   E G R E S S   M E T A D A T A  *********/
+
+struct my_egress_metadata_t {
+    parser_metadata_t parser_md;
+    /* Add more fields if necessary */
+}
+
+    /***********************  P A R S E R  **************************/
+
+parser EgressParser(packet_in pkt,
+    /* User */
+    out my_egress_headers_t hdr,
+    out my_egress_metadata_t meta,
+    /* Intrinsic */
+    out egress_intrinsic_metadata_t eg_intr_md)
+{
+    PacketParser() packet_parser;
+
+    /* This is a mandatory state, required by Tofino Architecture */
     state start {
         pkt.extract(eg_intr_md);
+
+        /* Use common packet parser */
+        packet_parser.apply(pkt, hdr, meta.parser_md);
         transition accept;
     }
 }
 
-// Empty egress parser/control blocks
-parser EmptyEgressParser<H, M>(
-        packet_in pkt,
-        out H hdr,
-        out M eg_md,
-        out egress_intrinsic_metadata_t eg_intr_md) {
-    state start {
-        transition accept;
+    /***************** M A T C H - A C T I O N  *********************/
+
+control Egress(
+    /* User */
+    inout my_egress_headers_t hdr,
+    inout my_egress_metadata_t meta,
+    /* Intrinsic */
+    in egress_intrinsic_metadata_t eg_intr_md,
+    in egress_intrinsic_metadata_from_parser_t eg_prsr_md,
+    inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md,
+    inout egress_intrinsic_metadata_for_output_port_t eg_oport_md)
+{
+
+
+
+
+
+
+    action drop() {
+        set_drop(eg_dprsr_md.drop_ctl);
     }
-}
 
-control EmptyEgressDeparser<H, M>(
-        packet_out pkt,
-        inout H hdr,
-        in M eg_md,
-        in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
-    apply {}
-}
+    table ipv4_acl {
+        key = {
 
-control EmptyEgress<H, M>(
-        inout H hdr,
-        inout M eg_md,
-        in egress_intrinsic_metadata_t eg_intr_md,
-        in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-        inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
-        inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
-    apply {}
-}
-# 16 "test_skip.p4" 2
 
-/**
- * Ingress parser
- * @param in pkt input packet
- * @param out hdr header(s) extracted from the packet
- * @param out ig_md ingress metadata
- * @param out ig_intr_md ingress intrinsic metadata
- * @return none
- */
-parser SxIngParser(packet_in pkt,
-       out header_t hdr,
-       out ingress_metadata_t ig_md,
-       out ingress_intrinsic_metadata_t ig_intr_md) {
 
-    bit<8> ts_offset_bytes_left = 0;
-    bit<4> ts_offset_hi = 0;
-    bit<4> ts_offset_lo/* = 0*/;
 
-    state start {
-        //ts_offset_lo = 4;
-        pkt.extract(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-          1: parseResubmit;
-          0: parsePortMetadata;
+
+
+
+            hdr.ipv4.src_addr : ternary;
+            hdr.ipv4.dst_addr : ternary;
+            hdr.ipv4.protocol : ternary;
+            meta.parser_md.l4_lookup.word_1 : ternary;
+            meta.parser_md.l4_lookup.word_2 : ternary;
+
+            meta.parser_md.first_frag : ternary;
+            eg_intr_md.egress_port : ternary;
+        }
+        actions = { NoAction; drop; }
+        size = 2048;
+    }
+
+    apply {
+        if (hdr.ipv4.isValid()) {
+# 420 "simple_l3_acl.p4"
+            ipv4_acl.apply();
         }
     }
-
-    state parseResubmit {
-      transition reject;
-    }
-
-    state parsePortMetadata {
-
-
-
-        pkt.advance(64);
-
-        transition parseEthernet;
-    }
-
-    state parseEthernet {
-        pkt.extract(hdr.ethernet);
-        transition select(hdr.ethernet.ether_type) {
-            ETHERTYPE_VLAN: parseVlan;
-            ETHERTYPE_SVLAN: parseVlan;
-            ETHERTYPE_MPLS_UNICAST: parseMpls0;
-            ETHERTYPE_MPLS_MULTICAST: parseMpls0;
-            default: accept;
-        }
-    }
-
-    state parseVlan {
-        pkt.extract(hdr.vlan_tag.next);
-        transition select(hdr.vlan_tag.last.ether_type) {
-            ETHERTYPE_VLAN_INNER: parseVlan;
-            ETHERTYPE_VLAN: parseVlan;
-            ETHERTYPE_SVLAN: parseVlan;
-            ETHERTYPE_MPLS_UNICAST: parseMpls0;
-            ETHERTYPE_MPLS_MULTICAST: parseMpls0;
-            default: accept;
-        }
-    }
-
-    state parseMpls0 {
-      transition select(pkt.lookahead<bit<20>>()){
-        0: parse_ixia_l47_header;
-        default: parseMpls;
-      }
-    }
-
-    state parseMpls {
-        pkt.extract(hdr.mpls.next);
-        transition select(hdr.mpls.last.bos) {
-          1: parseMplsBos;
-          default: parseMpls;
-        }
-    }
-    /* assume always v4 following mpls labels for now*/
-    state parseMplsBos {
-        transition select(pkt.lookahead<bit<4>>()){
-          0x4: parse_ipv4_hdr;
-          0x6: parse_ipv6_hdr;
-          default: accept;
-        }
-    }
-
-    state parse_ixia_l47_header{
-      pkt.extract(hdr.overhead);
-      ts_offset_lo = hdr.overhead.ts_l3_offset_lo;
-      ts_offset_hi = hdr.overhead.ts_l3_offset_hi;
-      transition parse_l3_hdr;
-    }
-
-    state parse_l3_hdr {
-      transition select(pkt.lookahead<bit<4>>())
-      {
-          0x6: parse_ipv6_hdr;
-          0x4: parse_ipv4_hdr;
-          default: parse_padding;
-      }
-    }
-
-    state parse_ipv4_hdr {
-      pkt.extract(hdr.ipv4);
-      //ts_offset_bytes_left = ts_offset_bytes_left - 20;
-      transition select(hdr.ipv4.protocol) {
-        IP_PROTOCOLS_TCP: parse_tcp_hdr;
-        IP_PROTOCOLS_UDP: parse_udp_hdr;
-        default: parse_padding;
-      }
-    }
-
-    state parse_ipv6_hdr {
-      pkt.extract(hdr.ipv6);
-      //ts_offset_bytes_left = ts_offset_bytes_left - 24;
-      transition select(hdr.ipv6.next_hdr) {
-        IP_PROTOCOLS_TCP: parse_tcp_hdr;
-        IP_PROTOCOLS_UDP: parse_udp_hdr;
-        default: parse_padding;
-      }
-    }
-
-    state parse_tcp_hdr {
-      pkt.extract(hdr.tcp);
-      //ts_offset_bytes_left = ts_offset_bytes_left - 20;
-      transition parse_padding;
-    }
-
-    state parse_udp_hdr {
-      pkt.extract(hdr.udp);
-      //ts_offset_bytes_left = ts_offset_bytes_left - 8;
-      transition parse_padding;
-    }
-
-    /*state parse_padding {
-      pkt.extract(hdr.pyld_padding, 128);
-      transition accept;
-    }*/
-
-    state parse_padding {
-        //ts_offset_lo = 4;
-        pkt.extract(hdr.pyld_padding, (bit<32>)ts_offset_lo * 8);
-        transition accept;
-    }
-}
-/* Generating hash and inserting it in vlan tag 0 */
-
-
-/**
- * Ingress pipeline: Sets the destination port for incoming packets.
- * @param inout hdr extracted header(s)
- * @param inout ig_md ingress metadata
- * @param in ig_intr_md ingress intrinsic metadata
- * @param in ig_intr_prsr_md ingress intrinsic metadata for parser
- * @param in ig_intr_dprsr_md ingress intrinsic metadata for deparser
- * @param out ig_intr_md_for_tm ingress intrinsic metadata for traffic manager
- * @return none
- */
-control SxSetEgrPort(inout header_t hdr,
-         inout ingress_metadata_t ig_md,
-         in ingress_intrinsic_metadata_t ig_intr_md,
-         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
-         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
-          inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-
-  const bit<32> table_sz = 512;
-  Counter<bit<32>, PortId_t> (256, CounterType_t.PACKETS_AND_BYTES) igPortStatCnt;
-
-  action doCountIgPortStatCnt() {
-    igPortStatCnt.count(ig_intr_md.ingress_port);
-  }
-
-  table doCountIgPortStatCntTbl {
-    actions = {
-      doCountIgPortStatCnt;
-    }
-    default_action = doCountIgPortStatCnt;
-    size = 1;
-  }
-
-  action setEgPort(PortId_t egPort) {
-    ig_intr_tm_md.ucast_egress_port = egPort;
-    ig_md.egress_port = (bit<8>) egPort;
-  }
-
-  table assignEgPortTbl {
-    key = {
-      ig_intr_md.ingress_port : exact;
-    }
-    actions = {
-      setEgPort;
-      NoAction;
-    }
-    default_action = NoAction;
-    size = 8;
-  }
-
-  apply {
-    doCountIgPortStatCntTbl.apply();
-    assignEgPortTbl.apply();
-  }
 }
 
-/**
- * Ingress deparser
- * @param out pkt packet to be emitted to the egress pipeline
- * @param in ig_md ingress metadata
- * @param in ig_intr_dprsr_md ingress intrinsic metadata for deparser
- * @return none
- */
-control SxIngDeparser(packet_out pkt,
-          inout header_t hdr,
-          in ingress_metadata_t ig_md,
-          in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-  apply{
-    pkt.emit(ig_md.bridge);
-    pkt.emit(hdr.ethernet);
-    pkt.emit(hdr.vlan_tag);
-    pkt.emit(hdr.mpls);
-    pkt.emit(hdr.ipv4);
-    pkt.emit(hdr.ipv6);
-    pkt.emit(hdr.tcp);
-    pkt.emit(hdr.udp);
-    pkt.emit(hdr.pyld_padding);
-  }
+    /*********************  D E P A R S E R  ************************/
+
+control EgressDeparser(packet_out pkt,
+    /* User */
+    inout my_egress_headers_t hdr,
+    in my_egress_metadata_t meta,
+    /* Intrinsic */
+    in egress_intrinsic_metadata_for_deparser_t eg_dprsr_md)
+{
+    PacketDeparser() packet_deparser;
+
+    apply {
+        packet_deparser.apply(pkt, hdr);
+    }
 }
 
-/**
- * Egress parser
- * @param in pkt input packet
- * @param out hdr header(s) extracted from the packet
- * @param out eg_md egress metadata
- * @param out eg_intr_md egress intrinsic metadata
- * @return none
- */
-parser SxEgrParser(packet_in pkt,
-       out header_t hdr,
-       out egress_metadata_t eg_md,
-       out egress_intrinsic_metadata_t eg_intr_md) {
 
-  state start {
-    pkt.extract(eg_intr_md); // need to extract egress intrinsic metadata
-    pkt.extract(eg_md.bridge);
-    pkt.extract(hdr.ethernet);
-    transition select(hdr.ethernet.ether_type) {
-            ETHERTYPE_VLAN: parseVlan;
-            ETHERTYPE_VLAN_INNER: parseVlan;
-            ETHERTYPE_SVLAN: parseVlan;
-            ETHERTYPE_MPLS_UNICAST: parseMpls;
-            ETHERTYPE_MPLS_MULTICAST: parseMpls;
-            ETHERTYPE_IPV4: parseIpv4;
-            ETHERTYPE_IPV6: parseIpv6;
-            default: reject;
-    }
-  }
-
-  state parseVlan {
-        pkt.extract(hdr.vlan_tag.next);
-        transition select(hdr.vlan_tag.last.ether_type) {
-            ETHERTYPE_VLAN_INNER: parseVlan;
-            ETHERTYPE_VLAN: parseVlan;
-            ETHERTYPE_SVLAN: parseVlan;
-            ETHERTYPE_MPLS_UNICAST: parseMpls;
-            ETHERTYPE_MPLS_MULTICAST: parseMpls;
-            ETHERTYPE_IPV4: parseIpv4;
-            ETHERTYPE_IPV6: parseIpv6;
-            default: accept;
-        }
-    }
-
-
-  state parseMpls {
-        pkt.extract(hdr.mpls.next);
-        transition select(hdr.mpls.last.bos) {
-          1: parseMplsBos;
-          default: parseMpls;
-        }
-    }
-
-  /* assume always v4 following mpls labels for now*/
-  state parseMplsBos {
-        transition select(pkt.lookahead<bit<4>>()){
-          0x4: parseIpv4;
-          0x6: parseIpv6;
-          default: accept;
-        }
-    }
-
-  state parseIpv4 {
-      pkt.extract(hdr.ipv4);
-      transition select(hdr.ipv4.protocol) {
-        IP_PROTOCOLS_TCP: parseTcp;
-        IP_PROTOCOLS_UDP: parseUdp;
-        default: accept;
-      }
-    }
-
-    state parseIpv6 {
-      pkt.extract(hdr.ipv6);
-      transition select(hdr.ipv6.next_hdr) {
-        IP_PROTOCOLS_TCP: parseTcp;
-        IP_PROTOCOLS_UDP: parseUdp;
-        default: accept;
-      }
-    }
-
-    state parseTcp {
-      pkt.extract(hdr.tcp);
-      transition accept;
-    }
-
-    state parseUdp {
-      pkt.extract(hdr.udp);
-      transition accept;
-    }
-
-}
-
-/**
- * Egress pipeline
- * @param inout hdr extracted header(s)
- * @param inout eg_md egress metadata
- * @param in eg_intr_md egress intrinsic metadata
- * @param in eg_intr_prsr_md egress intrinsic metadata for parser
- * @param in eg_intr_dprsr_md egress intrinsic metadata for deparser
- * @param out eg_intr_md_for_oport egress intrinsic metadata for output port
- * @return none
- */
-control SxEgrPipeline(inout header_t hdr,
-          inout egress_metadata_t eg_md,
-          in egress_intrinsic_metadata_t eg_intr_md,
-          in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-          inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs,
-          inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
-  apply {}
-}
-
-/*
- * Egress deparser
- * @param out pkt packet to be emitted to the egress pipeline
- * @param inout hdr header(s) extracted
- * @param in eg_md egress metadata
- * @param in eg_intr_dprsr_md egress intrinsic metadata for deparser
- * @return none
- */
-control SxEgrDeparser(packet_out pkt,
-          inout header_t hdr,
-          in egress_metadata_t eg_md,
-          in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs) {
-  apply{
-    pkt.emit(hdr.ethernet);
-    pkt.emit(hdr.vlan_tag);
-    pkt.emit(hdr.mpls);
-    pkt.emit(hdr.ipv4);
-    pkt.emit(hdr.ipv6);
-    pkt.emit(hdr.tcp);
-    pkt.emit(hdr.udp);
-  }
-}
-
-/*
- * Pipeline construction
- */
-Pipeline(SxIngParser(), SxSetEgrPort(), SxIngDeparser(), SxEgrParser(), SxEgrPipeline(), SxEgrDeparser()) pipe;
+/************ F I N A L   P A C K A G E ******************************/
+Pipeline(
+    IngressParser(),
+    Ingress(),
+    IngressDeparser(),
+    EgressParser(),
+    Egress(),
+    EgressDeparser()
+) pipe;
 
 Switch(pipe) main;
-

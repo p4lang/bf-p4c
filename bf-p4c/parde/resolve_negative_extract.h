@@ -66,8 +66,12 @@ struct ResolveNegativeExtract : public PassManager {
                 auto state = kv.first;
                 auto max_idx_value = kv.second;
                 BUG_CHECK(max_idx_value <= max_buff_size,
-                    "Maximal historic value should be smaller than %d B for state %s!",
-                    max_buff_size, state->name);
+                    "In parse state %s: a value that is %d B backwards from the current "
+                    "parsing position is being accessed/used. It is only possible to "
+                    "access %d B backwards from the current parsing position. As a "
+                    "possible workaround try moving around the extracts (possibly "
+                    "by using methods advance and lookahead or splitting some headers).",
+                    state->name, max_idx_value, max_buff_size);
 
                 distribute_shift_to_node(state, nullptr, parsers[state], max_idx_value);
                 // 2] Add the fix amount of shift data (it should be the same value from nodes)

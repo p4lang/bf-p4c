@@ -1304,7 +1304,6 @@ p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
   extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
@@ -1921,4 +1920,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: PHV allocation produced following overlapping slices of field .* that are simultaneously live in the MAU pipeline"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
+)
+
+# P4C-3765
+p4c_add_xfail_reason("tofino"
+  "error: Value used in select statement needs to be set from input packet"
+  extensions/p4_tests/p4_16/compile_only/p4c-3765-fail.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
 )
