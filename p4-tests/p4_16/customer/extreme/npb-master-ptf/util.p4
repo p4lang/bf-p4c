@@ -25,23 +25,23 @@
 // -----------------------------------------------------------------------------
 
 control HashMask(
-	inout switch_lookup_fields_t lkp_1,
-	inout bit<6>                 lkp_1_hash_mask_en
+	inout switch_lookup_fields_t lkp,
+	inout bit<6>                 lkp_hash_mask_en
 ) {
 
 	// -----------------------------------------
 
 	apply {
 #ifdef LAG_HASH_MASKING_ENABLE
-//		if(lkp_1_hash_mask_en[0:0] == 1) { lkp_1.mac_type     = 0; }
-//		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_src_addr = 0; }
-//		if(lkp_1_hash_mask_en[1:1] == 1) { lkp_1.mac_dst_addr = 0; }
-		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_src_addr  = 0; }
-		if(lkp_1_hash_mask_en[2:2] == 1) { lkp_1.ip_dst_addr  = 0; }
-		if(lkp_1_hash_mask_en[3:3] == 1) { lkp_1.ip_proto     = 0; }
-		if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_src_port  = 0; }
-		if(lkp_1_hash_mask_en[4:4] == 1) { lkp_1.l4_dst_port  = 0; }
-		if(lkp_1_hash_mask_en[5:5] == 1) { lkp_1.tunnel_id    = 0; }
+//		if(lkp_hash_mask_en[0:0] == 1) { lkp.mac_type     = 0; }
+//		if(lkp_hash_mask_en[1:1] == 1) { lkp.mac_src_addr = 0; }
+//		if(lkp_hash_mask_en[1:1] == 1) { lkp.mac_dst_addr = 0; }
+		if(lkp_hash_mask_en[2:2] == 1) { lkp.ip_src_addr  = 0; }
+		if(lkp_hash_mask_en[2:2] == 1) { lkp.ip_dst_addr  = 0; }
+		if(lkp_hash_mask_en[3:3] == 1) { lkp.ip_proto     = 0; }
+		if(lkp_hash_mask_en[4:4] == 1) { lkp.l4_src_port  = 0; }
+		if(lkp_hash_mask_en[4:4] == 1) { lkp.l4_dst_port  = 0; }
+		if(lkp_hash_mask_en[5:5] == 1) { lkp.tunnel_id    = 0; }
 #endif
 	}
 }

@@ -201,6 +201,7 @@ action hit (                                                                  \
 	bool redirect_to_cpu,                                                     \
 	switch_cpu_reason_t cpu_reason_code,                                      \
 	switch_copp_meter_id_t copp_meter_id,                                     \
+	switch_qid_t qid,                                                         \
 /*	bool dtel_report_type_enable,              */                             \
 /*	switch_dtel_report_type_t dtel_report_type */                             \
                                                                               \
@@ -222,6 +223,8 @@ action hit (                                                                  \
 	redirect_to_cpu_            = redirect_to_cpu;                            \
 	cpu_reason_                 = cpu_reason_code;                            \
 	copp_meter_id_              = copp_meter_id;                              \
+                                                                              \
+	qid_                        = qid;                                        \
                                                                               \
 /*	dtel_report_type_enable_    = dtel_report_type_enable */                  \
 /*	dtel_report_type_           = dtel_report_type        */                  \
@@ -309,6 +312,7 @@ control IngressMacAcl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -317,6 +321,7 @@ control IngressMacAcl(
 	inout switch_cpu_reason_t cpu_reason_,
 	inout switch_copp_meter_id_t copp_meter_id_,
 	inout bit<SF_FLOW_CLASS_WIDTH_A> flow_class_,
+	inout switch_qid_t qid_,
 	inout bool dtel_report_type_enable_,
 	inout switch_dtel_report_type_t dtel_report_type_,
 	inout bit<6> indirect_counter_index_
@@ -355,7 +360,9 @@ control IngressMacAcl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -376,6 +383,7 @@ control IngressIpAcl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -384,6 +392,7 @@ control IngressIpAcl(
 	inout switch_cpu_reason_t cpu_reason_,
 	inout switch_copp_meter_id_t copp_meter_id_,
 	inout bit<SF_FLOW_CLASS_WIDTH_A> flow_class_,
+	inout switch_qid_t qid_,
 	inout bool dtel_report_type_enable_,
 	inout switch_dtel_report_type_t dtel_report_type_,
 	inout bit<6> indirect_counter_index_
@@ -456,7 +465,9 @@ control IngressIpAcl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -477,6 +488,7 @@ control IngressIpv4Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -485,6 +497,7 @@ control IngressIpv4Acl(
 	inout switch_cpu_reason_t cpu_reason_,
 	inout switch_copp_meter_id_t copp_meter_id_,
 	inout bit<SF_FLOW_CLASS_WIDTH_A> flow_class_,
+	inout switch_qid_t qid_,
 	inout bool dtel_report_type_enable_,
 	inout switch_dtel_report_type_t dtel_report_type_,
 	inout bit<6> indirect_counter_index_
@@ -558,7 +571,9 @@ control IngressIpv4Acl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -581,6 +596,7 @@ control IngressIpv6Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -589,6 +605,7 @@ control IngressIpv6Acl(
 	inout switch_cpu_reason_t cpu_reason_,
 	inout switch_copp_meter_id_t copp_meter_id_,
 	inout bit<SF_FLOW_CLASS_WIDTH_A> flow_class_,
+	inout switch_qid_t qid_,
 	inout bool dtel_report_type_enable_,
 	inout switch_dtel_report_type_t dtel_report_type_,
 	inout bit<6> indirect_counter_index_
@@ -663,7 +680,9 @@ control IngressIpv6Acl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -687,6 +706,7 @@ control IngressL7Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool scope_,
@@ -695,6 +715,7 @@ control IngressL7Acl(
 	inout switch_cpu_reason_t cpu_reason_,
 	inout switch_copp_meter_id_t copp_meter_id_,
 	inout bit<SF_FLOW_CLASS_WIDTH_A> flow_class_,
+	inout switch_qid_t qid_,
 	inout bool dtel_report_type_enable_,
 	inout switch_dtel_report_type_t dtel_report_type_,
 	inout bit<6> indirect_counter_index_
@@ -731,7 +752,9 @@ control IngressL7Acl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -786,11 +809,16 @@ control IngressAcl(
 	IngressL7Acl(l7_table_size) l7_acl;
 #endif
 
+#ifdef SF_0_INDIRECT_COUNTERS
 //	Counter<bit<32>, PortId_t>(512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 	Counter<bit<32>, bit<15>>(32768, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+#endif
 
+	bool l2_hit = false;
+	bool ip_hit = false;
+	bool l7_hit = false;
 	bool drop = false;
 	bool terminate = false;
 	bool scope = false;
@@ -800,6 +828,7 @@ control IngressAcl(
 	bool dtel_report_type_enable = false;
 	switch_copp_meter_id_t copp_meter_id = 0;
 	bit<SF_FLOW_CLASS_WIDTH_A> flow_class = 0;
+	switch_qid_t qid = 0;
 	switch_dtel_report_type_t dtel_report_type;
 	bit<6> indirect_counter_index = 0;
 
@@ -831,8 +860,15 @@ control IngressAcl(
 	// -------------------------------------
 #ifdef CPU_ACL_INGRESS_ENABLE
 	action copy_to_cpu_process_results(in switch_cpu_reason_t cpu_reason_, in switch_copp_meter_id_t copp_meter_id_) {
+/*
 		ig_intr_md_for_tm.copy_to_cpu = 1w1;
 		ig_md.cpu_reason = cpu_reason_;
+*/
+		ig_md.cpu_reason = cpu_reason_;
+//		ig_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_CPU; // don't need, there is an alias on ingress for this.
+		ig_md.mirror.type = SWITCH_MIRROR_TYPE_CPU;
+		ig_md.mirror.src = SWITCH_PKT_SRC_CLONED_INGRESS;
+		ig_md.mirror.session_id = SWITCH_MIRROR_SESSION_CPU_INGRESS;
 	}
 #endif // CPU_ACL_INGRESS_ENABLE
 	// -------------------------------------
@@ -879,10 +915,11 @@ control IngressAcl(
 			l4_dst_port, l4_dst_port_is_rng_bitmask,
 			int_ctrl_flags,
 			// ----- results -----
+			l2_hit,
 			drop,
 			terminate,
 			scope,
-			copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+			copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class, qid,
 			dtel_report_type_enable, dtel_report_type,
 			indirect_counter_index
 		);
@@ -900,10 +937,11 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				ip_hit,
 				drop,
 				terminate,
 				scope,
-				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class, qid,
 				dtel_report_type_enable, dtel_report_type,
 				indirect_counter_index
 			);
@@ -921,10 +959,11 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				ip_hit,
 				drop,
 				terminate,
 				scope,
-				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class, qid,
 				dtel_report_type_enable, dtel_report_type,
 				indirect_counter_index
 			);
@@ -940,10 +979,11 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				ip_hit,
 				drop,
 				terminate,
 				scope,
-				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class, qid,
 				dtel_report_type_enable, dtel_report_type,
 				indirect_counter_index
 			);
@@ -964,16 +1004,39 @@ control IngressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				l7_hit
 				drop,
 				terminate,
 				scope,
-				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class,
+				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class, qid,
 				dtel_report_type_enable, dtel_report_type,
 				indirect_counter_index
 			);
 		}
 #endif // UDF_ENABLE
-
+/*
+		if(ip_hit == false) {
+			// ----- l2 -----
+			mac_acl.apply(
+				lkp,
+				hdr_0,
+				ig_md,
+				ig_intr_md_for_dprsr,
+				ip_len, ip_len_is_rng_bitmask,
+				l4_src_port, l4_src_port_is_rng_bitmask,
+				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				int_ctrl_flags,
+				// ----- results -----
+				l2_hit,
+				drop,
+				terminate,
+				scope,
+				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id, flow_class, qid,
+				dtel_report_type_enable, dtel_report_type,
+				indirect_counter_index
+			);
+		}
+*/
 		// --------------
 		// results
 		// --------------
@@ -1011,13 +1074,13 @@ control IngressAcl(
 						ig_md.lkp_2,
 //						ig_md.drop_reason_2,
 
-						ig_md.lkp_1
+						lkp
 					);
   #else
 					ScoperInner.apply(
 						hdr_2,
 
-						ig_md.lkp_1
+						lkp
 					);
   #endif
 
@@ -1037,7 +1100,7 @@ control IngressAcl(
 //			ig_md.lkp_1,
 			ig_md.lkp_2,
 
-			ig_md.lkp_1,
+			lkp,
 
 			terminate,
 			scope,
@@ -1048,7 +1111,7 @@ control IngressAcl(
 		);
 */
 		Scoper_ScopeAndTermOnly.apply(
-			ig_md.lkp_1,
+			lkp,
 
 			terminate,
 			scope,
@@ -1071,6 +1134,11 @@ control IngressAcl(
 #endif
 		}
 
+		// ----- qid -----
+#ifdef SF_0_QID_ENABLE
+		ig_intr_md_for_tm.qid = (switch_qid_t) qid;
+#endif
+
 		// ----- copy to cpu -----
 #ifdef CPU_ACL_INGRESS_ENABLE
 		if(copy_to_cpu == true) {
@@ -1092,7 +1160,9 @@ control IngressAcl(
 		}
 #endif
 
+#ifdef SF_0_INDIRECT_COUNTERS
 		indirect_counter.count(ig_md.port ++ indirect_counter_index);
+#endif
 	}
 }
 
@@ -1118,6 +1188,7 @@ control EgressMacAcl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool copy_to_cpu_,
@@ -1148,8 +1219,8 @@ control EgressMacAcl(
 #endif
 			// -------------------------------------------
 #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
-			eg_md.lkp_1.tunnel_outer_type          : ternary @name("tunnel_outer_type");
-			eg_md.lkp_1.tunnel_inner_type          : ternary @name("tunnel_inner_type");
+			lkp.tunnel_outer_type                  : ternary @name("tunnel_outer_type");
+			lkp.tunnel_inner_type                  : ternary @name("tunnel_inner_type");
 //			eg_md.tunnel_1.type                    : ternary @name("tunnel_outer_type");
 //			eg_md.tunnel_2.type                    : ternary @name("tunnel_inner_type");
 #endif
@@ -1167,7 +1238,9 @@ control EgressMacAcl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -1187,6 +1260,7 @@ control EgressIpAcl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool copy_to_cpu_,
@@ -1251,8 +1325,8 @@ control EgressIpAcl(
 #endif
 			// -------------------------------------------
 #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
-			eg_md.lkp_1.tunnel_outer_type          : ternary @name("tunnel_outer_type");
-			eg_md.lkp_1.tunnel_inner_type          : ternary @name("tunnel_inner_type");
+			lkp.tunnel_outer_type                  : ternary @name("tunnel_outer_type");
+			lkp.tunnel_inner_type                  : ternary @name("tunnel_inner_type");
 //			eg_md.tunnel_1.type                    : ternary @name("tunnel_outer_type");
 //			eg_md.tunnel_2.type                    : ternary @name("tunnel_inner_type");
 #endif
@@ -1269,7 +1343,9 @@ control EgressIpAcl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -1289,6 +1365,7 @@ control EgressIpv4Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool copy_to_cpu_,
@@ -1355,8 +1432,8 @@ control EgressIpv4Acl(
 #endif
 			// -------------------------------------------
 #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
-			eg_md.lkp_1.tunnel_outer_type          : ternary @name("tunnel_outer_type");
-			eg_md.lkp_1.tunnel_inner_type          : ternary @name("tunnel_inner_type");
+			lkp.tunnel_outer_type                  : ternary @name("tunnel_outer_type");
+			lkp.tunnel_inner_type                  : ternary @name("tunnel_inner_type");
 //			eg_md.tunnel_1.type                    : ternary @name("tunnel_outer_type");
 //			eg_md.tunnel_2.type                    : ternary @name("tunnel_inner_type");
 #endif
@@ -1373,7 +1450,9 @@ control EgressIpv4Acl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -1395,6 +1474,7 @@ control EgressIpv6Acl(
 	in    bool                     l4_dst_port_is_rng_bitmask,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
+	out   bool hit_,
 	inout bool drop_,
 	inout bool terminate_,
 	inout bool copy_to_cpu_,
@@ -1461,8 +1541,8 @@ control EgressIpv6Acl(
 #endif
 			// -------------------------------------------
 #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
-			eg_md.lkp_1.tunnel_outer_type          : ternary @name("tunnel_outer_type");
-			eg_md.lkp_1.tunnel_inner_type          : ternary @name("tunnel_inner_type");
+			lkp.tunnel_outer_type                  : ternary @name("tunnel_outer_type");
+			lkp.tunnel_inner_type                  : ternary @name("tunnel_inner_type");
 //			eg_md.tunnel_1.type                    : ternary @name("tunnel_outer_type");
 //			eg_md.tunnel_1.type                    : ternary @name("tunnel_inner_type");
 #endif
@@ -1479,7 +1559,9 @@ control EgressIpv6Acl(
 	}
 
 	apply {
-		acl.apply();
+		if(acl.apply().hit) {
+			hit_ = true;
+		}
 	}
 }
 
@@ -1488,7 +1570,7 @@ control EgressIpv6Acl(
 //-----------------------------------------------------------------------------
 
 control EgressAcl(
-	in    switch_lookup_fields_t lkp,
+	inout switch_lookup_fields_t lkp,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
 	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
@@ -1521,11 +1603,15 @@ control EgressAcl(
 #endif
 	EgressMacAcl(mac_table_size) egress_mac_acl;
 
+#ifdef SF_2_INDIRECT_COUNTERS
 //	Counter<bit<32>, PortId_t>(512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 	Counter<bit<32>, bit<15>>(32768, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<16>>(65536, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
 //	Counter<bit<32>, bit<17>>(131072, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+#endif
 
+	bool l2_hit = false;
+	bool ip_hit = false;
 	bool drop = false;
 	bool terminate = false;
 	bool copy_to_cpu = false;
@@ -1607,8 +1693,8 @@ control EgressAcl(
 		eg_md.cpu_reason = cpu_reason_;
 		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_CPU;
 		eg_md.mirror.type = SWITCH_MIRROR_TYPE_CPU;
-		eg_md.mirror.session_id = SWITCH_MIRROR_SESSION_CPU;
 		eg_md.mirror.src = SWITCH_PKT_SRC_CLONED_EGRESS;
+		eg_md.mirror.session_id = SWITCH_MIRROR_SESSION_CPU_EGRESS;
 	}
 #endif // CPU_ACL_EGRESS_ENABLE
 	// -------------------------------------
@@ -1652,6 +1738,7 @@ control EgressAcl(
 			l4_dst_port, l4_dst_port_is_rng_bitmask,
 			int_ctrl_flags,
 			// ----- results -----
+			l2_hit,
 			drop,
 			terminate,
 			copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
@@ -1670,6 +1757,7 @@ control EgressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				ip_hit,
 				drop,
 				terminate,
 				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
@@ -1688,6 +1776,7 @@ control EgressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				ip_hit,
 				drop,
 				terminate,
 				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
@@ -1704,6 +1793,7 @@ control EgressAcl(
 				l4_dst_port, l4_dst_port_is_rng_bitmask,
 				int_ctrl_flags,
 				// ----- results -----
+				ip_hit,
 				drop,
 				terminate,
 				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
@@ -1711,7 +1801,26 @@ control EgressAcl(
 			);
 		}
 #endif
-
+/*
+		// ----- l2 -----
+		if(ip_hit == false) {
+			egress_mac_acl.apply(
+				lkp,
+				eg_md,
+				eg_intr_md_for_dprsr,
+				ip_len, ip_len_is_rng_bitmask,
+				l4_src_port, l4_src_port_is_rng_bitmask,
+				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				int_ctrl_flags,
+				// ----- results -----
+				l2_hit,
+				drop,
+				terminate,
+				copy_to_cpu, redirect_to_cpu, cpu_reason, copp_meter_id,
+				indirect_counter_index
+			);
+		}
+*/
 		// --------------
 		// results
 		// --------------
@@ -1799,7 +1908,7 @@ control EgressAcl(
 		}
 */
 		Scoper_ScopeAndTermOnly.apply(
-			eg_md.lkp_1,
+			lkp,
 
 			terminate,
 			false,
@@ -1837,7 +1946,9 @@ control EgressAcl(
 
 #endif // CPU_ACL_EGRESS_ENABLE
 
+#ifdef SF_2_INDIRECT_COUNTERS
 		indirect_counter.count(eg_md.port ++ indirect_counter_index);
+#endif
 	}
 }
 

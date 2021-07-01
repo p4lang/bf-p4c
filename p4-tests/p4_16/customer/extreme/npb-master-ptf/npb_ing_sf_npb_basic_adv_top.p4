@@ -6,6 +6,7 @@
 #include "table_sizes.p4"
 
 control npb_ing_sf_npb_basic_adv_top (
+	inout switch_lookup_fields_t                    lkp,
 	inout switch_header_transport_t                 hdr_0,
 	inout switch_header_outer_t                     hdr_1,
 	inout switch_header_inner_t                     hdr_2,
@@ -100,7 +101,7 @@ control npb_ing_sf_npb_basic_adv_top (
 	) {
 		stats_ip_len.count();
 
-		ip_len = ig_md.lkp_1.ip_len;
+		ip_len = lkp.ip_len;
 		ip_len_is_rng_bitmask = false;
 	}
 
@@ -115,7 +116,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	table ing_sf_ip_len_rng {
 		key = {
-			ig_md.lkp_1.ip_len : range @name("ip_len");
+			lkp.ip_len : range @name("ip_len");
 		}
 
 		actions = {
@@ -156,7 +157,7 @@ control npb_ing_sf_npb_basic_adv_top (
 	) {
 		stats_l4_src_port.count();
 
-		l4_src_port = ig_md.lkp_1.l4_src_port;
+		l4_src_port = lkp.l4_src_port;
 		l4_src_port_is_rng_bitmask = false;
 	}
 
@@ -171,7 +172,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	table ing_sf_l4_src_port_rng {
 		key = {
-			ig_md.lkp_1.l4_src_port : range @name("l4_src_port");
+			lkp.l4_src_port : range @name("l4_src_port");
 		}
 
 		actions = {
@@ -212,7 +213,7 @@ control npb_ing_sf_npb_basic_adv_top (
 	) {
 		stats_l4_dst_port.count();
 
-		l4_dst_port = ig_md.lkp_1.l4_dst_port;
+		l4_dst_port = lkp.l4_dst_port;
 		l4_dst_port_is_rng_bitmask = false;
 	}
 
@@ -227,7 +228,7 @@ control npb_ing_sf_npb_basic_adv_top (
 
 	table ing_sf_l4_dst_port_rng {
 		key = {
-			ig_md.lkp_1.l4_dst_port : range @name("l4_dst_port");
+			lkp.l4_dst_port : range @name("l4_dst_port");
 		}
 
 		actions = {
@@ -285,24 +286,24 @@ control npb_ing_sf_npb_basic_adv_top (
 #ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
 			ing_sf_ip_len_rng.apply();
 #else
-			ip_len = ig_md.lkp_1.ip_len;
+			ip_len = lkp.ip_len;
 			ip_len_is_rng_bitmask = false;
 #endif
 #ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
 			ing_sf_l4_src_port_rng.apply();
 #else
-			l4_src_port = ig_md.lkp_1.l4_src_port;
+			l4_src_port = lkp.l4_src_port;
 			l4_src_port_is_rng_bitmask = false;
 #endif
 #ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
 			ing_sf_l4_dst_port_rng.apply();
 #else
-			l4_dst_port = ig_md.lkp_1.l4_dst_port;
+			l4_dst_port = lkp.l4_dst_port;
 			l4_dst_port_is_rng_bitmask = false;
 #endif
 
 			acl.apply(
-				ig_md.lkp_1,
+				lkp,
 				ig_md,
 				ig_intr_md_for_dprsr,
 				ig_intr_md_for_tm,
@@ -324,7 +325,7 @@ control npb_ing_sf_npb_basic_adv_top (
 /*
 			npb_ing_sf_npb_basic_adv_dedup.apply (
 				ig_md.nsh_md.dedup_en,
-				ig_md.lkp_1,         // for hash
+				lkp,                 // for hash
 				(bit<VPN_ID_WIDTH>)ig_md.nsh_md.vpn, // for hash
 				ig_md.nsh_md.hash_2,
 //				ig_md.port,          // for dedup

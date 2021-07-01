@@ -110,14 +110,14 @@ class test(BfRuntimeTest):
 		sf_bitmask_0            = 5 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 		sf_bitmask_1            = 4 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		nexthop_ptr             = 0 # Arbitrary value
-		bd                      = 1 # Arbitrary value
-		ig_lag_ptr              = 2 # Arbitrary value
-		eg_lag_ptr              = 3 # Arbitrary value
-		tunnel_encap_ptr        = 4 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 5 # Arbitrary value
-		tunnel_encap_bd         = 6 # Arbitrary value
-		tunnel_encap_smac_ptr   = 7 # Arbitrary value
+		nexthop_ptr             = 1 # Arbitrary value
+		bd                      = 2 # Arbitrary value
+		ig_lag_ptr              = 3 # Arbitrary value
+		eg_lag_ptr              = 4 # Arbitrary value
+		tunnel_encap_ptr        = 5 # Arbitrary value
+		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+		tunnel_encap_bd         = 7 # Arbitrary value
+		tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
 		# -----------------------------------------------------------
 		# Insert Table Entries

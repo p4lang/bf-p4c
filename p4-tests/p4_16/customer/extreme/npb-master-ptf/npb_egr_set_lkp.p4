@@ -7,10 +7,11 @@
 // ============================================================================
 
 control EgressSetLookup(
-	in    switch_header_t          hdr, // src
-	inout switch_egress_metadata_t eg_md, // dst
+	in    switch_header_outer_t       hdr_1, // src
+	in    switch_header_inner_t       hdr_2, // src
+	inout switch_egress_metadata_t    eg_md, // dst
 
-	in    egress_intrinsic_metadata_t                 eg_intr_md
+	in    egress_intrinsic_metadata_t eg_intr_md
 ) {
 
 	// Override whatever the parser set "ip_type" to.  Doing so allows the
@@ -28,53 +29,53 @@ control EgressSetLookup(
 	//    the container slices after the first aren't byte aligned"
 
 	// -----------------------------
-	// Table
+	// Table: Hdr to Lkp
 	// -----------------------------
 
 #ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
 
-	action set_lkp_1_v4() {
+	action set_lkp_1_type_tos_v4() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
-//		eg_md.lkp_1.ip_tos = hdr.outer.ipv4.tos;
+//		eg_md.lkp_1.ip_tos = hdr_1.ipv4.tos;
 	}
 
-	action set_lkp_1_v6() {
+	action set_lkp_1_type_tos_v6() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
-		eg_md.lkp_1.ip_tos = hdr.outer.ipv6.tos;
+		eg_md.lkp_1.ip_tos = hdr_1.ipv6.tos;
 	}
 
-	action set_lkp_1_none() {
+	action set_lkp_1_type_tos_none() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
 	}
 
 	action set_lkp_2_v4() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
-//		eg_md.lkp_1.ip_tos = hdr.inner.ipv4.tos;
+//		eg_md.lkp_1.ip_tos = hdr_2.ipv4.tos;
 	}
 
 	action set_lkp_2_v6() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
-		eg_md.lkp_1.ip_tos = hdr.inner.ipv6.tos;
+		eg_md.lkp_1.ip_tos = hdr_2.ipv6.tos;
 	}
 
 	action set_lkp_2_none() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
 	}
 
-	table set_lkp_1 {
+	table set_lkp_1_type_tos {
 		key = {
 			eg_md.nsh_md.scope : exact;
-			hdr.outer.ipv4.isValid() : exact;
-			hdr.outer.ipv6.isValid() : exact;
-			hdr.inner.ipv4.isValid() : exact;
-			hdr.inner.ipv6.isValid() : exact;
+			hdr_1.ipv4.isValid() : exact;
+			hdr_1.ipv6.isValid() : exact;
+			hdr_2.ipv4.isValid() : exact;
+			hdr_2.ipv6.isValid() : exact;
 		}
 
 		actions = {
 			NoAction;
-			set_lkp_1_v4;
-			set_lkp_1_v6;
-			set_lkp_1_none;
+			set_lkp_1_type_tos_v4;
+			set_lkp_1_type_tos_v6;
+			set_lkp_1_type_tos_none;
 			set_lkp_2_v4;
 			set_lkp_2_v6;
 			set_lkp_2_none;
@@ -82,27 +83,27 @@ control EgressSetLookup(
 
 		const entries = {
 /*
-			(0, true,  false, _,     _    ) : set_lkp_1_v4();   // inner is a don't care
-			(0, false, true,  _,     _    ) : set_lkp_1_v6();   // inner is a don't care
-			(0, false, false, _,     _    ) : set_lkp_1_none(); // inner is a don't care
+			(0, true,  false, _,     _    ) : set_lkp_1_type_tos_v4();   // inner is a don't care
+			(0, false, true,  _,     _    ) : set_lkp_1_type_tos_v6();   // inner is a don't care
+			(0, false, false, _,     _    ) : set_lkp_1_type_tos_none(); // inner is a don't care
 			(1, _,     _,     true,  false) : set_lkp_2_v4();   // outer is a don't care
 			(1, _,     _,     false, true ) : set_lkp_2_v6();   // outer is a don't care
 			(1, _,     _,     false, false) : set_lkp_2_none(); // outer is a don't care
 */
-			(1, true,  false, false, false) : set_lkp_1_v4();   // note: inner is a don't care
-			(1, true,  false, true,  false) : set_lkp_1_v4();   // note: inner is a don't care
-			(1, true,  false, false, true ) : set_lkp_1_v4();   // note: inner is a don't care
-			(1, true,  false, true,  true ) : set_lkp_1_v4();   // note: inner is a don't care
+			(1, true,  false, false, false) : set_lkp_1_type_tos_v4();   // note: inner is a don't care
+			(1, true,  false, true,  false) : set_lkp_1_type_tos_v4();   // note: inner is a don't care
+			(1, true,  false, false, true ) : set_lkp_1_type_tos_v4();   // note: inner is a don't care
+			(1, true,  false, true,  true ) : set_lkp_1_type_tos_v4();   // note: inner is a don't care
 
-			(1, false, true,  false, false) : set_lkp_1_v6();   // note: inner is a don't care
-			(1, false, true,  true,  false) : set_lkp_1_v6();   // note: inner is a don't care
-			(1, false, true,  false, true ) : set_lkp_1_v6();   // note: inner is a don't care
-			(1, false, true,  true,  true ) : set_lkp_1_v6();   // note: inner is a don't care
+			(1, false, true,  false, false) : set_lkp_1_type_tos_v6();   // note: inner is a don't care
+			(1, false, true,  true,  false) : set_lkp_1_type_tos_v6();   // note: inner is a don't care
+			(1, false, true,  false, true ) : set_lkp_1_type_tos_v6();   // note: inner is a don't care
+			(1, false, true,  true,  true ) : set_lkp_1_type_tos_v6();   // note: inner is a don't care
 
-			(1, false, false, false, false) : set_lkp_1_none(); // note: inner is a don't care
-			(1, false, false, true,  false) : set_lkp_1_none(); // note: inner is a don't care
-			(1, false, false, false, true ) : set_lkp_1_none(); // note: inner is a don't care
-			(1, false, false, true,  true ) : set_lkp_1_none(); // note: inner is a don't care
+			(1, false, false, false, false) : set_lkp_1_type_tos_none(); // note: inner is a don't care
+			(1, false, false, true,  false) : set_lkp_1_type_tos_none(); // note: inner is a don't care
+			(1, false, false, false, true ) : set_lkp_1_type_tos_none(); // note: inner is a don't care
+			(1, false, false, true,  true ) : set_lkp_1_type_tos_none(); // note: inner is a don't care
 
 			(2, false, false, true,  false) : set_lkp_2_v4();   // note: outer is a don't care
 			(2, true,  false, true,  false) : set_lkp_2_v4();   // note: outer is a don't care
@@ -125,37 +126,37 @@ control EgressSetLookup(
 #else
   #ifdef EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
 
-	action set_lkp_1_v4() {
+	action set_lkp_1_type_tos_v4() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
-//		eg_md.lkp_1.ip_tos = hdr.outer.ipv4.tos;
+//		eg_md.lkp_1.ip_tos = hdr_1.ipv4.tos;
 	}
 
-	action set_lkp_1_v6() {
+	action set_lkp_1_type_tos_v6() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
-		eg_md.lkp_1.ip_tos = hdr.outer.ipv6.tos;
+		eg_md.lkp_1.ip_tos = hdr_1.ipv6.tos;
 	}
 
-	action set_lkp_1_none() {
+	action set_lkp_1_type_tos_none() {
 		eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
 	}
 
-	table set_lkp_1 {
+	table set_lkp_1_type_tos {
 		key = {
-			hdr.outer.ipv4.isValid() : exact;
-			hdr.outer.ipv6.isValid() : exact;
+			hdr_1.ipv4.isValid() : exact;
+			hdr_1.ipv6.isValid() : exact;
 		}
 
 		actions = {
 			NoAction;
-			set_lkp_1_v4;
-			set_lkp_1_v6;
-			set_lkp_1_none;
+			set_lkp_1_type_tos_v4;
+			set_lkp_1_type_tos_v6;
+			set_lkp_1_type_tos_none;
 		}
 
 		const entries = {
-			(true,  false) : set_lkp_1_v4();
-			(false, true ) : set_lkp_1_v6();
-			(false, false) : set_lkp_1_none();
+			(true,  false) : set_lkp_1_type_tos_v4();
+			(false, true ) : set_lkp_1_type_tos_v6();
+			(false, false) : set_lkp_1_type_tos_none();
 			(true,  true ) : NoAction(); // illegal
 		}
 		const default_action = NoAction;
@@ -165,26 +166,26 @@ control EgressSetLookup(
 #endif
 
 	// -----------------------------
-	// Table
+	// Table: Lkp to Lkp
 	// -----------------------------
 
-	action set_next_lyr_valid_1_value(bool value) {
+	action set_lkp_1_next_lyr_valid_value(bool value) {
 		eg_md.lkp_1.next_lyr_valid = value;
 	}
 
-	table set_next_lyr_valid_1 {
+	table set_lkp_1_next_lyr_valid {
 		key = {
 			eg_md.lkp_1.tunnel_type : exact;
 		}
-		actions = { set_next_lyr_valid_1_value; }
+		actions = { set_lkp_1_next_lyr_valid_value; }
 		const entries = {
-			(SWITCH_TUNNEL_TYPE_NONE)        : set_next_lyr_valid_1_value(false);
-			(SWITCH_TUNNEL_TYPE_VXLAN)       : set_next_lyr_valid_1_value(true); // filler entries to get rid of compiler bug when less than 4 constant entries
-			(SWITCH_TUNNEL_TYPE_IPINIP)      : set_next_lyr_valid_1_value(true); // filler entries to get rid of compiler bug when less than 4 constant entries
-			(SWITCH_TUNNEL_TYPE_GTPC)        : set_next_lyr_valid_1_value(false);
-			(SWITCH_TUNNEL_TYPE_UNSUPPORTED) : set_next_lyr_valid_1_value(false);
+			(SWITCH_TUNNEL_TYPE_NONE)        : set_lkp_1_next_lyr_valid_value(false);
+			(SWITCH_TUNNEL_TYPE_VXLAN)       : set_lkp_1_next_lyr_valid_value(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+			(SWITCH_TUNNEL_TYPE_IPINIP)      : set_lkp_1_next_lyr_valid_value(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+			(SWITCH_TUNNEL_TYPE_GTPC)        : set_lkp_1_next_lyr_valid_value(false);
+			(SWITCH_TUNNEL_TYPE_UNSUPPORTED) : set_lkp_1_next_lyr_valid_value(false);
 		}
-		const default_action = set_next_lyr_valid_1_value(true);
+		const default_action = set_lkp_1_next_lyr_valid_value(true);
 	}
 
 	// -----------------------------
@@ -192,6 +193,41 @@ control EgressSetLookup(
 	// -----------------------------
 
 	apply {
+
+#ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
+/*
+		if(eg_md.nsh_md.scope == 1) {
+			if     (hdr_1.ipv4.isValid())
+				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
+			else if(hdr_1.ipv6.isValid()) {
+				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
+				eg_md.lkp_1.ip_tos = hdr_1.ipv6.tos;
+			} else
+				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
+		} else {
+			if     (hdr_2.ipv4.isValid())
+				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
+			else if(hdr_2.ipv6.isValid()) {
+				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
+				eg_md.lkp_1.ip_tos = hdr_2.ipv6.tos;
+			} else
+				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
+		}
+*/
+		set_lkp_1_type_tos.apply();
+#else
+  #ifdef EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
+		if     (hdr_1.ipv4.isValid())
+			eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
+		else if(hdr_1.ipv6.isValid()) {
+			eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
+			eg_md.lkp_1.ip_tos = hdr_1.ipv6.tos;
+		} else
+			eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
+  #endif
+#endif
+
+		// -----------------------------------------------------------------------
 
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
 /*
@@ -203,85 +239,18 @@ control EgressSetLookup(
 			eg_md.lkp_1.next_lyr_valid = false;
 		}
 */
-		set_next_lyr_valid_1.apply();
+		set_lkp_1_next_lyr_valid.apply();
 #endif
 
 		// -----------------------------------------------------------------------
+
+		// This code does not work for detecting copy-to-cpu packets, due to bug in chip....
+		// (note: leaving in, because removing it causes design to take 21 stages?!?!)
 /*
-#ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
-		if(eg_md.nsh_md.scope == 1) {
-			if     (hdr.outer.ipv4.isValid())
-				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
-			else if(hdr.outer.ipv6.isValid()) {
-				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
-				eg_md.lkp_1.ip_tos = hdr.outer.ipv6.tos;
-			} else
-				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
-		} else {
-			if     (hdr.inner.ipv4.isValid())
-				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
-			else if(hdr.inner.ipv6.isValid()) {
-				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
-				eg_md.lkp_1.ip_tos = hdr.inner.ipv6.tos;
-			} else
-				eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
-		}
-#else
-  #ifdef EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
-		if     (hdr.outer.ipv4.isValid())
-			eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV4;
-		else if(hdr.outer.ipv6.isValid()) {
-			eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_IPV6;
-			eg_md.lkp_1.ip_tos = hdr.outer.ipv6.tos;
-		} else
-			eg_md.lkp_1.ip_type = SWITCH_IP_TYPE_NONE;
-  #endif
-#endif
-*/
-		// -----------------------------------------------------------------------
-/*
-#ifdef EGRESS_PARSER_POPULATES_LKP_SCOPED
-		if(eg_md.nsh_md.scope == 1) {
-			// ----- outer -----
-  #ifdef IPV6_ENABLE
-			if(hdr.outer.ipv6.isValid()) {
-			}
-  #endif // IPV6_ENABLE
-//			if(hdr.outer.ipv4.isValid()) {
-//				eg_md.lkp_1.ip_tos = hdr.outer.ipv4.tos;
-//			}
-		} else {
-			// ----- inner -----
-  #ifdef IPV6_ENABLE
-			if(hdr.inner.ipv6.isValid()) {
-			}
-  #endif // IPV6_ENABLE
-//			if(hdr.inner.ipv4.isValid()) {
-//				eg_md.lkp_1.ip_tos = hdr.inner.ipv4.tos;
-//			}
-		}
-#else // EGRESS_PARSER_POPULATES_LKP_SCOPED
-  #ifdef EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
-		// ----- outer -----
-#ifdef IPV6_ENABLE
-		if(hdr.outer.ipv6.isValid()) {
-		}
-#endif // IPV6_ENABLE
-//		if(hdr.outer.ipv4.isValid()) {
-//			eg_md.lkp_1.ip_tos = hdr.outer.ipv4.tos;
-//		}
-  #endif
-#endif // EGRESS_PARSER_POPULATES_LKP_SCOPED
-*/
-
-		set_lkp_1.apply();
-
-		// -----------------------------------------------------------------------
-
 		if((eg_intr_md.egress_rid == 0) && (eg_intr_md.egress_rid_first == 1)) {
 			eg_md.bypass = ~SWITCH_EGRESS_BYPASS_MTU;
 		}
-
+*/
 	}
 }
 

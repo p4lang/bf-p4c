@@ -226,7 +226,7 @@ const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFC           = 8w0x02;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_ACL        = 8w0x04;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SF_MCAST      = 8w0x08;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_SFF           = 8w0x10;
-const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE       = 8w0x20;
+//const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_REWRITE       = 8w0x20;
 const switch_ingress_bypass_t SWITCH_INGRESS_BYPASS_ALL           = 8w0xff;
 
 #define INGRESS_BYPASS(t) (ig_md.bypass & SWITCH_INGRESS_BYPASS_##t != 0)
@@ -293,7 +293,8 @@ struct switch_multicast_metadata_t {
 // Mirroring ------------------------------------------------------------------
 
 typedef MirrorId_t switch_mirror_session_t; // Defined in tna.p4
-const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU = 250;
+const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU_INGRESS = 251;
+const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU_EGRESS  = 250;
 
 // Using same mirror type for both Ingress/Egress to simplify the parser.
 typedef bit<8> switch_mirror_type_t;
@@ -633,6 +634,7 @@ struct switch_egress_checks_t {
 
 struct switch_lookup_fields_t {
 	// l2
+	bool              l2_valid;
     mac_addr_t        mac_src_addr;
     mac_addr_t        mac_dst_addr;
     bit<16>           mac_type;
@@ -649,6 +651,8 @@ struct switch_lookup_fields_t {
     bit<128>          ip_dst_addr;
 	bit<32>           ip_src_addr_v4;
 	bit<32>           ip_dst_addr_v4;
+//  @pa_alias("ingress" , "ig_md.lkp_0.ip_src_addr[31:0]", "ig_md.lkp_0.ip_src_addr_v4" )
+//  @pa_alias("ingress" , "ig_md.lkp_0.ip_dst_addr[31:0]", "ig_md.lkp_0.ip_dst_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_1.ip_src_addr[31:0]", "ig_md.lkp_1.ip_src_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_1.ip_dst_addr[31:0]", "ig_md.lkp_1.ip_dst_addr_v4" )
 //#ifdef INGRESS_PARSER_POPULATES_LKP_2

@@ -11,6 +11,7 @@ control npb_ing_sfc_top (
 	inout switch_tunnel_metadata_reduced_t          tunnel_1,
 	inout switch_header_inner_t                     hdr_2,
 	inout switch_tunnel_metadata_reduced_t          tunnel_2,
+	inout switch_header_inner_inner_t               hdr_3,
 	inout udf_h                                     hdr_udf,
 
 	inout switch_ingress_metadata_t                 ig_md,
@@ -41,6 +42,13 @@ control npb_ing_sfc_top (
 #endif
 //	IngressTunnelInner(NPB_ING_SFC_TUNNEL_INNER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
 	IngressTunnelOuter(NPB_ING_SFC_TUNNEL_INNER_EXM_TABLE_DEPTH, NPB_ING_SFC_TUNNEL_INNER_TCAM_TABLE_DEPTH) tunnel_inner;
+
+#ifdef INGRESS_MAU_NO_LKP_1
+	Scoper_DataMux_Hdr1ToLkp() Scoper_DataMux_Hdr1ToLkp_inst;
+#else
+	Scoper_DataMux_LkpToLkp() Scoper_DataMux_LkpToLkp_inst;
+#endif
+	Scoper_DataMux_Hdr2ToLkp() Scoper_DataMux_Hdr2ToLkp_inst;
 
 	// =========================================================================
 	// W/  NSH... Table #0a:
@@ -212,6 +220,31 @@ control npb_ing_sfc_top (
 //			ig_md.nsh_md.start_of_path = false;
 //			ig_md.nsh_md.sfc_enable    = false;
 
+			// ---- advance data to match incoming scope value ----
+/*
+#ifdef INGRESS_MAU_NO_LKP_1
+			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.lkp_0);
+#else
+			Scoper_DataMux_LkpToLkp_inst.apply(ig_md.lkp_1, ig_md.lkp_0);
+#endif
+
+			Scoper_DataOnly.apply(
+				ig_md.lkp_0,
+//				ig_md.lkp_1,
+				ig_md.lkp_2,
+    
+				hdr_1,
+				hdr_2,
+				hdr_3,
+
+				ig_md.nsh_md.scope,
+				ig_md.lkp_1
+			);
+*/
+			if(ig_md.nsh_md.scope == 2) {
+				scope_flag = true;
+			}
+
 			// ----- table -----
   #ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
 			if(ig_md.nsh_md.ver == 2) {
@@ -280,19 +313,30 @@ control npb_ing_sfc_top (
 			// -----------------------------------------------------------------
 
 			if(hdr_0.ethernet.isValid()) {
+//			if(ig_md.flags.transport_valid == true) {
 
 				// ---------------------------
 				// ----- Normally Tapped -----
 				// ---------------------------
 
 #ifdef TRANSPORT_ENABLE
-				tunnel_transport.apply(ig_md, hdr_0, ig_md.lkp_0, tunnel_0, ig_intr_md_for_dprsr);
+				tunnel_transport.apply(
+					ig_md,
+					hdr_0,
+					ig_md.lkp_0,
+					tunnel_0,
+					ig_intr_md_for_dprsr
+				);
 
   #ifdef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 				// -----------------------
 				// Network SAP
 				// -----------------------
-				tunnel_network.apply(ig_md, ig_md.lkp_0, hdr_0);
+				tunnel_network.apply(
+					ig_md,
+					ig_md.lkp_0,
+					hdr_0
+				);
   #endif
 #endif // TRANSPORT_ENABLE
 			} else {
@@ -309,9 +353,8 @@ control npb_ing_sfc_top (
 					ig_md,
 					ig_md.lkp_1,
 
-					ig_md.lkp_0,
-//					ig_md.lkp_1,
-					ig_md.lkp_2
+					scope_flag,
+					term_flag
 				);
 #endif
 			}
@@ -319,7 +362,13 @@ control npb_ing_sfc_top (
 			// always terminate transport headers
 			tunnel_0.terminate = true;
 			ig_md.nsh_md.scope = 1;
-
+/*
+#ifdef INGRESS_MAU_NO_LKP_1
+			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_0);
+#else
+			Scoper_DataMux_LkpToLkp_inst.apply(ig_md.lkp_1, ig_md.lkp_0);
+#endif
+*/
 			// -----------------------
 			// Inner SAP
 			// -----------------------
@@ -327,32 +376,47 @@ control npb_ing_sfc_top (
 				ig_md,
 				ig_md.lkp_1,
 
+				scope_flag,
+				term_flag
+			);
+/*
+			Scoper_ScopeAndTermAndData.apply(
 				ig_md.lkp_0,
 //				ig_md.lkp_1,
 				ig_md.lkp_2,
 
+				hdr_1,
+				hdr_2,
+				hdr_3,
+
+				ig_md.lkp_1,
+
+				term_flag,
 				scope_flag,
-				term_flag
+				ig_md.nsh_md.scope,
+
+				ig_md.tunnel_0.terminate,
+				ig_md.tunnel_1.terminate,
+				ig_md.tunnel_2.terminate
+			);
+*/
+			Scoper_ScopeAndTermOnly.apply(
+				ig_md.lkp_1,
+
+				term_flag,
+				scope_flag,
+				ig_md.nsh_md.scope,
+
+				ig_md.tunnel_0.terminate,
+				ig_md.tunnel_1.terminate,
+				ig_md.tunnel_2.terminate
 			);
 #ifdef SFC_NSH_ENABLE
 		}
 #endif // SFC_NSH_ENABLE
 
-        Scoper_ScopeAndTermAndData.apply(
-            ig_md.lkp_0,
-//          ig_md.lkp_1,
-            ig_md.lkp_2,
-
-            ig_md.lkp_1,
-
-            term_flag,
-            scope_flag,
-            ig_md.nsh_md.scope,
-
-            ig_md.tunnel_0.terminate,
-            ig_md.tunnel_1.terminate,
-            ig_md.tunnel_2.terminate
-        );
-
+		if(scope_flag && ig_md.lkp_1.next_lyr_valid) {
+			Scoper_DataMux_Hdr2ToLkp_inst.apply(hdr_2, hdr_3, ig_md.lkp_2, ig_md.lkp_1);
+		}
 	}
 }

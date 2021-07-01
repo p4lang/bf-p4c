@@ -39,6 +39,7 @@
 
 control DMAC(
 	in mac_addr_t dst_addr,
+	in switch_lookup_fields_t lkp,
 	inout switch_ingress_metadata_t ig_md,
 	inout switch_header_t hdr
 ) (
@@ -114,10 +115,10 @@ control DMAC(
 //			ig_md.bd : exact;
 //			dst_addr : exact;
 
-			ig_md.lkp_1.mac_dst_addr : exact @name("mac_dst_addr");
-			ig_md.lkp_1.vid          : exact @name("vid");
-			ig_md.lkp_1.mac_type     : exact @name("mac_type");
-			ig_md.port_lag_index     : exact @name("port_lag_index");
+			lkp.mac_dst_addr     : ternary @name("mac_dst_addr");
+			lkp.vid              : ternary @name("vid");
+			lkp.mac_type         : ternary @name("mac_type");
+			ig_md.port_lag_index : ternary @name("port_lag_index");
 		}
 
 		actions = {

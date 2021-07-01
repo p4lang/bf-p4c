@@ -85,14 +85,14 @@ class test(BfRuntimeTest):
 		si                      = 5 # Arbitrary value (ttl)
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
-                ta                      = 8 # Arbitrary value
+		ta                      = 8 # Arbitrary value
 
 		sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		nexthop_ptr             = 0 # Arbitrary value
-		bd                      = 1 # Arbitrary value
-		ig_lag_ptr              = 2 # Arbitrary value
-		eg_lag_ptr              = 3 # Arbitrary value
+		nexthop_ptr             = 1 # Arbitrary value
+		bd                      = 2 # Arbitrary value
+		ig_lag_ptr              = 3 # Arbitrary value
+		eg_lag_ptr              = 4 # Arbitrary value
 
 		# -----------------------------------------------------------
 		# Insert Table Entries

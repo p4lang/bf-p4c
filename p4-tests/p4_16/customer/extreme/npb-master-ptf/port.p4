@@ -82,7 +82,7 @@ control IngressPortMapping(
 #ifdef MIRROR_INGRESS_PORT_ENABLE
 	PortMirror(port_table_size) port_mirror;
 #endif
-	ActionProfile(bd_table_size) bd_action_profile;
+//	ActionProfile(bd_table_size) bd_action_profile;
 
 	// ----------------------------------------------
 	// Table: Port Mapping
@@ -188,7 +188,7 @@ control IngressPortMapping(
 	// ----------------------------------------------
 	// Table: BD Mapping
 	// ----------------------------------------------
-
+/*
 	action port_vlan_miss() {
 		//ig_md.flags.port_vlan_miss = true;
 	}
@@ -263,7 +263,7 @@ control IngressPortMapping(
 		implementation = bd_action_profile;
 		size = bd_table_size;
 	}
-
+*/
 	// ----------------------------------------------
 	// Apply
 	// ----------------------------------------------
@@ -322,6 +322,7 @@ control IngressPortMapping(
 // ----------------------------------------------------------------------------
 
 control LAG(
+	in switch_lookup_fields_t lkp,
 	inout switch_ingress_metadata_t ig_md,
 	in bit<(switch_lag_hash_width/2)> hash,
 	out switch_port_t egress_port
@@ -410,14 +411,14 @@ control LAG(
 	// ----------------------------------------------
 
 	apply {
-        lag_hash = selector_hash.get({ig_md.lkp_1.mac_src_addr,
-                                      ig_md.lkp_1.mac_dst_addr,
-                                      ig_md.lkp_1.mac_type,
-                                      ig_md.lkp_1.ip_src_addr,
-                                      ig_md.lkp_1.ip_dst_addr,
-                                      ig_md.lkp_1.ip_proto,
-                                      ig_md.lkp_1.l4_dst_port,
-                                      ig_md.lkp_1.l4_src_port});
+        lag_hash = selector_hash.get({lkp.mac_src_addr,
+                                      lkp.mac_dst_addr,
+                                      lkp.mac_type,
+                                      lkp.ip_src_addr,
+                                      lkp.ip_dst_addr,
+                                      lkp.ip_proto,
+                                      lkp.l4_dst_port,
+                                      lkp.l4_src_port});
 		lag.apply();
 
 #ifdef LAG_TABLE_INDIRECT_COUNTERS

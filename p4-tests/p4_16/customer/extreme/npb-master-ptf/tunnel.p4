@@ -295,13 +295,8 @@ control IngressTunnel(
 			ig_md.nsh_md.sap        : ternary @name("sap");
   #endif
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-    #ifdef INGRESS_PARSER_POPULATES_LKP_0
 			lkp_0.ip_src_addr_v4    : ternary @name("src_addr");
-    #else
-			hdr_0.ipv4.src_addr     : ternary @name("src_addr");
-    #endif
   #endif
-    #ifdef INGRESS_PARSER_POPULATES_LKP_0
 			// l3
 			lkp_0.ip_type           : ternary @name("type");
 			lkp_0.ip_dst_addr_v4    : ternary @name("dst_addr");
@@ -310,20 +305,8 @@ control IngressTunnel(
 			// l4
 			lkp_0.l4_src_port       : ternary @name("src_port");
 			lkp_0.l4_dst_port       : ternary @name("dst_port");
-    #else
-			// l3
-			lkp_0.ip_type           : ternary @name("type");
-			hdr_0.ipv4.dst_addr     : ternary @name("dst_addr");
-			hdr_0.ipv4.protocol     : ternary @name("proto");
-#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			// l4
-			hdr_0.udp.src_port      : ternary @name("src_port");
-			hdr_0.udp.dst_port      : ternary @name("dst_port");
-#endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-    #endif
 #endif
 			// tunnel
-//			tunnel_0.type           : ternary @name("tunnel_type");
 			lkp_0.tunnel_type       : ternary @name("tunnel_type");
   #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			lkp_0.tunnel_id         : ternary @name("tunnel_id");
@@ -415,13 +398,8 @@ control IngressTunnel(
 			ig_md.nsh_md.sap        : ternary @name("sap");
   #endif
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-    #ifdef INGRESS_PARSER_POPULATES_LKP_0
 			lkp_0.ip_src_addr       : ternary @name("src_addr");
-    #else
-			hdr_0.ipv6.src_addr     : ternary @name("src_addr");
-    #endif
   #endif
-    #ifdef INGRESS_PARSER_POPULATES_LKP_0
 			// l3
 			lkp_0.ip_type           : ternary @name("ip_type");
 			lkp_0.ip_dst_addr       : ternary @name("dst_addr");
@@ -430,19 +408,8 @@ control IngressTunnel(
 			// l4
 			lkp_0.l4_src_port       : ternary @name("src_port");
 			lkp_0.l4_dst_port       : ternary @name("dst_port");
-    #else
-			// l3
-			lkp_0.ip_type           : ternary @name("ip_type");
-			hdr_0.ipv6.dst_addr     : ternary @name("dst_addr");
-			hdr_0.ipv6.next_hdr     : ternary @name("proto");
-
-			// l4
-			hdr_0.udp.src_port      : ternary @name("src_port");
-			hdr_0.udp.dst_port      : ternary @name("dst_port");
-    #endif
 #endif
 			// tunnel
-//			tunnel_0.type           : ternary @name("tunnel_type");
 			lkp_0.tunnel_type       : ternary @name("tunnel_type");
   #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			lkp_0.tunnel_id         : ternary @name("tunnel_id");
@@ -641,10 +608,6 @@ control IngressTunnelOuter(
 	inout switch_ingress_metadata_t ig_md,
 	inout switch_lookup_fields_t    lkp,
 
-	in    switch_lookup_fields_t    lkp_0,
-//	in    switch_lookup_fields_t    lkp_1,
-	in    switch_lookup_fields_t    lkp_2,
-
 	inout bool scope_,
 	inout bool terminate_
 ) (
@@ -837,9 +800,9 @@ control IngressTunnelOuter(
 */
 /*
 		Scoper_ScopeAndTermAndData.apply(
-			lkp_0,
-//			lkp_1,
-			lkp_2,
+			ig_md.lkp_0,
+//			ig_md.lkp_1,
+			ig_md.lkp_2,
 
 			lkp,
 
@@ -860,11 +823,7 @@ control IngressTunnelOuter(
 
 control IngressTunnelInner(
 	inout switch_ingress_metadata_t ig_md,
-	inout switch_lookup_fields_t    lkp,
-
-	in    switch_lookup_fields_t    lkp_0,
-//	in    switch_lookup_fields_t    lkp_1,
-	in    switch_lookup_fields_t    lkp_2
+	inout switch_lookup_fields_t    lkp
 ) (
 	switch_uint32_t sap_exm_table_size=32w1024,
 	switch_uint32_t sap_tcam_table_size=32w1024
@@ -1058,10 +1017,11 @@ control IngressTunnelInner(
 			}
 		}
 */
+/*
 		Scoper_ScopeAndTermAndData.apply(
-			lkp_0,
-//			lkp_1,
-			lkp_2,
+			ig_md.lkp_0,
+//			ig_md.lkp_1,
+			ig_md.lkp_2,
 
 			lkp,
 
@@ -1072,6 +1032,7 @@ control IngressTunnelInner(
 			ig_md.tunnel_1.terminate,
 			ig_md.tunnel_2.terminate
 		);
+*/
 	}
 }
 
@@ -2345,7 +2306,7 @@ control TunnelEncap(
   #endif
 #endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
 #ifdef MPLS_L2VPN_ENABLE
-		hdr_1.mpls_pw_cw.setInvaid();
+		hdr_1.mpls_pw_cw.setInvalid();
 #endif // MPLS_L2VPN_ENABLE
 	}
 

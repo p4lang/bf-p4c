@@ -42,6 +42,7 @@ def npb_simple_1lyr_udp(
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
 	vlan_en        = False,
+	vlan2_en       = False,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -68,6 +69,7 @@ def npb_simple_1lyr_udp(
 
 	#outer expected variables
 	vlan_en_exp    = None,
+	vlan2_en_exp   = None,#vlan2_en_exp should never be set if vlan_en_exp is not set.
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -75,6 +77,7 @@ def npb_simple_1lyr_udp(
 		# -----------------
 
 		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if vlan_en         is False: vlan2_en      = False
 		if spi_exp         is None: spi_exp         = spi
 		if si_exp          is None: si_exp          = si
 		if ta_exp          is None: ta_exp          = ta
@@ -83,6 +86,8 @@ def npb_simple_1lyr_udp(
 		if vpn_exp         is None: vpn_exp         = vpn
 
 		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan2_en_exp     = False
+		if vlan2_en_exp    is None: vlan2_en_exp     = False
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -105,7 +110,10 @@ def npb_simple_1lyr_udp(
 		if((vlan_en == True) or (e_en == True) or (vn_en == True)):
 			# use my version, that adds support for e and vn tags
 #			src_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en)
-			src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en, udp_sport=udp_sport, udp_dport=udp_dport,)
+			if(vlan2_en == True):
+				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen+4, dl_vlan_enable=2, dot1br=e_en, vn_tag=vn_en, udp_sport=udp_sport, udp_dport=udp_dport,)
+			else:
+				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en, udp_sport=udp_sport, udp_dport=udp_dport,)
 		else:
 			# user barefoot's version
 #			src_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen)
@@ -116,7 +124,10 @@ def npb_simple_1lyr_udp(
 		if((vlan_en_exp == True) or (e_en_exp == True) or (vn_en_exp == True)):
 			# use my version, that adds support for e and vn tags
 #			exp_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp)
-			exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp, udp_sport=udp_sport, udp_dport=udp_dport,)
+			if(vlan2_en_exp == True):
+				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp+4, dl_vlan_enable=2, dot1br=e_en_exp, vn_tag=vn_en_exp, udp_sport=udp_sport, udp_dport=udp_dport,)
+			else:
+				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp, udp_sport=udp_sport, udp_dport=udp_dport,)
 		else:
 			# user barefoot's version
 #			exp_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp)
@@ -933,10 +944,10 @@ def npb_simple_2lyr_gre_ip(
 
 		# -----------------
 
-		print "---------- Peter Debug ----------"
-		print(testutils.format_packet(src_pkt))
-		print(testutils.format_packet(exp_pkt))
-		print "---------- Debug ----------"
+#		print "---------- Debug ----------"
+#		print(testutils.format_packet(src_pkt))
+#		print(testutils.format_packet(exp_pkt))
+#		print "---------- Debug ----------"
 
 		return src_pkt, exp_pkt
 

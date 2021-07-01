@@ -22,6 +22,7 @@
 
 // List of all supported #define directives.
 
+#define PA_AUTO_INIT_METADATA
 #define PA_MONOGRESS
 #undef  PA_NO_INIT
 
@@ -70,7 +71,7 @@
 #undef  INGRESS_PARSER_POPULATES_LKP_0
 #define INGRESS_PARSER_POPULATES_LKP_1
 #undef  INGRESS_PARSER_POPULATES_LKP_2
-#undef  INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
+#define INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
 #define EGRESS_PARSER_POPULATES_LKP_WITH_OUTER
 #define EGRESS_PARSER_POPULATES_LKP_SCOPED
 #undef  PARSER_ERROR_HANDLING_ENABLE
@@ -116,7 +117,7 @@
 #define SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE // only valid if TRANSPORT_ENABLE is defined
 #undef  SFC_TRANSPORT_NETSAP_TABLE_ENABLE        // only valid if TRANSPORT_ENABLE is defined
 #undef  SFC_OUTER_TUNNEL_TABLE_ENABLE
-#define SFC_TIMESTAMP_ENABLE                     // undef for sims, define for real chip
+#undef  SFC_TIMESTAMP_ENABLE                     // undef for sims, define for real chip
 
 // ----- npb: sff -----
 #define SFF_SCHD_SIMPLE                       // define for selecting simple tables, rather than action_selectors/action_profiles tables.
@@ -135,6 +136,8 @@
 #undef  SF_0_ACL_INT_CTRL_FLAGS_ENABLE
 #define SF_0_ALLOW_SCOPE_CHANGES
 #undef  SF_0_DEDUP_ENABLE
+#define SF_0_INDIRECT_COUNTERS
+#undef  SF_0_QID_ENABLE
 
 // ----- npb: sf #2  -----
 #define SF_2_L2_VLAN_ID_ENABLE
@@ -150,6 +153,7 @@
 #define SF_2_EDIT_BD_TO_VID_TABLE_ENABLE
 #undef  SF_2_METER_ENABLE
 #undef  SF_2_DEDUP_ENABLE
+#define SF_2_INDIRECT_COUNTERS
 
 // ----- tofino 1 fitting -----
 #define BRIDGING_ENABLE // define for simultaneous switch and npb functionality (undefine for npb only)
@@ -168,16 +172,18 @@
 #define BUG_00593238_WORKAROUND // egress truncation length corruption
 
 // ----- other wanted / needed features that don't fit -----
-#define CPU_TX_BYPASS_ENABLE                  // this feature currently doesn't fit
-#define CPU_IG_BYPASS_ENABLE                  // this feature currently doesn't fit
-#define MULTICAST_INGRESS_RID_ENABLE          // this feature currently doesn't fit
-#define LAG_HASH_MASKING_ENABLE               // this feature currently doesn't fit
-#define LAG_HASH_IN_NSH_HDR_ENABLE            // this feature currently doesn't fit
+#define CPU_TX_BYPASS_ENABLE
+#define CPU_IG_BYPASS_ENABLE
+#define MULTICAST_INGRESS_RID_ENABLE
+#define LAG_HASH_MASKING_ENABLE
+#define LAG_HASH_IN_NSH_HDR_ENABLE
 #define FIELD_WIDTHS_REDUCED                  // to help w/ fitting
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
-#undef  MIRROR_METER_ENABLE                   // this feature currently doesn't fit
-#undef  LAG_TABLE_INDIRECT_COUNTERS           // this feature currently doesn't fit
-#define CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
-#define INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
-#define EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit
+#undef  MIRROR_METER_ENABLE
+#undef  LAG_TABLE_INDIRECT_COUNTERS
+#define CPU_HDR_CONTAINS_EG_PORT
+#define INGRESS_NSH_HDR_VER_1_SUPPORT
+#define EGRESS_NSH_HDR_VER_1_SUPPORT
+#define INGRESS_MAU_NO_LKP_1                  // only valid if INGRESS_PARSER_POPULATES_LKP_1 not defined
+#define INGRESS_MAU_NO_LKP_2                  // only valid if INGRESS_PARSER_POPULATES_LKP_2 not defined

@@ -91,15 +91,15 @@ class test(BfRuntimeTest):
 
 		sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		nexthop_ptr             = 0 # Arbitrary value
+		nexthop_ptr             = 1 # Arbitrary value
 		vid                     = 0 # Arbitrary value
-		bd                      = 1 # Arbitrary value
-		ig_lag_ptr              = 2 # Arbitrary value
-		eg_lag_ptr              = 3 # Arbitrary value
-		tunnel_encap_ptr        = 4 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 5 # Arbitrary value
-		tunnel_encap_bd         = 6 # Arbitrary value
-		tunnel_encap_smac_ptr   = 7 # Arbitrary value
+		bd                      = 2 # Arbitrary value
+		ig_lag_ptr              = 3 # Arbitrary value
+		eg_lag_ptr              = 4 # Arbitrary value
+		tunnel_encap_ptr        = 5 # Arbitrary value
+		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+		tunnel_encap_bd         = 7 # Arbitrary value
+		tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
 		mgid                    = 8 # Arbitrary value
 		node                    = 7 # Arbitrary value
@@ -117,9 +117,13 @@ class test(BfRuntimeTest):
 			#egress
 		)
 
-		npb_nsh_bridge_cpu_add(self, self.target,
+		# mirrored, to cpu port
+		npb_egr_port_cpu_add      (self, self.target, [eg_port2], eg_lag_ptr)
+
+		# from cpu port, to normal port
+		npb_nsh_bridge_add(self, self.target,
 			#ingress
-			[ig_port2], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac2, eg_lag_ptr+1, 0+1, 0+1, [eg_port2]
+			[ig_port2], ig_lag_ptr, rmac, nexthop_ptr, bd, 0x0800, 0, vid, dmac2, eg_lag_ptr+1, 0+1, 0+1, [eg_port], False
 			#egress
 		)
 
@@ -137,7 +141,8 @@ class test(BfRuntimeTest):
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, flow_class=flow_class_acl, redirect_to_cpu=1, cpu_reason_code=5)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, flow_class=flow_class_acl, redirect_to_cpu=1, cpu_reason_code=5)
 
-		npb_pre_port_add(self, self.target, eg_port2)
+#		npb_pre_port_add(self, self.target, eg_port2)
+		npb_pre_mirror_add(self, self.target, 251, "INGRESS", eg_port2) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU_INGRESS = 251
 
 		# -----------------
 		# Ingress SFP Sel
@@ -249,9 +254,12 @@ class test(BfRuntimeTest):
 			#egress
 		)
 
+		# mirrored, to cpu port
+		npb_egr_port_del      (self, self.target, [eg_port2])
+
 		npb_nsh_bridge_del(self, self.target,
 			#ingress
-			[ig_port2], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac2, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port2]
+			[ig_port2], ig_lag_ptr, rmac, nexthop_ptr, 0x0800, 0, vid, dmac2, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port]
 			#egress
 		)
 
@@ -269,7 +277,8 @@ class test(BfRuntimeTest):
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf)
 
-		npb_pre_port_del(self, self.target, eg_port2)
+#		npb_pre_port_del(self, self.target, eg_port2)
+		npb_pre_mirror_del(self, self.target, 251) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU_INGRESS = 251
 
 		# -----------------
 		# Ingress SFP Sel

@@ -90,14 +90,14 @@ class test(BfRuntimeTest):
 
 		sf_bitmask              = 2 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		nexthop_ptr             = 0 # Arbitrary value
-		bd                      = 1 # Arbitrary value
-		ig_lag_ptr              = 2 # Arbitrary value
-		eg_lag_ptr              = 3 # Arbitrary value
-		tunnel_encap_ptr        = 4 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 5 # Arbitrary value
-		tunnel_encap_bd         = 6 # Arbitrary value
-		tunnel_encap_smac_ptr   = 7 # Arbitrary value
+		nexthop_ptr             = 1 # Arbitrary value
+		bd                      = 2 # Arbitrary value
+		ig_lag_ptr              = 3 # Arbitrary value
+		eg_lag_ptr              = 4 # Arbitrary value
+		tunnel_encap_ptr        = 5 # Arbitrary value
+		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+		tunnel_encap_bd         = 7 # Arbitrary value
+		tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
 		mgid                    = 8 # Arbitrary value
 		node                    = 7 # Arbitrary value
@@ -117,7 +117,7 @@ class test(BfRuntimeTest):
 
 		npb_pre_node_add(self, self.target, node, rid, [], [eg_port1, eg_port2]) # lower
 		npb_pre_mgid_add(self, self.target, mgid, [node])                        # upper
-		npb_mult_rid_add(self, self.target, rid, 0)
+		npb_mult_rid_identical_add(self, self.target, rid, 0)
 
 		# -----------------
 
@@ -162,4 +162,4 @@ class test(BfRuntimeTest):
 
 		npb_pre_mgid_del(self, self.target, mgid) # upper
 		npb_pre_node_del(self, self.target, node) # lower
-		npb_mult_rid_del(self, self.target, rid)
+		npb_mult_rid_identical_del(self, self.target, rid)

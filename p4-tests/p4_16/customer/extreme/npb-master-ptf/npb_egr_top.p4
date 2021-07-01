@@ -116,6 +116,7 @@ control npb_egr_top (
 
 		if (!EGRESS_BYPASS(SF_ACL)) {
 			npb_egr_sf_proxy_top.apply (
+				eg_md.lkp_1,
 				hdr_0,
 				hdr_1,
 				eg_md,

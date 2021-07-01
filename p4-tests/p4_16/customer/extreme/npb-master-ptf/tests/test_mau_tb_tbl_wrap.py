@@ -659,11 +659,11 @@ def npb_tunnel_dmac_add(self, target, ig_port_lag_ptr, ethertype, vid_isValid, v
 			table.entry_add(
 				target,
 				[table.make_key(
-#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid),
-					[gc.KeyTuple('vid',                                   vid),
-					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr)),
-					 gc.KeyTuple('port_lag_index',                        ig_port_lag_ptr),
-					 gc.KeyTuple('mac_type',                              ethertype)]
+#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid, 0x1),
+					[gc.KeyTuple('vid',                                   vid, 0xfff),
+					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr), 0xffffffffffff),
+					 gc.KeyTuple('port_lag_index',                        ig_port_lag_ptr, 0x3ff),
+					 gc.KeyTuple('mac_type',                              ethertype, 0xffff)]
 				)],
 				[table.make_data(
 					[gc.DataTuple('port_lag_index',                       eg_port_lag_ptr)],
@@ -678,11 +678,11 @@ def npb_tunnel_dmac_del(self, target, ig_port_lag_ptr, ethertype, vid_isValid, v
 			table.entry_del(
 				target,
 				[table.make_key(
-#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid),
-					[gc.KeyTuple('vid',                                   vid),
-					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr)),
-					 gc.KeyTuple('port_lag_index',                        ig_port_lag_ptr),
-					 gc.KeyTuple('mac_type',                              ethertype)]
+#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid, 0x1),
+					[gc.KeyTuple('vid',                                   vid, 0xfff),
+					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr), 0xffffffffffff),
+					 gc.KeyTuple('port_lag_index',                        ig_port_lag_ptr, 0x3ff),
+					 gc.KeyTuple('mac_type',                              ethertype, 0xffff)]
 				)]
 			)
 
@@ -1504,7 +1504,6 @@ def npb_npb_sf0_policy_l7_del(self, target,
 def npb_npb_sf0_policy_sfp_sel_hash_add(self, target, vpn, flowclass):
 	try:
 			# insert both copies of the table:
-
 			table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.ing_flow_class')
 			table.entry_add(
 				target,
@@ -1819,6 +1818,30 @@ def npb_npb_sf1_action_sel_add(self, target, spi, si, bitmask, mgid):
 def npb_npb_sf1_action_sel_del(self, target, spi, si):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel')
+
+		# read counter
+		resp = table.entry_get(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('spi',                               spi),
+				 gc.KeyTuple('si',                                si)],
+			)],
+			{"from_hw": True},
+			table.make_data(
+				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+				'SwitchIngress.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel_hit',
+				get=True
+			)
+		)
+
+		data_dict = next(resp)[0].to_dict()
+		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+
+		print "Dumping npb_npb_sf1_multicast (ingress) counters: pkts", recv_pkts, "bytes", recv_bytes
+
+		# delete entry
 		table.entry_del(
 			target,
 			[table.make_key(
@@ -1858,7 +1881,7 @@ def npb_nexthop_add(self, target, nexthop_ptr, bd, port_lag_ptr):
 				)],
 				[table.make_data(
 					[],
-					'NoAction'
+					'no_action'
 				)]
 			)
 
@@ -1968,7 +1991,6 @@ def npb_tunnel_encap_nexthop_del(self, target, tunnel_ptr):
 def npb_lag_single_add(self, target, port_lag_ptr, port_lag_member_ptr, port):
 
 		try:
-
 			# bottom
 #			table = self.bfrt_info.table_get('SwitchIngress.lag.lag_selector')
 			table = self.bfrt_info.table_get('SwitchIngress.lag.lag_action_profile')
@@ -2368,7 +2390,7 @@ def npb_egr_port_mirror_del(self, target, port):
 
 ########################################
 
-def npb_mult_rid_add(self, target, rid, bd):
+def npb_mult_rid_identical_add(self, target, rid, bd):
 
 		table = self.bfrt_info.table_get('SwitchEgress.multicast_replication.rid')
 		table.entry_add(
@@ -2382,9 +2404,87 @@ def npb_mult_rid_add(self, target, rid, bd):
 			)]
 		)
 
-def npb_mult_rid_del(self, target, rid):
+def npb_mult_rid_identical_del(self, target, rid):
 
 		table = self.bfrt_info.table_get('SwitchEgress.multicast_replication.rid')
+		table = self.bfrt_info.table_get('SwitchEgress.multicast_replication.rid')
+
+		# read counter
+		resp = table.entry_get(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('replication_id',                   rid)],
+			)],
+			{"from_hw": True},
+			table.make_data(
+				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+				'SwitchEgress.multicast_replication.rid_hit_identical_copies',
+				get=True
+			)
+		)
+
+		data_dict = next(resp)[0].to_dict()
+		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+
+		print "Dumping npb_npb_sf1_multicast (egress) counters: pkts", recv_pkts, "bytes", recv_bytes
+
+		table.entry_del(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('replication_id',                   rid)],
+			)],
+		)
+
+########################################
+
+def npb_mult_rid_unique_add(self, target, rid, bd, spi, si, nexthop_index, tunnel_index, outer_nexthop_index):
+
+		table = self.bfrt_info.table_get('SwitchEgress.multicast_replication.rid')
+		table.entry_add(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('replication_id',                   rid)],
+			)],
+			[table.make_data(
+				[gc.DataTuple('bd',                              bd),
+				 gc.DataTuple('spi',                             spi),
+				 gc.DataTuple('si',                              si),
+				 gc.DataTuple('nexthop_index',                   nexthop_index),
+				 gc.DataTuple('tunnel_index',                    tunnel_index),
+				 gc.DataTuple('outer_nexthop_index',             outer_nexthop_index)],
+				'SwitchEgress.multicast_replication.rid_hit_unique_copies',
+			)]
+		)
+
+def npb_mult_rid_unique_del(self, target, rid):
+
+		table = self.bfrt_info.table_get('SwitchEgress.multicast_replication.rid')
+		table = self.bfrt_info.table_get('SwitchEgress.multicast_replication.rid')
+
+		# read counter
+		resp = table.entry_get(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('replication_id',                   rid)],
+			)],
+			{"from_hw": True},
+			table.make_data(
+				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+				'SwitchEgress.multicast_replication.rid_hit_unique_copies',
+				get=True
+			)
+		)
+
+		data_dict = next(resp)[0].to_dict()
+		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+
+		print "Dumping npb_npb_sf1_multicast (egress) counters: pkts", recv_pkts, "bytes", recv_bytes
+
+		# delete entry
 		table.entry_del(
 			target,
 			[table.make_key(
@@ -3434,7 +3534,8 @@ def npb_nsh_chain_start_end_del(self, target,
 	else:
 		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
 
-	npb_egr_port_del          (self, target, eg_port)
+	if(eg_port_lag_ptr < 99) :
+		npb_egr_port_del          (self, target, eg_port)
 	if(sf_bitmask&4):
 		npb_npb_sf2_action_sel_del(self, target, spi, si-(popcount(sf_bitmask&3)))
 
@@ -3517,6 +3618,7 @@ def npb_nsh_chain_start_add(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&1)), 0, mgid)
 	npb_nexthop_tunnel_mac_add(self, target, nexthop_ptr, ig_bd, eg_port_lag_ptr, tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac)
+
 	if(len(eg_port) == 1):
 		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
 	else:
@@ -3675,7 +3777,7 @@ def npb_nsh_chain_end_del(self, target,
 def npb_nsh_bridge_add(self, target,
 	#ingress
 #	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
-	ig_port, ig_port_lag_ptr, rmac, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, bd, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu
 	#egress
 ):
 	cpu_port_add              (self, target)
@@ -3683,35 +3785,20 @@ def npb_nsh_bridge_add(self, target,
 #	npb_port_vlan_to_bd_add   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr, bd)
 	npb_tunnel_rmac_add       (self, target, rmac);
 	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr);
+#	npb_nexthop_add           (self, target, nexthop_ptr, bd, eg_port_lag_ptr)
 	if(len(eg_port) == 1):
 		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
 	else:
 		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
-
-	npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
-
-def npb_nsh_bridge_cpu_add(self, target,
-	#ingress
-#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
-	ig_port, ig_port_lag_ptr, rmac, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
-	#egress
-):
-	cpu_port_add              (self, target)
-	npb_ing_port_add          (self, target, ig_port, ig_port_lag_ptr, 1, 0, 0, 0, 0, 0)
-#	npb_port_vlan_to_bd_add   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr, bd)
-	npb_tunnel_rmac_add       (self, target, rmac);
-	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr);
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
+	if(eg_port_is_cpu):
+		npb_egr_port_cpu_add      (self, target, eg_port, eg_port_lag_ptr)
 	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
-
-	npb_egr_port_cpu_add      (self, target, eg_port, eg_port_lag_ptr)
+		npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
 
 def npb_nsh_bridge_del(self, target,
 	#ingress
 #	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
-	ig_port, ig_port_lag_ptr, rmac, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
 	#egress
 ):
 	cpu_port_del              (self, target)
@@ -3719,9 +3806,39 @@ def npb_nsh_bridge_del(self, target,
 #	npb_port_vlan_to_bd_del   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr)
 	npb_tunnel_rmac_del       (self, target, rmac);
 	npb_tunnel_dmac_del       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac);
+#	npb_nexthop_del           (self, target, nexthop_ptr)
 	if(eg_port_num_entries == 1):
 		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
 	else:
 		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
-
 	npb_egr_port_del          (self, target, eg_port)
+
+#######################################
+
+def npb_nsh_bridge_no_eg_lag_add(self, target,
+	#ingress
+#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, bd, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+	#egress
+):
+	cpu_port_add              (self, target)
+	npb_ing_port_add          (self, target, ig_port, ig_port_lag_ptr, 1, 0, 0, 0, 0, 0)
+#	npb_port_vlan_to_bd_add   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr, bd)
+	npb_tunnel_rmac_add       (self, target, rmac);
+	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr);
+
+# Egress lag removed if sharing with other flows
+
+def npb_nsh_bridge_no_eg_lag_del(self, target,
+	#ingress
+#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+	#egress
+):
+	cpu_port_del              (self, target)
+	npb_ing_port_del          (self, target, ig_port, ig_port_lag_ptr)
+#	npb_port_vlan_to_bd_del   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr)
+	npb_tunnel_rmac_del       (self, target, rmac);
+	npb_tunnel_dmac_del       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac);
+
+# Egress lag removed if sharing with other flows

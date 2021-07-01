@@ -33,18 +33,23 @@ control Scoper_DataMux_LkpToLkp(
 		inout switch_lookup_fields_t lkp
 ) {
 
-	action scoper() {
+//	action scoper() {
+	apply {
 #if 0
 		// Derek: Can't use this code, as we need to alias the 128-bit ip addresses with a 32-bit version.  Need to use the code below instead.
 		lkp = lkp_in;
 #else
 		// l2
-		lkp.mac_src_addr        = lkp_in.mac_src_addr;
-		lkp.mac_dst_addr        = lkp_in.mac_dst_addr;
+		if(lkp_in.l2_valid != false) {
+			// only update if next layer has l2
+			lkp.mac_src_addr        = lkp_in.mac_src_addr;
+			lkp.mac_dst_addr        = lkp_in.mac_dst_addr;
+//			lkp.mac_type            = lkp_in.mac_type;
+			lkp.pcp                 = lkp_in.pcp;
+			lkp.pad                 = lkp_in.pad;
+			lkp.vid                 = lkp_in.vid;
+		}
 		lkp.mac_type            = lkp_in.mac_type;
-		lkp.pcp                 = lkp_in.pcp;
-		lkp.pad                 = lkp_in.pad;
-		lkp.vid                 = lkp_in.vid;
 
 		// l3
 		lkp.ip_type             = lkp_in.ip_type;
@@ -64,8 +69,16 @@ control Scoper_DataMux_LkpToLkp(
 		lkp.l4_dst_port         = lkp_in.l4_dst_port;
 
 		// tunnel
+  #ifdef INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
+		if(lkp_in.tunnel_type != SWITCH_TUNNEL_TYPE_NONE) {
+			// only update if next layer has tunnel
+			lkp.tunnel_type         = lkp_in.tunnel_type;
+			lkp.tunnel_id           = lkp_in.tunnel_id;
+		}
+  #else
 		lkp.tunnel_type         = lkp_in.tunnel_type;
 		lkp.tunnel_id           = lkp_in.tunnel_id;
+  #endif
 
   #ifdef SF_2_ACL_INNER_OUTER_TUNNEL_KEY_ENABLE
 		// outer means two back from current scope (scope-2), inner means one back from current scope (scope-1)
@@ -77,10 +90,11 @@ control Scoper_DataMux_LkpToLkp(
 		lkp.next_lyr_valid      = lkp_in.next_lyr_valid;
 #endif
 	}
-
+/*
 	apply {
 		scoper();
 	}
+*/
 }
 
 // ============================================================================
@@ -88,6 +102,7 @@ control Scoper_DataMux_LkpToLkp(
 control Scoper_DataMux_Hdr0ToLkp(
 		in switch_header_transport_t hdr_0,
 		in switch_header_outer_t     hdr_1,
+		in    switch_lookup_fields_t lkp_in,
 
 		inout switch_lookup_fields_t lkp
 ) {
@@ -97,6 +112,7 @@ control Scoper_DataMux_Hdr0ToLkp(
 	// -----------------------------
 
 	action scope_l2_none() {
+		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
 		lkp.mac_type     = 0;
@@ -106,6 +122,7 @@ control Scoper_DataMux_Hdr0ToLkp(
 	}
 
 	action scope_l2_0tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_0.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_0.ethernet.dst_addr;
 		lkp.mac_type     = hdr_0.ethernet.ether_type;
@@ -115,6 +132,7 @@ control Scoper_DataMux_Hdr0ToLkp(
 	}
 
 	action scope_l2_1tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_0.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_0.ethernet.dst_addr;
 		lkp.mac_type     = hdr_0.vlan_tag[0].ether_type;
@@ -215,6 +233,18 @@ control Scoper_DataMux_Hdr0ToLkp(
 #endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4 
 	}
 
+	action scope_tunnel_unsupported() {
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false; // unsupported has no next layer
+	}
+
+	action scope_tunnel_use_parser_values(bool lkp_in_next_lyr_valid) {
+		lkp.tunnel_type    = lkp_in.tunnel_type;
+		lkp.tunnel_id      = lkp_in.tunnel_id;
+		lkp.next_lyr_valid = lkp_in_next_lyr_valid;
+	}
+/*
 	table scope_tunnel_ {
 		key = {
 			hdr_0.gre.isValid(): exact;
@@ -233,6 +263,7 @@ control Scoper_DataMux_Hdr0ToLkp(
 			scope_tunnel_mpls;
 			scope_tunnel_ipinip;
 			scope_tunnel_none;
+			scope_tunnel_unsupported;
 		}
 		const entries = {
 #if !defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) && !defined(MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4)
@@ -298,31 +329,45 @@ control Scoper_DataMux_Hdr0ToLkp(
 #endif //  VXLAN_TRANSPORT_INGRESS_ENABLE_V4 &&  MPLS_SR_TRANSPORT_INGRESS_ENABLE_V4
 		const default_action = scope_tunnel_none;
 	}
+*/
+	table scope_tunnel_ {
+		key = {
+			lkp_in.tunnel_type: exact;
+		}
+		actions = {
+			scope_tunnel_none;
+			scope_tunnel_use_parser_values;
+		}
+		const entries = {
+			(SWITCH_TUNNEL_TYPE_GTPC):        scope_tunnel_use_parser_values(false);
+			(SWITCH_TUNNEL_TYPE_NONE):        scope_tunnel_none();
+			(SWITCH_TUNNEL_TYPE_UNSUPPORTED): scope_tunnel_use_parser_values(false);
+//			(SWITCH_TUNNEL_TYPE_VXLAN):       scope_tunnel_use_parser_values(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+//			(SWITCH_TUNNEL_TYPE_IPINIP):      scope_tunnel_use_parser_values(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+		}
+		const default_action = scope_tunnel_use_parser_values(true);
+	}
 
 	// -----------------------------
-	// L2 / L3 / L4 / TUNNEL
+	// L2 / L3 / L4
 	// -----------------------------
 
-	action scope_l2_none_l3_none_l4_none_tun_none()  { scope_l2_none(); scope_l3_none(); scope_l4_none(); scope_tunnel_none();  }
+	action scope_l2_none_l3_none_l4_none() { scope_l2_none(); scope_l3_none(); scope_l4_none(); }
 
-	action scope_l2_0tag_l3_none_l4_none_tun_none()  { scope_l2_0tag(); scope_l3_none(); scope_l4_none(); scope_tunnel_none();  }
-	action scope_l2_1tag_l3_none_l4_none_tun_none()  { scope_l2_1tag(); scope_l3_none(); scope_l4_none(); scope_tunnel_none();  }
+	action scope_l2_0tag_l3_none_l4_none() { scope_l2_0tag(); scope_l3_none(); scope_l4_none(); }
+	action scope_l2_1tag_l3_none_l4_none() { scope_l2_1tag(); scope_l3_none(); scope_l4_none(); }
 
-	action scope_l2_0tag_l3_v4_l4_none_tun_none()    { scope_l2_0tag(); scope_l3_v4();   scope_l4_none(); scope_tunnel_none();  } // todo: handle possible ip-in-ip
-	action scope_l2_1tag_l3_v4_l4_none_tun_none()    { scope_l2_1tag(); scope_l3_v4();   scope_l4_none(); scope_tunnel_none();  } // todo: handle possible ip-in-ip
-	action scope_l2_0tag_l3_v4_l4_none_tun_gre()     { scope_l2_0tag(); scope_l3_v4();   scope_l4_none(); scope_tunnel_gre();   }
-	action scope_l2_1tag_l3_v4_l4_none_tun_gre()     { scope_l2_1tag(); scope_l3_v4();   scope_l4_none(); scope_tunnel_gre();   }
-	action scope_l2_0tag_l3_v4_l4_udp_tun_vxlan()    { scope_l2_0tag(); scope_l3_v4();   scope_l4_udp();  scope_tunnel_vxlan(); }
-	action scope_l2_1tag_l3_v4_l4_udp_tun_vxlan()    { scope_l2_1tag(); scope_l3_v4();   scope_l4_udp();  scope_tunnel_vxlan(); }
+	action scope_l2_0tag_l3_v4_l4_none()   { scope_l2_0tag(); scope_l3_v4();   scope_l4_none(); }
+	action scope_l2_1tag_l3_v4_l4_none()   { scope_l2_1tag(); scope_l3_v4();   scope_l4_none(); }
+	action scope_l2_0tag_l3_v4_l4_udp()    { scope_l2_0tag(); scope_l3_v4();   scope_l4_udp();  }
+	action scope_l2_1tag_l3_v4_l4_udp()    { scope_l2_1tag(); scope_l3_v4();   scope_l4_udp();  }
 
-	action scope_l2_0tag_l3_v6_l4_none_tun_none()    { scope_l2_0tag(); scope_l3_v6();   scope_l4_none(); scope_tunnel_none();  } // todo: handle possible ip-in-ip
-	action scope_l2_1tag_l3_v6_l4_none_tun_none()    { scope_l2_1tag(); scope_l3_v6();   scope_l4_none(); scope_tunnel_none();  } // todo: handle possible ip-in-ip
-	action scope_l2_0tag_l3_v6_l4_none_tun_gre()     { scope_l2_0tag(); scope_l3_v6();   scope_l4_none(); scope_tunnel_gre();   }
-	action scope_l2_1tag_l3_v6_l4_none_tun_gre()     { scope_l2_1tag(); scope_l3_v6();   scope_l4_none(); scope_tunnel_gre();   }
-	action scope_l2_0tag_l3_v6_l4_udp_tun_vxlan()    { scope_l2_0tag(); scope_l3_v6();   scope_l4_udp();  scope_tunnel_vxlan(); }
-	action scope_l2_1tag_l3_v6_l4_udp_tun_vxlan()    { scope_l2_1tag(); scope_l3_v6();   scope_l4_udp();  scope_tunnel_vxlan(); }
+	action scope_l2_0tag_l3_v6_l4_none()   { scope_l2_0tag(); scope_l3_v6();   scope_l4_none(); }
+	action scope_l2_1tag_l3_v6_l4_none()   { scope_l2_1tag(); scope_l3_v6();   scope_l4_none(); }
+	action scope_l2_0tag_l3_v6_l4_udp()    { scope_l2_0tag(); scope_l3_v6();   scope_l4_udp();  }
+	action scope_l2_1tag_l3_v6_l4_udp()    { scope_l2_1tag(); scope_l3_v6();   scope_l4_udp();  }
 
-	table scope_l234tunnel_ {
+	table scope_l234_ {
 		key = {
 			hdr_0.ethernet.isValid(): exact;
 			hdr_0.vlan_tag[0].isValid(): exact;
@@ -330,103 +375,93 @@ control Scoper_DataMux_Hdr0ToLkp(
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
 			hdr_0.ipv6.isValid(): exact;
 #endif // IPV6_ENABLE
-			hdr_0.gre.isValid(): exact;
 #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			hdr_0.vxlan.isValid(): exact;
+			hdr_0.udp.isValid(): exact;
 #endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-//			hdr_1.ipv4.isValid(): exact;
-//			hdr_1.ipv6.isValid(): exact;
 		}
 		actions = {
-			scope_l2_none_l3_none_l4_none_tun_none;
+			scope_l2_none_l3_none_l4_none;
 
-			scope_l2_0tag_l3_none_l4_none_tun_none;
-			scope_l2_1tag_l3_none_l4_none_tun_none;
+			scope_l2_0tag_l3_none_l4_none;
+			scope_l2_1tag_l3_none_l4_none;
 
-			scope_l2_0tag_l3_v4_l4_none_tun_none;
-			scope_l2_1tag_l3_v4_l4_none_tun_none;
-			scope_l2_0tag_l3_v4_l4_none_tun_gre;
-			scope_l2_1tag_l3_v4_l4_none_tun_gre;
+			scope_l2_0tag_l3_v4_l4_none;
+			scope_l2_1tag_l3_v4_l4_none;
 #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			scope_l2_0tag_l3_v4_l4_udp_tun_vxlan;
-			scope_l2_1tag_l3_v4_l4_udp_tun_vxlan;
+			scope_l2_0tag_l3_v4_l4_udp;
+			scope_l2_1tag_l3_v4_l4_udp;
 #endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
 
-			scope_l2_0tag_l3_v6_l4_none_tun_none;
-			scope_l2_1tag_l3_v6_l4_none_tun_none;
-			scope_l2_0tag_l3_v6_l4_none_tun_gre;
-			scope_l2_1tag_l3_v6_l4_none_tun_gre;
+			scope_l2_0tag_l3_v6_l4_none;
+			scope_l2_1tag_l3_v6_l4_none;
 #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			scope_l2_0tag_l3_v6_l4_udp_tun_vxlan;
-			scope_l2_1tag_l3_v6_l4_udp_tun_vxlan;
+			scope_l2_0tag_l3_v6_l4_udp;
+			scope_l2_1tag_l3_v6_l4_udp;
 #endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
 		}
 		const entries = {
 #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
 #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			// l2             l3                tunnel
-			// ----------     -------------     ------------
-			(true, false,     false, false,     false, false): scope_l2_0tag_l3_none_l4_none_tun_none();
-			(true, true,      false, false,     false, false): scope_l2_1tag_l3_none_l4_none_tun_none();
+			// l2             l3                l4
+			// ----------     -------------     ------
+			(true, false,     false, false,     false): scope_l2_0tag_l3_none_l4_none;
+			(true, true,      false, false,     false): scope_l2_1tag_l3_none_l4_none;
 
-			(true, false,     true,  false,     false, false): scope_l2_0tag_l3_v4_l4_none_tun_none();
-			(true, true,      true,  false,     false, false): scope_l2_1tag_l3_v4_l4_none_tun_none();
-			(true, false,     true,  false,     true,  false): scope_l2_0tag_l3_v4_l4_none_tun_gre();
-			(true, true,      true,  false,     true,  false): scope_l2_1tag_l3_v4_l4_none_tun_gre();
-			(true, false,     true,  false,     false, true ): scope_l2_0tag_l3_v4_l4_udp_tun_vxlan();
-			(true, true,      true,  false,     false, true ): scope_l2_1tag_l3_v4_l4_udp_tun_vxlan();
+			(true, false,     true,  false,     false): scope_l2_0tag_l3_v4_l4_none;
+			(true, true,      true,  false,     false): scope_l2_1tag_l3_v4_l4_none;
+			(true, false,     true,  false,     true ): scope_l2_0tag_l3_v4_l4_udp;
+			(true, true,      true,  false,     true ): scope_l2_1tag_l3_v4_l4_udp;
 
-			(true, false,     false, true,      false, false): scope_l2_0tag_l3_v6_l4_none_tun_none();
-			(true, true,      false, true,      false, false): scope_l2_1tag_l3_v6_l4_none_tun_none();
-			(true, false,     false, true,      true,  false): scope_l2_0tag_l3_v6_l4_none_tun_gre();
-			(true, true,      false, true,      true,  false): scope_l2_1tag_l3_v6_l4_none_tun_gre();
-			(true, false,     false, true,      false, true ): scope_l2_0tag_l3_v6_l4_udp_tun_vxlan();
-			(true, true,      false, true,      false, true ): scope_l2_1tag_l3_v6_l4_udp_tun_vxlan();
+			(true, false,     false, true,      false): scope_l2_0tag_l3_v6_l4_none;
+			(true, true,      false, true,      false): scope_l2_1tag_l3_v6_l4_none;
+			(true, false,     false, true,      true ): scope_l2_0tag_l3_v6_l4_udp;
+			(true, true,      false, true,      true ): scope_l2_1tag_l3_v6_l4_udp;
 #else // #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			(true, false,     false, false,     false       ): scope_l2_0tag_l3_none_l4_none_tun_none();
-			(true, true,      false, false,     false       ): scope_l2_1tag_l3_none_l4_none_tun_none();
+			(true, false,     false, false           ): scope_l2_0tag_l3_none_l4_none;
+			(true, true,      false, false           ): scope_l2_1tag_l3_none_l4_none;
 
-			(true, false,     true,  false,     false       ): scope_l2_0tag_l3_v4_l4_none_tun_none();
-			(true, true,      true,  false,     false       ): scope_l2_1tag_l3_v4_l4_none_tun_none();
-			(true, false,     true,  false,     true        ): scope_l2_0tag_l3_v4_l4_none_tun_gre();
-			(true, true,      true,  false,     true        ): scope_l2_1tag_l3_v4_l4_none_tun_gre();
+			(true, false,     true,  false           ): scope_l2_0tag_l3_v4_l4_none;
+			(true, true,      true,  false           ): scope_l2_1tag_l3_v4_l4_none;
 
-			(true, false,     false, true,      false       ): scope_l2_0tag_l3_v6_l4_none_tun_none();
-			(true, true,      false, true,      false       ): scope_l2_1tag_l3_v6_l4_none_tun_none();
-			(true, false,     false, true,      true        ): scope_l2_0tag_l3_v6_l4_none_tun_gre();
-			(true, true,      false, true,      true        ): scope_l2_1tag_l3_v6_l4_none_tun_gre();
+			(true, false,     false, true            ): scope_l2_0tag_l3_v6_l4_none;
+			(true, true,      false, true            ): scope_l2_1tag_l3_v6_l4_none;
 #endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
 #else
 #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			(true, false,     false,            false, false): scope_l2_0tag_l3_none_l4_none_tun_none();
-			(true, true,      false,            false, false): scope_l2_1tag_l3_none_l4_none_tun_none();
+			(true, false,     false,            false): scope_l2_0tag_l3_none_l4_none;
+			(true, true,      false,            false): scope_l2_1tag_l3_none_l4_none;
 
-			(true, false,     true,             false, false): scope_l2_0tag_l3_v4_l4_none_tun_none();
-			(true, true,      true,             false, false): scope_l2_1tag_l3_v4_l4_none_tun_none();
-			(true, false,     true,             true,  false): scope_l2_0tag_l3_v4_l4_none_tun_gre();
-			(true, true,      true,             true,  false): scope_l2_1tag_l3_v4_l4_none_tun_gre();
-			(true, false,     true,             false, true ): scope_l2_0tag_l3_v4_l4_udp_tun_vxlan();
-			(true, true,      true,             false, true ): scope_l2_1tag_l3_v4_l4_udp_tun_vxlan();
+			(true, false,     true,             false): scope_l2_0tag_l3_v4_l4_none;
+			(true, true,      true,             false): scope_l2_1tag_l3_v4_l4_none;
+			(true, false,     true,             true ): scope_l2_0tag_l3_v4_l4_udp;
+			(true, true,      true,             true ): scope_l2_1tag_l3_v4_l4_udp;
 #else // #ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
-			(true, false,     false,            false       ): scope_l2_0tag_l3_none_l4_none_tun_none();
-			(true, true,      false,            false       ): scope_l2_1tag_l3_none_l4_none_tun_none();
+			(true, false,     false                  ): scope_l2_0tag_l3_none_l4_none;
+			(true, true,      false                  ): scope_l2_1tag_l3_none_l4_none;
 
-			(true, false,     true,             false       ): scope_l2_0tag_l3_v4_l4_none_tun_none();
-			(true, true,      true,             false       ): scope_l2_1tag_l3_v4_l4_none_tun_none();
-			(true, false,     true,             true        ): scope_l2_0tag_l3_v4_l4_none_tun_gre();
-			(true, true,      true,             true        ): scope_l2_1tag_l3_v4_l4_none_tun_gre();
+			(true, false,     true                   ): scope_l2_0tag_l3_v4_l4_none;
+			(true, true,      true                   ): scope_l2_1tag_l3_v4_l4_none;
 #endif // VXLAN_TRANSPORT_INGRESS_ENABLE_V4
 #endif
 		}
-		const default_action = scope_l2_none_l3_none_l4_none_tun_none;
+		const default_action = scope_l2_none_l3_none_l4_none;
 	}
 
 	apply {
-		// DOESN'T FIT
-//		scope_l234tunnel_.apply();
-
-		lkp.ip_type = SWITCH_IP_TYPE_IPV4;
-		lkp.next_lyr_valid = true;
+		scope_l234_.apply();
+		// Note: we can't use our tunnel table, because we don't know about the parser's unsupported tunnel type
+/*
+		lkp.tunnel_type    = lkp_in.tunnel_type;
+		scope_tunnel_.apply();
+*/
+/*
+		if(lkp_in.tunnel_type == SWITCH_TUNNEL_TYPE_NONE) {
+			// for handling overload case
+			scope_tunnel_none();
+		} else {
+			scope_tunnel_use_parser_values(lkp_in.next_lyr_valid);
+		}
+*/
 		scope_tunnel_.apply();
 	}
 }
@@ -437,7 +472,7 @@ control Scoper_DataMux_Hdr0ToLkp(
 control Scoper_DataMux_Hdr1ToLkp(
 		in switch_header_outer_t     hdr_1,
 		in switch_header_inner_t     hdr_2,
-//		in switch_tunnel_metadata_t  tunnel,
+		in    switch_lookup_fields_t lkp_in,
 
 		inout switch_lookup_fields_t lkp
 ) {
@@ -447,13 +482,20 @@ control Scoper_DataMux_Hdr1ToLkp(
 	// -----------------------------
 
 	action scope_l2_none() {
+#ifdef INGRESS_MAU_NO_LKP_1
+		lkp.l2_valid     = false;
+		// do nothing...keep previous layer's values
+#else
+		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
 		lkp.mac_type     = 0;
 		lkp.pcp          = 0;
+#endif
 	}
 
 	action scope_l2_0tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_1.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_1.ethernet.dst_addr;
 		lkp.mac_type     = hdr_1.ethernet.ether_type;
@@ -462,6 +504,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 
 #ifdef ETAG_ENABLE
 	action scope_l2_e_tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_1.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_1.ethernet.dst_addr;
 		lkp.mac_type     = hdr_1.e_tag.ether_type;
@@ -472,6 +515,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 
 #ifdef VNTAG_ENABLE
 	action scope_l2_vn_tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_1.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_1.ethernet.dst_addr;
 		lkp.mac_type     = hdr_1.vn_tag.ether_type;
@@ -480,6 +524,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 #endif // VNTAG_ENABLE
 
 	action scope_l2_1tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_1.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_1.ethernet.dst_addr;
 		lkp.mac_type     = hdr_1.vlan_tag[0].ether_type;
@@ -487,6 +532,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 	}
 
 	action scope_l2_2tags() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_1.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_1.ethernet.dst_addr;
 		lkp.mac_type     = hdr_1.vlan_tag[1].ether_type;
@@ -589,7 +635,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 	// -----------------------------
 
 	action scope_l3_none() {
-		lkp.ip_type       = 0;
+		lkp.ip_type       = SWITCH_IP_TYPE_NONE;
 		lkp.ip_tos        = 0;
 		lkp.ip_proto      = 0;
 		lkp.ip_flags      = 0;
@@ -986,46 +1032,101 @@ control Scoper_DataMux_Hdr1ToLkp(
 	// -----------------------------
 
 	action scope_tunnel_none() {
-		lkp.tunnel_type = 0;
-		lkp.tunnel_id   = 0;
-	}
 /*
-	action scope_tunnel_vlan() {
-		lkp.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;
-		lkp.tunnel_id   = (switch_tunnel_id_t)hdr_1.vlan_tag[0].vid;
-	}
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_NONE;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false;
 */
-	action scope_tunnel_vni() {
-//		lkp.tunnel_type = lkp.tunnel_type;
-//		lkp.tunnel_id   = lkp.tunnel_id;
+#ifdef INGRESS_MAU_NO_LKP_1
+  #ifdef INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
+		// do nothing...keep previous layer's values
+		lkp.next_lyr_valid = false;
+  #else
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_NONE;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false;
+  #endif
+#else
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_NONE;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false;
+#endif
 	}
 
+	action scope_tunnel_gre() {
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_GRE;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = true;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	action scope_tunnel_unsupported() {
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false; // unsupported has no next layer
+	}
+
+	action scope_tunnel_use_parser_values(bool lkp_in_next_lyr_valid) {
+		lkp.tunnel_type    = lkp_in.tunnel_type;
+		lkp.tunnel_id      = lkp_in.tunnel_id;
+		lkp.next_lyr_valid = lkp_in_next_lyr_valid;
+	}
+/*
 	table scope_tunnel_ {
 		key = {
-			lkp.tunnel_type: exact;
-/*
-			tunnel.type: ternary;
-			hdr_1.vlan_tag[0].isValid(): exact;
-			hdr_1.vlan_tag[0].vid: ternary;
-*/
+			hdr_1.gre.isValid():  exact;
 		}
 		actions = {
-			scope_tunnel_vni;
-//          scope_tunnel_vlan;
+			scope_tunnel_gre;
 			scope_tunnel_none;
+			scope_tunnel_unsupported;
 		}
 		const entries = {
-/*
-			// highest -> lowest priority in tcam
-			(0, true,  0): scope_tunnel_none(); // tag has priority only
-			(0, true,  _): scope_tunnel_vlan(); // tag has priority and vlan
-			(_, true,  _): scope_tunnel_vni();
-			(_, false, _): scope_tunnel_vni();
-			(0, false, _): scope_tunnel_none();
-*/
-			(SWITCH_TUNNEL_TYPE_NONE): scope_tunnel_none();
+			(true ): scope_tunnel_gre();
+			(false): scope_tunnel_none();
 		}
-		const default_action = scope_tunnel_vni;
+		const default_action = scope_tunnel_none;
+	}
+*/
+	table scope_tunnel_ {
+		key = {
+			lkp_in.tunnel_type: exact;
+		}
+		actions = {
+			scope_tunnel_none;
+			scope_tunnel_use_parser_values;
+		}
+		const entries = {
+			(SWITCH_TUNNEL_TYPE_GTPC):        scope_tunnel_use_parser_values(false);
+			(SWITCH_TUNNEL_TYPE_NONE):        scope_tunnel_none();
+			(SWITCH_TUNNEL_TYPE_UNSUPPORTED): scope_tunnel_use_parser_values(false);
+//			(SWITCH_TUNNEL_TYPE_VXLAN):       scope_tunnel_use_parser_values(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+//			(SWITCH_TUNNEL_TYPE_IPINIP):      scope_tunnel_use_parser_values(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+		}
+		const default_action = scope_tunnel_use_parser_values(true);
 	}
 
 	// -----------------------------
@@ -1038,8 +1139,20 @@ control Scoper_DataMux_Hdr1ToLkp(
 //		scope_l4_.apply();
 		scope_l34_.apply();
 //		scope_l234_.apply();
-//		scope_tunnel_.apply();
-		scope_tunnel_vni();
+		// Note: we can't use our tunnel table, because we don't know about the parser's unsupported tunnel type
+/*
+		lkp.tunnel_type    = lkp_in.tunnel_type;
+		scope_tunnel_.apply();
+*/
+/*
+		if(lkp_in.tunnel_type == SWITCH_TUNNEL_TYPE_NONE) {
+			// for handling overload case
+			scope_tunnel_none();
+		} else {
+			scope_tunnel_use_parser_values(lkp_in.next_lyr_valid);
+		}
+*/
+		scope_tunnel_.apply();
 	}
 }
 
@@ -1048,6 +1161,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 control Scoper_DataMux_Hdr2ToLkp(
 		in switch_header_inner_t       hdr_2,
 		in switch_header_inner_inner_t hdr_3,
+		in switch_lookup_fields_t      lkp_in,
 
 		inout switch_lookup_fields_t   lkp
 ) {
@@ -1057,15 +1171,54 @@ control Scoper_DataMux_Hdr2ToLkp(
 	// -----------------------------
 
 	action scope_l2_none() {
+#ifdef INGRESS_MAU_NO_LKP_2
+		lkp.l2_valid     = false;
+		// do nothing...keep previous layer's values
+#else
+		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
 		lkp.mac_type     = 0;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
+#endif
+	}
+
+	action scope_l2_none_v4() {
+#ifdef INGRESS_MAU_NO_LKP_2
+		lkp.l2_valid     = false;
+		// do nothing...keep previous layer's values
+		lkp.mac_type     = ETHERTYPE_IPV4;
+#else
+		lkp.l2_valid     = false;
+		lkp.mac_src_addr = 0;
+		lkp.mac_dst_addr = 0;
+		lkp.mac_type     = 0;
+		lkp.pcp          = 0;
+		lkp.pad          = 0;
+		lkp.vid          = 0;
+#endif
+	}
+
+	action scope_l2_none_v6() {
+#ifdef INGRESS_MAU_NO_LKP_2
+		lkp.l2_valid     = false;
+		// do nothing...keep previous layer's values
+		lkp.mac_type     = ETHERTYPE_IPV6;
+#else
+		lkp.l2_valid     = false;
+		lkp.mac_src_addr = 0;
+		lkp.mac_dst_addr = 0;
+		lkp.mac_type     = 0;
+		lkp.pcp          = 0;
+		lkp.pad          = 0;
+		lkp.vid          = 0;
+#endif
 	}
 
 	action scope_l2_0tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_2.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_2.ethernet.dst_addr;
 		lkp.mac_type     = hdr_2.ethernet.ether_type;
@@ -1075,6 +1228,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 	}
 
 	action scope_l2_1tag() {
+		lkp.l2_valid     = true;
 		lkp.mac_src_addr = hdr_2.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_2.ethernet.dst_addr;
 		lkp.mac_type     = hdr_2.vlan_tag[0].ether_type;
@@ -1135,32 +1289,6 @@ control Scoper_DataMux_Hdr2ToLkp(
 		lkp.ip_src_addr   = hdr_2.ipv6.src_addr;
 		lkp.ip_dst_addr   = hdr_2.ipv6.dst_addr;
 		lkp.ip_len        = hdr_2.ipv6.payload_len;
-#endif // IPV6_ENABLE
-	}
-
-	action scope_l3_v4_set_eth() {
-		lkp.ip_type       = SWITCH_IP_TYPE_IPV4;
-		lkp.ip_proto      = hdr_2.ipv4.protocol;
-		lkp.ip_tos        = hdr_2.ipv4.tos;
-		lkp.ip_flags      = hdr_2.ipv4.flags;
-		lkp.ip_src_addr_v4= hdr_2.ipv4.src_addr;
-		lkp.ip_dst_addr_v4= hdr_2.ipv4.dst_addr;
-		lkp.ip_len        = hdr_2.ipv4.total_len;
-
-		lkp.mac_type      = ETHERTYPE_IPV4;
-	}
-
-	action scope_l3_v6_set_eth() {
-#ifdef IPV6_ENABLE
-		lkp.ip_type       = SWITCH_IP_TYPE_IPV6;
-		lkp.ip_proto      = hdr_2.ipv6.next_hdr;
-		lkp.ip_tos        = hdr_2.ipv6.tos;
-		lkp.ip_flags      = 0;
-		lkp.ip_src_addr   = hdr_2.ipv6.src_addr;
-		lkp.ip_dst_addr   = hdr_2.ipv6.dst_addr;
-		lkp.ip_len        = hdr_2.ipv6.payload_len;
-
-		lkp.mac_type      = ETHERTYPE_IPV6;
 #endif // IPV6_ENABLE
 	}
 
@@ -1241,9 +1369,28 @@ control Scoper_DataMux_Hdr2ToLkp(
 	// -----------------------------
 
 	action scope_tunnel_none() {
+
+	// scenario 1: we're the only  step (no_lkp2     defined)
+	//  - overload     defined: keep (do nothing)
+	//  - overload not defined: replace
+	// secnario 2: we're the first step (no_lkp2 not defined)
+	//  - overload     defined: replace (scoper handles)
+	//  - overload not defined: replace (scoper handles)
+
+#ifdef INGRESS_MAU_NO_LKP_2
+  #ifdef INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
+		// do nothing...keep previous layer's values
+		lkp.next_lyr_valid = false;
+  #else
 		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_NONE;
 		lkp.tunnel_id      = 0;
 		lkp.next_lyr_valid = false;
+  #endif
+#else
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_NONE;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false;
+#endif
 	}
 
 	action scope_tunnel_ipinip() {
@@ -1270,6 +1417,18 @@ control Scoper_DataMux_Hdr2ToLkp(
 		lkp.next_lyr_valid = false; // gtp-c has no next layer
 	}
 
+	action scope_tunnel_unsupported() {
+		lkp.tunnel_type    = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+		lkp.tunnel_id      = 0;
+		lkp.next_lyr_valid = false; // unsupported has no next layer
+	}
+
+	action scope_tunnel_use_parser_values(bool lkp_in_next_lyr_valid) {
+		lkp.tunnel_type    = lkp_in.tunnel_type;
+		lkp.tunnel_id      = lkp_in.tunnel_id;
+		lkp.next_lyr_valid = lkp_in_next_lyr_valid;
+	}
+/*
 	table scope_tunnel_ {
 		key = {
 			hdr_2.gre.isValid():  exact;
@@ -1289,56 +1448,76 @@ control Scoper_DataMux_Hdr2ToLkp(
 		const entries = {
 			// hdr2               hdr3
 			// ------------------ ------------
-			{true,  false, false, false, false}: scope_tunnel_gre(); // hdr3 is a don't care
-			{true,  false, false, true,  false}: scope_tunnel_gre(); // hdr3 is a don't care
-			{true,  false, false, false, true }: scope_tunnel_gre(); // hdr3 is a don't care
+			(true,  false, false, false, false): scope_tunnel_gre(); // hdr3 is a don't care
+			(true,  false, false, true,  false): scope_tunnel_gre(); // hdr3 is a don't care
+			(true,  false, false, false, true ): scope_tunnel_gre(); // hdr3 is a don't care
 
-			{false, true,  false, false, false}: scope_tunnel_gtpu(); // hdr3 is a don't care
-			{false, true,  false, true,  false}: scope_tunnel_gtpu(); // hdr3 is a don't care
-			{false, true,  false, false, true }: scope_tunnel_gtpu(); // hdr3 is a don't care
+			(false, true,  false, false, false): scope_tunnel_gtpu(); // hdr3 is a don't care
+			(false, true,  false, true,  false): scope_tunnel_gtpu(); // hdr3 is a don't care
+			(false, true,  false, false, true ): scope_tunnel_gtpu(); // hdr3 is a don't care
 
-			{false, false, true,  false, false}: scope_tunnel_gtpc(); // hdr3 is a don't care
-			{false, false, true,  true,  false}: scope_tunnel_gtpc(); // hdr3 is a don't care
-			{false, false, true,  false, true }: scope_tunnel_gtpc(); // hdr3 is a don't care
+			(false, false, true,  false, false): scope_tunnel_gtpc(); // hdr3 is a don't care
+			(false, false, true,  true,  false): scope_tunnel_gtpc(); // hdr3 is a don't care
+			(false, false, true,  false, true ): scope_tunnel_gtpc(); // hdr3 is a don't care
 
-			{false, false, false, true,  false}: scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
-			{false, false, false, false, true }: scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
+			(false, false, false, true,  false): scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
+			(false, false, false, false, true ): scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
 		}
 		const default_action = scope_tunnel_none;
+	}
+*/
+	table scope_tunnel_ {
+		key = {
+			lkp_in.tunnel_type: exact;
+		}
+		actions = {
+			scope_tunnel_none;
+			scope_tunnel_use_parser_values;
+		}
+		const entries = {
+			(SWITCH_TUNNEL_TYPE_GTPC):        scope_tunnel_use_parser_values(false);
+			(SWITCH_TUNNEL_TYPE_NONE):        scope_tunnel_none();
+			(SWITCH_TUNNEL_TYPE_UNSUPPORTED): scope_tunnel_use_parser_values(false);
+//			(SWITCH_TUNNEL_TYPE_VXLAN):       scope_tunnel_use_parser_values(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+//			(SWITCH_TUNNEL_TYPE_IPINIP):      scope_tunnel_use_parser_values(true); // filler entries to get rid of compiler bug when less than 4 constant entries
+		}
+		const default_action = scope_tunnel_use_parser_values(true);
 	}
 
 	// -----------------------------
 	// L2 / L3 / L4
 	// -----------------------------
 
-	action scope_l2_none_l3_none_l4_none() { scope_l2_none(); scope_l3_none();         scope_l4_none(); }
-	action scope_l2_0tag_l3_none_l4_none() { scope_l2_0tag(); scope_l3_none();         scope_l4_none(); }
-	action scope_l2_1tag_l3_none_l4_none() { scope_l2_1tag(); scope_l3_none();         scope_l4_none(); }
-	action scope_l2_0tag_l3_v4_l4_none()   { scope_l2_0tag(); scope_l3_v4();           scope_l4_none(); }
-	action scope_l2_1tag_l3_v4_l4_none()   { scope_l2_1tag(); scope_l3_v4();           scope_l4_none(); }
-	action scope_l2_0tag_l3_v6_l4_none()   { scope_l2_0tag(); scope_l3_v6();           scope_l4_none(); }
-	action scope_l2_1tag_l3_v6_l4_none()   { scope_l2_1tag(); scope_l3_v6();           scope_l4_none(); }
-	action scope_l2_0tag_l3_v4_l4_tcp()    { scope_l2_0tag(); scope_l3_v4();           scope_l4_tcp();  }
-	action scope_l2_1tag_l3_v4_l4_tcp()    { scope_l2_1tag(); scope_l3_v4();           scope_l4_tcp();  }
-	action scope_l2_0tag_l3_v6_l4_tcp()    { scope_l2_0tag(); scope_l3_v6();           scope_l4_tcp();  }
-	action scope_l2_1tag_l3_v6_l4_tcp()    { scope_l2_1tag(); scope_l3_v6();           scope_l4_tcp();  }
-	action scope_l2_0tag_l3_v4_l4_udp()    { scope_l2_0tag(); scope_l3_v4();           scope_l4_udp();  }
-	action scope_l2_1tag_l3_v4_l4_udp()    { scope_l2_1tag(); scope_l3_v4();           scope_l4_udp();  }
-	action scope_l2_0tag_l3_v6_l4_udp()    { scope_l2_0tag(); scope_l3_v6();           scope_l4_udp();  }
-	action scope_l2_1tag_l3_v6_l4_udp()    { scope_l2_1tag(); scope_l3_v6();           scope_l4_udp();  }
-	action scope_l2_0tag_l3_v4_l4_sctp()   { scope_l2_0tag(); scope_l3_v4();           scope_l4_sctp(); }
-	action scope_l2_1tag_l3_v4_l4_sctp()   { scope_l2_1tag(); scope_l3_v4();           scope_l4_sctp(); }
-	action scope_l2_0tag_l3_v6_l4_sctp()   { scope_l2_0tag(); scope_l3_v6();           scope_l4_sctp(); }
-	action scope_l2_1tag_l3_v6_l4_sctp()   { scope_l2_1tag(); scope_l3_v6();           scope_l4_sctp(); }
-	// l3 tunnel cases (no l2)
-	action scope_l2_none_l3_v4_l4_none()   { scope_l2_none(); scope_l3_v4_set_eth();   scope_l4_none(); }
-	action scope_l2_none_l3_v6_l4_none()   { scope_l2_none(); scope_l3_v6_set_eth();   scope_l4_none(); }
-	action scope_l2_none_l3_v4_l4_tcp()    { scope_l2_none(); scope_l3_v4_set_eth();   scope_l4_tcp();  }
-	action scope_l2_none_l3_v6_l4_tcp()    { scope_l2_none(); scope_l3_v6_set_eth();   scope_l4_tcp();  }
-	action scope_l2_none_l3_v4_l4_udp()    { scope_l2_none(); scope_l3_v4_set_eth();   scope_l4_udp();  }
-	action scope_l2_none_l3_v6_l4_udp()    { scope_l2_none(); scope_l3_v6_set_eth();   scope_l4_udp();  }
-	action scope_l2_none_l3_v4_l4_sctp()   { scope_l2_none(); scope_l3_v4_set_eth();   scope_l4_sctp(); }
-	action scope_l2_none_l3_v6_l4_sctp()   { scope_l2_none(); scope_l3_v6_set_eth();   scope_l4_sctp(); }
+	action scope_l2_none_l3_none_l4_none() { scope_l2_none_v4(); scope_l3_none(); scope_l4_none(); }
+	// l2 only
+	action scope_l2_0tag_l3_none_l4_none() { scope_l2_0tag();    scope_l3_none(); scope_l4_none(); }
+	action scope_l2_1tag_l3_none_l4_none() { scope_l2_1tag();    scope_l3_none(); scope_l4_none(); }
+	// l2, l3, l4
+	action scope_l2_0tag_l3_v4_l4_none()   { scope_l2_0tag();    scope_l3_v4();   scope_l4_none(); }
+	action scope_l2_1tag_l3_v4_l4_none()   { scope_l2_1tag();    scope_l3_v4();   scope_l4_none(); }
+	action scope_l2_0tag_l3_v6_l4_none()   { scope_l2_0tag();    scope_l3_v6();   scope_l4_none(); }
+	action scope_l2_1tag_l3_v6_l4_none()   { scope_l2_1tag();    scope_l3_v6();   scope_l4_none(); }
+	action scope_l2_0tag_l3_v4_l4_tcp()    { scope_l2_0tag();    scope_l3_v4();   scope_l4_tcp();  }
+	action scope_l2_1tag_l3_v4_l4_tcp()    { scope_l2_1tag();    scope_l3_v4();   scope_l4_tcp();  }
+	action scope_l2_0tag_l3_v6_l4_tcp()    { scope_l2_0tag();    scope_l3_v6();   scope_l4_tcp();  }
+	action scope_l2_1tag_l3_v6_l4_tcp()    { scope_l2_1tag();    scope_l3_v6();   scope_l4_tcp();  }
+	action scope_l2_0tag_l3_v4_l4_udp()    { scope_l2_0tag();    scope_l3_v4();   scope_l4_udp();  }
+	action scope_l2_1tag_l3_v4_l4_udp()    { scope_l2_1tag();    scope_l3_v4();   scope_l4_udp();  }
+	action scope_l2_0tag_l3_v6_l4_udp()    { scope_l2_0tag();    scope_l3_v6();   scope_l4_udp();  }
+	action scope_l2_1tag_l3_v6_l4_udp()    { scope_l2_1tag();    scope_l3_v6();   scope_l4_udp();  }
+	action scope_l2_0tag_l3_v4_l4_sctp()   { scope_l2_0tag();    scope_l3_v4();   scope_l4_sctp(); }
+	action scope_l2_1tag_l3_v4_l4_sctp()   { scope_l2_1tag();    scope_l3_v4();   scope_l4_sctp(); }
+	action scope_l2_0tag_l3_v6_l4_sctp()   { scope_l2_0tag();    scope_l3_v6();   scope_l4_sctp(); }
+	action scope_l2_1tag_l3_v6_l4_sctp()   { scope_l2_1tag();    scope_l3_v6();   scope_l4_sctp(); }
+	// l3, l4 only (no l2)
+	action scope_l2_none_l3_v4_l4_none()   { scope_l2_none_v4(); scope_l3_v4();   scope_l4_none(); }
+	action scope_l2_none_l3_v6_l4_none()   { scope_l2_none_v6(); scope_l3_v6();   scope_l4_none(); }
+	action scope_l2_none_l3_v4_l4_tcp()    { scope_l2_none_v4(); scope_l3_v4();   scope_l4_tcp();  }
+	action scope_l2_none_l3_v6_l4_tcp()    { scope_l2_none_v6(); scope_l3_v6();   scope_l4_tcp();  }
+	action scope_l2_none_l3_v4_l4_udp()    { scope_l2_none_v4(); scope_l3_v4();   scope_l4_udp();  }
+	action scope_l2_none_l3_v6_l4_udp()    { scope_l2_none_v6(); scope_l3_v6();   scope_l4_udp();  }
+	action scope_l2_none_l3_v4_l4_sctp()   { scope_l2_none_v4(); scope_l3_v4();   scope_l4_sctp(); }
+	action scope_l2_none_l3_v6_l4_sctp()   { scope_l2_none_v6(); scope_l3_v6();   scope_l4_sctp(); }
 
 	table scope_l234_ {
 		key = {
@@ -1356,8 +1535,10 @@ control Scoper_DataMux_Hdr2ToLkp(
 		}
 		actions = {
 			scope_l2_none_l3_none_l4_none;
+			// l2 only
 			scope_l2_0tag_l3_none_l4_none;
 			scope_l2_1tag_l3_none_l4_none;
+			// l2, l3, l4
 			scope_l2_0tag_l3_v4_l4_tcp;
 			scope_l2_1tag_l3_v4_l4_tcp;
 			scope_l2_0tag_l3_v6_l4_tcp;
@@ -1374,7 +1555,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 			scope_l2_1tag_l3_v4_l4_none;
 			scope_l2_0tag_l3_v6_l4_none;
 			scope_l2_1tag_l3_v6_l4_none;
-			// l3 tunnel cases (no l2)
+			// l3, l4 only (no l2)
 			scope_l2_none_l3_v4_l4_tcp;
 			scope_l2_none_l3_v6_l4_tcp;
 			scope_l2_none_l3_v4_l4_udp;
@@ -1473,6 +1654,19 @@ control Scoper_DataMux_Hdr2ToLkp(
 //		scope_l3_.apply();
 //		scope_l4_.apply();
 		scope_l234_.apply();
+		// Note: we can't use our tunnel table, because we don't know about the parser's unsupported tunnel type
+/*
+		lkp.tunnel_type    = lkp_in.tunnel_type;
+		scope_tunnel_.apply();
+*/
+/*
+		if(lkp_in.tunnel_type == SWITCH_TUNNEL_TYPE_NONE) {
+			// for handling overload case
+			scope_tunnel_none();
+		} else {
+			scope_tunnel_use_parser_values(lkp_in.next_lyr_valid);
+		}
+*/
 		scope_tunnel_.apply();
 	}
 }
@@ -1489,16 +1683,32 @@ control Scoper_DataOnly(
 //		in    switch_lookup_fields_t lkp1_in,
 		in    switch_lookup_fields_t lkp2_in,
 
+		in    switch_header_outer_t       hdr_1,
+		in    switch_header_inner_t       hdr_2,
+		in    switch_header_inner_inner_t hdr_3,
+
 		in    bit<8> scope,
 		inout switch_lookup_fields_t lkp
 ) {
 	apply {
 		if(scope == 0) {
+#ifdef INGRESS_MAU_NO_LKP_0
+//			Scoper_DataMux_Hdr0ToLkp.apply(hdr_0, hdr_1, lkp0_in, lkp);
+#else
 //			Scoper_DataMux_LkpToLkp.apply(lkp0_in, lkp);
+#endif
 		} else if(scope == 1) {
+#ifdef INGRESS_MAU_NO_LKP_1
+//			Scoper_DataMux_Hdr1ToLkp.apply(hdr_1, hdr_2, lkp1_in, lkp);
+#else
 //			Scoper_DataMux_LkpToLkp.apply(lkp1_in, lkp);
+#endif
 		} else {
+#ifdef INGRESS_MAU_NO_LKP_2
+			Scoper_DataMux_Hdr2ToLkp.apply(hdr_2, hdr_3, lkp2_in, lkp);
+#else
 			Scoper_DataMux_LkpToLkp.apply(lkp2_in, lkp);
+#endif
 		}
 	}
 }
@@ -1569,16 +1779,16 @@ control Scoper_ScopeAndTermOnly(
 			term_2;
 		}
 		const entries = {
-			(true, false, true,  0)  : scope_0();
-			(true, false, true,  1)  : scope_1();
-			(true, false, true,  2)  : scope_2();
+			(true, false, true,  0) : scope_0();
+			(true, false, true,  1) : scope_1();
+			(true, false, true,  2) : scope_2();
 
-			(true, true,  true,  0)  : term_0(); // scope_flag is a don't care when terminating
-			(true, true,  false, 0)  : term_0(); // scope_flag is a don't care when terminating
-			(true, true,  true,  1)  : term_1(); // scope_flag is a don't care when terminating
-			(true, true,  false, 1)  : term_1(); // scope_flag is a don't care when terminating
-			(true, true,  true,  2)  : term_2(); // scope_flag is a don't care when terminating
-			(true, true,  false, 2)  : term_2(); // scope_flag is a don't care when terminating
+			(true, true,  true,  0) : term_0(); // scope_flag is a don't care when terminating
+			(true, true,  false, 0) : term_0(); // scope_flag is a don't care when terminating
+			(true, true,  true,  1) : term_1(); // scope_flag is a don't care when terminating
+			(true, true,  false, 1) : term_1(); // scope_flag is a don't care when terminating
+			(true, true,  true,  2) : term_2(); // scope_flag is a don't care when terminating
+			(true, true,  false, 2) : term_2(); // scope_flag is a don't care when terminating
 		}
 		const default_action = NoAction;
 	}
@@ -1594,9 +1804,13 @@ control Scoper_ScopeAndTermOnly(
 // YES Set Lkp Data
 
 control Scoper_ScopeAndTermAndData(
-		in    switch_lookup_fields_t lkp0_in,
-//		in    switch_lookup_fields_t lkp1_in,
-		in    switch_lookup_fields_t lkp2_in,
+		inout switch_lookup_fields_t lkp0_in,
+//		inout switch_lookup_fields_t lkp1_in,
+		inout switch_lookup_fields_t lkp2_in,
+
+		in    switch_header_outer_t       hdr_1,
+		in    switch_header_inner_t       hdr_2,
+		in    switch_header_inner_inner_t hdr_3,
 
 		inout switch_lookup_fields_t lkp,
 
@@ -1658,16 +1872,16 @@ control Scoper_ScopeAndTermAndData(
 			term_2;
 		}
 		const entries = {
-			(true, false, true,  0)  : scope_0();
-			(true, false, true,  1)  : scope_1();
-			(true, false, true,  2)  : scope_2();
+			(true, false, true,  0) : scope_0();
+			(true, false, true,  1) : scope_1();
+			(true, false, true,  2) : scope_2();
 
-			(true, true,  true,  0)  : term_0(); // scope_flag is a don't care when terminating
-			(true, true,  false, 0)  : term_0(); // scope_flag is a don't care when terminating
-			(true, true,  true,  1)  : term_1(); // scope_flag is a don't care when terminating
-			(true, true,  false, 1)  : term_1(); // scope_flag is a don't care when terminating
-			(true, true,  true,  2)  : term_2(); // scope_flag is a don't care when terminating
-			(true, true,  false, 2)  : term_2(); // scope_flag is a don't care when terminating
+			(true, true,  true,  0) : term_0(); // scope_flag is a don't care when terminating
+			(true, true,  false, 0) : term_0(); // scope_flag is a don't care when terminating
+			(true, true,  true,  1) : term_1(); // scope_flag is a don't care when terminating
+			(true, true,  false, 1) : term_1(); // scope_flag is a don't care when terminating
+			(true, true,  true,  2) : term_2(); // scope_flag is a don't care when terminating
+			(true, true,  false, 2) : term_2(); // scope_flag is a don't care when terminating
 		}
 		const default_action = NoAction;
 	}
@@ -1684,7 +1898,11 @@ control Scoper_ScopeAndTermAndData(
 		}
 */
 		if(scope_inc.apply().hit) {
+#ifdef INGRESS_MAU_NO_LKP_2
+			Scoper_DataMux_Hdr2ToLkp.apply(hdr_2, hdr_3, lkp2_in, lkp);
+#else
 			Scoper_DataMux_LkpToLkp.apply(lkp2_in, lkp);
+#endif
 		}
 	}
 

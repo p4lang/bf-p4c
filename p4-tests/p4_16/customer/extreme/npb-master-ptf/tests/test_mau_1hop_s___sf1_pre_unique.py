@@ -61,6 +61,8 @@ class test(BfRuntimeTest):
 
 		ig_port = swports[1]
 		eg_port = swports[1]
+		eg_port1= swports[2]
+		eg_port2= swports[3]
 
 		# -----------------------
 		# Packet values to use
@@ -71,7 +73,7 @@ class test(BfRuntimeTest):
 		sip = "0.0.0.3"
 		dip = "0.0.0.4"
 
-		rmac = '33:33:33:33:33:33'
+		rmac = '33:33:22:33:33:33'
 
 		# -----------------------
 		# NSH values to use
@@ -86,7 +88,7 @@ class test(BfRuntimeTest):
 		sfc                     = 6 # Arbitrary value
 		dsap                    = 7 # Arbitrary value
 
-		sf_bitmask              = 4 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+		sf_bitmask              = 2 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
 		nexthop_ptr             = 1 # Arbitrary value
 		bd                      = 2 # Arbitrary value
@@ -97,23 +99,25 @@ class test(BfRuntimeTest):
 		tunnel_encap_bd         = 7 # Arbitrary value
 		tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
+		mgid                    = 8 # Arbitrary value
+		node                    = 7 # Arbitrary value
+		rid                     = 9 # Arbitrary value
+
 		# -----------------------------------------------------------
 		# Insert Table Entries
 		# -----------------------------------------------------------
 
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap,
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], mgid, dsap,
 			#tunnel
 			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 			#egress
 		)
 
-		# -----------------
-		# Egress SF(s)
-		# -----------------
-
-		npb_npb_sf2_policy_l2_add    (self, self.target, dsap=dsap, l2_etype=0x0800, l2_etype_mask=0xffff, strip_tag_e=1)
+		npb_pre_node_add(self, self.target, node, rid, [], [eg_port1, eg_port2]) # lower
+		npb_pre_mgid_add(self, self.target, mgid, [node])                        # upper
+		npb_mult_rid_unique_add(self, self.target, rid, 0, spi, si-1, nexthop_ptr, tunnel_encap_ptr, tunnel_encap_nexthop_ptr)
 
 		# -----------------
 
@@ -124,54 +128,22 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, e_en=True, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			e_en_exp=False,
 			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 		)
 
-		'''
-#		base_pkt = simple_tcp_packet2(eth_dst=dmac,tcp_sport=0,  tcp_dport=0,dl_vlan_enable=1,dot1br=1)
-		base_pkt = simple_udp_packet2(eth_dst=dmac,udp_sport=443,udp_dport=0,dl_vlan_enable=1,dot1br=1)
-		print(type(base_pkt))
+		# -----------------------------------------------------------
 
-		# -----------------
-
-		src_pkt = \
-			base_pkt
-		print(type(src_pkt))
-
-#		print "---------- Debug ----------"
-#		print(testutils.format_packet(src_pkt))
-#		print "---------- Debug ----------"
-
-		# -----------------
-
-		base_pkt_exp = testutils.simple_udp_packet(eth_dst=dmac,udp_sport=443,udp_dport=0,dl_vlan_enable=1,pktlen=100-8) # subtract 4, since tag will be stripped
-
-		exp_pkt = \
-			testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x894f) / \
-			scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si-(popcount(sf_bitmask)), TTL=63, \
-				NPC=((2<<24)|(sap)), \
-				NSC=((vpn<<16)|(0)), \
-				SPC=0, \
-				SSC=0, \
-			) / \
-			base_pkt_exp
-		print(type(exp_pkt))
-		'''
+		logger.info("Sending packet on port %d", ig_port)
+		testutils.send_packet(self, ig_port, str(src_pkt))
 
 		# -----------------------------------------------------------
 
-		if(ETAG_ENABLE == True):
-
-			logger.info("Sending packet on port %d", ig_port)
-			testutils.send_packet(self, ig_port, str(src_pkt))
-
-			# -------------------------------------------------------
-
-			logger.info("Verify packet on port %d", eg_port)
-			testutils.verify_packets(self, exp_pkt, [eg_port])
+		logger.info("Verify packet on port %d", eg_port)
+		logger.info("Verify packet on port %d", eg_port1)
+		logger.info("Verify packet on port %d", eg_port2)
+		testutils.verify_packets(self, exp_pkt, [eg_port, eg_port1, eg_port2])
 
 		logger.info("Verify no other packets")
 		testutils.verify_no_other_packets(self, 0, 1)
@@ -188,8 +160,6 @@ class test(BfRuntimeTest):
 			#egress
 		)
 
-		# -----------------
-		# Egress SF(s)
-		# -----------------
-
-		npb_npb_sf2_policy_l2_del(self, self.target, dsap=dsap, l2_etype=0x0800, l2_etype_mask=0xffff)
+		npb_pre_mgid_del(self, self.target, mgid) # upper
+		npb_pre_node_del(self, self.target, node) # lower
+		npb_mult_rid_unique_del(self, self.target, rid)

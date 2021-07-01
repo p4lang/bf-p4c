@@ -93,14 +93,14 @@ class test(BfRuntimeTest):
 		sf_bitmask_0            = 4 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 		sf_bitmask_1            = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		nexthop_ptr             = 0 # Arbitrary value
-		bd                      = 1 # Arbitrary value
-		ig_lag_ptr              = 2 # Arbitrary value
-		eg_lag_ptr              = 3 # Arbitrary value
-		tunnel_encap_ptr        = 4 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 5 # Arbitrary value
-		tunnel_encap_bd         = 6 # Arbitrary value
-		tunnel_encap_smac_ptr   = 7 # Arbitrary value
+		nexthop_ptr             = 1 # Arbitrary value
+		bd                      = 2 # Arbitrary value
+		ig_lag_ptr              = 3 # Arbitrary value
+		eg_lag_ptr              = 4 # Arbitrary value
+		tunnel_encap_ptr        = 5 # Arbitrary value
+		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+		tunnel_encap_bd         = 7 # Arbitrary value
+		tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
 		# -----------------------------------------------------------
 		# Insert Table Entries
@@ -127,7 +127,7 @@ class test(BfRuntimeTest):
 		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
 		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
 		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
-		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
+#		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
 		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=0)
 		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
 		npb_tunnel_inner_sap_add(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, sap_new=sap, vpn=vpn+1, scope=1)
@@ -138,7 +138,7 @@ class test(BfRuntimeTest):
 
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, flow_class=flow_class_acl, terminate=1)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, flow_class=flow_class_acl, terminate=1)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, flow_class=flow_class_acl, terminate=1)
+#		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, flow_class=flow_class_acl, terminate=1)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, flow_class=flow_class_acl, terminate=1)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, flow_class=flow_class_acl, terminate=0)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, flow_class=flow_class_acl, terminate=1)
@@ -223,7 +223,7 @@ class test(BfRuntimeTest):
 
 		exp_pkt_saved = exp_pkt
 
-		src_pkt, exp_pkt = npb_simple_3lyr_vxlan_gre_ip(
+		src_pkt, exp_pkt = npb_simple_3lyr_nvgre_gre_ip(
 			spi=spi, si=si, sap=sap, vpn=vpn+1, ttl=63, scope=2,
 			dmac=dmac, smac=smac,
 			sf_bitmask=sf_bitmask_1, start_of_chain=False, end_of_chain=True, scope_term_list=[1],
@@ -282,7 +282,7 @@ class test(BfRuntimeTest):
 		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)
 		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf)
 		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
-		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
+#		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
 		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf)
 		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)
 		npb_tunnel_inner_sap_del(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf)
@@ -293,7 +293,7 @@ class test(BfRuntimeTest):
 
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
+#		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf)
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)

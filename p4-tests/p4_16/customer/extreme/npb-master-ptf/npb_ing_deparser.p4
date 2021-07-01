@@ -62,6 +62,23 @@ control IngressMirror(
 */
 				ig_md.cpu_reason
             });
+        } else if (ig_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_CPU) {
+  #ifdef CPU_ACL_EGRESS_ENABLE
+            mirror.emit<switch_cpu_mirror_metadata_h>(ig_md.mirror.session_id, {
+                ig_md.mirror.src,
+                ig_md.mirror.type,
+                0,
+                ig_md.port,
+                ig_md.bd,
+                0,
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+                ig_md.egress_port,
+#else
+                ig_md.port_lag_index,
+#endif
+                ig_md.cpu_reason
+            });
+  #endif
         } else if (ig_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_DTEL_DROP) {
 #ifdef DTEL_ENABLE
             mirror.emit<switch_dtel_drop_mirror_metadata_h>(ig_md.dtel.session_id, {

@@ -63,6 +63,7 @@ parser NpbEgressParser(
 //          (_, _,                             SWITCH_MIRROR_TYPE_PORT             ) : parse_port_mirrored_metadata;
             (_, SWITCH_PKT_SRC_CLONED_INGRESS, SWITCH_MIRROR_TYPE_PORT             ) : parse_ig_port_mirrored_metadata; // derek added
             (_, SWITCH_PKT_SRC_CLONED_EGRESS,  SWITCH_MIRROR_TYPE_PORT             ) : parse_eg_port_mirrored_metadata; // derek added
+            (_, SWITCH_PKT_SRC_CLONED_INGRESS, SWITCH_MIRROR_TYPE_CPU              ) : parse_cpu_mirrored_metadata; // derek added
             (_, SWITCH_PKT_SRC_CLONED_EGRESS,  SWITCH_MIRROR_TYPE_CPU              ) : parse_cpu_mirrored_metadata;
 
 #ifdef DTEL_ENABLE
@@ -601,7 +602,6 @@ parser NpbEgressParser(
 #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         transition select(hdr.outer.vlan_tag[0].ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_1_scope0;
-            ETHERTYPE_QINQ : parse_outer_vlan_1_scope0;
 #if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls_scope0;
 #endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
@@ -732,7 +732,6 @@ parser NpbEgressParser(
         
         transition select(hdr.outer.vlan_tag[0].ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_1_scope1;
-            ETHERTYPE_QINQ : parse_outer_vlan_1_scope1;
 #if defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
             ETHERTYPE_MPLS : parse_outer_mpls_scope1;
 #endif // defined(MPLS_SR_ENABLE) || defined(MPLS_L2VPN_ENABLE) || defined(MPLS_L3VPN_ENABLE)
@@ -1031,7 +1030,7 @@ parser NpbEgressParser(
     state extract_outer_mpls_scope0 {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_mpls_scope0;
+            0: extract_outer_mpls_scope0;
             1: parse_inner_ethernet_scope0;
         }
     }
@@ -1041,10 +1040,12 @@ parser NpbEgressParser(
     state extract_outer_mpls_scope0 {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_mpls_scope0;
+            (0, _): extract_outer_mpls_scope0;
             (1, 4): parse_inner_ipv4_scope0;
             (1, 6): parse_inner_ipv6_scope0;
-            default: parse_outer_eompls_scope0;
+            (1, 0): parse_outer_eompls_scope0;
+            //default: parse_inner_ethernet_scope0;
+            default: accept; // todo: unexpected - flag this as error?
         }
     }
 
@@ -1057,9 +1058,11 @@ parser NpbEgressParser(
 
     state extract_outer_mpls_scope0 {
     	pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_mpls_scope0;
-            1: parse_outer_eompls_scope0;
+        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): extract_outer_mpls_scope0;
+            (1, 0): parse_outer_eompls_scope0;
+            //default: parse_inner_ethernet_scope0;
+            default: accept; // todo: unexpected - flag this as error?
         }
     }
 
@@ -1073,7 +1076,7 @@ parser NpbEgressParser(
     state extract_outer_mpls_scope0 {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_mpls_scope0;
+            (0, _): extract_outer_mpls_scope0;
             (1, 4): parse_inner_ipv4_scope0;
             (1, 6): parse_inner_ipv6_scope0;
             default: accept; // todo: unexpected - flag this as error?
@@ -1094,7 +1097,7 @@ parser NpbEgressParser(
     state extract_outer_mpls_scope1 {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_mpls_scope1;
+            0: extract_outer_mpls_scope1;
             1: parse_inner_ethernet_scope1;
         }
     }
@@ -1104,10 +1107,12 @@ parser NpbEgressParser(
     state extract_outer_mpls_scope1 {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_mpls_scope1;
+            (0, _): extract_outer_mpls_scope1;
             (1, 4): parse_inner_ipv4_scope1;
             (1, 6): parse_inner_ipv6_scope1;
-            default: parse_outer_eompls_scope1;
+            (1, 0): parse_outer_eompls_scope1;
+            //default: parse_inner_ethernet_scope1;
+            default: accept; // todo: unexpected - flag this as error?
         }
     }
 
@@ -1120,9 +1125,11 @@ parser NpbEgressParser(
 
     state extract_outer_mpls_scope1 {
     	pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_mpls_scope1;
-            1: parse_outer_eompls_scope1;
+        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): extract_outer_mpls_scope1;
+            (1, 0): parse_outer_eompls_scope1;
+            //default: parse_inner_ethernet_scope1;
+            default: accept; // todo: unexpected - flag this as error?
         }
     }
     
@@ -1136,7 +1143,7 @@ parser NpbEgressParser(
     state extract_outer_mpls_scope1 {
     	pkt.extract(hdr.outer.mpls.next);
         transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_mpls_scope1;
+            (0, _): extract_outer_mpls_scope1;
             (1, 4): parse_inner_ipv4_scope1;
             (1, 6): parse_inner_ipv6_scope1;
             default: accept; // todo: unexpected - flag this as error?

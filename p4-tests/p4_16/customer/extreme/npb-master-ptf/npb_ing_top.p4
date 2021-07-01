@@ -44,49 +44,43 @@ control npb_ing_top (
 //		ig_intr_md_for_tm.level2_exclusion_id = 0;
 
 		// -----------------------------------------------------------------
-		// Set Initial Scope
+		// Set Initial Lkp Structures
 		// -----------------------------------------------------------------
 
-#ifdef INGRESS_PARSER_POPULATES_LKP_0
-#else
+#ifndef INGRESS_PARSER_POPULATES_LKP_0
 		Scoper_DataMux_Hdr0ToLkp.apply(
 			hdr_0,
 			hdr_1,
+			ig_md.lkp_0,
 
 			ig_md.lkp_0
 		);
 #endif
 
-#ifdef INGRESS_PARSER_POPULATES_LKP_1
-#else
+#ifndef INGRESS_PARSER_POPULATES_LKP_1
+  #ifndef INGRESS_MAU_NO_LKP_1
 		Scoper_DataMux_Hdr1ToLkp.apply(
 			hdr_1,
 			hdr_2,
+			ig_md.lkp_1,
 
 			ig_md.lkp_1
 		);
+  #endif
 #endif
 
-#ifdef INGRESS_PARSER_POPULATES_LKP_2
-#else
+#ifndef INGRESS_PARSER_POPULATES_LKP_2
+  #ifndef INGRESS_MAU_NO_LKP_2
 		Scoper_DataMux_Hdr2ToLkp.apply(
 			hdr_2,
 			hdr_3,
+			ig_md.lkp_2,
 
 			ig_md.lkp_2
 		);
+  #endif
 #endif
-		// -----------------------------------------------------------------
-/*
-		Scoper_DataOnly.apply(
-			ig_md.lkp_0,
-//			ig_md.lkp_1
-			ig_md.lkp_2,
 
-			ig_md.nsh_md.scope,
-			ig_md.lkp_1
-        );
-*/
 		// -----------------------------------------------------------------
 		// Set Initial Scope (L7)
 		// -----------------------------------------------------------------
@@ -108,6 +102,7 @@ control npb_ing_top (
 				tunnel_1,
 				hdr_2,
 				tunnel_2,
+				hdr_3,
 				hdr_udf,
 
 				ig_md,
@@ -159,6 +154,7 @@ control npb_ing_top (
 
 		if (!INGRESS_BYPASS(SF_ACL)) {
 			npb_ing_sf_npb_basic_adv_top.apply (
+				ig_md.lkp_1,
 				hdr_0,
 				hdr_1,
 				hdr_2,
@@ -248,17 +244,20 @@ control npb_ing_top (
 		// Add NSH header
 		// -------------------------------------
 
-        hdr_0.nsh_type1_internal = {
-            version  = 0,
-            o        = 0,
-            reserved = 0,
-            ttl      = ig_md.nsh_md.ttl,
-            len      = 0,
-            spi      = ig_md.nsh_md.spi,
-            si       = ig_md.nsh_md.si,
-            vpn      = ig_md.nsh_md.vpn,
-            scope    = ig_md.nsh_md.scope,
-            sap      = ig_md.nsh_md.sap
-        };
+		// Only add bridged metadata if we are NOT bypassing egress pipeline.
+		if (ig_intr_md_for_tm.bypass_egress == 1w0) {
+			hdr_0.nsh_type1_internal = {
+				version  = 0,
+				o        = 0,
+				reserved = 0,
+				ttl      = ig_md.nsh_md.ttl,
+				len      = 0,
+				spi      = ig_md.nsh_md.spi,
+				si       = ig_md.nsh_md.si,
+				vpn      = ig_md.nsh_md.vpn,
+				scope    = ig_md.nsh_md.scope,
+				sap      = ig_md.nsh_md.sap
+			};
+		}
 	}
 }

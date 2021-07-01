@@ -10,6 +10,7 @@
 #include "acl.p4"
 
 control npb_egr_sf_proxy_top (
+	inout switch_lookup_fields_t                      lkp,
 	inout switch_header_transport_t                   hdr_0,
 	inout switch_header_outer_t                       hdr_1,
 	inout switch_egress_metadata_t                    eg_md,
@@ -103,7 +104,7 @@ control npb_egr_sf_proxy_top (
 	) {
 		stats_ip_len.count();
 
-		ip_len = eg_md.lkp_1.ip_len;
+		ip_len = lkp.ip_len;
 		ip_len_is_rng_bitmask = false;
 	}
 
@@ -118,7 +119,7 @@ control npb_egr_sf_proxy_top (
 
 	table egr_sf_ip_len_rng {
 		key = {
-			eg_md.lkp_1.ip_len : range @name("ip_len");
+			lkp.ip_len : range @name("ip_len");
 		}
 
 		actions = {
@@ -159,7 +160,7 @@ control npb_egr_sf_proxy_top (
 	) {
 		stats_l4_src_port.count();
 
-		l4_src_port = eg_md.lkp_1.l4_src_port;
+		l4_src_port = lkp.l4_src_port;
 		l4_src_port_is_rng_bitmask = false;
 	}
 
@@ -174,7 +175,7 @@ control npb_egr_sf_proxy_top (
 
 	table egr_sf_l4_src_port_rng {
 		key = {
-			eg_md.lkp_1.l4_src_port : range @name("l4_src_port");
+			lkp.l4_src_port : range @name("l4_src_port");
 		}
 
 		actions = {
@@ -215,7 +216,7 @@ control npb_egr_sf_proxy_top (
 	) {
 		stats_l4_dst_port.count();
 
-		l4_dst_port = eg_md.lkp_1.l4_dst_port;
+		l4_dst_port = lkp.l4_dst_port;
 		l4_dst_port_is_rng_bitmask = false;
 	}
 
@@ -230,7 +231,7 @@ control npb_egr_sf_proxy_top (
 
 	table egr_sf_l4_dst_port_rng {
 		key = {
-			eg_md.lkp_1.l4_dst_port : range @name("l4_dst_port");
+			lkp.l4_dst_port : range @name("l4_dst_port");
 		}
 
 		actions = {
@@ -288,24 +289,24 @@ control npb_egr_sf_proxy_top (
 #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
 			egr_sf_ip_len_rng.apply();
 #else
-			ip_len = eg_md.lkp_1.ip_len;
+			ip_len = lkp.ip_len;
 			ip_len_is_rng_bitmask = false;
 #endif
 #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
 			egr_sf_l4_src_port_rng.apply();
 #else
-			l4_src_port = eg_md.lkp_1.l4_src_port;
+			l4_src_port = lkp.l4_src_port;
 			l4_src_port_is_rng_bitmask = false;
 #endif
 #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
 			egr_sf_l4_dst_port_rng.apply();
 #else
-			l4_dst_port = eg_md.lkp_1.l4_dst_port;
+			l4_dst_port = lkp.l4_dst_port;
 			l4_dst_port_is_rng_bitmask = false;
 #endif
 
 			acl.apply(
-				eg_md.lkp_1,
+				lkp,
 				eg_md,
 				eg_intr_md_for_dprsr,
 				ip_len,
@@ -375,7 +376,7 @@ control npb_egr_sf_proxy_top (
 #ifdef SF_2_DEDUP_ENABLE
 			npb_egr_sf_proxy_dedup.apply (
 				eg_md.nsh_md.dedup_en,
-				eg_md.lkp_1,         // for hash
+				lkp,                 // for hash
 				(bit<VPN_ID_WIDTH>)eg_md.nsh_md.vpn, // for hash
 //				eg_md.ingress_port,  // for dedup
 				eg_md.nsh_md.sap, // for dedup

@@ -92,10 +92,12 @@ class test(BfRuntimeTest):
 
 		sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		nexthop_ptr             = 0 # Arbitrary value
+		nexthop_ptr             = 1 # Arbitrary value
 		vid                     = 0 # Arbitrary value
-		ig_lag_ptr              = 2 # Arbitrary value
-		eg_lag_ptr              = 3 # Arbitrary value
+		bd                      = 2 # Arbitrary value
+		ig_lag_ptr              = 3 # Arbitrary value
+		eg_lag_ptr              = 4 # Arbitrary value
+
 
 		# -----------------------------------------------------------
 		# Insert Table Entries
@@ -103,13 +105,13 @@ class test(BfRuntimeTest):
 
 		npb_nsh_bridge_add(self, self.target, 
 			#ingress
-			[ig_port], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac2,  eg_lag_ptr,   0,   0,   [eg_port]
+			[ig_port], ig_lag_ptr, rmac, nexthop_ptr, bd,0x0800, 0, vid, dmac2,  eg_lag_ptr,   0,   0,   [eg_port], False
 			#egress
 		)
 
-		npb_nsh_bridge_cpu_add(self, self.target, 
+		npb_nsh_bridge_add(self, self.target, 
 			#ingress
-			[ig_port2], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac, eg_lag_ptr+1, 0+1, 0+1, [eg_port2]
+			[ig_port2], ig_lag_ptr, rmac, nexthop_ptr, bd,0x0800, 0, vid, dmac, eg_lag_ptr+1, 0+1, 0+1, [eg_port2], True
 			#egress
 		)
 
@@ -201,12 +203,12 @@ class test(BfRuntimeTest):
 
 		npb_nsh_bridge_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac2,  eg_lag_ptr,   0,   0,   1, [eg_port]
+			[ig_port], ig_lag_ptr, rmac, nexthop_ptr, 0x0800, 0, vid, dmac2,  eg_lag_ptr,   0,   0,   1, [eg_port]
 			#egress
 		)
 
 		npb_nsh_bridge_del(self, self.target,
 			#ingress
-			[ig_port2], ig_lag_ptr, rmac, 0x0800, 0, vid, dmac, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port2]
+			[ig_port2], ig_lag_ptr, rmac, nexthop_ptr, 0x0800, 0, vid, dmac, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port2]
 			#egress
 		)

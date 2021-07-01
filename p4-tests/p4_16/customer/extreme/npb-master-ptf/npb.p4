@@ -179,14 +179,11 @@ control SwitchIngress(
 
 #ifdef BRIDGING_ENABLE
 	// the new parser puts bridging in outer
-    #ifdef INGRESS_PARSER_POPULATES_LKP_1
-			dmac.apply(ig_md.lkp_1.mac_dst_addr, ig_md, hdr);
-    #else
-			dmac.apply(hdr.outer.ethernet.dst_addr, ig_md, hdr);
-    #endif
+	dmac.apply(ig_md.lkp_1.mac_dst_addr,    ig_md.lkp_1, ig_md, hdr);
 #endif // BRIDGING ENABLE
 
-		if((ig_md.flags.transport_valid == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
+//		if((hdr.transport.ethernet.isValid() == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
+		if((ig_md.flags.transport_valid      == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
 			// ----- Bridging Path -----
 		} else {
 			// ----- NPB Path -----
@@ -243,8 +240,8 @@ control SwitchIngress(
 
 		if (ig_md.egress_port_lag_index == SWITCH_FLOOD) {
 		} else {
-//			lag.apply(ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
-			lag.apply(ig_md, ig_md.hash[switch_lag_hash_width-1:switch_lag_hash_width/2], ig_intr_md_for_tm.ucast_egress_port);
+//			lag.apply(ig_md.lkp_1, ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
+			lag.apply(ig_md.lkp_1, ig_md, ig_md.hash[switch_lag_hash_width-1:switch_lag_hash_width/2], ig_intr_md_for_tm.ucast_egress_port);
 		}
 
 		// Only add bridged metadata if we are NOT bypassing egress pipeline.
@@ -314,7 +311,7 @@ control SwitchEgress(
 		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_INVALID;// for barefoot reset bug
 #endif
 
-		egress_set_lookup.apply(hdr, eg_md, eg_intr_md);  // set lookup structure fields that parser couldn't
+		egress_set_lookup.apply(hdr.outer, hdr.inner, eg_md, eg_intr_md);  // set lookup structure fields that parser couldn't
 
 		egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 
@@ -360,7 +357,7 @@ control SwitchEgress(
 //			npb_egr_sf_proxy_hdr_edit.apply (hdr.transport, hdr.outer, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_intr_md_for_dprsr, eg_intr_md_for_oport);
 
 			// ---- outer nexthop (tunnel) code: operates on 'transport' ----
-			vlan_decap.apply(hdr.transport, eg_md);
+//			vlan_decap.apply(hdr.transport, eg_md);
 			tunnel_encap.apply(hdr.transport, hdr.outer, hdr.inner, hdr.inner_inner, eg_md, eg_md.tunnel_0, eg_md.tunnel_1, eg_md.tunnel_2);
 			tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
 			vlan_xlate.apply(hdr.transport, eg_md);

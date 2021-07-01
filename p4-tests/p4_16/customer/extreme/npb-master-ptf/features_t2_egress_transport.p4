@@ -22,6 +22,7 @@
 
 // List of all supported #define directives.
 
+#define PA_AUTO_INIT_METADATA
 #define PA_MONOGRESS
 #define PA_NO_INIT
 
@@ -130,6 +131,8 @@
 #undef  SF_0_ACL_INT_CTRL_FLAGS_ENABLE
 #define SF_0_ALLOW_SCOPE_CHANGES
 #undef  SF_0_DEDUP_ENABLE
+#define SF_0_INDIRECT_COUNTERS
+#undef  SF_0_QID_ENABLE
 
 // ----- npb: sf #2  -----
 #define SF_2_L2_VLAN_ID_ENABLE
@@ -145,6 +148,7 @@
 #define SF_2_EDIT_BD_TO_VID_TABLE_ENABLE
 #undef  SF_2_METER_ENABLE
 #undef  SF_2_DEDUP_ENABLE
+#define SF_2_INDIRECT_COUNTERS
 
 // ----- tofino 1 fitting -----
 #define BRIDGING_ENABLE // define for simultaneous switch and npb functionality (undefine for npb only)
@@ -163,16 +167,17 @@
 #define BUG_00593238_WORKAROUND // egress truncation length corruption
 
 // ----- other wanted / needed features that don't fit -----
-#define CPU_TX_BYPASS_ENABLE                  // this feature currently doesn't fit
-#define CPU_IG_BYPASS_ENABLE                  // this feature currently doesn't fit
-#define MULTICAST_INGRESS_RID_ENABLE          // this feature currently doesn't fit
-#define LAG_HASH_MASKING_ENABLE               // this feature currently doesn't fit
-#define LAG_HASH_IN_NSH_HDR_ENABLE            // this feature currently doesn't fit
+#define CPU_TX_BYPASS_ENABLE
+#define CPU_IG_BYPASS_ENABLE
+#define MULTICAST_INGRESS_RID_ENABLE
+#define LAG_HASH_MASKING_ENABLE
+#define LAG_HASH_IN_NSH_HDR_ENABLE
 #define FIELD_WIDTHS_REDUCED                  // to help w/ fitting
 #undef  FIX_L3_TUN_ALL_AT_ONCE	              // method #1 to try to get inner-inner l3 tunnel decaps to fit
 #define FIX_L3_TUN_LYR_BY_LYR	              // method #2 to try to get inner-inner l3 tunnel decaps to fit
-#undef  MIRROR_METER_ENABLE                   // this feature currently doesn't fit
-#undef  LAG_TABLE_INDIRECT_COUNTERS           // this feature currently doesn't fit
-#undef  CPU_HDR_CONTAINS_EG_PORT              // this feature currently doesn't fit
-#undef  INGRESS_NSH_HDR_VER_1_SUPPORT         // this feature currently doesn't fit
-#undef  EGRESS_NSH_HDR_VER_1_SUPPORT          // this feature currently doesn't fit
+#undef  MIRROR_METER_ENABLE
+#undef  LAG_TABLE_INDIRECT_COUNTERS
+#undef  CPU_HDR_CONTAINS_EG_PORT
+#undef  INGRESS_NSH_HDR_VER_1_SUPPORT
+#undef  EGRESS_NSH_HDR_VER_1_SUPPORT
+#undef  INGRESS_MAU_NO_LKP_2                  // only valid if INGRESS_PARSER_POPULATES_LKP_2 not defined
