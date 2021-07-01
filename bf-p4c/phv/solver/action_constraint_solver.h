@@ -11,6 +11,84 @@
 
 namespace solver {
 
+/// ContainerID is a cstring that uniquely represents a container.
+/// Empty string is reserved to represent const or action data.
+using ContainerID = cstring;
+
+/// base class for all instructions.
+/// TODO(yumin): currenly instruction classes only print a readable string representation.
+/// To print asm-compatible string, we need
+/// (1) distinguish inline const v.s. action data.
+/// (2) allow replacing action data with actual address.
+class Instruction {
+ public:
+    virtual cstring name() const = 0;
+    virtual cstring to_cstring() const = 0;
+};
+
+/// deposit-field instruction.
+///   dest = ((src1 << shift) & mask) | (src2 & ~mask)
+/// Note that in some docs, deposit-field is using right rotate instead of left rotate here.
+/// Since left/right rotate is isomorphic, we will simply use left rotate in this
+/// module.
+class DepositField : public Instruction {
+ public:
+    ContainerID dest;
+    ContainerID src1;
+    int left_rotate;
+    bitvec mask;
+    ContainerID src2;
+    DepositField(ContainerID dest, ContainerID src1, int left_rotate, bitvec mask,
+                 ContainerID src2)
+        : dest(dest), src1(src1), left_rotate(left_rotate), mask(mask), src2(src2) {}
+    cstring name() const override { return "deposit-field"; };
+    cstring to_cstring() const override;
+};
+
+/// bitmasked-set:
+///     dest = (src1 & mask) | (src2 & ~mask)
+class BitmaskedSet : public Instruction {
+ public:
+    ContainerID dest;
+    ContainerID src1;
+    ContainerID src2;
+    bitvec mask;
+    BitmaskedSet(ContainerID dest, ContainerID src1, ContainerID src2, bitvec mask)
+        : dest(dest), src1(src1), src2(src2), mask(mask) {}
+    cstring name() const override { return "bitmasked-set"; };
+    cstring to_cstring() const override;
+};
+
+/// byte-rotate-merge:
+///   dest = ((src1 << src1_shift) & mask) | ((src2 << src2_shift) & ~mask)
+class ByteRotateMerge : public Instruction {
+ public:
+    ContainerID dest;
+    ContainerID src1;
+    int shift1;
+    ContainerID src2;
+    int shift2;
+    bitvec mask;
+    ByteRotateMerge(ContainerID dest, ContainerID src1, int shift1, ContainerID src2, int shift2,
+                    bitvec mask)
+        : dest(dest), src1(src1), shift1(shift1), src2(src2), shift2(shift2), mask(mask) {}
+    cstring name() const override { return "byte-rotate-merge"; };
+    cstring to_cstring() const override;
+};
+
+/// ContainerSet is a simple container set op that writes all aligned bits in dest by src.
+/// It is the only instruction to set dark or mocha container.
+///   dest = src.
+class ContainerSet : public Instruction {
+ public:
+    ContainerID dest;
+    ContainerID src;
+    ContainerSet(ContainerID dest, ContainerID src)
+        : dest(dest), src(src) {}
+    cstring name() const override { return "set"; };
+    cstring to_cstring() const override;
+};
+
 enum class ErrorCode {
     unsat = 1,
     invalid_input = 2,
@@ -31,13 +109,22 @@ struct Error {
     Error(ErrorCode code, cstring msg) : code(code), msg(msg){};
 };
 
-// CcontainerID is a cstring that uniquely represents a container.
-using ContainerID = cstring;
-
 // ContainerSpec container specification.
 struct ContainerSpec {
     int size;
     bitvec live;  // bits that *will* have live fieldslices allocated, after action.
+};
+
+// Result contains either an error or all instructions for an action.
+struct Result {
+    boost::optional<Error> err;
+    std::vector<const Instruction*> instructions;
+    Result(){}
+    explicit Result(const Error& err): err(err) {}
+    explicit Result(const Instruction* inst): instructions({inst}) {}
+    explicit Result(const std::vector<const Instruction*>& instructions)
+        : instructions(instructions) {}
+    bool ok() { return !err; }
 };
 
 // Operand represents either a source or a destination of an instruction.
@@ -73,13 +160,28 @@ class ActionSolverBase {
     // destination-clustered assignments.
     ordered_map<ContainerID, RotateClassifiedAssigns> dest_assigns_i;
     ordered_map<ContainerID, ContainerSpec> specs_i;
+    bool enable_bitmasked_set_i = true;
 
  protected:
     /// validate_input run misc basic checks on input, see comments in
     /// function body for details.
     boost::optional<Error> validate_input() const;
 
+    /// try to use container set to synthesize all assignments to @p dest, either
+    /// (1) sources are all constants: can be merge into one constant or action data, or
+    /// (2) sources are of one container: all aligned, or
+    /// (3) sources are all action data.
+    /// Also, We need to ensure that other allocated bits in the container will not be corrupted,
+    /// i.e., all other bits of dest that are not set in this action need to be not live.
+    Result try_container_set(const ContainerID dest,
+                             const RotateClassifiedAssigns& offset_assigns) const;
+
  public:
+    // set true to enable bitmasked_set set, otherwise disable. default: enable.
+    void enable_bitmasked_set(bool enable) {
+        enable_bitmasked_set_i = enable;
+    }
+
     // add an assignment from the action.
     virtual void add_assign(const Operand& dst, Operand src);
 
@@ -87,12 +189,13 @@ class ActionSolverBase {
     virtual void set_container_spec(ContainerID id, int size, bitvec live);
 
     // return solve result.
-    virtual boost::optional<Error> solve() const = 0;
+    virtual Result solve() const = 0;
 
-    // clear all states.
+    // clear all states and will reset enable_bitmasked_set to true.
     virtual void clear() {
         dest_assigns_i.clear();
         specs_i.clear();
+        enable_bitmasked_set_i = true;
     }
 };
 
@@ -126,52 +229,59 @@ class ActionMoveSolver : public ActionSolverBase {
                                                  const symbolic_bitvec::BitVec& bv_src2) const;
 
     // run deposit-field instruction symbolic bitvec solver with specific src1 and src2.
-    boost::optional<Error> run_deposit_field_symbolic_bitvec_solver(
+    // When src2 is empty, src2 is assumed to be dest.
+    Result run_deposit_field_symbolic_bitvec_solver(
         const ContainerID dest,
         const std::vector<Assign>& src1, const std::vector<Assign>& src2) const;
 
     // an indirection to symbolic bitvec solver, potentially can be other solvers.
-    boost::optional<Error> run_deposit_field_solver(
+    Result run_deposit_field_solver(
         const ContainerID dest,
         const std::vector<Assign>& src1, const std::vector<Assign>& src2) const;
 
-    // try solve this assignment using deposit-field or bitmasked-set.
-    boost::optional<Error> try_deposit_field_or_bitmasked_set(
+    // try solve this assignment using deposit-field.
+    Result try_deposit_field(
         const ContainerID dest, const RotateClassifiedAssigns& assigns) const;
 
-    // with known src1 and src2 synthesis and verify.
-    boost::optional<Error> run_byte_rotate_merge_symbolic_bitvec_solver(
+    // Build and run a symbolic solver to check possibility of assignments on dest from
+    // src1 and src2. When src2 is empty, src2 is assumed to be dest.
+    Result run_byte_rotate_merge_symbolic_bitvec_solver(
         const ContainerID dest, const std::vector<Assign>& src1,
         const std::vector<Assign>& src2) const;
 
     // an indirection to symbolic solver. For byte-rotate-merge,
     // only symbolic solver is implemented.
-    boost::optional<Error> run_byte_rotate_merge_solver(
+    Result run_byte_rotate_merge_solver(
         const ContainerID dest, const std::vector<Assign>& src1,
         const std::vector<Assign>& src2) const;
 
-    // try solve this assignment using byte_rotate_merge.
+    // try to solve this assignment using byte_rotate_merge.
     // dest = ((src1 << src1_shift) & mask) | ((src2 << src2_shift) & ~mask)
-    boost::optional<Error> try_byte_rotate_merge(
+    Result try_byte_rotate_merge(
+        const ContainerID dest, const RotateClassifiedAssigns& assigns) const;
+
+    // try to solve this assignment using bitmasked-set.
+    // Note that, even if it's possible to just use a simple ContainerSet, this function
+    // will return a BitmaskedSet. Since a simple containerSet can be considered as a
+    // special form of deposit-field with 0 shift and full mask, make sure to try use
+    // deposit-field first.
+    Result try_bitmasked_set(
         const ContainerID dest, const RotateClassifiedAssigns& assigns) const;
 
  public:
-    ActionMoveSolver() {};
-
-    // solve it
-    boost::optional<Error> solve() const override;
+    Result solve() const override;
 };
 
 /// ActionMochaSolver checks basic mocha set constraints for an action that either
 /// (1) sources are all constants or action data: can be merge into one operand.
 /// (2) sources are of one container: all aligned.
 /// Also, we need to ensure that other allocated bits in the container will not be corrupted,
-/// and since set instruction on mocha/dark are whole-container-set, all other bits that
+/// and since set instruction on mocha are whole-container-set, all other bits that
 /// are not set in this action need to be not live.
 class ActionMochaSolver : public ActionSolverBase {
  public:
     ActionMochaSolver() {};
-    boost::optional<Error> solve() const override;
+    Result solve() const override;
 };
 
 /// ActionDarkSolver checks basic dark set constraints for an action that either
@@ -182,7 +292,7 @@ class ActionMochaSolver : public ActionSolverBase {
 class ActionDarkSolver : public ActionSolverBase {
  public:
     ActionDarkSolver() {};
-    boost::optional<Error> solve() const override;
+    Result solve() const override;
 };
 
 }  // namespace solver

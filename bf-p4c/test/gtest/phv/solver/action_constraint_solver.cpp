@@ -71,8 +71,8 @@ TEST(action_constraint_solver, one_field_assign) {
     solver.set_container_spec("H2", 16, bitvec());
     solver.add_assign(make_container_operand("H1", StartLen(0, 3)),
                       make_container_operand("H2", StartLen(0, 3)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, one_field_assign_rot_aligned) {
@@ -81,8 +81,8 @@ TEST(action_constraint_solver, one_field_assign_rot_aligned) {
     solver.set_container_spec("H2", 16, bitvec());
     solver.add_assign(make_container_operand("H1", StartLen(0, 3)),
                       make_container_operand("H2", StartLen(11, 3)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, two_field_one_container_assign) {
@@ -96,8 +96,8 @@ TEST(action_constraint_solver, two_field_one_container_assign) {
                       make_container_operand("H2", FromTo(0, 3)));
     solver.add_assign(make_container_operand("H1", FromTo(4, 6)),
                       make_container_operand("H2", FromTo(5, 7)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, two_field_assign_src2_ne_dest) {
@@ -109,10 +109,10 @@ TEST(action_constraint_solver, two_field_assign_src2_ne_dest) {
                       make_container_operand("H2", FromTo(0, 3)));
     solver.add_assign(make_container_operand("H1", FromTo(4, 6)),
                       make_container_operand("H1", FromTo(5, 7)));
-    auto err = solver.solve();
-    EXPECT_TRUE(err);
-    EXPECT_EQ(ErrorCode::deposit_src2_must_be_dest, err->code);
-    EXPECT_THAT(err->msg.c_str(),
+    auto rst = solver.solve();
+    EXPECT_FALSE(rst.ok());
+    EXPECT_EQ(ErrorCode::deposit_src2_must_be_dest, rst.err->code);
+    EXPECT_THAT(rst.err->msg.c_str(),
                 HasSubstr("destination H1 will be corrupted because src2 H2 is not equal to dest"));
 }
 
@@ -128,8 +128,8 @@ TEST(action_constraint_solver, two_field_assign_dest_no_live_bits) {
                       make_container_operand("H2", FromTo(0, 3)));
     solver.add_assign(make_container_operand("H1", FromTo(4, 6)),
                       make_container_operand("H3", FromTo(5, 7)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, wrap_around_1) {
@@ -143,8 +143,8 @@ TEST(action_constraint_solver, wrap_around_1) {
     // solver.add_assign(Operand{false, "H1", FromTo(0, 3)}, Operand{false, "H1", FromTo(0, 3)});
     solver.add_assign(make_container_operand("H1", FromTo(4, 6)),
                       make_container_operand("H2", FromTo(3, 5)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, wrap_around_2) {
@@ -159,8 +159,8 @@ TEST(action_constraint_solver, wrap_around_2) {
                       make_container_operand("H2", FromTo(2, 2)));
     solver.add_assign(make_container_operand("H1", FromTo(11, 12)),
                       make_container_operand("H2", FromTo(14, 15)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, wrap_around_3) {
@@ -175,8 +175,8 @@ TEST(action_constraint_solver, wrap_around_3) {
                       make_ad_or_const_operand());
     solver.add_assign(make_container_operand("H1", FromTo(11, 12)),
                       make_ad_or_const_operand());
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, byte_rotate_merge_byte_reversed) {
@@ -190,8 +190,8 @@ TEST(action_constraint_solver, byte_rotate_merge_byte_reversed) {
                       make_container_operand("W35", FromTo(8, 15)));
     solver.add_assign(make_container_operand("W35", FromTo(24, 31)),
                       make_container_operand("W35", FromTo(0, 7)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, byte_rotate_merge_reversed_from_other_field) {
@@ -206,8 +206,8 @@ TEST(action_constraint_solver, byte_rotate_merge_reversed_from_other_field) {
                       make_container_operand("W36", FromTo(8, 15)));
     solver.add_assign(make_container_operand("W35", FromTo(24, 31)),
                       make_container_operand("W36", FromTo(0, 7)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, byte_rotate_merge_half_reversed_1) {
@@ -217,8 +217,8 @@ TEST(action_constraint_solver, byte_rotate_merge_half_reversed_1) {
                       make_container_operand("W35", FromTo(24, 31)));
     solver.add_assign(make_container_operand("W35", FromTo(16, 23)),
                       make_container_operand("W35", FromTo(8, 15)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, byte_rotate_merge_half_reversed_2) {
@@ -229,8 +229,8 @@ TEST(action_constraint_solver, byte_rotate_merge_half_reversed_2) {
                       make_container_operand("W36", FromTo(24, 31)));
     solver.add_assign(make_container_operand("W35", FromTo(8, 15)),
                       make_container_operand("W36", FromTo(0, 7)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
 
 TEST(action_constraint_solver, byte_rotate_merge_mixed) {
@@ -246,8 +246,73 @@ TEST(action_constraint_solver, byte_rotate_merge_mixed) {
                       make_container_operand("W35", FromTo(8, 15)));
     solver.add_assign(make_container_operand("W0", FromTo(24, 31)),
                       make_container_operand("W36", FromTo(0, 7)));
-    auto err = solver.solve();
-    EXPECT_FALSE(err);
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
 }
+
+TEST(action_constraint_solver, bitmasked_set_only) {
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_container_operand("W35", FromTo(0, 1)));
+    solver.add_assign(make_container_operand("W0", FromTo(3, 4)),
+                      make_container_operand("W35", FromTo(3, 4)));
+    solver.add_assign(make_container_operand("W0", FromTo(15, 16)),
+                      make_container_operand("W35", FromTo(15, 16)));
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
+}
+
+TEST(action_constraint_solver, bitmasked_set_only_but_disabled) {
+    auto solver = ActionMoveSolver();
+    solver.enable_bitmasked_set(false);
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_container_operand("W35", FromTo(0, 1)));
+    solver.add_assign(make_container_operand("W0", FromTo(3, 4)),
+                      make_container_operand("W35", FromTo(3, 4)));
+    solver.add_assign(make_container_operand("W0", FromTo(15, 16)),
+                      make_container_operand("W35", FromTo(15, 16)));
+    auto rst = solver.solve();
+    EXPECT_FALSE(rst.ok());
+}
+
+TEST(action_constraint_solver, dakr_solver) {
+    auto solver = ActionDarkSolver();
+    // not okay, action data source.
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_ad_or_const_operand());
+    EXPECT_FALSE(solver.solve().ok());
+    solver.clear();
+
+    // not okay, will overwrite w0[2:31]
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_container_operand("W35", FromTo(0, 1)));
+    EXPECT_FALSE(solver.solve().ok());
+    solver.clear();
+
+    // okay, full set
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 31)),
+                      make_container_operand("W35", FromTo(0, 31)));
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+
+    // okay, w0[2:31] does not have live bits.
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 2));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_container_operand("W35", FromTo(0, 1)));
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+}
+
+
 
 }  // namespace Test

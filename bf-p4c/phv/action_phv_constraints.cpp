@@ -3641,10 +3641,16 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints_with_solver(
             add_dark_init_assign(action, slice, dest);
             add_action_assign(action, slice, dest);
         }
-        auto err = solver->solve();
-        if (err) {
-            LOG1("Solver Error Reason: " << err->msg);
+        auto rst = solver->solve();
+        if (!rst.ok()) {
+            LOG1("Solver Error Reason: " << rst.err->msg);
             return CanPackErrorCode::CONSTRAINT_CHECKER_FALIED;
+        }
+        if (LOGGING(4)) {
+            LOG4("instructions: ");
+            for (const auto* inst : rst.instructions) {
+                LOG4(inst->to_cstring());
+            }
         }
     }
 
@@ -3675,6 +3681,7 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints_with_solver(
     for (const auto* ara_slice : ara_slices) {
         LOG3("check ARA on slice: " << ara_slice);
         solver->clear();
+        solver->enable_bitmasked_set(false);  // ara cannot do bitmasked set.
         const auto dest_live =
             compute_dest_live_bv(ara_slice->getEarliestLiveness().first, nullptr);
         LOG5("dest live bits bitvec after ARA: " << dest_live);
@@ -3712,10 +3719,16 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints_with_solver(
                 }
             }
         }
-        auto err = solver->solve();
-        if (err) {
-            LOG1("ARA Solver Error Reason: " << err->msg);
+        auto rst = solver->solve();
+        if (!rst.ok()) {
+            LOG1("ARA Solver Error Reason: " << rst.err->msg);
             return CanPackErrorCode::CONSTRAINT_CHECKER_FALIED;
+        }
+        if (LOGGING(4)) {
+            LOG4("ARA instructions: ");
+            for (const auto* inst : rst.instructions) {
+                LOG4(inst->to_cstring());
+            }
         }
     }
 
