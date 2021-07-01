@@ -145,7 +145,6 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_index")),
                     new IR::PathExpression(IR::ID("index"))));
 
-        LOG1("number of action " << number_actions);
         if (number_actions > 1) {
             if (use_funnel_shift(lpm_key->type->width_bits())) {
                 int shift_amt =
@@ -178,7 +177,12 @@ void SplitAlpm::apply_pragma_exclude_msbs(const IR::P4Table* tbl,
         const ordered_map<cstring, int>* fields_to_exclude,
         IR::Vector<IR::KeyElement>& keys) {
     for (auto k : tbl->getKey()->keyElements) {
-        auto fname = k->expression->toString();
+        cstring fname;
+        if (auto annot = k->getAnnotation(IR::Annotation::nameAnnotation)) {
+            fname = annot->getName();
+        } else {
+            fname = k->expression->toString();
+        }
         if (fields_to_exclude->find(fname) != fields_to_exclude->end()) {
             auto msb = fields_to_exclude->at(fname);
             auto key_width = k->expression->type->width_bits();
