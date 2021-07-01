@@ -4838,7 +4838,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
     PHV::ConcreteAllocation alloc = make_concrete_allocation(phv_i, uses_i);
     auto container_groups = AllocatePHV::makeDeviceContainerGroups();
     std::list<PHV::SuperCluster*> cluster_groups;
-    const int pipeId = root->id;
+    const int pipeId = root->to<IR::BFN::Pipe>()->id;
     for (const auto& f : temp_vars_i) {
         cluster_groups.push_back(new PHV::SuperCluster(
             {new PHV::RotationalCluster({new PHV::AlignedCluster(
