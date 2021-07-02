@@ -551,7 +551,9 @@ const IR::MAU::Primitive *ConstantsToActionData::preorder(IR::MAU::Primitive *pr
 const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
     LOG1("ConstantsToActionData preorder on constant : " << constant);
     has_constant = true;
-    unsigned constant_value = static_cast<unsigned>(constant->value);
+    unsigned constant_value = constant->value < 0 ?
+        static_cast<unsigned>(static_cast<int>(constant->value)) :
+        static_cast<unsigned>(constant->value);
     ActionData::Parameter *param = new ActionData::Constant(constant_value,
                                                             constant->type->width_bits());
     constant_rename_key.param = param;

@@ -961,7 +961,9 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
     BUG_CHECK(constant->value >= INT_MIN && constant->value <= UINT_MAX, "%s: Constant "
               "value in an instruction not split correctly", constant->srcInfo);
 
-    uint32_t constant_value = static_cast<uint32_t>(constant->value);
+    uint32_t constant_value = constant->value < 0 ?
+        static_cast<uint32_t>(static_cast<int32_t>(constant->value)):
+        static_cast<uint32_t>(constant->value);
 
     int bits_seen = 0;
     for (auto read_bits : read_bits_brs) {
@@ -1020,7 +1022,9 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
     BUG_CHECK(constant->fitsUint() || constant->fitsInt(), "%s: Constant "
               "value in an instruction not split correctly", constant->srcInfo);
 
-    uint32_t constant_value = static_cast<uint32_t>(constant->value);
+    uint32_t constant_value = constant->value < 0 ?
+        static_cast<uint32_t>(static_cast<int32_t>(constant->value)) :
+        static_cast<uint32_t>(constant->value);
 
     // Tries to determine if the constant has an action data allocation in the
     // ActionData::Format::Use oject
@@ -1164,7 +1168,6 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 same_action = false;
             }
         }
-
 
         if (!same_action && error_verbose) {
             ::warning("In action %s over container %s, the action has multiple operand types %s",

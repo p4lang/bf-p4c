@@ -775,11 +775,15 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
         return this; }
     slot = dest->reg.mau_id();
     int size = Phv::reg(slot)->size;
-    if (size > 21)
+    int minval = -1 << (size - 1);
+    if (size > 21) {
         size = 21;
-    // The load const source is an unsigned constant (even though the uArch for Tofino says that
-    // the source is signed, this is not true);
-    if (src >= (1 << size) || src < 0)
+        minval = 0; }
+    // For an 8 or 16 bit PHV, the constant to load is 8 (or 16) bits, so
+    // there's no need for sign extension to deal with a negative value.  For
+    // 32 bit PHVs, the constant is 21 bits and zero-extended to 32 bits, so
+    // must be positive.
+    if (src >= (1 << size) || src < minval)
         error(lineno, "Constant value %d out of range", src);
     src &= (1 << size) - 1;
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
