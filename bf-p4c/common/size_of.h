@@ -54,6 +54,7 @@ class BackendConstantFolding : public Transform {
 
 class BackendStrengthReduction : public Transform {
     const IR::Node* sub(IR::MAU::Instruction* inst);
+    const IR::Node* preorder(IR::MAU::SaluInstruction* inst) override;
     const IR::Node* preorder(IR::MAU::Instruction* inst) override;
 };
 

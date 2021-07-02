@@ -107,6 +107,13 @@ const IR::Node* BackendStrengthReduction::sub(IR::MAU::Instruction* inst) {
     return inst;
 }
 
+const IR::Node* BackendStrengthReduction::preorder(IR::MAU::SaluInstruction* inst) {
+    // Don't go through these.
+    LOG3("leaving alone SALU inst " << inst);
+    prune();
+    return inst;
+}
+
 const IR::Node* BackendStrengthReduction::preorder(IR::MAU::Instruction* inst) {
     LOG3("replacing inst " << inst);
     if (inst->name == "sub")
