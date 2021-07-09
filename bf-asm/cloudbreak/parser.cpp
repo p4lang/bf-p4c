@@ -483,6 +483,10 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
         regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
     }
 
+    // All phvs used globaly by egress and not by ingress parser should be owned by
+    // egress parser so they get zeroed properly in the parser
+    phv_use[EGRESS] |= remove_nonparser(Phv::use(EGRESS)) - expand_parser_groups(phv_use[INGRESS]);
+
     setup_jbay_ownership(phv_use,
                          regs.merge.ul.phv_owner_127_0.owner,
                          regs.merge.ur.phv_owner_255_128.owner,

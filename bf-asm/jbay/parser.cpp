@@ -229,6 +229,24 @@ static void write_output_const_slot(
     used |= tmpused & ~SAVE_ONLY_USED_SLOTS;
 }
 
+/* If the bitvec contains one of a pair of 8-bit PHVs, add the other, as they need
+ * to be owened together in the parser ingress/egress ownership */
+static bitvec expand_parser_groups(bitvec phvs) {
+    for (int i : phvs)
+        if (Phv::reg(i)->size == 8)
+            phvs[i^1] = 1;
+    return phvs;
+}
+
+/* remove PHVs from the bitvec which are not accessable in the parser
+ * FIXME -- should just have a static const bitvec of the valid ones and & with it */
+static bitvec remove_nonparser(bitvec phvs) {
+    for (int i : phvs)
+        if (Phv::reg(i)->parser_id() < 0)
+            phvs[i] = 0;
+    return phvs;
+}
+
 static void setup_jbay_ownership(bitvec phv_use[2],
                                  checked_array<128, ubits<1>> &left,
                                  checked_array<128, ubits<1>> &right,
@@ -465,6 +483,10 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
         regs.egress.epbreg.chan6_group.chnl_ctrl.meta_opt = meta_opt;
         regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
     }
+
+    // All phvs used globaly by egress and not by ingress parser should be owned by
+    // egress parser so they get zeroed properly in the parser
+    phv_use[EGRESS] |= remove_nonparser(Phv::use(EGRESS)) - expand_parser_groups(phv_use[INGRESS]);
 
     setup_jbay_ownership(phv_use,
                          regs.merge.ul.phv_owner_127_0.owner,
