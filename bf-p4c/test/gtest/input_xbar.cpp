@@ -4,7 +4,7 @@
 
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
@@ -20,14 +20,14 @@ class InputXbarAlloc: public TofinoBackendTest {
 
 TEST_F(InputXbarAlloc, hello) {
     safe_vector<IXBar::Use::Byte *> alloced;
-    IXBar::hash_matrix_reqs hm_reqs;
+    Tofino::IXBar::hash_matrix_reqs hm_reqs;
     hm_reqs.max_search_buses = -1;
     hm_reqs.index_groups = 0;
     hm_reqs.select_bits = 0;
     hm_reqs.hash_dist = 0;
     hm_reqs.requires_versioning = 1;
 
-    IXBar ixbar;
+    Tofino::IXBar ixbar;
 
     alloc.clear();
     auto byte = new IXBar::Use::Byte("W10", 16);

@@ -360,6 +360,13 @@ set (BF_P4C_BACKEND_MAU_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
+set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
+  mau/tofino/input_xbar.cpp
+  mau/tofino/memories.cpp
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}")
+build_unified(BF_P4C_BACKEND_MAU_TOFINO_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+
 set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
   mau/action_data_bus.h
@@ -419,6 +426,12 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/walk_power_graph.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
+
+set (BF_P4C_BACKEND_MAU_TOFINO_HDRS
+  mau/tofino/input_xbar.h
+  mau/tofino/memories.h
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_HDRS}")
 
 set (BF_P4C_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
@@ -844,6 +857,7 @@ set (BF_P4C_SOURCES
   ${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}
   ${BF_P4C_BACKEND_LOGGING_SRCS}
   ${BF_P4C_BACKEND_MAU_SRCS}
+  ${BF_P4C_BACKEND_MAU_TOFINO_SRCS}
   ${BF_P4C_BACKEND_PARDE_SRCS}
   ${BF_P4C_BACKEND_PHV_SRCS}
   ${BF_P4C_BACKEND_ARCH_SRCS}
