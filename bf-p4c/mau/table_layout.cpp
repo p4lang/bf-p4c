@@ -464,10 +464,10 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
             layout.match_width_bits += bv.popcount() * mbk.match_multiplier;
             byte_sizes.push_back(bv.popcount());
         }
-        LOG4("\tIXBar Bytes : " << layout.ixbar_bytes << " Match Bytes : " << layout.match_bytes
-             << " IXBar Width Bits : " << layout.ixbar_width_bits << " Match Width Bits : "
-             << layout.match_width_bits);
     }
+    LOG4("\tIXBar Bytes : " << layout.ixbar_bytes << " Match Bytes : " << layout.match_bytes
+         << " IXBar Width Bits : " << layout.ixbar_width_bits << " Match Width Bits : "
+         << layout.match_width_bits);
 
     if (layout.atcam) {
         ERROR_CHECK(partition_found, ErrorType::ERR_INVALID,
@@ -634,6 +634,7 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         return;
     }
 
+    auto lo_key = std::make_pair(tbl->name, format_type);
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
         if (pack_val > 0 && entry_count != pack_val)
             continue;
@@ -676,7 +677,7 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         } else {
             mod_value = entry_count % width;
             min_value = width;
-         }
+        }
 
         // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
         // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
@@ -697,9 +698,9 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         layout_for_pack.action_data_bytes = action_data_bytes_in_table + (immediate_bits + 7) / 8;
         way.match_groups = entry_count;
         way.width = width;
-        LayoutOption lo(layout_for_pack, way, index);
-        cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+        cache_layout_options[lo_key].emplace_back(layout_for_pack, way, index);
     }
+    // FIXME sort layout options best (cheapest) to worst?
 }
 
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
@@ -718,6 +719,7 @@ void LayoutChoices::setup_layout_options(const IR::MAU::Table *tbl,
                                   use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
                                   use.immediate_bits(), index);
             index++; } }
+    LOG2_UNINDENT;
 }
 
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked

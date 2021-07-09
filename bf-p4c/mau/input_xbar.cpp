@@ -6,6 +6,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/tofino/input_xbar.h"
+#include "bf-p4c/mau/flatrock/input_xbar.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "dynamic_hash/dynamic_hash.h"
 #include "lib/algorithm.h"
@@ -107,19 +108,19 @@ IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) con
         return rv;
     }
 
-    for (int i = 0; i < HASH_GROUPS; i++) {
-        if (hash_table_inputs[i] == 0) continue;
+    for (auto &input : hash_table_inputs) {
+        if (input == 0) continue;
         auto rv_index = new safe_vector<Byte>();
         for (auto byte : use) {
             int hash_group = byte.loc.group * 2 + byte.loc.byte / 8;
-            if ((1 << hash_group) & hash_table_inputs[i]) {
+            if ((1 << hash_group) & input) {
                 rv_index->push_back(byte);
             }
         }
 
         rv.push_back(rv_index);
         if (hash_groups)
-            hash_groups->push_back(i);
+            hash_groups->push_back(&input - &hash_table_inputs[0]);
     }
     return rv;
 }
@@ -152,10 +153,10 @@ safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *hash_group) const
         partition.push_back(byte);
     }
     if (hash_group) {
-        for (int i = 0; i < HASH_GROUPS; i++) {
-            if (hash_table_inputs[i] == 0) continue;
-            *hash_group = i;
-            break;
+        for (auto &input : hash_table_inputs) {
+            if (input) {
+                *hash_group = &input - &hash_table_inputs[0];
+                break; }
         }
     }
     return partition;
@@ -278,10 +279,11 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
     use.insert(use.end(), alloc.use.begin(), alloc.use.end());
     bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
     way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
-    for (int i = 0; i < HASH_GROUPS; i++) {
-        if (hash_table_inputs[i] != 0 && alloc.hash_table_inputs[i] != 0)
+    for (auto &input : alloc.hash_table_inputs) {
+        int i = &input - &alloc.hash_table_inputs[0];
+        if (hash_table_inputs[i] != 0 && input != 0)
             BUG("When adding allocs of ways, somehow ended up on the same hash group");
-        hash_table_inputs[i] |= alloc.hash_table_inputs[i];
+        hash_table_inputs[i] |= input;
         BUG_CHECK(hash_seed[i].popcount() == 0 || alloc.hash_seed[i].popcount() == 0,
                   "Hash seed already present for group %1%", i);
         hash_seed[i] |= alloc.hash_seed[i];
@@ -855,7 +857,16 @@ void IXBar::Base::update(const IR::MAU::Table *tbl) {
         update(tbl, tbl->resources);
 }
 
-IXBar::IXBar() : rep(new Tofino::IXBar()) {}
+IXBar::IXBar() {
+#if HAVE_FLATROCK
+    // FIXME -- add Device::newIXBar() method?
+    if (Device::currentDevice() == Device::FLATROCK) {
+        rep = new Flatrock::IXBar();
+        return; }
+#endif
+    rep = new Tofino::IXBar();
+}
+
 IXBar::~IXBar() { delete rep; }
 IXBar::IXBar(IXBar &&a) : rep(a.rep) { a.rep = nullptr; }
 IXBar &IXBar::operator=(IXBar &&a) {

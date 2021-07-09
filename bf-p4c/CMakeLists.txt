@@ -378,6 +378,12 @@ set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_TOFINO_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
+set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
+  mau/flatrock/input_xbar.cpp
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")
+build_unified(BF_P4C_BACKEND_MAU_FLATROCK_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+
 set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
   mau/action_data_bus.h
@@ -443,6 +449,11 @@ set (BF_P4C_BACKEND_MAU_TOFINO_HDRS
   mau/tofino/memories.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_HDRS}")
+
+set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
+  mau/flatrock/input_xbar.h
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")
 
 set (BF_P4C_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
@@ -878,6 +889,12 @@ set (BF_P4C_SOURCES
   ${BF_P4C_BACKEND_MIDEND_SRCS}
   ${BF_P4C_BACKEND_MAIN_SRCS}
   )
+if (ENABLE_FLATROCK)
+set (BF_P4C_SOURCES
+  ${BF_P4C_SOURCES}
+  ${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}
+  )
+endif ()
 
 set (P4C_BAREFOOT_SRCS
   frontend.cpp

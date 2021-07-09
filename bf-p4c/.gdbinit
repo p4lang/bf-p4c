@@ -348,7 +348,7 @@ def vec_at(vec, i):
     return (vec_begin(vec) + i).dereference()
 
 class safe_vector_Printer:
-    "Print a safe_vector<>"
+    "Print a safe_vector<> or dyn_vector"
     def __init__(self, val):
         self.val = val
     def to_string(self):
@@ -377,7 +377,7 @@ def bvec_size(vec):
     return sz
 
 class safe_vector_bool_Printer:
-    "Print a safe_vector<bool>"
+    "Print a safe_vector<bool> or dyn_vector<bool>"
     def __init__(self, val):
         self.val = val
     def to_string(self):
@@ -482,12 +482,15 @@ class IXBarUsePrinter(object):
             rv = "<type %d>" % type_tag
             if type_tag >= 0 and type_tag < len(self.use_types):
                 rv = self.use_types[type_tag]
-            type_tag = int(self.val['hash_dist_type'])
-            if type_tag >= 0 and type_tag < len(self.hash_dist_use_types):
-                rv += "/" + self.hash_dist_use_types[type_tag]
+            try:
+                type_tag = int(self.val['hash_dist_type'])
+                if type_tag >= 0 and type_tag < len(self.hash_dist_use_types):
+                    rv += "/" + self.hash_dist_use_types[type_tag]
+            except:
+                pass
             rv += self.use_array(self.val['use'], '   ')
-            for i in range(0, 8):
-                hti = self.val['hash_table_inputs'][i]
+            for i in range(0, vec_size(self.val['hash_table_inputs'])):
+                hti = vec_at(self.val['hash_table_inputs'], i)
                 if hti != 0:
                     rv += "\n   hash_group[%d]: " % i
                     j = 0
@@ -593,14 +596,18 @@ class UniqueIdPrinter(object):
                 rv += "." + a_id['name']['str'].string()
         return rv
 
-def find_pp(val):
+def bfp4c_pp(val):
     if str(val.type.tag).startswith('ordered_map<'):
         return ordered_map_Printer(val)
     if str(val.type.tag).startswith('ordered_set<'):
         return ordered_set_Printer(val)
     if str(val.type.tag).startswith('safe_vector<bool'):
         return safe_vector_bool_Printer(val)
+    if str(val.type.tag).startswith('dyn_vector<bool'):
+        return safe_vector_bool_Printer(val)
     if str(val.type.tag).startswith('safe_vector<'):
+        return safe_vector_Printer(val)
+    if str(val.type.tag).startswith('dyn_vector<'):
         return safe_vector_Printer(val)
     if val.type.tag == 'ActionFormat::Use':
         return ActionFormatUsePrinter(val)
@@ -633,10 +640,17 @@ def find_pp(val):
     return None
 
 try:
-    while gdb.pretty_printers[-1].__name__ == "find_pp":
-        gdb.pretty_printers = gdb.pretty_printers[:-1]
+    found = False
+    for i in range(len(gdb.pretty_printers)):
+        try:
+            if gdb.pretty_printers[i].__name__ == "bfp4c_pp":
+                gdb.pretty_printers[i] = bfp4c_pp
+                found = True
+        except:
+            pass
+    if not found:
+        gdb.pretty_printers.append(bfp4c_pp)
 except:
     pass
 
-gdb.pretty_printers.append(find_pp)
 end

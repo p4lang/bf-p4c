@@ -84,6 +84,10 @@ Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
 }
 
 void IXBarVerify::postorder(IR::MAU::Table *tbl) {
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK)
+        return;         // FIXME -- skip for flatrock for now
+#endif  /* HAVE_FLATROCK */
     currentTable = tbl;
     verify_format(tbl->resources->gateway_ixbar);
     verify_format(tbl->resources->match_ixbar);

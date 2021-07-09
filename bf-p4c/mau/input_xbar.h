@@ -6,6 +6,7 @@
 #include <random>
 #include <unordered_set>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/lib/dyn_vector.h"
 #include "bf-p4c/mau/attached_entries.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/table_layout.h"
@@ -291,9 +292,9 @@ struct IXBar {
         bool allocated() { return !use.empty(); }
 
         /* which of the 16 hash tables we are using (bitvec) */
-        unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
+        dyn_vector<unsigned>    hash_table_inputs;
         /* hash seed for different hash groups */
-        bitvec          hash_seed[HASH_GROUPS];
+        dyn_vector<bitvec>      hash_seed;
 
         struct Bits {
             cstring     field;
@@ -368,6 +369,7 @@ struct IXBar {
             unsigned    hash_bytemask = 0;  // redundant with meter_alu_hash.bit_mask?
 
             void clear() { data_bytemask = hash_bytemask = 0; }
+            bool empty() const { return !data_bytemask && !hash_bytemask; }
         } salu_input_source;
 
         // The order in the P4 program that the fields appear in the list
@@ -383,17 +385,20 @@ struct IXBar {
             parity = PARITY_NONE;
             used_by.clear();
             use.clear();
-            memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
+            hash_table_inputs.clear();
             bit_use.clear();
             way_use.clear();
             meter_alu_hash.clear();
-            for (size_t i = 0; i < HASH_GROUPS; i++)
-                hash_seed[i].clear();
+            hash_seed.clear();
             hash_dist_hash.clear();
             proxy_hash_key_use.clear();
             salu_input_source.clear();
             field_list_order.clear();
         }
+        bool empty() const {
+            return type == TYPES && use.empty() && bit_use.empty() && way_use.empty() &&
+                !meter_alu_hash.allocated && !hash_dist_hash.allocated &&
+                !proxy_hash_key_use.allocated && salu_input_source.empty(); }
 
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use

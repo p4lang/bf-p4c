@@ -816,6 +816,7 @@ class MauAsmOutput::EmitHashExpression : public Inspector {
 void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
         std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
         const IR::MAU::Table *tbl, bool ternary, bool atcam) const {
+    // FIXME -- probably needs to be completely different for flatrock
     PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
@@ -831,11 +832,17 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
                 if (b.loc.byte == byte_loc && ternary) {
                     Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
                     auto n = midbytes[b.loc.group/2].emplace(asm_sl.bytealign(), asm_sl);
-                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
+#ifdef HAVE_FLATROCK
+                    if (Device::currentDevice() != Device::FLATROCK)
+#endif   /* HAVE_FLATROCK */
+                        BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 } else {
                     Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
                     auto n = sort[b.loc.group].emplace(b.loc.byte*8 + asm_sl.bytealign(), asm_sl);
-                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
+#ifdef HAVE_FLATROCK
+                    if (Device::currentDevice() != Device::FLATROCK)
+#endif   /* HAVE_FLATROCK */
+                        BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
             });
         }
@@ -934,6 +941,10 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &mat
     if (sort.empty())
         return;
     unsigned half = hash_table & 1;
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK && !sort.count(hash_table/2))
+        return;  // FIXME
+#endif  /* HAVE_FLATROCK */
     for (auto &match : sort.at(hash_table/2)) {
         Slice reg = match.second;
         if (match.first/64U != half) {
