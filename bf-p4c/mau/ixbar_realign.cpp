@@ -62,7 +62,7 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
                 throw IXBar::failure(-1, byte.loc.group);
         }
 
-        if (!use.ternary) {
+        if (use.type != IXBar::Use::TERNARY_MATCH) {
             if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset)
                 throw IXBar::failure(-1, byte.loc.group);
         } else {

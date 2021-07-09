@@ -1139,87 +1139,6 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
     return hash_matrix_reqs(groups_required, bits_required, false);
 }
 
-/** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
- *  on multiple overlaid bits, that these bits appear twice in the match key.  One could in
- *  theory have a ternary match table that has the following:
- *
- *  key {
- *       h1.f1 : ternary;
- *       h2.f1 : ternary;
- *  }
- *
- *  where if h1.f1 and h2.f1 are never live at the same time, could be that a don't care
- *  match is always turned on for at least one of the two fields.  This could potentially
- *  be a save on logical tables.
- *
- *  However, the driver currently writes the fields in the order in the context JSON, not in
- *  the order of write don't care before do care, and in this instance, if these fields
- *  were overlaid on the match, could potentially overwrite one of the fields.
- *
- *  Thus currently, the fields have to appear multiple times within the match, and as of
- *  right now, also need to appear multiple times on the IXBar.  In some cases this might
- *  not be true.  For ternary table, a single byte in the match must be a single byte in the
- *  ixbar.  However, for exact match, a byte can be swizzled multiple times, which we take
- *  advantage of in an ATCAM match to save room.  However the compiler will not do this for
- *  multiple appearances of overlaid fields.
- *
- *  Furthermore, each byte is classified by a byte_speciaility_t.  Bytes with different
- *  specialities themselves will not be overlaid during the allocation process.  This management
- *  just becomes difficult
- *
- */
-void IXBar::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes) {
-    for (auto &entry : map_alloc) {
-        safe_vector<IXBar::Use::Byte> created_bytes;
-
-        for (auto &fi : entry.second) {
-            bool add_new_byte = true;
-            int index = 0;
-            safe_vector<FieldInfo> non_overlap_field_info;
-            for (auto c_byte : created_bytes) {
-                if (c_byte.can_add_info(fi)) {
-                    add_new_byte = false;
-                    break;
-                }
-                index++;
-            }
-            if (add_new_byte)
-                created_bytes.emplace_back(entry.first);
-            created_bytes[index].add_info(fi);
-        }
-        bytes.insert(bytes.end(), created_bytes.begin(), created_bytes.end());
-    }
-
-    // Putting the fields in container order so the visualization prints them out in
-    // le_bitrange order
-    for (auto &byte : bytes) {
-        std::sort(byte.field_bytes.begin(), byte.field_bytes.end(),
-            [](const FieldInfo &a, const FieldInfo &b) {
-            return a.cont_lo < b.cont_lo;
-        });
-    }
-
-    // Used to print initialization information for gtest
-    for (auto &byte : bytes) {
-        LOG5("Allocate " << byte.name << " lo " << byte.lo
-             << " bit_use " << byte.bit_use
-             << " flag " << byte.flags
-             << " non_zero_bits " << byte.non_zero_bits
-             << " specialities " << byte.specialities
-             << " search_bus " << byte.search_bus
-             << " match_index " << byte.match_index
-             << " range_index " << byte.range_index
-             << " proxy_hash " << byte.proxy_hash);
-    }
-}
-
-void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
-    create_alloc(map_alloc, alloc.use);
-}
-
-/* This visitor is used by stateful tables to find the fields needed and add them to the
- * use info */
-
 Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
     profile_t rv = MauInspector::init_apply(root);
     if (!tbl->for_dleft() || tbl->match_key.empty())
@@ -1292,7 +1211,6 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
                        const PhvInfo &phv, Use &alloc,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        hash_matrix_reqs &hm_reqs) {
-    alloc.ternary = ternary;
     if (tbl->match_key.empty()) return true;
     ContByteConversion map_alloc;
     std::map<cstring, bitvec> fields_needed;
@@ -1329,7 +1247,7 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
         alloc.compute_hash_tables();
     if (!rv) alloc.clear();
 
-    alloc.type = Use::MATCH;
+    alloc.type = ternary ? Use::TERNARY_MATCH : Use::EXACT_MATCH;
     alloc.used_by = tbl->match_table->externalName();
     return rv;
 }
@@ -1982,7 +1900,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     BUG_CHECK(alloc.use.size() > 0, "No partition index found for %1%", tbl);
 
     bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
-    alloc.type = Use::MATCH;
+    alloc.type = Use::ATCAM_MATCH;
     alloc.used_by = tbl->match_table->externalName();
 
     unsigned local_hash_table_input = 0;
@@ -2032,7 +1950,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
 
     /** The partition fits.  Just update all of the values */
     match_alloc.use.insert(match_alloc.use.end(), alloc.use.begin(), alloc.use.end());
-    match_alloc.atcam = true;
+    match_alloc.type = alloc.type;
     match_alloc.hash_table_inputs[hash_group] = local_hash_table_input;
     hash_group_use[hash_group] |= local_hash_table_input;
     update_hash_parity(match_alloc, hash_group);
@@ -2093,11 +2011,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             aliasSourceName = collect->info_to_uses[&info.second];
         }
         if (aliasSourceName)
-            ::IXBar::add_use(map_alloc, info.first.field(), phv, tbl,
-                             aliasSourceName, &info.first.range(), flags, NO_BYTE_TYPE);
+            add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName,
+                    &info.first.range(), flags, NO_BYTE_TYPE);
         else
-            ::IXBar::add_use(map_alloc, info.first.field(), phv, tbl,
-                             boost::none, &info.first.range(), flags, NO_BYTE_TYPE);
+            add_use(map_alloc, info.first.field(), phv, tbl, boost::none,
+                    &info.first.range(), flags, NO_BYTE_TYPE);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
 
@@ -2436,7 +2354,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
               mtr->name);
     if (!fields_needed.count(finfo->name)) {
         fields_needed.insert(finfo->name);
-        ::IXBar::add_use(map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, NO_BYTE_TYPE);
+        add_use(map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, NO_BYTE_TYPE);
     }
     create_alloc(map_alloc, alloc);
 
@@ -3906,13 +3824,13 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
  *  resources are known
  */
 void IXBar::update(cstring name, const Use &alloc) {
-    auto &use = alloc.ternary ? ternary_use.base() : exact_use.base();
-    auto &fields = alloc.ternary ? ternary_fields : exact_fields;
-    cstring xbar_type = alloc.ternary ? "TCAM" : "SRAM";
+    auto &use = alloc.type == Use::TERNARY_MATCH ? ternary_use.base() : exact_use.base();
+    auto &fields = alloc.type == Use::TERNARY_MATCH ? ternary_fields : exact_fields;
+    cstring xbar_type = alloc.type == Use::TERNARY_MATCH ? "TCAM" : "SRAM";
     for (auto &byte : alloc.use) {
         if (!byte.loc) continue;
         field_users[byte.name].insert(name);
-        if (byte.loc.byte == 5 && alloc.ternary) {
+        if (byte.loc.byte == 5 && alloc.type == Use::TERNARY_MATCH) {
             /* the sixth byte in a ternary group is actually half a byte group it shares with
              * the adjacent ternary group */
             int byte_group = byte.loc.group/2;
@@ -4054,47 +3972,7 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
 }
 
 void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
-    const IR::MAU::Selector *as = nullptr;
-    const IR::MAU::Meter *mtr = nullptr;
-    const IR::MAU::StatefulAlu *salu = nullptr;
-
-    for (auto ba : tbl->attached) {
-        if (auto as_p = ba->attached->to<IR::MAU::Selector>())
-            as = as_p;
-        if (auto mtr_p = ba->attached->to<IR::MAU::Meter>())
-            mtr = mtr_p;
-        if (auto salu_p = ba->attached->to<IR::MAU::StatefulAlu>())
-            salu = salu_p;
-    }
-
-    auto name = tbl->name;
-    if (as && (allocated_attached.count(as) == 0)) {
-        update(name + "$select", rsrc->selector_ixbar);
-        allocated_attached.emplace(as, rsrc->selector_ixbar);
-    }
-    if (mtr && (allocated_attached.count(mtr) == 0)) {
-        update(name + "$mtr", rsrc->meter_ixbar);
-        allocated_attached.emplace(mtr, rsrc->meter_ixbar);
-    }
-    if (salu && (allocated_attached.count(salu) == 0)) {
-        if (!tbl->for_dleft() && salu->for_dleft()) {
-            // FIXME -- if this SALU is used for dleft, then it must be accounted for
-            // with its dleft match table; otherwise the dleft hash won't be allocated
-            // properly.  So we hack it by simply skipping it when we see it with a
-            // non-dleft table
-        } else {
-            update(name + "$salu", rsrc->salu_ixbar);
-            allocated_attached.emplace(salu, rsrc->salu_ixbar);
-        }
-    }
-
-    update(name + "$proxy_hash", rsrc->proxy_hash_ixbar);
-    update(name + "$gw", rsrc->gateway_ixbar);
-    update(name, rsrc->match_ixbar);
-    int index = 0;
-    for (auto &hash_dist : rsrc->hash_dists) {
-        update(name + "$hash_dist" + std::to_string(index++), hash_dist);
-    }
+    Base::update(tbl, rsrc);
     tbl_hash_dists.emplace(tbl, &rsrc->hash_dists);
 }
 
@@ -4105,10 +3983,8 @@ void IXBar::update(const IR::MAU::Table *tbl) {
             return;
         dleft_updates.emplace(orig_name);
     }
-    if (tbl->is_placed())
-        update(tbl, tbl->resources);
+    Base::update(tbl);
 }
-
 
 /**
  * Because hash functions can share portions of hash tables, this looks for all possible

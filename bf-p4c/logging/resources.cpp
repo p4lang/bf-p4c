@@ -255,8 +255,9 @@ void ResourcesLogging::collectXbarBytesUsage(unsigned int stage, const IXBar::Us
 
     LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc.used_by);
     for (auto &byte : alloc.use) {
-        LOG3("\tadding resource: xbar bytes " << byte.loc.getOrd(alloc.ternary));
-        stageResource.xbarBytes[byte.loc.getOrd(alloc.ternary)].insert(
+        bool ternary = alloc.type == IXBar::Use::TERNARY_MATCH;
+        LOG3("\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
+        stageResource.xbarBytes[byte.loc.getOrd(ternary)].insert(
             XbarByteResource(alloc.used_by, alloc.used_for(), byte));
     }
 

@@ -880,7 +880,7 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
         }
         out  << "]" << std::endl;
         // ATCAM tables have only one input xbar way
-        if (!use->atcam) ++ixbar_way;
+        if (use->type != IXBar::Use::ATCAM_MATCH) ++ixbar_way;
     }
 }
 
@@ -1124,7 +1124,7 @@ void MauAsmOutput::ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
 void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
         int hash_group, int &ident_bits_prev_alloc) const {
-    if (use->atcam) {
+    if (use->type == IXBar::Use::ATCAM_MATCH) {
         emit_ixbar_hash_atcam(out, indent, ghost, use, hash_group);
         return;
     }
@@ -1805,18 +1805,20 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
         const TableMatch *fmt, const IR::MAU::Table *tbl) const {
     std::map<int, std::map<int, Slice>> sort;
     std::map<int, std::map<int, Slice>> midbytes;
-    emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl, use->ternary);
-    cstring group_type = use->ternary ? "ternary" : "exact";
+    emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl, use->type == IXBar::Use::TERNARY_MATCH);
+    cstring group_type = use->type == IXBar::Use::TERNARY_MATCH ? "ternary" : "exact";
     for (auto &group : sort)
         out << indent << group_type << " group "
             << group.first << ": " << group.second << std::endl;
     for (auto &midbyte : midbytes)
         out << indent << "byte group "
             << midbyte.first << ": " << midbyte.second << std::endl;
-    if (use->atcam) {
+    if (use->type == IXBar::Use::ATCAM_MATCH) {
         sort.clear();
         midbytes.clear();
-        emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl, use->ternary, use->atcam);
+        emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl,
+                                use->type == IXBar::Use::TERNARY_MATCH,
+                                use->type == IXBar::Use::ATCAM_MATCH);
     }
     for (int hash_group = 0; hash_group < IXBar::HASH_GROUPS; hash_group++) {
         unsigned hash_table_input = use->hash_table_inputs[hash_group];
@@ -1862,7 +1864,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
         && (hash_dist_use == nullptr || hash_dist_use->empty())) {
         return;
     }
-    if (ternary && use && !use->ternary) return;
+    if (ternary && use && use->type != IXBar::Use::TERNARY_MATCH) return;
     out << indent++ << "input_xbar:" << std::endl;
     if (use) {
         emit_single_ixbar(out, indent, use, fmt, tbl);

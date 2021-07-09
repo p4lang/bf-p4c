@@ -169,7 +169,6 @@ struct IXBar : public ::IXBar::Base {
     static constexpr auto HD_DESTS = ::IXBar::HD_DESTS;
 
     using Use = ::IXBar::Use;
-    using ContByteConversion = ::IXBar::ContByteConversion;
     using HashDistAllocPostExpand = ::IXBar::HashDistAllocPostExpand;
     using HashDistIRUse = ::IXBar::HashDistIRUse;
     using HashDistUse = ::IXBar::HashDistUse;
@@ -339,12 +338,7 @@ struct IXBar : public ::IXBar::Base {
         bool                                            dleft = false;
     };
 
-    using KeyInfo = ::IXBar::KeyInfo;
-
-    ordered_map<const IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
-
     void clear();
-    using FieldManagement = ::IXBar::FieldManagement;
     bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                     safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
     bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -377,9 +371,8 @@ struct IXBar : public ::IXBar::Base {
 
     void update(cstring name, const Use &alloc);
     void update(cstring name, const HashDistUse &hash_dist_alloc);
-    void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
-    // void update(cstring name, const TableResourceAlloc *alloc);
-    void update(const IR::MAU::Table *tbl);
+    virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
+    virtual void update(const IR::MAU::Table *tbl);
     void add_collisions();
     void verify_hash_matrix() const;
     void dbprint(std::ostream &) const;
@@ -460,8 +453,6 @@ struct IXBar : public ::IXBar::Base {
         bool ternary);
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
-    void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
-    void create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes);
 
     int max_bit_to_byte(bitvec bit_mask);
     int max_index_group(int max_bit);

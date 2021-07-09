@@ -13,7 +13,7 @@ Visitor::profile_t CollectIXBarInfo::init_apply(const IR::Node* node) {
 }
 
 void CollectIXBarInfo::postorder(const IR::MAU::Table *tbl) {
-    if (!tbl->resources->match_ixbar.ternary)
+    if (tbl->resources->match_ixbar.type != IXBar::Use::TERNARY_MATCH)
         return;
     for (auto& use : tbl->resources->match_ixbar.use) {
         _stage[tbl->stage()].push_back(use);

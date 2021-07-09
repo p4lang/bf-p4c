@@ -16,7 +16,6 @@
 #include "lib/range.h"
 #include "lib/log.h"
 
-
 constexpr int IXBar::HASH_INDEX_GROUPS;
 constexpr int IXBar::HASH_SINGLE_BITS;
 constexpr int IXBar::METER_ALU_HASH_BITS;
@@ -98,7 +97,7 @@ int IXBar::Use::hash_groups() const {
  */
 IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) const {
     TotalBytes rv;
-    if (atcam) {
+    if (type == ATCAM_MATCH) {
         rv = atcam_match();
         if (hash_groups) {
             int atcam_partition_group = -1;
@@ -250,8 +249,6 @@ unsigned IXBar::Use::compute_hash_tables() {
 /* Combining the allocation of multiple separately allocated hash groups of the same
    table.  Done if the table requires two hash groups */
 void IXBar::Use::add(const IXBar::Use &alloc) {
-    ternary = alloc.ternary;
-    atcam = alloc.atcam;
     gw_search_bus = alloc.gw_search_bus;
     gw_search_bus_bytes = alloc.gw_search_bus_bytes;
     gw_hash_group = alloc.gw_hash_group;
@@ -294,13 +291,14 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
 /** Visualization Information of Bytes and their corresponding Hash Matrix Bits
  */
 std::string IXBar::Use::used_for() const {
-    if (type == MATCH) {
-        if (ternary)
-            return "ternary_match";
-        else if (atcam)
-            return "atcam_match";
-        else
-            return "exact_match";
+    if (type == EXACT_MATCH) {
+        return "exact_match";
+    } else if (type == ATCAM_MATCH) {
+        return "atcam_match";
+    } else if (type == TERNARY_MATCH) {
+        return "ternary_match";
+    } else if (type == TRIE_MATCH) {
+        return "trie_match";
     } else if (type == GATEWAY) {
         return "gateway";
     } else if (type == SELECTOR) {
@@ -335,6 +333,12 @@ void dump(const IXBar::Use *use) {
 }
 void dump(const IXBar::Use &use) {
     std::cout << use;
+}
+void dump(const IXBar::Use::Byte *ub) {
+    std::cout << *ub << std::endl;
+}
+void dump(const IXBar::Use::Byte &ub) {
+    std::cout << ub << std::endl;
 }
 
 std::string IXBar::FieldInfo::visualization_detail() const {
@@ -479,10 +483,10 @@ static int need_align_flags[4][IXBar::REPEATING_CONSTRAINT_SECT] = {
 };
 
 /* Add the pre-allocated bytes to the Use structure */
-void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
-                    const PhvInfo &phv, const IR::MAU::Table *ctxt,
-                    boost::optional<cstring> aliasSourceName, const le_bitrange *bits, int flags,
-                    byte_type_t byte_type, unsigned extra_align, int range_index) {
+void IXBar::Base::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
+                          const PhvInfo &phv, const IR::MAU::Table *ctxt,
+                          boost::optional<cstring> aliasSourceName, const le_bitrange *bits,
+                          int flags, byte_type_t byte_type, unsigned extra_align, int range_index) {
     LOG5("Adding IXBar Use for field - " << field << "on table : " << ctxt->name
             << ", flags : " << flags << ", byte_type: " << byte_type
             << ", extra_align: " << extra_align << ", range_index: " << range_index);
@@ -543,38 +547,116 @@ void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
              "incorrect"); }
 }
 
-/** IXBar::FieldManagement: This is for adding fields to be allocated in the ixbar allocation
-  * scheme.  Used by match tables, selectors, and hash distribution */
-bool IXBar::FieldManagement::preorder(const IR::ListExpression *) {
+/** In order to prevent some overlay bugs by the driver, this guarantees that if a table matches
+ *  on multiple overlaid bits, that these bits appear twice in the match key.  One could in
+ *  theory have a ternary match table that has the following:
+ *
+ *  key {
+ *       h1.f1 : ternary;
+ *       h2.f1 : ternary;
+ *  }
+ *
+ *  where if h1.f1 and h2.f1 are never live at the same time, could be that a don't care
+ *  match is always turned on for at least one of the two fields.  This could potentially
+ *  be a save on logical tables.
+ *
+ *  However, the driver currently writes the fields in the order in the context JSON, not in
+ *  the order of write don't care before do care, and in this instance, if these fields
+ *  were overlaid on the match, could potentially overwrite one of the fields.
+ *
+ *  Thus currently, the fields have to appear multiple times within the match, and as of
+ *  right now, also need to appear multiple times on the IXBar.  In some cases this might
+ *  not be true.  For ternary table, a single byte in the match must be a single byte in the
+ *  ixbar.  However, for exact match, a byte can be swizzled multiple times, which we take
+ *  advantage of in an ATCAM match to save room.  However the compiler will not do this for
+ *  multiple appearances of overlaid fields.
+ *
+ *  Furthermore, each byte is classified by a byte_speciaility_t.  Bytes with different
+ *  specialities themselves will not be overlaid during the allocation process.  This management
+ *  just becomes difficult
+ *
+ */
+void IXBar::Base::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes) {
+    for (auto &entry : map_alloc) {
+        safe_vector<IXBar::Use::Byte> created_bytes;
+
+        for (auto &fi : entry.second) {
+            bool add_new_byte = true;
+            int index = 0;
+            safe_vector<FieldInfo> non_overlap_field_info;
+            for (auto c_byte : created_bytes) {
+                if (c_byte.can_add_info(fi)) {
+                    add_new_byte = false;
+                    break;
+                }
+                index++;
+            }
+            if (add_new_byte)
+                created_bytes.emplace_back(entry.first);
+            created_bytes[index].add_info(fi);
+        }
+        bytes.insert(bytes.end(), created_bytes.begin(), created_bytes.end());
+    }
+
+    // Putting the fields in container order so the visualization prints them out in
+    // le_bitrange order
+    for (auto &byte : bytes) {
+        std::sort(byte.field_bytes.begin(), byte.field_bytes.end(),
+            [](const FieldInfo &a, const FieldInfo &b) {
+            return a.cont_lo < b.cont_lo;
+        });
+    }
+
+    // Used to print initialization information for gtest
+    for (auto &byte : bytes) {
+        LOG5("Allocate " << byte.name << " lo " << byte.lo
+             << " bit_use " << byte.bit_use
+             << " flag " << byte.flags
+             << " non_zero_bits " << byte.non_zero_bits
+             << " specialities " << byte.specialities
+             << " search_bus " << byte.search_bus
+             << " match_index " << byte.match_index
+             << " range_index " << byte.range_index
+             << " proxy_hash " << byte.proxy_hash);
+    }
+}
+
+void IXBar::Base::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
+    create_alloc(map_alloc, alloc.use);
+}
+
+/** IXBar::Base::FieldManagement: This is for adding fields to be allocated in the ixbar
+  * allocation scheme.  Used by match tables, selectors, and hash distribution */
+bool IXBar::Base::FieldManagement::preorder(const IR::ListExpression *) {
     if (!ki.hash_dist)
         BUG("A field list is somehow contained within the reads in table %s", tbl->name);
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::Mask *) {
+bool IXBar::Base::FieldManagement::preorder(const IR::Mask *) {
     BUG("Masks should have been converted to Slices before input xbar allocation");
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::MAU::TableKey *read) {
+bool IXBar::Base::FieldManagement::preorder(const IR::MAU::TableKey *read) {
     if (ki.is_atcam) {
         if (ki.partition != read->partition_index)
             return false; }
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::Constant *c) {
+bool IXBar::Base::FieldManagement::preorder(const IR::Constant *c) {
     field_list_order.push_back(c);
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::MAU::ActionArg *aa) {
+bool IXBar::Base::FieldManagement::preorder(const IR::MAU::ActionArg *aa) {
     error(ErrorType::ERR_INVALID, "Can't use action argument %1% in a hash in the same action;"
           " try splitting the action", aa);
     return false;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
+bool IXBar::Base::FieldManagement::preorder(const IR::Expression *e) {
     LOG3("IXBar::FieldManagement preorder expression : " << e);
     le_bitrange bits = { };
     auto *finfo = phv.field(e, &bits);
@@ -623,7 +705,7 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
     return false;
 }
 
-void IXBar::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
+void IXBar::Base::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
     BUG_CHECK(!field_list_order.empty(), "SignExtend on nonexistant field");
     BUG_CHECK(field_list_order.back() == c->expr, "SignExtend mismatch");
     int size = c->expr->type->width_bits();
@@ -639,7 +721,7 @@ void IXBar::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
  * doesn't crash .  When the dynamic hashing is correctly handled in the backend,
  * this can go away.
  */
-void IXBar::FieldManagement::end_apply() {
+void IXBar::Base::FieldManagement::end_apply() {
     if (ki.repeats_allowed)
         return;
     std::map<cstring, bitvec> field_list_check;
@@ -724,7 +806,56 @@ void dump(const IXBar &ixbar) {
     std::cout << ixbar;
 }
 
-IXBar::IXBar() : rep(new Tofino::IXBar) {}
+void IXBar::Base::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
+    const IR::MAU::Selector *as = nullptr;
+    const IR::MAU::Meter *mtr = nullptr;
+    const IR::MAU::StatefulAlu *salu = nullptr;
+
+    for (auto ba : tbl->attached) {
+        if (auto as_p = ba->attached->to<IR::MAU::Selector>())
+            as = as_p;
+        if (auto mtr_p = ba->attached->to<IR::MAU::Meter>())
+            mtr = mtr_p;
+        if (auto salu_p = ba->attached->to<IR::MAU::StatefulAlu>())
+            salu = salu_p;
+    }
+
+    auto name = tbl->name;
+    if (as && (allocated_attached.count(as) == 0)) {
+        update(name + "$select", rsrc->selector_ixbar);
+        allocated_attached.emplace(as, rsrc->selector_ixbar);
+    }
+    if (mtr && (allocated_attached.count(mtr) == 0)) {
+        update(name + "$mtr", rsrc->meter_ixbar);
+        allocated_attached.emplace(mtr, rsrc->meter_ixbar);
+    }
+    if (salu && (allocated_attached.count(salu) == 0)) {
+        if (!tbl->for_dleft() && salu->for_dleft()) {
+            // FIXME -- if this SALU is used for dleft, then it must be accounted for
+            // with its dleft match table; otherwise the dleft hash won't be allocated
+            // properly.  So we hack it by simply skipping it when we see it with a
+            // non-dleft table
+        } else {
+            update(name + "$salu", rsrc->salu_ixbar);
+            allocated_attached.emplace(salu, rsrc->salu_ixbar);
+        }
+    }
+
+    update(name + "$proxy_hash", rsrc->proxy_hash_ixbar);
+    update(name + "$gw", rsrc->gateway_ixbar);
+    update(name, rsrc->match_ixbar);
+    int index = 0;
+    for (auto &hash_dist : rsrc->hash_dists) {
+        update(name + "$hash_dist" + std::to_string(index++), hash_dist);
+    }
+}
+
+void IXBar::Base::update(const IR::MAU::Table *tbl) {
+    if (tbl->is_placed())
+        update(tbl, tbl->resources);
+}
+
+IXBar::IXBar() : rep(new Tofino::IXBar()) {}
 IXBar::~IXBar() { delete rep; }
 IXBar::IXBar(IXBar &&a) : rep(a.rep) { a.rep = nullptr; }
 IXBar &IXBar::operator=(IXBar &&a) {

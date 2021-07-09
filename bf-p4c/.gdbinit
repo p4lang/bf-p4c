@@ -266,8 +266,8 @@ class MemoriesPrinter(object):
             rv += "   " + k + " " + tbl + "\n"
         return rv
 
-class IXBarPrinter(object):
-    "Print an IXBar object"
+class TofinoIXBarPrinter(object):
+    "Print a Tofino::IXBar object"
     def __init__(self, val):
         self.val = val
     def to_string(self):
@@ -453,7 +453,8 @@ class MemoriesUsePrinter(object):
 
 class IXBarUsePrinter(object):
     "Print an IXBar::Use object"
-    use_types = [ "Exact", "Gateway", "ProxyHash", "Selector", "Meter", "StatefulAlu", "HashDist" ]
+    use_types = [ "Exact", "ATCam", "Ternary", "Trie", "Gateway", "ProxyHash", "Selector",
+                  "Meter", "StatefulAlu", "HashDist" ]
     hash_dist_use_types = [ "CounterAdr", "MeterAdr", "MeterAdrAndImmed", "ActionAdr",
                             "Immed", "PreColor", "HashMod" ]
     def __init__(self, val):
@@ -479,13 +480,7 @@ class IXBarUsePrinter(object):
         try:
             type_tag = int(self.val['type'])
             rv = "<type %d>" % type_tag
-            if self.val['ternary']:
-                rv = "Ternary"
-                if type_tag != 0: rv += "<%d>" % type_tag
-            elif self.val['atcam']:
-                rv = "ATcam"
-                if type_tag != 0: rv += "<%d>" % type_tag
-            elif type_tag >= 0 and type_tag < len(self.use_types):
+            if type_tag >= 0 and type_tag < len(self.use_types):
                 rv = self.use_types[type_tag]
             type_tag = int(self.val['hash_dist_type'])
             if type_tag >= 0 and type_tag < len(self.hash_dist_use_types):
@@ -613,9 +608,11 @@ def find_pp(val):
         return bitvecPrinter(val)
     if val.type.tag == 'cstring':
         return cstringPrinter(val)
-    if val.type.tag == 'IXBar':
-        return IXBarPrinter(val)
-    if val.type.tag == 'IXBar::Use':
+    if val.type.tag == 'Tofino::IXBar':
+        return TofinoIXBarPrinter(val)
+    if val.type.tag == 'Tofino::IXBar::Use':
+        return IXBarUsePrinter(val)
+    if str(val.type.tag).endswith('IXBar::Use'):
         return IXBarUsePrinter(val)
     if val.type.tag == 'Memories':
         return MemoriesPrinter(val)

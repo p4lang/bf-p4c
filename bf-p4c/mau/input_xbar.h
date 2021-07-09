@@ -184,8 +184,6 @@ struct IXBar {
         /* everything is public so anyone can read it, but only IXBar should write to this */
         enum flags_t { NeedRange = 1, NeedXor = 2,
                        Align16lo = 4, Align16hi = 8, Align32lo = 16, Align32hi = 32 };
-        bool            ternary = false;
-        bool            atcam = false;
         bool            gw_search_bus = false;
         int             gw_search_bus_bytes = 0;
         bool            gw_hash_group = false;
@@ -195,7 +193,8 @@ struct IXBar {
         bool is_parity_enabled() const { return parity == PARITY_ENABLED; }
 
         // FIXME: Could be better created initialized through a constructor
-        enum type_t { MATCH, GATEWAY, PROXY_HASH, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
+        enum type_t { EXACT_MATCH, ATCAM_MATCH, TERNARY_MATCH, TRIE_MATCH, GATEWAY,
+                      PROXY_HASH, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
             type = TYPES;
 
         HashDistDest_t hash_dist_type = HD_DESTS;
@@ -370,6 +369,12 @@ struct IXBar {
 
 
         void clear() {
+            type = TYPES;
+            gw_search_bus = false;
+            gw_search_bus_bytes = 0;
+            gw_hash_group = false;
+            parity = PARITY_NONE;
+            used_by.clear();
             use.clear();
             memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
             bit_use.clear();
@@ -426,59 +431,6 @@ struct IXBar {
             }
             return rv;
         }
-    };
-
-    /** The purpose of this structure is to capture that multiple stretch of fields can
-     *  be contained within the same container byte.  In the add_use function, each FieldInfo
-     *  object will be created, and linked to a corresponding container byte.  Later, in the
-     *  create_alloc function, these individual FieldInfo object will be used to create at least
-     *  a single byte, (and maybe more due to overlay issues), that the compiler needs to allocate
-     *  for an input xbar.
-     */
-    typedef std::map<Use::Byte, safe_vector<FieldInfo>> ContByteConversion;
-    static void add_use(ContByteConversion &map_alloc, const PHV::Field *field,
-                        const PhvInfo &phv, const IR::MAU::Table *ctxt,
-                        boost::optional<cstring> aliasSourceName,
-                        const le_bitrange *bits = nullptr, int flags = 0,
-                        byte_type_t byte_type = NO_BYTE_TYPE,
-                        unsigned extra_align = 0, int range_index = 0);
-
-    struct KeyInfo {
-        bool hash_dist = false;
-        bool is_atcam = false;
-        bool partition = false;
-        int partition_bits = 0;
-        int range_index = 0;
-        bool repeats_allowed = true;
-        KeyInfo() { }
-    };
-
-    /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
-       match tables, selectors, and hash distribution */
-    class FieldManagement : public Inspector {
-        ContByteConversion *map_alloc;
-        safe_vector<const IR::Expression *> &field_list_order;
-        std::map<cstring, bitvec> *fields_needed;
-        const PhvInfo &phv;
-        KeyInfo &ki;
-        const IR::MAU::Table* tbl;
-
-        bool preorder(const IR::ListExpression *) override;
-        bool preorder(const IR::Mask *) override;
-        bool preorder(const IR::MAU::TableKey *read) override;
-        bool preorder(const IR::Constant *c) override;
-        bool preorder(const IR::MAU::ActionArg *aa) override;
-        bool preorder(const IR::Expression *e) override;
-        void postorder(const IR::BFN::SignExtend *c) override;
-        void end_apply() override;
-
-     public:
-        FieldManagement(ContByteConversion *map_alloc,
-                        safe_vector<const IR::Expression *> &field_list_order,
-                        const IR::Expression *field, std::map<cstring, bitvec> *fields_needed,
-                        const PhvInfo &phv, KeyInfo &ki, const IR::MAU::Table* t)
-        : map_alloc(map_alloc), field_list_order(field_list_order), fields_needed(fields_needed),
-          phv(phv), ki(ki), tbl(t) { field->apply(*this); }
     };
 
     static HashDistDest_t dest_location(const IR::Node *node, bool precolor = false);
@@ -559,7 +511,67 @@ struct IXBar {
     };
 
     class Base {
+        // FIXME -- perhaps move the definition of Base to a separate header file to be used
+        // only by target-specific IXBar implementations?  Alll of this is essentially internal
+        // to such implementations
+
      protected:
+        ordered_map<const IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
+
+        /** The purpose of ContByteConversion is to capture that multiple stretch of fields can
+         *  be contained within the same container byte.  In the add_use function, each FieldInfo
+         *  object will be created, and linked to a corresponding container byte.  Later, in the
+         *  create_alloc function, these individual FieldInfo object will be used to create at
+         *  least a single byte, (and maybe more due to overlay issues), that the compiler needs
+         * to allocate for an input xbar.  */
+        typedef std::map<Use::Byte, safe_vector<FieldInfo>> ContByteConversion;
+        static void add_use(ContByteConversion &map_alloc, const PHV::Field *field,
+                            const PhvInfo &phv, const IR::MAU::Table *ctxt,
+                            boost::optional<cstring> aliasSourceName,
+                            const le_bitrange *bits = nullptr, int flags = 0,
+                            byte_type_t byte_type = NO_BYTE_TYPE,
+                            unsigned extra_align = 0, int range_index = 0);
+        void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
+        void create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes);
+
+        struct KeyInfo {
+            bool hash_dist = false;
+            bool is_atcam = false;
+            bool partition = false;
+            int partition_bits = 0;
+            int range_index = 0;
+            bool repeats_allowed = true;
+            KeyInfo() { }
+        };
+
+        /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
+           match tables, selectors, and hash distribution */
+        class FieldManagement : public Inspector {
+            ContByteConversion *map_alloc;
+            safe_vector<const IR::Expression *> &field_list_order;
+            std::map<cstring, bitvec> *fields_needed;
+            const PhvInfo &phv;
+            KeyInfo &ki;
+            const IR::MAU::Table* tbl;
+
+            bool preorder(const IR::ListExpression *) override;
+            bool preorder(const IR::Mask *) override;
+            bool preorder(const IR::MAU::TableKey *read) override;
+            bool preorder(const IR::Constant *c) override;
+            bool preorder(const IR::MAU::ActionArg *aa) override;
+            bool preorder(const IR::Expression *e) override;
+            void postorder(const IR::BFN::SignExtend *c) override;
+            void end_apply() override;
+
+         public:
+            FieldManagement(ContByteConversion *map_alloc,
+                            safe_vector<const IR::Expression *> &field_list_order,
+                            const IR::Expression *field, std::map<cstring, bitvec> *fields_needed,
+                            const PhvInfo &phv, KeyInfo &ki, const IR::MAU::Table* t)
+            : map_alloc(map_alloc), field_list_order(field_list_order),
+              fields_needed(fields_needed), phv(phv), ki(ki), tbl(t) { field->apply(*this); }
+        };
+
         friend class IXBar;
         virtual ~Base() {}
         virtual bool allocTable(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
@@ -567,9 +579,9 @@ struct IXBar {
                                 const attached_entries_t &) = 0;
         virtual void update(cstring name, const Use &alloc) = 0;
         virtual void update(cstring name, const HashDistUse &hash_dist_alloc) = 0;
-        virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) = 0;
+        virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
         // virtual void update(cstring name, const TableResourceAlloc *alloc) = 0;
-        virtual void update(const IR::MAU::Table *tbl) = 0;
+        virtual void update(const IR::MAU::Table *tbl);
         virtual void add_collisions() = 0;
         virtual void verify_hash_matrix() const = 0;
         virtual void dbprint(std::ostream &) const = 0;
