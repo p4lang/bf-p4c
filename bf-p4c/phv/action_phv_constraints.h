@@ -13,11 +13,6 @@
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/utils/utils.h"
 
-// forward declaration for solver base.
-namespace solver {
-class ActionSolverBase;
-}
-
 struct ActionPhvConstraintLogging {
     int error;
 };
@@ -298,12 +293,17 @@ class ActionPhvConstraints : public Inspector {
         /// @returns operation information for fields written in @act.
         const ordered_set<PHV::FieldSlice>& reads(const IR::MAU::Action* act) const;
 
+        /// AVOID USING this function.
         /// @returns a OperandInfo structure if @slice is written in @act.
+        /// XXX(yumin): The OperandInfo returned in this function is NOT COMPLETE!
+        /// phv_used, ad, constant is uninitialized!
         boost::optional<OperandInfo>
         is_written(PHV::FieldSlice slice, const IR::MAU::Action *act) const;
 
+        /// AVOID USING this function.
         /// Convenience method that translates @slice to a FieldSlice and passes
         /// it to `is_written` above.
+        /// XXX(yumin): The OperandInfo returned in this function is NOT COMPLETE!
         boost::optional<OperandInfo>
         is_written(PHV::AllocSlice slice, const IR::MAU::Action *act) const {
             return is_written(PHV::FieldSlice(slice.field(), slice.field_slice()), act);
@@ -1069,21 +1069,39 @@ class ActionPhvConstraints : public Inspector {
      *  (2) dark container can only be written in while by container.
      */
     CanPackErrorCode check_move_constraints(
-        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
-        const ActionPropertyMap& action_props,
+        const PHV::Allocation& alloc, const IR::MAU::Action* action,
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
-    /** Checks whether packing @slices into a container will violate MAU action constraints for
-     *  all move-based instructions, using an action constraint solver.
-     */
-    CanPackErrorCode check_move_constraints_with_solver(
-        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
-        const ActionPropertyMap& action_props, const std::vector<PHV::AllocSlice>& slices,
+    /** Besides actual actions, we need to check always run actions:
+    * (1) always run action does not overwrite other fields. For example, if we
+    *     have two sources to one destination in one ARA, we need verify there's
+    *     no other field in destination that are not mutex.
+    * (2) TODO(yumin): always run action can be synthesized: we cannot do it now
+    *     because we don't have a way to get all ARA instructions for a specific point, and
+    *     because we do table placement after PHV, it's always possible
+    *     to have any ARA, so the check here is trying to avoid introducing new dependencies.
+    *     table placement will add new stages when multiple instruction cannot
+    *     be synthesized in one always run action.
+    */
+    CanPackErrorCode check_ara_move_constraints(
+        const PHV::Allocation& alloc,
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
-        const PHV::Allocation::LiveRangeShrinkingMap& initActions,
-        solver::ActionSolverBase* solver) const;
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+
+    /** Check action move constraints when a source slice is allocated in @slices.
+     *  It will iterate over all actions that has read any in @slices and run move constraint
+     *  checker on its destination container, with fields during the action.
+     */
+    CanPackErrorCode check_move_constraints_from_read(
+        const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+
+    CanPackErrorCode check_read_action_move_constraints(
+    const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+    const IR::MAU::Action* action,
+    const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);

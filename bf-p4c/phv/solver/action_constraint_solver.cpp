@@ -612,6 +612,7 @@ Result ActionMochaSolver::solve() const {
     for (const auto& dest_assigns : dest_assigns_i) {
         auto rst = try_container_set(dest_assigns.first, dest_assigns.second);
         if (rst.ok()) {
+            LOG5("synthesized with container-set: " << rst.instructions.front()->to_cstring());
             instructions.push_back(rst.instructions.front());
         } else {
             return rst;
@@ -638,6 +639,7 @@ Result ActionDarkSolver::solve() const {
                    << " has ad/const source: " << offset_assigns.at(0);
                 return Result(Error(ErrorCode::dark_container_ad_or_const_source, ss.str()));
             }
+            LOG5("synthesized with container-set: " << rst.instructions.front()->to_cstring());
             instructions.push_back(rst.instructions.front());
         } else {
             return rst;
