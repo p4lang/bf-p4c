@@ -207,6 +207,9 @@ class Manifest : public Inspector {
     }
 
     void setPipe(int pipe_id, cstring pipe_name) {
+#if BAREFOOT_INTERNAL
+        if (_options.skipped_pipes.count(pipe_name)) return;
+#endif
         _pipeId = pipe_id;
         _pipes.emplace(_pipeId, pipe_name);
         // and add implicitly add the pipe outputs so that even if there are no

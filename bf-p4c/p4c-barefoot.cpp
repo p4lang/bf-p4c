@@ -382,6 +382,10 @@ int main(int ac, char **av) {
 
     for (auto& kv : substitute.pipes) {
         auto pipe = kv.second;
+#if BAREFOOT_INTERNAL
+        if (options.skipped_pipes.count(pipe->name)) continue;
+#endif
+
         manifest.setPipe(pipe->id, pipe->name.name);
         EventLogger::get().pipeChange(pipe->id);
 
@@ -402,12 +406,8 @@ int main(int ac, char **av) {
             LOG2("Generating parser graphs");
             program->apply(manifest);  // generate graph entries for parsers in manifest
         }
-#if BAREFOOT_INTERNAL
-        if (!options.skipped_pipes.count(pipe->name))
-            execute_backend(pipe, options);
-#else
-            execute_backend(pipe, options);
-#endif
+
+        execute_backend(pipe, options);
     }
 
     // and output the manifest. This gets called for successful compilation.
