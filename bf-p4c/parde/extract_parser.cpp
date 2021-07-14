@@ -1241,10 +1241,18 @@ struct RewriteParserStatements : public Transform {
         } else if (method->member == "increment") {
             auto* value = (*call->arguments)[0]->expression->to<IR::Constant>();
             auto* inc = new IR::BFN::ParserCounterIncrement(declName);
+            if (!value) {
+                ::fatal_error("Parser counter increment argument is not a constant integer: %1%",
+                              statement);
+            }
             inc->value = value->asInt();
             rv->push_back(inc);
         } else if (method->member == "decrement") {
             auto value = (*call->arguments)[0]->expression->to<IR::Constant>();
+            if (!value) {
+                ::fatal_error("Parser counter decrement argument is not a constant integer: %1%",
+                              statement);
+            }
             auto* dec = new IR::BFN::ParserCounterDecrement(declName);
             dec->value = value->asInt();
             rv->push_back(dec);
