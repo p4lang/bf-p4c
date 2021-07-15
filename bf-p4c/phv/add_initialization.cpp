@@ -321,8 +321,16 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
         prior_tables.insert(tbl->get_uid());
         LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
 
-        for (auto minStg : phv.minStage(tbl))
-            prior_max_stage = std::max(prior_max_stage, minStg);
+        // *ALEX* Using dependendence graph min_stage() instead of phv.minStage()
+        //        due to corner case hit in P4C-3522
+        int min_stage = dg.min_stage(tbl);
+        bool same_static_minStg = false;
+        for (auto minStg : phv.minStage(tbl)) {
+            same_static_minStg |= (min_stage == minStg);
+        }
+
+        BUG_CHECK(same_static_minStg, "DG min stage %1% not included in static min stages (%2) %3%",
+                  dg.min_stage(tbl), phv.minStage(tbl).size(), *(phv.minStage(tbl).begin()));
     }
 
     LOG4("\tPost Tables: ");
