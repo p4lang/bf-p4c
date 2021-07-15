@@ -182,7 +182,7 @@ header hdr bug
     BaseCompileContext::get().errorReporter().setOutputStream(&customStream);
 
     std::istringstream inputCode = std::istringstream("header hdr bug { bit<8> field; }");
-    const IR::P4Program *program = P4::P4ParserDriver::parse(inputCode, "file.cpp", 1);
+    P4::P4ParserDriver::parse(inputCode, "file.cpp", 1);
 
     EXPECT_EQ(customStream.str(), EXPECTED_WARN);
 
