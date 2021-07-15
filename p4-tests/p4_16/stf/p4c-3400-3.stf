@@ -1,0 +1,54 @@
+# NOTE: Addresses (add table address ...) and/or the stage they point
+# to can change if table placement, the test harness code, or the model
+# code changes.
+
+# test1, stage 0
+add test1 18 hdr.data.f1:0x0f0f0f0f setb2(v:0xf0)
+
+# test1, stage 2
+add test1 12 hdr.data.f1:0x0d0d0d0d setb2(v:0xf2)
+
+# test1, stage 3
+add test1 0 hdr.data.f1:0x0b0b0b0b setb2(v:0xf3)
+
+# test2
+add test2 0 hdr.data.f1:0x0f****** setb1(v:0xfe)
+add test2 1 hdr.data.f1:0x0d****** setb1(v:0xdc)
+add test2 2 hdr.data.f1:0x0b****** setb1(v:0xba)
+
+# Miss initial gateway
+expect 33 deadbeaf cafeface abba ac dc
+packet 33 deadbeaf cafeface abba ac dc
+
+# Miss test1, miss test2
+expect 9 0a0a0a0a 00000000 0002 00 00
+packet 9 0a0a0a0a 00000000 0000 00 00
+
+# Hit on all test1 stages, miss test2
+expect 9 0f0f0f0f 00000000 0001 00 f0
+expect 9 0d0d0d0d 00000000 0001 00 f2
+expect 9 0b0b0b0b 00000000 0001 00 f3
+packet 9 0f0f0f0f 00000000 0000 00 00
+packet 9 0d0d0d0d 00000000 0000 00 00
+packet 9 0b0b0b0b 00000000 0000 00 00
+
+# Hit test1 stage 0, hit test2
+expect 4 0f0f0f0f 00000000 0001 fe f0
+packet 4 0f0f0f0f 00000000 0000 00 00
+# Miss test1, hit test2
+expect 4 0f0f0f00 00000000 0002 fe 00
+packet 4 0f0f0f00 00000000 0000 00 00
+
+# Hit test1 stage 2, hit test2
+expect 4 0d0d0d0d 00000000 0001 dc f2
+packet 4 0d0d0d0d 00000000 0000 00 00
+# Miss test1, hit test2
+expect 4 0d0d0d00 00000000 0002 dc 00
+packet 4 0d0d0d00 00000000 0000 00 00
+
+# Hit test1 stage 3, setb1 hit test2
+expect 4 0b0b0b0b 00000000 0001 ba f3
+packet 4 0b0b0b0b 00000000 0000 00 00
+# Miss test1, hit test2
+expect 4 0b0b0b00 00000000 0002 ba 00
+packet 4 0b0b0b00 00000000 0000 00 00

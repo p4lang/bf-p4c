@@ -3068,12 +3068,25 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     IR::MAU::Table::Layout gw_layout;
     bool gw_only = true;
     bool gw_layout_used = false;
+    ordered_map<cstring, const IR::MAU::TableSeq *> match_table_next;
+    IR::MAU::TableSeq *gw_true_seq = nullptr;
 
     if (it->second->use.preferred() && it->second->use.preferred()->layout.gateway_match) {
         tbl = self.lc.fpc.convert_to_gateway(tbl);
         gw_only = false;
     } else if (it->second->gw && it->second->gw->name == tbl->name) {
-        /* fold gateway and match table together */
+        // Fold gateway and match table together, deepcopy match table's next sequences.
+        // If the merged table is split, all table parts beyond the first will use this copy.
+        if (!it->second->table->next.empty() && Device::currentDevice() != Device::TOFINO) {
+            for (auto const &element : it->second->table->next) {
+                // Create new TableSeqs rather than clones to have new unique IDs.
+                auto deepcopy = new IR::MAU::TableSeq();
+                deepcopy->tables = element.second->tables;
+                match_table_next[element.first] = deepcopy;
+            }
+        }
+        // Store a clone of gw's "$true" to be used if the merged table is split.
+        gw_true_seq = (tbl->next.count("$true")) ? tbl->next["$true"]->clone() : nullptr;
         merge_match_and_gateway(tbl, it->second, gw_layout);
         gw_only = false;
         gw_layout_used = true;
@@ -3134,8 +3147,8 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         // Divide the entries amongst the table_parts.
         table_part->entries_list = tbl_entries_list.split_off(pl->entries);
 
-        // When a gateway is merged against a split table, only the first table created from the
-        // split has the merged gateway
+        // When a gateway is merged against a split table, only the first table part created
+        // from the split has the merged gateway.
         if (!rv->empty())
             table_part->remove_gateway();
 
@@ -3214,13 +3227,46 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             rv->push_back(table_part);
             BUG_CHECK(!prev, "didn't add prev stage table?");
         } else if (pl->entries) {
+            // Connect all split table parts together so missing on a previous part leads
+            // to trying the next part.
+            //
+            // If split table is merged with a gateway, the "$true" sequence of gateway should
+            // still always happen if the gateway condition is met, regardless of hitting
+            // or missing the first part of the split table it was merged with. Append "$true"
+            // sequence to "$try_next_stage" sequence, which happens on miss, of the first
+            // table part. This might result in more than one path being executed in future
+            // stages, so this fix is exclusive from Tofino 2 onwards.
+            //
             // FIXME: Long term solution could be the following for these types of actions:
             //    - Clone all actions and set them all to hit_only
             //    - Create a noop action as miss_only
             //    - Get rid of the $try_next_stage and just go through the standard hit/miss
-            // Separate control flow processing for try_next_stage vs miss"
-            prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
-            prev->next.erase("$miss"); }
+            // Separate control flow processing for try_next_stage vs miss
+            auto try_next_stage_seq = new IR::MAU::TableSeq(table_part);
+            if (gw_true_seq && Device::currentDevice() != Device::TOFINO) {
+                for (auto table : gw_true_seq->tables) {
+                    // Remove table_part, as try_next_stage_seq already includes it.
+                    if (table->name == table_part->name) {
+                        gw_true_seq->tables.erase(remove(gw_true_seq->tables.begin(),
+                                                         gw_true_seq->tables.end(),
+                                                         table),
+                                                  gw_true_seq->tables.end());
+                        break;
+                    }
+                }
+                try_next_stage_seq->tables.insert(
+                    try_next_stage_seq->tables.end(),
+                    gw_true_seq->tables.begin(),
+                    gw_true_seq->tables.end());
+                gw_true_seq = nullptr;
+            }
+            // Since the gateway is handled by the first table part, all subsequent parts
+            // should use a deepcopy of the original match table's next sequences.
+            if (gw_layout_used && Device::currentDevice() != Device::TOFINO)
+                table_part->next = match_table_next;
+            prev->next["$try_next_stage"] = try_next_stage_seq;
+            prev->next.erase("$miss");
+        }
 
         // check for any attached tables not completely placed as of this stage and do any
         // address updates needed for later stages.

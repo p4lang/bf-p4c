@@ -1,0 +1,47 @@
+# test1
+add test1 hdr.data.f1:0xf0000000 setb2(v:0xf0)
+add test1 hdr.data.f1:0xf1000000 setb2(v:0xf1)
+add test1 hdr.data.f1:0xf2000000 setb2(v:0xf2)
+add test1 hdr.data.f1:0xf3000000 setb2(v:0xf3)
+
+# test2
+add test2 0 hdr.data.f1:0xf1****** setb1(v:0xf1)
+add test2 1 hdr.data.f1:0xf3****** setb1(v:0xf3)
+add test2 2 hdr.data.f1:0xf5****** setb1(v:0xf5)
+add test2 3 hdr.data.f1:0xf7****** setb1(v:0xf7)
+
+# test3
+add test3 hdr.data.b1:0xaa seth1(v:0x00aa)
+add test3 hdr.data.b1:0xf3 seth1(v:0x00f3)
+add test3 hdr.data.b1:0xf7 seth1(v:0x00f7)
+
+# Miss initial gateway
+expect 33 ffffffff ffffffff ffff ff ff
+packet 33 ffffffff ffffffff ffff ff ff
+
+# Hit test1, miss test2, miss test3
+expect 4 f0000000 00000000 0000 00 f0
+packet 4 f0000000 00000000 0000 00 00
+# Hit test1, hit test2, miss test3
+expect 4 f1000000 00000000 0000 f1 f1
+packet 4 f1000000 00000000 0000 00 00
+# Hit test1, miss test2, hit test3
+expect 4 f2000000 00000000 00aa aa f2
+packet 4 f2000000 00000000 0000 aa 00
+# Hit test1, hit test2, hit test3
+expect 4 f3000000 00000000 00f3 f3 f3
+packet 4 f3000000 00000000 0000 00 00
+
+# Miss test1, miss test2, miss test3
+expect 4 f4000000 00000000 0000 00 00
+packet 4 f4000000 00000000 0000 00 00
+# Miss test1, hit test2, miss test3
+expect 4 f5000000 00000000 0000 f5 00
+packet 4 f5000000 00000000 0000 00 00
+# Miss test1, miss test2, hit test3
+expect 4 f6000000 00000000 00aa aa 00
+packet 4 f6000000 00000000 0000 aa 00
+# Miss test1, hit test2, hit test3
+expect 4 f7000000 00000000 00f7 f7 00
+packet 4 f7000000 00000000 0000 00 00
+
