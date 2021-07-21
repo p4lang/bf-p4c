@@ -10,15 +10,14 @@ bool ParserResourcesLogging::preorder(const IR::BFN::LoweredParser* parser) {
     const auto parserId = parser->portmap.size() > 0 ? parser->portmap[0] : 0;
     const auto nStates = Device::pardeSpec().numTcamRows();
 
-    parsers[parser->name].phase0 = nullptr;
+    BUG_CHECK(parsers[parser->name].phase0 == nullptr,
+            "phase0 for parser: %1% is already set unexpectedly!", parser->name);
+
     if (parser->gress == INGRESS) {
         if (parser->phase0) {
             const std::string usedBy = parser->phase0->tableName.c_str();
             const std::string usedFor = parser->phase0->actionName.c_str();
-            const auto eu = new ElementUsage(usedBy, usedFor);
-
-            parsers[parser->name].phase0 = new Phase0ResourceUsage();
-            parsers[parser->name].phase0->append(eu);
+            parsers[parser->name].phase0 = new Phase0ResourceUsage(usedBy, usedFor);
         }
     }
 
