@@ -312,6 +312,17 @@ class BfRtSchemaGenerator {
     const p4configv1::P4Info& p4info;
 };
 
+static Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName) {
+    for (auto *t : *tablesJson) {
+        auto *tblObj = t->to<Util::JsonObject>();
+        auto tName = tblObj->get("name")->to<Util::JsonValue>()->getString();
+        if (tName == tblName) {
+            return tblObj;
+        }
+    }
+    return nullptr;
+}
+
 // See https://stackoverflow.com/a/33799784/4538702
 static std::string escapeJson(const std::string& s) {
     std::ostringstream o;
@@ -817,6 +828,7 @@ struct BfRtSchemaGenerator::ActionSelector {
     std::string get_mem_name;
     P4Id id;
     P4Id get_mem_id;
+    P4Id action_profile_id;
     int64_t max_group_size;
     int64_t num_groups;  // aka size of selector
     std::vector<P4Id> tableIds;
@@ -832,7 +844,7 @@ struct BfRtSchemaGenerator::ActionSelector {
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
         return ActionSelector{pre.name(), pre.name() + "_get_member",
-                              selectorId, selectorGetMemId,
+                              selectorId, selectorGetMemId, actionProfile.preamble().id(),
                               actionProfile.max_group_size(), actionProfile.size(),
                               tableIds, transformAnnotations(pre)};
     }
@@ -850,7 +862,7 @@ struct BfRtSchemaGenerator::ActionSelector {
         auto tableIds = collectTableIds(
             p4info, actionSelector.table_ids().begin(), actionSelector.table_ids().end());
         return ActionSelector{pre.name(), pre.name() + "_get_member",
-                              selectorId, selectorGetMemId,
+                              selectorId, selectorGetMemId, actionSelector.action_profile_id(),
                               actionSelector.max_group_size(), actionSelector.num_groups(),
                               tableIds, transformAnnotations(pre)};
     }
@@ -891,9 +903,10 @@ struct BfRtSchemaGenerator::ActionProf {
             ::error("Extern instance %1% does not pack an ActionProfile object", pre.name());
             return boost::none;
         }
+        auto profileId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_PROFILE);
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionProf{pre.name(), pre.id(), actionProfile.size(), tableIds,
+        return ActionProf{pre.name(), profileId, actionProfile.size(), tableIds,
                           transformAnnotations(pre)};
     }
 };
@@ -1357,6 +1370,10 @@ BfRtSchemaGenerator::initTableJson(const std::string& name,
 BfRtSchemaGenerator::addToDependsOn(Util::JsonObject* tableJson, P4Id id) {
     auto* dependsOnJson = tableJson->get("depends_on")->to<Util::JsonArray>();
     CHECK_NULL(dependsOnJson);
+    // Skip duplicates
+    for (auto *d : *dependsOnJson) {
+        if (*d->to<Util::JsonValue>() == id) return;
+    }
     dependsOnJson->append(id);
 }
 
@@ -1634,13 +1651,17 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
     auto oneTableId = actionProf.tableIds.at(0);
     auto* oneTable = Standard::findTable(p4info, oneTableId);
     CHECK_NULL(oneTable);
+
+    // Add action profile to match table depends on
+    auto oneTableJson = findJsonTable(tablesJson, oneTable->preamble().name());
+    addToDependsOn(oneTableJson, actionProf.id);
+
     tableJson->emplace("action_specs", makeActionSpecs(*oneTable));
 
     tableJson->emplace("data", new Util::JsonArray());
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
     tableJson->emplace("attributes", new Util::JsonArray());
-    addToDependsOn(tableJson, actionProf.id);
 
     tablesJson->append(tableJson);
 }
@@ -1683,6 +1704,7 @@ BfRtSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
     tableJson->emplace("attributes", new Util::JsonArray());
+    addToDependsOn(tableJson, actionSelector.action_profile_id);
 
     tablesJson->append(tableJson);
 }
@@ -2078,17 +2100,6 @@ BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) cons
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
-}
-
-static Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName) {
-    for (auto *t : *tablesJson) {
-        auto *tblObj = t->to<Util::JsonObject>();
-        auto tName = tblObj->get("name")->to<Util::JsonValue>()->getString();
-        if (tName == tblName) {
-            return tblObj;
-        }
-    }
-    return nullptr;
 }
 
 void
@@ -2538,9 +2549,14 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                 ::error("Invalid implementation id in p4info: %1%", implementationId);
                 continue;
             }
-            tableType = *hasSelector ? "MatchAction_Indirect_Selector" : "MatchAction_Indirect";
-            actProfId = ActionProf::makeActProfId(implementationId);
-            if (*hasSelector) actSelectorId = ActionProf::makeActSelectorId(implementationId);
+            if (*hasSelector) {
+                actSelectorId = ActionProf::makeActSelectorId(implementationId);
+                tableType = "MatchAction_Indirect_Selector";
+                // actProfId will be set while visiting action profile externs
+            } else {
+                actProfId = ActionProf::makeActProfId(implementationId);
+                tableType = "MatchAction_Indirect";
+            }
         }
 
         auto* tableJson = initTableJson(

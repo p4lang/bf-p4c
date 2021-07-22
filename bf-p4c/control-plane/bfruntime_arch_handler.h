@@ -1452,8 +1452,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         selector.set_num_groups(actionSelector.numGroups);
         cstring actionSelectorName = prefix(blockPrefix, actionSelector.name);
         if (actionSelector.actionProfileName) {
-            selector.set_action_profile_id(symbols.getId(
-                SymbolType::ACTION_PROFILE(),
+            selector.set_action_profile_id(symbols.getId(SymbolType::ACTION_PROFILE(),
                 prefix(blockPrefix, *actionSelector.actionProfileName)));
             auto tablesIt = actionProfilesRefs.find(actionSelector.name);
             if (tablesIt != actionProfilesRefs.end()) {
