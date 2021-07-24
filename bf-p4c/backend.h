@@ -37,10 +37,6 @@ class Backend : public PassManager {
     MauBacktracker mau_backtracker;
     TableSummary table_summary;
     TableAllocPass table_alloc;
-    /// List of field names which should not be privatized. Detected by ValidateAllocation pass and
-    /// used by Privatization (when invoked due to backtracking) or UndoPrivatization to prevent
-    /// privatization.
-    ordered_set<cstring> doNotPrivatize;
     // Primitives Json Node, is populated before instruction adjustment and
     // passed to AsmOutput to output primitive json file
     Util::JsonObject primNode;

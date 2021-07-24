@@ -26,8 +26,8 @@ namespace PHV {
  */
 class ValidateAllocation final : public Inspector {
  public:
-    ValidateAllocation(PhvInfo& phv, const ClotInfo& clot, ordered_set<cstring>& f)
-        : phv(phv), clot(clot), doNotPrivatize(f) { }
+    ValidateAllocation(PhvInfo& phv, const ClotInfo& clot)
+        : phv(phv), clot(clot) { }
 
  private:
     PhvInfo& phv;
@@ -37,20 +37,6 @@ class ValidateAllocation final : public Inspector {
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::BFN::Digest* digest) override;
     bool preorder(const IR::BFN::Pipe* pipe) override;
-
-    /// List of all privatized fields that cause PHV allocation to fail; grows monotonically every
-    /// time PHV allocation fails because of privatization, until every privatizable field is
-    /// included.
-    ordered_set<cstring>& doNotPrivatize;
-
-    /// Checks if privatization needs to be rolled back and chooses one of two mechanisms
-    /// (replacement of uses of privatized fields or backtracking) to roll it back.
-    void checkAndThrowPrivatizeException(
-            const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const;
-
-    /// returns true if a backtrack exception must be thrown, instead of invoking UndoPrivatization.
-    bool throwBacktrackException(
-            const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const;
 
     /// returns total number of container bits used for POV bit allocation in @gress.
     size_t getPOVContainerBytes(gress_t gress) const;

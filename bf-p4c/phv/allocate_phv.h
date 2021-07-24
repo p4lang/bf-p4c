@@ -667,10 +667,6 @@ class AllocatePHV : public Visitor {
     std::list<PHV::SuperCluster*> make_cluster_groups() const {
         return clustering_i.cluster_groups(); }
 
-    /// @returns true if the only unallocated fields are all TempVars (TPHV fields) introduced by
-    /// privatization (field->privatized() == true).
-    bool onlyPrivatizedFieldsUnallocated(std::list<PHV::SuperCluster*>& unallocated) const;
-
     /// Throw a pretty-printed ::error when allocation fails due to resource constraints.
     void formatAndThrowError(
         const PHV::Allocation& alloc,

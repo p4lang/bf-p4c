@@ -28,7 +28,6 @@
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
-#include "bf-p4c/phv/privatization.h"
 
 // helper function
 bool findFlexibleAnnotation(const IR::Type_StructLike* header) {

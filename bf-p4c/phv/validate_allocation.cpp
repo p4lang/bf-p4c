@@ -11,7 +11,6 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
-#include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "ir/ir.h"
@@ -42,9 +41,6 @@ Visitor::profile_t ValidateAllocation::init_apply(const IR::Node* root) {
 bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
-    /// To be set to true if privatization causes PHV allocation to fail.
-    bool throwPrivatizeException = false;
-
     const auto& phvSpec = Device::phvSpec();
 
     // A mapping from PHV containers to the field slices that they contain.
@@ -78,25 +74,14 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        if (field.privatized() && (field.is_unallocated() && no_clots_allocated)) {
-            boost::optional<cstring> privatizedFieldName = field.getPHVPrivateFieldName();
-            if (!privatizedFieldName)
-                BUG("Did not find PHV name of privatized field %1%", field.name);
-            doNotPrivatize.insert(*privatizedFieldName);
-            LOG1("Do not privatize " << *privatizedFieldName << " as it is unallocated.");
-            throwPrivatizeException = true;
-            continue;
-        } else {
-            // XXX(hanw): paddings do not require phv allocation.
-            ERROR_CHECK(!field.is_unallocated() || !no_clots_allocated ||
-                        field.is_ignore_alloc() || field.is_avoid_alloc(),
+        // XXX(hanw): paddings do not require phv allocation.
+        ERROR_CHECK(!field.is_unallocated() || !no_clots_allocated || field.is_ignore_alloc() ||
+                        field.is_avoid_alloc(),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
-        }
 
         ERROR_CHECK(!field.bridged || field.deparsed() || field.gress == EGRESS,
-                    "Ingress field is bridged, but not deparsed: %1%",
-                    cstring::to_cstring(field));
+                    "Ingress field is bridged, but not deparsed: %1%", cstring::to_cstring(field));
 
         // TODO(zma) add clot validation
         if (!no_clots_allocated)
@@ -478,22 +463,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     "fields and deparsed metadata fields: %2%", container,
                     cstring::to_cstring(fields));
 
-        if (deparsedHeaderFields.size() && nonDeparsedFields.size()) {
-            for (auto* deparsed : deparsedHeaderFields)
-                for (auto* nonDeparsed : nonDeparsedFields) {
-                    if (deparsed->bridged) continue;
-                    if (nonDeparsed->privatizable()) {
-                        if (mutually_exclusive_field_ids(deparsed->id, nonDeparsed->id))
-                            continue;
-                        doNotPrivatize.insert(nonDeparsed->name);
-                        throwPrivatizeException = true;
-                        ::warning("Deparsed container %1% mixes deparsed header field %2% with "
-                                "non-deparsed field %3%", container,
-                                cstring::to_cstring(deparsed), cstring::to_cstring(nonDeparsed));
-                    }
-                }
-        }
-
         // Verify that the allocations for each field don't overlap. (Note that
         // this is checking overlapping with respect to the *container*; we
         // check overlapping with respect to the *field* above.)
@@ -674,9 +643,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     });
 
-    if (throwPrivatizeException)
-        checkAndThrowPrivatizeException(allocations);
-
     // Mirror metadata allocation constraint check:
     for (auto gress : {INGRESS, EGRESS}) {
         const auto* mirror_id = phv.field(
@@ -771,31 +737,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
         }
     }
     return true;
-}
-
-void ValidateAllocation::checkAndThrowPrivatizeException(
-        const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const {
-    // If privatized fields flout deparser requirements, raise a backtrack exception.
-    bool backtrack = throwBacktrackException(allocations);
-    if (backtrack) {
-        LOG1("   Reinvoking privatization pass");
-        throw PrivatizationTrigger::failure(doNotPrivatize); }
-}
-
-bool ValidateAllocation::throwBacktrackException(
-        const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const {
-    bool anyFieldOverlaid = false;
-    for (cstring fName : doNotPrivatize) {
-        const PHV::Field* f = phv.field(fName);
-        BUG_CHECK(f, "Privatized field %1% not found", fName);
-        f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
-            for (auto& slice : allocations.at(alloc.container())) {
-                if (slice.field() == alloc.field()) continue;
-                if (alloc.container_slice().overlaps(slice.container_slice()))
-                    anyFieldOverlaid = true; }
-        });
-    }
-    return anyFieldOverlaid;
 }
 
 size_t ValidateAllocation::getPOVContainerBytes(gress_t gress) const {

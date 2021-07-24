@@ -527,7 +527,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
   phv/phv_spec.cpp
-  phv/privatization.cpp
   phv/table_phv_constraints.cpp
   phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
@@ -598,7 +597,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/phv_fields.h
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
-  phv/privatization.h
   phv/table_phv_constraints.h
   phv/trivial_alloc.h
   phv/validate_allocation.h

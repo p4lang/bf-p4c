@@ -2998,10 +2998,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     }
     alloc.commit(result.transaction);
 
-    // If only privatized fields are unallocated, mark allocation as done.
-    // The rollback of unallocated privatized fields will happen in ValidateAllocation.
-    bool allocationDone = (result.status == AllocResultCode::SUCCESS) ||
-        onlyPrivatizedFieldsUnallocated(result.remaining_clusters);
+    bool allocationDone = (result.status == AllocResultCode::SUCCESS);
     if (allocationDone) {
         bindSlices(alloc, phv_i);
         phv_i.set_done();
@@ -3025,12 +3022,6 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG_DEBUG1("PHV ALLOCATION SUCCESSFUL");
-        LOG1(alloc);  // Not emitting to EventLog on purpose
-    } else if (onlyPrivatizedFieldsUnallocated(result.remaining_clusters)) {
-        LOG_DEBUG1("PHV ALLOCATION SUCCESSFUL FOR NON-PRIVATIZED FIELDS");
-        LOG_DEBUG1("SuperClusters with Privatized Fields unallocated: ");
-        for (auto* sc : result.remaining_clusters)
-            LOG_DEBUG1(sc);
         LOG1(alloc);  // Not emitting to EventLog on purpose
     } else {
         bool failure_diagnosed = (result.remaining_clusters.size() == 0) ? false :
@@ -3096,17 +3087,6 @@ bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
             fieldAlignments, ss);
     if (diagnosed) ::error("%1%", ss.str());
     return diagnosed;
-}
-
-bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
-        std::list<PHV::SuperCluster*>& unallocated) const {
-    for (auto* super_cluster : unallocated)
-        for (auto* rotational_cluster : super_cluster->clusters())
-            for (auto* cluster : rotational_cluster->clusters())
-                for (auto& slice : cluster->slices())
-                    if (!slice.field()->privatized())
-                        return false;
-    return true;
 }
 
 namespace PHV {

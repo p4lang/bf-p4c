@@ -1037,9 +1037,6 @@ bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
 }
 
 bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
-    // Privatized fields are the TPHV copies of header fields. Therefore, privatized fields are
-    // always TPHV candidates.
-    if (field_i->privatized()) return true;
     if (field_i->padding) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
     std::string f_name(field_i->name.c_str());
@@ -1437,16 +1434,6 @@ class CollectPhvFields : public Inspector {
             f->set_solitary(PHV::SolitaryReason::ARCH);
             f->set_no_split(true);
         }
-
-        // A field that ends with PHV::Field::TPHV_PRIVATIZE_SUFFIX is the TPHV copy of a header
-        // field, produced during the Privatization pass. This field must be marked appropriately as
-        // privatized.
-        if (tv->name.endsWith(PHV::Field::TPHV_PRIVATIZE_SUFFIX)) {
-            PHV::Field* f = phv.field(tv);
-            BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
-            f->set_privatized(true);
-        }
-
         return false;
     }
 
@@ -1831,18 +1818,6 @@ class CollectPardeConstraints : public Inspector {
         src_field->set_exact_containers(true);
         src_field->set_emitted(true);
         LOG3("   marking field " << src_field << " as emitted");
-
-        if (!src_field->privatized()) return;
-
-        // The original PHV copy of privatized fields must be explicitly identified as privatizable
-        // and its exact containers property must be set to true.
-        boost::optional<cstring> newString = src_field->getPHVPrivateFieldName();
-        if (!newString)
-            BUG("Did not find PHV version of privatized field %1%", src_field->name);
-        auto* phv_field = phv.field(*newString);
-        BUG_CHECK(phv_field, "PHV version of privatized field %1% not found", src_field->name);
-        phv_field->set_exact_containers(true);
-        phv_field->set_privatizable(true);
     }
 
     static std::vector<cstring> bottom_bit_aligned_deparser_params() {
@@ -2269,8 +2244,6 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
     if (field.used_in_wide_arith()) out << " wide_arith";
-    if (field.privatized()) out << " TPHV-priv";
-    if (field.privatizable()) out << " PHV-priv";
     if (Device::phvSpec().hasContainerKind(PHV::Kind::mocha)) {
         if (field.is_mocha_candidate()) out << " mocha";
     }
@@ -2396,8 +2369,6 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
     if (field.used_in_wide_arith()) out << " wide_arith";
-    if (field.privatized()) out << " TPHV-priv";
-    if (field.privatizable()) out << " PHV-priv";
     if (Device::phvSpec().hasContainerKind(PHV::Kind::mocha)) {
         if (field.is_mocha_candidate()) out << " mocha";
     }

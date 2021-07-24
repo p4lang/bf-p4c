@@ -134,17 +134,10 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        // If there is a pa_container_size pragma on the field, then also apply it to its privatized
-        // (TPHV) version.
-        boost::optional<cstring> tphvName = field->getTPHVPrivateFieldName();
-        PHV::Field* privatized_field = tphvName ? phv_i.field(*tphvName) : nullptr;
-        if (privatized_field) LOG1("Privatized field in pragma: " << privatized_field);
-
         if (pa_container_sizes_i.count(field)) {
             ::warning("overriding @pragma pa_container_size %1%", field->name);
         }
         pa_container_sizes_i[field] = {};
-        if (privatized_field) pa_container_sizes_i[privatized_field] = {};
 
         bool failed = false;
         for (; expr_index < exprs.size(); ++expr_index) {
@@ -163,18 +156,15 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
                 break;
             } else {
                 pa_container_sizes_i[field].push_back(*container_size);
-                if (privatized_field)
-                    pa_container_sizes_i[privatized_field].push_back(*container_size);
             }
         }
 
         if (failed) {
             pa_container_sizes_i.erase(field);
-            if (privatized_field) pa_container_sizes_i.erase(privatized_field);
             continue;
         }
 
-        check_and_add_no_split(field, privatized_field);
+        check_and_add_no_split(field);
     }
     LOG1(*this);
     return true;
@@ -200,8 +190,7 @@ boost::optional<PHV::Size> PragmaContainerSize::expected_container_size(
     return PHV::Size::null;
 }
 
-void PragmaContainerSize::check_and_add_no_split(PHV::Field* field,
-                                                 PHV::Field* privatized_field) const {
+void PragmaContainerSize::check_and_add_no_split(PHV::Field* field) const {
     // Add no-split constraint if the field has only one container size associated with it and
     // the size of the container is larger than or equal to the size of the field. The pragma
     // also implies that the entire field must be packed into a single specified size container.
@@ -210,15 +199,11 @@ void PragmaContainerSize::check_and_add_no_split(PHV::Field* field,
         if (static_cast<int>(container_size) >= field->size) {
             field->set_no_split(true);
             LOG3("Setting field " << field->name << " to no-split.");
-            if (privatized_field)
-                privatized_field->set_no_split(true);
         }
         // XXX(yumin): not necessary.
         if (static_cast<int>(container_size) == field->size) {
             field->set_solitary(PHV::SolitaryReason::PRAGMA_CONTAINER_SIZE);
             LOG3("Setting field " << field->name << " to no-pack.");
-            if (privatized_field)
-                privatized_field->set_solitary(PHV::SolitaryReason::PRAGMA_CONTAINER_SIZE);
         }
     }
 }

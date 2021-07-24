@@ -161,9 +161,6 @@ BFN_Options::BFN_Options() {
             phv_scale_factor = temp;
             return true; },
          "Scale number of phvs by a factor");
-    registerOption("--no-phv-privatization", nullptr,
-        [this](const char *) { privatization = false; return true; },
-        "Do not use TPHV/PHV privatization");
     registerOption("--auto-init-metadata", nullptr,
         [this](const char *) {
             auto_init_metadata = true;

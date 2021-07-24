@@ -411,18 +411,6 @@ PHV::FieldSlice* SuperClusterBuilder::analyze_field_slice(std::string &str) {
         }
         t = get_token(ss);
     }
-    if (t.compare("TPHV-priv") == 0) {
-        if (new_field) {
-            f->set_privatized(true);
-        }
-        t = get_token(ss);
-    }
-    if (t.compare("PHV-priv") == 0) {
-        if (new_field) {
-            f->set_privatizable(true);
-        }
-        t = get_token(ss);
-    }
     if (t.compare("mocha") == 0) {
         if (new_field) {
             f->set_mocha_candidate(true);

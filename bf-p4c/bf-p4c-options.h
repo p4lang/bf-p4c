@@ -18,7 +18,6 @@ class BFN_Options : public CompilerOptions {
     float phv_scale_factor = 1;
     float max_power = 0.0;
     bool create_graphs = false;
-    bool privatization = false;
     bool decaf = false;
     bool auto_init_metadata = false;
     bool disable_parser_state_merging = false;

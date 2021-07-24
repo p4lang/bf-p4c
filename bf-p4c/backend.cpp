@@ -53,7 +53,6 @@
 #include "bf-p4c/phv/dump_table_flow_graph.h"
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
-#include "bf-p4c/phv/privatization.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/validate_allocation.h"
 
@@ -165,8 +164,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new FindDependencyGraph(phv, deps, &options, "program_graph",
                                 "After Instruction Selection"),
         options.decaf ? &decaf : nullptr,
-        options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
-                                  // For read-only fields, generate private TPHV and PHV copies.
 
         new CollectPhvInfo(phv),
         // Aliasing replaces all uses of the alias source field with the alias destination field.
@@ -227,18 +224,12 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new DumpTableFlowGraph(phv),
             PHV_Analysis,
             // Validate results of PHV allocation.
-            new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
+            new PHV::ValidateAllocation(phv, clot),
             allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
-
-            // FIXME -- options.privatization defaults to false and can't be set to true?
-            // experimental work never enabled?
-            options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
-                                    // Undo results of privatization for the doNotPrivatize fields
             new ValidateActions(phv, false, true, false),
         }),
         new PHV::AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
-        options.privatization ? &defuse : nullptr,
         // This pass must be called before instruction adjustment since the primitive info
         // is per P4 actions. This should also happen before table placement which may cause
         // tables to be split across stages.
@@ -255,10 +246,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new DumpTableFlowGraph(phv),
             PHV_Analysis,
             // Validate results of PHV allocation.
-            new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
+            new PHV::ValidateAllocation(phv, clot),
             allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
-            options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
-                                    // Undo results of privatization for the doNotPrivatize fields
             new ValidateActions(phv, false, true, false),
             new PHV::AddAliasAllocation(phv),
             new ReinstateAliasSources(phv),  // revert AliasMembers/Slices to their original
