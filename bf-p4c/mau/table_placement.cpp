@@ -481,40 +481,135 @@ class DecidePlacement::BacktrackPlacement {
     DecidePlacement &self;
     const Placed *pl;
     ordered_set<const GroupPlace*> work;
+    bool is_best;  // Set to true if this placement was initially selected
+    int init_cnt;  // Backtrack count value when saved
 
  public:
-    bool tried = false;
+    bool tried = false;  // Set to true if this placement was tried
     BacktrackPlacement(DecidePlacement &self, const Placed *p,
-                       const ordered_set<const GroupPlace*> &w) : self(self), pl(p), work(w) {}
+                       const ordered_set<const GroupPlace *> &w, bool ib) :
+        self(self), pl(p), work(w), is_best(ib) { init_cnt = self.backtrack_count; }
     BacktrackPlacement &operator=(const BacktrackPlacement &a) {
         BUG_CHECK(&self == &a.self, " inconsistent backtracking assignment");
         pl = a.pl;
         work = a.work;
+        is_best = a.is_best;
+        init_cnt = a.init_cnt;
         return *this; }
     const Placed *operator->() const { return pl; }
+    const Placed *get_placed() const { return pl; }
 
     const Placed *reset_place_table(ordered_set<const GroupPlace *> &w) {
         tried = true;
         ++self.backtrack_count;
         w = work;
         return self.place_table(w, pl); }
+
+    bool is_best_placement() { return is_best; }
+    void reset_best_placement() { is_best = false; }
+    bool is_same_backtrack_pass() { return self.backtrack_count == init_cnt; }
 };
 
+/** Structure that saves various backtracking point for each table. The first index being the stage
+ *  where this backtracking point is located and the second is the backtracking point itself. We
+ *  use two maps to carry global and local backtracking point for each table. Global refer to the
+ *  earliest time this table was placable per stage while local is rebuilt when a table is eligible
+ *  and have a different backtrack count than previously found. E.g.:
+ *
+ *  Stage 0 : Eligible Tables = {T0, T1, T2, T3, T4}, Placed Tables = {T0, T3}
+ *  Stage 1 : Eligible Tables = {T1, T2, T4, T5}, Placed Tables = {T1, T5}
+ *  Stage 2 : Eligible Tables = {T2, T4, T6}, Placed Tables = {T4}
+ *
+ *  At this point the early(global) and last_pass(local) map will be the same for all tables
+ *
+ *  T0 -> Stage 0
+ *  T1 -> Stage 0, 1
+ *  T2 -> Stage 0, 1, 2
+ *  T3 -> Stage 0
+ *  T4 -> Stage 0, 1, 2
+ *  T5 -> Stage 1
+ *  T6 -> Stage 2
+ *
+ *  At this point if we found that placing table T6 would cause a fitting issue because the downward
+ *  dependency chain will exceed the resource of the underlying chip, the backtracking mechanism
+ *  will kick in and try to find an earlier placement for T6. Based on our current map, T6 don't
+ *  have any previous stages where it was eligible. In this case, the backtracking mechanism will
+ *  look at control and data dependency for this table and might find that T4 have a control
+ *  dependency on T6 and if we move that table earlier we can probably fix the T6 dependency
+ *  problem. By looking at T4 mapping we can see that this table was eligible at stage 0 and 1 as
+ *  well. Stage 1 will probably be selected at backtracking point if the dependency chain was only
+ *  missing 1 stage. The result might look like:
+ *
+ *  Stage 0 : Eligible Tables = {T0, T1, T2, T3, T4}, Placed Tables = {T0, T3}
+ *  Stage 1 : Eligible Tables = {T1, T2, T4, T5, T6}, Placed Tables = {T4, T6}
+ *  Stage 2 : Eligible Tables = {T1, T2, T5}, Placed Tables = {T1, T5}
+ *
+ *  After that backtracking point, the early(global) and last_pass(local) mapping will start to
+ *  diverge. The backtracking mechanism will always try to find a local point before looking at
+ *  global one to increase the solution instead of changing it entirely:
+ *
+ *         |            Local           |           Global          |
+ *  T0 ->  | 0 (Same as original)       | 0                         |
+ *  T1 ->  | 1, 2 (BT include T4)       | 0, 1, 2 (Stage 2 is new)  |
+ *  T2 ->  | 1, 2 (BT include T4)       | 0, 1, 2                   |
+ *  T3 ->  | 0 (Same as original)       | 0                         |
+ *  T4 ->  | 1 (Tried flag set)         | 0, 1, 2                   |
+ *  T5 ->  | 1, 2 (BT include T4)       | 1, 2 (Stage 2 is new)     |
+ *  T6 ->  | 1 (BT include T4)          | 1, 2 (Stage 1 is new)     |
+ */
 struct DecidePlacement::save_placement_t {
-    BacktrackPlacement  early;  // earliest stage we've foudn where table is placeable
-    BacktrackPlacement  late;   // latest placement found for table
+    std::map<int, BacktrackPlacement>  early;  // global earliest time we've found where table
+                                               // is placeable
+    std::map<int, BacktrackPlacement>  last_pass;  // local earliest position. Local point are
+                                                   // always updated when revisited with a new
+                                                   // backtrack count
 };
 
-void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPlace *> &work) {
+void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPlace *> &work,
+                                    bool is_best) {
     if (saved_placements.count(pl->name)) {
         auto &info = saved_placements.at(pl->name);
-        if (!info.late.tried || info.late->stage < pl->stage)
-            info.late = BacktrackPlacement(*this, pl, work);
-        if (pl->stage < info.early->stage || (pl->stage == info.early->stage && !info.early.tried))
-            info.early = BacktrackPlacement(*this, pl, work);
+        // Local backtrack point management
+        if (!info.last_pass.begin()->second.is_same_backtrack_pass()) {
+            info.last_pass.clear();
+            info.last_pass.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+        } else {
+            if (info.last_pass.count(pl->stage)) {
+                BacktrackPlacement &actual_pl = info.last_pass.at(pl->stage);
+                if (actual_pl.tried || (actual_pl->need_more && !pl->need_more) ||
+                    (actual_pl->entries < pl->entries && actual_pl->need_more == pl->need_more)) {
+                    info.last_pass.erase(pl->stage);
+                    info.last_pass.insert({pl->stage, BacktrackPlacement(*this, pl, work,
+                                                                         is_best)});
+                }
+            } else {
+                info.last_pass.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+            }
+        }
+        // Global backtrack point management
+        if (info.early.count(pl->stage)) {
+            BacktrackPlacement &actual_pl = info.early.at(pl->stage);
+            if (actual_pl.tried || (actual_pl->need_more && !pl->need_more)) {
+                info.early.erase(pl->stage);
+                info.early.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+            } else if ((actual_pl->need_more == pl->need_more) &&
+                       (actual_pl->entries < pl->entries || (actual_pl->entries == pl->entries &&
+                        !actual_pl.is_same_backtrack_pass()))) {
+                info.early.erase(pl->stage);
+                info.early.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+            } else {
+                actual_pl.reset_best_placement();
+            }
+        } else {
+            info.early.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+        }
     } else {
-        saved_placements.emplace(pl->name, save_placement_t {
-            BacktrackPlacement(*this, pl, work), BacktrackPlacement(*this, pl, work) });
+        // Initial backtrack point
+        std::map<int, BacktrackPlacement> early;
+        early.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+        std::map<int, BacktrackPlacement> last_pass;
+        last_pass.insert({pl->stage, BacktrackPlacement(*this, pl, work, is_best)});
+        saved_placements.emplace(pl->name, save_placement_t { early, last_pass });
     }
 }
 
@@ -2246,9 +2341,160 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
 void DecidePlacement::recomputePartlyPlaced(const Placed *done,
                                             ordered_set<const IR::MAU::Table *> &partly_placed) {
     partly_placed.clear();
-    for (auto *p = done; p; p = p->prev)
-        if (done->is_placed(p->table))
+    // Also update the starter pistol table from scratch
+    self.starter_pistol = { { nullptr, nullptr } };
+    for (auto *p = done; p; p = p->prev) {
+        if (p->table->created_during_tp) {
+            if (p->table->name == "$ingress_starter_pistol")
+                self.starter_pistol[INGRESS] = p->table;
+            else if (p->table->name == "$egress_starter_pistol")
+                self.starter_pistol[EGRESS] = p->table;
+            else
+                BUG("Unsupported internal table name %s", p->table->name);
+        } else if (!done->is_placed(p->table)) {
             partly_placed.insert(p->table);
+        }
+    }
+}
+
+boost::optional<DecidePlacement::BacktrackPlacement&>
+DecidePlacement::find_previous_placement(const Placed *best, int offset, bool local_bt,
+                                         int process_stage) {
+    // Find initial position of a table in case this one is split across multiple stages
+    auto init_stage = [](const Placed *pl) {
+        const IR::MAU::Table *search_tbl = pl->table;
+        const Placed *prev_pl = pl->prev;
+        int first_stage = pl->stage;
+        while (prev_pl) {
+            if (prev_pl->table == search_tbl)
+                first_stage = prev_pl->stage;
+            prev_pl = prev_pl->prev;
+        }
+        return first_stage;
+    };
+
+    auto &info = saved_placements.at(best->name);
+    auto &bt = local_bt ? info.last_pass : info.early;
+    int best_init_stage = init_stage(best);
+    for (auto it = bt.rbegin(); it != bt.rend(); ++it) {
+        int stage = it->first;
+        DecidePlacement::BacktrackPlacement& placement = it->second;
+        int plac_init_stage = init_stage(placement.get_placed());
+        // Tried placement are not a good option
+        if (placement.is_best_placement() || placement.tried) {
+            continue;
+        } else if (((stage + offset) <= process_stage) && !placement->need_more) {
+            LOG3("Found other placement for table:" << best->name << " at stage:" << stage);
+            return placement;
+        } else if ((plac_init_stage + offset) <= best_init_stage &&
+                   (stage + offset) < process_stage) {
+            LOG3("Found other initial placement for split table:" << best->name <<
+                 " at stage:" << stage);
+            return placement;
+        }
+    }
+    return boost::none;
+}
+
+boost::optional<DecidePlacement::BacktrackPlacement&>
+DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local_bt) {
+    ordered_set<const IR::MAU::Table*> to_be_analyzed;
+    std::map<const IR::MAU::Table*, const Placed*> same_stage;
+    int process_stage = best->stage;
+    const Placed *last_stage = best;
+
+    to_be_analyzed.insert(best->table);
+    ordered_set<const IR::MAU::Table*> to_be_analyzed_next_pre;
+
+    LOG3("Find " << (local_bt ? "local" : "global") << " backtracking point for table " <<
+         best->name << " and offset " << offset);
+
+    if (saved_placements.count(best->name)) {
+        auto bt = find_previous_placement(best, offset, local_bt, process_stage);
+        if (bt)
+            return bt;
+    }
+
+    LOG3("Initial process_stage:" << process_stage);
+    while (last_stage) {
+        if (last_stage->stage < process_stage) {
+            process_stage = last_stage->stage;
+            LOG3("Initial updated process_stage:" << process_stage);
+            break;
+        }
+        same_stage.insert({ last_stage->table, last_stage });
+        if (last_stage->gw)
+            same_stage.insert({ last_stage->gw, last_stage });
+        last_stage = last_stage->prev;
+    }
+
+    /* Revisit the already placed tables that can have an impact on the actual fitting problem
+     * by looking at the control and data dependency. The control and data dependency analysis
+     * start with the initial table that failed the downward dependency compute. Upward dependency
+     * tables are added to the pool when analyzing the actual placed table. Each tables that are
+     * found to be critical for the actual fitting issue are analyzed to see if other placement
+     * are available that would relaxe the actual constraint.
+     */
+    while (!to_be_analyzed.empty()) {
+        ordered_set<const IR::MAU::Table*> to_be_analyzed_next_post;
+        for (const IR::MAU::Table* t1 : to_be_analyzed) {
+            // Data dependency
+            ordered_set<const IR::MAU::Table*> prev = self.deps.happens_phys_after_map.at(t1);
+            to_be_analyzed_next_pre.insert(prev.begin(), prev.end());
+            to_be_analyzed_next_pre.insert(t1);
+
+            // Control dependency
+            ordered_set<const IR::MAU::Table*> log_prev = self.deps.happens_logi_after_map.at(t1);
+            for (const IR::MAU::Table* log_tbl : log_prev) {
+                // If the analyzed table is control dependent on another table located in the same
+                // stage then both table must be moved to an earlier stage.
+                if (same_stage.count(log_tbl)) {
+                    const Placed *tbl_pl = same_stage.at(log_tbl);
+                    auto bt = find_previous_placement(tbl_pl, offset, local_bt, process_stage + 1);
+                    if (bt)
+                        return bt;
+                }
+                // Data dependency of the control dependent table must also be analyzed.
+                if (!to_be_analyzed_next_pre.count(log_tbl)) {
+                    ordered_set<const IR::MAU::Table*> phys_prev =
+                                                       self.deps.happens_phys_after_map.at(log_tbl);
+                    to_be_analyzed_next_pre.insert(phys_prev.begin(), phys_prev.end());
+                }
+            }
+        }
+        same_stage.clear();
+        while (last_stage) {
+            if (last_stage->stage < process_stage) {
+                process_stage = last_stage->stage;
+                LOG3("Updated process_stage:" << process_stage);
+                break;
+            }
+            if (to_be_analyzed_next_pre.count(last_stage->table) ||
+                (last_stage->gw && to_be_analyzed_next_pre.count(last_stage->gw))) {
+                LOG3("Found dependant table:" << last_stage->name << " in previous stage:" <<
+                     process_stage);
+                to_be_analyzed_next_post.insert(last_stage->table);
+                if (saved_placements.count(last_stage->name)) {
+                    auto bt = find_previous_placement(last_stage, offset, local_bt, process_stage);
+                    if (bt)
+                        return bt;
+                }
+            }
+            same_stage.insert({ last_stage->table, last_stage });
+            if (last_stage->gw)
+                same_stage.insert({ last_stage->gw, last_stage });
+            last_stage = last_stage->prev;
+        }
+        if (to_be_analyzed_next_post.empty() && process_stage && last_stage)
+            LOG3("Analyzing previous stage with the same dependent table");
+        else
+            to_be_analyzed = to_be_analyzed_next_post;
+
+        if (!to_be_analyzed.empty())
+            LOG3("Analyzing previous stage next");
+    }
+
+    return boost::none;
 }
 
 bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
@@ -2260,6 +2506,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
          TableTree("ghost", pipe->ghost_thread) );
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
+    BacktrackPlacement *original_flow = nullptr;
     /* all the state for a partial table placement is stored in the work
      * set and placed list, which are const pointers, so we can backtrack
      * by just saving a snapshot of a work set and corresponding placed
@@ -2456,10 +2703,32 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 LOG3("    Keeping best " << best->name << " for reason: " << choice);
                 self.reject_placement(t, choice, best); } }
 
-        // maybe save rejected placements for later backtracking
-        for (auto t : trial)
-            if (t != best)
-                savePlacement(t, work);
+        // Always try to respect the stage and placement pragma even when backtracking.
+        bool best_with_pragmas = false;
+        if (best->table->get_provided_stage() >= 0 ||
+            best->table->get_placement_priority_int() > 0) {
+            LOG3("Best table have stage or priority pragma");
+            best_with_pragmas = true;
+        } else {
+            std::set<cstring> pri_tbls = best->table->get_placement_priority_string();
+            for (auto t : trial) {
+                if (pri_tbls.count(t->table->externalName())) {
+                    LOG3("Best table have priority pragma with tbl " << t->name);
+                    best_with_pragmas = true;
+                    break;
+                }
+            }
+        }
+
+        // Tables being placed because of pragmas can't be overriden by backtrack.
+        if (!best_with_pragmas) {
+            for (auto t : trial) {
+                if (t->stage == best->stage)
+                    savePlacement(t, work, t == best);
+            }
+        } else {
+            savePlacement(best, work, true);
+        }
 
         if (placed && best->stage > placed->stage &&
             !self.options.disable_table_placement_backfill) {
@@ -2494,14 +2763,59 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                     LOG_FEATURE("stage_advance", 2, "can't place " << t->name << " in stage " <<
                                 (t->stage-1) << " : " << t->stage_advance_log); }
         }
-        // if (there is some problem with best) {
-        //    BacktrackPlacement &bt = pick a backtrack point from saved_placements
-        //    placed = bt.reset_place_table(work);
-        //    recomputePartlyPlaced(placed, partly_placed);
-        //    backfill.clear();  // backfill will be out of date, so we will lose some
-        //              // backfilling opportunities.  Could we reconstruct them?  Or
-        //              // save them in the BacktrackPlacement?  Not clear it is worth it.
-        //    continue; }
+
+        if (best->table) {
+            int dep_chain = self.deps.stage_info[best->table].dep_stages_control_anti;
+            if ((best->stage + dep_chain >= Device::numStages()) &&
+                (backtrack_count <= MaxBacktracksPerPipe) &&
+                (self.summary.getActualState() > TableSummary::NOCC_TRY1)) {
+                // Save the original placement to return at this point if backtracking fail.
+                if (backtrack_count == 0)
+                    original_flow = new BacktrackPlacement(*this, best, work, true);
+
+                LOG3("Found dependency chain of " << dep_chain << " at stage " << best->stage);
+                LOG3("Actual backtrack count:" << backtrack_count << " with max backtrack count:"
+                     << MaxBacktracksPerPipe);
+
+                // Try to increase the solution by doing "local" backtracking which mean that we
+                // prefer latest backtracking point for a given table. If this strategy fail, we
+                // move to the "global" backtracking point which can go back anywhere in the past.
+                if (backtrack_count < MaxBacktracksPerPipe) {
+                    int offset = best->stage + dep_chain - (Device::numStages() - 1);
+                    boost::optional<BacktrackPlacement&> bt = find_backtrack_point(best, offset,
+                                                                                   true);
+                    if (bt) {
+                        LOG3("Found local backtracking point");
+                        placed = bt->reset_place_table(work);
+                        recomputePartlyPlaced(placed, partly_placed);
+                        backfill.clear();
+                        continue;
+                    } else {
+                        boost::optional<BacktrackPlacement&> bt = find_backtrack_point(best, offset,
+                                                                                       false);
+                        if (bt) {
+                            LOG3("Found global backtracking point");
+                            placed = bt->reset_place_table(work);
+                            recomputePartlyPlaced(placed, partly_placed);
+                            backfill.clear();
+                            continue;
+                        }
+                    }
+                }
+
+                // Go back to the original flow path when backtracking was not able to find a good
+                // solution. Set the backtrack_count to the maximum value to disable any more
+                // backtracking for this table allocation pass.
+                if (original_flow) {
+                    LOG3("Reset the flow to the original one");
+                    placed = original_flow->reset_place_table(work);
+                    recomputePartlyPlaced(placed, partly_placed);
+                    backfill.clear();
+                    backtrack_count = MaxBacktracksPerPipe + 1;
+                    continue;
+                }
+            }
+        }
         placed = place_table(work, best);
 
         if (!self.options.disable_table_placement_backfill) {

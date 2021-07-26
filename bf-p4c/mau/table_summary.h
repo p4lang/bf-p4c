@@ -67,13 +67,6 @@ struct NoContainerConflictTrigger {
 class TableSummary: public MauInspector {
  public:
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
-
- private:
-    static constexpr int CRITICAL_PATH_THRESHOLD = 2;
-    int numInvoked = 0;
-    /// true if the first round of table placement resulted in less than Device::numStages() stages.
-    bool firstRoundFit = false;
-    Logging::FileLog *tsLog = nullptr;
     enum state_t {
         INITIAL,
         NOCC_TRY1,
@@ -83,7 +76,15 @@ class TableSummary: public MauInspector {
         FINAL_PLACEMENT,
         FAILURE,
         SUCCESS,
-    } state = INITIAL;
+    };
+
+ private:
+    static constexpr int CRITICAL_PATH_THRESHOLD = 2;
+    int numInvoked = 0;
+    /// true if the first round of table placement resulted in less than Device::numStages() stages.
+    bool firstRoundFit = false;
+    Logging::FileLog *tsLog = nullptr;
+    state_t state = INITIAL;
 
     /// The total number of stages allocated by Table Placement
     int maxStage;
@@ -151,6 +152,7 @@ class TableSummary: public MauInspector {
     int placementErrorCount() { return tablePlacementErrors.size(); }
     void FinalizePlacement() { state = FINAL_PLACEMENT; }
     void resetPlacement() { state = INITIAL; }
+    state_t getActualState() { return state; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

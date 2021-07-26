@@ -115,7 +115,7 @@ class TablePlacement : public PassManager {
     std::array<bool, 3> table_in_gress = { { false, false, false } };
     cstring error_message;
     bool ignoreContainerConflicts = false;
-    std::array<IR::MAU::Table *, 2> starter_pistol = { { nullptr, nullptr } };
+    std::array<const IR::MAU::Table *, 2> starter_pistol = { { nullptr, nullptr } };
     bool alloc_done = false;
 
     profile_t init_apply(const IR::Node *root) override;
@@ -171,9 +171,12 @@ class DecidePlacement : public MauInspector {
     struct save_placement_t;
     std::map<cstring, save_placement_t>  saved_placements;
     int backtrack_count = 0;  // number of times backtracked in this pipe
-    static constexpr int MaxBacktracksPerPipe = 1000;
-    void savePlacement(const Placed *, ordered_set<const GroupPlace *> &);
+    static constexpr int MaxBacktracksPerPipe = 32;
+    void savePlacement(const Placed *, ordered_set<const GroupPlace *> &, bool);
     void recomputePartlyPlaced(const Placed *, ordered_set<const IR::MAU::Table *> &);
+    boost::optional<BacktrackPlacement&> find_previous_placement(const Placed *best, int offset,
+                                                                 bool local_bt, int process_stage);
+    boost::optional<BacktrackPlacement&> find_backtrack_point(const Placed *, int, bool);
 
     void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     bool preorder(const IR::BFN::Pipe *) override;
