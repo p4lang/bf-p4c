@@ -862,7 +862,10 @@ class BarefootBackend(BackendDriver):
                 # a large context.json file. So we don't!
 
                 # Add resources from deparser
-                self.aggregate_deparser_resources_json(pipe)
+                if self._dry_run:
+                    print("Skipping aggregation of resources_deparser.json with resources.json, no file was generated")
+                else:
+                    self.aggregate_deparser_resources_json(pipe)
 
                 rc_ver = 0
                 if run_verifier:
