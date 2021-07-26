@@ -2235,6 +2235,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
             }
             dg.min_stage_edges[tbl] = min_edges_of_table[true_min_stage];
             dg.stage_info[tbl].min_stage = true_min_stage;
+            LOG5("\tmin_stage for " << tbl->name << " : " << dg.stage_info[tbl].min_stage);
         }
     }
 

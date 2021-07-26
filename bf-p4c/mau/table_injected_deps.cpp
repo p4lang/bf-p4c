@@ -9,16 +9,37 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
     if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
         const IR::MAU::Table* parent;
         parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
+        auto seq_size = seq->size();
+        auto seq_front = seq->front();
+        auto seq_back = seq->back();
 
+        LOG5("  ICD Parent:" << parent->name);
 
         for (auto child : seq->tables) {
-             auto edge_label = DependencyGraph::NONE;
+            LOG5("    ICD Child:" << child->name);
+            if (child->is_always_run_action()) {
+                LOG5("\t\tSkiping ARA table " << child->name);
+                continue;
+            }
+
+            auto edge_label = DependencyGraph::NONE;
             auto ctrl_annot = "";
             // Find control type relationship between parent & child
             for (auto options : parent->next) {
+                LOG5("      ICD seq:" << options.first);
+                if (options.second->size()  != seq_size  ||
+                    options.second->front() != seq_front ||
+                    options.second->back()  != seq_back)
+                    continue;
+
                 for (auto dst : options.second->tables) {
+                    LOG5("        ICD dst:" << dst->name);
                     if (dst == child) {
                         ctrl_annot = options.first;
+                        if (edge_label != DependencyGraph::NONE)
+                            LOG3("\t\tICD Multiple deps to DST " << child->name << " from SRC " <<
+                                 parent->name << ". Prev dep = " << edge_label << " Curr dep = " <<
+                                 ctrl_annot);
                         edge_label = DependencyGraph::get_control_edge_type(ctrl_annot);
                         break;
                     }
