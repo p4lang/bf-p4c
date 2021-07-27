@@ -46,8 +46,12 @@ def npb_simple_1lyr_udp(
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
+	tos            = 0,
+	sip            = '11.22.33.44',
+	dip            = '55.66.77.88',
 	udp_sport      = 1234,
 	udp_dport      = 80,
+	tcp_flags      = 0,
 
 	#model flags
 	transport_decap= False,
@@ -111,13 +115,13 @@ def npb_simple_1lyr_udp(
 			# use my version, that adds support for e and vn tags
 #			src_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en)
 			if(vlan2_en == True):
-				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen+4, dl_vlan_enable=2, dot1br=e_en, vn_tag=vn_en, udp_sport=udp_sport, udp_dport=udp_dport,)
+				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen+4, dl_vlan_enable=2, dot1br=e_en, vn_tag=vn_en, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 			else:
-				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en, udp_sport=udp_sport, udp_dport=udp_dport,)
+				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 		else:
 			# user barefoot's version
 #			src_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen)
-			src_pkt_base = testutils.simple_udp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, udp_sport=udp_sport, udp_dport=udp_dport)
+			src_pkt_base = testutils.simple_udp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 
 		# -----------------
 
@@ -125,13 +129,13 @@ def npb_simple_1lyr_udp(
 			# use my version, that adds support for e and vn tags
 #			exp_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp)
 			if(vlan2_en_exp == True):
-				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp+4, dl_vlan_enable=2, dot1br=e_en_exp, vn_tag=vn_en_exp, udp_sport=udp_sport, udp_dport=udp_dport,)
+				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp+4, dl_vlan_enable=2, dot1br=e_en_exp, vn_tag=vn_en_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 			else:
-				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp, udp_sport=udp_sport, udp_dport=udp_dport,)
+				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 		else:
 			# user barefoot's version
 #			exp_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp)
-			exp_pkt_base = testutils.simple_udp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, udp_sport=udp_sport, udp_dport=udp_dport)
+			exp_pkt_base = testutils.simple_udp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 
 		# -----------------
 		# src: add nsh hdr
@@ -217,8 +221,12 @@ def npb_simple_1lyr_udpv6(
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
+	tos            = 0,
+	sip            = '2001:db8:85a3::8a2e:370:7334',
+	dip            = '2002:db8:85a3::8a2e:370:7334',
 	udp_sport      = 1234,
 	udp_dport      = 80,
+	tcp_flags      = 0,
 
 	#model flags
 	transport_decap= False,
@@ -275,12 +283,12 @@ def npb_simple_1lyr_udpv6(
 		# -----------------
 
 #		src_pkt_base = testutils.simple_tcpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en)
-		src_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, udp_sport=udp_sport, udp_dport=udp_dport)
+		src_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, ipv6_src=sip, ipv6_dst=dip, ipv6_tc=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 
 		# -----------------
 
 #		exp_pkt_base = testutils.simple_tcpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp)
-		exp_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, udp_sport=udp_sport, udp_dport=udp_dport)
+		exp_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, ipv6_src=sip, ipv6_dst=dip, ipv6_tc=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 
 		# -----------------
 		# src: add nsh hdr
@@ -341,6 +349,166 @@ def npb_simple_1lyr_udpv6(
 		return src_pkt, exp_pkt
 
 ################################################################################
+# 1 layers: Simple GRE
+################################################################################
+
+def npb_simple_1lyr_gre(
+	#transport source variables (only used when start_of_chain=False)
+	dmac_nsh       = '00:01:02:03:04:05',
+	smac_nsh       = '00:06:07:08:09:0a',
+	vlan_en_nsh    = False,
+	vlan_pcp_nsh   = 0,
+	vlan_vid_nsh   = 0,
+	spi            = 0,
+	si             = 0,
+	ta             = 0,
+	nshtype        = 2,
+	sap            = 0,
+	vpn            = 0,
+	ttl            = 63, # new packets will have a value of 63
+	scope          = 0,
+
+	#outer source variables
+	dmac           = '00:01:02:03:04:05',
+	smac           = '00:06:07:08:09:0a',
+	vlan_en        = False,
+	e_en           = False,
+	vn_en          = False,
+	pktlen         = 100,
+
+	#model flags
+	transport_decap= False,
+	sf_bitmask     = 0,
+	start_of_chain = True,
+	end_of_chain   = False,
+
+	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
+	transport_encap= EgressTunnelType.NONE.value,
+	bridged_pkt    = False,
+
+	#transport expected variables (only used when end_of_chain=False)
+	vlan_en_nsh_exp= None,
+	spi_exp        = None,
+	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,
+	sap_exp        = None,
+	vpn_exp        = None,
+
+	#outer expected variables
+	vlan_en_exp    = None,
+	e_en_exp       = None,
+	vn_en_exp      = None,
+	pktlen_exp     = None):
+
+		# -----------------
+
+		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if spi_exp         is None: spi_exp         = spi
+		if si_exp          is None: si_exp          = si
+		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype
+		if sap_exp         is None: sap_exp         = sap
+		if vpn_exp         is None: vpn_exp         = vpn
+
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if e_en_exp        is None: e_en_exp        = e_en
+		if vn_en_exp       is None: vn_en_exp       = vn_en
+		if pktlen_exp      is None: pktlen_exp      = pktlen
+
+		# -----------------
+
+		if(vlan_en == True) and (vlan_en_exp == False):
+			pktlen_exp = pktlen_exp - 4
+		elif(vlan_en == False) and (vlan_en_exp == True):
+			pktlen_exp = pktlen_exp + 4
+
+		if(e_en == True) and (e_en_exp == False):
+			pktlen_exp = pktlen_exp - 8
+
+		if(vn_en == True) and (vn_en_exp == False):
+			pktlen_exp = pktlen_exp - 6
+
+		# -----------------
+
+#		src_pkt_inner = testutils.simple_tcp_packet()
+#		src_pkt_inner = testutils.simple_udp_packet()
+		src_pkt_inner = testutils.simple_ip_only_packet()
+
+		src_pkt_base = testutils.simple_gre_packet(eth_dst=dmac, eth_src=smac, inner_frame=src_pkt_inner)
+
+		# -----------------
+
+		if(transport_decap == True):
+			# if the pkt is decap'ed at the transport...the npb design has to create a new l2 header (and currently sets da and sa to 0)....
+			exp_pkt_inner = testutils.simple_tcp_packet(eth_dst=0,    eth_src=0,    pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+		else:
+			# if the pkt is decap'ed elsewhere...
+			exp_pkt_inner = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+
+		exp_pkt_base = src_pkt_base
+
+		# -----------------
+		# src: add nsh hdr
+		# -----------------
+
+		if(start_of_chain == False):
+			src_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh, vlan_pcp_nsh, vlan_vid_nsh, spi, si, ta, nshtype, scope, sap, vpn, ttl, src_pkt_base)
+		else:
+			src_pkt = src_pkt_base
+
+
+		# -----------------
+		# model
+		# -----------------
+
+		model_pkt = npb_model(
+			# possible result packets
+			[exp_pkt_base, exp_pkt_inner, exp_pkt_inner],
+
+			# nsh values
+			spi_exp,
+			si_exp,
+			ta_exp,
+			nshtype_exp,
+			sap_exp,
+			vpn_exp,
+			ttl,
+			scope,
+
+			# model flags
+			bridged_pkt,
+			transport_decap,
+			sf_bitmask,
+			start_of_chain,
+			end_of_chain,
+			scope_term_list,
+			transport_encap,
+
+			# encap values
+			dmac_nsh,
+			smac_nsh,
+			vlan_en_nsh_exp,
+			vlan_pcp_nsh,
+			vlan_vid_nsh
+		)
+
+		# -----------------
+		# exp: add nsh hdr
+		# -----------------
+
+		exp_pkt = model_pkt
+
+		# -----------------
+
+#		print "---------- Debug ----------"
+#		print(testutils.format_packet(src_pkt))
+#		print(testutils.format_packet(exp_pkt))
+#		print "---------- Debug ----------"
+
+		return src_pkt, exp_pkt
+
+################################################################################
 # 2 layers: Simple VXLAN / UDP
 ################################################################################
 
@@ -351,6 +519,7 @@ def npb_simple_2lyr_vxlan_udp(
 	vlan_en_nsh    = False,
 	vlan_pcp_nsh   = 0,
 	vlan_vid_nsh   = 0,
+	vxlan_vni      = 0xaba,
 	spi            = 0,
 	si             = 0,
 	ta             = 0,
@@ -425,7 +594,7 @@ def npb_simple_2lyr_vxlan_udp(
 #		src_pkt_inner = testutils.simple_tcp_packet()
 		src_pkt_inner = testutils.simple_udp_packet()
 
-		src_pkt_base = testutils.simple_vxlan_packet(eth_dst=dmac, eth_src=smac, inner_frame=src_pkt_inner)
+		src_pkt_base = testutils.simple_vxlan_packet(eth_dst=dmac, eth_src=smac, vxlan_vni=vxlan_vni, inner_frame=src_pkt_inner)
 
 		# -----------------
 
@@ -637,6 +806,166 @@ def npb_simple_2lyr_vxlanv6_udpv6(
 #		print "---------- Debug ----------"
 #		print(testutils.format_packet(src_pkt))
 #		print "---------- Debug ----------"
+
+		return src_pkt, exp_pkt
+
+################################################################################
+# 2 layers: Simple MPLS SR / UDP
+################################################################################
+
+def npb_simple_2lyr_mpls_sr_udp(
+	#transport source variables (only used when start_of_chain=False)
+	dmac_nsh       = '00:01:02:03:04:05',
+	smac_nsh       = '00:06:07:08:09:0a',
+	vlan_en_nsh    = False,
+	vlan_pcp_nsh   = 0,
+	vlan_vid_nsh   = 0,
+	mpls_label     = [],
+	spi            = 0,
+	si             = 0,
+	ta             = 0,
+	nshtype        = 2,
+	sap            = 0,
+	vpn            = 0,
+	ttl            = 63, # new packets will have a value of 63
+	scope          = 0,
+
+	#outer source variables
+	dmac           = '00:01:02:03:04:05',
+	smac           = '00:06:07:08:09:0a',
+	vlan_en        = False,
+	e_en           = False,
+	vn_en          = False,
+	pktlen         = 100,
+
+	#model flags
+	transport_decap= False,
+	sf_bitmask     = 0,
+	start_of_chain = True,
+	end_of_chain   = False,
+	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
+	transport_encap= EgressTunnelType.NONE.value,
+	bridged_pkt    = False,
+
+	#transport expected variables (only used when end_of_chain=False)
+	vlan_en_nsh_exp= None,
+	spi_exp        = None,
+	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,
+	sap_exp        = None,
+	vpn_exp        = None,
+
+	#outer expected variables
+	vlan_en_exp    = None,
+	e_en_exp       = None,
+	vn_en_exp      = None,
+	pktlen_exp     = None):
+
+		# -----------------
+
+		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if spi_exp         is None: spi_exp         = spi
+		if si_exp          is None: si_exp          = si
+		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype
+		if sap_exp         is None: sap_exp         = sap
+		if vpn_exp         is None: vpn_exp         = vpn
+
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if e_en_exp        is None: e_en_exp        = e_en
+		if vn_en_exp       is None: vn_en_exp       = vn_en
+		if pktlen_exp      is None: pktlen_exp      = pktlen
+
+		# -----------------
+
+		if(vlan_en == True) and (vlan_en_exp == False):
+			pktlen_exp = pktlen_exp - 4
+		elif(vlan_en == False) and (vlan_en_exp == True):
+			pktlen_exp = pktlen_exp + 4
+
+		if(e_en == True) and (e_en_exp == False):
+			pktlen_exp = pktlen_exp - 8
+
+		if(vn_en == True) and (vn_en_exp == False):
+			pktlen_exp = pktlen_exp - 6
+
+		# -----------------
+
+		src_pkt_inner = testutils.simple_udp_packet()
+
+#		src_pkt_base = testutils.simple_mpls_packet(eth_dst=dmac, eth_src=smac, mpls_tags=mpls_tags, inner_frame=src_pkt_inner)
+		
+	       	src_pkt_base = scapy.Ether(dst=dmac, src=smac)
+		
+	        for i in range(0, len(mpls_label)):
+			src_pkt_base = src_pkt_base / scapy.MPLS(label=mpls_label[i], s=(i==(len(mpls_label)-1)), ttl=0xff)
+
+                src_pkt_base = src_pkt_base /src_pkt_inner
+
+#                scapy.MPLS(label=0x12345, s=1, ttl=0xff)/ \
+
+		# -----------------
+
+		exp_pkt_inner = src_pkt_inner
+
+		exp_pkt_base = src_pkt_base
+
+		# -----------------
+		# src: add nsh hdr
+		# -----------------
+
+		if(start_of_chain == False):
+			src_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh, vlan_pcp_nsh, vlan_vid_nsh, spi, si, ta, nshtype, scope, sap, vpn, ttl, src_pkt_base)
+		else:
+			src_pkt = src_pkt_base
+
+		# -----------------
+		# model
+		# -----------------
+
+		model_pkt = npb_model(
+			# possible result packets
+			[exp_pkt_base, exp_pkt_inner, exp_pkt_inner],
+
+			# nsh values
+			spi_exp,
+			si_exp,
+			ta_exp,
+			nshtype_exp,
+			sap_exp,
+			vpn_exp,
+			ttl,
+			scope,
+
+			# model flags
+			bridged_pkt,
+			transport_decap,
+			sf_bitmask,
+			start_of_chain,
+			end_of_chain,
+			scope_term_list,
+			transport_encap,
+
+			# encap values
+			dmac_nsh,
+			smac_nsh,
+			vlan_en_nsh_exp,
+			vlan_pcp_nsh,
+			vlan_vid_nsh
+		)
+
+		# -----------------
+		# exp: add nsh hdr
+		# -----------------
+
+		exp_pkt = model_pkt
+
+		# -----------------
+
+		#print "---------- Debug ----------"
+		#print(testutils.format_packet(src_pkt))
+		#print "---------- Debug ----------"
 
 		return src_pkt, exp_pkt
 
@@ -885,6 +1214,7 @@ def npb_simple_2lyr_gre_ip(
 		if(transport_decap == True):
 			# if the pkt is decap'ed at the transport...the npb design has to create a new l2 header (and currently sets da and sa to 0)....
 			exp_pkt_inner = testutils.simple_tcp_packet(eth_dst=0,    eth_src=0,    pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+#peter Overload			exp_pkt_inner = testutils.simple_ip_packet(eth_dst=dmac,    eth_src=smac,    pktlen=14+100) # add 14, because original packet didn't have an l2 on it
 		else:
 			# if the pkt is decap'ed elsewhere...
 			exp_pkt_inner = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=14+100) # add 14, because original packet didn't have an l2 on it
@@ -1666,6 +1996,7 @@ def npb_simple_3lyr_vxlan_gre_ip(
 
 		exp_pkt_inner_inner = testutils.simple_tcp_packet(pktlen=14+100) # add 14, because original packet didn't have an l2 on it
 
+		
 		exp_pkt_inner = testutils.simple_gre_packet(inner_frame=src_pkt_inner_inner)
 
 		exp_pkt_base = src_pkt_base
@@ -1722,10 +2053,172 @@ def npb_simple_3lyr_vxlan_gre_ip(
 
 		# -----------------
 
-		print "---------- Debug ----------"
-		print(testutils.format_packet(src_pkt))
-		print(testutils.format_packet(exp_pkt))
-		print "---------- Debug ----------"
+		#print "---------- Debug ----------"
+		#print(testutils.format_packet(src_pkt))
+		#print(exp_pkt)
+		#print "---------- Debug ----------"
+
+		return src_pkt, exp_pkt
+
+################################################################################
+# 3 layers: Simple VXLAN / GRE / UDP
+################################################################################
+
+def npb_simple_3lyr_vxlan_gre_udp(
+	#transport source variables (only used when start_of_chain=False)
+	dmac_nsh       = '00:01:02:03:04:05',
+	smac_nsh       = '00:06:07:08:09:0a',
+	dip_nsh        = '192.168.0.1',
+	sip_nsh        = '192.168.0.2',
+	vlan_en_nsh    = False,
+	vlan_pcp_nsh   = 0,
+	vlan_vid_nsh   = 0,
+	spi            = 0,
+	si             = 0,
+	ta             = 0,
+	nshtype        = 2,
+	sap            = 0,
+	vpn            = 0,
+	ttl            = 63, # new packets will have a value of 63
+	scope          = 0,
+
+	#outer source variables
+	dmac           = '00:01:02:03:04:05',
+	smac           = '00:06:07:08:09:0a',
+	vlan_en        = False,
+	e_en           = False,
+	vn_en          = False,
+	pktlen         = 100,
+
+	#model flags
+	transport_decap= False,
+	sf_bitmask     = 0,
+	start_of_chain = True,
+	end_of_chain   = False,
+	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
+	transport_encap= EgressTunnelType.NONE.value,
+	bridged_pkt    = False,
+
+	#transport expected variables (only used when end_of_chain=False)
+	vlan_en_nsh_exp= None,
+	spi_exp        = None,
+	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,
+	sap_exp        = None,
+	vpn_exp        = None,
+
+	#outer expected variables
+	vlan_en_exp    = None,
+	e_en_exp       = None,
+	vn_en_exp      = None,
+	pktlen_exp     = None):
+
+		# -----------------
+
+		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if spi_exp         is None: spi_exp         = spi
+		if si_exp          is None: si_exp          = si
+		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype
+		if sap_exp         is None: sap_exp         = sap
+		if vpn_exp         is None: vpn_exp         = vpn
+
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if e_en_exp        is None: e_en_exp        = e_en
+		if vn_en_exp       is None: vn_en_exp       = vn_en
+		if pktlen_exp      is None: pktlen_exp      = pktlen
+
+		# -----------------
+
+		if(vlan_en == True) and (vlan_en_exp == False):
+			pktlen_exp = pktlen_exp - 4
+		elif(vlan_en == False) and (vlan_en_exp == True):
+			pktlen_exp = pktlen_exp + 4
+
+		if(e_en == True) and (e_en_exp == False):
+			pktlen_exp = pktlen_exp - 8
+
+		if(vn_en == True) and (vn_en_exp == False):
+			pktlen_exp = pktlen_exp - 6
+
+		# -----------------
+		dmac_inner           = '0:01:02:03:04:05'
+		smac_inner           = '0:06:07:08:09:0a'
+		dmac_inner_inner     = '20:21:22:23:24:25'
+		smac_inner_inner     = '20:26:27:28:29:2a'
+
+		src_pkt_inner_inner = testutils.simple_udp_packet(eth_dst=dmac_inner_inner, eth_src=smac_inner_inner)
+
+		src_pkt_inner = testutils.simple_gre_packet(eth_dst=dmac_inner, eth_src=smac_inner, inner_frame=src_pkt_inner_inner)
+
+		src_pkt_base = testutils.simple_vxlan_packet(eth_dst=dmac, eth_src=smac,  ip_src=sip_nsh, ip_dst=dip_nsh, inner_frame=src_pkt_inner)
+
+		# -----------------
+
+		exp_pkt_inner_inner = testutils.simple_tcp_packet(pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+
+		
+		exp_pkt_inner = testutils.simple_gre_packet(inner_frame=src_pkt_inner_inner)
+
+		exp_pkt_base = src_pkt_base
+
+		# -----------------
+		# src: add nsh hdr
+		# -----------------
+
+		if(start_of_chain == False):
+			src_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh, vlan_pcp_nsh, vlan_vid_nsh, spi, si, ta, nshtype, scope, sap, vpn, ttl, src_pkt_base)
+		else:
+			src_pkt = src_pkt_base
+
+		# -----------------
+		# model
+		# -----------------
+
+		model_pkt = npb_model(
+			# possible result packets
+			[exp_pkt_base, exp_pkt_inner, exp_pkt_inner_inner],
+
+			# nsh values
+			spi_exp,
+			si_exp,
+			ta_exp,
+			nshtype_exp,
+			sap_exp,
+			vpn_exp,
+			ttl,
+			scope,
+
+			# model flags
+			bridged_pkt,
+			transport_decap,
+			sf_bitmask,
+			start_of_chain,
+			end_of_chain,
+			scope_term_list,
+			transport_encap,
+
+			# encap values
+			dmac_nsh,
+			smac_nsh,
+			vlan_en_nsh_exp,
+			vlan_pcp_nsh,
+			vlan_vid_nsh
+		)
+
+		# -----------------
+		# exp: add nsh hdr
+		# -----------------
+
+		exp_pkt = model_pkt
+
+		# -----------------
+
+		#print "---------- Debug ----------"
+		#print(testutils.format_packet(src_pkt))
+		#print(exp_pkt)
+		#print "---------- Debug ----------"
 
 		return src_pkt, exp_pkt
 
@@ -2940,7 +3433,11 @@ def npb_simple_3lyr_gre_ip_ip(
 
 		exp_pkt_inner_inner = testutils.simple_tcp_packet(pktlen=14+100) # add 14, because original packet didn't have an l2 on it
 
-		exp_pkt_inner = testutils.simple_ip_packet(pktlen=14+20, ip_proto=4) / testutils.simple_ip_only_packet()
+		#Special case for Overloaded packets where Outer Header has no L2
+		if(transport_decap == False): 
+			exp_pkt_inner = testutils.simple_ip_packet(eth_dst=dmac, eth_src=smac,pktlen=14+20, ip_proto=4) / testutils.simple_ip_only_packet()
+		else:
+			exp_pkt_inner = testutils.simple_ip_packet(eth_dst='00:00:00:00:00:00', eth_src='00:00:00:00:00:00' ,pktlen=14+20, ip_proto=4) / testutils.simple_ip_only_packet()
 
 		exp_pkt_base = src_pkt_base
 
@@ -3800,7 +4297,344 @@ def npb_simple_3lyr_grev6_ip_ipv6(
 #		print "---------- Debug ----------"
 
 		return src_pkt, exp_pkt
+################################################################################
+# 3 layers: Simple GRE / IP / UDP
+################################################################################
 
+def npb_simple_3lyr_gre_ip_udp(
+	#transport source variables (only used when start_of_chain=False)
+	dmac_nsh       = '00:01:02:03:04:05',
+	smac_nsh       = '00:06:07:08:09:0a',
+	vlan_en_nsh    = False,
+	vlan_pcp_nsh   = 0,
+	vlan_vid_nsh   = 0,
+	spi            = 0,
+	si             = 0,
+	ta             = 0,
+	nshtype        = 2,
+	sap            = 0,
+	vpn            = 0,
+	ttl            = 63, # new packets will have a value of 63
+	scope          = 0,
+
+	#outer source variables
+	dmac           = '00:01:02:03:04:05',
+	smac           = '00:06:07:08:09:0a',
+	vlan_en        = False,
+	e_en           = False,
+	vn_en          = False,
+	pktlen         = 100,
+
+	#model flags
+	transport_decap= False,
+	sf_bitmask     = 0,
+	start_of_chain = True,
+	end_of_chain   = False,
+	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
+	transport_encap= EgressTunnelType.NONE.value,
+	bridged_pkt    = False,
+
+	#transport expected variables (only used when end_of_chain=False)
+	vlan_en_nsh_exp= None,
+	spi_exp        = None,
+	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,
+	sap_exp        = None,
+	vpn_exp        = None,
+
+	#outer expected variables
+	vlan_en_exp    = None,
+	e_en_exp       = None,
+	vn_en_exp      = None,
+	pktlen_exp     = None):
+
+		# -----------------
+
+		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if spi_exp         is None: spi_exp         = spi
+		if si_exp          is None: si_exp          = si
+		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype 
+		if sap_exp         is None: sap_exp         = sap
+		if vpn_exp         is None: vpn_exp         = vpn
+
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if e_en_exp        is None: e_en_exp        = e_en
+		if vn_en_exp       is None: vn_en_exp       = vn_en
+		if pktlen_exp      is None: pktlen_exp      = pktlen
+
+		# -----------------
+
+		if(vlan_en == True) and (vlan_en_exp == False):
+			pktlen_exp = pktlen_exp - 4
+		elif(vlan_en == False) and (vlan_en_exp == True):
+			pktlen_exp = pktlen_exp + 4
+
+		if(e_en == True) and (e_en_exp == False):
+			pktlen_exp = pktlen_exp - 8
+
+		if(vn_en == True) and (vn_en_exp == False):
+			pktlen_exp = pktlen_exp - 6
+
+		# -----------------
+
+#       notes:
+#		simple_ip_packet      = l2 / l3 ipv4
+#		simple_ip_only_packet =      l3 ipv4 / l4 tcp
+
+		src_pkt_inner_inner = testutils.simple_udp_packet(ip_tos=0x69)
+
+		src_pkt_inner = scapy.IP(src='192.168.0.1', dst='192.168.0.2', proto=4) / src_pkt_inner_inner
+
+		src_pkt_base = testutils.simple_gre_packet(eth_dst=dmac, eth_src=smac, inner_frame=src_pkt_inner)
+		#print("---DEBUG src_pkt_base---")
+		#print(testutils.format_packet(src_pkt_base))
+
+		# -----------------
+
+#		exp_pkt_inner_inner = testutils.simple_udp_packet(pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+		exp_pkt_inner_inner = testutils.simple_udp_packet(ip_tos=0x69) # add 14, because original packet didn't have an l2 on it
+
+		#print("---DEBUG INNER INNER---")
+		#print(testutils.format_packet(exp_pkt_inner_inner))
+
+		#Special case for Overloaded packets where Outer Header has no L2
+		if(transport_decap == False): 
+			exp_pkt_inner = testutils.simple_ip_packet(eth_dst=dmac, eth_src=smac,pktlen=14+20, ip_proto=4) / testutils.simple_ip_only_packet() / exp_pkt_inner_inner
+		else:
+			exp_pkt_inner = testutils.simple_ip_packet(eth_dst='00:00:00:00:00:00', eth_src='00:00:00:00:00:00' ,pktlen=14+20, ip_proto=4) / testutils.simple_ip_only_packet() / exp_pkt_inner_inner
+
+		#print("---DEBUG EXP INNER---")
+		#print(testutils.format_packet(exp_pkt_inner))
+
+		exp_pkt_base = src_pkt_base
+
+		#print("---DEBUG EXP BASE---")
+		#print(testutils.format_packet(exp_pkt_base))
+
+		exp_pkt_base = src_pkt_base
+		# -----------------
+		# src: add nsh hdr
+		# -----------------
+
+		if(start_of_chain == False):
+			src_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh, vlan_pcp_nsh, vlan_vid_nsh, spi, si, ta, nshtype, scope, sap, vpn, ttl, src_pkt_base)
+		else:
+			src_pkt = src_pkt_base
+
+		# -----------------
+		# model
+		# -----------------
+
+		model_pkt = npb_model(
+			# possible result packets
+			[exp_pkt_base, exp_pkt_inner, exp_pkt_inner_inner],
+
+			# nsh values
+			spi_exp,
+			si_exp,
+			ta_exp,
+			nshtype_exp,
+			sap_exp,
+			vpn_exp,
+			ttl,
+			scope,
+
+			# model flags
+			bridged_pkt,
+			transport_decap,
+			sf_bitmask,
+			start_of_chain,
+			end_of_chain,
+			scope_term_list,
+			transport_encap,
+
+			# encap values
+			dmac_nsh,
+			smac_nsh,
+			vlan_en_nsh_exp,
+			vlan_pcp_nsh,
+			vlan_vid_nsh
+		)
+
+		# -----------------
+		# exp: add nsh hdr
+		# -----------------
+
+		exp_pkt = model_pkt
+
+		# -----------------
+
+		#print "---------- Debug Final----------"
+		#print(testutils.format_packet(src_pkt))
+		#print(exp_pkt)
+		#print "---------- Debug ----------"
+
+		return src_pkt, exp_pkt
+
+################################################################################
+# 3 layers: Simple GRE / GRE / UDP
+################################################################################
+
+def npb_simple_3lyr_gre_gre_udp(
+	#transport source variables (only used when start_of_chain=False)
+	dmac_nsh       = '00:01:02:03:04:05',
+	smac_nsh       = '00:06:07:08:09:0a',
+	vlan_en_nsh    = False,
+	vlan_pcp_nsh   = 0,
+	vlan_vid_nsh   = 0,
+	spi            = 0,
+	si             = 0,
+	ta             = 0,
+	nshtype        = 2,
+	sap            = 0,
+	vpn            = 0,
+	ttl            = 63, # new packets will have a value of 63
+	scope          = 0,
+
+	#outer source variables
+	dmac           = '00:01:02:03:04:05',
+	smac           = '00:06:07:08:09:0a',
+	vlan_en        = False,
+	e_en           = False,
+	vn_en          = False,
+	pktlen         = 100,
+
+	#model flags
+	transport_decap= False,
+	sf_bitmask     = 0,
+	start_of_chain = True,
+	end_of_chain   = False,
+	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
+	transport_encap= EgressTunnelType.NONE.value,
+	bridged_pkt    = False,
+
+	#transport expected variables (only used when end_of_chain=False)
+	vlan_en_nsh_exp= None,
+	spi_exp        = None,
+	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,
+	sap_exp        = None,
+	vpn_exp        = None,
+
+	#outer expected variables
+	vlan_en_exp    = None,
+	e_en_exp       = None,
+	vn_en_exp      = None,
+	pktlen_exp     = None):
+
+		# -----------------
+
+		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if spi_exp         is None: spi_exp         = spi
+		if si_exp          is None: si_exp          = si
+		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype 
+		if sap_exp         is None: sap_exp         = sap
+		if vpn_exp         is None: vpn_exp         = vpn
+
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if e_en_exp        is None: e_en_exp        = e_en
+		if vn_en_exp       is None: vn_en_exp       = vn_en
+		if pktlen_exp      is None: pktlen_exp      = pktlen
+
+		# -----------------
+
+		if(vlan_en == True) and (vlan_en_exp == False):
+			pktlen_exp = pktlen_exp - 4
+		elif(vlan_en == False) and (vlan_en_exp == True):
+			pktlen_exp = pktlen_exp + 4
+
+		if(e_en == True) and (e_en_exp == False):
+			pktlen_exp = pktlen_exp - 8
+
+		if(vn_en == True) and (vn_en_exp == False):
+			pktlen_exp = pktlen_exp - 6
+
+		# -----------------
+
+#       notes:
+#		simple_ip_packet      = l2 / l3 ipv4
+#		simple_ip_only_packet =      l3 ipv4 / l4 tcp
+
+#		src_pkt_inner_inner = testutils.simple_tcp_packet()
+		src_pkt_inner_inner = testutils.simple_udp_packet()
+#		src_pkt_inner_inner = testutils.simple_ip_only_packet()
+
+		src_pkt_inner = testutils.simple_gre_packet(inner_frame=src_pkt_inner_inner)
+#		src_pkt_inner = scapy.IP(src='192.168.0.1', dst='192.168.0.2', proto=4) / src_pkt_inner_inner
+
+		src_pkt_base = testutils.simple_gre_packet(eth_dst=dmac, eth_src=smac, inner_frame=src_pkt_inner)
+
+		# -----------------
+
+#		exp_pkt_inner_inner = testutils.simple_tcp_packet(pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+		exp_pkt_inner_inner = testutils.simple_udp_packet(pktlen=14+100) # add 14, because original packet didn't have an l2 on it
+
+		exp_pkt_inner = testutils.simple_gre_packet(eth_dst=dmac, eth_src=smac, inner_frame=exp_pkt_inner_inner)
+
+		exp_pkt_base = src_pkt_base
+
+		# -----------------
+		# src: add nsh hdr
+		# -----------------
+
+		if(start_of_chain == False):
+			src_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh, vlan_pcp_nsh, vlan_vid_nsh, spi, si, ta, nshtype, scope, sap, vpn, ttl, src_pkt_base)
+		else:
+			src_pkt = src_pkt_base
+
+		# -----------------
+		# model
+		# -----------------
+
+		model_pkt = npb_model(
+			# possible result packets
+			[exp_pkt_base, exp_pkt_inner, exp_pkt_inner_inner],
+
+			# nsh values
+			spi_exp,
+			si_exp,
+			ta_exp,
+			nshtype_exp,
+			sap_exp,
+			vpn_exp,
+			ttl,
+			scope,
+
+			# model flags
+			bridged_pkt,
+			transport_decap,
+			sf_bitmask,
+			start_of_chain,
+			end_of_chain,
+			scope_term_list,
+			transport_encap,
+
+			# encap values
+			dmac_nsh,
+			smac_nsh,
+			vlan_en_nsh_exp,
+			vlan_pcp_nsh,
+			vlan_vid_nsh
+		)
+
+		# -----------------
+		# exp: add nsh hdr
+		# -----------------
+
+		exp_pkt = model_pkt
+
+		# -----------------
+
+#		print "---------- Debug ----------"
+#		print(testutils.format_packet(src_pkt))
+#		print "---------- Debug ----------"
+
+		return src_pkt, exp_pkt
+#####
 ################################################################################
 # Helper Utilities
 ################################################################################

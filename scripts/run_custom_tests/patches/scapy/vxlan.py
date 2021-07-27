@@ -1,36 +1,84 @@
-# Virtual eXtensible Local Area Network (VXLAN)
-# https://tools.ietf.org/html/draft-mahalingam-dutt-dcops-vxlan-06
+#! /usr/bin/env python
+# RFC 7348 - Virtual eXtensible Local Area Network (VXLAN):
+# A Framework for Overlaying Virtualized Layer 2 Networks over Layer 3 Networks
+# http://tools.ietf.org/html/rfc7348
+# https://www.ietf.org/id/draft-ietf-nvo3-vxlan-gpe-02.txt
+#
+# VXLAN Group Policy Option:
+# http://tools.ietf.org/html/draft-smith-vxlan-group-policy-00
 
-# scapy.contrib.description = VXLAN
-# scapy.contrib.status = loads
+from scapy.packet import Packet, bind_layers
+from scapy.layers.l2 import Ether
+from scapy.layers.inet import IP, UDP
+from scapy.layers.inet6 import IPv6
+from scapy.fields import FlagsField, XByteField, ThreeBytesField, \
+    ConditionalField, ShortField, ByteEnumField, X3BytesField
 
-from scapy.packet import *
-from scapy.fields import *
-from scapy.all import * # Otherwise failing at the UDP reference below
+_GP_FLAGS = ["R", "R", "R", "A", "R", "R", "D", "R"]
+
 
 class VXLAN(Packet):
     name = "VXLAN"
-    fields_desc = [ FlagsField("flags", 0x08, 8, ['R', 'R', 'R', 'I', 'R', 'R', 'R', 'R']),
-                    X3BytesField("reserved1", 0x000000),
-                    ThreeBytesField("vni", 0),
-                    XByteField("reserved2", 0x00)]
+
+    fields_desc = [
+        FlagsField("flags", 0x8, 8,
+                   ['OAM', 'R', 'NextProtocol', 'Instance',
+                    'V1', 'V2', 'R', 'G']),
+        ConditionalField(
+            ShortField("reserved0", 0),
+            lambda pkt: pkt.flags.NextProtocol,
+        ),
+        ConditionalField(
+            ByteEnumField('NextProtocol', 0,
+                          {0: 'NotDefined',
+                           1: 'IPv4',
+                           2: 'IPv6',
+                           3: 'Ethernet',
+                           4: 'NSH'}),
+            lambda pkt: pkt.flags.NextProtocol,
+        ),
+        ConditionalField(
+            ThreeBytesField("reserved1", 0),
+            lambda pkt: (not pkt.flags.G) and (not pkt.flags.NextProtocol),
+        ),
+        ConditionalField(
+            FlagsField("gpflags", 0, 8, _GP_FLAGS),
+            lambda pkt: pkt.flags.G,
+        ),
+        ConditionalField(
+            ShortField("gpid", 0),
+            lambda pkt: pkt.flags.G,
+        ),
+        X3BytesField("vni", 0),
+        XByteField("reserved2", 0),
+    ]
+
+    # Use default linux implementation port
+    overload_fields = {
+        UDP: {'dport': 8472},
+    }
 
     def mysummary(self):
-        return self.sprintf("VXLAN (vni=%VXLAN.vni%)")
+        if self.flags.G:
+            return self.sprintf("VXLAN (vni=%VXLAN.vni% gpid=%VXLAN.gpid%)")
+        else:
+            return self.sprintf("VXLAN (vni=%VXLAN.vni%)")
 
-bind_layers(UDP, VXLAN, dport=4789)
+bind_layers(UDP, VXLAN, dport=4789)  # RFC standard vxlan port
+bind_layers(UDP, VXLAN, dport=4790)  # RFC standard vxlan-gpe port
+bind_layers(UDP, VXLAN, dport=6633)  # New IANA assigned port for use with NSH
+bind_layers(UDP, VXLAN, dport=8472)  # Linux implementation port
+bind_layers(UDP, VXLAN, sport=4789)
+bind_layers(UDP, VXLAN, sport=4790)
+bind_layers(UDP, VXLAN, sport=6633)
+bind_layers(UDP, VXLAN, sport=8472)
+# By default, set both ports to the RFC standard
+bind_layers(UDP, VXLAN, sport=4789, dport=4789)
+
 bind_layers(VXLAN, Ether)
-
-class VXLAN_GPE(Packet):
-    name = "VXLAN_GPE"
-    fields_desc = [ FlagsField("flags", 0x18, 8, ['R', 'R', 'R', 'I', 'P', 'R', 'R', 'R']),
-                    XShortField("reserved1", 0x0000),
-                    XByteField("next_proto", 0x03),
-                    ThreeBytesField("vni", 0),
-                    XByteField("reserved2", 0x00)]
-
-    def mysummary(self):
-        return self.sprintf("VXLAN_GPE (vni=%VXLAN_GPE.vni%)")
- 
-bind_layers(UDP, VXLAN_GPE, dport=4790)
-bind_layers(VXLAN_GPE, Ether, next_proto=3)
+bind_layers(VXLAN, IP, NextProtocol=1)
+bind_layers(VXLAN, IPv6, NextProtocol=2)
+bind_layers(VXLAN, Ether, flags=4, NextProtocol=0)
+bind_layers(VXLAN, IP, flags=4, NextProtocol=1)
+bind_layers(VXLAN, IPv6, flags=4, NextProtocol=2)
+bind_layers(VXLAN, Ether, flags=4, NextProtocol=3)

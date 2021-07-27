@@ -109,15 +109,15 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], mgid, dsap,
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, mgid, dsap,
 			#tunnel
 			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 			#egress
 		)
 
-		npb_pre_node_add(self, self.target, node, rid, [], [eg_port1, eg_port2]) # lower
-		npb_pre_mgid_add(self, self.target, mgid, [node])                        # upper
-		npb_mult_rid_unique_add(self, self.target, rid, 0, spi, si-1, nexthop_ptr, tunnel_encap_ptr, tunnel_encap_nexthop_ptr)
+		npb_pre_node_add(self, self.target, node=node, rid=rid, lags=[], ports=[eg_port1, eg_port2]) # lower
+		npb_pre_mgid_add(self, self.target, mgid=mgid, nodes=[node])                                 # upper
+		npb_mult_rid_unique_add(self, self.target, rid=rid, bd=0, spi=spi, si=si-1, nexthop_index=nexthop_ptr, tunnel_index=tunnel_encap_ptr, outer_nexthop_index=tunnel_encap_nexthop_ptr)
 
 		# -----------------
 
@@ -154,12 +154,12 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port],
+			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port],
 			#tunnel
 			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
 			#egress
 		)
 
-		npb_pre_mgid_del(self, self.target, mgid) # upper
-		npb_pre_node_del(self, self.target, node) # lower
-		npb_mult_rid_unique_del(self, self.target, rid)
+		npb_pre_mgid_del(self, self.target, mgid=mgid) # upper
+		npb_pre_node_del(self, self.target, node=node) # lower
+		npb_mult_rid_unique_del(self, self.target, rid=rid)

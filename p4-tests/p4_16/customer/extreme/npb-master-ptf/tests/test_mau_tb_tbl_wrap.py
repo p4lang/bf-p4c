@@ -652,18 +652,18 @@ def npb_vlan_to_bd_del(self, target, vid, member_ptr):
 
 # dmac (bridge)
 
-def npb_tunnel_dmac_add(self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dst_addr, eg_port_lag_ptr):
+def npb_tunnel_dmac_add(self, target, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dst_addr, dst_addr_mask, eg_port_lag_ptr):
 		if(BRIDGING_ENABLE == True):
 
 			table = self.bfrt_info.table_get('SwitchIngress.dmac.dmac')
 			table.entry_add(
 				target,
 				[table.make_key(
-#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid, 0x1),
-					[gc.KeyTuple('vid',                                   vid, 0xfff),
-					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr), 0xffffffffffff),
+#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid, vid_isValid_mask),
+					[gc.KeyTuple('vid',                                   vid, vid_mask),
+					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr), dst_addr_mask),
 					 gc.KeyTuple('port_lag_index',                        ig_port_lag_ptr, 0x3ff),
-					 gc.KeyTuple('mac_type',                              ethertype, 0xffff)]
+					 gc.KeyTuple('mac_type',                              ethertype, ethertype_mask)]
 				)],
 				[table.make_data(
 					[gc.DataTuple('port_lag_index',                       eg_port_lag_ptr)],
@@ -671,18 +671,18 @@ def npb_tunnel_dmac_add(self, target, ig_port_lag_ptr, ethertype, vid_isValid, v
 				)]
 			)
 
-def npb_tunnel_dmac_del(self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dst_addr):
+def npb_tunnel_dmac_del(self, target, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dst_addr, dst_addr_mask):
 		if(BRIDGING_ENABLE == True):
 
 			table = self.bfrt_info.table_get('SwitchIngress.dmac.dmac')
 			table.entry_del(
 				target,
 				[table.make_key(
-#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid, 0x1),
-					[gc.KeyTuple('vid',                                   vid, 0xfff),
-					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr), 0xffffffffffff),
+#					[gc.KeyTuple('vlan_tag.isValid',                      vid_isValid, vid_isValid_mask),
+					[gc.KeyTuple('vid',                                   vid, vid_mask),
+					 gc.KeyTuple('mac_dst_addr',                          gc.mac_to_bytes(dst_addr), dst_addr_mask),
 					 gc.KeyTuple('port_lag_index',                        ig_port_lag_ptr, 0x3ff),
-					 gc.KeyTuple('mac_type',                              ethertype, 0xffff)]
+					 gc.KeyTuple('mac_type',                              ethertype, ethertype_mask)]
 				)]
 			)
 
@@ -694,11 +694,13 @@ def npb_tunnel_network_dst_vtep_add(self, target,
 		l3_src   = '0.0.0.0', l3_src_mask   = 0,
 		l3_dst   = '0.0.0.0', l3_dst_mask   = 0,
 		tun_type = 0,         tun_type_mask = 0,
+		tun_id   = 0,         tun_id_mask   = 0,
 		# results
-		sap          = 0,
-		vpn          = 0,
-		port_lag_ptr = 0,
-		drop         = 0
+		sap           = 0,
+		vpn           = 0,
+		port_lag_ptr  = 0,
+		drop          = 0,
+		mirror_enable = 0,    mirror_id   = 0,
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep')
@@ -707,13 +709,16 @@ def npb_tunnel_network_dst_vtep_add(self, target,
 			[table.make_key(
 				[gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
 				 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
-				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask)],
+				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
+				 gc.KeyTuple('tunnel_id',                               tun_id, tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('sap',                                      sap),
 				 gc.DataTuple('vpn',                                      vpn),
 #				 gc.DataTuple('port_lag_index',                           port_lag_ptr),
-				 gc.DataTuple('drop',                                     drop)],
+				 gc.DataTuple('drop',                                     drop),
+				 gc.DataTuple('mirror_enable',                            mirror_enable),
+				 gc.DataTuple('mirror_session_id',                        mirror_id)],
 				'SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep_hit'
 			)]
 		)
@@ -721,6 +726,7 @@ def npb_tunnel_network_dst_vtep_add(self, target,
 def npb_tunnel_network_dst_vtep_del(self, target,
 		l3_src   = '0.0.0.0', l3_src_mask   = 0,
 		l3_dst   = '0.0.0.0', l3_dst_mask   = 0,
+		tun_id   = 0,         tun_id_mask   = 0,
 		tun_type = 0,         tun_type_mask = 0
 		):
 
@@ -730,7 +736,8 @@ def npb_tunnel_network_dst_vtep_del(self, target,
 			[table.make_key(
 				[gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
 				 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
-				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask)],
+				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
+				 gc.KeyTuple('tunnel_id',                                 tun_id, tun_id_mask)],
 			)],
 		)
 
@@ -869,7 +876,14 @@ def npb_tunnel_outer_sap_del(self, target,
 # ing sfc: decap #2 (inner)
 
 def npb_tunnel_inner_sap_add(self, target,
-		sap       = 0,
+		sap            = 0,
+		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_type        = 0, l3_type_mask         = 0,
+		l3_sip         = '0.0.0.0', l3_sip_mask         = 0,
+		l3_dip         = '0.0.0.0', l3_dip_mask         = 0,
+		l4_src         = 0, l4_src_mask         = 0,
+		l4_dst         = 0, l4_dst_mask         = 0,
+		tun_id    = 0,      tun_id_mask         = 0,
 		tun_type  = 0, tun_type_mask = 0,
 		# results
 		sap_new   = 0,
@@ -886,8 +900,15 @@ def npb_tunnel_inner_sap_add(self, target,
 		table.entry_add(
 			target,
 			[table.make_key(
-				[gc.KeyTuple('sap',                              sap, 0xffff),
-				 gc.KeyTuple('tunnel_type',                      tun_type, tun_type_mask)]
+				[gc.KeyTuple('sap',                              sap,         0xffff),
+				 gc.KeyTuple('ip_type',                          l3_type,     l3_type_mask),
+				 gc.KeyTuple('ip_src_addr',                      gc.ipv4_to_bytes(l3_sip),      l3_sip_mask),
+				 gc.KeyTuple('ip_dst_addr',                      gc.ipv4_to_bytes(l3_dip),      l3_dip_mask),
+				 gc.KeyTuple('ip_proto',                         l3_proto,    l3_proto_mask),
+				 gc.KeyTuple('l4_src_port',                      l4_src,      l4_src_mask),
+				 gc.KeyTuple('l4_dst_port',                      l4_dst,      l4_dst_mask),
+				 gc.KeyTuple('tunnel_id',                        tun_id,      tun_id_mask),
+				 gc.KeyTuple('tunnel_type',                      tun_type,    tun_type_mask)]
 			)],
 			[table.make_data(
 				[gc.DataTuple('sap',                             sap_new),
@@ -900,6 +921,13 @@ def npb_tunnel_inner_sap_add(self, target,
 
 def npb_tunnel_inner_sap_del(self, target,
 		sap       = 0,
+		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_type        = 0, l3_type_mask         = 0,
+		l3_sip         = '0.0.0.0', l3_sip_mask         = 0,
+		l3_dip         = '0.0.0.0', l3_dip_mask         = 0,
+		l4_src         = 0, l4_src_mask         = 0,
+		l4_dst         = 0, l4_dst_mask         = 0,
+		tun_id    = 0,      tun_id_mask         = 0,
 		tun_type  = 0, tun_type_mask = 0
 		):
 
@@ -908,6 +936,13 @@ def npb_tunnel_inner_sap_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap, 0xffff),
+				 gc.KeyTuple('ip_type',                          l3_type,     l3_type_mask),
+				 gc.KeyTuple('ip_src_addr',                      gc.ipv4_to_bytes(l3_sip),      l3_sip_mask),
+				 gc.KeyTuple('ip_dst_addr',                      gc.ipv4_to_bytes(l3_dip),      l3_dip_mask),
+				 gc.KeyTuple('ip_proto',                         l3_proto,    l3_proto_mask),
+				 gc.KeyTuple('l4_src_port',                      l4_src,      l4_src_mask),
+				 gc.KeyTuple('l4_dst_port',                      l4_dst,      l4_dst_mask),
+				 gc.KeyTuple('tunnel_id',                        tun_id,      tun_id_mask),
 				 gc.KeyTuple('tunnel_type',                      tun_type, tun_type_mask)]
 			)],
 		)
@@ -1099,6 +1134,9 @@ def npb_npb_sf0_l4_dst_port_rng_del(self, target, l3_len_lo, l3_len_hi):
 
 def npb_npb_sf0_policy_l2_add(self, target,
 		sap         = 0, sap_mask      = 0xffff,
+		vpn         = 0, vpn_mask      = 0xffff,
+		l2_sa       = '0:0:0:0:0:0', l2_sa_mask = 0,
+		l2_da       = '0:0:0:0:0:0', l2_da_mask = 0,
 		l2_etype    = 0, l2_etype_mask = 0,
 		tun_type    = 0, tun_type_mask = 0,
 		# results
@@ -1107,8 +1145,7 @@ def npb_npb_sf0_policy_l2_add(self, target,
 		scope       = 0,
 		terminate   = 0, # note: terminate & !scope is nonsense
 		trunc_enable= 0, trunc         = 0,
-		copy_to_cpu = 0,
-		redirect_to_cpu = 0,
+		mirror_enable = 0, mirror_id   = 0,
 		cpu_reason_code = 0,
 		sfc_enable  = 0,
 		sfc         = 0
@@ -1123,8 +1160,9 @@ def npb_npb_sf0_policy_l2_add(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,      sap_mask),
-				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
-				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
+				 gc.KeyTuple('vpn',                              vpn,      vpn_mask),
+				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes(l2_sa), l2_sa_mask),
+				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes(l2_da), l2_da_mask),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype, l2_etype_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask)],
 			)],
@@ -1135,8 +1173,8 @@ def npb_npb_sf0_policy_l2_add(self, target,
 				 gc.DataTuple('terminate',                       terminate),
 				 gc.DataTuple('truncate_enable',                 trunc_enable),
 				 gc.DataTuple('truncate_len',                    trunc),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 				 gc.DataTuple('sfc_enable',                      sfc_enable),
 				 gc.DataTuple('sfc',                             sfc)],
@@ -1146,8 +1184,11 @@ def npb_npb_sf0_policy_l2_add(self, target,
 
 def npb_npb_sf0_policy_l2_del(self, target,
 		sap         = 0, sap_mask      = 0xffff,
+		vpn         = 0, vpn_mask      = 0xffff,
+		l2_sa       = '0:0:0:0:0:0', l2_sa_mask = 0,
+		l2_da       = '0:0:0:0:0:0', l2_da_mask = 0,
 		l2_etype    = 0, l2_etype_mask = 0,
-		tun_type    = 0, tun_type_mask = 0,
+		tun_type    = 0, tun_type_mask = 0
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.acl')
@@ -1157,8 +1198,9 @@ def npb_npb_sf0_policy_l2_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,      sap_mask),
-				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
-				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
+				 gc.KeyTuple('vpn',                              vpn,      vpn_mask),
+				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes(l2_sa), l2_sa_mask),
+				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes(l2_da), l2_da_mask),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype, l2_etype_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask)],
 			)],
@@ -1182,8 +1224,9 @@ def npb_npb_sf0_policy_l2_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,      sap_mask),
-				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
-				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
+				 gc.KeyTuple('vpn',                              vpn,      vpn_mask),
+				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes(l2_sa), l2_sa_mask),
+				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes(l2_da), l2_da_mask),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype, l2_etype_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask)],
 			)]
@@ -1205,10 +1248,9 @@ def npb_npb_sf0_policy_l34_v4_add(self, target,
 		drop           = 0,
 		scope          = 0,
 		terminate      = 0, # note: terminate & !scope is nonsense
-		trunc_enable   = 0, trunc         = 0,
-		copy_to_cpu    = 0,
-		redirect_to_cpu = 0,
-		cpu_reason_code = 0,
+		trunc_enable   = 0, trunc               = 0,
+		mirror_enable  = 0, mirror_id           = 0,
+		cpu_reason_code= 0,
 		sfc_enable     = 0,
 		sfc            = 0 
 		):
@@ -1238,8 +1280,8 @@ def npb_npb_sf0_policy_l34_v4_add(self, target,
 				 gc.DataTuple('terminate',                       terminate),
 				 gc.DataTuple('truncate_enable',                 trunc_enable),
 				 gc.DataTuple('truncate_len',                    trunc),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 				 gc.DataTuple('sfc_enable',                      sfc_enable),
 				 gc.DataTuple('sfc',                             sfc)],
@@ -1309,20 +1351,27 @@ def npb_npb_sf0_policy_l34_v4_del(self, target,
 
 def npb_npb_sf0_policy_l34_v6_add(self, target,
 		sap            = 0, sap_mask            = 0xffff,
+		vpn            = 0, vpn_mask            = 0xffff,
+		mac_type       = 0, mac_type_mask       = 0xffff,
+		vid            = 0, vid_mask            = 0xfff,
 		l3_len_bitmask = 0, l3_len_bitmask_mask = 0,
 		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_tos         = 0, l3_tos_mask         = 0,
+		l3_sip         = "0:0:0:0:0:0:0:0", l3_sip_mask         = 0,
+		l3_dip         = "0:0:0:0:0:0:0:0", l3_dip_mask         = 0,
 		l4_src         = 0, l4_src_mask         = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
+		tcp_flags      = 0, tcp_flags_mask      = 0,
 		tun_type       = 0, tun_type_mask       = 0,
+		tun_id         = 0, tun_id_mask         = 0,
 		# results
 		flow_class     = 0,
 		drop           = 0,
 		scope          = 0,
 		terminate      = 0, # note: terminate & !scope is nonsense
 		trunc_enable   = 0, trunc               = 0,
-		copy_to_cpu    = 0,
-		redirect_to_cpu = 0,
-		cpu_reason_code = 0,
+		mirror_enable  = 0, mirror_id           = 0,
+		cpu_reason_code= 0,
 		sfc_enable     = 0,
 		sfc            = 0
 		):
@@ -1331,18 +1380,27 @@ def npb_npb_sf0_policy_l34_v6_add(self, target,
 		if(terminate):
 			scope = 1;
 
+		#gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
+		#gc.KeyTuple('vpn',                              vpn,            vpn_mask),
+
+
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl')
 		table.entry_add(
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
+				 #gc.KeyTuple('vpn',                             vpn,            vpn_mask),
+				 gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
 				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
-				 gc.KeyTuple('lkp.ip_src_addr',                  0,              0),
-				 gc.KeyTuple('lkp.ip_dst_addr',                  0,              0),
+				 gc.KeyTuple('lkp.ip_tos',                       l3_tos,         l3_tos_mask),
+				 gc.KeyTuple('lkp.ip_src_addr',                  gc.ipv6_to_bytes(l3_sip),         l3_sip_mask),
+				 gc.KeyTuple('lkp.ip_dst_addr',                  gc.ipv6_to_bytes(l3_dip),         l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.tcp_flags',                    tcp_flags,      tcp_flags_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('flow_class',                      flow_class),
@@ -1351,8 +1409,8 @@ def npb_npb_sf0_policy_l34_v6_add(self, target,
 				 gc.DataTuple('terminate',                       terminate),
 				 gc.DataTuple('truncate_enable',                 trunc_enable),
 				 gc.DataTuple('truncate_len',                    trunc),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 				 gc.DataTuple('sfc_enable',                      sfc_enable),
 				 gc.DataTuple('sfc',                             sfc)],
@@ -1362,11 +1420,18 @@ def npb_npb_sf0_policy_l34_v6_add(self, target,
 
 def npb_npb_sf0_policy_l34_v6_del(self, target,
 		sap            = 0, sap_mask            = 0xffff,
+		vpn            = 0, vpn_mask            = 0xffff,
+		vid            = 0, vid_mask            = 0xfff,
 		l3_len_bitmask = 0, l3_len_bitmask_mask = 0,
 		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_tos         = 0, l3_tos_mask         = 0,
+		l3_sip         = "0:0:0:0:0:0:0:0", l3_sip_mask         = 0,
+		l3_dip         = "0:0:0:0:0:0:0:0", l3_dip_mask         = 0,
 		l4_src         = 0, l4_src_mask         = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
-		tun_type       = 0, tun_type_mask       = 0
+		tcp_flags      = 0, tcp_flags_mask      = 0,
+		tun_type       = 0, tun_type_mask       = 0,
+		tun_id         = 0, tun_id_mask         = 0
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl')
@@ -1376,13 +1441,18 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
+				 #gc.KeyTuple('vpn',                             vpn,            vpn_mask),
+				 gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
 				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
-				 gc.KeyTuple('lkp.ip_src_addr',                  0,              0),
-				 gc.KeyTuple('lkp.ip_dst_addr',                  0,              0),
+				 gc.KeyTuple('lkp.ip_tos',                       l3_tos,         l3_tos_mask),
+				 gc.KeyTuple('lkp.ip_src_addr',                  gc.ipv6_to_bytes(l3_sip),         l3_sip_mask),
+				 gc.KeyTuple('lkp.ip_dst_addr',                  gc.ipv6_to_bytes(l3_dip),         l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.tcp_flags',                    tcp_flags,      tcp_flags_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 			{"from_hw": True},
 			table.make_data(
@@ -1404,13 +1474,18 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
+				 #gc.KeyTuple('vpn',                              vpn,            vpn_mask),
+				 gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
 				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
-				 gc.KeyTuple('lkp.ip_src_addr',                  0,              0),
-				 gc.KeyTuple('lkp.ip_dst_addr',                  0,              0),
+				 gc.KeyTuple('lkp.ip_tos',                       l3_tos,         l3_tos_mask),
+				 gc.KeyTuple('lkp.ip_src_addr',                  gc.ipv6_to_bytes(l3_sip),         l3_sip_mask),
+				 gc.KeyTuple('lkp.ip_dst_addr',                  gc.ipv6_to_bytes(l3_dip),         l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.tcp_flags',                    tcp_flags,      tcp_flags_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)]
 		)
 
@@ -1426,8 +1501,7 @@ def npb_npb_sf0_policy_l7_add(self, target,
 		scope       = 0,
 		terminate   = 0, # note: terminate & !scope is nonsense
 		trunc_enable= 0, trunc         = 0,
-		copy_to_cpu = 0,
-		redirect_to_cpu = 0,
+		mirror_enable = 0, mirror_id   = 0,
 		cpu_reason_code = 0,
 		sfc_enable  = 0,
 		sfc         = 0
@@ -1450,8 +1524,8 @@ def npb_npb_sf0_policy_l7_add(self, target,
 				 gc.DataTuple('terminate',                       terminate),
 				 gc.DataTuple('truncate_enable',                 trunc_enable),
 				 gc.DataTuple('truncate_len',                    trunc),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 				 gc.DataTuple('sfc_enable',                      sfc_enable),
 				 gc.DataTuple('sfc',                             sfc)],
@@ -1712,7 +1786,7 @@ def npb_npb_sf0_policy_sfp_sel_multi_add(self, target, sfc, sfc_group_ptr, sfc_m
 				)]
 			)
 
-def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, sfc, sfc_group_ptr, sfc_member_ptr, num_entries):
+def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, sfc, sfc_group_ptr, sfc_member_ptr, spi, si):
 		if(SFF_SCHD_SIMPLE == True):
 			self.delete_table_entry(
 				target,
@@ -1721,7 +1795,7 @@ def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, sfc, sfc_group_ptr, sfc_m
 		else:
 			sfc_member_ptr_list = []
 
-			for i in range(0, num_entries):
+			for i in range(0, len(spi)):
 				sfc_member_ptr_list.append(sfc_member_ptr+i)
 
 			# top
@@ -1743,7 +1817,7 @@ def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, sfc, sfc_group_ptr, sfc_m
 				)],
 			)
 
-			for i in range(0, num_entries):
+			for i in range(0, len(spi)):
 
 				# bottom
 #				table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector')
@@ -2102,10 +2176,10 @@ def npb_lag_multi_add(self, target, port_lag_ptr, port_lag_group_ptr, port_lag_m
 			)]
 		)
 
-def npb_lag_multi_del(self, target, port_lag_ptr, port_lag_group_ptr, port_lag_member_ptr, num_entries):
+def npb_lag_multi_del(self, target, port_lag_ptr, port_lag_group_ptr, port_lag_member_ptr, port):
 		port_lag_member_ptr_list = []
 
-		for i in range(0, num_entries):
+		for i in range(0, len(port)):
 			port_lag_member_ptr_list.append(port_lag_member_ptr+i)
 
 		# top
@@ -2127,7 +2201,7 @@ def npb_lag_multi_del(self, target, port_lag_ptr, port_lag_group_ptr, port_lag_m
 			)],
 		)
 
-		for i in range(0, num_entries):
+		for i in range(0, len(port)):
 
 			# bottom
 #			table = self.bfrt_info.table_get('SwitchIngress.lag.lag_selector')
@@ -2268,70 +2342,66 @@ def npb_pre_mirror_del(self, target, session_id):
 # Egress
 ########################################
 
-def npb_egr_port_add(self, target, port, port_lag_ptr):
+def npb_egr_port_add(self, target, port, eg_port_is_cpu, port_lag_ptr):
 
 	for i in range(len(port)):
 
 		try:
 
-			table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping.port_mapping')
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('port',                                      port[i])],
-				)],
-				[table.make_data(
-					[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
-					'SwitchEgress.egress_port_mapping.port_normal'
-				)]
-			)
-			'''
-			if(SPLIT_EG_PORT_TBL == True):
-				table = self.bfrt_info.table_get('SwitchEgress.cpu_rewrite.cpu_port_rewrite')
+			if(eg_port_is_cpu):
+
+				table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping.port_mapping')
 				table.entry_add(
 					target,
 					[table.make_key(
 						[gc.KeyTuple('port',                                      port[i])],
 					)],
 					[table.make_data(
-						[],
-						'SwitchEgress.cpu_rewrite.normal_rewrite'
+						[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
+						'SwitchEgress.egress_port_mapping.port_cpu'
 					)]
 				)
-			'''
-		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 13.")
 
-def npb_egr_port_cpu_add(self, target, port, port_lag_ptr):
+				if(SPLIT_EG_PORT_TBL == True):
+					table = self.bfrt_info.table_get('SwitchEgress.cpu_rewrite.cpu_port_rewrite')
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('port',                                      port[i])],
+						)],
+						[table.make_data(
+							[],
+							'SwitchEgress.cpu_rewrite.cpu_rewrite'
+						)]
+					)
 
-	for i in range(len(port)):
+			else: 
 
-		try:
-
-			table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping.port_mapping')
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('port',                                      port[i])],
-				)],
-				[table.make_data(
-					[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
-					'SwitchEgress.egress_port_mapping.port_cpu'
-				)]
-			)
-
-			if(SPLIT_EG_PORT_TBL == True):
-				table = self.bfrt_info.table_get('SwitchEgress.cpu_rewrite.cpu_port_rewrite')
+				table = self.bfrt_info.table_get('SwitchEgress.egress_port_mapping.port_mapping')
 				table.entry_add(
 					target,
 					[table.make_key(
 						[gc.KeyTuple('port',                                      port[i])],
 					)],
 					[table.make_data(
-						[],
-						'SwitchEgress.cpu_rewrite.cpu_rewrite'
+						[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
+						'SwitchEgress.egress_port_mapping.port_normal'
 					)]
 				)
+				'''
+				if(SPLIT_EG_PORT_TBL == True):
+					table = self.bfrt_info.table_get('SwitchEgress.cpu_rewrite.cpu_port_rewrite')
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('port',                                      port[i])],
+						)],
+						[table.make_data(
+							[],
+							'SwitchEgress.cpu_rewrite.normal_rewrite'
+						)]
+					)
+				'''
 
 		except:
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 13.")
@@ -2631,8 +2701,7 @@ def npb_npb_sf2_policy_l2_add(self, target,
 		strip_tag_vlan  = 0,
 		add_tag_vlan_bd = 0,
 		dedup_en        = 0,
-		copy_to_cpu     = 0,
-		redirect_to_cpu = 0,
+		mirror_enable   = 0, mirror_id           = 0,
 		cpu_reason_code = 0
 		):
 
@@ -2658,8 +2727,8 @@ def npb_npb_sf2_policy_l2_add(self, target,
 				 gc.DataTuple('strip_tag_vlan',                  strip_tag_vlan),
 				 gc.DataTuple('add_tag_vlan_bd',                 add_tag_vlan_bd),
 				 gc.DataTuple('dedup_en',                        dedup_en),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code)],
 				'SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.hit'
 			)]
@@ -2732,8 +2801,7 @@ def npb_npb_sf2_policy_l34_v4_add(self, target,
 		strip_tag_vlan  = 0,
 		add_tag_vlan_bd = 0,
 		dedup_en        = 0,
-		copy_to_cpu     = 0,
-		redirect_to_cpu = 0,
+		mirror_enable   = 0, mirror_id           = 0,
 		cpu_reason_code = 0
 		):
 
@@ -2762,8 +2830,8 @@ def npb_npb_sf2_policy_l34_v4_add(self, target,
 				 gc.DataTuple('strip_tag_vlan',                  strip_tag_vlan),
 				 gc.DataTuple('add_tag_vlan_bd',                 add_tag_vlan_bd),
 				 gc.DataTuple('dedup_en',                        dedup_en),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code)],
 				'SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.hit'
 			)]
@@ -2844,8 +2912,7 @@ def npb_npb_sf2_policy_l34_v6_add(self, target,
 		strip_tag_vlan  = 0,
 		add_tag_vlan_bd = 0,
 		dedup_en        = 0,
-		copy_to_cpu     = 0,
-		redirect_to_cpu = 0,
+		mirror_enable   = 0, mirror_id           = 0,
 		cpu_reason_code = 0
 		):
 
@@ -2874,8 +2941,8 @@ def npb_npb_sf2_policy_l34_v6_add(self, target,
 				 gc.DataTuple('strip_tag_vlan',                  strip_tag_vlan),
 				 gc.DataTuple('add_tag_vlan_bd',                 add_tag_vlan_bd),
 				 gc.DataTuple('dedup_en',                        dedup_en),
-				 gc.DataTuple('copy_to_cpu',                     copy_to_cpu),
-				 gc.DataTuple('redirect_to_cpu',                 redirect_to_cpu),
+				 gc.DataTuple('mirror_enable',                   mirror_enable),
+				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code)],
 				'SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.hit'
 			)]
@@ -3409,6 +3476,8 @@ def npb_bd_to_vlan_del(self, target, bd):
 # MIDDLE LEVEL FUNCTIONS
 #######################################
 
+# function for adding an egress l2 tunnel (an ethernet header) to a packet
+
 def npb_nexthop_tunnel_mac_add(self, target,
 	# ingress nexthop
 	nexthop_ptr, ig_bd_ptr, port_lag_ptr,
@@ -3475,14 +3544,32 @@ def npb_npb_sfp_sel_add(self, target,
 def npb_npb_sfp_sel_del(self, target,
 	# ingress
 	vpn,
-	sfc, sfc_group_ptr, sfc_member_ptr, spi_num_entries
+	sfc, sfc_group_ptr, sfc_member_ptr, spi, si
 	# egress
 ):
 	npb_npb_sf0_policy_sfp_sel_hash_del         (self, target, vpn)
-	if(spi_num_entries == 1):
+	if(len(spi) == 1):
 		npb_npb_sf0_policy_sfp_sel_single_del       (self, target, sfc,                sfc_member_ptr)
 	else:
-		npb_npb_sf0_policy_sfp_sel_multi_del        (self, target, sfc, sfc_group_ptr, sfc_member_ptr, spi_num_entries)
+		npb_npb_sf0_policy_sfp_sel_multi_del        (self, target, sfc, sfc_group_ptr, sfc_member_ptr, spi_num_entries, spi, si)
+
+#######################################
+
+def npb_lag_add(self, target,
+	eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+):
+	if(len(eg_port) == 1):
+		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
+	else:
+		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+
+def npb_lag_del(self, target,
+	eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+):
+	if(len(eg_port) == 1):
+		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
+	else:
+		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
 #######################################
 # HIGH LEVEL FUNCTIONS
@@ -3492,7 +3579,7 @@ def npb_npb_sfp_sel_del(self, target,
 
 def npb_nsh_chain_start_end_add(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, bridging_enable, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd,  eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, mgid, dsap
+	ig_port, ig_port_lag_ptr, bridging_enable, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd,  eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu, mgid, dsap
 	# egress
 ):
 	cpu_port_add              (self, target)
@@ -3505,18 +3592,15 @@ def npb_nsh_chain_start_end_add(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&1)), 0, mgid)
 	npb_nexthop_add           (self, target, nexthop_ptr, ig_bd, eg_port_lag_ptr)
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
-	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+	npb_lag_add               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
-	npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
+	npb_egr_port_add          (self, target, eg_port, eg_port_is_cpu, eg_port_lag_ptr)
 	if(sf_bitmask&4):
 		npb_npb_sf2_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&3)), 0, dsap)
 
 def npb_nsh_chain_start_end_del(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+	ig_port, ig_port_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
 	# egress
 ):
 	cpu_port_del              (self, target)
@@ -3529,10 +3613,7 @@ def npb_nsh_chain_start_end_del(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_del(self, target, spi, si-(popcount(sf_bitmask&1)))
 	npb_nexthop_del           (self, target, nexthop_ptr)
-	if(eg_port_num_entries == 1):
-		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
-	else:
-		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
+	npb_lag_del               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
 	if(eg_port_lag_ptr < 99) :
 		npb_egr_port_del          (self, target, eg_port)
@@ -3545,7 +3626,7 @@ def npb_nsh_chain_start_end_del(self, target,
 
 def npb_nsh_chain_start_end_with_tunnel_add(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, bridging_enable, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, mgid, dsap,
+	ig_port, ig_port_lag_ptr, bridging_enable, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu, mgid, dsap,
 	# tunnel
 	tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac
 	# egress
@@ -3560,19 +3641,16 @@ def npb_nsh_chain_start_end_with_tunnel_add(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&1)), 0, mgid)
 	npb_nexthop_tunnel_mac_add(self, target, nexthop_ptr, ig_bd, eg_port_lag_ptr, tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac)
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
-	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+	npb_lag_add               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
-	npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
+	npb_egr_port_add          (self, target, eg_port, eg_port_is_cpu, eg_port_lag_ptr)
 	if(sf_bitmask&4):
 		npb_npb_sf2_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&3)), 0, dsap)
 	npb_tunnel_encap_add      (self, target) # this is a constant table, independent of the test (barefoot should really set automatically!)
 
 def npb_nsh_chain_start_end_with_tunnel_del(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port,
+	ig_port, ig_port_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port,
 	# tunnel
 	tunnel_ptr, outer_nexthop_ptr, eg_bd_ptr, smac_ptr
 	# egress
@@ -3587,10 +3665,7 @@ def npb_nsh_chain_start_end_with_tunnel_del(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_del(self, target, spi, si-(popcount(sf_bitmask&1)))
 	npb_nexthop_tunnel_mac_del(self, target, nexthop_ptr, tunnel_ptr, outer_nexthop_ptr, eg_bd_ptr, smac_ptr)
-	if(eg_port_num_entries == 1):
-		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
-	else:
-		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
+	npb_lag_del               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
 	npb_egr_port_del          (self, target, eg_port)
 	if(sf_bitmask&4):
@@ -3603,7 +3678,7 @@ def npb_nsh_chain_start_end_with_tunnel_del(self, target,
 
 def npb_nsh_chain_start_add(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, bridging_enable, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, mgid, dsap,
+	ig_port, ig_port_lag_ptr, bridging_enable, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu, mgid, dsap,
 	# tunnel
 	tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac
 	# egress
@@ -3619,19 +3694,16 @@ def npb_nsh_chain_start_add(self, target,
 		npb_npb_sf1_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&1)), 0, mgid)
 	npb_nexthop_tunnel_mac_add(self, target, nexthop_ptr, ig_bd, eg_port_lag_ptr, tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac)
 
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
-	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+	npb_lag_add               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
-	npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
+	npb_egr_port_add          (self, target, eg_port, eg_port_is_cpu, eg_port_lag_ptr)
 	if(sf_bitmask&4):
 		npb_npb_sf2_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&3)), 0, dsap)
 	npb_tunnel_encap_add      (self, target) # this is a constant table, independent of the test (barefoot should really set automatically!)
 
 def npb_nsh_chain_start_del(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port,
+	ig_port, ig_port_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port,
 	# tunnel
 	tunnel_ptr, outer_nexthop_ptr, eg_bd_ptr, smac_ptr
 	# egress
@@ -3646,10 +3718,7 @@ def npb_nsh_chain_start_del(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_del(self, target, spi, si-(popcount(sf_bitmask&1)))
 	npb_nexthop_tunnel_mac_del(self, target, nexthop_ptr, tunnel_ptr, outer_nexthop_ptr, eg_bd_ptr, smac_ptr)
-	if(eg_port_num_entries == 1):
-		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
-	else:
-		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
+	npb_lag_del               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
 	npb_egr_port_del          (self, target, eg_port)
 	if(sf_bitmask&4):
@@ -3662,7 +3731,7 @@ def npb_nsh_chain_start_del(self, target,
 
 def npb_nsh_chain_middle_add(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, bridging_enable, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, mgid, dsap,
+	ig_port, ig_port_lag_ptr, bridging_enable, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu, mgid, dsap,
 	# tunnel
 	tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac
 	# egress
@@ -3680,19 +3749,16 @@ def npb_nsh_chain_middle_add(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&1)), 0, mgid)
 	npb_nexthop_tunnel_mac_add(self, target, nexthop_ptr, ig_bd, eg_port_lag_ptr, tunnel_ptr, tun_type, outer_nexthop_ptr, eg_bd_ptr, dmac, smac_ptr, smac)
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
-	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+	npb_lag_add               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
-	npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
+	npb_egr_port_add          (self, target, eg_port, eg_port_is_cpu, eg_port_lag_ptr)
 	if(sf_bitmask&4):
 		npb_npb_sf2_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&3)), 0, dsap)
 	npb_tunnel_encap_add      (self, target) # this is a constant table, independent of the test (barefoot should really set automatically!)
 
 def npb_nsh_chain_middle_del(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port,
+	ig_port, ig_port_lag_ptr, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port,
 	# tunnel
 	tunnel_ptr, outer_nexthop_ptr, eg_bd_ptr, smac_ptr
 	# egress
@@ -3708,10 +3774,7 @@ def npb_nsh_chain_middle_del(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_del(self, target, spi, si-(popcount(sf_bitmask&1)))
 	npb_nexthop_tunnel_mac_del(self, target, nexthop_ptr, tunnel_ptr, outer_nexthop_ptr, eg_bd_ptr, smac_ptr)
-	if(eg_port_num_entries == 1):
-		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
-	else:
-		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
+	npb_lag_del               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
 	npb_egr_port_del          (self, target, eg_port)
 	if(sf_bitmask&4):
@@ -3724,7 +3787,7 @@ def npb_nsh_chain_middle_del(self, target,
 
 def npb_nsh_chain_end_add(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, bridging_enable, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd,  eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, mgid, dsap
+	ig_port, ig_port_lag_ptr, bridging_enable, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, ig_bd,  eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu, mgid, dsap
 	# egress
 ):
 	cpu_port_add              (self, target)
@@ -3738,18 +3801,15 @@ def npb_nsh_chain_end_add(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&1)), 0, mgid)
 	npb_nexthop_add           (self, target, nexthop_ptr, ig_bd, eg_port_lag_ptr)
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
-	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+	npb_lag_add               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
-	npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
+	npb_egr_port_add          (self, target, eg_port, eg_port_is_cpu, eg_port_lag_ptr)
 	if(sf_bitmask&4):
 		npb_npb_sf2_action_sel_add(self, target, spi, si-(popcount(sf_bitmask&3)), 0, dsap)
 
 def npb_nsh_chain_end_del(self, target,
 	# ingress
-	ig_port, ig_port_lag_ptr, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+	ig_port, ig_port_lag_ptr, ta, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
 	# egress
 ):
 	cpu_port_del              (self, target)
@@ -3763,10 +3823,7 @@ def npb_nsh_chain_end_del(self, target,
 	if(sf_bitmask&2):
 		npb_npb_sf1_action_sel_del(self, target, spi, si-(popcount(sf_bitmask&1)))
 	npb_nexthop_del           (self, target, nexthop_ptr)
-	if(eg_port_num_entries == 1):
-		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
-	else:
-		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
+	npb_lag_del               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 
 	npb_egr_port_del          (self, target, eg_port)
 	if(sf_bitmask&4):
@@ -3777,40 +3834,31 @@ def npb_nsh_chain_end_del(self, target,
 def npb_nsh_bridge_add(self, target,
 	#ingress
 #	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
-	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, bd, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, bd, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port, eg_port_is_cpu
 	#egress
 ):
 	cpu_port_add              (self, target)
 	npb_ing_port_add          (self, target, ig_port, ig_port_lag_ptr, 1, 0, 0, 0, 0, 0)
 #	npb_port_vlan_to_bd_add   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr, bd)
 	npb_tunnel_rmac_add       (self, target, rmac);
-	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr);
+	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask, eg_port_lag_ptr);
 #	npb_nexthop_add           (self, target, nexthop_ptr, bd, eg_port_lag_ptr)
-	if(len(eg_port) == 1):
-		npb_lag_single_add        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr, eg_port[0])
-	else:
-		npb_lag_multi_add         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
-	if(eg_port_is_cpu):
-		npb_egr_port_cpu_add      (self, target, eg_port, eg_port_lag_ptr)
-	else:
-		npb_egr_port_add          (self, target, eg_port, eg_port_lag_ptr)
+	npb_lag_add               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
+	npb_egr_port_add          (self, target, eg_port, eg_port_is_cpu, eg_port_lag_ptr)
 
 def npb_nsh_bridge_del(self, target,
 	#ingress
-#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
-	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
 	#egress
 ):
 	cpu_port_del              (self, target)
 	npb_ing_port_del          (self, target, ig_port, ig_port_lag_ptr)
 #	npb_port_vlan_to_bd_del   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr)
 	npb_tunnel_rmac_del       (self, target, rmac);
-	npb_tunnel_dmac_del       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac);
+	npb_tunnel_dmac_del       (self, target, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask);
 #	npb_nexthop_del           (self, target, nexthop_ptr)
-	if(eg_port_num_entries == 1):
-		npb_lag_single_del        (self, target, eg_port_lag_ptr,                        eg_port_lag_member_ptr)
-	else:
-		npb_lag_multi_del         (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries)
+	npb_lag_del               (self, target, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port)
 	npb_egr_port_del          (self, target, eg_port)
 
 #######################################
@@ -3818,27 +3866,27 @@ def npb_nsh_bridge_del(self, target,
 def npb_nsh_bridge_no_eg_lag_add(self, target,
 	#ingress
 #	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
-	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, bd, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, bd, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
 	#egress
 ):
 	cpu_port_add              (self, target)
 	npb_ing_port_add          (self, target, ig_port, ig_port_lag_ptr, 1, 0, 0, 0, 0, 0)
 #	npb_port_vlan_to_bd_add   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr, bd)
 	npb_tunnel_rmac_add       (self, target, rmac);
-	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr);
+	npb_tunnel_dmac_add       (self, target, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask, eg_port_lag_ptr);
 
 # Egress lag removed if sharing with other flows
 
 def npb_nsh_bridge_no_eg_lag_del(self, target,
 	#ingress
-#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
-	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, ethertype, vid_isValid, vid, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port_num_entries, eg_port
+#	ig_port, ig_port_lag_ptr, rmac, bd, bd_member_ptr, dmac, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
+	ig_port, ig_port_lag_ptr, rmac, nexthop_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask, eg_port_lag_ptr, eg_port_lag_group_ptr, eg_port_lag_member_ptr, eg_port
 	#egress
 ):
 	cpu_port_del              (self, target)
 	npb_ing_port_del          (self, target, ig_port, ig_port_lag_ptr)
 #	npb_port_vlan_to_bd_del   (self, self.target, ig_port_lag_ptr, 0, 0, 0, 0, bd_member_ptr)
 	npb_tunnel_rmac_del       (self, target, rmac);
-	npb_tunnel_dmac_del       (self, target, ig_port_lag_ptr, ethertype, vid_isValid, vid, dmac);
+	npb_tunnel_dmac_del       (self, target, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask);
 
 # Egress lag removed if sharing with other flows

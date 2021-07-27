@@ -99,7 +99,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap 
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap 
 			#egress
 		)
 
@@ -107,15 +107,15 @@ class test(BfRuntimeTest):
 		# Ingress SF(s)
 		# -----------------
 
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
 
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
-		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
+		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, flow_class=flow_class_acl, trunc_enable=1, trunc=0x100)
 
 		# -----------------
 		# Ingress SFP Sel
@@ -139,9 +139,9 @@ class test(BfRuntimeTest):
 
 		# Derek: Have to fix up some of the expected values.  Most of these were obtained by looking the the received / truncated packet
 		exp_pkt.exp_pkt[IP].len     = 0x01f2
-		exp_pkt.exp_pkt[IP].chksum  = 0xf7a6
+		exp_pkt.exp_pkt[IP].chksum  = 0xc81e
 		exp_pkt.exp_pkt[UDP].len    = 0x01de
-		exp_pkt.exp_pkt[UDP].chksum = 0x3a97
+		exp_pkt.exp_pkt[UDP].chksum = 0x0b0f
 
 		# -----------------------------------------------------------
 
@@ -162,7 +162,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port]
+			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port]
 			#egress
 		)
 
@@ -170,15 +170,15 @@ class test(BfRuntimeTest):
 		# Ingress SF(s)
 		# -----------------
 
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf)
 
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)
-		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf)
+		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf)
 
 		# -----------------
 		# Ingress SFP Sel

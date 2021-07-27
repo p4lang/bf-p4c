@@ -234,9 +234,11 @@ set_tests_properties("tofino2/p4c-3479" PROPERTIES TIMEOUT 1200)
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3479")
 
 p4c_add_ptf_test_with_ptfdir (
-    "tofino2" "npb-master-ptf" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/npb.p4"
+    "tofino2" "npb-master-ptf"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/angel-eyes/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 3000"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/tests")
+bfn_set_p4_build_flag("tofino2" "npb-master-ptf" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/angel-eyes -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/shared")
 set_tests_properties("tofino2/npb-master-ptf" PROPERTIES TIMEOUT 3000)
 
 p4c_add_ptf_test_with_ptfdir (

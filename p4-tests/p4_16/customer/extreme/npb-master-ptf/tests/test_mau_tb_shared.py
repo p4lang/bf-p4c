@@ -57,6 +57,10 @@ class IngressTunnelType(Enum):
 	GTPU        = 6;
 	ERSPAN      = 7;
 	GRE         = 8;
+	VLAN        = 9;
+	MPLS        = 10;
+	UNSUPPORTED = 11;
+	GENEVE      = 12;
 
 class EgressTunnelType(Enum):
 	# these are arbitrary, and don't need to match anything in the p4 code.

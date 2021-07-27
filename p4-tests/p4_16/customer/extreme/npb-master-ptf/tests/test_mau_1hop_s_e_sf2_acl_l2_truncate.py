@@ -99,7 +99,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap 
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap 
 			#egress
 		)
 
@@ -135,9 +135,9 @@ class test(BfRuntimeTest):
 
 		# Derek: Have to fix up some of the expected values.  Most of these were obtained by looking the the received / truncated packet
 		exp_pkt.exp_pkt[IP].len     = 0x01f2
-		exp_pkt.exp_pkt[IP].chksum  = 0xf7a6
+		exp_pkt.exp_pkt[IP].chksum  = 0xc81e
 		exp_pkt.exp_pkt[UDP].len    = 0x01de
-		exp_pkt.exp_pkt[UDP].chksum = 0x3a97
+		exp_pkt.exp_pkt[UDP].chksum = 0x0b0f
 
 		# -----------------------------------------------------------
 
@@ -158,7 +158,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port]
+			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port]
 			#egress
 		)
 

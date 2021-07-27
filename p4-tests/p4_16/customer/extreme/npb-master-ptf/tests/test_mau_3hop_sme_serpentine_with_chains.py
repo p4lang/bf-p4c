@@ -113,7 +113,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
-			[ig_port_0], ig_lag_ptr+0, 0, sap, vpn, spi+0, si,                                                   sf_bitmask_0, rmac, nexthop_ptr+0, bd, eg_lag_ptr+0, 0+0, 0+0, [eg_port_1], 0, dsap,
+			[ig_port_0], ig_lag_ptr+0, 0, sap, vpn, spi+0, si,                                                   sf_bitmask_0, rmac, nexthop_ptr+0, bd, eg_lag_ptr+0, 0+0, 0+0, [eg_port_1], False, 0, dsap,
 			#tunnel
 			tunnel_encap_ptr+0, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+0, tunnel_encap_bd+0, dmac_0, tunnel_encap_smac_ptr+0, smac
 			#egress
@@ -121,7 +121,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, 0,  ta,         spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_0], 0, dsap
+			[ig_port_1], ig_lag_ptr+1, 0,  ta,         spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_0], False, 0, dsap
 			#egress
 		)
 
@@ -129,13 +129,13 @@ class test(BfRuntimeTest):
 
 #		npb_nsh_chain_end_add(self, self.target,
 #			#ingress
-#			[ig_port_2], ig_lag_ptr+2, 0,           spi+0, si-(popcount(sf_bitmask_0)),                          sf_bitmask_2, rmac, nexthop_ptr+2, bd, eg_lag_ptr+2, 0+2, 0+2, [eg_port_3], 0, dsap
+#			[ig_port_2], ig_lag_ptr+2, 0,           spi+0, si-(popcount(sf_bitmask_0)),                          sf_bitmask_2, rmac, nexthop_ptr+2, bd, eg_lag_ptr+2, 0+2, 0+2, [eg_port_3], False, 0, dsap
 #			#egress
 #		)
 #
 #		npb_nsh_chain_start_add(self, self.target,
 #			#ingress
-#			[ig_port_3], ig_lag_ptr+3, 0, sap, vpn, spi+1, si,                                                   sf_bitmask_2, rmac, nexthop_ptr+3, bd, eg_lag_ptr+3, 0+3, 0+3, [eg_port_2], 0, dsap,
+#			[ig_port_3], ig_lag_ptr+3, 0, sap, vpn, spi+1, si,                                                   sf_bitmask_2, rmac, nexthop_ptr+3, bd, eg_lag_ptr+3, 0+3, 0+3, [eg_port_2], False, 0, dsap,
 #			#tunnel
 #			tunnel_encap_ptr+3, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+0, tunnel_encap_bd+0, dmac_0, tunnel_encap_smac_ptr+0, smac
 #			#egress
@@ -351,7 +351,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_del(self, self.target,
 			#ingress
-			[ig_port_0], ig_lag_ptr+0, spi+0, si,                                                   sf_bitmask_0, rmac, nexthop_ptr+0, eg_lag_ptr+0, 0+0, 0+0, 1, [eg_port_1],
+			[ig_port_0], ig_lag_ptr+0, spi+0, si,                                                   sf_bitmask_0, rmac, nexthop_ptr+0, eg_lag_ptr+0, 0+0, 0+0, [eg_port_1],
 			#tunnel
 			tunnel_encap_ptr+0, tunnel_encap_nexthop_ptr+0, tunnel_encap_bd+0, tunnel_encap_smac_ptr+0
 			#egress
@@ -359,7 +359,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, ta, spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_0]
+			[ig_port_1], ig_lag_ptr+1, ta, spi+1, si-(popcount(sf_bitmask_2)),                          sf_bitmask_0, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, [eg_port_0]
 			#egress
 		)
 
@@ -367,13 +367,13 @@ class test(BfRuntimeTest):
 
 #		npb_nsh_chain_end_del(self, self.target,
 #			#ingress
-#			[ig_port_2], ig_lag_ptr+2, spi+0, si-(popcount(sf_bitmask_0)),                          sf_bitmask_2, rmac, nexthop_ptr+2, eg_lag_ptr+2, 0+2, 0+2, 1, [eg_port_3]
+#			[ig_port_2], ig_lag_ptr+2, spi+0, si-(popcount(sf_bitmask_0)),                          sf_bitmask_2, rmac, nexthop_ptr+2, eg_lag_ptr+2, 0+2, 0+2, [eg_port_3]
 #			#egress
 #		)
 
 #		npb_nsh_chain_start_del(self, self.target,
 #			#ingress
-#			[ig_port_3], ig_lag_ptr+3, spi+1, si,                                                   sf_bitmask_2, rmac, nexthop_ptr+3, eg_lag_ptr+3, 0+3, 0+3, 1, [eg_port_2],
+#			[ig_port_3], ig_lag_ptr+3, spi+1, si,                                                   sf_bitmask_2, rmac, nexthop_ptr+3, eg_lag_ptr+3, 0+3, 0+3, [eg_port_2],
 #			#tunnel
 #			tunnel_encap_ptr+3, tunnel_encap_nexthop_ptr+0, tunnel_encap_bd+0, tunnel_encap_smac_ptr+0
 #			#egress

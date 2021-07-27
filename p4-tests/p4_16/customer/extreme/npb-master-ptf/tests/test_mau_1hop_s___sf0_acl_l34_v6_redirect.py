@@ -109,7 +109,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap,
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap,
 			#tunnel
 			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 			#egress
@@ -117,7 +117,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
-			[ig_port_new], ig_lag_ptr+1, 0, sap+1, vpn+1, spi+1, si+1, sf_bitmask, rmac, nexthop_ptr+1, bd+1, eg_lag_ptr+1, 0+1, 0+1, [eg_port_new], 0, dsap,
+			[ig_port_new], ig_lag_ptr+1, 0, sap+1, vpn+1, spi+1, si+1, sf_bitmask, rmac, nexthop_ptr+1, bd+1, eg_lag_ptr+1, 0+1, 0+1, [eg_port_new], False, 0, dsap,
 			#tunnel
 			tunnel_encap_ptr+1, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+1, tunnel_encap_bd+1, dmac, tunnel_encap_smac_ptr+1, smac
 			#egress
@@ -169,7 +169,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port],
+			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port],
 			#tunnel
 			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
 			#egress
@@ -177,7 +177,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_del(self, self.target,
 			#ingress
-			[ig_port_new], ig_lag_ptr+1, spi+1, si+1, sf_bitmask, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_new],
+			[ig_port_new], ig_lag_ptr+1, spi+1, si+1, sf_bitmask, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, [eg_port_new],
 			#tunnel
 			tunnel_encap_ptr+1, tunnel_encap_nexthop_ptr+1, tunnel_encap_bd+1, tunnel_encap_smac_ptr+1
 			#egress
@@ -193,4 +193,4 @@ class test(BfRuntimeTest):
 		# Ingress SFP Sel
 		# -----------------
 
-		npb_npb_sfp_sel_del(self, self.target, vpn, sfc, 0, 0, 1)
+		npb_npb_sfp_sel_del(self, self.target, vpn, sfc, 0, 0, [spi+1], [si+1])

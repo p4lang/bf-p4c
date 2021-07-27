@@ -2,7 +2,6 @@
 # The following code gets appended to the following file:
 # $SDE/pkgsrc/ptf-modules/ptf/src/ptf/packet.py
 
-
 VNTag = None
 if not config.get("disable_vntag", False):
     try:
@@ -87,3 +86,56 @@ if not config.get("disable_lacp", False):
     except:
         logging.warn("LACP support not found in Scapy")
         pass
+
+    
+ERSPAN = None
+if not config.get("disable_erspan", False):
+    try:
+        scapy.main.load_contrib("erspan")
+        ERSPAN = scapy.contrib.erspan.ERSPAN
+        logging.info("ERSPAN support found in Scapy")
+    except:
+        logging.warn("ERSPAN support not found in Scapy")
+        pass
+
+
+NVGRE = None
+if not config.get("disable_nvgre", False):
+    try:
+        scapy.main.load_contrib("nvgre")
+        NVGRE = scapy.contrib.nvgre.NVGRE
+        logging.info("NVGRE support found in Scapy")
+    except:
+        logging.warn("NVGRE support not found in Scapy")
+        pass
+
+    
+GENEVE = None
+if not config.get("disable_geneve", False):
+    try:
+        scapy.main.load_contrib("geneve")
+        GENEVE = scapy.contrib.geneve.GENEVE
+        logging.info("GENEVE support found in Scapy")
+    except:
+        logging.warn("GENEVE support not found in Scapy")
+        pass
+
+VXLAN = None
+if not config.get("disable_vxlan", False):
+    try:
+        scapy.main.load_contrib("vxlan")
+        VXLAN = scapy.contrib.vxlan.VXLAN
+        logging.info("VXLAN support found in Scapy")
+    except:
+        logging.warn("VXLAN support not found in Scapy")
+        pass
+
+# VXLAN = None
+# if not config.get("disable_vxlan", False):
+#     try:
+#         scapy.main.load_layer("vxlan")
+#         VXLAN = scapy.layer.vxlan.VXLAN
+#         logging.info("VXLAN support found in Scapy")
+#     except:
+#         logging.warn("VXLAN support not found in Scapy")
+#         pass

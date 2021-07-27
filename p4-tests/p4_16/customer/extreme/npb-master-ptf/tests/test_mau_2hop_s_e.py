@@ -108,7 +108,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_add(self, self.target,
 			#ingress
-			[ig_port_0], ig_lag_ptr+0, 0, sap, vpn, spi, si,                          sf_bitmask_0, rmac, nexthop_ptr+0, bd, eg_lag_ptr+0, 0+0, 0+0, [eg_port_0], 0, dsap,
+			[ig_port_0], ig_lag_ptr+0, 0, sap, vpn, spi, si,                          sf_bitmask_0, rmac, nexthop_ptr+0, bd, eg_lag_ptr+0, 0+0, 0+0, [eg_port_0], False, 0, dsap,
 			#tunnel
 			tunnel_encap_ptr+0, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr+0, tunnel_encap_bd+0, dmac_0, tunnel_encap_smac_ptr+0, smac
 			#egress
@@ -116,7 +116,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_add(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, 0,        ta,    spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_1], 0, dsap
+			[ig_port_1], ig_lag_ptr+1, 0,        ta,    spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, bd, eg_lag_ptr+1, 0+1, 0+1, [eg_port_1], False, 0, dsap
 			#egress
 		)
 
@@ -234,7 +234,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_del(self, self.target,
 			#ingress
-			[ig_port_0], ig_lag_ptr+0, spi, si,                          sf_bitmask_0, rmac, nexthop_ptr+0, eg_lag_ptr+0, 0+0, 0+0, 1, [eg_port_0],
+			[ig_port_0], ig_lag_ptr+0, spi, si,                          sf_bitmask_0, rmac, nexthop_ptr+0, eg_lag_ptr+0, 0+0, 0+0, [eg_port_0],
 			#tunnel
 			tunnel_encap_ptr+0, tunnel_encap_nexthop_ptr+0, tunnel_encap_bd+0, tunnel_encap_smac_ptr+0
 			#egress
@@ -242,7 +242,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_end_del(self, self.target,
 			#ingress
-			[ig_port_1], ig_lag_ptr+1, ta, spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, 1, [eg_port_1]
+			[ig_port_1], ig_lag_ptr+1, ta, spi, si-(popcount(sf_bitmask_0)), sf_bitmask_1, rmac, nexthop_ptr+1, eg_lag_ptr+1, 0+1, 0+1, [eg_port_1]
 			#egress
 		)
 

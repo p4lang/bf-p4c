@@ -101,7 +101,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_bridge_add(self, self.target, 
 			#ingress
-			[ig_port], ig_lag_ptr, rmac,  nexthop_ptr, bd, 0x0800, 0, vid, dmac, eg_lag_ptr, 0, 0, [eg_port], False
+			[ig_port], ig_lag_ptr, rmac,  nexthop_ptr, bd, 0x0800, 0xffff, 0, 0x1, vid, 0xfff, dmac, 0xffffffffffff, eg_lag_ptr, 0, 0, [eg_port], False
 			#egress
 		)
 
@@ -139,6 +139,6 @@ class test(BfRuntimeTest):
 
 		npb_nsh_bridge_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, rmac, nexthop_ptr,0x0800, 0, vid, dmac, eg_lag_ptr, 0, 0, 1, [eg_port]
+			[ig_port], ig_lag_ptr, rmac, nexthop_ptr, 0x0800, 0xffff, 0, 0x1, vid, 0xfff, dmac, 0xffffffffffff, eg_lag_ptr, 0, 0, [eg_port]
 			#egress
 		)

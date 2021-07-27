@@ -88,7 +88,7 @@ class test(BfRuntimeTest):
 		sfc                     = 0xd # Arbitrary value
 		dsap                    = 7 # Arbitrary value
 
-		sf_bitmask              = 7 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+		sf_bitmask              = 5 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
 		nexthop_ptr             = 0x65 # Arbitrary value
 		bd                      = 2 # Arbitrary value
@@ -108,7 +108,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_add(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], 0, dsap
+			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap
 			#tunnel
 #			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 			#egress
@@ -116,7 +116,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_add(self, self.target,
 			#ingress
-			[ig_port_new], ig_lag_ptr, 0, sap, vpn, spi_new, si_new, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port_new], 0, dsap
+			[ig_port_new], ig_lag_ptr, 0, sap, vpn, spi_new, si_new, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port_new], False, 0, dsap
 			#tunnel
 #			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 			#egress
@@ -194,7 +194,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_del(self, self.target,
 			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port]
+			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port]
 			#tunnel
 #			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
 			#egress
@@ -202,7 +202,7 @@ class test(BfRuntimeTest):
 
 		npb_nsh_chain_start_end_del(self, self.target,
 			#ingress
-			[ig_port_new], ig_lag_ptr, spi_new, si_new, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, 1, [eg_port_new]
+			[ig_port_new], ig_lag_ptr, spi_new, si_new, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port_new]
 			#tunnel
 #			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
 			#egress
@@ -218,4 +218,4 @@ class test(BfRuntimeTest):
 		# Ingress SFP Sel
 		# -----------------
 
-		npb_npb_sfp_sel_del(self, self.target, vpn, sfc, 0, 0, 1)
+		npb_npb_sfp_sel_del(self, self.target, vpn, sfc, 0, 0, [spi_new], [si_new])
