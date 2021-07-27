@@ -11,7 +11,7 @@
 #include "barefoot/p4info.pb.h"
 
 #include "bf-p4c/control-plane/bfruntime.h"
-#include "bf-p4c/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/control-plane/p4runtime_force_std.h"
 
 #include "bf-p4c/arch/tna.h"

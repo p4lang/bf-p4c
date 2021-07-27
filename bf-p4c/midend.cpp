@@ -43,6 +43,7 @@
 #include "midend/tableHit.h"
 #include "midend/validateProperties.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/midend/action_synthesis_policy.h"
 #include "bf-p4c/midend/annotate_with_in_hash.h"
 #include "bf-p4c/midend/blockmap.h"
@@ -64,7 +65,6 @@
 #include "bf-p4c/midend/simplify_args.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/midend/simplify_key_policy.h"
-#include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/logging/source_info_logging.h"
 

@@ -1,5 +1,5 @@
-#include "bf-p4c/control-plane/bfruntime.h"
-#include "bf-p4c/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/control-plane/bfruntime_ext.h"
+#include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/control-plane/bfruntime_arch_handler.h"
 #include "bf-p4c/control-plane/p4runtime_force_std.h"
 
@@ -31,7 +31,7 @@ class CheckReservedNames : public Inspector {
     CheckReservedNames() {}
 };
 
-void generateP4Runtime(const IR::P4Program* program,
+void generateRuntime(const IR::P4Program* program,
                        const BFN_Options& options) {
     // If the user didn't ask for us to generate P4Runtime, skip the analysis.
     bool doNotGenerateP4Info = options.p4RuntimeFile.isNullOrEmpty() &&
@@ -111,7 +111,8 @@ void generateP4Runtime(const IR::P4Program* program,
         program->apply(CheckReservedNames());
 
         auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
-        BFRT::serializeBfRtSchema(out, p4Runtime);
+        auto *bfrt = new BFRT::BFRuntimeSchemaGenerator(*p4Runtime.p4Info);
+        bfrt->serializeBFRuntimeSchema(out);
     }
 }
 

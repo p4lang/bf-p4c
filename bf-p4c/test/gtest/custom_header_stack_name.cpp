@@ -10,7 +10,7 @@
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 #include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/control-plane/runtime.h"
 #include "control-plane/p4RuntimeArchStandard.h"
 
 namespace Test {
@@ -131,8 +131,8 @@ TEST(CustomHeaderStackName, Test1) {
 
     // Generate runtime information
     auto& options = BackendOptions();
-    BFN::generateP4Runtime(testCode.get_program(), options);
-    // BFN's generateP4Runtime re-registers handler for psa architecture to a BFN handler
+    BFN::generateRuntime(testCode.get_program(), options);
+    // BFN's generateRuntime re-registers handler for psa architecture to a BFN handler
     // Re-register the original p4c one so that (plain) p4c tests are not affected
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
     p4RuntimeSerializer->registerArch(

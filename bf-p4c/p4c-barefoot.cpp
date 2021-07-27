@@ -12,7 +12,7 @@
 #include "backends/graphs/controls.h"
 #include "bf-p4c/backend.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
-#include "bf-p4c/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/frontend.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/filelog.h"
@@ -318,7 +318,7 @@ int main(int ac, char **av) {
 
     log_dump(program, "Initial program");
 
-    BFN::generateP4Runtime(program, options);
+    BFN::generateRuntime(program, options);
     if (::errorCount() > 0)
         return PROGRAM_ERROR;
 

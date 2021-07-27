@@ -97,7 +97,7 @@ class P4RuntimeStdConverter {
                 updatorIt->second(externInstance);
         }
 
-        // remove all (except allowed) Tofino-specific externs now that we have
+        // remove all (except allowed) TNA-specific externs now that we have
         // converted / updated them to standard P4Info objects (when it was possible)
         typedef google::protobuf::RepeatedPtrField<p4configv1::Extern> protoExterns;
         auto externs = new protoExterns(p4info->externs());
@@ -188,7 +188,7 @@ class P4RuntimeStdConverter {
         stripPipePrefix(preOut->mutable_name());
         P4Id idBase = preIn.id() & 0xffffff;
         P4Id id;
-        // Convert the Tofino P4Info id to the Standard P4Info id. Most of the
+        // Convert the TNA P4Info id to the Standard P4Info id. Most of the
         // time, this just means doing the correct prefix substitution. But
         // there can be some subtle differences between the 2, which may cause
         // id collisions. We therefore add some logic to handle these
@@ -228,15 +228,15 @@ class P4RuntimeStdConverter {
     void convertActionSelector(p4configv1::P4Info*,
                                const p4configv1::ExternInstance&) {
         // The standard P4Info only has one message (ActionProfile) whereas the
-        // Tofino-specific P4Info defines one message for action profiles
+        // TNA-specific P4Info defines one message for action profiles
         // (ActionProfile) and one for action selectors (ActionSelector). When
-        // visiting the Tofino-specific ActionProfile messages (in
+        // visiting the TNA-specific ActionProfile messages (in
         // convertActionProfile), we generate the appropriate standard
         // ActionProfile message (in particular we set the with_selector field)
         // to the appropriate value, which means we have nothing to do for
-        // Tofino-specific ActionSelector messages (which is why this function
+        // TNA-specific ActionSelector messages (which is why this function
         // is empty). Note that by definition, each ActionSelector message in
-        // the Tofino-specific P4Info must have a corresponding ActionProfile
+        // the TNA-specific P4Info must have a corresponding ActionProfile
         // message (no selector table without action data table).
     }
 

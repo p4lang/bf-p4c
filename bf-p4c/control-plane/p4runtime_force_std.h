@@ -5,9 +5,9 @@
 
 namespace BFN {
 
-/// Takes a P4Info message generated for a Tofino-specific architecture and
+/// Takes a P4Info message generated for a TNA-specific architecture and
 /// converts it to a "standard" P4Info message, which can be used with a
-/// standard P4Runtime implementation (with no support for Tofino-specific
+/// standard P4Runtime implementation (with no support for TNA-specific
 /// extensions). Displays a warning to the user for each extern instance that
 /// cannot be converted.
 P4::P4RuntimeAPI convertToStdP4Runtime(const P4::P4RuntimeAPI& p4RuntimeInput);

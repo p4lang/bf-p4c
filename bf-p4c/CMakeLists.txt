@@ -280,18 +280,20 @@ set (BF_P4C_BACKEND_COMMON_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 
 set (BF_P4C_BACKEND_CONTROL_PLANE_SRCS
-  control-plane/bfruntime.cpp
+  control-plane/bfruntime_ext.cpp
   control-plane/p4runtime_force_std.cpp
-  control-plane/tofino_p4runtime.cpp
+  control-plane/bfruntime.cpp
+  control-plane/runtime.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}")
 build_unified(BF_P4C_BACKEND_CONTROL_PLANE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
-  control-plane/bfruntime.h
   control-plane/bfruntime_arch_handler.h
+  control-plane/bfruntime_ext.h
+  control-plane/bfruntime.h
   control-plane/p4runtime_force_std.h
-  control-plane/tofino_p4runtime.h
+  control-plane/runtime.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_HDRS}")
 

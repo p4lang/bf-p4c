@@ -169,7 +169,7 @@ message PortMetadata {
 // This should not be required, since this is a built-in P4_16 object and there
 // is already a ValueSet message defined in p4/config/v1/p4info.proto. However,
 // P4Runtime v1.0.0 assumes that value sets are limited to storing simple
-// bitstring values and we need more general support for Tofino. When P4Runtime
+// bitstring values and we need more general support for TNA. When P4Runtime
 // removes this restriction in future versions, we should be able to get rid of
 // this message.
 message ValueSet {
