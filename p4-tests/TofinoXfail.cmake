@@ -1803,6 +1803,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )
 
+
+# P4C-3804
+p4c_add_xfail_reason("tofino"
+  "Parser counter increment argument is not a constant integer"
+  extensions/p4_tests/p4_16/errors/p4c-3804-inc.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Parser counter decrement argument is not a constant integer"
+  extensions/p4_tests/p4_16/errors/p4c-3804-dec.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "error: .*: type Counter has no matching constructor"
   extensions/p4_tests/p4_16/ptf/large_indirect_count.p4
