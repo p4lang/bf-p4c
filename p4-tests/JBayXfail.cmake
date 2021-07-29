@@ -497,3 +497,12 @@ p4c_add_xfail_reason("tofino2"
   "error: You can only have more than one binary operator in a statement"
   extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
 )
+
+# P4C-3914
+p4c_add_xfail_reason("tofino2"
+  "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
+Compiler will improve allocation of learning fields in future releases.
+Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
+  extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+)
+

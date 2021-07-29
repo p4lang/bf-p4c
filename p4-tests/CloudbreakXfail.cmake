@@ -508,3 +508,11 @@ p4c_add_xfail_reason("tofino3"
   "error: Tofino3 requires byte-aligned headers, but header bridge_h is not byte-aligned"
   extensions/p4_tests/p4_16/stf/p4c-3761.p4
 )
+
+# P4C-3914
+p4c_add_xfail_reason("tofino3"
+  "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
+Compiler will improve allocation of learning fields in future releases.
+Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
+  extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+)

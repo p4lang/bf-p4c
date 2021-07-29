@@ -1928,3 +1928,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-3765-fail.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
 )
+
+# P4C-3914
+p4c_add_xfail_reason("tofino"
+  "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
+Compiler will improve allocation of learning fields in future releases.
+Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
+  extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+)

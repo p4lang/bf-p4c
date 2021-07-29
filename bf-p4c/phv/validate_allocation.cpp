@@ -697,7 +697,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             BUG("Total size of containers used for %1% POV allocation is %2%b, greater than the "
                     "allowed limit of %3%b.", gress, povBits, povLimit);
     }
-
     return true;
 }
 
@@ -710,9 +709,39 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     selector->foreach_alloc([&](const PHV::AllocSlice& alloc) {
         selectorSize += alloc.container().size();
     });
+
+    ordered_map<const PHV::Field *, std::vector<size_t>> field_info_map;
+    std::stringstream ss;
+
+    // Get the minimal number and size of containers that can be assigned to a field
+    auto get_min_fit_container_size = [&](int size) {
+        std::vector<int> rst;
+        int remaining = size;
+        while (remaining > 0) {
+            for (const int sz : {32, 16, 8}) {
+                if (sz <= remaining || (remaining < 8 && sz == 8)) {
+                    remaining -= sz;
+                    rst.push_back(sz);
+                    break;
+                }
+            }
+        }
+        return rst;
+    };
+    // This function will assign minimal number of containers to a field and print the
+    // progma hint for users.
+    auto get_correct_containers = [&](const PHV::Field *f){
+        ss << "@pa_container_size(\"" << f->gress << "\", \"" <<
+                        f->name << "\"";
+        auto containers = get_min_fit_container_size(f->size);
+        for (auto container : containers) {
+            ss << ", " << container;
+        }
+        ss << ")" << std::endl;
+    };
+
     for (auto fieldList : digest->fieldLists) {
         size_t digestSizeInBits = selectorSize;
-        std::stringstream ss;
         for (auto flval : fieldList->sources) {
             le_bitrange bits = {};
             const PHV::Field* f = phv.field(flval->field, &bits);
@@ -720,19 +749,32 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
             f->foreach_alloc(
                 bits,
                 PHV::AllocContext::DEPARSER, nullptr, [&](const PHV::AllocSlice& alloc) {
-                    ss << "learning field " << alloc.field() << " to " << alloc.container() << "\n";
-                    LOG5("learning field " << alloc.field() << " to " << alloc.container());
+                    field_info_map[f].push_back(alloc.container().size());
                     digestSizeInBits += alloc.container().size();
                 });
         }
         BUG_CHECK(digestSizeInBits % 8 == 0, "Digest size in bits cannot be non byte aligned.");
         size_t digestSizeInBytes = digestSizeInBits / 8;
         if (digestSizeInBytes > Device::maxDigestSizeInBytes()) {
+            // If learning quantas are over the limit
+            for (auto it : field_info_map) {
+                auto containers = it.second;
+                auto field = it.first;
+                auto min_containers_size = get_min_fit_container_size(field->size);
+                // If number of containers assigned to a field is larger than the minimal number
+                // of containers can be assigned to a field or this field only takes one container
+                // but the container size is 8 bits larger than the field size, print the hint
+                if (containers.size() > min_containers_size.size() || (containers.size() == 1 &&
+                    (containers.front() - (size_t)(min_containers_size[0]) >= 8))) {
+                    get_correct_containers(field);
+                }
+            }
+
             ::error(
                 "Size of learning quanta is %1% bytes, greater than the maximum allowed %2% "
                 "bytes.\nCompiler will improve allocation of learning fields in future releases.\n"
                 "Temporary fix: try to apply @pa_container_size pragma to small fields allocated "
-                "to large container in: %3%",
+                "to large container in. Here are possible useful progmas you can try: \n%3%",
                 digestSizeInBytes, Device::maxDigestSizeInBytes(), ss.str());
         }
     }
