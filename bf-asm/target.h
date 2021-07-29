@@ -50,6 +50,7 @@
     M(const char *, name) \
     M(target_t, register_set)  \
     M(int, PARSER_CHECKSUM_UNITS) \
+    M(bool, PARSER_EXTRACT_BYTES) \
     M(int, MATCH_BYTE_16BIT_PAIRS) \
     M(int, DEPARSER_MAX_FD_ENTRIES) \
     M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
@@ -164,6 +165,7 @@ class Target::Tofino : public Target {
     };
     enum {
         PARSER_CHECKSUM_UNITS = 2,
+        PARSER_EXTRACT_BYTES = false,
         MATCH_BYTE_16BIT_PAIRS = true,
         NUM_MAU_STAGES_PRIVATE = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
@@ -278,6 +280,7 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {
         PARSER_CHECKSUM_UNITS = 5,
+        PARSER_EXTRACT_BYTES = true,
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
@@ -447,6 +450,7 @@ class Target::Cloudbreak : public Target {
     typedef ::Cloudbreak::regs_deparser                   deparser_regs;
     enum {
         PARSER_CHECKSUM_UNITS = 5,
+        PARSER_EXTRACT_BYTES = true,
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,

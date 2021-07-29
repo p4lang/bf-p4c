@@ -1208,7 +1208,7 @@ static value_t &extract_save_phv(value_t &data) {
 Parser::State::Match::Save::Save(gress_t gress, Match* m,
                                  int l, int h, value_t &data, int flgs) :
     match(m), lo(l), hi(h), where(gress, 0, extract_save_phv(data)), flags(flgs) {
-    if (hi < lo || hi-lo > 3 || hi-lo == 2)
+    if (hi < lo || hi-lo > 3 || (hi-lo == 2 && !Target::PARSER_EXTRACT_BYTES()))
         error(data.lineno, "Invalid parser extraction size");
     if (data.type == tVEC) {
         if (data.vec.size > 2 || data.vec.size < 1)
@@ -1427,7 +1427,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         if (options.target == JBAY && s->lo >= 32 && s->lo < 48)
             error(s->where.lineno, "byte 32-47 of input buffer cannot be used for output");
         pa->phv_use[state->gress][s->where->reg.uid] = 1;
-        int size = s->where->reg.size;
+        int size = s->where.size();
         if (s->second) {
             if (!s->second.check()) continue;
             if (s->second->reg.parser_id() < 0)
@@ -1441,7 +1441,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
                 error(s->second.lineno, "Can only write data into whole phv registers in parser");
             else
                 size *= 2; }
-        if (s->where->lo || s->where->hi != s->where->reg.size-1)
+        if (!Target::PARSER_EXTRACT_BYTES() && s->where.size() != s->where->reg.size)
             error(s->where.lineno, "Can only write data into whole phv registers in parser");
         else if ((s->hi-s->lo+1)*8 != size)
             error(s->where.lineno, "Data to write doesn't match phv register size");
