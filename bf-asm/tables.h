@@ -609,7 +609,6 @@ class Table {
     virtual bool uses_colormaprams() const { return false; }
     virtual int color_shiftcount(Table::Call &call, int group, int tcam_shift) const {
         BUG(); return -1; }
-    virtual int color_addr_type() const { BUG(); return -1; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     virtual Format* get_format() { return format; }
@@ -1759,7 +1758,13 @@ public:
     void set_color_used() override { color_used = true; }
     void set_output_used() override { output_used = true; }
     int color_shiftcount(Table::Call &call, int group, int tcam_shift) const override;
-    int color_addr_type() const override { return color_mapram_addr; }
+    template<class REGS> void setup_exact_shift(REGS &merge, int bus,
+                                                int group, int word, int word_group,
+                                                Call &meter_call, Call &color_call);
+    template<class REGS> void setup_tcam_shift(REGS &merge, int bus, int tcam_shift,
+                                               Call &meter_call, Call &color_call);
+    template<class REGS> void write_color_regs(REGS &regs, MatchTable *match, int type,
+                                               int bus, const std::vector<Call::Arg> &args);
 )
 
 namespace StatefulAlu {

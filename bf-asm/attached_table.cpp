@@ -242,7 +242,8 @@ void AttachedTable::determine_meter_merge_regs(MatchTable *match, int type, int 
         max_ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS;
 
     unsigned max_address = (1U << METER_ADDRESS_BITS) - 1;
-    BUG_CHECK(args.size() == 3);
+    BUG_CHECK((args.size() == 2 && default_type == METER_COLOR_ACCESS) || args.size() == 3,
+              "wrong size for meter args");
     if (args[0] == "$DIRECT") {
         adr_mask |= (((1U << max_ptr_bits) - 1) << address_shift()) & max_address;
     } else if (auto addr = args[0].field()) {
@@ -259,7 +260,9 @@ void AttachedTable::determine_meter_merge_regs(MatchTable *match, int type, int 
         }
     }
 
-    if (args[2].name() && strcmp(args[2].name(), "$DEFAULT") == 0) {
+    if (default_type == METER_COLOR_ACCESS) {
+        // meter color access -- has no meter type
+    } else if (args[2].name() && strcmp(args[2].name(), "$DEFAULT") == 0) {
         adr_default |= default_type << METER_TYPE_START_BIT;
     } else if (auto type_field = args[2].field()) {
         if (auto addr_field = args[0].field()) {
@@ -442,7 +445,15 @@ void AttachedTables::pass1(MatchTable *self) {
 template<class REGS>
 void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, int bus) {
     for (auto &s : stats) s->write_merge_regs(regs, self, type, bus, s.args);
-    for (auto &m : meters) m->write_merge_regs(regs, self, type, bus, m.args);
+    for (auto &m : meters) {
+        m->write_merge_regs(regs, self, type, bus, m.args);
+        if (m->uses_colormaprams()) {
+            if (meter_color)
+                m->to<MeterTable>()->write_color_regs(regs, self, type, bus, meter_color.args);
+            else
+                m->to<MeterTable>()->write_color_regs(regs, self, type, bus, m.args);
+        }
+    }
     for (auto &s : statefuls) s->write_merge_regs(regs, self, type, bus, s.args);
     if (auto s = get_selector())
         s->write_merge_regs(regs, self, type, bus, selector.args);
@@ -459,18 +470,7 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
         break;
     }
     for (auto &m : meters) {
-        int shiftcount = m->determine_shiftcount(m, 0, 0, tcam_shift);
-        merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
-        if (m->uses_colormaprams()) {
-            int color_shift = m->color_shiftcount(meter_color, 0, tcam_shift);
-            if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
-                merge.mau_idletime_adr_tcam_shiftcount[bus] = color_shift;
-                merge.mau_payload_shifter_enable[1][bus].idletime_adr_payload_shifter_en = 1;
-            } else if (m->color_addr_type() == MeterTable::STATS_MAP_ADDR) {
-                merge.mau_stats_adr_tcam_shiftcount[bus] = color_shift;
-                merge.mau_payload_shifter_enable[1][bus].stats_adr_payload_shifter_en = 1;
-            }
-        }
+        m->to<MeterTable>()->setup_tcam_shift(merge, bus, tcam_shift, m, meter_color);
         break; /* all must be the same, only config once */
     }
     for (auto &s : statefuls) {

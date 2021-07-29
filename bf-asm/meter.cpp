@@ -258,48 +258,93 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     merge.mau_meter_adr_mask[type][bus] = adr_mask;
     merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_entry_en_mux_ctl;
     merge.mau_meter_adr_type_position[type][bus] = meter_type_position;
+}
 
+template<class REGS> void MeterTable::write_color_regs(REGS &regs, MatchTable *match,
+            int type, int bus, const std::vector<Call::Arg> &args) {
+    BUG_CHECK(uses_colormaprams(), "meter %s does not use color maprams, but uses color?", name());
+    auto &merge = regs.rams.match.merge;
+    unsigned adr_mask = 0U;
+    unsigned per_entry_en_mux_ctl = 0U;
+    unsigned adr_default = 0U;
+    unsigned meter_type_position = 0U;
+    AttachedTable::determine_meter_merge_regs(match, type, bus, args, METER_COLOR_ACCESS,
+            adr_mask, per_entry_en_mux_ctl, adr_default, meter_type_position);
 
+    // Based on the uArch section 6.2.8.4.9 Map RAM Addressing, color maprams can be
+    // addressed by either idletime or stats based addresses.  Which address is used
+    // can be specified in the asm file, and is built according to the specification
+
+    if (color_mapram_addr == IDLE_MAP_ADDR) {
+        unsigned idle_mask = (1U << IDLETIME_ADDRESS_BITS) - 1;
+        unsigned full_idle_mask = (1U << IDLETIME_FULL_ADDRESS_BITS) - 1;
+        unsigned shift_diff = METER_LOWER_HUFFMAN_BITS - IDLETIME_HUFFMAN_BITS;
+        merge.mau_idletime_adr_mask[type][bus] =
+            (adr_mask >> shift_diff) & idle_mask;
+        merge.mau_idletime_adr_default[type][bus] =
+            (adr_default >> shift_diff) & full_idle_mask;
+        if (per_entry_en_mux_ctl > shift_diff)
+            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus]
+                = per_entry_en_mux_ctl - shift_diff;
+        else
+            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
+    } else if (color_mapram_addr == STATS_MAP_ADDR) {
+        unsigned stats_mask = (1U << STAT_ADDRESS_BITS) - 1;
+        unsigned full_stats_mask = (1U << STAT_FULL_ADDRESS_BITS) - 1;
+        unsigned shift_diff = METER_LOWER_HUFFMAN_BITS
+                                  - STAT_METER_COLOR_LOWER_HUFFMAN_BITS;
+        merge.mau_stats_adr_mask[type][bus] =
+            (adr_mask >> shift_diff) & stats_mask;
+        merge.mau_stats_adr_default[type][bus] =
+            (adr_default >> shift_diff) & full_stats_mask;
+        if (per_entry_en_mux_ctl > shift_diff)
+            merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus]
+                = per_entry_en_mux_ctl - shift_diff;
+        else
+            merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 0;
+    } else {
+        BUG();
+    }
+}
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void MeterTable::write_color_regs,
+    mau_regs &, MatchTable *, int, int, const std::vector<Call::Arg> &);
+
+template<class REGS> void MeterTable::setup_exact_shift(REGS &merge, int bus,
+                                                        int group, int word, int word_group,
+                                                        Call &meter_call, Call &color_call) {
+    int shiftcount = determine_shiftcount(meter_call, group, word, 0);
+    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
     if (uses_colormaprams()) {
-        // Based on the uArch section 6.2.8.4.9 Map RAM Addressing, color maprams can be
-        // addressed by either idletime or stats based addresses.  Which address is used
-        // can be specified in the asm file, and is built according to the specification
-
-        // Could also be done from the meter_color call, as well, but at the moment is
-        // identical to the meter call, only shifted appropriately to the correct address
-        // size
+        int color_shift = color_shiftcount(color_call, group, 0);
         if (color_mapram_addr == IDLE_MAP_ADDR) {
-            unsigned idle_mask = (1U << IDLETIME_ADDRESS_BITS) - 1;
-            unsigned full_idle_mask = (1U << IDLETIME_FULL_ADDRESS_BITS) - 1;
-            unsigned shift_diff = METER_LOWER_HUFFMAN_BITS - IDLETIME_HUFFMAN_BITS;
-            merge.mau_idletime_adr_mask[type][bus] =
-                (adr_mask >> shift_diff) & idle_mask;
-            merge.mau_idletime_adr_default[type][bus] =
-                (adr_default >> shift_diff) & full_idle_mask;
-            if (per_entry_en_mux_ctl > shift_diff)
-                merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus]
-                    = per_entry_en_mux_ctl - shift_diff;
-            else
-                merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] = 0;
+            merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = color_shift;
+            merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1;
         } else if (color_mapram_addr == STATS_MAP_ADDR) {
-            unsigned stats_mask = (1U << STAT_ADDRESS_BITS) - 1;
-            unsigned full_stats_mask = (1U << STAT_FULL_ADDRESS_BITS) - 1;
-            unsigned shift_diff = METER_LOWER_HUFFMAN_BITS
-                                      - STAT_METER_COLOR_LOWER_HUFFMAN_BITS;
-            merge.mau_stats_adr_mask[type][bus] =
-                (adr_mask >> shift_diff) & stats_mask;
-            merge.mau_stats_adr_default[type][bus] =
-                (adr_default >> shift_diff) & full_stats_mask;
-            if (per_entry_en_mux_ctl > shift_diff)
-                merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus]
-                    = per_entry_en_mux_ctl - shift_diff;
-            else
-                merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 0;
-        } else {
-            BUG();
+            merge.mau_stats_adr_exact_shiftcount[bus][word_group] = color_shift;
+            merge.mau_payload_shifter_enable[0][bus].stats_adr_payload_shifter_en = 1;
         }
     }
 }
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void MeterTable::setup_exact_shift,
+    mau_regs::_rams::_match::_merge &, int, int, int, int, Call &, Call &);
+
+template<class REGS> void MeterTable::setup_tcam_shift(REGS &merge, int bus, int tcam_shift,
+                                                       Call &meter_call, Call &color_call) {
+    int shiftcount = determine_shiftcount(meter_call, 0, 0, tcam_shift);
+    merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
+    if (uses_colormaprams()) {
+        int color_shift = color_shiftcount(color_call, 0, tcam_shift);
+        if (color_mapram_addr == IDLE_MAP_ADDR) {
+            merge.mau_idletime_adr_tcam_shiftcount[bus] = color_shift;
+            merge.mau_payload_shifter_enable[1][bus].idletime_adr_payload_shifter_en = 1;
+        } else if (color_mapram_addr == STATS_MAP_ADDR) {
+            merge.mau_stats_adr_tcam_shiftcount[bus] = color_shift;
+            merge.mau_payload_shifter_enable[1][bus].stats_adr_payload_shifter_en = 1;
+        }
+    }
+}
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void MeterTable::setup_tcam_shift,
+    mau_regs::_rams::_match::_merge &, int, int, Call &, Call &);
 
 template<class REGS>
 void MeterTable::write_regs(REGS &regs) {

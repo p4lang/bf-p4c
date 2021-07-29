@@ -708,38 +708,11 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
                     for (unsigned i = 0; i < payload_map.size(); ++i) {
                         auto grp = payload_map.at(i);
                         if (grp < 0) continue;
-                        merge.mau_meter_adr_exact_shiftcount[row*2 + bus][i]
-                            = m->determine_shiftcount(m, grp, 0, 0);
-                        if (m->uses_colormaprams()) {
-                            int color_shift = m->color_shiftcount(attached->meter_color, i, 0);
-                            if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
-                                merge.mau_idletime_adr_exact_shiftcount[row*2 + bus][i]
-                                    = color_shift;
-                                merge.mau_payload_shifter_enable[0][row*2 + bus]
-                                    .idletime_adr_payload_shifter_en = 1;
-                            } else if (m->color_addr_type() == MeterTable::STATS_MAP_ADDR) {
-                                merge.mau_stats_adr_exact_shiftcount[row*2 + bus][i] = color_shift;
-                                merge.mau_payload_shifter_enable[0][row*2 + bus]
-                                    .stats_adr_payload_shifter_en = 1;
-                            }
-                        }
-                    }
+                        m->to<MeterTable>()->setup_exact_shift(merge, row*2 + bus, grp, 0, i,
+                                                               m, attached->meter_color); }
                 } else {
-                    merge.mau_meter_adr_tcam_shiftcount[row*2 + bus]
-                        = m->determine_shiftcount(m, 0, 0, tcam_shift);
-                    if (m->uses_colormaprams()) {
-                        int color_shift = m->color_shiftcount(attached->meter_color, 0, 0);
-                        if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
-                            merge.mau_idletime_adr_tcam_shiftcount[row*2 + bus] = color_shift;
-                            merge.mau_payload_shifter_enable[1][row*2 + bus]
-                                .idletime_adr_payload_shifter_en = 1;
-                        } else if (m->color_addr_type() == MeterTable::STATS_MAP_ADDR) {
-                            merge.mau_stats_adr_tcam_shiftcount[row*2 + bus] = color_shift;
-                            merge.mau_payload_shifter_enable[1][row*2 + bus]
-                                .stats_adr_payload_shifter_en = 1;
-                        }
-                    }
-                }
+                    m->to<MeterTable>()->setup_tcam_shift(merge, row*2 + bus, tcam_shift,
+                                                          m, attached->meter_color); }
                 break;
             }
             for (auto &s : attached->statefuls) {

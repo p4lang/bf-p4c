@@ -134,7 +134,8 @@ enum METER_ACCESS_TYPE {
     STATEFUL_INSTRUCTION_0 = 1,
     STATEFUL_INSTRUCTION_1 = 3,
     STATEFUL_INSTRUCTION_2 = 5,
-    STATEFUL_INSTRUCTION_3 = 7
+    STATEFUL_INSTRUCTION_3 = 7,
+    METER_COLOR_ACCESS = -1  // special for color mapram access
 };
 
 /* constants for various config params */

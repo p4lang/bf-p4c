@@ -514,18 +514,8 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
     for (auto &m : attached.meters) {
         if (group_info[group].overhead_word == static_cast<int>(word)
             || group_info[group].overhead_word == -1) {
-            int shiftcount = m->to<MeterTable>()->determine_shiftcount(m, group, word, 0);
-            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
-            if (m->uses_colormaprams()) {
-                int color_shift = m->color_shiftcount(attached.meter_color, group, 0);
-                if (m->color_addr_type() == MeterTable::IDLE_MAP_ADDR) {
-                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = color_shift;
-                    merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1;
-                } else if (m->color_addr_type() == MeterTable::STATS_MAP_ADDR) {
-                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = color_shift;
-                    merge.mau_payload_shifter_enable[0][bus].stats_adr_payload_shifter_en = 1;
-                }
-            }
+            m->to<MeterTable>()->setup_exact_shift(merge, bus, group, word, word_group,
+                                                   m, attached.meter_color);
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16;
