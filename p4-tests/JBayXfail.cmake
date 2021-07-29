@@ -5,7 +5,7 @@
 # the compiler yet.
 #
 # Tests that are _always_ expected to fail should be placed in an 'errors'
-# directory, e.g., p4-tests/p4_16/errors/
+# directory, e.g., p4-tests/p4_16/errors/, and added to JBayErrors.cmake.
 
 
 set (JBAY_XFAIL_TESTS

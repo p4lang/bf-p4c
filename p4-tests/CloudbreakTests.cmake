@@ -268,3 +268,4 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #
 include(SwitchCloudbreak.cmake)
 include(CloudbreakXfail.cmake)
+include(CloudbreakErrors.cmake)

@@ -5,7 +5,7 @@
 # the compiler yet.
 #
 # Tests that are _always_ expected to fail should be placed in an 'errors'
-# directory, e.g., p4-tests/p4_16/errors/
+# directory, e.g., p4-tests/p4_16/errors/, and added to CloudbreakErrors.cmake.
 
 set (CLOUDBREAK_XFAIL_TESTS
   # this is intentionally empty because xfails should be added with a reason.

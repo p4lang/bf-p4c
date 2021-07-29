@@ -1017,6 +1017,7 @@ include(GlassTests.cmake)
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
+include(TofinoErrors.cmake)
 
 set  (PHASE0_PRAGMA_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/phase0_pragma.p4)
 file (RELATIVE_PATH phase0test ${P4C_SOURCE_DIR} ${PHASE0_PRAGMA_P4})

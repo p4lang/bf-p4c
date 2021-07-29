@@ -518,3 +518,4 @@ set_tests_properties("tofino2/p4c_2527" PROPERTIES TIMEOUT 1200)
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)
+include(JBayErrors.cmake)
