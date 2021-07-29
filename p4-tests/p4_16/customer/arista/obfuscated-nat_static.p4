@@ -1,8 +1,9 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.5.1 (SHA: 9c1b0ca)
+// p4c 9.6.0 (SHA: f6d0a70)
 
 #include <core.p4>
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tofino.p4>
+#include <tofino1arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("egress" , "Longwood.Aniak.Grannis" , 16)
@@ -314,7 +315,7 @@ header Hackett {
     bit<16> Lathrop;
 }
 
-header Horton {
+header Trammel {
     bit<24> Lacona;
     bit<24> Albemarle;
     bit<24> Grabill;
@@ -327,14 +328,6 @@ header Algodones {
 
 header Caborn {
     bit<8> Goodrich;
-}
-
-header Buckeye {
-    bit<24> Lacona;
-    bit<24> Albemarle;
-    bit<24> Grabill;
-    bit<24> Moorcroft;
-    bit<16> Lathrop;
 }
 
 header Topanga {
@@ -519,6 +512,12 @@ header Kalvesta {
 header Colson {
     bit<16> Lathrop;
     bit<64> FordCity;
+}
+
+header Caldwell {
+    bit<7>   Sahuarita;
+    PortId_t Tallassee;
+    bit<16>  Melrude;
 }
 
 typedef bit<16> Ipv4PartIdx_t;
@@ -803,7 +802,7 @@ struct Cortland {
     bit<1>  Bradner;
     bit<1>  Pelland;
     bit<32> Saltair;
-    bit<16> Tahuya;
+    bit<32> Tahuya;
     bit<12> Reidville;
     bit<12> Belfair;
     bit<12> Gomez;
@@ -994,6 +993,7 @@ struct Hapeville {
     Cortland  Elmsford;
     bool      Tanana;
     bit<1>    Ellinger;
+    bit<8>    Ikatan;
 }
 
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Kaluaaha" , "Longwood.Daisytown.Noyes")
@@ -1253,12 +1253,12 @@ struct Hapeville {
 @pa_mutually_exclusive("egress" , "Longwood.Sequim.Lathrop" , "Longwood.Daisytown.Glendevey") struct Ekron {
     Adona      Swisshome;
     Hackett    Sequim;
-    Horton     Hallwood;
+    Trammel    Hallwood;
     Algodones  Empire;
     Cornell    Daisytown;
     Naruna     Balmorhea;
     Colson     Baidland;
-    Horton     Earling;
+    Trammel    Earling;
     Topanga[2] Udall;
     Algodones  Crannell;
     Cornell    Aniak;
@@ -1271,7 +1271,8 @@ struct Hapeville {
     Neshoba    LoneJack;
     Kalvesta   LaMonte;
     Lowes      Terral;
-    Buckeye    HighRock;
+    Trammel    HighRock;
+    Algodones  Seagrove;
     Cornell    WebbCity;
     Littleton  Covert;
     Hampton    Ekwok;
@@ -1345,7 +1346,7 @@ parser Gamaliel(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
         transition accept;
     }
     state Hearne {
-        Orting.extract<Horton>(Longwood.Earling);
+        Orting.extract<Trammel>(Longwood.Earling);
         transition select((Orting.lookahead<bit<24>>())[7:0], (Orting.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Moultrie;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Moultrie;
@@ -1608,11 +1609,12 @@ parser Gamaliel(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
         transition accept;
     }
     state Wanamassa {
-        Orting.extract<Buckeye>(Longwood.HighRock);
+        Orting.extract<Trammel>(Longwood.HighRock);
         Yorkshire.NantyGlo.Lacona = Longwood.HighRock.Lacona;
         Yorkshire.NantyGlo.Albemarle = Longwood.HighRock.Albemarle;
-        Yorkshire.NantyGlo.Lathrop = Longwood.HighRock.Lathrop;
-        transition select((Orting.lookahead<bit<8>>())[7:0], Longwood.HighRock.Lathrop) {
+        Orting.extract<Algodones>(Longwood.Seagrove);
+        Yorkshire.NantyGlo.Lathrop = Longwood.Seagrove.Lathrop;
+        transition select((Orting.lookahead<bit<8>>())[7:0], Yorkshire.NantyGlo.Lathrop) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Peoria;
             (8w0x45 &&& 8w0xff, 16w0x800): Biggers;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Frederika;
@@ -1679,7 +1681,7 @@ control Monrovia(packet_out Orting, inout Ekron Longwood, in Hapeville Yorkshire
             }
         }
         Orting.emit<Adona>(Longwood.Swisshome);
-        Orting.emit<Horton>(Longwood.Earling);
+        Orting.emit<Trammel>(Longwood.Earling);
         Orting.emit<Colson>(Longwood.Baidland);
         Orting.emit<Topanga>(Longwood.Udall[0]);
         Orting.emit<Topanga>(Longwood.Udall[1]);
@@ -1695,7 +1697,8 @@ control Monrovia(packet_out Orting, inout Ekron Longwood, in Hapeville Yorkshire
         Orting.emit<Kalvesta>(Longwood.LaMonte);
         {
             Orting.emit<Lowes>(Longwood.Terral);
-            Orting.emit<Buckeye>(Longwood.HighRock);
+            Orting.emit<Trammel>(Longwood.HighRock);
+            Orting.emit<Algodones>(Longwood.Seagrove);
             Orting.emit<Cornell>(Longwood.WebbCity);
             Orting.emit<Littleton>(Longwood.Covert);
             Orting.emit<Hampton>(Longwood.Ekwok);
@@ -3752,7 +3755,7 @@ control Danbury(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
 control Neosho(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrinsic_metadata_t Masontown, in ingress_intrinsic_metadata_from_parser_t Knights, inout ingress_intrinsic_metadata_for_deparser_t Humeston, inout ingress_intrinsic_metadata_for_tm_t Wesson) {
     @name(".Islen.Homeacre") Hash<bit<16>>(HashAlgorithm_t.CRC16) Islen;
     @name(".BarNunn") action BarNunn() {
-        Yorkshire.Lynch.Knoke = Islen.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Longwood.HighRock.Lacona, Longwood.HighRock.Albemarle, Longwood.HighRock.Grabill, Longwood.HighRock.Moorcroft, Longwood.HighRock.Lathrop, Yorkshire.Masontown.Corinth });
+        Yorkshire.Lynch.Knoke = Islen.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Longwood.HighRock.Lacona, Longwood.HighRock.Albemarle, Longwood.HighRock.Grabill, Longwood.HighRock.Moorcroft, Longwood.Seagrove.Lathrop, Yorkshire.Masontown.Corinth });
     }
     @disable_atomic_modify(1) @name(".Jemison") table Jemison {
         actions = {
@@ -4521,7 +4524,7 @@ control Wattsburg(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
 }
 
 control Bethune(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrinsic_metadata_t Masontown, in ingress_intrinsic_metadata_from_parser_t Knights, inout ingress_intrinsic_metadata_for_deparser_t Humeston, inout ingress_intrinsic_metadata_for_tm_t Wesson) {
-    @name(".PawCreek") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) PawCreek;
+    @name(".PawCreek") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) PawCreek;
     @name(".Cornwall") action Cornwall(bit<32> Langhorne) {
         Yorkshire.Greenland.Pajaros = (bit<2>)PawCreek.execute((bit<32>)Langhorne);
     }
@@ -4621,7 +4624,7 @@ control Kerby(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrins
         Longwood.Daisytown.Steger = (bit<13>)13w0;
         Longwood.Daisytown.Dowell = Trion;
         Longwood.Daisytown.Glendevey = Baldridge;
-        Longwood.Daisytown.Rains = Yorkshire.Yerington.Uintah + 16w17;
+        Longwood.Daisytown.Rains = Yorkshire.Yerington.Uintah + 16w20 + 16w4 - 16w4 - 16w3;
         Longwood.Balmorhea.setValid();
         Longwood.Balmorhea.Suttle = (bit<1>)1w0;
         Longwood.Balmorhea.Galloway = (bit<1>)1w0;
@@ -4701,7 +4704,7 @@ control Nowlin(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
 }
 
 control Ashburn(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrinsic_metadata_t Yerington, in egress_intrinsic_metadata_from_parser_t Flynn, inout egress_intrinsic_metadata_for_deparser_t Algonquin, inout egress_intrinsic_metadata_for_output_port_t Beatrice) {
-    @name(".Estrella") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Estrella;
+    @name(".Estrella") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) Estrella;
     @name(".Luverne") action Luverne(bit<32> Langhorne) {
         Yorkshire.Shingler.Pajaros = (bit<1>)Estrella.execute((bit<32>)Langhorne);
     }
@@ -4853,6 +4856,7 @@ control Parmelee(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         }
         key = {
             Longwood.Crump.isValid()    : ternary @name("Crump") ;
+            Longwood.Sequim.isValid()   : ternary @name("Sequim") ;
             Yorkshire.Ocracoke.Loring   : ternary @name("Ocracoke.Loring") ;
             Yorkshire.Ocracoke.Brainard : ternary @name("Ocracoke.Brainard") ;
             Yorkshire.NantyGlo.Forkville: ternary @name("NantyGlo.Forkville") ;
@@ -5071,22 +5075,16 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
         Longwood.Hallwood.Albemarle = Yorkshire.Ocracoke.Albemarle;
         Longwood.Hallwood.Grabill = Magazine;
         Longwood.Hallwood.Moorcroft = McDougal;
-        Longwood.Empire.Lathrop = Longwood.Crannell.Lathrop;
         Longwood.Hallwood.setValid();
-        Longwood.Empire.setValid();
         Longwood.Earling.setInvalid();
-        Longwood.Crannell.setInvalid();
     }
     @name(".Batchelor") action Batchelor() {
-        Longwood.Empire.Lathrop = Longwood.Crannell.Lathrop;
         Longwood.Hallwood.Lacona = Longwood.Earling.Lacona;
         Longwood.Hallwood.Albemarle = Longwood.Earling.Albemarle;
         Longwood.Hallwood.Grabill = Longwood.Earling.Grabill;
         Longwood.Hallwood.Moorcroft = Longwood.Earling.Moorcroft;
         Longwood.Hallwood.setValid();
-        Longwood.Empire.setValid();
         Longwood.Earling.setInvalid();
-        Longwood.Crannell.setInvalid();
     }
     @name(".Dundee") action Dundee(bit<24> Magazine, bit<24> McDougal) {
         Trail(Magazine, McDougal);
@@ -6579,19 +6577,25 @@ control Elliston(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     @name(".Holcut") action Holcut() {
         Yorkshire.Sanford.Darien = Yorkshire.Lynch.Knoke;
     }
+    @name(".Dubuque") action Dubuque() {
+    }
     @name(".Valier") action Valier() {
+        Dubuque();
     }
     @name(".Waimalu") action Waimalu() {
+        Dubuque();
     }
     @name(".FarrWest") action FarrWest() {
         Longwood.Aniak.setInvalid();
         Longwood.Udall[0].setInvalid();
         Longwood.Crannell.Lathrop = Yorkshire.NantyGlo.Lathrop;
+        Dubuque();
     }
     @name(".Dante") action Dante() {
         Longwood.Nevis.setInvalid();
         Longwood.Udall[0].setInvalid();
         Longwood.Crannell.Lathrop = Yorkshire.NantyGlo.Lathrop;
+        Dubuque();
     }
     @name(".Nicolaus") action Nicolaus() {
     }
@@ -7012,12 +7016,12 @@ control Netarts(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
 parser Beaman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, out egress_intrinsic_metadata_t Yerington) {
     @name(".Alderson") value_set<bit<17>>(2) Alderson;
     state Challenge {
-        Orting.extract<Horton>(Longwood.Earling);
+        Orting.extract<Trammel>(Longwood.Earling);
         Orting.extract<Algodones>(Longwood.Crannell);
         transition accept;
     }
     state Seaford {
-        Orting.extract<Horton>(Longwood.Earling);
+        Orting.extract<Trammel>(Longwood.Earling);
         Orting.extract<Algodones>(Longwood.Crannell);
         Yorkshire.Ocracoke.Dovray = (bit<1>)1w1;
         transition accept;
@@ -7025,22 +7029,16 @@ parser Beaman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, out
     state Craigtown {
         transition Hearne;
     }
-    state Garrison {
-        Orting.extract<Algodones>(Longwood.Crannell);
-        Orting.extract<McBride>(Longwood.Crump);
-        transition accept;
-    }
     state Sespe {
         Orting.extract<Algodones>(Longwood.Crannell);
         transition accept;
     }
     state Hearne {
-        Orting.extract<Horton>(Longwood.Earling);
+        Orting.extract<Trammel>(Longwood.Earling);
         transition select((Orting.lookahead<bit<24>>())[7:0], (Orting.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Moultrie;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Moultrie;
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Moultrie;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Garrison;
             (8w0x45 &&& 8w0xff, 16w0x800): Milano;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Halltown;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Recluse;
@@ -7052,7 +7050,6 @@ parser Beaman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, out
     state Pinetop {
         Orting.extract<Topanga>(Longwood.Udall[1]);
         transition select((Orting.lookahead<bit<24>>())[7:0], (Orting.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Garrison;
             (8w0x45 &&& 8w0xff, 16w0x800): Milano;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Halltown;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Recluse;
@@ -7064,7 +7061,6 @@ parser Beaman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, out
         Orting.extract<Topanga>(Longwood.Udall[0]);
         transition select((Orting.lookahead<bit<24>>())[7:0], (Orting.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Pinetop;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Garrison;
             (8w0x45 &&& 8w0xff, 16w0x800): Milano;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Halltown;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Recluse;
@@ -7158,7 +7154,7 @@ parser Beaman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, out
                 Orting.extract(Longwood.Swisshome);
             }
         }
-        Orting.extract<Horton>(Longwood.Earling);
+        Orting.extract<Trammel>(Longwood.Earling);
         transition accept;
     }
     state CruzBay {
@@ -7198,13 +7194,13 @@ control Schofield(packet_out Orting, inout Ekron Longwood, in Hapeville Yorkshir
             Longwood.Aniak.Findlay = Woodville.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Longwood.Aniak.Noyes, Longwood.Aniak.Helton, Longwood.Aniak.Grannis, Longwood.Aniak.StarLake, Longwood.Aniak.Rains, Longwood.Aniak.SoapLake, Longwood.Aniak.Linden, Longwood.Aniak.Conner, Longwood.Aniak.Ledoux, Longwood.Aniak.Steger, Longwood.Aniak.Weinert, Longwood.Aniak.Quogue, Longwood.Aniak.Dowell, Longwood.Aniak.Glendevey }, false);
             Longwood.Daisytown.Findlay = Stanwood.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Longwood.Daisytown.Noyes, Longwood.Daisytown.Helton, Longwood.Daisytown.Grannis, Longwood.Daisytown.StarLake, Longwood.Daisytown.Rains, Longwood.Daisytown.SoapLake, Longwood.Daisytown.Linden, Longwood.Daisytown.Conner, Longwood.Daisytown.Ledoux, Longwood.Daisytown.Steger, Longwood.Daisytown.Weinert, Longwood.Daisytown.Quogue, Longwood.Daisytown.Dowell, Longwood.Daisytown.Glendevey }, false);
             Orting.emit<Hackett>(Longwood.Sequim);
-            Orting.emit<Horton>(Longwood.Hallwood);
+            Orting.emit<Trammel>(Longwood.Hallwood);
             Orting.emit<Topanga>(Longwood.Udall[0]);
             Orting.emit<Topanga>(Longwood.Udall[1]);
             Orting.emit<Algodones>(Longwood.Empire);
             Orting.emit<Cornell>(Longwood.Daisytown);
             Orting.emit<Naruna>(Longwood.Balmorhea);
-            Orting.emit<Horton>(Longwood.Earling);
+            Orting.emit<Trammel>(Longwood.Earling);
             Orting.emit<Algodones>(Longwood.Crannell);
             Orting.emit<Cornell>(Longwood.Aniak);
             Orting.emit<Littleton>(Longwood.Nevis);

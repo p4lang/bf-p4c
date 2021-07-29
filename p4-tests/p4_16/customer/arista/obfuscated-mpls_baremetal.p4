@@ -1,8 +1,9 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MPLS_BAREMETAL=1 -Ibf_arista_switch_mpls_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_mpls_baremetal --bf-rt-schema bf_arista_switch_mpls_baremetal/context/bf-rt.json
-// p4c 9.5.1 (SHA: 9c1b0ca)
+// p4c 9.6.0 (SHA: f6d0a70)
 
 #include <core.p4>
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tofino.p4>
+#include <tofino1arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("egress" , "Aniak.LaMoille.Rocklake" , 16)
@@ -38,12 +39,15 @@
 @pa_alias("ingress" , "Crannell.Greenwood.Palatine" , "Aniak.Emida.Chavies")
 @pa_alias("ingress" , "Crannell.Greenwood.Hoagland" , "Aniak.Paulding.Toklat")
 @pa_alias("ingress" , "Crannell.Greenwood.Ocoee" , "Aniak.Paulding.Devers")
+@pa_alias("ingress" , "Crannell.Greenwood.Kalvesta" , "Aniak.Kalvesta")
 @pa_alias("ingress" , "Crannell.Greenwood.Bowden" , "Aniak.LaMoille.Mendocino")
 @pa_alias("ingress" , "Crannell.Greenwood.Oriskany" , "Aniak.LaMoille.Montague")
 @pa_alias("ingress" , "Crannell.Greenwood.Kaluaaha" , "Aniak.LaMoille.Rains")
 @pa_alias("ingress" , "Crannell.Greenwood.Cisco" , "Aniak.LaMoille.SoapLake")
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Aniak.Hapeville.Selawik")
+@pa_alias("ingress" , "ig_intr_md_for_tm.copy_to_cpu" , "Aniak.Gosnell.Schroeder")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Aniak.Ocracoke.Florien")
+@pa_alias("ingress" , "ig_intr_md_for_tm.ucast_egress_port" , "Aniak.Gosnell.Chubbuck")
 @pa_alias("ingress" , "Aniak.Corvallis.Clover" , "Aniak.Corvallis.Blairsden")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Aniak.Lynch.Matheson")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Aniak.Hapeville.Selawik")
@@ -64,6 +68,7 @@
 @pa_alias("egress" , "Crannell.Greenwood.Hoagland" , "Aniak.Paulding.Toklat")
 @pa_alias("egress" , "Crannell.Greenwood.Ocoee" , "Aniak.Paulding.Devers")
 @pa_alias("egress" , "Crannell.Greenwood.Hackett" , "Aniak.Sopris.McGrady")
+@pa_alias("egress" , "Crannell.Greenwood.Kalvesta" , "Aniak.Kalvesta")
 @pa_alias("egress" , "Crannell.Greenwood.Bowden" , "Aniak.LaMoille.Mendocino")
 @pa_alias("egress" , "Crannell.Greenwood.Oriskany" , "Aniak.LaMoille.Montague")
 @pa_alias("egress" , "Crannell.Greenwood.Kaluaaha" , "Aniak.LaMoille.Rains")
@@ -183,6 +188,21 @@ struct Blitchton {
     bit<8>   Aguilita;
 }
 
+struct Husum {
+    @flexible 
+    bit<16> Almond;
+    @flexible 
+    bit<1>  Schroeder;
+    @flexible 
+    bit<12> Lovewell;
+    @flexible 
+    bit<9>  Chubbuck;
+    @flexible 
+    bit<1>  Hiland;
+    @flexible 
+    bit<3>  Hagerman;
+}
+
 @flexible struct Tusculum {
     bit<48> Forman;
     bit<20> Lattimore;
@@ -254,6 +274,8 @@ header Adona {
     @flexible 
     bit<1>  Hackett;
     @flexible 
+    bit<1>  Kalvesta;
+    @flexible 
     bit<6>  Kaluaaha;
 }
 
@@ -277,7 +299,7 @@ header Calcasieu {
     bit<16> Lathrop;
 }
 
-header Albemarle {
+header Jermyn {
     bit<24> Algodones;
     bit<24> Buckeye;
     bit<24> Grabill;
@@ -290,14 +312,6 @@ header Topanga {
 
 header Campbell {
     bit<8> Navarro;
-}
-
-header Allison {
-    bit<24> Algodones;
-    bit<24> Buckeye;
-    bit<24> Grabill;
-    bit<24> Moorcroft;
-    bit<16> Lathrop;
 }
 
 header Spearman {
@@ -484,6 +498,12 @@ header BigBay {
     bit<64> Flats;
 }
 
+header Cleator {
+    bit<7>   Buenos;
+    PortId_t Antlers;
+    bit<16>  Almond;
+}
+
 typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
@@ -652,6 +672,12 @@ struct Standish {
     bit<2>  Barrow;
 }
 
+struct Harvey {
+    bit<5>   Bostic;
+    bit<8>   LongPine;
+    PortId_t Masardis;
+}
+
 struct Foster {
     bit<10> Blairsden;
     bit<10> Clover;
@@ -735,7 +761,7 @@ struct Powhatan {
     bit<1>  TroutRun;
     bit<1>  Stanwood;
     bit<32> Netarts;
-    bit<16> Hartwick;
+    bit<32> Hartwick;
     bit<12> Crossnore;
     bit<12> Devers;
     bit<12> Weslaco;
@@ -871,6 +897,12 @@ struct Freeny {
     bit<1>  Osyka;
 }
 
+struct WolfTrap {
+    bit<1>  Schroeder;
+    bit<16> Isabel;
+    bit<9>  Chubbuck;
+}
+
 struct Brookneal {
     bit<1>  Hoven;
     bit<1>  Shirley;
@@ -901,6 +933,7 @@ struct Buckhorn {
     Daleville Mentone;
     Newfolden Elvaston;
     Ackley    Elkville;
+    Harvey    Padonia;
     Standish  Corvallis;
     Foster    Bridger;
     Renick    Belmont;
@@ -914,6 +947,7 @@ struct Buckhorn {
     Bayshore  Ocracoke;
     Freeburg  Lynch;
     Blitchton Sanford;
+    WolfTrap  Gosnell;
     Brookneal BealCity;
     bit<1>    Toluca;
     bit<1>    Goodwin;
@@ -925,6 +959,7 @@ struct Buckhorn {
     Powhatan  Blanchard;
     bool      Compton;
     bit<1>    Kalvesta;
+    bit<8>    Wharton;
 }
 
 @pa_mutually_exclusive("egress" , "Crannell.Shingler.Ankeny" , "Crannell.Readsboro.Levittown")
@@ -1337,14 +1372,15 @@ struct Buckhorn {
 @pa_mutually_exclusive("egress" , "Crannell.Readsboro.Lathrop" , "Crannell.Sumner.Killen") struct Bernice {
     Adona       Greenwood;
     Calcasieu   Readsboro;
-    Albemarle   Astor;
+    Sutherlin   Cortland;
+    Jermyn      Astor;
     Topanga     Hohenwald;
     Helton      Sumner;
     Irvine      Eolia;
     McBride     Kamrar;
     Loris       Greenland;
     Galloway    Shingler;
-    Albemarle   Gastonia;
+    Jermyn      Gastonia;
     Spearman[2] Hillsview;
     Topanga     Westbury;
     Helton      Makawao;
@@ -1356,11 +1392,13 @@ struct Buckhorn {
     McBride     Yerington;
     Chugwater   Belmore;
     Chloride[1] Millhaven;
-    Allison     Newhalem;
+    Jermyn      Newhalem;
+    Topanga     Rendville;
     Helton      Westville;
     Turkey      Baudette;
     Irvine      Ekron;
     Kenbridge   Swisshome;
+    Cleator     Kalvesta;
 }
 
 struct Sequim {
@@ -1395,6 +1433,7 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
     state Covert {
         transition select(Dozier.ingress_port) {
             WebbCity: Ekwok;
+            9w68 &&& 9w0x7f: Saltair;
             default: Wyndmoor;
         }
     }
@@ -1410,6 +1449,13 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
     state Crump {
         Talco.extract<Calcasieu>(Crannell.Readsboro);
         transition Wyndmoor;
+    }
+    state Saltair {
+        Talco.extract<Sutherlin>(Crannell.Cortland);
+        transition select(Crannell.Cortland.Daphne) {
+            8w0x4: Wyndmoor;
+            default: accept;
+        }
     }
     state Bronwood {
         Talco.extract<Topanga>(Crannell.Westbury);
@@ -1431,7 +1477,7 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
         transition accept;
     }
     state Wyndmoor {
-        Talco.extract<Albemarle>(Crannell.Gastonia);
+        Talco.extract<Jermyn>(Crannell.Gastonia);
         transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Picabo;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Picabo;
@@ -1714,11 +1760,12 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
         transition accept;
     }
     state Hearne {
-        Talco.extract<Allison>(Crannell.Newhalem);
+        Talco.extract<Jermyn>(Crannell.Newhalem);
         Aniak.Paulding.Algodones = Crannell.Newhalem.Algodones;
         Aniak.Paulding.Buckeye = Crannell.Newhalem.Buckeye;
-        Aniak.Paulding.Lathrop = Crannell.Newhalem.Lathrop;
-        transition select((Talco.lookahead<bit<8>>())[7:0], Crannell.Newhalem.Lathrop) {
+        Talco.extract<Topanga>(Crannell.Rendville);
+        Aniak.Paulding.Lathrop = Crannell.Rendville.Lathrop;
+        transition select((Talco.lookahead<bit<8>>())[7:0], Aniak.Paulding.Lathrop) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Moultrie;
             (8w0x45 &&& 8w0xff, 16w0x800): Armagh;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Pinetop;
@@ -1733,6 +1780,26 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
     }
     state start {
         Talco.extract<ingress_intrinsic_metadata_t>(Dozier);
+        transition select(Dozier.ingress_port, (Talco.lookahead<Edgemont>()).Ellicott) {
+            (9w68 &&& 9w0x7f, 3w4 &&& 3w0x7): Tahuya;
+            default: Reidville;
+        }
+    }
+    state Tahuya {
+        {
+            Talco.advance(32w64);
+            Talco.advance(32w48);
+            Talco.extract<Cleator>(Crannell.Kalvesta);
+            Aniak.Kalvesta = (bit<1>)1w1;
+            Aniak.Dozier.Corinth = Crannell.Kalvesta.Antlers;
+        }
+        transition Frederika;
+    }
+    state Reidville {
+        {
+            Aniak.Dozier.Corinth = Dozier.ingress_port;
+            Aniak.Kalvesta = (bit<1>)1w0;
+        }
         transition Frederika;
     }
     @override_phase0_table_name("Virgil") @override_phase0_action_name(".Florin") state Frederika {
@@ -1742,7 +1809,6 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
             Aniak.Sopris.Goulds = Saugatuck.Goulds;
             Aniak.Sopris.LaConner = (bit<12>)Saugatuck.LaConner;
             Aniak.Sopris.Oilmont = Saugatuck.Twain;
-            Aniak.Dozier.Corinth = Dozier.ingress_port;
         }
         transition Covert;
     }
@@ -1751,6 +1817,7 @@ parser Boonsboro(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out 
 control Flaherty(packet_out Talco, inout Bernice Crannell, in Buckhorn Aniak, in ingress_intrinsic_metadata_for_deparser_t Lindsborg) {
     @name(".Casnovia") Digest<Glassboro>() Casnovia;
     @name(".Sunbury") Mirror() Sunbury;
+    @name(".Higgston") Digest<Husum>() Higgston;
     apply {
         {
             if (Lindsborg.mirror_type == 3w1) {
@@ -1763,10 +1830,12 @@ control Flaherty(packet_out Talco, inout Bernice Crannell, in Buckhorn Aniak, in
         {
             if (Lindsborg.digest_type == 3w1) {
                 Casnovia.pack({ Aniak.Paulding.Grabill, Aniak.Paulding.Moorcroft, (bit<16>)Aniak.Paulding.Toklat, Aniak.Paulding.Bledsoe });
+            } else if (Lindsborg.digest_type == 3w5) {
+                Higgston.pack({ Crannell.Kalvesta.Almond, Aniak.Gosnell.Schroeder, Aniak.Dateland.Lovewell, Aniak.Gosnell.Chubbuck, Aniak.Dateland.Hiland, Lindsborg.drop_ctl });
             }
         }
         Talco.emit<Adona>(Crannell.Greenwood);
-        Talco.emit<Albemarle>(Crannell.Gastonia);
+        Talco.emit<Jermyn>(Crannell.Gastonia);
         Talco.emit<Spearman>(Crannell.Hillsview[0]);
         Talco.emit<Spearman>(Crannell.Hillsview[1]);
         Talco.emit<Topanga>(Crannell.Westbury);
@@ -1780,7 +1849,8 @@ control Flaherty(packet_out Talco, inout Bernice Crannell, in Buckhorn Aniak, in
         Talco.emit<Chloride>(Crannell.Millhaven[0]);
         {
             Talco.emit<Chugwater>(Crannell.Belmore);
-            Talco.emit<Allison>(Crannell.Newhalem);
+            Talco.emit<Jermyn>(Crannell.Newhalem);
+            Talco.emit<Topanga>(Crannell.Rendville);
             Talco.emit<Helton>(Crannell.Westville);
             Talco.emit<Turkey>(Crannell.Baudette);
             Talco.emit<Irvine>(Crannell.Ekron);
@@ -2000,6 +2070,9 @@ control RichBar(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrins
     apply {
         if (Aniak.Mickleton.Wauconda != 2w0) {
             Jerico.apply();
+        }
+        if (Crannell.Kalvesta.isValid() == true) {
+            Lindsborg.digest_type = (bit<3>)3w5;
         }
     }
 }
@@ -2738,7 +2811,7 @@ control Vanoss(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
 control Owanka(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsic_metadata_t Dozier, in ingress_intrinsic_metadata_from_parser_t Nevis, inout ingress_intrinsic_metadata_for_deparser_t Lindsborg, inout ingress_intrinsic_metadata_for_tm_t Ocracoke) {
     @name(".Natalia.Homeacre") Hash<bit<16>>(HashAlgorithm_t.CRC16) Natalia;
     @name(".Sunman") action Sunman() {
-        Aniak.Doddridge.Pinole = Natalia.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Crannell.Newhalem.Algodones, Crannell.Newhalem.Buckeye, Crannell.Newhalem.Grabill, Crannell.Newhalem.Moorcroft, Crannell.Newhalem.Lathrop, Aniak.Dozier.Corinth });
+        Aniak.Doddridge.Pinole = Natalia.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Crannell.Newhalem.Algodones, Crannell.Newhalem.Buckeye, Crannell.Newhalem.Grabill, Crannell.Newhalem.Moorcroft, Crannell.Rendville.Lathrop, Aniak.Dozier.Corinth });
     }
     @disable_atomic_modify(1) @name(".FairOaks") table FairOaks {
         actions = {
@@ -3467,7 +3540,7 @@ control Heizer(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsi
 }
 
 control Miltona(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrinsic_metadata_t Dozier, in ingress_intrinsic_metadata_from_parser_t Nevis, inout ingress_intrinsic_metadata_for_deparser_t Lindsborg, inout ingress_intrinsic_metadata_for_tm_t Ocracoke) {
-    @name(".Wakeman") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Wakeman;
+    @name(".Wakeman") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) Wakeman;
     @name(".Chilson") action Chilson(bit<32> Reynolds) {
         Aniak.Corvallis.Barrow = (bit<2>)Wakeman.execute((bit<32>)Reynolds);
     }
@@ -3567,7 +3640,7 @@ control Cropper(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsi
         Crannell.Sumner.Findlay = (bit<13>)13w0;
         Crannell.Sumner.Littleton = Lebanon;
         Crannell.Sumner.Killen = Siloam;
-        Crannell.Sumner.Linden = Aniak.Lynch.Uintah + 16w17;
+        Crannell.Sumner.Linden = Aniak.Lynch.Uintah + 16w20 + 16w4 - 16w4 - 16w3;
         Crannell.Shingler.setValid();
         Crannell.Shingler.Ankeny = (bit<1>)1w0;
         Crannell.Shingler.Denhoff = (bit<1>)1w0;
@@ -3647,7 +3720,7 @@ control FourTown(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
 }
 
 control Govan(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic_metadata_t Lynch, in egress_intrinsic_metadata_from_parser_t Kalaloch, inout egress_intrinsic_metadata_for_deparser_t Papeton, inout egress_intrinsic_metadata_for_output_port_t Yatesboro) {
-    @name(".Gladys") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Gladys;
+    @name(".Gladys") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) Gladys;
     @name(".Rumson") action Rumson(bit<32> Reynolds) {
         Aniak.Bridger.Barrow = (bit<1>)Gladys.execute((bit<32>)Reynolds);
     }
@@ -3799,6 +3872,7 @@ control BirchRun(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrin
         }
         key = {
             Crannell.Swisshome.isValid(): ternary @name("Swisshome") ;
+            Crannell.Readsboro.isValid(): ternary @name("Readsboro") ;
             Aniak.Dateland.Dugger       : ternary @name("Dateland.Dugger") ;
             Aniak.Dateland.Edgemoor     : ternary @name("Dateland.Edgemoor") ;
             Aniak.Paulding.Moquah       : ternary @name("Paulding.Moquah") ;
@@ -4055,22 +4129,16 @@ control Napanoch(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
         Crannell.Astor.Buckeye = Aniak.Dateland.Buckeye;
         Crannell.Astor.Grabill = Cornwall;
         Crannell.Astor.Moorcroft = Langhorne;
-        Crannell.Hohenwald.Lathrop = Crannell.Westbury.Lathrop;
         Crannell.Astor.setValid();
-        Crannell.Hohenwald.setValid();
         Crannell.Gastonia.setInvalid();
-        Crannell.Westbury.setInvalid();
     }
     @name(".Comobabi") action Comobabi() {
-        Crannell.Hohenwald.Lathrop = Crannell.Westbury.Lathrop;
         Crannell.Astor.Algodones = Crannell.Gastonia.Algodones;
         Crannell.Astor.Buckeye = Crannell.Gastonia.Buckeye;
         Crannell.Astor.Grabill = Crannell.Gastonia.Grabill;
         Crannell.Astor.Moorcroft = Crannell.Gastonia.Moorcroft;
         Crannell.Astor.setValid();
-        Crannell.Hohenwald.setValid();
         Crannell.Gastonia.setInvalid();
-        Crannell.Westbury.setInvalid();
     }
     @name(".Bovina") action Bovina(bit<24> Cornwall, bit<24> Langhorne) {
         PawCreek(Cornwall, Langhorne);
@@ -5292,6 +5360,7 @@ control August(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic
             Crannell.Makawao.Noyes    : ternary @name("Makawao.Noyes") ;
             Crannell.Makawao.isValid(): ternary @name("Makawao") ;
             Aniak.Dateland.Hiland     : ternary @name("Dateland.Hiland") ;
+            Aniak.Kalvesta            : exact @name("Kalvesta") ;
         }
         default_action = Bosco();
         size = 512;
@@ -5505,17 +5574,23 @@ control Mulhall(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrins
     @name(".Anthony") action Anthony() {
         Aniak.Emida.Miranda = Aniak.Doddridge.Pinole;
     }
+    @name(".Arredondo") action Arredondo() {
+    }
     @name(".Waiehu") action Waiehu() {
         Aniak.LaMoille.SoapLake = Crannell.Makawao.SoapLake;
+        Arredondo();
     }
     @name(".Stamford") action Stamford() {
         Aniak.LaMoille.SoapLake = Crannell.Mather.SoapLake;
+        Arredondo();
     }
     @name(".Tampa") action Tampa() {
         Crannell.Makawao.setInvalid();
+        Arredondo();
     }
     @name(".Pierson") action Pierson() {
         Crannell.Mather.setInvalid();
+        Arredondo();
     }
     @name(".Piedmont") action Piedmont() {
         Waiehu();
@@ -5525,6 +5600,7 @@ control Mulhall(inout Bernice Crannell, inout Buckhorn Aniak, in ingress_intrins
         Crannell.Yerington.setInvalid();
         Crannell.Millhaven[0].setInvalid();
         Crannell.Westbury.Lathrop = Aniak.Paulding.Lathrop;
+        Arredondo();
     }
     @name(".Perma") action Perma() {
         Aniak.LaMoille.SoapLake = (bit<2>)2w0;
@@ -5926,12 +6002,12 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
 parser Penrose(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out egress_intrinsic_metadata_t Lynch) {
     @name(".Seaford") value_set<bit<17>>(2) Seaford;
     state Eustis {
-        Talco.extract<Albemarle>(Crannell.Gastonia);
+        Talco.extract<Jermyn>(Crannell.Gastonia);
         Talco.extract<Topanga>(Crannell.Westbury);
         transition accept;
     }
     state Almont {
-        Talco.extract<Albemarle>(Crannell.Gastonia);
+        Talco.extract<Jermyn>(Crannell.Gastonia);
         Talco.extract<Topanga>(Crannell.Westbury);
         Aniak.Dateland.Welch = (bit<1>)1w1;
         transition accept;
@@ -5939,22 +6015,16 @@ parser Penrose(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out eg
     state SandCity {
         transition Wyndmoor;
     }
-    state Jayton {
-        Talco.extract<Topanga>(Crannell.Westbury);
-        Talco.extract<Kenbridge>(Crannell.Swisshome);
-        transition accept;
-    }
     state Peoria {
         Talco.extract<Topanga>(Crannell.Westbury);
         transition accept;
     }
     state Wyndmoor {
-        Talco.extract<Albemarle>(Crannell.Gastonia);
+        Talco.extract<Jermyn>(Crannell.Gastonia);
         transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Picabo;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Picabo;
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Picabo;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Jayton;
             (8w0x45 &&& 8w0xff, 16w0x800): Millstone;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Cotter;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Kinde;
@@ -5964,7 +6034,6 @@ parser Penrose(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out eg
     state Circle {
         Talco.extract<Spearman>(Crannell.Hillsview[1]);
         transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Jayton;
             (8w0x45 &&& 8w0xff, 16w0x800): Millstone;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Cotter;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Kinde;
@@ -5976,7 +6045,6 @@ parser Penrose(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out eg
         Talco.extract<Spearman>(Crannell.Hillsview[0]);
         transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Circle;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Jayton;
             (8w0x45 &&& 8w0xff, 16w0x800): Millstone;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Cotter;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Kinde;
@@ -6057,7 +6125,7 @@ parser Penrose(packet_in Talco, out Bernice Crannell, out Buckhorn Aniak, out eg
                 Talco.extract(Crannell.Greenwood);
             }
         }
-        Talco.extract<Albemarle>(Crannell.Gastonia);
+        Talco.extract<Jermyn>(Crannell.Gastonia);
         transition accept;
     }
     state Panola {
@@ -6095,7 +6163,7 @@ control NewRoads(packet_out Talco, inout Bernice Crannell, in Buckhorn Aniak, in
             Crannell.Makawao.Glendevey = Berrydale.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Crannell.Makawao.Grannis, Crannell.Makawao.StarLake, Crannell.Makawao.Rains, Crannell.Makawao.SoapLake, Crannell.Makawao.Linden, Crannell.Makawao.Conner, Crannell.Makawao.Ledoux, Crannell.Makawao.Steger, Crannell.Makawao.Quogue, Crannell.Makawao.Findlay, Crannell.Makawao.Noyes, Crannell.Makawao.Dowell, Crannell.Makawao.Littleton, Crannell.Makawao.Killen }, false);
             Crannell.Sumner.Glendevey = Benitez.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Crannell.Sumner.Grannis, Crannell.Sumner.StarLake, Crannell.Sumner.Rains, Crannell.Sumner.SoapLake, Crannell.Sumner.Linden, Crannell.Sumner.Conner, Crannell.Sumner.Ledoux, Crannell.Sumner.Steger, Crannell.Sumner.Quogue, Crannell.Sumner.Findlay, Crannell.Sumner.Noyes, Crannell.Sumner.Dowell, Crannell.Sumner.Littleton, Crannell.Sumner.Killen }, false);
             Talco.emit<Calcasieu>(Crannell.Readsboro);
-            Talco.emit<Albemarle>(Crannell.Astor);
+            Talco.emit<Jermyn>(Crannell.Astor);
             Talco.emit<Spearman>(Crannell.Hillsview[0]);
             Talco.emit<Spearman>(Crannell.Hillsview[1]);
             Talco.emit<Topanga>(Crannell.Hohenwald);
@@ -6105,7 +6173,7 @@ control NewRoads(packet_out Talco, inout Bernice Crannell, in Buckhorn Aniak, in
             Talco.emit<Loris>(Crannell.Greenland);
             Talco.emit<McBride>(Crannell.Kamrar);
             Talco.emit<Chloride>(Crannell.Millhaven[0]);
-            Talco.emit<Albemarle>(Crannell.Gastonia);
+            Talco.emit<Jermyn>(Crannell.Gastonia);
             Talco.emit<Topanga>(Crannell.Westbury);
             Talco.emit<Helton>(Crannell.Makawao);
             Talco.emit<Turkey>(Crannell.Mather);

@@ -1,8 +1,9 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.5.1 (SHA: 9c1b0ca)
+// p4c 9.6.0 (SHA: f6d0a70)
 
 #include <core.p4>
-#include <t2na.p4>       /* TOFINO2_ONLY */
+#include <tofino2.p4>
+#include <tofino2arch.p4>
 
 @pa_auto_init_metadata
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Kendrick" , "Wanamassa.Knights.Kendrick")
@@ -68,6 +69,7 @@
 @pa_no_init("ingress" , "Peoria.Masontown.Stratford")
 @pa_no_init("ingress" , "Peoria.Aniak.LaUnion")
 @pa_no_init("egress" , "Peoria.Nevis.LaUnion")
+@pa_no_init("egress" , "Peoria.Belmore.Bells")
 @pa_no_init("egress" , "Peoria.Belmore.Kenney")
 @pa_no_init("egress" , "Peoria.Belmore.Herod")
 @pa_no_init("egress" , "Peoria.Belmore.Coalwood")
@@ -94,6 +96,7 @@
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Coalwood" , "Wanamassa.Knights.Coalwood")
 @pa_container_size("pipe_a" , "egress" , "Peoria.Belmore.Bells" , 32)
 @pa_no_overlay("pipe_a" , "ingress" , "Peoria.Masontown.Lenexa")
+@pa_container_size("pipe_a" , "egress" , "Wanamassa.Dushore.Colona" , 16)
 @pa_mutually_exclusive("ingress" , "Peoria.ElMirage.Thistle" , "Peoria.Yerington.Darien")
 @pa_no_overlay("ingress" , "Wanamassa.Moultrie.Charco")
 @pa_no_overlay("ingress" , "Wanamassa.Pinetop.Charco")
@@ -171,6 +174,7 @@
 
 header Waipahu {
     bit<8> Shabbona;
+    bit<8> Yorkville;
     @flexible 
     bit<9> Ronan;
 }
@@ -409,7 +413,7 @@ header Petrey {
     bit<16> Clarion;
 }
 
-header Loris {
+header Trooper {
     bit<24> Mackville;
     bit<24> McBride;
     bit<24> Toklat;
@@ -422,14 +426,6 @@ header Vinemont {
 
 header ElkPoint {
     bit<8> KentPark;
-}
-
-header Kenbridge {
-    bit<24> Mackville;
-    bit<24> McBride;
-    bit<24> Toklat;
-    bit<24> Bledsoe;
-    bit<16> Clarion;
 }
 
 header Parkville {
@@ -614,6 +610,12 @@ header Reidville {
 header Trotwood {
     bit<16> Clarion;
     bit<64> Columbus;
+}
+
+header Winner {
+    bit<7>   Taopi;
+    PortId_t Montross;
+    bit<16>  Webbville;
 }
 
 typedef bit<16> Ipv4PartIdx_t;
@@ -871,7 +873,7 @@ struct Karluk {
     bit<1>  Weatherby;
     bit<1>  Horns;
     bit<32> Kealia;
-    bit<16> BelAir;
+    bit<32> BelAir;
     bit<13> Newberg;
     bit<13> Etter;
     bit<12> VanWert;
@@ -1061,6 +1063,7 @@ struct Martelle {
     Karluk    Whitetail;
     bool      Cotuit;
     bit<1>    Deering;
+    bit<8>    McCloud;
 }
 
 @pa_mutually_exclusive("egress" , "Wanamassa.Garrison.Hulbert" , "Wanamassa.Milano.Montross")
@@ -1816,7 +1819,7 @@ struct Martelle {
     Littleton    Alstown;
     Adona        Yorkshire;
     Petrey       Knights;
-    Loris        Humeston;
+    Trooper      Humeston;
     Vinemont     Armagh;
     Suttle       Basco;
     Parkland     Gamaliel;
@@ -1825,7 +1828,7 @@ struct Martelle {
     Caroleen     Thawville;
     Guadalupe    Harriet;
     Bucktown     Dushore;
-    Loris        Bratt;
+    Trooper      Bratt;
     Parkville[2] Tabler;
     Vinemont     Hearne;
     Suttle       Moultrie;
@@ -1836,7 +1839,8 @@ struct Martelle {
     DonaAna      Biggers;
     Belfair      Pineville;
     Guadalupe    Nooksack;
-    Kenbridge    Courtdale;
+    Trooper      Courtdale;
+    Vinemont     Macedonia;
     Suttle       Swifton;
     Sutherlin    PeaRidge;
     Knierim      Cranbury;
@@ -2445,7 +2449,7 @@ control Nucla(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
 control McDonough(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrinsic_metadata_t Covert, in ingress_intrinsic_metadata_from_parser_t Frederika, inout ingress_intrinsic_metadata_for_deparser_t Saugatuck, inout ingress_intrinsic_metadata_for_tm_t Ekwok) {
     @name(".Ozona.Homeacre") Hash<bit<16>>(HashAlgorithm_t.CRC16) Ozona;
     @name(".Leland") action Leland() {
-        Peoria.Millhaven.Salix = Ozona.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Wanamassa.Courtdale.Mackville, Wanamassa.Courtdale.McBride, Wanamassa.Courtdale.Toklat, Wanamassa.Courtdale.Bledsoe, Wanamassa.Courtdale.Clarion, Peoria.Covert.Bayshore });
+        Peoria.Millhaven.Salix = Ozona.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Wanamassa.Courtdale.Mackville, Wanamassa.Courtdale.McBride, Wanamassa.Courtdale.Toklat, Wanamassa.Courtdale.Bledsoe, Wanamassa.Macedonia.Clarion, Peoria.Covert.Bayshore });
     }
     @disable_atomic_modify(1) @name(".Aynor") table Aynor {
         actions = {
@@ -3229,7 +3233,7 @@ control Cropper(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intri
 }
 
 control PellCity(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrinsic_metadata_t Covert, in ingress_intrinsic_metadata_from_parser_t Frederika, inout ingress_intrinsic_metadata_for_deparser_t Saugatuck, inout ingress_intrinsic_metadata_for_tm_t Ekwok) {
-    @name(".Lebanon") Meter<bit<32>>(32w31, MeterType_t.BYTES, 8w1, 8w1, 8w0) Lebanon;
+    @name(".Lebanon") Meter<bit<32>>(32w256, MeterType_t.BYTES, 8w1, 8w1, 8w0) Lebanon;
     @name(".Siloam") action Siloam(bit<32> Ozark) {
         Peoria.Aniak.LaUnion = (bit<1>)Lebanon.execute((bit<32>)Ozark);
     }
@@ -3329,7 +3333,7 @@ control Brownson(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
         Wanamassa.Basco.Teigen = (bit<13>)13w0;
         Wanamassa.Basco.Chugwater = Bernstein;
         Wanamassa.Basco.Charco = Kingman;
-        Wanamassa.Basco.Whitten = Peoria.Crump.Avondale + 16w17;
+        Wanamassa.Basco.Whitten = Peoria.Crump.Avondale + 16w20 + 16w4 - 16w4 - 16w4;
         Wanamassa.Dushore.setValid();
         Wanamassa.Dushore.Hulbert = (bit<1>)1w0;
         Wanamassa.Dushore.Philbrook = (bit<1>)1w0;
@@ -3425,7 +3429,7 @@ control Woolwine(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
 }
 
 control Westend(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
-    @name(".Scotland") Meter<bit<32>>(32w31, MeterType_t.BYTES, 8w1, 8w1, 8w0) Scotland;
+    @name(".Scotland") Meter<bit<32>>(32w256, MeterType_t.BYTES, 8w1, 8w1, 8w0) Scotland;
     @name(".Addicks") action Addicks(bit<32> Ozark) {
         Peoria.Nevis.LaUnion = (bit<1>)Scotland.execute((bit<32>)Ozark);
     }
@@ -3653,6 +3657,7 @@ control Onamia(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         key = {
             Wanamassa.Neponset.isValid(): ternary @name("Neponset") ;
+            Wanamassa.Knights.isValid() : ternary @name("Knights") ;
             Peoria.Belmore.Kendrick     : ternary @name("Belmore.Kendrick") ;
             Peoria.Belmore.McGrady      : ternary @name("Belmore.McGrady") ;
             Peoria.Masontown.Rockham    : ternary @name("Masontown.Rockham") ;
@@ -3773,6 +3778,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
         Peoria.Belmore.Coalwood = (bit<1>)1w0;
         Peoria.Nevis.LaUnion = (bit<1>)1w0;
         Peoria.Belmore.Ardara = (bit<1>)1w0;
+        Peoria.Belmore.Bells = (bit<3>)3w0;
     }
     @name(".Herald") action Herald() {
         Wanilla();
@@ -4214,22 +4220,16 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Wanamassa.Humeston.McBride = Peoria.Belmore.McBride;
         Wanamassa.Humeston.Toklat = Dunkerton;
         Wanamassa.Humeston.Bledsoe = Gunder;
-        Wanamassa.Armagh.Clarion = Wanamassa.Hearne.Clarion;
         Wanamassa.Humeston.setValid();
-        Wanamassa.Armagh.setValid();
         Wanamassa.Bratt.setInvalid();
-        Wanamassa.Hearne.setInvalid();
     }
     @name(".Maury") action Maury() {
-        Wanamassa.Armagh.Clarion = Wanamassa.Hearne.Clarion;
         Wanamassa.Humeston.Mackville = Wanamassa.Bratt.Mackville;
         Wanamassa.Humeston.McBride = Wanamassa.Bratt.McBride;
         Wanamassa.Humeston.Toklat = Wanamassa.Bratt.Toklat;
         Wanamassa.Humeston.Bledsoe = Wanamassa.Bratt.Bledsoe;
         Wanamassa.Humeston.setValid();
-        Wanamassa.Armagh.setValid();
         Wanamassa.Bratt.setInvalid();
-        Wanamassa.Hearne.setInvalid();
     }
     @name(".Ashburn") action Ashburn(bit<24> Dunkerton, bit<24> Gunder) {
         Ragley(Dunkerton, Gunder);
@@ -5805,12 +5805,12 @@ control Rembrandt(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
 
 control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrinsic_metadata_t Covert, in ingress_intrinsic_metadata_from_parser_t Frederika, inout ingress_intrinsic_metadata_for_deparser_t Saugatuck, inout ingress_intrinsic_metadata_for_tm_t Ekwok) {
     @name(".Hartford") action Hartford(bit<32> BelAir, bit<32> Kealia, bit<12> VanWert) {
-        Peoria.Whitetail.BelAir = (bit<16>)BelAir;
+        Peoria.Whitetail.BelAir = BelAir;
         Peoria.Whitetail.Kealia = Kealia;
         Peoria.Whitetail.VanWert = VanWert;
     }
     @name(".Halstead") action Halstead(bit<32> BelAir, bit<32> Kealia, bit<16> Newberg) {
-        Peoria.Whitetail.BelAir = (bit<16>)BelAir;
+        Peoria.Whitetail.BelAir = BelAir;
         Peoria.Whitetail.Kealia = Kealia;
         Peoria.Whitetail.Bothwell = (bit<1>)1w1;
         Peoria.Whitetail.Newberg = (bit<13>)Newberg;
@@ -5842,11 +5842,11 @@ control Pettigrew(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
         const default_action = NoAction();
     }
     @name(".Alderson") action Alderson(bit<32> BelAir, bit<32> Kealia) {
-        Peoria.Whitetail.BelAir = Peoria.Whitetail.BelAir & (bit<16>)BelAir;
+        Peoria.Whitetail.BelAir = Peoria.Whitetail.BelAir & BelAir;
         Peoria.Whitetail.Kealia = Peoria.Whitetail.Kealia & Kealia;
     }
     @name(".Mellott") action Mellott(bit<32> BelAir, bit<32> Kealia) {
-        Peoria.Whitetail.BelAir = Peoria.Whitetail.BelAir & (bit<16>)BelAir;
+        Peoria.Whitetail.BelAir = Peoria.Whitetail.BelAir & BelAir;
         Peoria.Whitetail.Kealia = Peoria.Whitetail.Kealia & Kealia;
         Peoria.Whitetail.Bothwell = (bit<1>)1w1;
     }
@@ -14324,7 +14324,7 @@ parser Lamar(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out in
         transition accept;
     }
     state Folcroft {
-        Doral.extract<Loris>(Wanamassa.Bratt);
+        Doral.extract<Trooper>(Wanamassa.Bratt);
         transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Elliston;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Elliston;
@@ -14585,13 +14585,14 @@ parser Lamar(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out in
         transition accept;
     }
     state LaFayette {
-        Doral.extract<Kenbridge>(Wanamassa.Courtdale);
-        Peoria.Masontown.Toklat = Wanamassa.Courtdale.Toklat;
-        Peoria.Masontown.Bledsoe = Wanamassa.Courtdale.Bledsoe;
+        Doral.extract<Trooper>(Wanamassa.Courtdale);
         Peoria.Masontown.Mackville = Wanamassa.Courtdale.Mackville;
         Peoria.Masontown.McBride = Wanamassa.Courtdale.McBride;
-        Peoria.Masontown.Clarion = Wanamassa.Courtdale.Clarion;
-        transition select((Doral.lookahead<bit<8>>())[7:0], Wanamassa.Courtdale.Clarion) {
+        Peoria.Masontown.Toklat = Wanamassa.Courtdale.Toklat;
+        Peoria.Masontown.Bledsoe = Wanamassa.Courtdale.Bledsoe;
+        Doral.extract<Vinemont>(Wanamassa.Macedonia);
+        Peoria.Masontown.Clarion = Wanamassa.Macedonia.Clarion;
+        transition select((Doral.lookahead<bit<8>>())[7:0], Peoria.Masontown.Clarion) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Carrizozo;
             (8w0x45 &&& 8w0xff, 16w0x800): Fairchild;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Munday;
@@ -14959,43 +14960,49 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Peoria.Baudette.Eureka = Peoria.Minneota.Kalaloch;
     }
     @name(".Woodsboro") DirectMeter(MeterType_t.BYTES) Woodsboro;
+    @name(".Radom") action Radom() {
+        Wanamassa.Bratt.setInvalid();
+        Wanamassa.Hearne.setInvalid();
+        Wanamassa.Tabler[0].setInvalid();
+        Wanamassa.Tabler[1].setInvalid();
+    }
+    @name(".Angus") action Angus() {
+    }
     @name(".Abbyville") action Abbyville() {
+        Angus();
     }
     @name(".Cantwell") action Cantwell() {
+        Angus();
     }
     @name(".Parmele") action Parmele() {
         Wanamassa.Moultrie.setInvalid();
         Wanamassa.Tabler[0].setInvalid();
         Wanamassa.Hearne.Clarion = Peoria.Masontown.Clarion;
+        Angus();
     }
     @name(".Easley") action Easley() {
         Wanamassa.Pinetop.setInvalid();
         Wanamassa.Tabler[0].setInvalid();
         Wanamassa.Hearne.Clarion = Peoria.Masontown.Clarion;
+        Angus();
     }
     @name(".Rawson") action Rawson() {
         Abbyville();
-        Wanamassa.Bratt.setInvalid();
-        Wanamassa.Hearne.setInvalid();
         Wanamassa.Moultrie.setInvalid();
         Wanamassa.Milano.setInvalid();
         Wanamassa.Dacono.setInvalid();
         Wanamassa.Pineville.setInvalid();
         Wanamassa.Nooksack.setInvalid();
-        Wanamassa.Tabler[0].setInvalid();
-        Wanamassa.Tabler[1].setInvalid();
+        Radom();
     }
     @name(".Rossburg") action Rossburg() {
         Cantwell();
-        Wanamassa.Bratt.setInvalid();
-        Wanamassa.Hearne.setInvalid();
         Wanamassa.Pinetop.setInvalid();
         Wanamassa.Milano.setInvalid();
         Wanamassa.Dacono.setInvalid();
         Wanamassa.Pineville.setInvalid();
         Wanamassa.Nooksack.setInvalid();
-        Wanamassa.Tabler[0].setInvalid();
-        Wanamassa.Tabler[1].setInvalid();
+        Radom();
     }
     @name(".Ladner") action Ladner() {
     }
@@ -15503,7 +15510,7 @@ control Conda(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria, in 
         {
             Doral.emit<Adona>(Wanamassa.Yorkshire);
         }
-        Doral.emit<Loris>(Wanamassa.Bratt);
+        Doral.emit<Trooper>(Wanamassa.Bratt);
         Doral.emit<Parkville>(Wanamassa.Tabler[0]);
         Doral.emit<Parkville>(Wanamassa.Tabler[1]);
         Doral.emit<Vinemont>(Wanamassa.Hearne);
@@ -15516,7 +15523,8 @@ control Conda(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria, in 
         Doral.emit<Belfair>(Wanamassa.Pineville);
         {
             Doral.emit<Guadalupe>(Wanamassa.Nooksack);
-            Doral.emit<Kenbridge>(Wanamassa.Courtdale);
+            Doral.emit<Trooper>(Wanamassa.Courtdale);
+            Doral.emit<Vinemont>(Wanamassa.Macedonia);
             Doral.emit<Suttle>(Wanamassa.Swifton);
             Doral.emit<Sutherlin>(Wanamassa.PeaRidge);
             Doral.emit<Knierim>(Wanamassa.Cranbury);
@@ -15528,12 +15536,12 @@ control Conda(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria, in 
 parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out egress_intrinsic_metadata_t Crump) {
     @name(".Bendavis") value_set<bit<17>>(2) Bendavis;
     state Colburn {
-        Doral.extract<Loris>(Wanamassa.Bratt);
+        Doral.extract<Trooper>(Wanamassa.Bratt);
         Doral.extract<Vinemont>(Wanamassa.Hearne);
         transition accept;
     }
     state Kirkwood {
-        Doral.extract<Loris>(Wanamassa.Bratt);
+        Doral.extract<Trooper>(Wanamassa.Bratt);
         Doral.extract<Vinemont>(Wanamassa.Hearne);
         Peoria.Belmore.Goessel = (bit<1>)1w1;
         transition accept;
@@ -15541,22 +15549,16 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
     state Munich {
         transition Folcroft;
     }
-    state Manakin {
-        Doral.extract<Vinemont>(Wanamassa.Hearne);
-        Doral.extract<Devers>(Wanamassa.Neponset);
-        transition accept;
-    }
     state Newburgh {
         Doral.extract<Vinemont>(Wanamassa.Hearne);
         transition accept;
     }
     state Folcroft {
-        Doral.extract<Loris>(Wanamassa.Bratt);
+        Doral.extract<Trooper>(Wanamassa.Bratt);
         transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Elliston;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Elliston;
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Elliston;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Manakin;
             (8w0x45 &&& 8w0xff, 16w0x800): Tontogany;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Glouster;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Penrose;
@@ -15566,7 +15568,6 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
     state Moapa {
         Doral.extract<Parkville>(Wanamassa.Tabler[1]);
         transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Manakin;
             (8w0x45 &&& 8w0xff, 16w0x800): Tontogany;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Glouster;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Penrose;
@@ -15578,7 +15579,6 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
         Doral.extract<Parkville>(Wanamassa.Tabler[0]);
         transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Moapa;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Manakin;
             (8w0x45 &&& 8w0xff, 16w0x800): Tontogany;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Glouster;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Penrose;
@@ -15664,13 +15664,14 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
                 Doral.extract(Wanamassa.Alstown);
             }
         }
-        Doral.extract<Loris>(Wanamassa.Bratt);
+        Doral.extract<Trooper>(Wanamassa.Bratt);
         transition accept;
     }
     state Coconino {
         Waipahu Talco;
         Doral.extract<Waipahu>(Talco);
         Peoria.Belmore.Ronan = Talco.Ronan;
+        Peoria.McCloud = Talco.Yorkville;
         transition select(Talco.Shabbona) {
             8w1 &&& 8w0x7: Colburn;
             8w2 &&& 8w0x7: Kirkwood;
@@ -15794,7 +15795,7 @@ control Cassadaga(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria,
             Wanamassa.Moultrie.Almedia = Yantis.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Wanamassa.Moultrie.Galloway, Wanamassa.Moultrie.Ankeny, Wanamassa.Moultrie.Denhoff, Wanamassa.Moultrie.Provo, Wanamassa.Moultrie.Whitten, Wanamassa.Moultrie.Joslin, Wanamassa.Moultrie.Weyauwega, Wanamassa.Moultrie.Powderly, Wanamassa.Moultrie.Welcome, Wanamassa.Moultrie.Teigen, Wanamassa.Moultrie.Naruna, Wanamassa.Moultrie.Lowes, Wanamassa.Moultrie.Chugwater, Wanamassa.Moultrie.Charco }, false);
             Wanamassa.Basco.Almedia = Harvard.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Wanamassa.Basco.Galloway, Wanamassa.Basco.Ankeny, Wanamassa.Basco.Denhoff, Wanamassa.Basco.Provo, Wanamassa.Basco.Whitten, Wanamassa.Basco.Joslin, Wanamassa.Basco.Weyauwega, Wanamassa.Basco.Powderly, Wanamassa.Basco.Welcome, Wanamassa.Basco.Teigen, Wanamassa.Basco.Naruna, Wanamassa.Basco.Lowes, Wanamassa.Basco.Chugwater, Wanamassa.Basco.Charco }, false);
             Doral.emit<Petrey>(Wanamassa.Knights);
-            Doral.emit<Loris>(Wanamassa.Humeston);
+            Doral.emit<Trooper>(Wanamassa.Humeston);
             Doral.emit<Parkville>(Wanamassa.Tabler[0]);
             Doral.emit<Parkville>(Wanamassa.Tabler[1]);
             Doral.emit<Vinemont>(Wanamassa.Armagh);
@@ -15805,7 +15806,7 @@ control Cassadaga(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria,
             Doral.emit<Caroleen>(Wanamassa.Thawville);
             Doral.emit<Belfair>(Wanamassa.SanRemo);
             Doral.emit<Guadalupe>(Wanamassa.Harriet);
-            Doral.emit<Loris>(Wanamassa.Bratt);
+            Doral.emit<Trooper>(Wanamassa.Bratt);
             Doral.emit<Vinemont>(Wanamassa.Hearne);
             Doral.emit<Suttle>(Wanamassa.Moultrie);
             Doral.emit<Sutherlin>(Wanamassa.Pinetop);
@@ -15824,6 +15825,7 @@ struct Chispa {
 @name(".pipe_a") Pipeline<Lookeba, Martelle, Lookeba, Martelle>(Lamar(), NewRoads(), Conda(), Lenapah(), Stratton(), Cassadaga()) pipe_a;
 
 parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out ingress_intrinsic_metadata_t Covert) {
+    @name(".Dalkeith") value_set<bit<9>>(2) Dalkeith;
     state start {
         Doral.extract<ingress_intrinsic_metadata_t>(Covert);
         transition Bridgton;
@@ -15841,6 +15843,13 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
             Doral.extract(Wanamassa.Yorkshire);
         }
         Peoria.Belmore.Oilmont = Peoria.Masontown.Blencoe;
+        transition select(Peoria.Covert.Bayshore) {
+            Dalkeith: Cornville;
+            default: Folcroft;
+        }
+    }
+    state Cornville {
+        Wanamassa.Knights.setValid();
         transition Folcroft;
     }
     state Newburgh {
@@ -15848,7 +15857,7 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         transition accept;
     }
     state Folcroft {
-        Doral.extract<Loris>(Wanamassa.Bratt);
+        Doral.extract<Trooper>(Wanamassa.Bratt);
         Peoria.Belmore.Mackville = Wanamassa.Bratt.Mackville;
         Peoria.Belmore.McBride = Wanamassa.Bratt.McBride;
         transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
@@ -16080,7 +16089,7 @@ control Almond(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria, in
         {
             Doral.emit<Littleton>(Wanamassa.Alstown);
         }
-        Doral.emit<Loris>(Wanamassa.Bratt);
+        Doral.emit<Trooper>(Wanamassa.Bratt);
         Doral.emit<Parkville>(Wanamassa.Tabler[0]);
         Doral.emit<Parkville>(Wanamassa.Tabler[1]);
         Doral.emit<Vinemont>(Wanamassa.Hearne);

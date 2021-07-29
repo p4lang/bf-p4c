@@ -1,8 +1,9 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.5.1 (SHA: 9c1b0ca)
+// p4c 9.6.0 (SHA: f6d0a70)
 
 #include <core.p4>
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tofino.p4>
+#include <tofino1arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Millstone.Livonia.Townville" , 8)
@@ -194,7 +195,7 @@ header Lacona {
     bit<16> Basic;
 }
 
-header StarLake {
+header Penzance {
     bit<24> Rains;
     bit<24> SoapLake;
     bit<24> Connell;
@@ -207,14 +208,6 @@ header Linden {
 
 header Scottdale {
     bit<8> Camargo;
-}
-
-header Conner {
-    bit<24> Rains;
-    bit<24> SoapLake;
-    bit<24> Connell;
-    bit<24> Cisco;
-    bit<16> Basic;
 }
 
 header Ledoux {
@@ -399,6 +392,12 @@ header Chaffee {
 header TroutRun {
     bit<16> Basic;
     bit<64> Bradner;
+}
+
+header Shasta {
+    bit<7>   Weathers;
+    PortId_t Kearns;
+    bit<16>  Coupland;
 }
 
 typedef bit<16> Ipv4PartIdx_t;
@@ -637,7 +636,7 @@ struct Cuprum {
     bit<1>  Randall;
     bit<1>  Broussard;
     bit<32> Arvada;
-    bit<16> Kalkaska;
+    bit<32> Kalkaska;
     bit<12> Newfolden;
     bit<12> Fairmount;
     bit<12> Candle;
@@ -826,12 +825,13 @@ struct Wildorado {
     Cuprum    Balmorhea;
     bool      Earling;
     bit<1>    Elkton;
+    bit<8>    Laclede;
 }
 
 struct Udall {
     Dugger    Crannell;
     Lacona    Aniak;
-    StarLake  Nevis;
+    Penzance  Nevis;
     Ledoux[2] Lindsborg;
     Linden    Magasco;
     Riner     Twain;
@@ -878,7 +878,7 @@ parser Picabo(packet_in Circle, out Udall Jayton, out Wildorado Millstone, out i
         transition Armagh;
     }
     state Bowers {
-        Circle.extract<StarLake>(Jayton.Nevis);
+        Circle.extract<Penzance>(Jayton.Nevis);
         Millstone.Ocracoke.Connell = Jayton.Nevis.Connell;
         Millstone.Ocracoke.Cisco = Jayton.Nevis.Cisco;
         Millstone.BealCity.Rains = Jayton.Nevis.Rains;
@@ -886,7 +886,7 @@ parser Picabo(packet_in Circle, out Udall Jayton, out Wildorado Millstone, out i
         transition Basco;
     }
     state Skene {
-        Circle.extract<StarLake>(Jayton.Nevis);
+        Circle.extract<Penzance>(Jayton.Nevis);
         Millstone.Ocracoke.Connell = Jayton.Nevis.Connell;
         Millstone.Ocracoke.Cisco = Jayton.Nevis.Cisco;
         Millstone.BealCity.Rains = Jayton.Nevis.Rains;
@@ -939,7 +939,7 @@ control Harriet(packet_out Circle, inout Udall Jayton, in Wildorado Millstone, i
             Bratt.pack({ Millstone.Ocracoke.Connell, Millstone.Ocracoke.Cisco, (bit<16>)Millstone.Ocracoke.Higginson, Millstone.Ocracoke.Oriskany });
         }
         Circle.emit<Dugger>(Jayton.Crannell);
-        Circle.emit<StarLake>(Jayton.Nevis);
+        Circle.emit<Penzance>(Jayton.Nevis);
         Circle.emit<Ledoux>(Jayton.Lindsborg[0]);
         Circle.emit<Linden>(Jayton.Magasco);
         Circle.emit<Riner>(Jayton.Twain);
@@ -1850,7 +1850,7 @@ parser Ozona(packet_in Circle, out Udall Jayton, out Wildorado Millstone, out eg
         transition Thawville;
     }
     state Thawville {
-        Circle.extract<StarLake>(Jayton.Nevis);
+        Circle.extract<Penzance>(Jayton.Nevis);
         transition select((Circle.lookahead<bit<16>>())[15:0]) {
             16w0x8100: Basco;
             default: Millikin;
@@ -1869,7 +1869,7 @@ parser Ozona(packet_in Circle, out Udall Jayton, out Wildorado Millstone, out eg
 control Meyers(packet_out Circle, inout Udall Jayton, in Wildorado Millstone, in egress_intrinsic_metadata_for_deparser_t Brady) {
     apply {
         Circle.emit<Lacona>(Jayton.Aniak);
-        Circle.emit<StarLake>(Jayton.Nevis);
+        Circle.emit<Penzance>(Jayton.Nevis);
         Circle.emit<Ledoux>(Jayton.Lindsborg[0]);
         Circle.emit<Linden>(Jayton.Magasco);
     }

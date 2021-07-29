@@ -1,8 +1,9 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
-// p4c 9.5.1 (SHA: 9c1b0ca)
+// p4c 9.6.0 (SHA: f6d0a70)
 
 #include <core.p4>
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tofino.p4>
+#include <tofino1arch.p4>
 
 @pa_auto_init_metadata
 @pa_atomic("ingress" , "Balmorhea.Millston.Madera")
@@ -289,7 +290,7 @@ header Cecilton {
     bit<16> Lathrop;
 }
 
-header Noyes {
+header Belcher {
     bit<24> Helton;
     bit<24> Grannis;
     bit<24> Grabill;
@@ -302,14 +303,6 @@ header StarLake {
 
 header Blanchard {
     bit<8> Gonzalez;
-}
-
-header Rains {
-    bit<24> Helton;
-    bit<24> Grannis;
-    bit<24> Grabill;
-    bit<24> Moorcroft;
-    bit<16> Lathrop;
 }
 
 header SoapLake {
@@ -494,6 +487,12 @@ header Baroda {
 header Berrydale {
     bit<16> Lathrop;
     bit<64> Benitez;
+}
+
+header Stratton {
+    bit<7>   Vincent;
+    PortId_t Bowden;
+    bit<16>  Cowan;
 }
 
 typedef bit<16> Ipv4PartIdx_t;
@@ -743,7 +742,7 @@ struct Blackwood {
     bit<1>  Hulbert;
     bit<1>  Kaplan;
     bit<32> Easley;
-    bit<16> Rawson;
+    bit<32> Rawson;
     bit<12> Oakford;
     bit<12> TroutRun;
     bit<12> McKenna;
@@ -933,6 +932,7 @@ struct Cassa {
     Blackwood Switzer;
     bool      Palomas;
     bit<1>    Colburn;
+    bit<8>    Wegdahl;
 }
 
 @pa_mutually_exclusive("egress" , "Daisytown.Eolia.Teigen" , "Daisytown.Bernice.Horton")
@@ -1347,11 +1347,11 @@ struct Cassa {
     Cecilton    Bernice;
     Halaula     Greenwood;
     Tenino      Readsboro;
-    Noyes       Astor;
+    Belcher     Astor;
     StarLake    Hohenwald;
     Littleton   Sumner;
     Welcome     Eolia;
-    Noyes       Kamrar;
+    Belcher     Kamrar;
     SoapLake[2] Greenland;
     StarLake    Shingler;
     Littleton   Gastonia;
@@ -1362,7 +1362,8 @@ struct Cassa {
     Mackville   Martelle;
     Poulan      Gambrills;
     Coulter     Masontown;
-    Rains       Wesson;
+    Belcher     Wesson;
+    StarLake    Denning;
     Littleton   Yerington;
     Westboro    Belmore;
     Loris       Millhaven;
@@ -1423,6 +1424,7 @@ parser Nevis(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea, ou
         Lindsborg.extract<Halaula>(Daisytown.Greenwood);
         transition select(Daisytown.Greenwood.Uvalde) {
             8w0x1: Bronwood;
+            8w0x4: Covert;
             default: accept;
         }
     }
@@ -1453,7 +1455,7 @@ parser Nevis(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea, ou
         transition accept;
     }
     state Covert {
-        Lindsborg.extract<Noyes>(Daisytown.Kamrar);
+        Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Ekwok;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Ekwok;
@@ -1712,11 +1714,12 @@ parser Nevis(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea, ou
         transition accept;
     }
     state SanRemo {
-        Lindsborg.extract<Rains>(Daisytown.Wesson);
+        Lindsborg.extract<Belcher>(Daisytown.Wesson);
         Balmorhea.Buckhorn.Helton = Daisytown.Wesson.Helton;
         Balmorhea.Buckhorn.Grannis = Daisytown.Wesson.Grannis;
-        Balmorhea.Buckhorn.Lathrop = Daisytown.Wesson.Lathrop;
-        transition select((Lindsborg.lookahead<bit<8>>())[7:0], Daisytown.Wesson.Lathrop) {
+        Lindsborg.extract<StarLake>(Daisytown.Denning);
+        Balmorhea.Buckhorn.Lathrop = Daisytown.Denning.Lathrop;
+        transition select((Lindsborg.lookahead<bit<8>>())[7:0], Balmorhea.Buckhorn.Lathrop) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Thawville;
             (8w0x45 &&& 8w0xff, 16w0x800): Jayton;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Harriet;
@@ -1767,7 +1770,7 @@ control Hillside(packet_out Lindsborg, inout Goodwin Daisytown, in Cassa Balmorh
             }
         }
         Lindsborg.emit<Alameda>(Daisytown.Livonia);
-        Lindsborg.emit<Noyes>(Daisytown.Kamrar);
+        Lindsborg.emit<Belcher>(Daisytown.Kamrar);
         Lindsborg.emit<SoapLake>(Daisytown.Greenland[0]);
         Lindsborg.emit<SoapLake>(Daisytown.Greenland[1]);
         Lindsborg.emit<StarLake>(Daisytown.Shingler);
@@ -1780,7 +1783,8 @@ control Hillside(packet_out Lindsborg, inout Goodwin Daisytown, in Cassa Balmorh
         Lindsborg.emit<Poulan>(Daisytown.Gambrills);
         {
             Lindsborg.emit<Coulter>(Daisytown.Masontown);
-            Lindsborg.emit<Rains>(Daisytown.Wesson);
+            Lindsborg.emit<Belcher>(Daisytown.Wesson);
+            Lindsborg.emit<StarLake>(Daisytown.Denning);
             Lindsborg.emit<Littleton>(Daisytown.Yerington);
             Lindsborg.emit<Westboro>(Daisytown.Belmore);
             Lindsborg.emit<Loris>(Daisytown.Millhaven);
@@ -2377,7 +2381,7 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
 control Hester(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrinsic_metadata_t NantyGlo, in ingress_intrinsic_metadata_from_parser_t Earling, inout ingress_intrinsic_metadata_for_deparser_t Udall, inout ingress_intrinsic_metadata_for_tm_t Wildorado) {
     @name(".Goodlett.Homeacre") Hash<bit<16>>(HashAlgorithm_t.CRC16) Goodlett;
     @name(".BigPoint") action BigPoint() {
-        Balmorhea.HillTop.Townville = Goodlett.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Daisytown.Wesson.Helton, Daisytown.Wesson.Grannis, Daisytown.Wesson.Grabill, Daisytown.Wesson.Moorcroft, Daisytown.Wesson.Lathrop, Balmorhea.NantyGlo.Corinth });
+        Balmorhea.HillTop.Townville = Goodlett.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Daisytown.Wesson.Helton, Daisytown.Wesson.Grannis, Daisytown.Wesson.Grabill, Daisytown.Wesson.Moorcroft, Daisytown.Denning.Lathrop, Balmorhea.NantyGlo.Corinth });
     }
     @disable_atomic_modify(1) @name(".Tenstrike") table Tenstrike {
         actions = {
@@ -3104,7 +3108,7 @@ control Poneto(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
 }
 
 control Gilman(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrinsic_metadata_t NantyGlo, in ingress_intrinsic_metadata_from_parser_t Earling, inout ingress_intrinsic_metadata_for_deparser_t Udall, inout ingress_intrinsic_metadata_for_tm_t Wildorado) {
-    @name(".Kalaloch") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Kalaloch;
+    @name(".Kalaloch") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) Kalaloch;
     @name(".Papeton") action Papeton(bit<32> Yatesboro) {
         Balmorhea.Elvaston.Clover = (bit<2>)Kalaloch.execute((bit<32>)Yatesboro);
     }
@@ -3204,7 +3208,7 @@ control Jemison(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         Daisytown.Sumner.Woodfield = (bit<13>)13w0;
         Daisytown.Sumner.Higginson = Somis;
         Daisytown.Sumner.Oriskany = Aptos;
-        Daisytown.Sumner.Comfrey = Balmorhea.Dozier.Uintah + 16w17;
+        Daisytown.Sumner.Comfrey = Balmorhea.Dozier.Uintah + 16w20 + 16w4 - 16w4 - 16w3;
         Daisytown.Eolia.setValid();
         Daisytown.Eolia.Teigen = (bit<1>)1w0;
         Daisytown.Eolia.Lowes = (bit<1>)1w0;
@@ -3284,7 +3288,7 @@ control Fordyce(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
 }
 
 control Wakefield(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrinsic_metadata_t Dozier, in egress_intrinsic_metadata_from_parser_t Amalga, inout egress_intrinsic_metadata_for_deparser_t Burmah, inout egress_intrinsic_metadata_for_output_port_t Leacock) {
-    @name(".Miltona") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Miltona;
+    @name(".Miltona") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) Miltona;
     @name(".Wakeman") action Wakeman(bit<32> Yatesboro) {
         Balmorhea.Elkville.Clover = (bit<1>)Miltona.execute((bit<32>)Yatesboro);
     }
@@ -3436,6 +3440,7 @@ control DeRidder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intr
         }
         key = {
             Daisytown.Newhalem.isValid(): ternary @name("Newhalem") ;
+            Daisytown.Bernice.isValid() : ternary @name("Bernice") ;
             Balmorhea.Millston.Spearman : ternary @name("Millston.Spearman") ;
             Balmorhea.Millston.Atoka    : ternary @name("Millston.Atoka") ;
             Balmorhea.Buckhorn.Gasport  : ternary @name("Buckhorn.Gasport") ;
@@ -3657,22 +3662,16 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         Daisytown.Astor.Grannis = Balmorhea.Millston.Grannis;
         Daisytown.Astor.Grabill = Westend;
         Daisytown.Astor.Moorcroft = Scotland;
-        Daisytown.Hohenwald.Lathrop = Daisytown.Shingler.Lathrop;
         Daisytown.Astor.setValid();
-        Daisytown.Hohenwald.setValid();
         Daisytown.Kamrar.setInvalid();
-        Daisytown.Shingler.setInvalid();
     }
     @name(".Addicks") action Addicks() {
-        Daisytown.Hohenwald.Lathrop = Daisytown.Shingler.Lathrop;
         Daisytown.Astor.Helton = Daisytown.Kamrar.Helton;
         Daisytown.Astor.Grannis = Daisytown.Kamrar.Grannis;
         Daisytown.Astor.Grabill = Daisytown.Kamrar.Grabill;
         Daisytown.Astor.Moorcroft = Daisytown.Kamrar.Moorcroft;
         Daisytown.Astor.setValid();
-        Daisytown.Hohenwald.setValid();
         Daisytown.Kamrar.setInvalid();
-        Daisytown.Shingler.setInvalid();
     }
     @name(".Wyandanch") action Wyandanch(bit<24> Westend, bit<24> Scotland) {
         Brinson(Westend, Scotland);
@@ -4995,19 +4994,25 @@ control Renfroe(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
     @name(".Kinston") action Kinston() {
         Balmorhea.Dateland.Heuvelton = Balmorhea.HillTop.Townville;
     }
+    @name(".Cross") action Cross() {
+    }
     @name(".Putnam") action Putnam() {
+        Cross();
     }
     @name(".Hartville") action Hartville() {
+        Cross();
     }
     @name(".Chandalar") action Chandalar() {
         Daisytown.Gastonia.setInvalid();
         Daisytown.Greenland[0].setInvalid();
         Daisytown.Shingler.Lathrop = Balmorhea.Buckhorn.Lathrop;
+        Cross();
     }
     @name(".Bosco") action Bosco() {
         Daisytown.Hillsview.setInvalid();
         Daisytown.Greenland[0].setInvalid();
         Daisytown.Shingler.Lathrop = Balmorhea.Buckhorn.Lathrop;
+        Cross();
     }
     @name(".Burtrum") action Burtrum() {
     }
@@ -5572,12 +5577,12 @@ control Wrens(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrinsi
 parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea, out egress_intrinsic_metadata_t Dozier) {
     @name(".Blakeslee") value_set<bit<17>>(2) Blakeslee;
     state Neuse {
-        Lindsborg.extract<Noyes>(Daisytown.Kamrar);
+        Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
         transition accept;
     }
     state Fairchild {
-        Lindsborg.extract<Noyes>(Daisytown.Kamrar);
+        Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
         Balmorhea.Millston.Lenapah = (bit<1>)1w1;
         transition accept;
@@ -5585,22 +5590,16 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
     state Lushton {
         transition Covert;
     }
-    state Wyndmoor {
-        Lindsborg.extract<StarLake>(Daisytown.Shingler);
-        Lindsborg.extract<Bicknell>(Daisytown.Newhalem);
-        transition accept;
-    }
     state Cranbury {
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
         transition accept;
     }
     state Covert {
-        Lindsborg.extract<Noyes>(Daisytown.Kamrar);
+        Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Ekwok;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Ekwok;
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Ekwok;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Wyndmoor;
             (8w0x45 &&& 8w0xff, 16w0x800): Picabo;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Pineville;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Nooksack;
@@ -5610,7 +5609,6 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
     state Crump {
         Lindsborg.extract<SoapLake>(Daisytown.Greenland[1]);
         transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Wyndmoor;
             (8w0x45 &&& 8w0xff, 16w0x800): Picabo;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Pineville;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Nooksack;
@@ -5622,7 +5620,6 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
         Lindsborg.extract<SoapLake>(Daisytown.Greenland[0]);
         transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Crump;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Wyndmoor;
             (8w0x45 &&& 8w0xff, 16w0x800): Picabo;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Pineville;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Nooksack;
@@ -5703,7 +5700,7 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
                 Lindsborg.extract(Daisytown.Livonia);
             }
         }
-        Lindsborg.extract<Noyes>(Daisytown.Kamrar);
+        Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         transition accept;
     }
     state Paradise {
@@ -5743,13 +5740,13 @@ control Ahmeek(packet_out Lindsborg, inout Goodwin Daisytown, in Cassa Balmorhea
             Lindsborg.emit<Halaula>(Daisytown.Greenwood);
             Lindsborg.emit<Tenino>(Daisytown.Readsboro);
             Lindsborg.emit<Cecilton>(Daisytown.Bernice);
-            Lindsborg.emit<Noyes>(Daisytown.Astor);
+            Lindsborg.emit<Belcher>(Daisytown.Astor);
             Lindsborg.emit<SoapLake>(Daisytown.Greenland[0]);
             Lindsborg.emit<SoapLake>(Daisytown.Greenland[1]);
             Lindsborg.emit<StarLake>(Daisytown.Hohenwald);
             Lindsborg.emit<Littleton>(Daisytown.Sumner);
             Lindsborg.emit<Welcome>(Daisytown.Eolia);
-            Lindsborg.emit<Noyes>(Daisytown.Kamrar);
+            Lindsborg.emit<Belcher>(Daisytown.Kamrar);
             Lindsborg.emit<StarLake>(Daisytown.Shingler);
             Lindsborg.emit<Littleton>(Daisytown.Gastonia);
             Lindsborg.emit<Westboro>(Daisytown.Hillsview);

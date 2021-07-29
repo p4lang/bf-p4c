@@ -1,8 +1,9 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
-// p4c 9.5.1 (SHA: 9c1b0ca)
+// p4c 9.6.0 (SHA: f6d0a70)
 
 #include <core.p4>
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tofino.p4>
+#include <tofino1arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Almota.Westville.Arvada" , 8)
@@ -256,7 +257,7 @@ header Chevak {
     bit<16> Keyes;
 }
 
-header Steger {
+header Supai {
     bit<24> Quogue;
     bit<24> Findlay;
     bit<24> Adona;
@@ -269,14 +270,6 @@ header Dowell {
 
 header LaHoma {
     bit<8> Varna;
-}
-
-header Glendevey {
-    bit<24> Quogue;
-    bit<24> Findlay;
-    bit<24> Adona;
-    bit<24> Connell;
-    bit<16> Keyes;
 }
 
 header Littleton {
@@ -466,6 +459,12 @@ header Colona {
 header Fairmount {
     bit<16> Keyes;
     bit<64> Guadalupe;
+}
+
+header Sharon {
+    bit<7>   Separ;
+    PortId_t Galloway;
+    bit<16>  Ahmeek;
 }
 
 typedef bit<16> Ipv4PartIdx_t;
@@ -710,7 +709,7 @@ struct Wisdom {
     bit<1>  Morstein;
     bit<1>  Belfalls;
     bit<32> Lewiston;
-    bit<16> Lamona;
+    bit<32> Lamona;
     bit<12> Naubinway;
     bit<12> Ambrose;
     bit<12> Clarendon;
@@ -912,6 +911,7 @@ struct Martelle {
     Wisdom    Gamaliel;
     bool      Emigrant;
     bit<1>    Lushton;
+    bit<8>    Elbing;
 }
 
 @pa_mutually_exclusive("egress" , "Sedan.Tabler.Pridgen" , "Sedan.Thawville.Mendocino")
@@ -1324,11 +1324,11 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Sedan.Thawville.Keyes" , "Sedan.Bratt.Solomon") struct Orting {
     Kaluaaha     SanRemo;
     Chevak       Thawville;
-    Steger       Harriet;
+    Supai        Harriet;
     Dowell       Dushore;
     LasVegas     Bratt;
     Tenino       Tabler;
-    Steger       Hearne;
+    Supai        Hearne;
     Littleton[2] Moultrie;
     Dowell       Pinetop;
     LasVegas     Garrison;
@@ -1339,7 +1339,8 @@ struct Martelle {
     Denhoff      Nooksack;
     Almedia      Courtdale;
     Glenmora     Swifton;
-    Glendevey    PeaRidge;
+    Supai        PeaRidge;
+    Dowell       Waxhaw;
     LasVegas     Cranbury;
     Garcia       Neponset;
     Suttle       Bronwood;
@@ -1415,7 +1416,7 @@ parser Halltown(packet_in Recluse, out Orting Sedan, out Martelle Almota, out in
         transition accept;
     }
     state Ambler {
-        Recluse.extract<Steger>(Sedan.Hearne);
+        Recluse.extract<Supai>(Sedan.Hearne);
         transition select((Recluse.lookahead<bit<24>>())[7:0], (Recluse.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Olmitz;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Olmitz;
@@ -1652,11 +1653,12 @@ parser Halltown(packet_in Recluse, out Orting Sedan, out Martelle Almota, out in
         transition accept;
     }
     state Nephi {
-        Recluse.extract<Glendevey>(Sedan.PeaRidge);
+        Recluse.extract<Supai>(Sedan.PeaRidge);
         Almota.Masontown.Quogue = Sedan.PeaRidge.Quogue;
         Almota.Masontown.Findlay = Sedan.PeaRidge.Findlay;
-        Almota.Masontown.Keyes = Sedan.PeaRidge.Keyes;
-        transition select((Recluse.lookahead<bit<8>>())[7:0], Sedan.PeaRidge.Keyes) {
+        Recluse.extract<Dowell>(Sedan.Waxhaw);
+        Almota.Masontown.Keyes = Sedan.Waxhaw.Keyes;
+        transition select((Recluse.lookahead<bit<8>>())[7:0], Almota.Masontown.Keyes) {
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Tofte;
             (8w0x45 &&& 8w0xff, 16w0x800): Jerico;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Geistown;
@@ -1704,7 +1706,7 @@ control Chatanika(packet_out Recluse, inout Orting Sedan, in Martelle Almota, in
             }
         }
         Recluse.emit<Kaluaaha>(Sedan.SanRemo);
-        Recluse.emit<Steger>(Sedan.Hearne);
+        Recluse.emit<Supai>(Sedan.Hearne);
         Recluse.emit<Littleton>(Sedan.Moultrie[0]);
         Recluse.emit<Littleton>(Sedan.Moultrie[1]);
         Recluse.emit<Dowell>(Sedan.Pinetop);
@@ -1717,7 +1719,8 @@ control Chatanika(packet_out Recluse, inout Orting Sedan, in Martelle Almota, in
         Recluse.emit<Almedia>(Sedan.Courtdale);
         {
             Recluse.emit<Glenmora>(Sedan.Swifton);
-            Recluse.emit<Glendevey>(Sedan.PeaRidge);
+            Recluse.emit<Supai>(Sedan.PeaRidge);
+            Recluse.emit<Dowell>(Sedan.Waxhaw);
             Recluse.emit<LasVegas>(Sedan.Cranbury);
             Recluse.emit<Garcia>(Sedan.Neponset);
             Recluse.emit<Suttle>(Sedan.Bronwood);
@@ -1985,7 +1988,7 @@ control Nixon(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
 control Nucla(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_metadata_t HighRock, in ingress_intrinsic_metadata_from_parser_t Lemont, inout ingress_intrinsic_metadata_for_deparser_t Hookdale, inout ingress_intrinsic_metadata_for_tm_t WebbCity) {
     @name(".Tillson.Rugby") Hash<bit<16>>(HashAlgorithm_t.CRC16) Tillson;
     @name(".Micro") action Micro() {
-        Almota.Millhaven.Mausdale = Tillson.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Sedan.PeaRidge.Quogue, Sedan.PeaRidge.Findlay, Sedan.PeaRidge.Adona, Sedan.PeaRidge.Connell, Sedan.PeaRidge.Keyes, Almota.HighRock.Bledsoe });
+        Almota.Millhaven.Mausdale = Tillson.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Sedan.PeaRidge.Quogue, Sedan.PeaRidge.Findlay, Sedan.PeaRidge.Adona, Sedan.PeaRidge.Connell, Sedan.Waxhaw.Keyes, Almota.HighRock.Bledsoe });
     }
     @disable_atomic_modify(1) @name(".Lattimore") table Lattimore {
         actions = {
@@ -2702,7 +2705,7 @@ control Bains(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
 }
 
 control Swandale(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_metadata_t HighRock, in ingress_intrinsic_metadata_from_parser_t Lemont, inout ingress_intrinsic_metadata_for_deparser_t Hookdale, inout ingress_intrinsic_metadata_for_tm_t WebbCity) {
-    @name(".Neosho") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) Neosho;
+    @name(".Neosho") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) Neosho;
     @name(".Islen") action Islen(bit<32> BarNunn) {
         Almota.Crannell.Miranda = (bit<2>)Neosho.execute((bit<32>)BarNunn);
     }
@@ -2802,7 +2805,7 @@ control Fordyce(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Sedan.Bratt.Tallassee = (bit<13>)13w0;
         Sedan.Bratt.Kendrick = Hector;
         Sedan.Bratt.Solomon = Wakefield;
-        Sedan.Bratt.Petrey = Almota.Covert.Clarion + 16w17;
+        Sedan.Bratt.Petrey = Almota.Covert.Clarion + 16w20 + 16w4 - 16w4 - 16w3;
         Sedan.Tabler.setValid();
         Sedan.Tabler.Pridgen = (bit<1>)1w0;
         Sedan.Tabler.Fairland = (bit<1>)1w0;
@@ -2882,7 +2885,7 @@ control BigFork(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
 }
 
 control Paragonah(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_metadata_t Covert, in egress_intrinsic_metadata_from_parser_t Asharoken, inout egress_intrinsic_metadata_for_deparser_t Weissert, inout egress_intrinsic_metadata_for_output_port_t Bellmead) {
-    @name(".DeRidder") Meter<bit<32>>(32w128, MeterType_t.BYTES, 8w1, 8w1, 8w0) DeRidder;
+    @name(".DeRidder") Meter<bit<32>>(32w1024, MeterType_t.BYTES, 8w1, 8w1, 8w0) DeRidder;
     @name(".Bechyn") action Bechyn(bit<32> BarNunn) {
         Almota.Aniak.Miranda = (bit<1>)DeRidder.execute((bit<32>)BarNunn);
     }
@@ -3032,6 +3035,7 @@ control Palco(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
         }
         key = {
             Sedan.Cotter.isValid()   : ternary @name("Cotter") ;
+            Sedan.Thawville.isValid(): ternary @name("Thawville") ;
             Almota.Belmore.Helton    : ternary @name("Belmore.Helton") ;
             Almota.Belmore.Norland   : ternary @name("Belmore.Norland") ;
             Almota.Masontown.Atoka   : ternary @name("Masontown.Atoka") ;
@@ -3286,22 +3290,16 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Sedan.Harriet.Findlay = Almota.Belmore.Findlay;
         Sedan.Harriet.Adona = Clermont;
         Sedan.Harriet.Connell = Blanding;
-        Sedan.Dushore.Keyes = Sedan.Pinetop.Keyes;
         Sedan.Harriet.setValid();
-        Sedan.Dushore.setValid();
         Sedan.Hearne.setInvalid();
-        Sedan.Pinetop.setInvalid();
     }
     @name(".Ocilla") action Ocilla() {
-        Sedan.Dushore.Keyes = Sedan.Pinetop.Keyes;
         Sedan.Harriet.Quogue = Sedan.Hearne.Quogue;
         Sedan.Harriet.Findlay = Sedan.Hearne.Findlay;
         Sedan.Harriet.Adona = Sedan.Hearne.Adona;
         Sedan.Harriet.Connell = Sedan.Hearne.Connell;
         Sedan.Harriet.setValid();
-        Sedan.Dushore.setValid();
         Sedan.Hearne.setInvalid();
-        Sedan.Pinetop.setInvalid();
     }
     @name(".Shelby") action Shelby(bit<24> Clermont, bit<24> Blanding) {
         Tekonsha(Clermont, Blanding);
@@ -5081,12 +5079,12 @@ control Rendon(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_me
 parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out egress_intrinsic_metadata_t Covert) {
     @name(".Brockton") value_set<bit<17>>(2) Brockton;
     state Valmont {
-        Recluse.extract<Steger>(Sedan.Hearne);
+        Recluse.extract<Supai>(Sedan.Hearne);
         Recluse.extract<Dowell>(Sedan.Pinetop);
         transition accept;
     }
     state Millican {
-        Recluse.extract<Steger>(Sedan.Hearne);
+        Recluse.extract<Supai>(Sedan.Hearne);
         Recluse.extract<Dowell>(Sedan.Pinetop);
         Almota.Belmore.Fairchild = (bit<1>)1w1;
         transition accept;
@@ -5094,22 +5092,16 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
     state Decorah {
         transition Ambler;
     }
-    state Glenoma {
-        Recluse.extract<Dowell>(Sedan.Pinetop);
-        Recluse.extract<Charco>(Sedan.Cotter);
-        transition accept;
-    }
     state Indios {
         Recluse.extract<Dowell>(Sedan.Pinetop);
         transition accept;
     }
     state Ambler {
-        Recluse.extract<Steger>(Sedan.Hearne);
+        Recluse.extract<Supai>(Sedan.Hearne);
         transition select((Recluse.lookahead<bit<24>>())[7:0], (Recluse.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Olmitz;
             (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Olmitz;
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Olmitz;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Glenoma;
             (8w0x45 &&& 8w0xff, 16w0x800): Thurmond;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Robstown;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Ponder;
@@ -5119,7 +5111,6 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
     state Baker {
         Recluse.extract<Littleton>(Sedan.Moultrie[1]);
         transition select((Recluse.lookahead<bit<24>>())[7:0], (Recluse.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Glenoma;
             (8w0x45 &&& 8w0xff, 16w0x800): Thurmond;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Robstown;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Ponder;
@@ -5131,7 +5122,6 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
         Recluse.extract<Littleton>(Sedan.Moultrie[0]);
         transition select((Recluse.lookahead<bit<24>>())[7:0], (Recluse.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Baker;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Glenoma;
             (8w0x45 &&& 8w0xff, 16w0x800): Thurmond;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Robstown;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Ponder;
@@ -5212,7 +5202,7 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
                 Recluse.extract(Sedan.SanRemo);
             }
         }
-        Recluse.extract<Steger>(Sedan.Hearne);
+        Recluse.extract<Supai>(Sedan.Hearne);
         transition accept;
     }
     state Downs {
@@ -5250,7 +5240,7 @@ control Blunt(packet_out Recluse, inout Orting Sedan, in Martelle Almota, in egr
             Sedan.Garrison.Antlers = Ludowici.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Sedan.Garrison.Westboro, Sedan.Garrison.Newfane, Sedan.Garrison.Norcatur, Sedan.Garrison.Burrel, Sedan.Garrison.Petrey, Sedan.Garrison.Armona, Sedan.Garrison.Dunstable, Sedan.Garrison.Madawaska, Sedan.Garrison.Hampton, Sedan.Garrison.Tallassee, Sedan.Garrison.Woodfield, Sedan.Garrison.Irvine, Sedan.Garrison.Kendrick, Sedan.Garrison.Solomon }, false);
             Sedan.Bratt.Antlers = Forbes.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Sedan.Bratt.Westboro, Sedan.Bratt.Newfane, Sedan.Bratt.Norcatur, Sedan.Bratt.Burrel, Sedan.Bratt.Petrey, Sedan.Bratt.Armona, Sedan.Bratt.Dunstable, Sedan.Bratt.Madawaska, Sedan.Bratt.Hampton, Sedan.Bratt.Tallassee, Sedan.Bratt.Woodfield, Sedan.Bratt.Irvine, Sedan.Bratt.Kendrick, Sedan.Bratt.Solomon }, false);
             Recluse.emit<Chevak>(Sedan.Thawville);
-            Recluse.emit<Steger>(Sedan.Harriet);
+            Recluse.emit<Supai>(Sedan.Harriet);
             Recluse.emit<Palmhurst>(Sedan.Kinde);
             Recluse.emit<Palmhurst>(Sedan.Hillside);
             Recluse.emit<Littleton>(Sedan.Moultrie[0]);
@@ -5258,7 +5248,7 @@ control Blunt(packet_out Recluse, inout Orting Sedan, in Martelle Almota, in egr
             Recluse.emit<Dowell>(Sedan.Dushore);
             Recluse.emit<LasVegas>(Sedan.Bratt);
             Recluse.emit<Tenino>(Sedan.Tabler);
-            Recluse.emit<Steger>(Sedan.Hearne);
+            Recluse.emit<Supai>(Sedan.Hearne);
             Recluse.emit<Dowell>(Sedan.Pinetop);
             Recluse.emit<LasVegas>(Sedan.Garrison);
             Recluse.emit<Garcia>(Sedan.Milano);

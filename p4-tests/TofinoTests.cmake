@@ -44,6 +44,7 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-packet_filter.p4"
   "obfuscated-small_scale_test.p4"
   "obfuscated-stateless_load_balance_v4v6.p4"
+  "obfuscated-vxlan_evpn_scale.p4"
 )
 
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
