@@ -2,8 +2,6 @@
 #include "stage.h"
 #include "input_xbar.h"
 
-DEFINE_TABLE_TYPE(ProxyHashMatchTable)
-
 void ProxyHashMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
@@ -85,7 +83,12 @@ void ProxyHashMatchTable::pass3() {
     LOG1("### Proxy Hash match table " << name() << " pass3 " << loc());
 }
 
-template<class REGS> void ProxyHashMatchTable::write_regs(REGS &regs) {
+#if HAVE_FLATROCK
+template<> void ProxyHashMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void ProxyHashMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### Proxy Hash match table " << name() << " write_regs " << loc());
     SRamMatchTable::write_regs(regs);
 
@@ -159,3 +162,5 @@ void ProxyHashMatchTable::gen_tbl_cfg(json::vector &out) const {
     }
     stage_tbl["proxy_hash_bit_width"] = proxy_hash_width;
 }
+
+DEFINE_TABLE_TYPE(ProxyHashMatchTable)

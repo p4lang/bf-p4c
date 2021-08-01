@@ -565,17 +565,21 @@ struct VLIWInstruction : Instruction {
     virtual int encode() = 0;
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     template<class REGS> void write_regs_2(REGS &regs, Table *tbl, Table::Actions::Action *act);
-#endif
+#endif  /* HAVE_JBAY || HAVE_CLOUDBREAK */
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
-#include "tofino/instruction.cpp"
+// target specific template specializations
+#include "tofino/instruction.cpp"                               // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/instruction.cpp"
-#endif  // HAVE_JBAY
+#include "jbay/instruction.cpp"                                 // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/instruction.cpp"
-#endif  // HAVE_CLOUDBREAK
+#include "cloudbreak/instruction.cpp"                           // NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/instruction.cpp"                             // NOLINT(build/include)
+#endif  /* HAVE_FLATROCK */
 
 struct AluOP : VLIWInstruction {
     const struct Decode : Instruction::Decode {
@@ -1418,7 +1422,7 @@ static AluOP::Decode        jb_cb_opGTEQU    ("gtequ",   jb_cb_targets, 0x02e), 
                             jb_cb_opNEQ      ("neq",     jb_cb_targets, 0x2ae, true),  // NOLINT
                             jb_cb_opEQ64     ("eq64",    jb_cb_targets, 0x26e, true),  // NOLINT
                             jb_cb_opNEQ64    ("neq64",   jb_cb_targets, 0x2ee, true);  // NOLINT
-#endif  // HAVE_JBAY || HAVE_CLOUDBREAK
+#endif  /* HAVE_JBAY || HAVE_CLOUDBREAK */
 
 }  // end namespace VLIW
 

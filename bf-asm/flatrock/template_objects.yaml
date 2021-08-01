@@ -1,0 +1,30 @@
+global:
+  - namespace=Flatrock
+  - binary_offset
+  - emit_binary
+  - emit_fieldname
+  - emit_json
+  - enable_disable
+  - widereg
+  # - write_dma=galois_field_matrix
+generate:
+  regs:
+    tfc_reg:
+      regs.ftr_reg.h: [ decl, name=regs.top ]
+      regs.ftr_reg.cpp: [ defn, name=regs.top,
+          -Iregs.ftr_reg.h, -Iregs.pipe_addrmap.h ]
+    fpp_rspec:  # pipe
+      regs.pipe_addrmap.h: [ decl, name=regs.pipe, widereg ]
+      regs.pipe_addrmap.cpp: [ defn, name=regs.pipe, widereg,
+          -Iregs.pipe_addrmap.h, -Iregs.mau_addrmap.h ]
+    ppu_rspec:  # mau
+      regs.mau_addrmap.h: [ decl, name=regs.match_action_stage.%02x ]
+      regs.mau_addrmap.cpp: [ defn, name=regs.match_action_stage.%02x,
+          -Iregs.mau_addrmap.h ]
+    # no parser/deparser in csr yet?
+
+ignore:
+  regs:
+    # tfc_reg
+    - dvsl_addrmap
+    # fpp / fpp_rspec

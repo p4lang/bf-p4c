@@ -80,7 +80,7 @@ void Synth2Port::pass3() {
 }
 
 template<class REGS>
-void Synth2Port::write_regs(REGS &) {
+void Synth2Port::write_regs_vt(REGS &) {
 }
 
 json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const {

@@ -594,11 +594,11 @@ void InputXbar::pass2() {
 #if HAVE_JBAY
 //  jbay template specializations
 #include <jbay/input_xbar.cpp>          // NOLINT(build/include_order)
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
 // cloudbreak template specializations
 #include <cloudbreak/input_xbar.cpp>    // NOLINT(build/include_order)
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
 
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {

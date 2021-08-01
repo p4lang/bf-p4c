@@ -122,6 +122,11 @@ void HashDistribution::pass1(Table *tbl, delay_type_t delay_type, bool non_linea
                 warning(use->lineno, "previous use here"); } } }
 }
 
+#if HAVE_FLATROCK
+template<> void HashDistribution::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void HashDistribution::write_regs(REGS &regs, Table *tbl) {
     /* from HashDistributionResourceAllocation.write_config: */

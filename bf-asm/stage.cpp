@@ -37,6 +37,15 @@ class AsmStage : public Section {
     static std::vector<Stage> &stages() { return singleton_object.stage; }
 } AsmStage::singleton_object;
 
+#include "tofino/stage.cpp"                             // NOLINT(build/include)
+#include "jbay/stage.cpp"                               // NOLINT(build/include)
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/stage.cpp"                         // NOLINT(build/include)
+#endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/stage.cpp"                           // NOLINT(build/include)
+#endif /* HAVE_FLATROCK */
+
 AsmStage::AsmStage() : Section("stage") {
     int slot = 0, byte = 0;
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
@@ -482,12 +491,6 @@ void Stage::verify_have_mpr(std::string key, int line_number) {
   if (!Target::HAS_MPR())
     error(line_number, "%s is not available on target %s.", key.c_str(), Target::name());
 }
-
-#include "tofino/stage.cpp"
-#include "jbay/stage.cpp"
-#ifdef HAVE_CLOUDBREAK
-#include "cloudbreak/stage.cpp"
-#endif /* HAVE_CLOUDBREAK */
 
 template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &regs) {
     /* FIXME -- most of the values set here are 'placeholder' constants copied

@@ -11,13 +11,16 @@
 #include "vector.h"
 #include "misc.h"
 
-#include "tofino/parser.cpp"            // tofino template specializations
+#include "tofino/parser.cpp"            // NOLINT(build/include) tofino template specializations
 #if HAVE_JBAY
-#include "jbay/parser.cpp"              // jbay template specializations
-#endif  // HAVE_JBAY
+#include "jbay/parser.cpp"              // NOLINT(build/include) jbay template specializations
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/parser.cpp"        // cloudbreak template specializations
-#endif  // HAVE_CLOUDBREAK
+#include "cloudbreak/parser.cpp"        // NOLINT(build/include) cloudbreak template specializations
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/parser.cpp"          // NOLINT(build/include) flatrock template specializations
+#endif  /* HAVE_FLATROCK */
 
 class AsmParser : public Section {
     std::vector<Parser*> parser[2];     // INGRESS, EGRESS

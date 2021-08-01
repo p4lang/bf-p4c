@@ -6,8 +6,6 @@
 #include "stage.h"
 #include "tables.h"
 
-DEFINE_TABLE_TYPE(StatefulTable)
-
 void StatefulTable::parse_register_params(int idx, const value_t &val) {
     if (idx < 0 || idx > Target::STATEFUL_REGFILE_ROWS())
         error(lineno, "Index out of range of the number of the register file rows (%d). "
@@ -93,11 +91,11 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                     error(v.key.lineno, "Unknow item %s in math_table", value_desc(kv.key));
                 }
             }
-#ifdef HAVE_JBAY
+#if HAVE_JBAY
         } else if (options.target >= JBAY && setup_jbay(kv)) {
             /* jbay specific extensions done in setup_jbay */
             // FIXME -- these should probably be based on individual Target::FEATURE() queries
-#endif
+#endif  /* HAVE_JBAY */
         } else if (kv.key == "log_vpn") {
             logvpn_lineno = kv.value.lineno;
             if (CHECKTYPE2(kv.value, tINT, tRANGE)) {
@@ -380,15 +378,26 @@ action_for_table_action(const MatchTable *tbl, const Actions::Action *act) const
     return nullptr;
 }
 
-#include "tofino/stateful.cpp"  // NOLINT(build/include)
+// target specific template specializations
+#include "tofino/stateful.cpp"          // NOLINT(build/include)
 #if HAVE_JBAY || HAVE_CLOUDBREAK
-#include "jbay/stateful.cpp"  // NOLINT(build/include)
+#include "jbay/stateful.cpp"            // NOLINT(build/include)
 #endif /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/stateful.cpp"  // NOLINT(build/include)
-#endif /* HAVE_JBAY */
+#include "cloudbreak/stateful.cpp"      // NOLINT(build/include)
+#endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/stateful.cpp"        // NOLINT(build/include)
+#endif /* HAVE_FLATROCK */
 
-template<class REGS> void StatefulTable::write_action_regs(REGS &regs, const Actions::Action *act) {
+#if HAVE_FLATROCK
+template<> void StatefulTable::write_action_regs_vt(Target::Flatrock::mau_regs &regs,
+            const Actions::Action *act) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS>
+void StatefulTable::write_action_regs_vt(REGS &regs, const Actions::Action *act) {
     int meter_alu = layout[0].row/4U;
     auto &stateful_regs = regs.rams.map_alu.meter_group[meter_alu].stateful;
     auto &salu_instr_common = stateful_regs.salu_instr_common[act->code];
@@ -403,7 +412,13 @@ template<class REGS> void StatefulTable::write_action_regs(REGS &regs, const Act
     }
 }
 
-template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable *match,
+#if HAVE_FLATROCK
+template<> void StatefulTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
+            MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     unsigned adr_mask = 0U;
@@ -419,7 +434,12 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
     merge.mau_meter_adr_type_position[type][bus] = meter_type_position;
 }
 
-template<class REGS> void StatefulTable::write_regs(REGS &regs) {
+#if HAVE_FLATROCK
+template<> void StatefulTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {
     LOG1("### Stateful table " << name() << " write_regs " << loc());
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
@@ -615,3 +635,12 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
     if (context_json)
         stage_tbl.merge(*context_json);
 }
+
+DEFINE_TABLE_TYPE(StatefulTable)
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void StatefulTable::write_action_regs, (mau_regs &regs, const Actions::Action *act), {
+        write_action_regs_vt(regs, act); })
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void StatefulTable::write_merge_regs,
+    (mau_regs &regs, MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args),
+    { write_merge_regs_vt(regs, match, type, bus, args); })

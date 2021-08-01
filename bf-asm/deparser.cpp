@@ -534,7 +534,7 @@ void write_csum_const_in_json(int deparserPhvIdx,
             chunk_byte["Checksum"] = csum_id;
             fd_entry_chunk_byte["csum_engine"] = csum_id;
         }
-#endif
+#endif  /* HAVE_CLOUDBREAK */
     }
     return;
 }
@@ -643,13 +643,16 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
     *deparser_json_dump << &resources_deparser;
 }
 
-#include "tofino/deparser.cpp"    // tofino template specializations
+#include "tofino/deparser.cpp"                  // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/deparser.cpp"      // jbay template specializations
-#endif  // HAVE_JBAY
+#include "jbay/deparser.cpp"                    // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/deparser.cpp"      // cloudbreak template specializations
-#endif  // HAVE_CLOUDBREAK
+#include "cloudbreak/deparser.cpp"              // NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/deparser.cpp"                // NOLINT(build/include)
+#endif  /* HAVE_FLATROCK */
 
 /* The following uses of specialized templates must be after the specialization... */
 void Deparser::output(json::map& map) {

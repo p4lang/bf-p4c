@@ -40,7 +40,7 @@ void Phase0MatchTable::pass3() {
 }
 
 template<class REGS>
-void Phase0MatchTable::write_regs(REGS &) {
+void Phase0MatchTable::write_regs_vt(REGS &) {
     LOG1("### Phase 0 match table " << name() << " write_regs " << loc());
 }
 

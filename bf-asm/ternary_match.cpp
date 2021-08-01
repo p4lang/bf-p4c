@@ -7,9 +7,6 @@
 #include "stage.h"
 #include "tables.h"
 
-DEFINE_TABLE_TYPE(TernaryMatchTable)
-DEFINE_TABLE_TYPE(TernaryIndirectTable)
-
 Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
          const std::string &act) const {
     assert(!format);
@@ -347,7 +344,7 @@ template<class REGS> void TernaryMatchTable::tcam_table_map(REGS &regs, int row,
         if (!((chain_rows[col] >> row) & 1))
             regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row; }
 }
-#ifdef HAVE_CLOUDBREAK
+#if HAVE_CLOUDBREAK
 template<> void TernaryMatchTable::tcam_table_map(Target::Cloudbreak::mau_regs &regs,
                                                   int row, int col) {
     // FIXME -- figure out how to program tcam_map_oxbar_ctl
@@ -391,15 +388,19 @@ template<> void TernaryMatchTable::tcam_table_map(Target::Cloudbreak::mau_regs &
         // setting it here means we set it multiple times (leading to WARNINGs), but is ok
         setup_muxctl(regs.tcams.mpr_tcam_table_oxbar_ctl[tcam_id], logical_id); }
 }
-#endif
+#endif  /* HAVE_CLOUDBREAK */
 
 static void set_tcam_mode_logical_table(ubits<4> &reg, int tcam_id, int logical_id) {
     reg = logical_id; }
 static void set_tcam_mode_logical_table(ubits<8> &reg, int tcam_id, int logical_id) {
     reg |= 1U << tcam_id; }
 
-template<class REGS>
-void TernaryMatchTable::write_regs(REGS &regs) {
+#if HAVE_FLATROCK
+template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### Ternary match table " << name() << " write_regs " << loc());
     MatchTable::write_regs(regs, 1, indirect);
     unsigned word = 0;
@@ -1079,7 +1080,12 @@ void TernaryIndirectTable::pass3() {
     if (action_bus) action_bus->pass3(this);
 }
 
-template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
+#if HAVE_FLATROCK
+template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;
     int tcam_shift = format->log2size-2;
@@ -1174,3 +1180,6 @@ void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) const {
     else
         result_physical_buses.push_back(indirect_bus);
 }
+
+DEFINE_TABLE_TYPE(TernaryMatchTable)
+DEFINE_TABLE_TYPE(TernaryIndirectTable)

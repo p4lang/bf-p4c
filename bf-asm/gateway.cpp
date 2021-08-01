@@ -7,8 +7,6 @@
 #include "hashexpr.h"
 #include "hex.h"
 
-DEFINE_TABLE_TYPE(GatewayTable)
-
 static struct {
     unsigned         units, bits, half_shift, mask, half_mask;
 } range_match_info[] = { { 0, 0, 0, 0, 0 }, { 6, 4, 2, 0xf, 0x3 }, { 3, 8, 8, 0xffff, 0xff } };
@@ -631,13 +629,13 @@ template<class REGS> void enable_gateway_payload_exact_shift_ovr(REGS &regs, int
     regs.rams.match.merge.gateway_payload_exact_shift_ovr[bus/8] |= 1U << bus % 8;
 }
 
-#include "tofino/gateway.cpp"
+#include "tofino/gateway.cpp"                   // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/gateway.cpp"
-#endif  // HAVE_JBAY
+#include "jbay/gateway.cpp"                     // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/gateway.cpp"
-#endif  // HAVE_CLOUDBREAK
+#include "cloudbreak/gateway.cpp"               // NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
 
 template<class REGS>
 void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
@@ -708,10 +706,10 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
                     for (unsigned i = 0; i < payload_map.size(); ++i) {
                         auto grp = payload_map.at(i);
                         if (grp < 0) continue;
-                        m->to<MeterTable>()->setup_exact_shift(merge, row*2 + bus, grp, 0, i,
+                        m->to<MeterTable>()->setup_exact_shift(regs, row*2 + bus, grp, 0, i,
                                                                m, attached->meter_color); }
                 } else {
-                    m->to<MeterTable>()->setup_tcam_shift(merge, row*2 + bus, tcam_shift,
+                    m->to<MeterTable>()->setup_tcam_shift(regs, row*2 + bus, tcam_shift,
                                                           m, attached->meter_color); }
                 break;
             }
@@ -788,8 +786,13 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
 
 template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
 
+#if HAVE_FLATROCK
+template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
-void GatewayTable::write_regs(REGS &regs) {
+void GatewayTable::write_regs_vt(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs " << loc());
     auto &row = layout[0];
     if (input_xbar) {
@@ -958,3 +961,5 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     out.push_back(std::move(gTable));
     gateways_in_json.insert(gwName);
 }
+
+DEFINE_TABLE_TYPE(GatewayTable)

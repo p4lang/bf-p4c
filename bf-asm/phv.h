@@ -253,9 +253,12 @@ inline unsigned Phv::mau_groupsize() { return phv.target->mau_groupsize(); }
 #include "tofino/phv.h"
 #if HAVE_JBAY
 #include "jbay/phv.h"
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/phv.h"
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/phv.h"
+#endif  /* HAVE_FLATROCK */
 
 #endif /* BF_ASM_PHV_H_ */

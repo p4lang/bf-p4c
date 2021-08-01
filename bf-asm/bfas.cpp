@@ -35,7 +35,7 @@ option_t options = {
     .singlewrite = true,
 #else
     .singlewrite = false,
-#endif
+#endif  /* !HAVE_JBAY && !HAVE_CLOUDBREAK */
     .stage_dependency_pattern = "",
     .target = NO_TARGET,
     .tof2lab44_workaround = true,
@@ -390,7 +390,7 @@ int main(int ac, char **av) {
         warning(0, "%d config errors in log file", log_error);
     return error_count > 0 || (options.werror && warn_count > 0) ? 1 : 0;
 }
-#endif
+#endif  /* !BUILDING_FOR_GTEST */
 
 void no_sections_error_exit() {
     if (Section::no_sections_in_assembly()) {

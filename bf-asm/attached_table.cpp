@@ -461,6 +461,12 @@ void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, in
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void AttachedTables::write_merge_regs, mau_regs &, MatchTable *, int, int)
 
+#if HAVE_FLATROCK
+template<>
+void AttachedTables::write_tcam_merge_regs(Target::Flatrock::mau_regs &, MatchTable *, int, int) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus, int tcam_shift) {
     auto &merge = regs.rams.match.merge;
@@ -470,7 +476,7 @@ void AttachedTables::write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus
         break;
     }
     for (auto &m : meters) {
-        m->to<MeterTable>()->setup_tcam_shift(merge, bus, tcam_shift, m, meter_color);
+        m->to<MeterTable>()->setup_tcam_shift(regs, bus, tcam_shift, m, meter_color);
         break; /* all must be the same, only config once */
     }
     for (auto &s : statefuls) {

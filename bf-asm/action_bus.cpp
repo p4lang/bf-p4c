@@ -734,6 +734,12 @@ int ActionBus::find(Stage *stage, ActionBusSource src, int lo, int hi, int size,
     return rv;
 }
 
+#if HAVE_FLATROCK
+template<> void ActionBus::write_action_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
+                                                    int home_row, unsigned action_slice) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                                                     int home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
@@ -900,6 +906,11 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
         void ActionBus::write_action_regs, mau_regs &, Table *, int, unsigned)
 
+#if HAVE_FLATROCK
+template<> void ActionBus::write_immed_regs(Target::Flatrock::mau_regs &, Table *) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
     auto &adrdist = regs.rams.match.adrdist;

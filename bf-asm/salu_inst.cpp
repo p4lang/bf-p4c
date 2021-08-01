@@ -749,7 +749,7 @@ Instruction *TMatchOP::pass1(Table *tbl_, Table::Actions::Action *act) {
         tbl->tmatch_use[slot].op = this; }
     return this;
 }
-#endif  /* HAVE_JBAY */
+#endif  /* HAVE_JBAY || HAVE_CLOUDBREAK */
 
 // Output ALU instruction
 struct OutOP : public SaluInstruction {
@@ -763,7 +763,7 @@ struct OutOP : public SaluInstruction {
 #if HAVE_JBAY
     bool lmatch = false;
     int lmatch_pred = 0;
-#endif
+#endif  /* HAVE_JBAY */
     operand::Phv *output_operand = 0;
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void decode_output_mux, (register_type, value_t &op))
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, int decode_output_option, (register_type, value_t &op))
@@ -776,7 +776,7 @@ struct OutOP : public SaluInstruction {
         out << "INSTR: output " << "pred=0x" << hex(predication_encode)
 #if HAVE_JBAY
             << " word" << (slot - ALUOUT0)
-#endif
+#endif  /* HAVE_JBAY */
             << " mux=" << output_mux; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
@@ -825,7 +825,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         else
             rv->slot = unit + ALUOUT0;
         idx++; }
-#endif
+#endif  /* HAVE_JBAY */
     // Check mux operand
     if (idx < op.size) {
         SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]););
@@ -867,15 +867,18 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
                 error(lineno, "Conflict lmatch output use in stateful %s", tbl->name());
                 error(other->lineno, "conflicting use here"); } }
         tbl->output_lmatch = this; }
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
     return this; }
 
-#include "tofino/salu_inst.cpp"  // NOLINT(build/include)
+#include "tofino/salu_inst.cpp"         // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/salu_inst.cpp"  // NOLINT(build/include)
-#endif  // HAVE_JBAY
+#include "jbay/salu_inst.cpp"           // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/salu_inst.cpp"  // NOLINT(build/include)
-#endif  // HAVE_CLOUDBREAK
+#include "cloudbreak/salu_inst.cpp"     // NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/salu_inst.cpp"       // NOLINT(build/include)
+#endif  /* HAVE_FLATROCK */
 
 }  // end namespace StatefulAlu

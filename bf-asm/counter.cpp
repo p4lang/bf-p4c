@@ -5,15 +5,14 @@
 #include "stage.h"
 #include "tables.h"
 
-#include "tofino/counter.cpp"            // tofino template specializations
+// target specific template specializations
+#include "tofino/counter.cpp"            // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/counter.cpp"              // jbay template specializations
-#endif  // HAVE_JBAY
+#include "jbay/counter.cpp"              // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/counter.cpp"        // cloudbreak template specializations
-#endif  // HAVE_CLOUDBREAK
-
-DEFINE_TABLE_TYPE(CounterTable)
+#include "cloudbreak/counter.cpp"        //NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
 
 void CounterTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::Statistics);
@@ -170,7 +169,13 @@ unsigned CounterTable::determine_shiftcount(Table::Call &call, int group, unsign
     return 0;
 }
 
-template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable *match,
+#if HAVE_FLATROCK
+template<> void CounterTable::write_merge_regs_vt(Target::Flatrock::mau_regs &, MatchTable *,
+                int, int, const std::vector<Call::Arg> &) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void CounterTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  regs.rams.match.merge;
     unsigned adr_mask = 0;
@@ -203,7 +208,12 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
     merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
 }
 
-template<class REGS> void CounterTable::write_regs(REGS &regs) {
+#if HAVE_FLATROCK
+template<> void CounterTable::write_regs_vt(Target::Flatrock::mau_regs &) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {
     LOG1("### Counter table " << name() << " write_regs " << loc());
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
@@ -375,3 +385,9 @@ void CounterTable::gen_tbl_cfg(json::vector &out) const {
     if (context_json)
         stage_tbl.merge(*context_json);
 }
+
+DEFINE_TABLE_TYPE(CounterTable)
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void CounterTable::write_merge_regs,
+    (mau_regs &regs, MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args),
+    { write_merge_regs_vt(regs, match, type, bus, args); } )

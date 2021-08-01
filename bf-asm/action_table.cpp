@@ -8,8 +8,6 @@
 /// See 6.2.8.4.3 of the MAU Micro-Architecture document.
 const unsigned MAX_AD_SHIFT = 5U;
 
-DEFINE_TABLE_TYPE(ActionTable)
-
 std::string ActionTable::find_field(Table::Format::Field *field) {
     for (auto &af : action_formats) {
         auto name = af.second->find_field(field);
@@ -544,8 +542,13 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
         break; }
 }
 
+#if HAVE_FLATROCK
+template<> void ActionTable::write_regs_vt(Target::Flatrock::mau_regs &) {
+    BUG("TBD");
+}
+#endif /* HAVE_FLATROCK */
 template<class REGS>
-void ActionTable::write_regs(REGS &regs) {
+void ActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Action table " << name() << " write_regs " << loc());
     unsigned fmt_log2size = format->log2size;
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
@@ -747,3 +750,5 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     tbl["how_referenced"] = hr;
     merge_context_json(tbl, stage_tbl);
 }
+
+DEFINE_TABLE_TYPE(ActionTable)

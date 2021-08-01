@@ -7,8 +7,6 @@
 #include "stage.h"
 #include "tables.h"
 
-DEFINE_TABLE_TYPE(ExactMatchTable)
-
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
@@ -260,9 +258,14 @@ void ExactMatchTable::generate_stash_overhead_rows() {
     }
 }
 
+#if HAVE_FLATROCK
+template<> void ExactMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
  * from write_regs? */
-template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
+template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### Exact match table " << name() << " write_regs " << loc());
     SRamMatchTable::write_regs(regs);
 
@@ -475,3 +478,5 @@ void ExactMatchTable::gen_ghost_bits(int hash_function_number,
         ghost_bits_to_hash_bits.push_back(std::move(ghost_bit_to_hash_bits));
     }
 }
+
+DEFINE_TABLE_TYPE(ExactMatchTable)

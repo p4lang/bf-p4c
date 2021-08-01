@@ -10,7 +10,7 @@
 
 enum config_version_t { CONFIG_OLD = 1, CONFIG_NEW = 2, CONFIG_BOTH = 3 };
 enum target_t { NO_TARGET = 0, TOFINO, TOFINO2, JBAY = TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
-                TOFINO2A0, TOFINO3, CLOUDBREAK = TOFINO3,
+                TOFINO2A0, TOFINO3, CLOUDBREAK = TOFINO3, TOFINO5, FLATROCK = TOFINO5,
                 TARGET_INDEX_LIMIT };
 enum binary_type_t { NO_BINARY,
     FOUR_PIPE,  // binary replicating to all 4 pipes
@@ -73,7 +73,7 @@ inline void warning(int lineno, const char *fmt, ...) {
         warning(lineno, fmt, args);
         va_end(args);
     }
-#endif
+#endif  /* BAREFOOT_INTERNAL */
 }
 
 void bug(const char *, int, const char * = 0, ...) __attribute__((format(printf, 3, 4)));
@@ -87,7 +87,7 @@ inline void bug(const char* fname, int lineno, const char *fmt, ...) {
         va_start(args, fmt);
         vfprintf(stderr, fmt, args);
         va_end(args); }
-#endif
+#endif  /* !NDEBUG */
     fprintf(stderr, "\n");
     fflush(stderr);
     std::terminate(); }

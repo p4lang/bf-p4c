@@ -1746,7 +1746,7 @@ class reg(csr_composite_object):
         class context:
             shift = 0
             words = []
-        context.words = [None] * (self.width // 32)
+        context.words = [None] * ((self.width + 31) // 32)
         for a in self.fields:
             field_name = a.name
             if field_name in args.cpp_reserved:

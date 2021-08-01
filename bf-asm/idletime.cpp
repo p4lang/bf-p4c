@@ -64,8 +64,13 @@ void IdletimeTable::pass3() {
 
 static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
 
+#if HAVE_FLATROCK
+template<> void IdletimeTable::write_merge_regs_vt(Target::Flatrock::mau_regs &, int, int) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
-void IdletimeTable::write_merge_regs(REGS &regs, int type, int bus) {
+void IdletimeTable::write_merge_regs_vt(REGS &regs, int type, int bus) {
     auto &merge = regs.rams.match.merge;
     merge.mau_payload_shifter_enable[type][bus].idletime_adr_payload_shifter_en = 1;
     merge.mau_idletime_adr_mask[type][bus] = (~1U << precision_bits[precision])
@@ -77,13 +82,18 @@ void IdletimeTable::write_merge_regs(REGS &regs, int type, int bus) {
 
 FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
     void IdletimeTable::write_merge_regs, (mau_regs &regs, int type, int bus), {
-        write_merge_regs<decltype(regs)>(regs, type, bus); })
+        write_merge_regs_vt(regs, type, bus); })
 
 int IdletimeTable::precision_shift() const { return precision_bits[precision] + 1; }
 int IdletimeTable::direct_shiftcount() const { return 67 - precision_bits[precision]; }
 
+#if HAVE_FLATROCK
+template<> void IdletimeTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
-void IdletimeTable::write_regs(REGS &regs) {
+void IdletimeTable::write_regs_vt(REGS &regs) {
     LOG1("### Idletime table " << name() << " write_regs " << loc());
     auto &map_alu = regs.rams.map_alu;
     auto &adrdist = regs.rams.match.adrdist;
@@ -160,6 +170,9 @@ void IdletimeTable::write_regs(REGS &regs) {
     adrdist.movereg_ad_direct[MoveReg::IDLE] |= 1 << logical_id;
     adrdist.idle_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |=  1 << logical_id;
 }
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void IdletimeTable::write_regs, (mau_regs &regs), {
+        write_regs_vt(regs); })
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) const {
     unsigned number_entries = layout_size() * (8U/precision) * 1024;

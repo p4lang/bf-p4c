@@ -10,10 +10,10 @@
 #include "log.h"
 
 #include "config.h"
-#ifdef HAVE_EXECINFO_H
+#if HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif
-#ifdef HAVE_UCONTEXT_H
+#if HAVE_UCONTEXT_H
 #include <ucontext.h>
 #endif
 
@@ -40,7 +40,7 @@ void register_thread() {
 #define MTONLY(...)     __VA_ARGS__
 #else
 #define MTONLY(...)
-#endif  // MULTITHREAD
+#endif  /* MULTITHREAD */
 
 static void sigint_shutdown(int sig, siginfo_t *info, void *uctxt) {
     LOG1("Exiting with SIG" << signames[sig]);
@@ -88,7 +88,7 @@ const char *addr2line(void *addr, const char *text) {
 #else
     // pipe2 is Linux specific
     if (pipe(pfd) < 0) return 0;
-#endif  // __linux__
+#endif  /* !__linux__ */
     while ((child = fork()) == -1 && errno == EAGAIN) {}
     if (child == -1) return 0;
     if (child == 0) {
@@ -110,7 +110,7 @@ const char *addr2line(void *addr, const char *text) {
     return buffer;
 }
 
-#ifdef HAVE_UCONTEXT_H
+#if HAVE_UCONTEXT_H
 static void dumpregs(mcontext_t *mctxt) {
 #if defined(REG_EAX)
     LOG1(" eax=" << hex(mctxt->gregs[REG_EAX], 8, '0') <<
@@ -168,7 +168,7 @@ static void dumpregs(mcontext_t *mctxt) {
 #warning "unknown machine type"
 #endif
 }
-#endif
+#endif  /* HAVE_UCONTEXT_H */
 
 static void crash_shutdown(int sig, siginfo_t *info, void *uctxt) {
     MTONLY(static std::recursive_mutex lock;
@@ -188,10 +188,10 @@ static void crash_shutdown(int sig, siginfo_t *info, void *uctxt) {
     if (sig == SIGILL || sig == SIGFPE || sig == SIGSEGV ||
         sig == SIGBUS || sig == SIGTRAP)
         LOG1("  address = " << hex(info->si_addr));
-#ifdef HAVE_UCONTEXT_H
+#if HAVE_UCONTEXT_H
     dumpregs(&(static_cast<ucontext_t *>(uctxt))->uc_mcontext);
 #endif
-#ifdef HAVE_EXECINFO_H
+#if HAVE_EXECINFO_H
     static void *buffer[64];
     int size = backtrace(buffer, 64);
     char **strings = backtrace_symbols(buffer, size);

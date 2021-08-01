@@ -2,19 +2,22 @@
 #define __BFASM_CONFIG_H__
 
 /* Define to 1 if you have the execinfo.h header */
-#cmakedefine HAVE_EXECINFO_H 1
+#cmakedefine HAVE_EXECINFO_H @HAVE_EXECINFO_H@
 
 /* Define to 1 if you have the ucontext.h header */
-#cmakedefine HAVE_UCONTEXT_H 1
+#cmakedefine HAVE_UCONTEXT_H @HAVE_UCONTEXT_H@
+
+/* Define to 1 if we include Flatrock */
+#cmakedefine HAVE_FLATROCK @HAVE_FLATROCK@
 
 /* Define to 1 if we include Cloudbreak */
-#cmakedefine HAVE_CLOUDBREAK 1
+#cmakedefine HAVE_CLOUDBREAK @HAVE_CLOUDBREAK@
 
 /* Define to 1 if we include JBay */
-#cmakedefine HAVE_JBAY 1
+#cmakedefine HAVE_JBAY @HAVE_JBAY@
 
 /* Define to 1 if we include Tofino */
-#cmakedefine HAVE_TOFINO 1
+#cmakedefine HAVE_TOFINO @HAVE_TOFINO@
 
 /* Schema version */
 #cmakedefine CONTEXT_SCHEMA_VERSION "@CONTEXT_SCHEMA_VERSION@"

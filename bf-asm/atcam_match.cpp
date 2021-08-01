@@ -7,8 +7,6 @@
 #include "stage.h"
 #include "tables.h"
 
-DEFINE_TABLE_TYPE(AlgTcamMatchTable)
-
 void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
@@ -320,7 +318,7 @@ void AlgTcamMatchTable::pass3() {
     if (action_bus) action_bus->pass3(this);
 }
 
-template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
+template<class REGS> void AlgTcamMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### ATCAM match table " << name() << " write_regs " << loc());
     SRamMatchTable::write_regs(regs);
 
@@ -335,6 +333,11 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
             ram.match_nibble_s1q0_enable
                 = 0xffffffffUL & ~s0q1_nibbles.getrange(way.word*32U, 32); } }
 }
+#if HAVE_FLATROCK
+template<> void AlgTcamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 
 std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_tbl_cfg() const {
     if (col_priority_way.size() == 0)
@@ -526,3 +529,5 @@ void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) const {
     // units->MatchTable->stage_table node
     match_attributes["stage_tables"] = json::vector();
 }
+
+DEFINE_TABLE_TYPE(AlgTcamMatchTable)

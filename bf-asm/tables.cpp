@@ -2211,6 +2211,12 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
                 { "field_called", std::move(immed_name) } } }); } }
 }
 
+#if HAVE_FLATROCK
+template<> void Table::write_mapram_regs(Target::Flatrock::mau_regs &regs,
+                                         int row, int col, int vpn, int type) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     auto &mapram_config = regs.rams.map_alu.row[row].adrmux.mapram_config[col];

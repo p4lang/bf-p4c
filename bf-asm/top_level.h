@@ -28,8 +28,7 @@ class TopLevelRegs : public TopLevel, public REGSET::top_level_regs {
     ~TopLevelRegs();
 
     void output(json::map &);
-    void set_mau_stage(int stage, const char *file, typename REGSET::mau_regs *regs) {
-        this->reg_pipe.mau[stage].set(file, regs); }
+    void set_mau_stage(int stage, const char *file, typename REGSET::mau_regs *regs);
 };
 
 template<class T> TopLevelRegs<typename T::register_type> *TopLevel::regs() {

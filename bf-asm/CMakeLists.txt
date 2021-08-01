@@ -248,6 +248,11 @@ if (ENABLE_CLOUDBREAK)
   set (HAVE_CLOUDBREAK 1)
   set (BFASM_LIBS ${BFASM_LIBS} regs_cb)
 endif()
+if (ENABLE_FLATROCK)
+  add_subdirectory (flatrock)
+  set (HAVE_FLATROCK 1)
+  set (BFASM_LIBS ${BFASM_LIBS} regs_ftr)
+endif()
 
 # Other configuration files that need to be generated
 configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.in" "${BFASM_BINARY_DIR}/config.h")

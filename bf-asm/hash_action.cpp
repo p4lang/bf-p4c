@@ -4,8 +4,6 @@
 #include "tables.h"
 #include "misc.h"
 
-DEFINE_TABLE_TYPE(HashActionTable)
-
 Table::Format::Field *HashActionTable::lookup_field(const std::string &n,
         const std::string &act) const {
     auto *rv = format ? format->field(n) : nullptr;
@@ -83,12 +81,17 @@ void HashActionTable::pass3() {
 }
 
 template<class REGS>
-void HashActionTable::write_merge_regs(REGS &regs, int type, int bus) {
+void HashActionTable::write_merge_regs_vt(REGS &regs, int type, int bus) {
     attached.write_merge_regs(regs, this, type, bus);
 }
 
+#if HAVE_FLATROCK
+template<> void HashActionTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
-void HashActionTable::write_regs(REGS &regs) {
+void HashActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Hash Action " << name() << " write_regs " << loc());
     /* FIXME -- setup layout with no rams so other functions can write registers properly */
     int bus_type = layout[0].bus >> 1;
@@ -198,3 +201,8 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     gen_idletime_tbl_cfg(stage_tbl);
     merge_context_json(tbl, stage_tbl);
 }
+
+DEFINE_TABLE_TYPE(HashActionTable)
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void HashActionTable::write_merge_regs, (mau_regs &regs, int type, int bus), {
+        write_merge_regs_vt(regs, type, bus); })

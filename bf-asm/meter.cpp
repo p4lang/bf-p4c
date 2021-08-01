@@ -4,15 +4,17 @@
 #include "stage.h"
 #include "tables.h"
 
-#include "tofino/meter.cpp"            // tofino template specializations
+// target specific template specializations
+#include "tofino/meter.cpp"            // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/meter.cpp"              // jbay template specializations
-#endif  // HAVE_JBAY
+#include "jbay/meter.cpp"              // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/meter.cpp"        // cloudbreak template specializations
-#endif  // HAVE_CLOUDBREAK
-
-DEFINE_TABLE_TYPE(MeterTable)
+#include "cloudbreak/meter.cpp"        // NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/meter.cpp"          // NOLINT(build/include)
+#endif  /* HAVE_FLATROCK */
 
 void MeterTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::Stateful);
@@ -244,7 +246,7 @@ unsigned MeterTable::determine_shiftcount(Table::Call &call, int group, unsigned
     return determine_meter_shiftcount(call, group, word, tcam_shift);
 }
 
-template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *match,
+template<class REGS> void MeterTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     unsigned adr_mask = 0U;
@@ -309,9 +311,10 @@ template<class REGS> void MeterTable::write_color_regs(REGS &regs, MatchTable *m
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void MeterTable::write_color_regs,
     mau_regs &, MatchTable *, int, int, const std::vector<Call::Arg> &);
 
-template<class REGS> void MeterTable::setup_exact_shift(REGS &merge, int bus,
+template<class REGS> void MeterTable::setup_exact_shift(REGS &regs, int bus,
                                                         int group, int word, int word_group,
                                                         Call &meter_call, Call &color_call) {
+    auto &merge = regs.rams.match.merge;
     int shiftcount = determine_shiftcount(meter_call, group, word, 0);
     merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
     if (uses_colormaprams()) {
@@ -326,10 +329,11 @@ template<class REGS> void MeterTable::setup_exact_shift(REGS &merge, int bus,
     }
 }
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void MeterTable::setup_exact_shift,
-    mau_regs::_rams::_match::_merge &, int, int, int, int, Call &, Call &);
+    mau_regs &, int, int, int, int, Call &, Call &);
 
-template<class REGS> void MeterTable::setup_tcam_shift(REGS &merge, int bus, int tcam_shift,
+template<class REGS> void MeterTable::setup_tcam_shift(REGS &regs, int bus, int tcam_shift,
                                                        Call &meter_call, Call &color_call) {
+    auto &merge = regs.rams.match.merge;
     int shiftcount = determine_shiftcount(meter_call, 0, 0, tcam_shift);
     merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
     if (uses_colormaprams()) {
@@ -344,10 +348,10 @@ template<class REGS> void MeterTable::setup_tcam_shift(REGS &merge, int bus, int
     }
 }
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void MeterTable::setup_tcam_shift,
-    mau_regs::_rams::_match::_merge &, int, int, Call &, Call &);
+    mau_regs &, int, int, Call &, Call &);
 
 template<class REGS>
-void MeterTable::write_regs(REGS &regs) {
+void MeterTable::write_regs_vt(REGS &regs) {
     LOG1("### Meter table " << name() << " write_regs " << loc());
     if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
@@ -729,7 +733,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
     }
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 
 #if HAVE_CLOUDBREAK
 template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_regs &regs,
@@ -760,7 +764,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_
     }
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
 
 void MeterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
@@ -793,3 +797,8 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
         stage_tbl.merge(*context_json);
 }
 
+DEFINE_TABLE_TYPE(MeterTable)
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void MeterTable::write_merge_regs,
+    (mau_regs &regs, MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args),
+    { write_merge_regs_vt(regs, match, type, bus, args); })

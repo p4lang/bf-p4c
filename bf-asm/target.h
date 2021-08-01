@@ -9,7 +9,22 @@
  *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
  *              basically a subset of targets with one per distinct register set
  */
-#if HAVE_CLOUDBREAK  /* for now also implies HAVE_JBAY */
+#if HAVE_FLATROCK  /* for now also implies HAVE_CLOUDBREAK and HAVE_JBAY */
+#define FOR_ALL_TARGETS(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__)     \
+    M(Tofino2H, ##__VA_ARGS__) \
+    M(Tofino2M, ##__VA_ARGS__) \
+    M(Tofino2U, ##__VA_ARGS__) \
+    M(Tofino2A0, ##__VA_ARGS__) \
+    M(Cloudbreak, ##__VA_ARGS__) \
+    M(Flatrock, ##__VA_ARGS__)
+#define FOR_ALL_REGISTER_SETS(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__) \
+    M(Cloudbreak, ##__VA_ARGS__) \
+    M(Flatrock, ##__VA_ARGS__)
+#elif HAVE_CLOUDBREAK  /* for now also implies HAVE_JBAY */
 #define FOR_ALL_TARGETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
     M(JBay, ##__VA_ARGS__)     \
@@ -38,7 +53,7 @@
     M(Tofino, ##__VA_ARGS__)
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)
-#endif  // HAVE_CLOUBREAK/JBAY
+#endif  /* !HAVE_FLATROCK && !HAVE_CLOUBREAK && !HAVE_JBAY */
 
 #define EXPAND(...)     __VA_ARGS__
 #define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...)  template FUNC(Target::TARGET::__VA_ARGS__);
@@ -391,7 +406,7 @@ class Target::Tofino2A0 : public Target::JBay {
 
 void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &);
 
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 
 #if HAVE_CLOUDBREAK
 #include "gen/cloudbreak/memories.cb_mem.h"
@@ -514,8 +529,104 @@ void declare_registers(const Target::Cloudbreak::deparser_regs *regs);
 
 void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::ostream &);
 
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
 
+#if HAVE_FLATROCK
+#include "gen/flatrock/regs.ftr_reg.h"
+#include "gen/flatrock/regs.pipe_addrmap.h"
+#include "gen/flatrock/regs.mau_addrmap.h"
+
+class Target::Flatrock : public Target {
+ public:
+    static constexpr const char * const name = "tofino5";
+    static constexpr target_t tag = FLATROCK;
+    static constexpr target_t register_set = FLATROCK;
+    typedef Target::Flatrock target_type;
+    typedef Target::Flatrock register_type;
+    class Phv;
+    struct                                          top_level_regs {
+        typedef ::Flatrock::regs_top                    _regs_top;
+        typedef ::Flatrock::regs_pipe                   _regs_pipe;
+
+        // no memories defined (yet) in CSR
+        struct _mem_top { }                             mem_top;
+        struct _mem_pipe { }                            mem_pipe;
+        ::Flatrock::regs_top                            reg_top;
+        ::Flatrock::regs_pipe                           reg_pipe;
+    };
+
+    // no parser/deparser defined (yet) in CSR
+    struct                                              parser_regs { };
+    typedef ::Flatrock::regs_match_action_stage_        mau_regs;
+    struct                                              deparser_regs { };
+    enum {
+        PARSER_CHECKSUM_UNITS = 0,
+        PARSER_EXTRACT_BYTES = true,
+        MATCH_BYTE_16BIT_PAIRS = false,
+#ifdef EMU_OVERRIDE_STAGE_COUNT
+        NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
+#else
+        // max of ingress and egress stages (ingress=13, egress=11)
+        NUM_MAU_STAGES_PRIVATE = 13,
+        OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
+#endif
+        ACTION_INSTRUCTION_MAP_WIDTH = 8,
+        DEPARSER_CHECKSUM_UNITS = 0,
+        DEPARSER_CONSTANTS = 0,
+        DEPARSER_MAX_POV_BYTES = 0,
+        DEPARSER_CHUNKS_PER_GROUP = 0,
+        DEPARSER_CHUNK_SIZE = 0,
+        DEPARSER_CHUNK_GROUPS = 0,
+        DEPARSER_CLOTS_PER_GROUP = 0,
+        DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
+        DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
+        END_OF_PIPE = 0xfff,
+        GATEWAY_PAYLOAD_GROUPS = 4,
+        INSTR_SRC2_BITS = 0,
+        LONG_BRANCH_TAGS = 32,
+        MAU_BASE_DELAY = 23,
+        MAU_BASE_PREDICATION_DELAY = 13,
+        METER_ALU_GROUP_DATA_DELAY = 15,
+        PHASE0_FORMAT_WIDTH = 0,
+        STATEFUL_CMP_UNITS = 4,
+        STATEFUL_CMP_ADDR_WIDTH = 2,
+        STATEFUL_CMP_CONST_WIDTH = 6,
+        STATEFUL_CMP_CONST_MASK = 0x3f,
+        STATEFUL_CMP_CONST_MIN = -32,
+        STATEFUL_CMP_CONST_MAX = 31,
+        STATEFUL_TMATCH_UNITS = 2,
+        STATEFUL_OUTPUT_UNITS = 4,
+        STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
+        STATEFUL_REGFILE_ROWS = 4,
+        STATEFUL_REGFILE_CONST_WIDTH = 34,
+        SUPPORT_ALWAYS_RUN = 1,
+        HAS_MPR = 0,
+        SUPPORT_CONCURRENT_STAGE_DEP = 0,
+        SUPPORT_OVERFLOW_BUS = 0,
+        SUPPORT_SALU_FAST_CLEAR = 1,
+        STATEFUL_ALU_ADDR_WIDTH = 2,
+        STATEFUL_ALU_CONST_WIDTH = 4,
+        STATEFUL_ALU_CONST_MASK = 0xf,
+        STATEFUL_ALU_CONST_MIN = -8,  // TODO Is the same as the following one?
+        STATEFUL_ALU_CONST_MAX = 7,
+        MINIMUM_INSTR_CONSTANT = -4,  // TODO
+        NUM_PARSERS = 1,
+    };
+    static int encodeConst(int src) {
+        return src;
+    }
+};
+void declare_registers(const Target::Flatrock::top_level_regs *regs);
+void undeclare_registers(const Target::Flatrock::top_level_regs *regs);
+void declare_registers(const Target::Flatrock::parser_regs *regs);
+void undeclare_registers(const Target::Flatrock::parser_regs *regs);
+void declare_registers(const Target::Flatrock::mau_regs *regs, int stage);
+void declare_registers(const Target::Flatrock::deparser_regs *regs);
+
+void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::ostream &);
+
+#endif  /* HAVE_FLATROCK */
 
 /** Macro to buid a switch table switching on a target_t, expanding to the same
  *  code for each target, with TARGET being a typedef for the target type */

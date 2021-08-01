@@ -227,7 +227,7 @@ void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostrea
         out << binout::tag('P') << json::binary(header);
         eg.second->emit_binary(out, 0); }
 }
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 
 #if HAVE_CLOUDBREAK
 void declare_registers(const Target::Cloudbreak::top_level_regs *regs) {
@@ -339,7 +339,39 @@ void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::
         out << binout::tag('P') << json::binary(header);
         eg.second->emit_binary(out, 0); }
 }
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
+
+#if HAVE_FLATROCK
+void declare_registers(const Target::Flatrock::top_level_regs *regs) {
+    declare_registers(&regs->reg_top, sizeof(regs->reg_top),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.top";
+            regs->reg_top.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->reg_pipe, sizeof(regs->reg_pipe),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.pipe";
+            regs->reg_pipe.emit_fieldname(out, addr, end); });
+}
+void undeclare_registers(const Target::Flatrock::top_level_regs *regs) {
+    undeclare_registers(&regs->reg_top);
+    undeclare_registers(&regs->reg_pipe);
+}
+void declare_registers(const Target::Flatrock::parser_regs *) {
+}
+void undeclare_registers(const Target::Flatrock::parser_regs *) {
+}
+void declare_registers(const Target::Flatrock::mau_regs *regs, int stage) {
+    declare_registers(regs, sizeof *regs,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "mau[" << stage << "]";
+            regs->emit_fieldname(out, addr, end); });
+}
+void declare_registers(const Target::Flatrock::deparser_regs *) {
+}
+
+void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::ostream &out) {
+}
+#endif  /* HAVE_FLATROCK */
 
 int Target::numMauStagesOverride = 0;
 

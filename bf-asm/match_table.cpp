@@ -197,13 +197,13 @@ void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {
         idletime->gen_stage_tbl_cfg(stage_tbl);
 }
 
-#include "tofino/match_table.cpp"
+#include "tofino/match_table.cpp"                       // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/match_table.cpp"
-#endif  // HAVE_JBAY
+#include "jbay/match_table.cpp"                         // NOLINT(build/include)
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/match_table.cpp"
-#endif  // HAVE_CLOUDBREAK
+#include "cloudbreak/match_table.cpp"                   // NOLINT(build/include)
+#endif  /* HAVE_CLOUDBREAK */
 
 template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_regs &regs,
                                                           int type, Table *result) {

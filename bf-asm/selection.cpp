@@ -5,8 +5,6 @@
 #include "stage.h"
 #include "tables.h"
 
-DEFINE_TABLE_TYPE(SelectionTable)
-
 void SelectionTable::setup(VECTOR(pair_t) &data) {
     setup_layout(layout, data);
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
@@ -146,7 +144,13 @@ unsigned SelectionTable::determine_shiftcount(Table::Call &call, int group, unsi
     return determine_meter_shiftcount(call, group, word, tcam_shift);
 }
 
-template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
+#if HAVE_FLATROCK
+template<> void SelectionTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
+            MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void SelectionTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     setup_physical_alu_map(regs, type, bus, meter_group());
@@ -258,17 +262,22 @@ template<> void SelectionTable::setup_physical_alu_map(Target::JBay::mau_regs &r
     auto &merge = regs.rams.match.merge;
     merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
 }
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
 template<> void SelectionTable::setup_physical_alu_map(Target::Cloudbreak::mau_regs &regs,
                                                        int type, int bus, int alu) {
     auto &merge = regs.rams.match.merge;
     merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
 }
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
 
+#if HAVE_FLATROCK
+template<> void SelectionTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
-void SelectionTable::write_regs(REGS &regs) {
+void SelectionTable::write_regs_vt(REGS &regs) {
     LOG1("### Selection table " << name() << " write_regs " << loc());
     if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
@@ -387,7 +396,7 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
     merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
         4 | alu, 3*(logical_id % 8U), 3);
 }
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
 template<> void SelectionTable::setup_logical_alu_map(Target::Cloudbreak::mau_regs &regs,
                                                       int logical_id, int alu) {
@@ -396,7 +405,7 @@ template<> void SelectionTable::setup_logical_alu_map(Target::Cloudbreak::mau_re
     merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
         4 | alu, 3*(logical_id % 8U), 3);
 }
-#endif  // HAVE_CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     // Stage table size reflects how many RAM lines are available for the selector, according
@@ -429,3 +438,9 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     if (context_json)
         stage_tbl.merge(*context_json);
 }
+
+DEFINE_TABLE_TYPE(SelectionTable)
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void SelectionTable::write_merge_regs,
+    (mau_regs &regs, MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args),
+    { write_merge_regs_vt(regs, match, type, bus, args); })

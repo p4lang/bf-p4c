@@ -498,6 +498,12 @@ void SRamMatchTable::setup_word_ixbar_group() {
     }
 }
 
+#if HAVE_FLATROCK
+template<> void SRamMatchTable::write_attached_merge_regs(Target::Flatrock::mau_regs &regs,
+            int bus, int word, int word_group) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, int word_group) {
     int group = word_info[word][word_group];
@@ -514,7 +520,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
     for (auto &m : attached.meters) {
         if (group_info[group].overhead_word == static_cast<int>(word)
             || group_info[group].overhead_word == -1) {
-            m->to<MeterTable>()->setup_exact_shift(merge, bus, group, word, word_group,
+            m->to<MeterTable>()->setup_exact_shift(regs, bus, group, word, word_group,
                                                    m, attached.meter_color);
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
@@ -791,7 +797,12 @@ int SRamMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int h
     return find_on_ixbar(sl, word_ixbar_group[word]);
 }
 
-template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
+#if HAVE_FLATROCK
+template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    BUG("TBD");
+}
+#endif  /* HAVE_FLATROCK */
+template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### SRam match table " << name() << " write_regs " << loc());
     MatchTable::write_regs(regs, 0, this);
     auto &merge = regs.rams.match.merge;
@@ -1075,7 +1086,8 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
     for (auto &hd : hash_dist)
         hd.write_regs(regs, this);
 }
-
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+    void SRamMatchTable::write_regs, (mau_regs &regs), { write_regs_vt(regs); })
 
 std::string SRamMatchTable::get_match_mode(const Phv::Ref &pref, int offset) const {
     return "unused";

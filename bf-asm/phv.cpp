@@ -454,4 +454,7 @@ void Phv::output(json::map &ctxt_json) {
 #include "tofino/phv.cpp"
 #if HAVE_JBAY
 #include "jbay/phv.cpp"
-#endif  // HAVE_JBAY
+#endif  /* HAVE_JBAY */
+#if HAVE_FLATROCK
+#include "flatrock/phv.cpp"
+#endif  /* HAVE_FLATROCK */
