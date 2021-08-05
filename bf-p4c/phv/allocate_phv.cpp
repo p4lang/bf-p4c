@@ -662,7 +662,7 @@ void AllocScore::calcParserExtractorBalanceScore(const PHV::Transaction& alloc, 
 bitvec
 AllocScore::calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices) {
     bitvec allocatedBits;
-    for (auto slice : slices) {
+    for (const auto& slice : slices) {
         allocatedBits |= bitvec(slice.container_slice().lo,
                                 slice.container_slice().size()); }
     return allocatedBits;
@@ -712,7 +712,7 @@ bool CoreAllocation::can_overlay(
         const SymBitMatrix& mutex,
         const PHV::Field* f,
         const ordered_set<PHV::AllocSlice>& slices) {
-    for (auto slice : slices)
+    for (const auto& slice : slices)
         if (!mutex(f->id, slice.field()->id))
             return false;
     return true;
@@ -882,7 +882,7 @@ bool CoreAllocation::satisfies_constraints(
         } }
 
     bool isExtracted = false;
-    for (auto slice : slices) {
+    for (const auto& slice : slices) {
         if (uses_i.is_extracted(slice.field())) {
             isExtracted = true;
             break;
@@ -897,7 +897,7 @@ bool CoreAllocation::satisfies_constraints(
     if (isExtracted) {
         ordered_map<const IR::BFN::ParserState*, bitvec> state_to_vec;
         cstring prev_field;
-        for (auto slice : slices) {
+        for (const auto& slice : slices) {
             auto field = slice.field();
             container_size = slice.container().size();
             if (field->padding || field->pov || field->is_solitary())
@@ -992,7 +992,7 @@ bool CoreAllocation::satisfies_constraints(
 // `can_pack` on slice lists.
 bool CoreAllocation::satisfies_constraints(
         const PHV::Allocation& alloc,
-        PHV::AllocSlice slice,
+        const PHV::AllocSlice& slice,
         ordered_set<PHV::AllocSlice>& initFields) const {
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
@@ -1300,11 +1300,11 @@ bool CoreAllocation::hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidat
 // Check dark mutex of all candidates and build bitvec of container
 // slice corresponding to dark mutex slices. If the bitvec is not contiguous
 // then turn off ARA initializations; instead use regular table inits
-bool CoreAllocation::checkDarkOverlay(std::vector<PHV::AllocSlice> candidate_slices,
-                                      PHV::Transaction alloc) const {
+bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candidate_slices,
+                                      const PHV::Transaction& alloc) const {
     bitvec cntr_bits;
 
-    for (auto sl : candidate_slices) {
+    for (const auto& sl : candidate_slices) {
         const auto& alloced_slices = alloc.slices(sl.container(), sl.container_slice());
 
         // Find slices that can be dark overlaid
@@ -3125,7 +3125,7 @@ static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
     std::set<const PHV::Field*> fields;
     for (auto* rc : sc.clusters())
         for (auto* ac : rc->clusters())
-            for (auto slice : *ac)
+            for (const auto& slice : *ac)
                 fields.insert(slice.field());
     std::vector<const PHV::Field*> sortedFields(fields.begin(), fields.end());
     std::sort(sortedFields.begin(), sortedFields.end(),
@@ -3149,7 +3149,7 @@ static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
 
             msg << "    These slices must also be aligned within their respective containers:"
                 << std::endl;
-            for (auto slice : *ac)
+            for (const auto& slice : *ac)
                 msg << "        " << PHV::Diagnostics::printSlice(slice) << std::endl; } }
     msg << std::endl;
 
@@ -3159,7 +3159,7 @@ static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
         msg << "These fields can (optionally) be packed adjacently in the same container to "
             << "satisfy exact_containers requirements:"
             << std::endl;
-        for (auto slice : *slist)
+        for (const auto& slice : *slist)
             msg << "    " << PHV::Diagnostics::printSlice(slice) << std::endl;
         msg << std::endl; }
 
@@ -3486,7 +3486,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryDeparserZeroAlloc(
         return alloc_attempt; }
     for (auto* sl : cluster.slice_lists()) {
         int slice_list_offset = 0;
-        for (auto slice : *sl) {
+        for (const auto& slice : *sl) {
             LOG_DEBUG5(TAB2 "Slice in slice list: " << slice);
             std::map<gress_t, PHV::Container> zero = { { INGRESS, PHV::Container("B0") },
                                                        { EGRESS, PHV::Container("B16") }};

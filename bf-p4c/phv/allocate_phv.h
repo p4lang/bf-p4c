@@ -271,7 +271,7 @@ class CoreAllocation {
     /// initialized via metadata initialization.
     bool satisfies_constraints(
             const PHV::Allocation& alloc,
-            PHV::AllocSlice slice,
+            const PHV::AllocSlice& slice,
             ordered_set<PHV::AllocSlice>& initFields) const;
 
     /// @returns true if @container_group and @cluster_group satisfy constraints.
@@ -325,8 +325,8 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         PHV::SuperCluster& cluster) const;
 
-    bool checkDarkOverlay(std::vector<PHV::AllocSlice> candidate_slices,
-                          PHV::Transaction alloc) const;
+    bool checkDarkOverlay(const std::vector<PHV::AllocSlice>& candidate_slices,
+                          const PHV::Transaction& alloc) const;
 
 
     /** Helper function for tryAlloc that tries to allocate all fields in

@@ -222,7 +222,7 @@ class Allocation {
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
-    virtual boost::optional<ContainerStatus> getStatus(PHV::Container c) const = 0;
+    virtual boost::optional<ContainerStatus> getStatus(const PHV::Container& c) const = 0;
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
@@ -370,7 +370,7 @@ class Allocation {
     }
 
     /// @returns the container status of @c and fails if @c is not present.
-    virtual GressAssignment gress(PHV::Container c) const;
+    virtual GressAssignment gress(const PHV::Container& c) const;
 
     /// @returns the gress of @c's parser group, if any.  If a container
     /// holds extracted fields, then its gress must match that of its parser
@@ -453,7 +453,7 @@ class ConcreteAllocation : public Allocation {
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
-    boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
+    boost::optional<ContainerStatus> getStatus(const PHV::Container& c) const override;
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
@@ -496,7 +496,7 @@ class Transaction : public Allocation {
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
-    boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
+    boost::optional<ContainerStatus> getStatus(const PHV::Container& c) const override;
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
@@ -726,7 +726,7 @@ class AlignedCluster : public ClusterStats {
 
     /// Find valid container start range for @slice in @container_size containers.
     static boost::optional<le_bitrange> validContainerStartRange(
-        PHV::FieldSlice slice,
+        const PHV::FieldSlice& slice,
         PHV::Size container_size);
 
     /// Helper function to set cluster id

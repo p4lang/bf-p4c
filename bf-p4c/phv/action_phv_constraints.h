@@ -245,12 +245,12 @@ class ActionPhvConstraints : public Inspector {
          * written in @act or if there are no sources.
          */
         std::vector<OperandInfo>
-        sources(PHV::FieldSlice dst, const IR::MAU::Action* act) const;
+        sources(const PHV::FieldSlice& dst, const IR::MAU::Action* act) const;
 
         /// Convenience method that translates @dst to a FieldSlice and passes
         /// it to `sources` above.
         std::vector<OperandInfo>
-        sources(PHV::AllocSlice dst, const IR::MAU::Action* act) const {
+        sources(const PHV::AllocSlice& dst, const IR::MAU::Action* act) const {
             return sources(PHV::FieldSlice(dst.field(), dst.field_slice()), act);
         }
 

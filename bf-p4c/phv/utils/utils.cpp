@@ -73,7 +73,7 @@ void PHV::Allocation::addMetaInitPoints(
     LOG5("Adding init points for " << slice);
     LOG5("Number of entries in meta_init_points_i: " << meta_init_points_i.size());
     if (meta_init_points_i.size() > 0)
-        for (auto kv : meta_init_points_i)
+        for (const auto& kv : meta_init_points_i)
             LOG5("  Init points for " << kv.first << " : " << kv.second.size());
     for (const IR::MAU::Action* act : actions)
         init_writes_i[act].insert(slice.field());
@@ -93,7 +93,7 @@ void PHV::Allocation::addSlice(PHV::Container c, PHV::AllocSlice slice) {
     if (container_status_i[c].alloc_status != PHV::Allocation::ContainerAllocStatus::FULL) {
         PHV::Allocation::ContainerAllocStatus old_status = container_status_i[c].alloc_status;
         bitvec allocated_bits;
-        for (auto slice : container_status_i[c].slices)
+        for (const auto& slice : container_status_i[c].slices)
             allocated_bits |= bitvec(slice.container_slice().lo, slice.width());
         if (allocated_bits == bitvec())
             container_status_i[c].alloc_status = PHV::Allocation::ContainerAllocStatus::EMPTY;
@@ -411,7 +411,7 @@ cstring PHV::Allocation::commit(Transaction& view) {
     state_to_containers_i.clear();
 
     // Merge the status from the view.
-    for (auto kv : view.getTransactionStatus()) {
+    for (const auto& kv : view.getTransactionStatus()) {
         bool c_status_chng = this->addStatus(kv.first, kv.second);
         if (c_status_chng) {
             ss << "   " << kv.first << " " << kv.second.parserGroupGress << " " <<
@@ -420,12 +420,12 @@ cstring PHV::Allocation::commit(Transaction& view) {
     }
 
     // Merge the metadata initialization points from the view.
-    for (auto kv : view.getMetaInitPoints())
+    for (const auto& kv : view.getMetaInitPoints())
         this->addMetaInitPoints(kv.first, kv.second);
 
     // Print the initialization information for this transaction.
     if (view.getInitWrites().size() != 0)
-        for (auto kv : view.getInitWrites())
+        for (const auto& kv : view.getInitWrites())
             this->init_writes_i[kv.first].insert(kv.second.begin(), kv.second.end());
 
     // Clear the view.
@@ -506,11 +506,11 @@ const ordered_set<unsigned>
 PHV::Allocation::getTagalongCollectionsUsed() const {
     ordered_set<unsigned> rv;
 
-    for (const auto kv : container_status_i) {
+    for (const auto& kv : container_status_i) {
         const auto& container = kv.first;
         const auto& status = kv.second;
 
-        const auto kind = container.type().kind();
+        const auto& kind = container.type().kind();
         if (kind != PHV::Kind::tagalong) continue;
         if (status.alloc_status == ContainerAllocStatus::EMPTY) continue;
 
@@ -529,7 +529,7 @@ PHV::Allocation::getParserStateToContainers(const PhvInfo&,
             const auto& field = kv.first;
             const auto& container_slices = kv.second;
 
-            for (auto slice : container_slices) {
+            for (const auto& slice : container_slices) {
                 if (field_to_parser_states.field_to_parser_states.count(field)) {
                     for (auto state : field_to_parser_states.field_to_parser_states.at(field))
                         state_to_containers_i[state].insert(slice.container());
@@ -651,7 +651,7 @@ void PHV::Transaction::printMetaInitPoints() const {
 }
 
 boost::optional<PHV::Allocation::ContainerStatus>
-PHV::ConcreteAllocation::getStatus(PHV::Container c) const {
+PHV::ConcreteAllocation::getStatus(const PHV::Container& c) const {
     if (container_status_i.find(c) != container_status_i.end())
         return container_status_i.at(c);
     return boost::none;
@@ -664,7 +664,7 @@ PHV::Allocation::FieldStatus PHV::ConcreteAllocation::getStatus(const PHV::Field
 }
 
 /// @returns the container status of @c and fails if @c is not present.
-PHV::Allocation::GressAssignment PHV::Allocation::gress(PHV::Container c) const {
+PHV::Allocation::GressAssignment PHV::Allocation::gress(const PHV::Container& c) const {
     auto status = this->getStatus(c);
     BUG_CHECK(status, "Trying to get gress for container %1% not in Allocation",
               cstring::to_cstring(c));
@@ -748,7 +748,7 @@ PHV::Allocation::slices(
 }
 
 boost::optional<PHV::Allocation::ContainerStatus>
-PHV::Transaction::getStatus(PHV::Container c) const {
+PHV::Transaction::getStatus(const PHV::Container& c) const {
     // If a status exists in the transaction, then it includes info from the
     // parent.
     if (container_status_i.find(c) != container_status_i.end())
@@ -995,7 +995,7 @@ PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
 
 /* static */
 boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
-        PHV::FieldSlice slice,
+        const PHV::FieldSlice& slice,
         PHV::Size container_size) {
     le_bitrange container_slice = StartLen(0, int(container_size));
     LOG5("Computing valid container start range for cluster " <<

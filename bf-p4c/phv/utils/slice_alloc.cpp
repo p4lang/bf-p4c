@@ -22,7 +22,7 @@ PHV::AllocSlice::AllocSlice(
               cstring::to_cstring(f), slice_range.lo, slice_range.hi, f->size);
     min_stage_i = std::make_pair(-1, PHV::FieldUse(PHV::FieldUse::READ));
     max_stage_i = std::make_pair(PhvInfo::getDeparserStage(), PHV::FieldUse(PHV::FieldUse::WRITE));
-    init_i = new DarkInitPrimitive();
+    init_i.reset(new DarkInitPrimitive());
 }
 
 PHV::AllocSlice::AllocSlice(
@@ -58,10 +58,28 @@ PHV::AllocSlice::AllocSlice(const AllocSlice& other) {
     init_points_i = other.getInitPoints();
     shadow_always_run_i = other.getShadowAlwaysRun();
     has_meta_init_i = other.hasMetaInit();
-    init_i = new DarkInitPrimitive(*(other.getInitPrimitive()));
+    init_i.reset(new DarkInitPrimitive(*(other.getInitPrimitive())));
     this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
 }
 
+
+PHV::AllocSlice& PHV::AllocSlice::operator=(const AllocSlice& other) {
+    field_i = other.field();
+    container_i = other.container();
+    field_bit_lo_i = other.field_slice().lo;
+    container_bit_lo_i = other.container_slice().lo;
+    width_i = other.width();
+    init_points_i = other.getInitPoints();
+    shadow_always_run_i = other.getShadowAlwaysRun();
+    has_meta_init_i = other.hasMetaInit();
+    init_i.reset(new DarkInitPrimitive(*(other.getInitPrimitive())));
+    this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
+    return *this;
+}
+
+void PHV::AllocSlice::setInitPrimitive(DarkInitPrimitive* prim) {
+    init_i.reset(new DarkInitPrimitive(*prim));
+}
 
 bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
     return field_i             == other.field_i
@@ -121,7 +139,7 @@ bool PHV::AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
 }
 
 bool PHV::AllocSlice::hasInitPrimitive() const {
-    if (init_i == nullptr) return false;
+    if (!init_i) return false;
     if (init_i->isEmpty()) return false;
     return true;
 }

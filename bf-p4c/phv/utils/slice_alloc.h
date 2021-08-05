@@ -25,7 +25,7 @@ class AllocSlice {
     ActionSet init_points_i;
     PHV::StageAndAccess min_stage_i;
     PHV::StageAndAccess max_stage_i;
-    DarkInitPrimitive* init_i;
+    std::unique_ptr<DarkInitPrimitive> init_i;
 
     // true if the alloc is copied from an alias destination alloc that requires an always run
     // in the final stage.
@@ -40,7 +40,11 @@ class AllocSlice {
                ActionSet action);
     AllocSlice(const PHV::Field* f, PHV::Container c, le_bitrange f_slice,
                le_bitrange container_slice);
+
     AllocSlice(const AllocSlice& a);
+    AllocSlice& operator=(const AllocSlice& a);
+    AllocSlice(AllocSlice&&) = default;
+    AllocSlice& operator=(AllocSlice&&) = default;
 
     bool operator==(const AllocSlice& other) const;
     bool operator!=(const AllocSlice& other) const;
@@ -59,8 +63,8 @@ class AllocSlice {
     le_bitrange field_slice() const         { return StartLen(field_bit_lo_i, width_i); }
     le_bitrange container_slice() const     { return StartLen(container_bit_lo_i, width_i); }
     int width() const                       { return width_i; }
-    const DarkInitPrimitive* getInitPrimitive() const { return init_i; }
-    DarkInitPrimitive* getInitPrimitive() { return init_i; }
+    const DarkInitPrimitive* getInitPrimitive() const { return init_i.get(); }
+    DarkInitPrimitive* getInitPrimitive() { return init_i.get(); }
     const PHV::StageAndAccess& getEarliestLiveness() const { return min_stage_i; }
     const PHV::StageAndAccess& getLatestLiveness() const { return max_stage_i; }
 
@@ -109,9 +113,7 @@ class AllocSlice {
         min_stage_i = std::make_pair(min.first, min.second);
     }
 
-    void setInitPrimitive(DarkInitPrimitive* prim) {
-        init_i = prim;
-    }
+    void setInitPrimitive(DarkInitPrimitive* prim);
 
     bool hasMetaInit() const { return has_meta_init_i; }
     void setMetaInit() { has_meta_init_i = true; }
