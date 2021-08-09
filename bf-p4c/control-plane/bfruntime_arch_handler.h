@@ -767,7 +767,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         LOG5("Block : " << block
                 << ", block_name: " << block_name
                 << ", block_name_prefix: " << getBlockNamePrefix(block)
-                << ", control_plane_name : " << control_plane_name
+                << ", control_plane_name: " << control_plane_name
                 << ", name: "       << name
                 << ", fqname: "     << full_name);
         return full_name;
@@ -1654,7 +1654,6 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 cstring blockNamePrefix = pipeName;
                 if (decl)
                     blockNamePrefix = decl->controlPlaneName();
-
                 blockNamePrefixMap[block] = blockNamePrefix;
                 pipes.insert(pipeName);
             });
@@ -1769,7 +1768,8 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
                 auto name = getFullyQualifiedName(parserBlock,
-                                        inst->controlPlaneName(), true);
+                                                  inst->controlPlaneName(),
+                                                  true);
                 symbols->add(SymbolType::VALUE_SET(), name);
             }
         }
@@ -2216,6 +2216,11 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         // required because value set support in "standard" P4Info is currently
         // insufficient: the standard ValueSet message restricts the element
         // type to a simple binary string (P4Runtime v1.0 limitation).
+        //
+        // Fix for P4C-3920. ValueSets created by open-source p4RuntimeSerializer.cpp need
+        // to be deleted because it creates duplicates when dealing with multipipe programs.
+        p4info->clear_value_sets();
+
         Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
             if (!block->is<IR::ParserBlock>()) return;
             analyzeParser(symbols, p4info, block->to<IR::ParserBlock>());

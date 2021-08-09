@@ -44,6 +44,7 @@ class P4RuntimeStdConverter {
           {::barefoot::P4Ids::DIGEST, std::bind(&C::convertDigest, this, _1, _2)},
           {::barefoot::P4Ids::REGISTER, std::bind(&C::convertRegister, this, _1, _2)},
           {::barefoot::P4Ids::DIRECT_REGISTER, std::bind(&C::convertDirectRegister, this, _1, _2)},
+          {::barefoot::P4Ids::VALUE_SET, std::bind(&C::convertValueSet, this, _1, _2)},
         };
 
         std::unordered_map<P4Id, UpdatorFn> updators = {
@@ -318,6 +319,15 @@ class P4RuntimeStdConverter {
         auto* regStd = p4info->add_registers();
         setPreamble(externInstance, p4configv1::P4Ids::REGISTER, regStd);
         regStd->mutable_type_spec()->CopyFrom(reg.type_spec());
+    }
+
+    void convertValueSet(p4configv1::P4Info* p4info,
+                        const p4configv1::ExternInstance& externInstance) {
+        ::barefoot::ValueSet valueSet;
+        unpackExternInstance(externInstance, &valueSet);
+        auto* valueSetStd = p4info->add_value_sets();
+        setPreamble(externInstance, p4configv1::P4Ids::VALUE_SET, valueSetStd);
+        valueSetStd->set_size(valueSet.size());
     }
 
     void updatePortMetadata(p4configv1::ExternInstance& externInstance) {

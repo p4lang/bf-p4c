@@ -1343,7 +1343,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-counter6.p4
   extensions/p4_tests/p4_16/compile_only/brig-814-2.p4
   extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
-  extensions/p4_tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4
 )
 
 # program error
