@@ -146,6 +146,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/copy_header.cpp
   midend/defuse.cpp
   midend/elim_cast.cpp
+  midend/eliminate_tuples.cpp
   midend/fold_constant_hashes.cpp
   midend/desugar_varbit_extract.cpp
   midend/move_to_egress.cpp
@@ -177,6 +178,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/copy_header.h
   midend/defuse.h
   midend/elim_cast.h
+  midend/eliminate_tuples.h
   midend/fold_constant_hashes.h
   midend/desugar_varbit_extract.h
   midend/move_to_egress.h
@@ -806,6 +808,8 @@ set (p4include_HEADERS
   p4include/tofino/stateful_alu.p4
   p4include/tofino/wred.p4
   p4include/psa.p4
+  p4include/bmv2/psa.p4
+  p4include/dpdk/psa.p4
   )
 
 if (ENABLE_JBAY)

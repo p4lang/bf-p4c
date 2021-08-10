@@ -151,7 +151,7 @@ TEST(CopyHeaders, Lower$valid) {
             }
         })";
     Match::CheckList expected {
-        "action NoAction_0() { }",
+        "action NoAction_1() { }",
         "action act() { }",
         "table tbl_0 {",
             "key = {",
@@ -165,7 +165,7 @@ TEST(CopyHeaders, Lower$valid) {
             "}",
             "actions = {",
                 "act();",
-                "NoAction_0();",
+                "NoAction_1();",
             "}",
             "const entries = {",
 #if ENABLE_P4C3251
@@ -177,7 +177,7 @@ TEST(CopyHeaders, Lower$valid) {
 #endif
                 "(default, true, default) : act();",
             "}",
-            "default_action = NoAction_0();",
+            "default_action = NoAction_1();",
         "}",
         "apply {",
 #if ENABLE_P4C3251

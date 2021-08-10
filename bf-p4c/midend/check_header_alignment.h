@@ -117,6 +117,11 @@ class PadFlexibleField : public PassManager {
                     &headers_to_pad, &resubmit_headers, &all_header_types),
             new AddPaddingFields(refMap, typeMap,
                     &headers_to_pad, &resubmit_headers, &all_header_types),
+            // After padding the TypeInference might
+            // change new ListExpressions to StructExpressions
+            new P4::ClearTypeMap(typeMap),
+            new P4::ResolveReferences(refMap),
+            new BFN::TypeInference(refMap, typeMap, false),
             new P4::ClearTypeMap(typeMap),
             new BFN::TypeChecking(refMap, typeMap, true),
             new CheckHeaderAlignment(refMap, typeMap),

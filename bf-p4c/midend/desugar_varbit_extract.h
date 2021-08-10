@@ -192,7 +192,7 @@ class RewriteVarbitUses : public Modifier {
 
     std::map<const IR::StructField*, IR::Type_Header*> varbit_field_to_post_header_type;
 
-    std::map<cstring, IR::Vector<IR::Type>> tuple_types_to_rewrite;
+    std::map<cstring, IR::Vector<IR::StructField>> tuple_types_to_rewrite;
 
  private:
     profile_t init_apply(const IR::Node* root) override;
@@ -221,10 +221,10 @@ class RewriteVarbitUses : public Modifier {
     bool preorder(IR::MethodCallExpression*) override;
     bool preorder(IR::BlockStatement*) override;
 
-    IR::Vector<IR::Expression>
-    filter_post_header_fields(const IR::Vector<IR::Expression>& components);
+    IR::IndexedVector<IR::NamedExpression>
+    filter_post_header_fields(const IR::IndexedVector<IR::NamedExpression>& components);
 
-    bool preorder(IR::ListExpression* list) override;
+    bool preorder(IR::StructExpression* list) override;
     bool preorder(IR::Member* member) override;
 
  public:

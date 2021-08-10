@@ -435,6 +435,18 @@ class HashListExpression : IR::ListExpression {
 #nodbprint
 }
 
+/** This class adds the convenience of specifying field list, field list
+ *  calculation and algorithm names specified in a p4 program to a StructExpression
+ *  which carries the field list
+ */
+class HashStructExpression : IR::StructExpression {
+    cstring             fieldListCalcName;
+    int                 outputWidth;
+    NullOK IR::NameList fieldListNames  = nullptr;
+    NullOK IR::NameList algorithms      = nullptr;
+#nodbprint
+}
+
 /**
  * We specialize the cast that only perform sign conversion to a separate
  * reinterpret_cast class. Reinterpreset_cast is handled in the backend. Other

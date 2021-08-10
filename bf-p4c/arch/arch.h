@@ -231,7 +231,7 @@ class ApplyEvaluator : public PassManager {
         refMap = new P4::ReferenceMap;
         typeMap = new P4::TypeMap;
         refMap->setIsV1(true);
-        auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+        auto evaluator = new BFN::EvaluatorPass(refMap, typeMap);
         addPasses({
             new BFN::TypeChecking(refMap, typeMap, true),
             evaluator,
@@ -239,12 +239,12 @@ class ApplyEvaluator : public PassManager {
         });
     }
 
-    ApplyEvaluator(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
+    ApplyEvaluator(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool doListConv = false) :
         refMap(refMap), typeMap(typeMap) {
         CHECK_NULL(refMap);
         CHECK_NULL(typeMap);
         refMap->setIsV1(true);
-        auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+        auto evaluator = new BFN::EvaluatorPass(refMap, typeMap, doListConv);
         addPasses({
             new BFN::TypeChecking(refMap, typeMap, true),
             evaluator,

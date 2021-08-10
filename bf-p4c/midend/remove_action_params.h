@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MIDEND_REMOVE_ACTION_PARAMS_H_
 #define BF_P4C_MIDEND_REMOVE_ACTION_PARAMS_H_
 
-#include "midend/removeParameters.h"
+#include "frontends/p4/removeParameters.h"
 
 namespace BFN {
 

@@ -1662,8 +1662,16 @@ GetBackendParser::convertBody(IR::BFN::ParserState* state) {
                                     state->p4State->controlPlaneName(),
                                     state->gress);
 
-    for (auto* statement : state->p4State->components)
-        state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
+    for (auto* statement : state->p4State->components) {
+        // Checksum add might have added a BlockStatement
+        if (auto* bs = statement->to<IR::BlockStatement>()) {
+            for (auto* s : bs->components) {
+                state->statements.pushBackOrAppend(s->apply(rewriteStatements));
+            }
+        } else {
+            state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
+        }
+    }
 
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();

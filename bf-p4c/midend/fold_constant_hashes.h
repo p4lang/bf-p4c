@@ -48,21 +48,39 @@ class FoldConstantHashes : public PassManager {
         void foldListToConstant(
                 uint64_t &value, size_t &shift,
                 const IR::ListExpression *list);
+        void foldListToConstant(
+                uint64_t &value, size_t &shift,
+                const IR::StructExpression *list);
         const IR::Expression *substituteIdentityHash(
                 const IR::ListExpression *hash_list,
+                const IR::Type *hash_type);
+        const IR::Expression *substituteIdentityHash(
+                const IR::StructExpression *hash_list,
                 const IR::Type *hash_type);
 
         hash_seed_t computeHash(
                 IR::MAU::HashFunction &hash_function,
                 const IR::ListExpression *hash_list,
                 const IR::Type *hash_type);
+        hash_seed_t computeHash(
+                IR::MAU::HashFunction &hash_function,
+                const IR::StructExpression *hash_list,
+                const IR::Type *hash_type);
         const IR::Expression *substituteCustomHash(
                 const IR::PathExpression *crc_poly_path,
                 const IR::ListExpression *hash_list,
                 const IR::Type *hash_type);
+        const IR::Expression *substituteCustomHash(
+                const IR::PathExpression *crc_poly_path,
+                const IR::StructExpression *hash_list,
+                const IR::Type *hash_type);
         const IR::Expression *substituteOtherHash(
                 const IR::Expression *hash_algo_expr,
                 const IR::ListExpression *hash_list,
+                const IR::Type *hash_type);
+        const IR::Expression *substituteOtherHash(
+                const IR::Expression *hash_algo_expr,
+                const IR::StructExpression *hash_list,
                 const IR::Type *hash_type);
 
      public:

@@ -280,12 +280,9 @@ const IR::Node* RewriteTypeArguments::preorder(IR::Type_Struct* typeStruct) {
     for (auto& t : eeh->rewriteTupleType) {
         if (typeStruct->name == t.first) {
              typeStruct->fields = {};
-             int i = 0;
-             for (auto type : t.second) {
-                 cstring name = t.first + "_field_" + cstring::to_cstring(i);
-                 auto field = new IR::StructField(name, type);
+             for (auto comp : t.second) {
+                 auto field = new IR::StructField(comp->name, comp->expression->type);
                  typeStruct->fields.push_back(field);
-                 i++;
              }
         }
     }
@@ -315,39 +312,68 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
     if (!em) return arg;
     cstring extName = em->actualExternType->name;
     if (extName == "Checksum") {
-        auto fieldVectorList = IR::Vector<IR::Expression>();
-        auto origlist = IR::Vector<IR::Expression>();
-        if (arg->expression->is<IR::ListExpression>()) {
-            origlist = arg->expression->to<IR::ListExpression>()->components;
+        auto fieldVectorList = IR::IndexedVector<IR::NamedExpression>();
+        std::map<cstring, int> namesUsed;
+        auto origlist = IR::IndexedVector<IR::NamedExpression>();
+        const IR::Type* structType = nullptr;
+        if (arg->expression->is<IR::StructExpression>()) {
+            origlist = arg->expression->to<IR::StructExpression>()->components;
+            structType = arg->expression->to<IR::StructExpression>()->structType;
         } else if (auto c = arg->expression->to<IR::Member>()) {
-            origlist.push_back(c);
+            if (c->type->is<IR::Type_Header>()) {
+                origlist.push_back(new IR::NamedExpression(c->member, c));
+                structType = new IR::Type_Name(c->type->to<IR::Type_Header>()->name);
+            }
         }
         for (auto expr : origlist) {
-            if (auto header = expr->type->to<IR::Type_Header>()) {
-                for (auto f : header->fields)
-                    fieldVectorList.push_back(new IR::Member(f->type, expr, f->name));
-            } else if (auto st = expr->type->to<IR::Type_Struct>()) {
-                for (auto f : st->fields)
-                    fieldVectorList.push_back(new IR::Member(f->type, expr, f->name));
-            } else if (auto concat = expr->to<IR::Concat>()) {
-                IR::Vector<IR::Expression> concatList;
+            if (auto header = expr->expression->type->to<IR::Type_Header>()) {
+                for (auto f : header->fields) {
+                    IR::ID name = f->name;
+                    if (namesUsed.count(name.name)) {
+                        name = IR::ID(name + "_renamed_" +
+                               cstring::to_cstring(namesUsed[name.name]++));
+                    } else {
+                        namesUsed[name.name] = 1;
+                    }
+                    fieldVectorList.push_back(
+                        new IR::NamedExpression(
+                            name,
+                            new IR::Member(f->type, expr->expression, f->name)));
+                }
+            } else if (auto st = expr->expression->type->to<IR::Type_Struct>()) {
+                for (auto f : st->fields) {
+                    IR::ID name = f->name;
+                    if (namesUsed.count(name.name)) {
+                        name = IR::ID(name + "_renamed_" +
+                               cstring::to_cstring(namesUsed[name.name]++));
+                    } else {
+                        namesUsed[name.name] = 1;
+                    }
+                    fieldVectorList.push_back(
+                        new IR::NamedExpression(
+                            name,
+                            new IR::Member(f->type, expr->expression, f->name)));
+                }
+            } else if (auto concat = expr->expression->to<IR::Concat>()) {
+                IR::IndexedVector<IR::NamedExpression> concatList;
                 elimConcat(concatList, concat);
                 fieldVectorList.append(concatList);
-            } else if (expr->is<IR::Member>() || expr->is<IR::Constant>() ||
-                       expr->is<IR::PathExpression>()) {
+            } else if (expr->expression->is<IR::Member>() || expr->expression->is<IR::Constant>() ||
+                       expr->expression->is<IR::PathExpression>()) {
+                namesUsed[expr->name.name]++;
                 fieldVectorList.push_back(expr);
             } else {
                 ::error(ErrorType::ERR_UNEXPECTED, " type as %1% parameter %2%", extName, expr);
             }
         }
         if (fieldVectorList.size()) {
-            auto list = new IR::ListExpression(fieldVectorList);
+            IR::StructExpression* list;
+            list = new IR::StructExpression(structType, fieldVectorList);
             if (mc->typeArguments->size()) {
                 if (auto type = mc->typeArguments->at(0)->to<IR::Type_Name>()) {
-                    rewriteTupleType[type->path->name] =
-                                 list->type->to<IR::Type_BaseList>()->components;
+                    rewriteTupleType[type->path->name] = list->components;
                 } else {
-                    rewriteOtherType[mc] = list->type;
+                    rewriteOtherType[mc] = list->structType;
                 }
             }
             return (new IR::Argument(arg->srcInfo, list));
@@ -394,17 +420,23 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
     return arg;
 }
 
-void EliminateHeaders::elimConcat(IR::Vector<IR::Expression>& output, const IR::Concat* expr) {
+void EliminateHeaders::elimConcat(IR::IndexedVector<IR::NamedExpression>& output,
+                                  const IR::Concat* expr) {
+     static int i = 0;
      if (!expr)
          return;
      if (expr->left->is<IR::Concat>())
          elimConcat(output, expr->left->to<IR::Concat>());
      else
-         output.push_back(expr->left);
+         output.push_back(new IR::NamedExpression(
+                                IR::ID("concat_" + cstring::to_cstring(i++)),
+                                expr->left));
 
      if (expr->right->is<IR::Concat>())
          elimConcat(output, expr->right->to<IR::Concat>());
      else
-         output.push_back(expr->right);
+         output.push_back(new IR::NamedExpression(
+                                IR::ID("concat_" + cstring::to_cstring(i++)),
+                                expr->right));
 }
 }  // namespace BFN

@@ -184,7 +184,7 @@ TEST(RegisterReadWrite, ReadRead) {
         }
     )";
     Match::CheckList expected {
-        "action NoAction_0() { }",
+        "action NoAction_1() { }",
         "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
         "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
         "reg_32b_0_test_action_2 = {",
@@ -212,8 +212,8 @@ TEST(RegisterReadWrite, ReadRead) {
             "key = {",
                 " ig_intr_md.ingress_port: exact ; ",
             "}",
-            "actions = { test_action_1(); test_action_2(); NoAction_0(); } ",
-            "default_action = NoAction_0(); "
+            "actions = { test_action_1(); test_action_2(); NoAction_1(); } ",
+            "default_action = NoAction_1(); "
         "}",
         "apply {",
             "test_table_0.apply();",
@@ -242,7 +242,7 @@ TEST(RegisterReadWrite, ReadWrite) {
         }
     )";
     Match::CheckList expected {
-        "action NoAction_0() { }",
+        "action NoAction_1() { }",
         "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
         "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
         "reg_32b_0_test_action_2 = {",
@@ -268,8 +268,8 @@ TEST(RegisterReadWrite, ReadWrite) {
             "key = {",
                 " ig_intr_md.ingress_port: exact ; ",
             "}",
-            "actions = { test_action_1(); test_action_2(); NoAction_0(); } ",
-            "default_action = NoAction_0(); "
+            "actions = { test_action_1(); test_action_2(); NoAction_1(); } ",
+            "default_action = NoAction_1(); "
         "}",
         "apply {",
             "test_table_0.apply();",
@@ -298,7 +298,7 @@ TEST(RegisterReadWrite, WriteWrite) {
         }
     )";
     Match::CheckList expected {
-        "action NoAction_0() { }",
+        "action NoAction_1() { }",
         "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
         "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
         "reg_32b_0_test_action_2 = {",
@@ -322,8 +322,8 @@ TEST(RegisterReadWrite, WriteWrite) {
             "key = {",
                 " ig_intr_md.ingress_port: exact ; ",
             "}",
-            "actions = { test_action_1(); test_action_2(); NoAction_0(); } ",
-            "default_action = NoAction_0(); "
+            "actions = { test_action_1(); test_action_2(); NoAction_1(); } ",
+            "default_action = NoAction_1(); "
         "}",
         "apply {",
             "test_table_0.apply();",
@@ -361,7 +361,7 @@ TEST(RegisterReadWrite, Read3Write2) {
         }
     )";
     Match::CheckList expected {
-        "action NoAction_0() { }",
+        "action NoAction_1() { }",
         "Register<bit<32>, PortId_t>(32w1024) reg_32b_0;",
         "RegisterAction<bit<32>, PortId_t, bit<32>>(reg_32b_0)",
         "reg_32b_0_test_action_4 = {",
@@ -420,9 +420,9 @@ TEST(RegisterReadWrite, Read3Write2) {
             "}",
             "actions = { ",
                 "test_action_0(); test_action_1(); test_action_2(); ",
-                "test_action_3(); test_action_4(); NoAction_0(); "
+                "test_action_3(); test_action_4(); NoAction_1(); "
             "} ",
-            "default_action = NoAction_0(); "
+            "default_action = NoAction_1(); "
         "}",
         "apply {",
             "test_table_0.apply();",

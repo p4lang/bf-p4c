@@ -41,6 +41,13 @@ bool FoldConstantHashes::DoFoldConstantHashes::checkConstantInput(const IR::Expr
                 return false;
         }
         return true;
+    } else if (auto *list = expr->to<IR::StructExpression>()) {
+        for (auto *comp : list->components) {
+            auto *comp_expr = comp->expression->to<IR::Expression>();
+            if (!comp_expr || !checkConstantInput(comp_expr))
+                return false;
+        }
+        return true;
     }
     return false;
 }
@@ -62,6 +69,24 @@ void FoldConstantHashes::DoFoldConstantHashes::foldListToConstant(
             shift += constant->type->width_bits();
         } else if (auto *list = comp->to<IR::ListExpression>()) {
             foldListToConstant(value, shift, list);
+        } else if (auto *list = comp->to<IR::StructExpression>()) {
+            foldListToConstant(value, shift, list);
+        } else {
+            continue;
+        }
+    }
+}
+void FoldConstantHashes::DoFoldConstantHashes::foldListToConstant(
+        uint64_t &value, size_t &shift,
+        const IR::StructExpression *list) {
+    for (auto *comp : boost::adaptors::reverse(list->components)) {
+        if (auto *constant = comp->expression->to<IR::Constant>()) {
+            value |= constant->asUint64() << shift;
+            shift += constant->type->width_bits();
+        } else if (auto *list = comp->expression->to<IR::ListExpression>()) {
+            foldListToConstant(value, shift, list);
+        } else if (auto *list = comp->expression->to<IR::StructExpression>()) {
+            foldListToConstant(value, shift, list);
         } else {
             continue;
         }
@@ -77,6 +102,14 @@ void FoldConstantHashes::DoFoldConstantHashes::foldListToConstant(
  */
 const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteIdentityHash(
         const IR::ListExpression *hash_list,
+        const IR::Type *hash_type) {
+    uint64_t value = 0;
+    size_t shift = 0;
+    foldListToConstant(value, shift, hash_list);
+    return new IR::Constant(hash_type->clone(), value);
+}
+const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteIdentityHash(
+        const IR::StructExpression *hash_list,
         const IR::Type *hash_type) {
     uint64_t value = 0;
     size_t shift = 0;
@@ -132,6 +165,47 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::comp
 
     return hash_seed;
 }
+hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::computeHash(
+        IR::MAU::HashFunction &hash_function,
+        const IR::StructExpression *hash_list,
+        const IR::Type *hash_type) {
+    bfn_hash_algorithm_t hash_alg;
+    hash_function.build_algorithm_t(&hash_alg);
+
+    safe_vector<hash_matrix_output_t> hash_outputs;
+    hash_matrix_output_t hash_output;
+    hash_output.gfm_start_bit = 0;
+    hash_output.p4_hash_output_bit = 0;
+    hash_output.bit_size = 0;
+    hash_output.bit_size = hash_type->width_bits();
+    hash_outputs.push_back(hash_output);
+
+    int total_input_bits = 0;
+
+    safe_vector<ixbar_input_t> hash_inputs;
+    for (auto *comp : hash_list->components) {
+        const auto *comp_expr = comp->expression->to<IR::Constant>();
+        ixbar_input_t hash_input;
+        hash_input.type = ixbar_input_type::tCONST;
+        hash_input.u.constant = comp_expr->asUint64();
+        hash_input.ixbar_bit_position = 0;
+        hash_input.bit_size = comp_expr->type->width_bits();
+        hash_input.symmetric_info.is_symmetric = false;
+        total_input_bits += hash_input.bit_size;
+        hash_inputs.push_back(hash_input);
+    }
+
+    hash_seed_t hash_seed = { .hash_seed_value = 0ULL, .hash_seed_used = 0ULL };
+
+    determine_seed(hash_outputs.data(), hash_outputs.size(),
+        hash_inputs.data(), hash_inputs.size(), total_input_bits,
+        &hash_alg, &hash_seed);
+
+    LOG1("  seed = " << std::hex << hash_seed.hash_seed_value << std::dec);
+    LOG1("  used = " << std::hex << hash_seed.hash_seed_used << std::dec);
+
+    return hash_seed;
+}
 
 /**
  * Creates a constant expression whose value is computed by a hash function
@@ -144,6 +218,25 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::comp
 const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteCustomHash(
         const IR::PathExpression *crc_poly_path,
         const IR::ListExpression *hash_list,
+        const IR::Type *hash_type) {
+    auto *crc_poly_decl_inst = getDeclInst(self.refMap, crc_poly_path);
+    if (!crc_poly_decl_inst) return nullptr;
+    auto *crc_poly_ref = new IR::GlobalRef(crc_poly_decl_inst->srcInfo,
+        crc_poly_decl_inst->type, crc_poly_decl_inst);
+    if (!crc_poly_ref) return nullptr;
+
+    IR::MAU::HashFunction hash_function;
+    hash_function.convertPolynomialExtern(crc_poly_ref);
+
+    LOG2("  " << hash_function);
+
+    hash_seed_t hash_seed = computeHash(hash_function, hash_list, hash_type);
+
+    return new IR::Constant(hash_type->clone(), hash_seed.hash_seed_value);
+}
+const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteCustomHash(
+        const IR::PathExpression *crc_poly_path,
+        const IR::StructExpression *hash_list,
         const IR::Type *hash_type) {
     auto *crc_poly_decl_inst = getDeclInst(self.refMap, crc_poly_path);
     if (!crc_poly_decl_inst) return nullptr;
@@ -183,6 +276,20 @@ const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteOtherH
 
     return new IR::Constant(hash_type->clone(), hash_seed.hash_seed_value);
 }
+const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteOtherHash(
+        const IR::Expression *hash_algo_expr,
+        const IR::StructExpression *hash_list,
+        const IR::Type *hash_type) {
+    IR::MAU::HashFunction hash_function;
+    if (!hash_function.setup(hash_algo_expr))
+        return nullptr;
+
+    LOG2("  " << hash_function);
+
+    hash_seed_t hash_seed = computeHash(hash_function, hash_list, hash_type);
+
+    return new IR::Constant(hash_type->clone(), hash_seed.hash_seed_value);
+}
 
 /**
  * Substitute hash functions with constant inputs.
@@ -207,10 +314,25 @@ const IR::Node *FoldConstantHashes::DoFoldConstantHashes::preorder(IR::MethodCal
     if (!checkConstantInput(hash_expr)) return mce;
 
     // Input values are represented as a list expression, even if it is a single value
-    auto *hash_list = hash_expr->to<IR::ListExpression>();
+    auto *hash_list = hash_expr->to<IR::StructExpression>();
     // Convert single value into a list
-    if (hash_expr->is<IR::Constant>())
-        hash_list = new IR::ListExpression(hash_expr->srcInfo, {hash_expr});
+    if (hash_expr->is<IR::Constant>()) {
+        IR::IndexedVector<IR::NamedExpression> components;
+        components.push_back(new IR::NamedExpression(IR::ID("temp_const"), hash_expr));
+        hash_list = new IR::StructExpression(hash_expr->srcInfo, nullptr, components);
+    }
+    // Convert possible ListExpression
+    if (hash_expr->is<IR::ListExpression>()) {
+        IR::IndexedVector<IR::NamedExpression> components;
+        int i = 0;
+        for (const auto& comp : hash_expr->to<IR::ListExpression>()->components) {
+            components.push_back(new IR::NamedExpression(
+                                    IR::ID("temp_name" + cstring::to_cstring(i++)),
+                                 comp));
+        }
+        hash_list = new IR::StructExpression(hash_expr->srcInfo, nullptr, components);
+    }
+    CHECK_NULL(hash_list);
 
     // Newly created constant expression
     const IR::Expression *rv = mce;

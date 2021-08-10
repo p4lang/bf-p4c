@@ -1295,6 +1295,17 @@ class FormatHash::SliceWidth : public Inspector {
             bit -= e->type->width_bits(); }
         bit = tmp;
         return false; }
+    bool preorder(const IR::StructExpression *sl) {
+        int tmp = bit;
+        for (auto *e : boost::adaptors::reverse(sl->components)) {
+            if (bit < e->expression->type->width_bits()) {
+                if (width > e->expression->type->width_bits() - bit)
+                    width = e->expression->type->width_bits() - bit;
+                visit(e->expression);
+                break; }
+            bit -= e->expression->type->width_bits(); }
+        bit = tmp;
+        return false; }
     bool preorder(const IR::BFN::SignExtend *e) {
         int w = e->type->width_bits() - bit;
         if (width > w)
@@ -1386,6 +1397,17 @@ class FormatHash::ZeroHash : public Inspector {
             slice = slice.shiftedByBits(-width); }
         slice = tmp;
         return false; }
+    bool preorder(const IR::StructExpression *sl) {
+        auto tmp = slice;
+        for (auto *e : boost::adaptors::reverse(sl->components)) {
+            int width = e->expression->type->width_bits();
+            if (slice.lo < width) {
+                BUG_CHECK(slice.hi < width, "Slice too wide in FormatHash::ZeroHash");
+                visit(e);
+                break; }
+            slice = slice.shiftedByBits(-width); }
+        slice = tmp;
+        return false; }
     bool preorder(const IR::Expression *e) {
         Slice sl(phv, e, slice);
         BUG_CHECK(sl, "Invalid expression %s in FormatHash::ZeroHash", e);
@@ -1452,6 +1474,15 @@ class FormatHash::Output : public Inspector {
                 visit(e);
                 break; }
             slice = slice.shiftedByBits(-e->type->width_bits()); }
+        slice = tmp;
+        return false; }
+    bool preorder(const IR::StructExpression *sl) {
+        auto tmp = slice;
+        for (auto *e : boost::adaptors::reverse(sl->components)) {
+            if (slice.lo < e->expression->type->width_bits()) {
+                visit(e->expression);
+                break; }
+            slice = slice.shiftedByBits(-e->expression->type->width_bits()); }
         slice = tmp;
         return false; }
     bool preorder(const IR::BFN::SignExtend *e) {

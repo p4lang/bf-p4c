@@ -133,7 +133,7 @@ getChecksumUpdateLocations(const IR::MethodCallExpression* call,
             auto& exprs = annot->expr;
             auto gress = exprs[0]->to<IR::StringLiteral>();
             auto pCall = exprs[1]->to<IR::MethodCallExpression>();
-            if (!pCall->equiv(*call)) continue;
+            if (pCall && !pCall->equiv(*call)) continue;
             if (gress->value == "ingress")
                 updateLocations = { INGRESS };
             else if (gress->value == "egress")
@@ -177,6 +177,7 @@ class CollectParserChecksums : public Inspector {
                 residualChecksums.push_back(node);
 
                 auto block = findContext<IR::BlockStatement>();
+                CHECK_NULL(block);
                 parserUpdateLocations[node] =
                     getChecksumUpdateLocations(mce, block,
                                        "residual_checksum_parser_update_location");
@@ -228,6 +229,7 @@ class InsertParserChecksums : public Inspector {
 
         void postorder(const IR::MethodCallStatement* statement) override {
             auto* call = statement->methodCall;
+            CHECK_NULL(call);
             auto* method = call->method->to<IR::Member>();
             auto* state = findContext<IR::ParserState>();
 
@@ -296,17 +298,35 @@ class InsertParserChecksums : public Inspector {
             structure->ingressParserDeclarations.push_back(decl);
         }
 
-        for (auto f : fieldlist->to<IR::ListExpression>()->components) {
-            for (auto extract : extracts) {
-                if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
-                    auto addCall = new IR::MethodCallStatement(mc->srcInfo,
-                        new IR::MethodCallExpression(mc->srcInfo,
-                            new IR::Member(new IR::PathExpression(decl->name), "add"),
-                            new IR::Vector<IR::Type>({ f->type }),
-                            new IR::Vector<IR::Argument>({ new IR::Argument(f) })));
+        if (fieldlist->is<IR::ListExpression>()) {
+            for (auto f : fieldlist->to<IR::ListExpression>()->components) {
+                for (auto extract : extracts) {
+                    if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
+                        auto addCall = new IR::MethodCallStatement(mc->srcInfo,
+                            new IR::MethodCallExpression(mc->srcInfo,
+                                new IR::Member(new IR::PathExpression(decl->name), "add"),
+                                new IR::Vector<IR::Type>({ f->type }),
+                                new IR::Vector<IR::Argument>({ new IR::Argument(f) })));
 
-                    structure->ingressParserStatements[stateName].push_back(addCall);
-                    translate->ingressVerifyDeclToStates[decl].insert(state->name);
+                        structure->ingressParserStatements[stateName].push_back(addCall);
+                        translate->ingressVerifyDeclToStates[decl].insert(state->name);
+                    }
+                }
+            }
+        } else if (fieldlist->is<IR::StructExpression>()) {
+            for (auto fld : fieldlist->to<IR::StructExpression>()->components) {
+                auto f = fld->expression;
+                for (auto extract : extracts) {
+                    if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
+                        auto addCall = new IR::MethodCallStatement(mc->srcInfo,
+                            new IR::MethodCallExpression(mc->srcInfo,
+                                new IR::Member(new IR::PathExpression(decl->name), "add"),
+                                new IR::Vector<IR::Type>({ f->type }),
+                                new IR::Vector<IR::Argument>({ new IR::Argument(f) })));
+
+                        structure->ingressParserStatements[stateName].push_back(addCall);
+                        translate->ingressVerifyDeclToStates[decl].insert(state->name);
+                    }
                 }
             }
         }
@@ -416,21 +436,43 @@ class InsertParserChecksums : public Inspector {
             const IR::Expression* constant = nullptr;
             for (auto extract : extracts) {
                 std::vector<const IR::Expression*> exprList;
-                for (auto f : fieldlist->to<IR::ListExpression>()->components) {
-                    if (f->is<IR::Constant>()) {
-                        constant = f;
-                    } else if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
-                        if (constant) {
-                            exprList.emplace_back(constant);
-                            constant = nullptr;
-                            // If immediate next field after the constant is extracted in this field
-                            // then the constant belongs to subtract field list of this state
-                        }
-                        exprList.emplace_back(f);
+                if (fieldlist->is<IR::ListExpression>()) {
+                    for (auto f : fieldlist->to<IR::ListExpression>()->components) {
+                        if (f->is<IR::Constant>()) {
+                            constant = f;
+                        } else if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
+                            if (constant) {
+                                exprList.emplace_back(constant);
+                                constant = nullptr;
+                                // If immediate next field after the constant is extracted in this
+                                // field then the constant belongs to subtract field list of this
+                                // state
+                            }
+                            exprList.emplace_back(f);
 
-                     } else {
-                        constant = nullptr;
-                     }
+                        } else {
+                            constant = nullptr;
+                        }
+                    }
+                } else if (fieldlist->is<IR::StructExpression>()) {
+                    for (auto fld : fieldlist->to<IR::StructExpression>()->components) {
+                        auto f = fld->expression;
+                        if (f->is<IR::Constant>()) {
+                            constant = f;
+                        } else if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
+                            if (constant) {
+                                exprList.emplace_back(constant);
+                                constant = nullptr;
+                                // If immediate next field after the constant is extracted in this
+                                // field then the constant belongs to subtract field list of this
+                                // state
+                            }
+                            exprList.emplace_back(f);
+
+                        } else {
+                            constant = nullptr;
+                        }
+                    }
                 }
                 for (auto e : exprList) {
                     auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,

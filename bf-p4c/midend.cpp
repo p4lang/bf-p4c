@@ -53,6 +53,7 @@
 #include "bf-p4c/midend/copy_block_pragmas.h"
 #include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/elim_cast.h"
+#include "bf-p4c/midend/eliminate_tuples.h"
 #include "bf-p4c/midend/fold_constant_hashes.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "bf-p4c/midend/normalize_params.h"
@@ -75,7 +76,7 @@ namespace BFN {
  * Optional is a special case of ternary which allows for 2 cases
  *
  * 1) Is Valid = true , mask = all 1's (Exact Match)
- * 2) Is Valid = false, mask = dont care (Any value) 
+ * 2) Is Valid = false, mask = dont care (Any value)
  *
  * The control plane API does the necessary checks for valid use cases and
  * programs the ternary accordingly.
@@ -230,7 +231,7 @@ MidEnd::MidEnd(BFN_Options& options) {
     setName("MidEnd");
     refMap.setIsV1(true);
     auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap);
-    auto typeInference = new BFN::TypeInference(&refMap, &typeMap, true);
+    auto typeInference = new BFN::TypeInference(&refMap, &typeMap, false);
     auto evaluator = new BFN::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
@@ -244,7 +245,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::EliminateSerEnums(&refMap, &typeMap, typeChecking),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckUnsupported(&refMap, &typeMap),
-        new BFN::RemoveActionParameters(&refMap, &typeMap, typeChecking),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::OptionalToTernaryMatchTypeConverter(),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
@@ -271,7 +271,9 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyParsers(&refMap),
         new P4::ReplaceSelectRange(&refMap, &typeMap),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
-        new P4::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
+        // Eliminate Tuples might need to preserve HashListExpressions
+        // Therefore we use our own
+        new BFN::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
         new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
         // must run after copy structure

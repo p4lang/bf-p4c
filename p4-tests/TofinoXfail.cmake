@@ -111,7 +111,6 @@ if (PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_16/ptf/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
-    basic_switching
     )
 
 # BRIG-686
@@ -162,6 +161,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
   testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   testdata/p4_16_samples/v1model-p4runtime-enumint-types1.p4
+  testdata/p4_16_samples/psa-example-select_tuple.p4
+  testdata/p4_16_samples/psa-example-select_tuple-wc.p4
+  testdata/p4_16_samples/psa-example-select_tuple-1.p4
+  testdata/p4_16_samples/psa-example-select_tuple-mask.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -552,6 +555,7 @@ p4c_add_xfail_reason("tofino"
   "table .* Cannot match on multiple fields using lpm match type"
   ../glass/testsuite/p4_tests/mau/case1770.p4
   testdata/p4_14_samples/issue60.p4
+  testdata/p4_16_samples/psa-dpdk-lpm-match-err1.p4
   )
 
 #END: XFAILS that match glass XFAILS
@@ -962,6 +966,7 @@ p4c_add_xfail_reason("tofino"
   "extern .* does not have method matching this call"
   ../glass/testsuite/p4_tests/mau/test_config_412_neg_lpf_no_idx.p4
   ../glass/testsuite/p4_tests/mau/test_config_413_neg_wred_no_idx.p4
+  testdata/p4_16_samples/psa-example-dpdk-counter.p4
   )
 
 # P4C-1323
@@ -1501,6 +1506,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_one_action_fail_before.p4
   testdata/p4_16_samples/psa-table-hit-miss.p4
   testdata/p4_16_samples/issue2344.p4
+  testdata/p4_16_samples/psa-action-selector4.p4
+  testdata/p4_16_samples/psa-dpdk-table-key-consolidation-if.p4
+  testdata/p4_16_samples/psa-dpdk-table-key-consolidation-if-1.p4
 )
 
 # P4C-2115
@@ -1645,7 +1653,6 @@ p4c_add_xfail_reason("tofino"
   "error: .*: action spanning multiple stages"
   testdata/p4_16_samples/nested_if_lvalue_dependencies.p4
   testdata/p4_16_samples/nested_if_else.p4
-  testdata/p4_16_samples/nested_if_statement.p4
   testdata/p4_16_samples/proliferation1.p4
 )
 
@@ -1888,6 +1895,9 @@ p4c_add_xfail_reason("tofino"
   "error: Cannot extract field .* from PSA_MeterColor_t which has type Type"
   testdata/p4_16_samples/psa-meter7-bmv2.p4
   testdata/p4_16_samples/psa-meter3.p4
+  testdata/p4_16_samples/psa-example-dpdk-meter1.p4
+  testdata/p4_16_samples/psa-example-dpdk-meter.p4
+  testdata/p4_16_samples/psa-example-dpdk-externs.p4
 )
 
 # P4C-3698
@@ -1916,3 +1926,49 @@ p4c_add_xfail_reason("tofino"
   "KeyError: "
   p4_16_programs_tna_pktgen
 )
+
+# P4C update 2021-07-12
+# At frontend because there is
+# a MethodCallExpression that is not inside a BlockStatement
+p4c_add_xfail_reason("tofino"
+  "Null stat"
+  testdata/p4_16_samples/issue2258-bmv2.p4 
+)
+
+p4c_add_xfail_reason("tofino"
+  "No PhvInfo::header for header named"
+  testdata/p4_16_samples/predication_issue_2.p4
+)
+
+# This one fails beause we do not support multistage actions
+p4c_add_xfail_reason("tofino"
+  "action spanning multiple stages"
+  testdata/p4_16_samples/issue2321.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/nested_if_statement.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "unexpected statement with call"
+  testdata/p4_16_samples/predication_issue_1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "expected a method call"
+  testdata/p4_16_samples/predication_issue_3.p4
+  testdata/p4_16_samples/predication_issue_4.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Tofino does not support nested checksum updates in the same deparser"
+  basic_switching
+)
+
+p4c_add_xfail_reason("tofino"
+  "no definitions found for"
+  testdata/p4_16_samples/issue2362-bmv2.p4
+)
+# P4C update 2021-07-12

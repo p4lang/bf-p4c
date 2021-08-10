@@ -77,6 +77,9 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
     if (expr->is<IR::ListExpression>()) {
         for (auto inst : expr->to<IR::ListExpression>()->components) {
             process_extern_instance(inst); }
+    } else if (expr->is<IR::StructExpression>()) {
+        for (auto inst : expr->to<IR::StructExpression>()->components) {
+            process_extern_instance(inst->expression); }
     } else {
         process_extern_instance(expr); }
 

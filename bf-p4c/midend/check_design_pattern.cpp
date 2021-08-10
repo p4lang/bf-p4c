@@ -46,6 +46,15 @@ bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
                     return false;
                 }
             }
+            if (auto sexp = arg->expression->to<IR::StructExpression>()) {
+                if (sexp->size() == 0) {
+                    std::string errString = "%1%: field list cannot be empty";
+                    if (externName != "Hash")
+                        errString += ", use emit()?";
+                    error(ErrorType::ERR_UNSUPPORTED, errString.c_str(), expr);
+                    return false;
+                }
+            }
         } else {
             error(ErrorType::ERR_UNSUPPORTED, "%1%: field list argument not present", expr);
         }

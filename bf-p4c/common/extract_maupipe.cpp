@@ -1867,8 +1867,8 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
 // custom visitor to the main package block to generate the
 // toplevel pipeline structure.
 bool BackendConverter::preorder(const IR::P4Program* program) {
-    ApplyEvaluator eval(refMap, typeMap);
-    program->apply(eval);
+    ApplyEvaluator eval(refMap, typeMap, true);
+    auto new_program = program->apply(eval);
 
     toplevel = eval.getToplevelBlock();
     BUG_CHECK(toplevel, "toplevel cannot be nullptr");
@@ -1878,7 +1878,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
 
     /// setup the context to know which pipes are available in the program: for logging and
     /// other output declarations.
-    BFNContext::get().discoverPipes(program, toplevel);
+    BFNContext::get().discoverPipes(new_program, toplevel);
 
     /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
     /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
@@ -1888,14 +1888,14 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
 
     // collect and set global_pragmas
     CollectGlobalPragma collect_pragma;
-    program->apply(collect_pragma);
+    new_program->apply(collect_pragma);
 
     auto npipe = 0;
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
         DeclarationConversions converted;
-        auto name = getPipelineName(program, npipe);
+        auto name = getPipelineName(new_program, npipe);
         auto rv = new IR::BFN::Pipe(name, npipe);
         std::list<gress_t> gresses = {INGRESS, EGRESS};
 

@@ -133,6 +133,10 @@ void ParseTna::parsePortMapAnnotation(const IR::PackageBlock* block, DefaultPort
                 for (auto expr : list->components) {
                     ports.push_back(expr->to<IR::Constant>()->asInt());
                 }
+            } else if (auto list = expr->to<IR::StructExpression>()) {
+                for (auto expr : list->components) {
+                    ports.push_back(expr->expression->to<IR::Constant>()->asInt());
+                }
             }
             map[index] = ports;
             index++;

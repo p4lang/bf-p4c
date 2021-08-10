@@ -76,10 +76,10 @@ class EliminateHeaders : public Transform {
     EliminateHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
             std::function<bool(const Context*, const IR::Type_StructLike*)> policy) :
         refMap(refMap), typeMap(typeMap), policy(policy) { setName("EliminateHeaders"); }
-    std::map<cstring, IR::Vector<IR::Type>> rewriteTupleType;
+    std::map<cstring, IR::IndexedVector<IR::NamedExpression>> rewriteTupleType;
     std::map<const IR::MethodCallExpression* , const IR::Type*> rewriteOtherType;
     const IR::Node* preorder(IR::Argument* arg) override;
-    void elimConcat(IR::Vector<IR::Expression>& output, const IR::Concat* expr);
+    void elimConcat(IR::IndexedVector<IR::NamedExpression>& output, const IR::Concat* expr);
 };
 
 class RewriteTypeArguments : public Transform {
@@ -144,6 +144,8 @@ class SimplifyEmitArgs : public PassManager {
         passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
         passes.push_back(eliminateHeaders);
         passes.push_back(rewriteTypeArguments);
+        // After eliminateHeaders we need to do TypeInference that might
+        // change new ListExpressions to StructExpressions
         passes.push_back(new P4::ClearTypeMap(typeMap));
         passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
         passes.push_back(new PadFlexibleField(refMap, typeMap)),

@@ -959,6 +959,7 @@ class ConstructSymbolTable : public Inspector {
             /// and do so recursively.
             if (std::get<1>(f)->is<IR::Type_BaseList>()) {
                 auto list = std::get<2>(f)->to<IR::ListExpression>();
+                BUG_CHECK(list, "Expected a ListExpression");
                 auto digestFieldsFromTuple = new std::vector<DigestFieldInfo>();
                 int index = 0;
                 for (auto em : list->components) {
@@ -971,6 +972,8 @@ class ConstructSymbolTable : public Inspector {
                 auto fl = convertFieldList(nestedPrefix, digestFieldsFromTuple, nullptr, false);
                 auto elem = new IR::NamedExpression(std::get<0>(f), fl);
                 initializer->push_back(elem);
+            } else if (std::get<2>(f)->is<IR::StructExpression>()) {
+                initializer->append(std::get<2>(f)->to<IR::StructExpression>()->components);
             } else {
                 auto elem = new IR::NamedExpression(std::get<0>(f), std::get<2>(f));
                 initializer->push_back(elem);
@@ -1037,6 +1040,10 @@ class ConstructSymbolTable : public Inspector {
         if (field_list->expression->is<IR::Type_BaseList>()) {
             for (auto t : field_list->expression->to<IR::ListExpression>()->components) {
                 LOG3("name " << t << " type " << t->type);
+            }
+        } else if (field_list->expression->is<IR::StructExpression>()) {
+            for (auto t : field_list->expression->to<IR::StructExpression>()->components) {
+                LOG3("name " << t->expression << " type " << t->expression->type);
             }
         }
 
@@ -1286,6 +1293,9 @@ class ConstructSymbolTable : public Inspector {
             auto *clonedData = mce->arguments->at(2)->expression;
             if (auto *originalFieldList = clonedData->to<IR::ListExpression>())
                 newFieldList->components.pushBackOrAppend(&originalFieldList->components);
+            else if (auto *originalFieldList = clonedData->to<IR::StructExpression>())
+                for (auto comp : originalFieldList->components)
+                    newFieldList->components.push_back(comp->expression);
             else
                 newFieldList->components.push_back(clonedData);
         }
@@ -1748,8 +1758,12 @@ class ConstructSymbolTable : public Inspector {
 
             IR::Vector<IR::Expression> exprs;
 
-            for (auto f : fieldlist->to<IR::ListExpression>()->components)
-                exprs.push_back(f);
+            if (fieldlist->is<IR::ListExpression>())
+                for (auto f : fieldlist->to<IR::ListExpression>()->components)
+                    exprs.push_back(f);
+            else if (fieldlist->is<IR::StructExpression>())
+                for (auto f : fieldlist->to<IR::StructExpression>()->components)
+                    exprs.push_back(f->expression);
 
             if (which == "update_checksum_with_payload") {
                 if (parserChecksums->residualChecksums.count(destfield)) {

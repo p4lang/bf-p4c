@@ -99,8 +99,8 @@ class PostMidEndLast : public PassManager {
  * provide a mechanism to iterate directly on TNA pipelines.
  */
 bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
-    ApplyEvaluator eval(refMap, typeMap);
-    program->apply(eval);
+    ApplyEvaluator eval(refMap, typeMap, true);
+    auto new_program = program->apply(eval);
 
     auto toplevel = eval.getToplevelBlock();
     BUG_CHECK(toplevel, "toplevel cannot be nullptr");
@@ -116,7 +116,7 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
 
     // collect and set global_pragmas
-    program->apply(collect_pragma);
+    new_program->apply(collect_pragma);
 
     auto npipe = 0;
     for (auto pkg : main->constantValue) {
@@ -236,7 +236,7 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
-    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
+    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap, false);
     extractBridgeInfo = new ExtractBridgeInfo(options, &refMap, &typeMap, conv, bindings, map);
 
     addPasses({
@@ -263,7 +263,7 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedH
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
-    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
+    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap, false);
     addPasses({
         new ReplaceFlexibleType(map),
         new P4::ClearTypeMap(&typeMap),

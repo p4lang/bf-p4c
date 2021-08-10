@@ -62,6 +62,8 @@ class ControlConverter : public Transform {
     const IR::Node* postorder(IR::Property* node) {
         return substitute<IR::Property>(node); }
 
+    const IR::Node* postorder(IR::BFN::TnaControl *node) override;
+
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Control>();

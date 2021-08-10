@@ -339,9 +339,9 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                 if (!type) return false;
                 if (type->name != "Checksum") return false;
 
-                if (auto add_expr = (*call->arguments)[0]->expression->to<IR::ListExpression>()) {
+                if (auto add_expr = (*call->arguments)[0]->expression->to<IR::StructExpression>()) {
                     for (auto field : add_expr->components) {
-                        if (auto member = field->to<IR::Member>()) {
+                        if (auto member = field->expression->to<IR::Member>()) {
                             if (member->type->is<IR::Type_Varbits>()) {
                                 if (method->member == "subtract") {
                                     P4C_UNIMPLEMENTED("Checksum subtract is currently not "
@@ -828,11 +828,13 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
     return true;
 }
 
-IR::Vector<IR::Expression>
-RewriteVarbitUses::filter_post_header_fields(const IR::Vector<IR::Expression>& components) {
-    IR::Vector<IR::Expression> filtered;
+IR::IndexedVector<IR::NamedExpression>
+RewriteVarbitUses::filter_post_header_fields(
+        const IR::IndexedVector<IR::NamedExpression>& components) {
+    IR::IndexedVector<IR::NamedExpression> filtered;
 
-    for (auto c : components) {
+    for (auto comp : components) {
+        auto c = comp->expression;
         if (auto member = c->to<IR::Member>()) {
             if (auto type = member->expr->type->to<IR::Type_Header>()) {
                 if (cve.header_type_to_varbit_field.count(type)) {
@@ -857,24 +859,25 @@ RewriteVarbitUses::filter_post_header_fields(const IR::Vector<IR::Expression>& c
             }
         }
 
-        filtered.push_back(c);
+        filtered.push_back(comp);
     }
 
     return filtered;
 }
 
-bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
+bool RewriteVarbitUses::preorder(IR::StructExpression* list) {
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     auto mc = findContext<IR::MethodCallExpression>();
-    IR::Vector<IR::Expression> components;
+    IR::IndexedVector<IR::NamedExpression> components;
 
     bool has_varbit = false;
 
-    IR::Vector<IR::Type> varbit_types;
+    IR::Vector<IR::StructField> varbit_types;
 
     if (!mc) return false;
 
-    for (auto c : list->components) {
+    for (auto comp : list->components) {
+        auto c = comp->expression;
         if (auto member = c->to<IR::Member>()) {
             if (member->type->is<IR::Type_Varbits>()) {
                 if (has_varbit)
@@ -883,14 +886,18 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
                     has_varbit = true;
                     auto path = member->expr->to<IR::Member>();
 
+                    unsigned ind = 0;
                     for (auto& kv : varbit_hdr_instance_to_header_types.at(path->member)) {
                         auto hdr = kv.second;
                         auto field = hdr->fields[0];
 
-                        varbit_types.push_back(field->type);
+                        auto new_name = IR::ID(comp->name + "_vbit_" + cstring::to_cstring(ind++));
+                        auto st_field = new IR::StructField(new_name, field->type);
+                        varbit_types.push_back(st_field);
 
                         auto member = new IR::Member(path->expr, create_instance_name(hdr->name));
-                        auto hdr_field = new IR::Member(member, "field");
+                        auto hdr_field =
+                            new IR::NamedExpression(new_name, new IR::Member(member, "field"));
 
                         components.push_back(hdr_field);
                     }
@@ -909,21 +916,21 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
             }
         }
 
-        components.push_back(c);
+        components.push_back(comp);
     }
 
     if (has_varbit) {
         list->components = components;
 
-        if (auto tuple = list->type->to<IR::Type_BaseList>()) {
-            IR::Vector<IR::Type> types;
+        if (auto tuple = list->type->to<IR::Type_StructLike>()) {
+            IR::Vector<IR::StructField> types;
 
-            for (auto type : tuple->components) {
-                if (type->is<IR::Type_Varbits>()) {
+            for (auto field : tuple->fields) {
+                if (field->type->is<IR::Type_Varbits>()) {
                     for (auto vt : varbit_types)
                         types.push_back(vt);
                 } else {
-                    types.push_back(type);
+                    types.push_back(field);
                 }
             }
 
@@ -1054,7 +1061,9 @@ bool RewriteVarbitTypes::preorder(IR::Type_StructLike* type_struct) {
     if (type_struct->is<IR::Type_HeaderUnion>()) {
         P4C_UNIMPLEMENTED("Unsupported type %s", type_struct);
     }
-    if (contains_varbit_header(type_struct)) {
+
+    if (contains_varbit_header(type_struct) &&
+        type_struct->name.name.find("tuple_") == nullptr) {
         for (auto& kv : rvu.varbit_hdr_instance_to_header_types) {
             for (auto& lt : kv.second) {
                 auto type = lt.second;
@@ -1077,10 +1086,7 @@ bool RewriteVarbitTypes::preorder(IR::Type_StructLike* type_struct) {
             if (type_struct->name == kv.first) {
                 type_struct->fields = {};
 
-                int i = 0;
-                for (auto type : kv.second) {
-                    cstring name = kv.first + "_field_" + cstring::to_cstring(i++);
-                    auto field = new IR::StructField(name, type);
+                for (auto field : kv.second) {
                     type_struct->fields.push_back(field);
                     LOG3("Adding " << field << "in " << type_struct);
                 }

@@ -13,6 +13,61 @@ namespace BFN {
 namespace V1 {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+// Removes control local standard_metadata_t variable declarations and assignments that use them
+const IR::Node* ControlConverter::postorder(IR::BFN::TnaControl *node) {
+    std::unordered_set<cstring> varsToRemove;
+    // Create new TnaControl controlLocals
+    IR::IndexedVector<IR::Declaration> newTnaControlLocals;
+    for (const auto* decl : node->controlLocals) {
+        // Check all Declaration_Variable and P4Action nodes in TnaControl
+        if (const auto* declVar = decl->to<IR::Declaration_Variable>()) {
+            // Save names of standard_metadata_t variables and skip/remove their declarations
+            const auto* declVarTypeName = declVar->type->to<IR::Type_Name>();
+            if (declVarTypeName && declVarTypeName->path->name.name == "standard_metadata_t") {
+                LOG3("Removing standard_metadata_t variable declaration: " << decl);
+                varsToRemove.emplace(declVar->name.name);
+                continue;
+            }
+        } else if (const auto* action = decl->to<IR::P4Action>()) {
+            // Create new P4Action body components
+            IR::IndexedVector<IR::StatOrDecl> newP4ActionBodyComponents;
+            for (const auto* stmt : action->body->components) {
+                // Check all AssignmentStatement nodes in P4Action
+                if (const auto* asgnStmt = stmt->to<IR::AssignmentStatement>()) {
+                    // Skip/remove all assignments using variables with saved names
+                    const auto* asgnStmtLPathExpr = asgnStmt->left->to<IR::PathExpression>();
+                    const auto* asgnStmtRPathExpr = asgnStmt->right->to<IR::PathExpression>();
+                    if ((asgnStmtLPathExpr &&
+                        varsToRemove.count(asgnStmtLPathExpr->path->name.name)) ||
+                        (asgnStmtRPathExpr &&
+                        varsToRemove.count(asgnStmtRPathExpr->path->name.name))) {
+                        LOG3("Removing assignment statement using standard_metadata_t variable: "
+                             << stmt);
+                        continue;
+                    }
+                }
+                // Else add original StatOrDecl to new P4Action body components
+                newP4ActionBodyComponents.push_back(stmt);
+            }
+            // Create and add new P4Action (with new body) to new TnaControl controlLocals
+            const auto* newP4ActionBody = new IR::BlockStatement(action->body->srcInfo,
+                                                                 action->body->annotations,
+                                                                 newP4ActionBodyComponents);
+            const auto* newP4Action = new IR::P4Action(action->srcInfo, action->name,
+                                                       action->annotations, action->parameters,
+                                                       newP4ActionBody);
+            newTnaControlLocals.push_back(newP4Action);
+            continue;
+        }
+        // Else add original Declaration to new TnaControl controlLocals
+        newTnaControlLocals.push_back(decl);
+    }
+    // Create and return new TnaControl (with new controlLocals)
+    return new IR::BFN::TnaControl(node->srcInfo, node->name, node->type,
+                                   node->constructorParams, newTnaControlLocals,
+                                   node->body, node->tnaParams, node->thread, node->pipeName);
+}
+
 const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     auto params = node->type->getApplyParameters();
     BUG_CHECK(params->size() == 3, "%1% Expected 3 parameters for ingress", node);
