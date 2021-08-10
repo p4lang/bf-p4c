@@ -27,27 +27,6 @@ enum {
 class Parser {
     int                                 lineno = -1;
     template<class REGS> void write_config(REGS &, json::map &, bool legacy = true);
-
-    struct Checksum {
-        int             lineno = -1, addr = -1, unit = -1;
-        gress_t         gress;
-        Phv::Ref        dest;
-        int             tag = -1;
-        unsigned        add = 0, mask = 0, swap = 0, mul_2 = 0;
-        unsigned        dst_bit_hdr_end_pos = 0;
-        bool            start = false, end = false, shift = false;
-        unsigned        type = 0;  // 0 = verify, 1 = residual, 2 = clot
-        Checksum(gress_t, pair_t);
-        bool equiv(const Checksum &) const;
-        void pass1(Parser *);
-        void pass2(Parser *);
-        template<class REGS> void write_config(REGS &, Parser *);
-        template<class REGS>
-        void write_output_config(REGS &, Parser *, void *, unsigned &) const;
-     private:
-        template <typename ROW> void write_tofino_row_config(ROW &row);
-        template <typename ROW> void write_row_config(ROW &row);
-    };
     struct CounterInit {
         gress_t         gress;
         int             lineno = -1, addr = -1;
@@ -75,6 +54,8 @@ class Parser {
     };
 
  public:
+    struct Checksum;
+
     struct State {
         struct Ref {
             int                         lineno;
@@ -162,7 +143,7 @@ class Parser {
                 int write_output_config(REGS &, void *, unsigned &, int, int) const;
                 OutputUse output_use() const;
             };
-            std::vector<Save*>               save;
+            std::vector<Save*>  save;
 
             struct Set {
                 Match*          match = nullptr;
@@ -177,7 +158,7 @@ class Parser {
                 bool operator==(const Set &a) const { return where == a.where && what == a.what
                     && flags == a.flags; }
             };
-            std::vector<Set*>            set;
+            std::vector<Set*> set;
 
             struct Clot {
                 int             lineno, tag;
@@ -259,6 +240,27 @@ class Parser {
         template<class REGS>
         int write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
         template<class REGS> void write_config(REGS &, Parser *, json::vector &);
+    };
+
+    struct Checksum {
+        int             lineno = -1, addr = -1, unit = -1;
+        gress_t         gress;
+        Phv::Ref        dest;
+        int             tag = -1;
+        unsigned        add = 0, mask = 0, swap = 0, mul_2 = 0;
+        unsigned        dst_bit_hdr_end_pos = 0;
+        bool            start = false, end = false, shift = false;
+        unsigned        type = 0;  // 0 = verify, 1 = residual, 2 = clot
+        Checksum(gress_t, pair_t);
+        bool equiv(const Checksum &) const;
+        void pass1(Parser *);
+        void pass2(Parser *);
+        template<class REGS> void write_config(REGS &, Parser *);
+        template<class REGS>
+        void write_output_config(REGS &, Parser *, State::Match*, void *, unsigned &) const;
+     private:
+        template <typename ROW> void write_tofino_row_config(ROW &row);
+        template <typename ROW> void write_row_config(ROW &row);
     };
 
  public:

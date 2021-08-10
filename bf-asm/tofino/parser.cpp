@@ -4,9 +4,187 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <string>
 #include <sstream>
 
 #include "misc.h"
+
+// ----------------------------------------------------------------------------
+// Slots & Useful constants
+// ----------------------------------------------------------------------------
+
+// Following constants are used for detection of unused slot (e.g., initial value) and
+// minimal/maximal indexes for extractor slots
+static unsigned EXTRACT_SLOT_UNUSED         = 511;
+static unsigned EXTRACT_SLOT_CONSTANT_DIS   = 0;
+static unsigned EXTRACT_SLOT_CONSTANT_EN    = 1;
+static unsigned EXTRACT_SLOT_CONSTANT_ZERO  = 0;
+static unsigned PHV_MIN_INDEX               = 0;
+static unsigned PHV_MAX_INDEX               = 224;
+static unsigned TPHV_MIN_INDEX              = 256;
+static unsigned TPHV_MAX_INDEX              = 368;
+
+/* remapping structure for getting at the config bits for phv output
+ * programming in a systematic way */
+struct tofino_phv_output_map {
+    int         size;   /* 8, 16, or 32 */
+    ubits<9>    *dst;
+    ubits_base  *src;   /* 6 or 8 bits */
+    ubits<1>    *src_type, *offset_add, *offset_rot;
+};
+std::ostream &operator<<(std::ostream &of, const tofino_phv_output_map *om) {
+    of << om->size << "bit, dst = " << std::to_string(om->dst->value) << ", src = "
+       << std::to_string(om->src->value);
+    if (om->src_type)
+        of << ", src_type = " << std::to_string(om->src_type->value);
+    if (om->offset_add)
+        of <<", offset_add = " << std::to_string(om->offset_add->value);
+    if (om->offset_rot)
+        of << ", offset_rot = " << std::to_string(om->offset_rot->value);
+    return of;
+}
+enum extractor_slots {
+    /* enum for indexes in the tofino_phv_output_map */
+    phv_32b_0, phv_32b_1, phv_32b_2, phv_32b_3,
+    phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3,
+    phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3,
+    tofino_phv_output_map_size,
+};
+
+static struct phv_use_slots { int idx; unsigned usemask, shift, size; }
+phv_32b_slots[] = {
+    { phv_32b_3, 1U << phv_32b_3, 0, 32 },
+    { phv_32b_2, 1U << phv_32b_2, 0, 32 },
+    { phv_32b_1, 1U << phv_32b_1, 0, 32 },
+    { phv_32b_0, 1U << phv_32b_0, 0, 32 },
+    { phv_16b_2, 3U << phv_16b_2, 16, 16 },
+    { phv_16b_0, 3U << phv_16b_0, 16, 16 },
+    { phv_8b_0, 0xfU << phv_8b_0, 24, 8 },
+    { 0, 0, 0, 0 }
+},
+phv_16b_slots[] = {
+    { phv_16b_3, 1U << phv_16b_3, 0, 16 },
+    { phv_16b_2, 1U << phv_16b_2, 0, 16 },
+    { phv_16b_1, 1U << phv_16b_1, 0, 16 },
+    { phv_16b_0, 1U << phv_16b_0, 0, 16 },
+    { phv_8b_2, 3U << phv_8b_2, 8, 8 },
+    { phv_8b_0, 3U << phv_8b_0, 8, 8 },
+    { 0, 0, 0, 0 }
+},
+phv_8b_slots[] = {
+    { phv_8b_0, 1U << phv_8b_0, 0, 8 },
+    { phv_8b_1, 1U << phv_8b_1, 0, 8 },
+    { phv_8b_2, 1U << phv_8b_2, 0, 8 },
+    { phv_8b_3, 1U << phv_8b_3, 0, 8 },
+    { 0, 0, 0, 0 }
+};
+
+static phv_use_slots* get_phv_use_slots(int size) {
+    phv_use_slots *usable_slots = nullptr;
+
+    if (size == 32)
+        usable_slots = phv_32b_slots;
+    else if (size == 16)
+        usable_slots = phv_16b_slots;
+    else if (size == 8)
+        usable_slots = phv_8b_slots;
+    else
+        BUG();
+
+    return usable_slots;
+}
+
+// ----------------------------------------------------------------------------
+// Helping classes
+// ----------------------------------------------------------------------------
+
+/// Helping cache to remember values for a different parser objects
+/// based on the type of extraction size. The storage is done into two
+/// layers and user is free to specify the values of layer 1 and layer 2
+/// types. The third type specifies the return value
+template <typename T1, typename T2, typename T3>
+class TwoLevelCache {
+    std::map<T1,
+        std::map<T2, T3>> m_cache;
+
+ public:
+    void insert(const T1 key1, T2 key2, T3 val) {
+        m_cache[key1][key2] = val;
+    }
+
+    bool has(const T1 key1, T2 key2) const {
+        if (!m_cache.count(key1)) return false;
+        auto level1 = m_cache.at(key1);
+
+        return level1.count(key2);
+    }
+
+    T3 get(const T1 key1, T2 key2) const {
+        return m_cache.at(key1).at(key2);
+    }
+};
+
+/**
+ * @brief This class is used for internal tracking of Tofino output map
+ * extractor allocation. It is beneficial during the debugging process of this
+ * functionality because it can provid the answer to question:
+ * "What is alloacted into this extractor slot?" 
+ */
+class MatchSlotTracker {
+    using SetMap  =
+        TwoLevelCache<const Parser::State::Match*, int, const Parser::State::Match::Set*>;
+    using SaveMap =
+        TwoLevelCache<const Parser::State::Match*, int, const Parser::State::Match::Save*>;
+    using CsumMap =
+        TwoLevelCache<const Parser::State::Match*, int, const Parser::Checksum*>;
+    using PaddingMap =
+        TwoLevelCache<const Parser::State::Match*, int, tofino_phv_output_map*>;
+
+ public:
+    // Helping caches for tracking of slot occupancy mapping
+    SetMap      setMap;
+    SaveMap     saveMap;
+    CsumMap     csumMap;
+    PaddingMap  padMap;
+
+    /**
+     * @brief Get the db slots object
+     * 
+     * @param match Match line to dump
+     * @param slot_idx Passed index of slot which needs to be dumped
+     * @return std::string object with dumped data
+     */
+    std::string get_db_slots(const Parser::State::Match *match, const int slot_idx) const {
+        std::stringstream ss;
+        ss << "Mapping for state " << match->state->name;
+        if (match->match) ss << ", match " << match->match;
+        ss << ", slot " << slot_idx << ": ";
+
+        if (setMap.has(match, slot_idx)) {
+            auto set = setMap.get(match, slot_idx);
+            ss << "set, " << set->where;
+        } else if (saveMap.has(match, slot_idx)) {
+            auto save = saveMap.get(match, slot_idx);
+            ss << "save, " << save->where;
+        } else  if (csumMap.has(match, slot_idx)) {
+            auto csum = csumMap.get(match, slot_idx);
+            ss << "csum, " << csum->dest;
+        }else if (padMap.has(match, slot_idx)) {
+            ss << "fake extraction padding, "
+               << padMap.get(match, slot_idx);
+        } else {
+            ss << "<unknown>";
+        }
+
+        return ss.str();
+    }
+};
+
+static MatchSlotTracker matchSlotTracker;
+
+// ----------------------------------------------------------------------------
+//  Parser configuration dump
+// ----------------------------------------------------------------------------
 
 template <> void Parser::Checksum::write_config(Target::Tofino::parser_regs &regs, Parser *parser) {
     if (unit == 0)
@@ -144,66 +322,6 @@ template <> int Parser::State::Match::write_load_config(Target::Tofino::parser_r
     return max_off;
 }
 
-/* remapping structure for getting at the config bits for phv output
- * programming in a systematic way */
-struct tofino_phv_output_map {
-    int         size;   /* 8, 16, or 32 */
-    ubits<9>    *dst;
-    ubits_base  *src;   /* 6 or 8 bits */
-    ubits<1>    *src_type, *offset_add, *offset_rot;
-};
-
-enum {
-    /* enum for indexes in the tofino_phv_output_map */
-    phv_32b_0, phv_32b_1, phv_32b_2, phv_32b_3,
-    phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3,
-    phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3,
-    tofino_phv_output_map_size,
-};
-
-static struct phv_use_slots { int idx; unsigned usemask, shift, size; }
-phv_32b_slots[] = {
-    { phv_32b_3, 1U << phv_32b_3, 0, 32 },
-    { phv_32b_2, 1U << phv_32b_2, 0, 32 },
-    { phv_32b_1, 1U << phv_32b_1, 0, 32 },
-    { phv_32b_0, 1U << phv_32b_0, 0, 32 },
-    { phv_16b_2, 3U << phv_16b_2, 16, 16 },
-    { phv_16b_0, 3U << phv_16b_0, 16, 16 },
-    { phv_8b_0, 0xfU << phv_8b_0, 24, 8 },
-    { 0, 0, 0, 0 }
-},
-phv_16b_slots[] = {
-    { phv_16b_3, 1U << phv_16b_3, 0, 16 },
-    { phv_16b_2, 1U << phv_16b_2, 0, 16 },
-    { phv_16b_1, 1U << phv_16b_1, 0, 16 },
-    { phv_16b_0, 1U << phv_16b_0, 0, 16 },
-    { phv_8b_2, 3U << phv_8b_2, 8, 8 },
-    { phv_8b_0, 3U << phv_8b_0, 8, 8 },
-    { 0, 0, 0, 0 }
-},
-phv_8b_slots[] = {
-    { phv_8b_0, 1U << phv_8b_0, 0, 8 },
-    { phv_8b_1, 1U << phv_8b_1, 0, 8 },
-    { phv_8b_2, 1U << phv_8b_2, 0, 8 },
-    { phv_8b_3, 1U << phv_8b_3, 0, 8 },
-    { 0, 0, 0, 0 }
-};
-
-static phv_use_slots* get_phv_use_slots(int size) {
-    phv_use_slots *usable_slots = nullptr;
-
-    if (size == 32)
-        usable_slots = phv_32b_slots;
-    else if (size == 16)
-        usable_slots = phv_16b_slots;
-    else if (size == 8)
-        usable_slots = phv_8b_slots;
-    else
-        BUG();
-
-    return usable_slots;
-}
-
 // Narrow-to-wide extraction alignment needs adjusting when
 // 8b/16b checksum validations are written in the same cycle
 bool adjust_phv_use_slot(phv_use_slots &slot, int size, int csum_8b, int csum_16b) {
@@ -223,7 +341,7 @@ bool adjust_phv_use_slot(phv_use_slots &slot, int size, int csum_8b, int csum_16
 
 template <>
 void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa,
-                                           void *_map, unsigned &used) const {
+                                           State::Match *ma,void *_map, unsigned &used) const {
     if (type != 0 || !dest) return;
 
     // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
@@ -237,6 +355,7 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
 
     auto id = dest->reg.parser_id();
     *map[slot.idx].dst = id;
+    matchSlotTracker.csumMap.insert(ma, slot.idx, this);
     // P4C-3659: The source address is checked for source extract errors whenever the dest
     // is not 511. To prevent errors when buf_req = 0 (corresponding to states with no extracts),
     // point the source to the version area of the source range which is always valid.
@@ -290,6 +409,7 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
 
             *map[x].dst = where->reg.parser_id();
             *map[x].src = byte;
+            matchSlotTracker.saveMap.insert(match, x, this);
             if (flags & OFFSET) *map[x].offset_add = 1;
             if (flags & ROTATE) *map[x].offset_rot = 1; }
         used |= slot.usemask;
@@ -381,6 +501,7 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
             *map[x].src_type = 1;
             auto v = encode_constant_for_slot(x, (what << where->lo) >> shift);
             *map[x].src = v;
+            matchSlotTracker.setMap.insert(match, x, this);
             if (flags & OFFSET) *map[x].offset_add = 1;
             if (flags & ROTATE) *map[x].offset_rot = 1;
             shift += slot.size;
@@ -486,6 +607,8 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
 enum class AnalysisType {BIT8, BIT16};
 const auto phv_8bit_extractors =  { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 };
 const auto phv_16bit_extractors =  { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 };
+// Declare a helping type for the count cache class
+using ExtractionCountCache = TwoLevelCache<const Parser::State::Match*, AnalysisType, int>;
 
 /// Count the number of extractions for a given \ref match.
 /// The method takes the \p elems list which holds PHV indexes to check
@@ -501,42 +624,13 @@ int count_number_of_extractions(Parser* parser,
 
     auto elems = type == AnalysisType::BIT8 ? phv_8bit_extractors : phv_16bit_extractors;
     for (auto i : elems) {
-        if (map[i].dst->value != 511) {
+        if (map[i].dst->value != EXTRACT_SLOT_UNUSED) {
             used++;
         }
     }
 
     return used;
 }
-
-/// Helping cache to remember values for a different parser objects
-/// based on the type of extraction size. The storage is done into two
-/// layers and user is free to specify the values of layer 1 and layer 2
-/// types.
-template <typename T1, typename T2>
-class CountCache {
- public:
-    void insert(const T1 key1, T2 key2, int val) {
-        m_cache[key1][key2] = val;
-    }
-
-    bool has(const T1 key1, T2 key2) {
-        if (m_cache.count(key1) == 0) return false;
-        if (m_cache[key1].count(key2) == 0) return false;
-
-        return true;
-    }
-
-    int get(const T1 key1, T2 key2) {
-        return m_cache[key1][key2];
-    }
-
- private:
-    std::map<const T1,
-            std::map<T2, int>> m_cache;
-};
-
-using ExtractionCountCache = CountCache<Parser::State::Match*, AnalysisType>;
 
 /// Pad collector object which provides mapping from a narrow-to-wide match
 /// to added padding
@@ -676,9 +770,9 @@ int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &re
         // This means that we can take this loop many times and that we need to distribute the
         // maximal FIFO value to our parets (we are predecessors of our parents).
         //
-        // IN SUCH CASE THE NUMBER OF EXTRACTIONS FOR ALL SUCCESSORS DOESN'T CATCH SHOW
-        // THE REALITY IT IS JUST FOR THE SIMULATION OF FULL PARSER FIFO BLOCKS.
-        // REALITY IS COVEDER WHEN THE GRAPH DOESN'T HAVE LOOPS
+        // IN SUCH CASE THE NUMBER OF EXTRACTIONS FOR ALL SUCCESSORS DOESN'T CATCH
+        // THE REALITY. IT IS JUST FOR THE SIMULATION OF FULL PARSER FIFO BLOCKS.
+        // REALITY IS COVERED WHEN THE GRAPH DOESN'T HAVE LOOPS
         return parser_fifo_size;
     }
 
@@ -713,153 +807,274 @@ int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &re
     return extraction_result;
 }
 
+/**
+ * @brief Dump the occupancy of extraction slots in output map
+ *
+ * @param match Current match which is being processed 
+ * @param indexes Indexes to inspect
+ * @param prefix Prefix to add before the print
+ */
+static void print_slot_occupancy(const Parser::State::Match *match,
+    const std::initializer_list<const extractor_slots> indexes,
+    const std::string prefix = "") {
+    // Print the prefix if not empty, iterate over checked indexes and
+    // print slot occupancy information.
+    std::stringstream ss;
+    std::string sep;
+    if (prefix != "") {
+        ss << prefix << " : " << std::endl;
+        sep = "\t* ";
+    }
 
+    for (auto idx : indexes) {
+        ss << sep << matchSlotTracker.get_db_slots(match, idx) << std::endl;
+    }
+
+    auto output = ss.str();
+    if (output.size() == 0) return;
+    LOG5(output);
+}
+
+/**
+ * @brief Set the \p pad_idx or \p from_idx based on the used extractor scenario
+ *
+ * @param pad_idx Input/output for padding index
+ * @param from_idx Input/output for source index
+ * @param used Number of used extractors
+ * @param has_csum State is using the VERIFY checksum
+ * @param match State match which is being processed
+ * @param map Pointer on the output map configuration
+ */
+static void set_idx_for_16b_extractions(unsigned &pad_idx, unsigned &from_idx, const unsigned used,
+    const bool has_csum, const Parser::State::Match* match, struct tofino_phv_output_map *map) {
+    if (used == 1) {
+        // One extractor is being used and the index is stored in from_idx. The allocation
+        // strategy here is to keep data in tuples {0,1} and {2,3}.
+        if (from_idx == phv_16b_0 || from_idx == phv_16b_2) {
+            pad_idx  = from_idx + 1;
+        } else if (from_idx == phv_16b_1 || from_idx == phv_16b_3) {
+            pad_idx = from_idx - 1;
+        } else {
+            // We should never reach this point
+            error(match->lineno,
+                "Cannot identify index for 16bit extractor padding (1 extractor)!");
+        }
+    } else {
+        // Three extractors are used and the unused extractor index is stored in
+        // the pad_idx variable. We can keep indexes in tuples
+        if (has_csum) {
+            from_idx = phv_16b_3;
+        }else if (pad_idx == phv_16b_0 || pad_idx == phv_16b_2) {
+            from_idx  = pad_idx + 1;
+        } else if (pad_idx == phv_16b_1 || pad_idx == phv_16b_3) {
+            from_idx = pad_idx - 1;
+        } else {
+            // We should never reach this point
+            error(match->lineno,
+                "Cannot identify index for 16bit extractor padding (3 extractors)!");
+        }
+    }
+}
+
+/**
+ * @brief Verify all invariants for the extractor padding configuration
+ *
+ * @param pad_idx Input/output for padding index
+ * @param from_idx Input/output for source index
+ * @param used Number of used extractors
+ * @param has_csum State is using the VERIFY checksum
+ * @param match State match which is being processed
+ * @param map Pointer on the output map configuration
+ */
+static void check_16b_extractor_configuration(const unsigned pad_idx, const unsigned from_idx,
+    const unsigned used, const bool has_csum, const struct tofino_phv_output_map *map) {
+    // 1] Indexes are kept in tuples {0,1} and {2,3}. Checksum means that from_idx is
+    // set to the last extractor.
+    bool csum         = has_csum && (from_idx == phv_16b_3);
+    bool first_tuple  = (from_idx == phv_16b_0 || from_idx == phv_16b_1) && (pad_idx <= phv_16b_1);
+    bool second_tuple = (from_idx == phv_16b_2 || from_idx == phv_16b_3) && (pad_idx >= phv_16b_2);
+    BUG_CHECK(has_csum || first_tuple || second_tuple,
+        "Source and destination index are not configured correctly for 16bit 2n extractor "
+        "padding!");
+
+    // 2] All indexes are sourced from global version field which is tight to zeros.
+    // The Checksum case means that we need to set the from index on the last 16b extractor
+    BUG_CHECK(map[pad_idx].dst->value != EXTRACT_SLOT_UNUSED,
+        "Invalid extractor destination for 16bit 2n padding!");
+    if (has_csum) {
+        BUG_CHECK(from_idx == phv_16b_3,
+            "Invalid from_idx for the 16bit 2n padding with checksum!");
+    }
+
+    // Check the slot configuration - sourcing from global field and no constant for {0,1}
+    BUG_CHECK(*map[pad_idx].src >= PARSER_SRC_MAX_IDX - 3 &&
+            *map[pad_idx].src != EXTRACT_SLOT_UNUSED,
+            "Field is not sourcing from the global version field!");
+    if (pad_idx == phv_16b_0 || pad_idx == phv_16b_1) {
+        BUG_CHECK(*map[pad_idx].src_type == 0,
+        "Invalid configuration of the source type for 16b 2n padding!");
+    }
+}
+
+// Related JIRA & uArch documents (defines why the padding needs to be added):
+// * https://jira.devtools.intel.com/browse/P4C-2878
+// * https://jira.devtools.intel.com/browse/P4C-3725
+//
+// uArch for Tofino Parser:
+// * Parser Output section
+// * Checksum section
+// * Parse Merge section
 
 /// Add the fake extractions to have 2n 16b extractions. The function returns
 /// the number of added extractions.
-int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
+static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
                                Parser::State::Match* match) {
+    // Obtain the slot configuration for given row
     int row = parser->match_to_row.at(match);
     auto map = reinterpret_cast<tofino_phv_output_map *>(
         parser->setup_phv_output_map(regs, parser->gress, row));
+    if (LOGGING(5)) {
+        print_slot_occupancy(match, phv_16bit_extractors, "Before 16bit padding");
+    }
 
-    unsigned used = 0;
-    int used_idx = -1, unused_idx = -1;
-
-    // find an used extractor and use its dest to issue a dummy write
-    for (auto i : { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 }) {
-        if (map[i].dst->value != 511) {
+    // Count number of used extractors - the number of extractions/constant set operations and
+    // checksums should be the padded to 2n.
+    unsigned used       = 0;
+    unsigned pad_idx    = 0;
+    unsigned from_idx   = 0;
+    for (auto i : phv_16bit_extractors) {
+        if (map[i].dst->value == EXTRACT_SLOT_UNUSED) {
+            pad_idx = i;
+        } else {
+            from_idx = i;
             used++;
-            if (used_idx == -1) used_idx = i;
-        } else if (unused_idx == -1) {
-            unused_idx = i;
         }
     }
 
-    // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
-    // see MODEL-210 for discussion.
-
-    bool has_csum_verify = false;
-
+    // Check if csum equals VERIFY type and destination register size is 16
+    bool has_csum = false;
     for (auto& c : match->csum) {
-        if (c.type == 0 && c.dest && c.dest->reg.size == 16 && used != 4) {
-            used++;
-            has_csum_verify = true;
+        if (c.type == 0 && c.dest && c.dest->reg.size == 16) {
+            has_csum = true;
             break;
         }
     }
 
-    if (used == 1) {
-        unused_idx = used_idx ^ 1;
-    } else if (used == 3) {
-        if (has_csum_verify) {
-            if (!map[unused_idx].src_type && map[unused_idx ^ 1].dst->value == 511) {
-            // If both used extractors are using slots that can source from packet or constant,
-            // it's impossible to pad to 2N alignment in the assembler. Compiler needs to account
-            // for this when splitting state.
-                error(match->lineno,
-                      "Unsatisfiable 2N alignment constraint for narrow-to-wide extract in %s",
-                      match->state->name.c_str());
-            } else if (map[unused_idx].src_type && map[unused_idx ^ 1].dst->value == 511) {
-                used_idx = phv_16b_2;
-            }
-        } else {
-            used_idx = unused_idx ^ 1;
-        }
-    }
-
-    if (used % 2) {
-        map[unused_idx].dst->rewrite();
-
-        *map[unused_idx].dst = *map[used_idx].dst;
-        *map[unused_idx].src = *map[used_idx].src;
-
-        if (map[used_idx].src_type && map[unused_idx].src_type)
-            *map[unused_idx].src_type = *map[used_idx].src_type;
-
-        // mark the dummy write dest as multi-write
-
-        if (*map[used_idx].dst >= 0 && *map[used_idx].dst < 224) {
-            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
-            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
-
-            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
-            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
-        } else if (*map[used_idx].dst >= 256 && *map[used_idx].dst < 368) {
-            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
-            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
-
-            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
-            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
+    // Identify indexes for source and destination slots for the padding
+    if (used == 1 || used == 3) {
+        set_idx_for_16b_extractions(pad_idx, from_idx, used, has_csum, match, map);
+    } else {
+        // Value is 0,2 or 4, we are good!
+        if (LOGGING(5)) {
+            LOG5("No 16bit padding is needed to add in " << match->state->name << " state.");
         }
 
-        return 2 - (used % 2);
+        return 0;
     }
 
-    return 0;
+    // Add fake extractors to reach 2n constraint, we need to copy destination and source from
+    // the global version field which is tight to zeros in RTL.
+    // We are keeping both indexes in tuples {0,1} or {2,3}.
+    map[pad_idx].dst->rewrite();
+    *map[pad_idx].dst = *map[from_idx].dst;
+    *map[pad_idx].src = PARSER_SRC_MAX_IDX - 1;
+    if (pad_idx < phv_16b_2) {
+        // Extractors {0,1} can source from constant and therefore we need to be sure to
+        // disable it.
+        *map[pad_idx].src_type = EXTRACT_SLOT_CONSTANT_DIS;
+    }
+    matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
+    check_16b_extractor_configuration(pad_idx, from_idx, used, has_csum, map);
+
+    // Mark the dummy write dest as multi-write, we need to distinguish between PHV and TPHV
+    if (*map[from_idx].dst >= PHV_MIN_INDEX && *map[from_idx].dst < PHV_MAX_INDEX) {
+        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
+        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
+
+        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
+        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
+    } else if (*map[from_idx].dst >= TPHV_MIN_INDEX && *map[from_idx].dst < TPHV_MAX_INDEX) {
+        auto tphv_idx = *map[from_idx].dst - TPHV_MIN_INDEX;
+        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
+        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
+
+        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+    }
+
+    if (LOGGING(5)) {
+        print_slot_occupancy(match, phv_16bit_extractors, "After 16bit padding");
+    }
+
+    return 1;
 }
 
 /// Add the fake extractions to have 4n 8b extractions. The function returns
 /// the number of added extractions.
-int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
+static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
                               Parser::State::Match* match) {
+    // Obtain the slot configuration for given row
     int row = parser->match_to_row.at(match);
     auto map = reinterpret_cast<tofino_phv_output_map *>(
         parser->setup_phv_output_map(regs, parser->gress, row));
-
-    unsigned used = 0;
-    int used_idx = -1;
-
-    // find an used extractor and use its dest to issue a dummy write
-
-    for (auto i : { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 }) {
-        if (map[i].dst->value != 511) {
-            used++;
-            if (used_idx == -1) used_idx = i;
-        }
+    if (LOGGING(5)) {
+        print_slot_occupancy(match, phv_8bit_extractors, "Before 8bit padding");
     }
 
-    // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
-    // see MODEL-210 for discussion.
-
-    for (auto& c : match->csum) {
-        if (c.type == 0 && c.dest && c.dest->reg.size == 8 && used != 4) {
-            used++;
-            break;
-        }
+    // Count number of used extractors - the number of extraction/constant set operations and
+    // checksums should be padded to 4n. The source of the added padding will be stored in
+    // the from_idx variable.
+    unsigned used       = 0;
+    int from_idx        = -1;
+    for (auto i : phv_8bit_extractors) {
+        if (map[i].dst->value == EXTRACT_SLOT_UNUSED) continue;
+        // Update the used counter and remember the used slot
+        used++;
+        if (from_idx == -1) from_idx = i;
     }
 
-    if (used % 4) {
-        for (auto i : { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 }) {
-            if (map[i].dst->value == 511) {
-                map[i].dst->rewrite();
-
-                *map[i].dst = *map[used_idx].dst;
-                *map[i].src = 0;
-                *map[i].src_type = 1;
-            }
+    if (used % 4 == 0) {
+        if (LOGGING(5)) {
+            LOG5("No 8bit padding is needed to add in " << match->state->name << " state.");
         }
 
-        // mark the dummy write dest as multi-write
-
-        if (*map[used_idx].dst >= 0 && *map[used_idx].dst < 224) {
-            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
-            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
-
-            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
-            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
-        } else if (*map[used_idx].dst >= 256 && *map[used_idx].dst < 368) {
-            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
-            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
-
-            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
-            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
-        }
-
-        return 4 - (used % 4);
+        return 0;
     }
 
-    return 0;
+    // Add fake extractions to meet the 4n constraint
+    for (auto pad_idx : phv_8bit_extractors) {
+        if (map[pad_idx].dst->value != EXTRACT_SLOT_UNUSED) continue;
+
+        // Extraction slot is not used and we need to put padding there. The main idea
+        // is to source from the zero constant
+        map[pad_idx].dst->rewrite();
+        *map[pad_idx].dst = *map[from_idx].dst;
+        *map[pad_idx].src = EXTRACT_SLOT_CONSTANT_ZERO;
+        *map[pad_idx].src_type = EXTRACT_SLOT_CONSTANT_EN;
+        matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
+    }
+
+    // Mark the dummy write dest as multi-write, we need to distinguish between PHV and TPHV
+    if (*map[from_idx].dst >= PHV_MIN_INDEX && *map[from_idx].dst < PHV_MAX_INDEX) {
+        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
+        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
+
+        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
+        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
+    } else if (*map[from_idx].dst >= TPHV_MIN_INDEX && *map[from_idx].dst < TPHV_MAX_INDEX) {
+        auto tphv_idx = *map[from_idx].dst - TPHV_MIN_INDEX;
+        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
+        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
+
+        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+    }
+
+    if (LOGGING(5)) {
+        print_slot_occupancy(match, phv_8bit_extractors, "After 8bit padding");
+    }
+
+    return 4 - (used % 4);
 }
 
 /// Add the padding to child nodes matches, added padding is controlled via the

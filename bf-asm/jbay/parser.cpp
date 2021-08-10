@@ -20,7 +20,7 @@ template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs,
 
 template <>
 void Parser::Checksum::write_output_config(Target::JBay::parser_regs &regs, Parser *pa,
-    void *_row, unsigned &used) const {
+    State::Match */*ma*/, void *_row, unsigned &used) const {
     if (type != 0 || !dest) return;
 
     Target::JBay::parser_regs::_memory::_po_action_row *row =

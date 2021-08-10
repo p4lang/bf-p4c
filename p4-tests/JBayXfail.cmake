@@ -506,3 +506,8 @@ Temporary fix: try to apply @pa_container_size pragma to small fields allocated 
   extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
 )
 
+# New issue from the model update - Remove once fixed
+p4c_add_xfail_reason("tofino2"
+  "Expected packet was not received on device .*"
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
+)

@@ -145,7 +145,7 @@ struct cloudbreak_row_output_state {
 
 template <>
 void Parser::Checksum::write_output_config(Target::Cloudbreak::parser_regs &regs, Parser *pa,
-    void *_row, unsigned &used) const {
+    State::Match */*ma*/, void *_row, unsigned &used) const {
     if (type != 0 || !dest) return;
 
     cloudbreak_row_output_state *row = static_cast<cloudbreak_row_output_state *>(_row);

@@ -1828,7 +1828,7 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
     int csum_8b = 0;
     int csum_16b = 0;
     for (auto &c : csum) {
-        c.write_output_config(regs, pa, output_map, used);
+        c.write_output_config(regs, pa, this, output_map, used);
         if (c.type == 0 && c.dest) {
             if (c.dest->reg.size == 8)
                 ++csum_8b;
