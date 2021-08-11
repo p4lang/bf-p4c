@@ -2391,7 +2391,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     if (err != CanPackErrorCode::NO_ERROR) {
         return std::make_tuple(err, boost::none);
     }
-    LOG1("after check bitwise_or_move copacking constraint " << copack_constraints.size());
+    LOG4("after check bitwise_or_move copacking constraint " << copack_constraints.size());
 
     // TODO(yumin): we use solver to check move-based actions as a safe net to ensure
     // we don't create invalid packing.

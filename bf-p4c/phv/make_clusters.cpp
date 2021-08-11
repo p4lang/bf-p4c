@@ -993,6 +993,11 @@ bool break_cond_deparsed_zero(const BreakSliceListCtx& ctx) {
     if (ctx.next) {
         auto curr = ctx.curr;
         auto next = *ctx.next;
+        // cannot apply this optimization when the list has exact container
+        // requirements while the current offset is not byte-aligned.
+        if (ctx.curr->field()->exact_containers() && ctx.offset % 8 != 0) {
+            return false;
+        }
         return curr->field()->is_deparser_zero_candidate() !=
                next->field()->is_deparser_zero_candidate();
     }
@@ -1422,7 +1427,7 @@ void Clustering::ValidateClusters::validate_same_container_group_fields(
 }
 
 Visitor::profile_t Clustering::ValidateClusters::init_apply(const IR::Node* root) {
-    validate_deparsed_zero_clusters(self.cluster_groups());
+    // validate_deparsed_zero_clusters(self.cluster_groups());
     validate_exact_container_lists(self.cluster_groups(), self.uses_i);
     validate_alignments(self.cluster_groups(), self.uses_i);
     validate_extract_from_flexible(

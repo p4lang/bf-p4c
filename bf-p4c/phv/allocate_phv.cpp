@@ -4720,9 +4720,9 @@ BruteForceAllocationStrategy::allocLoop(
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);
 
-    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_", 4);
-    LOG4("Allocation history of config " << config_i.name);
-    LOG4(alloc_history.str());
+    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_", 1);
+    LOG1("Allocation history of config " << config_i.name);
+    LOG1(alloc_history.str());
     Logging::FileLog::close(logfile);
 
     if (cluster_groups.empty()) {
