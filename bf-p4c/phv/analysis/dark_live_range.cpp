@@ -1304,7 +1304,7 @@ boost::optional<PHV::DarkInitEntry>
 DarkLiveRange::generateInitForLastStageAlwaysInit(
         const OrderedFieldInfo& field,
         const OrderedFieldInfo* prvField,
-        const PHV::DarkInitMap& darkInitMap) const {
+        PHV::DarkInitMap& darkInitMap) const {
     PHV::AllocSlice dstSlice(field.field);
     int fromDarkStage = prvField->maxStage.second == PHV::FieldUse(READ) ? prvField->maxStage.first
         : (prvField->maxStage.first + 1);
@@ -1318,6 +1318,8 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
                       dest.container_slice() == field.field.container_slice() &&
                       dest.width() == field.field.width());
         if (found) {
+            dest.setLatestLiveness(std::make_pair(fromDarkStage, PHV::FieldUse(READ)));
+            it->setDestinationLatestLiveness(std::make_pair(fromDarkStage, PHV::FieldUse(READ)));
             rv.addSource(dest);
             rv.setLastStageAlwaysInit();
             LOG_DEBUG3(TAB3 "Adding initialization from dark in last stage: " << rv);

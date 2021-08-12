@@ -332,7 +332,7 @@ class DarkLiveRange : public Inspector {
     boost::optional<PHV::DarkInitEntry> generateInitForLastStageAlwaysInit(
             const OrderedFieldInfo& field,
             const OrderedFieldInfo* previousField,
-            const PHV::DarkInitMap& darkInitMap) const;
+            PHV::DarkInitMap& darkInitMap) const;
 
  public:
     boost::optional<PHV::DarkInitMap> findInitializationNodes(
