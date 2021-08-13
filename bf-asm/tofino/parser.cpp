@@ -897,7 +897,7 @@ static void check_16b_extractor_configuration(const unsigned pad_idx, const unsi
         "Source and destination index are not configured correctly for 16bit 2n extractor "
         "padding!");
 
-    // 2] All indexes are sourced from global version field which is tight to zeros.
+    // 2] All indexes are sourced from global version field which is tied to zeros.
     // The Checksum case means that we need to set the from index on the last 16b extractor
     BUG_CHECK(map[pad_idx].dst->value != EXTRACT_SLOT_UNUSED,
         "Invalid extractor destination for 16bit 2n padding!");
@@ -919,11 +919,51 @@ static void check_16b_extractor_configuration(const unsigned pad_idx, const unsi
 // Related JIRA & uArch documents (defines why the padding needs to be added):
 // * https://jira.devtools.intel.com/browse/P4C-2878
 // * https://jira.devtools.intel.com/browse/P4C-3725
+// * https://jira.devtools.intel.com/browse/P4C-3926
 //
 // uArch for Tofino Parser:
 // * Parser Output section
 // * Checksum section
 // * Parse Merge section
+
+/**
+ * @brief Perform the 16b padding onto map and computed index.
+ *
+ * @param regs Register configuration instance
+ * @param map Tofino output map pointer
+ * @param pad_idx Index which needs to be padded
+ * @param from_idx Index which is the source of the slot configuration
+ */
+static void do_16b_padding(Target::Tofino::parser_regs &regs, tofino_phv_output_map *map,
+    const unsigned pad_idx, const unsigned from_idx) {
+    // Add fake extractors to reach 2n constraint, we need to copy destination and source from
+    // the global version field which is tied to zeros in RTL.
+    // We are keeping both indexes in tuples {0,1} or {2,3}.
+    map[pad_idx].dst->rewrite();
+    *map[pad_idx].dst = *map[from_idx].dst;
+    *map[pad_idx].src = PARSER_SRC_MAX_IDX - 1;
+    if (pad_idx < phv_16b_2) {
+        // Even though extractors {0, 1} can extract from constants, we want to extract
+        // from the tied-to-zero global version field for consistency across all 16b extractors
+        *map[pad_idx].src_type = EXTRACT_SLOT_CONSTANT_DIS;
+    }
+
+    // Mark the dummy write dest as multi-write, we need to distinguish between PHV and TPHV
+    if (*map[from_idx].dst >= PHV_MIN_INDEX && *map[from_idx].dst < PHV_MAX_INDEX) {
+        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
+        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
+
+        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
+        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
+    } else if (*map[from_idx].dst >= TPHV_MIN_INDEX && *map[from_idx].dst < TPHV_MAX_INDEX) {
+        auto tphv_idx = *map[from_idx].dst - TPHV_MIN_INDEX;
+        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
+        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
+
+        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+    }
+}
 
 /// Add the fake extractions to have 2n 16b extractions. The function returns
 /// the number of added extractions.
@@ -973,18 +1013,50 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
     }
 
     // Add fake extractors to reach 2n constraint, we need to copy destination and source from
-    // the global version field which is tight to zeros in RTL.
+    // the global version field which is tied to zeros in RTL.
     // We are keeping both indexes in tuples {0,1} or {2,3}.
-    map[pad_idx].dst->rewrite();
-    *map[pad_idx].dst = *map[from_idx].dst;
-    *map[pad_idx].src = PARSER_SRC_MAX_IDX - 1;
-    if (pad_idx < phv_16b_2) {
-        // Extractors {0,1} can source from constant and therefore we need to be sure to
-        // disable it.
-        *map[pad_idx].src_type = EXTRACT_SLOT_CONSTANT_DIS;
-    }
+    do_16b_padding(regs, map, pad_idx, from_idx);
     matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
     check_16b_extractor_configuration(pad_idx, from_idx, used, has_csum, map);
+
+    // Match can also have a value set which means we need to do the initialization for
+    // other rows. The first row is being initialized, other rows needs the initialization
+    // and padding configuration
+    for (int vs_offset = 1; vs_offset < match->value_set_size; ++vs_offset) {
+        int nrow = row + vs_offset;
+        LOG5("Adding the padding for value_set " << match->value_set_name << " offset = " <<
+            vs_offset << " (row = " << nrow << ")");
+        map =  reinterpret_cast<tofino_phv_output_map *>(
+            parser->setup_phv_output_map(regs, parser->gress, nrow));
+        do_16b_padding(regs, map, from_idx, pad_idx);
+    }
+
+    if (LOGGING(5)) {
+        print_slot_occupancy(match, phv_16bit_extractors, "After 16bit padding");
+    }
+
+    return 1;
+}
+
+/**
+ * @brief Perform the 8b padding onto map and computed index.
+ *
+ * @param regs Register configuration instance
+ * @param map Tofino output map pointer
+ * @param from_idx Index which is the source of the slot configuration
+ */
+static void do_8b_padding(Target::Tofino::parser_regs &regs, tofino_phv_output_map *map,
+    const unsigned from_idx) {
+    for (auto pad_idx : phv_8bit_extractors) {
+        if (map[pad_idx].dst->value != EXTRACT_SLOT_UNUSED) continue;
+
+        // Extraction slot is not used and we need to put padding there. The main idea
+        // is to source from the zero constant
+        map[pad_idx].dst->rewrite();
+        *map[pad_idx].dst = *map[from_idx].dst;
+        *map[pad_idx].src = EXTRACT_SLOT_CONSTANT_ZERO;
+        *map[pad_idx].src_type = EXTRACT_SLOT_CONSTANT_EN;
+    }
 
     // Mark the dummy write dest as multi-write, we need to distinguish between PHV and TPHV
     if (*map[from_idx].dst >= PHV_MIN_INDEX && *map[from_idx].dst < PHV_MAX_INDEX) {
@@ -1001,12 +1073,6 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
         regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
         regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
     }
-
-    if (LOGGING(5)) {
-        print_slot_occupancy(match, phv_16bit_extractors, "After 16bit padding");
-    }
-
-    return 1;
 }
 
 /// Add the fake extractions to have 4n 8b extractions. The function returns
@@ -1041,33 +1107,22 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
         return 0;
     }
 
-    // Add fake extractions to meet the 4n constraint
+    // Add fake extractions to meet the 4n constraint and setup tracking
+    do_8b_padding(regs, map, from_idx);
     for (auto pad_idx : phv_8bit_extractors) {
-        if (map[pad_idx].dst->value != EXTRACT_SLOT_UNUSED) continue;
-
-        // Extraction slot is not used and we need to put padding there. The main idea
-        // is to source from the zero constant
-        map[pad_idx].dst->rewrite();
-        *map[pad_idx].dst = *map[from_idx].dst;
-        *map[pad_idx].src = EXTRACT_SLOT_CONSTANT_ZERO;
-        *map[pad_idx].src_type = EXTRACT_SLOT_CONSTANT_EN;
         matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
     }
 
-    // Mark the dummy write dest as multi-write, we need to distinguish between PHV and TPHV
-    if (*map[from_idx].dst >= PHV_MIN_INDEX && *map[from_idx].dst < PHV_MAX_INDEX) {
-        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
-        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst].rewrite();
-
-        regs.ingress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
-        regs.egress.prsr_reg.no_multi_wr.nmw[*map[from_idx].dst] = 0;
-    } else if (*map[from_idx].dst >= TPHV_MIN_INDEX && *map[from_idx].dst < TPHV_MAX_INDEX) {
-        auto tphv_idx = *map[from_idx].dst - TPHV_MIN_INDEX;
-        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
-        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx].rewrite();
-
-        regs.ingress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
-        regs.egress.prsr_reg.no_multi_wr.t_nmw[tphv_idx] = 0;
+    // Match can also have a value set which means we need to do the initialization for
+    // other rows. The first row is being initialized, other rows needs the initialization
+    // and padding configuration
+    for (int vs_offset = 1; vs_offset < match->value_set_size; ++vs_offset) {
+        int nrow = row + vs_offset;
+        LOG5("Adding the padding for value_set " << match->value_set_name << " offset = " <<
+            vs_offset << " (row = " << nrow << ")");
+        map = reinterpret_cast<tofino_phv_output_map *>(
+            parser->setup_phv_output_map(regs, parser->gress, nrow));
+        do_8b_padding(regs, map, from_idx);
     }
 
     if (LOGGING(5)) {
