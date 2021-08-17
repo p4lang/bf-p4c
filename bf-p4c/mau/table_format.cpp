@@ -252,7 +252,7 @@ void TableFormat::analyze_proxy_hash_option(int per_RAM) {
         auto bv = ph.hash_bits.getslice(i, 8);
         if (bv.empty())
             continue;
-        IXBar::Use::Byte b("proxy_hash", i);
+        IXBar::Use::Byte b(PHV::Container(), i);
         b.bit_use = bv;
         b.proxy_hash = true;
         b.search_bus = 0;

@@ -406,7 +406,7 @@ std::vector<IXBar::FieldInfo> IXBar::Use::Byte::get_slices_for_visualization() c
 }
 
 bool IXBar::Use::Byte::is_subset(const Byte &b) const {
-    if (name != b.name && lo != b.lo)
+    if (container != b.container && lo != b.lo)
         return false;
     for (auto fi : field_bytes) {
         bool is_subset = false;
@@ -509,7 +509,7 @@ void IXBar::Base::add_use(ContByteConversion &map_alloc, const PHV::Field *field
         // time may still be non-zero even though they aren't live.  This will always mark
         // all bits that are ever allocated
         bitvec all_bits = phv.bits_allocated(sl.container());
-        IXBar::Use::Byte byte(sl.container().toString(), (sl.container_slice().lo/8U) * 8U);
+        IXBar::Use::Byte byte(sl.container(), (sl.container_slice().lo/8U) * 8U);
 
         byte.non_zero_bits = all_bits.getslice((sl.container_slice().lo / 8U) * 8U, 8);
         byte.flags =
@@ -609,7 +609,7 @@ void IXBar::Base::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::B
 
     // Used to print initialization information for gtest
     for (auto &byte : bytes) {
-        LOG5("Allocate " << byte.name << " lo " << byte.lo
+        LOG5("Allocate " << byte.container << " lo " << byte.lo
              << " bit_use " << byte.bit_use
              << " flag " << byte.flags
              << " non_zero_bits " << byte.non_zero_bits

@@ -349,7 +349,7 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
     }
 
     for (auto &need : unalloced) {
-        for (auto &p : Values(fields.equal_range(need->name))) {
+        for (auto &p : Values(fields.equal_range(need->container.toString()))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP) {
                 if (need->is_range())
                     continue;
@@ -447,7 +447,7 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
             continue;
 
 
-        for (auto &p : Values(fields.equal_range(need.name))) {
+        for (auto &p : Values(fields.equal_range(need.container.toString()))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP)
                 continue;
 
@@ -489,7 +489,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
             break;
         if (match_bytes_placed >= total_match_bytes)
             break;
-        for (auto &p : Values(fields.equal_range(need.name))) {
+        for (auto &p : Values(fields.equal_range(need.container.toString()))) {
             if (!(ternary && p.byte == TERNARY_BYTES_PER_GROUP))
                 continue;
 
@@ -662,7 +662,7 @@ void IXBar::fill_out_use(safe_vector<IXBar::Use::Byte *> &alloced, bool ternary)
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
     for (auto &need : alloced) {
-        fields.emplace(need->name, need->loc);
+        fields.emplace(need->container.toString(), need->loc);
         if (ternary && need->loc.byte == 5) {
             byte_group_use[need->loc.group/2] = *(need);
         } else {
@@ -3728,7 +3728,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                fill_out_use(alloced, ternary);
             }
             for (auto need : alloced) {
-                LOG6("alloced " << need->name << " " << need->lo << " " << need->loc);
+                LOG6("alloced " << need->container << " " << need->lo << " " << need->loc);
             }
             alloced.clear();
             all_tbl_allocs.push_back(next_alloc);
@@ -3829,7 +3829,7 @@ void IXBar::update(cstring name, const Use &alloc) {
     cstring xbar_type = alloc.type == Use::TERNARY_MATCH ? "TCAM" : "SRAM";
     for (auto &byte : alloc.use) {
         if (!byte.loc) continue;
-        field_users[byte.name].insert(name);
+        field_users[byte.container.toString()].insert(name);
         if (byte.loc.byte == 5 && alloc.type == Use::TERNARY_MATCH) {
             /* the sixth byte in a ternary group is actually half a byte group it shares with
              * the adjacent ternary group */
@@ -3845,7 +3845,7 @@ void IXBar::update(cstring name, const Use &alloc) {
                     byte.loc.group, byte.loc.byte);
             }
             use[byte.loc] = byte; }
-        fields.emplace(byte.name, byte.loc); }
+        fields.emplace(byte.container.toString(), byte.loc); }
     for (auto &bits : alloc.bit_use) {
         for (int b = 0; b < bits.width; b++) {
             for (auto ht : bitvec(alloc.hash_table_inputs[bits.group])) {

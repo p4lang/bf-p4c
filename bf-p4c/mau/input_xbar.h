@@ -205,8 +205,8 @@ struct IXBar {
 
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
-            // the PHV container name
-            cstring     name;
+            // the PHV container
+            PHV::Container      container;
             //
             int         lo;
             Loc         loc;
@@ -243,17 +243,24 @@ struct IXBar {
             // in which the hash is provide
             bool        proxy_hash = false;
 
-            Byte(cstring n, int l) : name(n), lo(l) {}
-            Byte(cstring n, int l, int g, int gb) : name(n), lo(l), loc(g, gb) {}
+            // Byte(cstring n, int l) : container(n), lo(l) {}
+            // Byte(cstring n, int l, int g, int gb) : container(n), lo(l), loc(g, gb) {}
+            Byte(PHV::Container c, int l) : container(c), lo(l) {}
+            Byte(PHV::Container c, int l, int g, int gb) : container(c), lo(l), loc(g, gb) {}
             Byte(const Byte &) = default;
-            operator std::pair<cstring, int>() const { return std::make_pair(name, lo); }
+            operator std::pair<PHV::Container, int>() const {
+                return std::make_pair(container, lo); }
+            operator std::pair<cstring, int>() const {
+                return std::make_pair(container.toString(), lo); }
+            bool operator==(const std::pair<PHV::Container, int> &a) const {
+                return container == a.first && lo == a.second; }
             bool operator==(const std::pair<cstring, int> &a) const {
-                return name == a.first && lo == a.second; }
+                return container.toString() == a.first && lo == a.second; }
             bool operator==(const Byte &b) const {
-                return name == b.name && lo == b.lo;
+                return container == b.container && lo == b.lo;
             }
             bool operator<(const Byte &b) const {
-                if (name != b.name) return name < b.name;
+                if (container != b.container) return container < b.container;
                 if (lo != b.lo) return lo < b.lo;
                 if (match_index != b.match_index) return match_index < b.match_index;
                 // Sort by specialities to prevent combining bytes that have different
@@ -624,7 +631,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::FieldInfo &fi) {
 
 std::ostream &operator<<(std::ostream &, const IXBar::Use &);
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
-    out << b.name << '[' << b.lo << ".." << (b.lo + 7) << ']';
+    out << b.container << '[' << b.lo << ".." << (b.lo + 7) << ']';
     if (b.loc) out << b.loc;
     out << " 0x" << b.bit_use;
     if (b.flags) out << " flags=" << hex(b.flags);

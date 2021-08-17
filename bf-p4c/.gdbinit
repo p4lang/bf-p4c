@@ -464,7 +464,7 @@ class IXBarUsePrinter(object):
         for i in range(0, vec_size(arr)):
             rv += "\n" + indent + "use[" + str(i) +"]: "
             byte = vec_at(arr, i)
-            rv += byte['name']['str'].string()
+            rv += str(byte['container'])
             rv += "[" + str(byte['lo']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
