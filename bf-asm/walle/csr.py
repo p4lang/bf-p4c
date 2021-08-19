@@ -11,6 +11,7 @@ import copy
 import string
 import re
 import sys
+import glob
 
 from operator import mul
 
@@ -2150,6 +2151,9 @@ def build_schema (dir, walle_version):
 
     version_file = os.path.join(dir, "..", "..", "VERSION")
     csv_files = os.path.join(dir, "module", "csv")
+    if not os.path.isdir(csv_files):
+        csv_files = dir
+
     if not os.path.isfile(version_file) or not os.path.isdir(csv_files):
         raise Exception("Directory '"+os.path.abspath(dir)+"' could not be opened, "+
                         "does not exist, or does not appear to be a valid bfnregs "+
@@ -2172,6 +2176,9 @@ def build_schema (dir, walle_version):
 
             with open(filename, "rb") as csv_file:
                 hasher.update(csv_file.read())
+
+    if len(new_schema) == 0:
+        raise Exception("No csv files found under '" + os.path.abspath(csv_files) + "'");
 
     with open(version_file, "r") as version_file_handle:
         reg_version = version_file_handle.read()
