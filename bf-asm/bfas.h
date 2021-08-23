@@ -42,6 +42,7 @@ extern struct option_t {
     bool                log_hashes;
     std::string         output_dir;
     int                 num_stages_override;
+    const char          *fill_noop_slot;
 } options;
 
 extern unsigned unique_action_handle;

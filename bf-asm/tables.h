@@ -147,7 +147,7 @@ class Table {
             if (CHECKTYPE(a, tSTR)) name = a.s;
         }
         Ref &operator=(const std::string &n) { name = n; return *this; }
-        operator bool() const { return all.count(name) > 0; }
+        operator bool() const { return all && all->count(name) > 0; }
         operator Table*() const { return ::get(all, name); }
         Table *operator->() const { return ::get(all, name); }
         bool set() const { return lineno >= 0; }
@@ -665,7 +665,8 @@ class Table {
     unsigned                    next_table_adr_mask = 0U;
     bitvec                      reachable_tables_;
 
-    static std::map<std::string, Table *>       all;
+    static std::map<std::string, Table *>       *all;
+    static std::vector<Table *>                 *by_uid;
 
     unsigned layout_size() const {
         unsigned rv = 0;

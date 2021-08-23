@@ -449,6 +449,13 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
         *ref = this;
 }
 
+bitvec Stage::imem_use_all() const {
+    bitvec rv;
+    for (auto &u : imem_use)
+        rv |= u;
+    return rv;
+}
+
 int Stage::tcam_delay(gress_t gress) {
     if (group_table_use[timing_thread(gress)] & Stage::USE_TCAM)
         return 2;

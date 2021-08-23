@@ -144,6 +144,8 @@ int main(int ac, char **av) {
     register_exit_signals();
     program_name = av[0];
     std::vector<char *> arguments(av, av+ac);
+    static std::set<std::string> valid_noop_fill = {
+        "and", "or", "alu_a", "alu_b", "minu", "mins", "maxu", "maxs" };
     if (auto opt = getenv("BFAS_OPTIONS")) {
         int add_at = 1;
         while (auto p = strsep(&opt, " \t\r\n")) {
@@ -203,6 +205,19 @@ int main(int ac, char **av) {
             break;
           }
           options.stage_dependency_pattern = av[i];
+        } else if (!strcmp(av[i], "--noop-fill-instruction")) {
+          ++i;
+          if (!av[i] || !valid_noop_fill.count(av[i])) {
+            std::cerr << "invalid fill instruction " << av[i] << std::endl;
+          } else {
+            options.fill_noop_slot = av[i];
+          }
+        } else if (val = 0, sscanf(av[i], "--noop-fill-instruction=%n", &val), val > 0) {
+          if (!valid_noop_fill.count(av[i] + val)) {
+            std::cerr << "invalid fill instruction " << (av[i] + val) << std::endl;
+          } else {
+            options.fill_noop_slot = av[i] + val;
+          }
         } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 && val >= 0 && val < 4) {
             unique_table_offset = val;
         } else if (sscanf(av[i], "--num-stages-override%d", &val) > 0 && val >= 0) {

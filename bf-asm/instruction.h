@@ -43,4 +43,9 @@ struct Instruction {
     };
 };
 
+namespace VLIW {
+std::unique_ptr<Instruction> genNoopFill(Table *tbl, Table::Actions::Action *act,
+                                         const char *op, int slot);
+}
+
 #endif /* BF_ASM_INSTRUCTION_H_ */

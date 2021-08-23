@@ -12,27 +12,35 @@
 
 unsigned StatefulTable::const_info_t::unique_register_param_handle = REGISTER_PARAM_HANDLE_START;
 
-std::map<std::string, Table *> Table::all;
+std::map<std::string, Table *> *Table::all;
+std::vector<Table *> *Table::by_uid;
 std::map<std::string, Table::Type *> *Table::Type::all;
 
 Table::Table(int line,
         std::string &&n, gress_t gr, Stage *s, int lid) :  // NOLINT(whitespace/operators)
     name_(n), stage(s), gress(gr), lineno(line), logical_id(lid) {
-    static int uid_counter;
-    uid = uid_counter++;
-    if (lineno >= 0) {
-        if (all.count(name_)) {
-            error(lineno, "Duplicate table %s", name());
-            error(all.at(name_)->lineno, "previously defined here"); }
-        all.emplace(name_, this); }
+    if (!all) all = new std::map<std::string, Table *>;
+    if (!by_uid) by_uid = new std::vector<Table *>;
+    uid = by_uid->size();
+    by_uid->push_back(this);
+    if (all->count(name_)) {
+        error(lineno, "Duplicate table %s", name());
+        error(all->at(name_)->lineno, "previously defined here"); }
+    all->emplace(name_, this);
     if (stage)
         stage->all_refs.insert(&stage);
 }
 Table::~Table() {
-    if (lineno >= 0)
-        all.erase(name_);
+    BUG_CHECK(by_uid && uid >= 0 && uid < by_uid->size(), "invalid uid %d in table", uid);
+    all->erase(name_);
+    (*by_uid)[uid] = nullptr;
     if (stage)
         stage->all_refs.erase(&stage);
+    if (all->empty()) {
+        delete all;
+        delete by_uid;
+        all = nullptr;
+        by_uid = nullptr; }
 }
 
 Table::Type::Type(std::string &&name) {  // NOLINT(whitespace/operators)
@@ -47,7 +55,7 @@ Table::Type::~Type() {
     all->erase(self);
     if (all->empty()) {
         delete all;
-        all = 0; }
+        all = nullptr; }
 }
 
 Table::NextTables::NextTables(value_t &v) : lineno(v.lineno) {
@@ -1792,7 +1800,13 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
         LOG2("# action " << act.name << " code=" << act.code << " addr=" << act.addr);
         tbl->write_action_regs(regs, &act);
         for (auto *inst : act.instr)
-            inst->write_regs(regs, tbl, &act); }
+            inst->write_regs(regs, tbl, &act);
+        if (options.fill_noop_slot) {
+            for (auto slot : Phv::use(tbl->gress) - tbl->stage->imem_use_all()) {
+                auto tmp = VLIW::genNoopFill(tbl, &act, options.fill_noop_slot, slot);
+                tmp->pass1(tbl, &act);
+                tmp->pass2(tbl, &act);
+                tmp->write_regs(regs, tbl, &act); } } }
 }
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
         void Table::Actions::write_regs, mau_regs &, Table *)

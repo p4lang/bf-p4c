@@ -687,8 +687,8 @@ static int slot_sizes[] = {
  *              actionbus slot.  Generally will only have 1 bit set, but might be 0.
  */
 int ActionBus::find(const char *name, TableOutputModifier mod, int lo, int hi, int size, int *len) {
-    if (Table::all.count(name))
-        return find(ActionBusSource(Table::all.at(name), mod), lo, hi, size, -1, len);
+    if (auto *tbl = ::get(Table::all, name))
+        return find(ActionBusSource(tbl, mod), lo, hi, size, -1, len);
     if (mod != TableOutputModifier::NONE) return -1;
     for (auto &slot : by_byte) {
         int offset = lo;

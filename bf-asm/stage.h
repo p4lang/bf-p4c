@@ -115,6 +115,7 @@ class Stage : public Stage_data {
     static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
     static Stage *stage(int stageno);
     void log_hashes(std::ofstream& out) const;
+    bitvec imem_use_all() const;
 };
 
 #endif /* BF_ASM_STAGE_H_ */

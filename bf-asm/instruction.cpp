@@ -239,8 +239,8 @@ struct operand {
                     error(lineno, "%s misaligned for action bus", name.c_str());
                 table->need_on_actionbus(field, lo, hi, bytes);
             } else if (!field && table->find_on_actionbus(name, mod, lo, hi, bytes) < 0) {
-                if (Table::all.count(name))
-                    table->need_on_actionbus(Table::all.at(name), mod, lo, hi, bytes);
+                if (auto *tbl = ::get(Table::all, name))
+                    table->need_on_actionbus(tbl, mod, lo, hi, bytes);
                 else
                     error(lineno, "Can't find any operand named %s", name.c_str()); } }
         unsigned bitoffset(int group) const override {
@@ -552,7 +552,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         ref = new RawAction(lineno, slot, lo);
     } else if (name == "hash_dist" && (lo == hi || hi < 0)) {
         ref = new HashDist(lineno, tbl, lo);
-    } else if (Table::all.count(name)) {
+    } else if (Table::all->count(name)) {
         ref = new Action(lineno, name, mod, tbl, lo, hi, p4name);
     } else {
         ref = new Phv(lineno, tbl->gress, tbl->stage->stageno, name, this->lo, hi); }
@@ -1423,6 +1423,21 @@ static AluOP::Decode        jb_cb_opGTEQU    ("gtequ",   jb_cb_targets, 0x02e), 
                             jb_cb_opEQ64     ("eq64",    jb_cb_targets, 0x26e, true),  // NOLINT
                             jb_cb_opNEQ64    ("neq64",   jb_cb_targets, 0x2ee, true);  // NOLINT
 #endif  /* HAVE_JBAY || HAVE_CLOUDBREAK */
+
+std::unique_ptr<Instruction> genNoopFill(Table *tbl, Table::Actions::Action *act,
+                                         const char *op, int slot) {
+    VECTOR(value_t) args;
+    VECTOR_init(args, 3);
+    value_t tmp{tSTR, -1};
+    tmp.s = const_cast<char *>(op);
+    VECTOR_add(args, tmp);
+    tmp.s = const_cast<char *>(Phv::reg(slot)->name);
+    VECTOR_add(args, tmp);
+    VECTOR_add(args, tmp);
+    std::unique_ptr<Instruction> rv(Instruction::decode(tbl, act, args));
+    VECTOR_fini(args);
+    return rv;
+}
 
 }  // end namespace VLIW
 

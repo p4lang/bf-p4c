@@ -448,17 +448,19 @@ void DeterminePowerUsage::add_unattached_memory_accesses() {
 
 void DeterminePowerUsage::update_stage_dependencies_for_min_latency() {
   auto& spec = Device::mauPowerSpec();
-  // Minimum latency required for egress pipeline on Tofino,
-  // so convert stages to match-dependent if can.
-  int egress_stage = 0;
-  while (mau_features_->compute_pipe_latency(EGRESS) < spec.get_min_required_egress_mau_latency() &&
-    egress_stage < Device::numStages()) {
-    mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(EGRESS, egress_stage);
-    if (dep != DEP_MATCH) {
-      mau_features_->stage_dep_to_previous_[EGRESS][egress_stage] = DEP_MATCH;
-      LOG4("Converted egress stage " << egress_stage << " to match dependent.");
+  if (!BackendOptions().disable_egress_latency_padding) {
+    // Minimum latency required for egress pipeline on Tofino,
+    // so convert stages to match-dependent if can.
+    int egress_stage = 0;
+    while (mau_features_->compute_pipe_latency(EGRESS) < spec.get_min_required_egress_mau_latency()
+           && egress_stage < Device::numStages()) {
+      mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(EGRESS, egress_stage);
+      if (dep != DEP_MATCH) {
+        mau_features_->stage_dep_to_previous_[EGRESS][egress_stage] = DEP_MATCH;
+        LOG4("Converted egress stage " << egress_stage << " to match dependent.");
+      }
+      ++egress_stage;
     }
-    ++egress_stage;
   }
   LOG4("Final pipeline latencies:");
   LOG4("  ingress: " << mau_features_->compute_pipe_latency(INGRESS));

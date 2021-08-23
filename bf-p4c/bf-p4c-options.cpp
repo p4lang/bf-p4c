@@ -98,6 +98,10 @@ BFN_Options::BFN_Options() {
             return true; },
         "Turns off the MAU power budget check",
         OptionFlags::Hide);
+    registerOption("--disable-egress-latency-padding", nullptr,
+        [this](const char *) { disable_egress_latency_padding = true; return true; },
+        "disable egress latency padding",
+        OptionFlags::Hide);
     registerOption("--skip-compilation", "pipe1[,pipe2]",
         [this](const char* arg) {
         auto copy = strdup(arg);

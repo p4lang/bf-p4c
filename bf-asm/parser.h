@@ -84,7 +84,7 @@ class Parser {
             short   width;
             short   save = 0;
             MatchKey() : lineno(0), specified(0), ctr_zero(-1), ctr_neg(-1), width(0) {
-                for (auto &a : data) a.bit = -1; }
+                for (auto &a : data) a.bit = a.byte = -1; }
             void setup(value_t &);
             int setup_match_el(int, value_t &);
             void preserve_saved(unsigned mask);
