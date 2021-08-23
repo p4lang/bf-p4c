@@ -1872,7 +1872,7 @@ control Starkey(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
         Yorkshire.NantyGlo.Dandridge = (bit<1>)1w1;
         Volens();
     }
-    @disable_atomic_modify(1) @name(".Dwight") table Dwight {
+    @disable_atomic_modify(1) @stage(7) @name(".Dwight") table Dwight {
         actions = {
             Ravinia();
             Virgilina();
@@ -2885,7 +2885,7 @@ control Penzance(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         Yorkshire.Ocracoke.Standish = Standish;
         Yorkshire.NantyGlo.Weatherby = Weatherby;
     }
-    @disable_atomic_modify(1) @name(".Buckfield") table Buckfield {
+    @disable_atomic_modify(1) @stage(7) @name(".Buckfield") table Buckfield {
         actions = {
             Shasta();
         }
@@ -2913,7 +2913,7 @@ control Penzance(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         default_action = Coupland(24w0, 24w0, 12w0);
         size = 16384;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".GlenRock") table GlenRock {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(7) @name(".GlenRock") table GlenRock {
         actions = {
             RedLake();
         }

@@ -70,6 +70,8 @@
 @pa_auto_init_metadata
 @pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
 @pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
+@pa_container_size("egress", "hdr.outer.vn_tag.svif_id", 16)  // table-fitting CODE HACK
+@pa_container_size("egress", "hdr.transport.ipv4.protocol", 16)  // table-fitting CODE HACK
 
 #ifdef PA_MONOGRESS
 @pa_parser_group_monogress  //grep for monogress in phv_allocation log to confirm

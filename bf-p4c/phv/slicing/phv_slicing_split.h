@@ -30,7 +30,7 @@ boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc, const Sp
 /// the @p split_schema is a bitvec that a `1` on n-th bit means to split before the
 /// the n-th bit.
 boost::optional<std::list<PHV::SuperCluster*>> split_rotational_cluster(
-    const PHV::SuperCluster* sc, bitvec split_schema);
+    const PHV::SuperCluster* sc, bitvec split_schema, int max_aligment = 0);
 
 }  // namespace Slicing
 }  // namespace PHV

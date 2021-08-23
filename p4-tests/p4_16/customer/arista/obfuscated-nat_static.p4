@@ -4284,7 +4284,7 @@ control Estero(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
     @name(".Inkom") action Inkom(bit<6> Grannis) {
         Yorkshire.Bernice.Sublett = Grannis;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".BurrOak") table BurrOak {
+    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".BurrOak") table BurrOak {
         actions = {
             Inkom();
             @defaultonly NoAction();
@@ -6632,7 +6632,7 @@ control Elliston(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         const default_action = Sharon();
         size = 1024;
     }
-    @disable_atomic_modify(1) @name(".Quamba") table Quamba {
+    @disable_atomic_modify(1) @stage(3) @name(".Quamba") table Quamba {
         actions = {
             Spindale();
             Lauada();

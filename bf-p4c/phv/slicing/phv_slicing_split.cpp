@@ -410,8 +410,8 @@ boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
 
 /// Split the RotationalCluster in a SuperCluster without a slice list
 /// according to @split_schema.
-boost::optional<std::list<PHV::SuperCluster*>> split_rotational_cluster(const PHV::SuperCluster* sc,
-                                                                        bitvec split_schema) {
+boost::optional<std::list<PHV::SuperCluster*>> split_rotational_cluster(
+        const PHV::SuperCluster* sc, bitvec split_schema, int max_aligment) {
     // This method cannot handle super clusters with slice lists.
     if (sc->slice_lists().size() > 0) return boost::none;
 
@@ -430,7 +430,7 @@ boost::optional<std::list<PHV::SuperCluster*>> split_rotational_cluster(const PH
     // the rotational clusters directly.
     std::list<PHV::SuperCluster*> rv;
     auto* remainder = *sc->clusters().begin();
-    int offset = 0;
+    int offset = max_aligment;
     for (int next_split : split_schema) {
         BUG_CHECK(next_split >= 0, "Trying to split remainder cluster at negative index");
         auto res = remainder->slice(next_split - offset);

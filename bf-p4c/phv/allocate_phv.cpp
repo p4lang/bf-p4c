@@ -2498,21 +2498,13 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
     const PHV::ContainerGroup& container_group,
     PHV::SuperCluster& super_cluster,
     const AllocAlignment& alignment,
+    const std::list<const PHV::SuperCluster::SliceList*>& sorted_slice_lists,
     const AllocContext& score_ctx) const {
     // Make a new transaction.
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
 
-    // Sort slice lists according to the number of times they
-    // have been written to and read from in various actions.
-    // This helps simplify constraints by placing destinations before sources
-    std::list<const PHV::SuperCluster::SliceList*> slice_lists;
-    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists()) {
-        slice_lists.push_back(slice_list);
-    }
-    actions_i.sort(slice_lists);
-
     ordered_set<PHV::FieldSlice> allocated;
-    for (const PHV::SuperCluster::SliceList* slice_list : slice_lists) {
+    for (const PHV::SuperCluster::SliceList* slice_list : sorted_slice_lists) {
         // Try allocating the slice list.
         auto partial_alloc_result = tryAllocSliceList(
             alloc_attempt, container_group, super_cluster, *slice_list,
@@ -2672,6 +2664,13 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         return boost::none;
     }
 
+    // Sort slice lists according to the number of times they
+    // have been written to and read from in various actions.
+    // This helps simplify constraints by placing destinations before sources
+    std::list<const PHV::SuperCluster::SliceList*> sorted_slice_lists(
+        super_cluster.slice_lists().begin(), super_cluster.slice_lists().end());
+    actions_i.sort(sorted_slice_lists);
+
     // try different alignments.
     boost::optional<PHV::Transaction> best_alloc = boost::none;
     AllocScore best_score = AllocScore::make_lowest();
@@ -2679,7 +2678,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         LOG_DEBUG6("Try allocate with " <<
                    str_supercluster_alignments(super_cluster, alignment));
         auto this_alloc = alloc_super_cluster_with_alignment(
-            alloc, container_group, super_cluster, alignment, score_ctx);
+            alloc, container_group, super_cluster, alignment, sorted_slice_lists, score_ctx);
         if (this_alloc) {
             auto score = score_ctx.make_score(*this_alloc, phv_i, clot_i, uses_i,
                 field_to_parser_states_i, parser_critical_path_i);

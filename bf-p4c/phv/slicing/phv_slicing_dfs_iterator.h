@@ -119,11 +119,21 @@ class DfsItrContext : public IteratorInterface {
     bool dfs(const IterateCb& yield);
 
     /// split_by_pa_container_size will split @p sc by @p pa container size.
-    bool split_by_pa_container_size(const SuperCluster* sc, const PHVContainerSizeLayout& pa);
+    boost::optional<std::list<SuperCluster*>> split_by_pa_container_size(
+        const SuperCluster* sc, const PHVContainerSizeLayout& pa);
 
     /// split_by_adjacent_no_pack will split @p sc at byte boundary if two adjacent fields
     /// cannot be packed into one container.
-    std::list<SuperCluster*> split_by_adjacent_no_pack(SuperCluster* sc) const;
+    boost::optional<std::list<SuperCluster*>> split_by_adjacent_no_pack(SuperCluster* sc) const;
+
+    /// split_by_deparsed_bottom_bits will split at the beginning of deparsed_bottom_bits field.
+    boost::optional<std::list<SuperCluster*>> split_by_deparsed_bottom_bits(
+        SuperCluster* sc) const;
+
+    /// split_by_adjacent_deparsed_and_non_deparsed will split @p sc between deparsed and
+    /// non-deparsed field.
+    boost::optional<std::list<SuperCluster*>> split_by_adjacent_deparsed_and_non_deparsed(
+        SuperCluster* sc) const;
 
     /// return possible SplitChoice on @p target. The result is sorted that better choices
     /// are at lower indexes.

@@ -211,6 +211,7 @@ class CoreAllocation {
         const PHV::ContainerGroup& container_group,
         PHV::SuperCluster& super_cluster,
         const AllocAlignment& alignment,
+        const std::list<const PHV::SuperCluster::SliceList*>& sorted_slice_lists,
         const AllocContext& score_ctx) const;
 
     /// returns @p max_n possible alloc alignments for a super cluster vs a container group

@@ -6,8 +6,6 @@
 #include <tofino1arch.p4>
 
 @pa_auto_init_metadata
-@pa_container_size("ingress" , "Boonsboro.Ekron.Antlers" , 16)
-@pa_container_size("ingress" , "Boonsboro.Kamrar.Hackett" , 32)
 @pa_container_size("ingress" , "Boonsboro.Westville.$valid" , 8)
 @pa_container_size("ingress" , "Boonsboro.Balmorhea.$valid" , 8)
 @pa_mutually_exclusive("egress" , "Talco.Lawai.Bushland" , "Boonsboro.Kamrar.Bushland")

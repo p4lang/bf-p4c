@@ -511,3 +511,8 @@ p4c_add_xfail_reason("tofino2"
   "Expected packet was not received on device .*"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "error: tofino2 supports up to 20 stages, using .*"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4
+)
