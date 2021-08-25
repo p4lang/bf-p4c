@@ -27,6 +27,8 @@ from simple_l3_mirror.p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 from mirror_pd_rpc.ttypes import *
 
+from scapy.fields import *
+
 #
 # This class below is not a test, but it provides a common configuration that
 # can be used by multiple other tests, subclassed from it.

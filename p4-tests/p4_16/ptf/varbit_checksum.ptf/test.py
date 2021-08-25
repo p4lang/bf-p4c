@@ -1,5 +1,6 @@
 import logging
 import time
+import copy
 from ptf import config
 from ptf.thriftutils import *
 import ptf.testutils as testutils
@@ -8,6 +9,7 @@ from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 
 import scapy
+from scapy.layers.inet import IPOption
 logger = logging.getLogger('varbit_checksum')
 logger.addHandler(logging.StreamHandler())
 
@@ -18,7 +20,7 @@ def create_ipv4_options(ipv4_opt):
     print "Creating IPv4 Options", repr(ipv4_opt)
     if ipv4_opt == 0 or ipv4_opt == None:
         return False
-    else: 
+    else:
         return IPOption(create_payload(ipv4_opt))
 
 class Test_IPv4_udp(P4RuntimeTest):
@@ -41,7 +43,7 @@ class Test_IPv4_udp(P4RuntimeTest):
                                                   with_udp_chksum = False)
 
             exp_pkt = copy.deepcopy(udp_pkt)
-            exp_pkt[IP].src = '01.01.01.02' 
+            exp_pkt[IP].src = '01.01.01.02'
             print ("Sending UDP packet with ipv4 option : %d" % (ipv4_opt))
             testutils.send_packet(self, ingress_port, str(udp_pkt))
             testutils.verify_packets(self, exp_pkt, [ingress_port])

@@ -5,15 +5,15 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 128,
-                    "column": 38
+                    "line": 126,
+                    "column": 39
                 }
             ],
-            "symbol_name": "IngressP.hash_1",
+            "symbol_name": "SwitchIngress.c_hash",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 125,
-                "column": 43
+                "line": 91,
+                "column": 42
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
@@ -21,15 +21,47 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 116,
-                    "column": 74
+                    "line": 122,
+                    "column": 26
                 }
             ],
-            "symbol_name": "bloom_filter_1",
+            "symbol_name": "SwitchIngress.example_action_selector",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 106,
-                "column": 38
+                "line": 99,
+                "column": 22
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 94,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "SwitchIngress.example_action_selector_ap",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 93,
+                "column": 25
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 95,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "SwitchIngress.sel_hash",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 90,
+                "column": 45
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
@@ -37,31 +69,15 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 133,
-                    "column": 47
-                }
-            ],
-            "symbol_name": "bloom_filter_alu_1",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 116,
-                "column": 90
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 190,
+                    "line": 155,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 189,
-                "column": 81
+                "line": 154,
+                "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
@@ -69,42 +85,20 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 128,
-                    "column": 21
-                },
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 133,
-                    "column": 74
-                }
-            ],
-            "symbol_name": "IngressP.temp",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 128,
-                "column": 13,
-                "end_line": 132
-            },
-            "symbol_type": "Declaration_Variable_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 138,
+                    "line": 135,
                     "column": 13
                 },
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 140,
-                    "column": 26
+                    "line": 137,
+                    "column": 32
                 }
             ],
-            "symbol_name": "check_bloom_filter_1",
+            "symbol_name": "SwitchIngress.apply_hash",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 126,
-                "column": 43
+                "line": 125,
+                "column": 12
             },
             "symbol_type": "P4Action"
         },
@@ -112,15 +106,52 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 144,
-                    "column": 9
+                    "line": 116,
+                    "column": 13
                 }
             ],
-            "symbol_name": "bloom_filter_1",
+            "symbol_name": "SwitchIngress.hit",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 136,
-                "column": 36
+                "line": 101,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 117,
+                    "column": 13
+                },
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 120,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.miss",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 105,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 142,
+                    "column": 7
+                }
+            ],
+            "symbol_name": "SwitchIngress.forward",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 109,
+                "column": 11
             },
             "symbol_type": "P4Table"
         },
@@ -128,205 +159,45 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 185,
-                    "column": 9
+                    "line": 141,
+                    "column": 7
                 }
             ],
-            "symbol_name": "DeparserE.b",
+            "symbol_name": "SwitchIngress.tbl_hash",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 180,
+                "line": 133,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_dyn_hashing145",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 145,
                 "column": 30
             },
-            "symbol_type": "Parameter_Type_Extern"
+            "symbol_type": "P4Table"
         },
         {
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 185,
-                    "column": 16
-                }
-            ],
-            "symbol_name": "DeparserE.hdr.ethernet",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 181,
-                "column": 33
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 154,
-                    "column": 9
-                },
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 155,
-                    "column": 9
-                },
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 156,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "DeparserI.b",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 149,
-                "column": 20
-            },
-            "symbol_type": "Parameter_Type_Extern"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 154,
-                    "column": 16
-                }
-            ],
-            "symbol_name": "DeparserI.hdr.ethernet",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 150,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 155,
-                    "column": 16
-                }
-            ],
-            "symbol_name": "DeparserI.hdr.ipv4",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 150,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 156,
-                    "column": 16
-                }
-            ],
-            "symbol_name": "DeparserI.hdr.tcp",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 150,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 130,
-                    "column": 51
-                }
-            ],
-            "symbol_name": "IngressP.hdr.ipv4.dip",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 109,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 128,
-                    "column": 51
-                }
-            ],
-            "symbol_name": "IngressP.hdr.ipv4.proto",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 109,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 129,
-                    "column": 51
-                }
-            ],
-            "symbol_name": "IngressP.hdr.ipv4.sip",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 109,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 132,
-                    "column": 51
-                }
-            ],
-            "symbol_name": "IngressP.hdr.tcp.dPort",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 109,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 131,
-                    "column": 51
-                }
-            ],
-            "symbol_name": "IngressP.hdr.tcp.sPort",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 109,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 133,
+                    "line": 112,
                     "column": 13
                 },
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 133,
-                    "column": 30
+                    "line": 126,
+                    "column": 9
                 }
             ],
-            "symbol_name": "IngressP.meta.md.bf_tmp",
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 110,
+                "line": 83,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -335,15 +206,79 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 122,
+                    "line": 128,
                     "column": 13
                 }
             ],
-            "symbol_name": "IngressP.rv",
+            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 117,
-                "column": 51
+                "line": 83,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 127,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 83,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 130,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.tcp.dst_port",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 83,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 129,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.tcp.src_port",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 83,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 102,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit.port",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 101,
+                "column": 25
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -351,31 +286,175 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 121,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "IngressP.value",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 117,
-                "column": 33
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 165,
+                    "line": 106,
                     "column": 9
                 }
             ],
-            "symbol_name": "ParserE.b",
+            "symbol_name": "SwitchIngress.ig_dprsr_md.drop_ctl",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 160,
-                "column": 26
+                "line": 87,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 111,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 85,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 145,
+                    "column": 7
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 88,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 102,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 88,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 16
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 74,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 16
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 74,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 16
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 74,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 16
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 74,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 16
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 74,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 16
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 74,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 78,
+                    "column": 7
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 73,
+                "column": 21
             },
             "symbol_type": "Parameter_Type_Extern"
         },
@@ -383,15 +462,15 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 165,
-                    "column": 19
+                    "line": 48,
+                    "column": 21
                 }
             ],
-            "symbol_name": "ParserE.hdr.ethernet",
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 161,
-                "column": 28
+                "line": 36,
+                "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
         },
@@ -399,15 +478,15 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 86,
-                    "column": 24
+                    "line": 49,
+                    "column": 28
                 }
             ],
-            "symbol_name": "ParserI.hdr.ethernet",
+            "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 82,
-                "column": 28
+                "line": 36,
+                "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
         },
@@ -415,15 +494,31 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 87,
+                    "line": 56,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 36,
+                "column": 22
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 57,
                     "column": 27
                 }
             ],
-            "symbol_name": "ParserI.hdr.ethernet.ethertype",
+            "symbol_name": "SwitchIngressParser.hdr.ipv4.protocol",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 82,
-                "column": 28
+                "line": 36,
+                "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
         },
@@ -431,73 +526,114 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 92,
-                    "column": 24
+                    "line": 64,
+                    "column": 21
                 }
             ],
-            "symbol_name": "ParserI.hdr.ipv4",
+            "symbol_name": "SwitchIngressParser.hdr.tcp",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 82,
-                "column": 28
+                "line": 36,
+                "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
         },
         {
             "references": [
                 {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 21
+                },
+                {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 93,
+                    "line": 43,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 38,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 43,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 38,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 29,
                     "column": 27
+                },
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 43,
+                    "column": 34
                 }
             ],
-            "symbol_name": "ParserI.hdr.ipv4.proto",
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 82,
-                "column": 28
+                "line": 38,
+                "column": 42
             },
-            "symbol_type": "Parameter_Type_Struct"
+            "symbol_type": "Parameter_Type_Header"
         },
         {
             "references": [
                 {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 98,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "ParserI.hdr.tcp",
-            "declaration": {
-                "file": "tna_dyn_hashing.p4",
-                "line": 82,
-                "column": 28
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 9
+                },
                 {
-                    "file": "tna_dyn_hashing.p4",
-                    "line": 86,
+                    "file": "common/util.p4",
+                    "line": 41,
                     "column": 9
                 },
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 92,
+                    "line": 43,
+                    "column": 29
+                },
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 48,
                     "column": 9
                 },
                 {
                     "file": "tna_dyn_hashing.p4",
-                    "line": 98,
+                    "line": 56,
+                    "column": 9
+                },
+                {
+                    "file": "tna_dyn_hashing.p4",
+                    "line": 64,
                     "column": 9
                 }
             ],
-            "symbol_name": "ParserI.packet",
+            "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_dyn_hashing.p4",
-                "line": 81,
-                "column": 26
+                "line": 35,
+                "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
         }

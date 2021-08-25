@@ -51,6 +51,7 @@ export P4C_DEPS="autoconf \
                  automake \
                  bison \
                  build-essential \
+                 ccache \
                  curl \
                  distcc \
                  flex \
@@ -175,7 +176,7 @@ unset CC CXX
 # Install dependencies and configure the build environment.
 if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   # Clean up default instance of libboost1.58 from base Ubuntu image.
-  apt-get --purge remove -y 'libboost*-dev'
+  apt-get --purge remove -y 'libboost*' || true
 
   # Configure apt repositories and update apt.
   add-apt-repository -y ppa:ubuntu-toolchain-r/test
@@ -250,7 +251,7 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
 
   # Dependencies for testing.
   apt-get install -y net-tools
-  pip install --upgrade pip==20.3.3
+  pip install --upgrade --target /usr/local/lib/python2.7/dist-packages pip==20.3.3
   pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging \
     prettytable pysubnettree ctypesgen
 
@@ -261,7 +262,7 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   pip install jsonschema==2.6
 
   # Install python3 packages
-  pip3 install --upgrade pip==20.3.3
+  pip3 install --upgrade --target /usr/local/lib/python3.5/dist-packages pip==20.3.3
   pip3 install ${PYTHON3_DEPS}
 
   # Copy scripts into ${BFN}.
@@ -322,10 +323,10 @@ if [[ "${BUILD_FOR}" == "jenkins-final" || "${BUILD_FOR}" == "tofino" ]] ; then
   make
   make install
 elif [[ "${BUILD_FOR}" == "release" ]] ; then
-  /usr/local/bin/ccache --zero-stats
+  ccache --zero-stats
   ./scripts/package_p4c_for_tofino.sh --build-dir build
 elif [[ "${BUILD_FOR}" == "glass" ]] ; then
-  /usr/local/bin/ccache --zero-stats
+  ccache --zero-stats
   ./bootstrap_bfn_compilers.sh \
     -DCMAKE_BUILD_TYPE=RELEASE \
     -DINSTALL_LIBDYNHASH=OFF \
@@ -339,7 +340,7 @@ fi
 WORKDIR "${BF_P4C_COMPILERS}"
 case "${BUILD_FOR}" in
 jenkins-final|tofino|release|glass)
-  /usr/local/bin/ccache -p --show-stats
+  ccache -p --show-stats
   apt-get autoremove --purge -y
   rm -rf ~/.cache/* /var/cache/apt/* /var/lib/apt/lists/*
   rm -rf bf-asm/walle/build/*

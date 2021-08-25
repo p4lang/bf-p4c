@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # assumes that the Dockerfile will make sure that the script is at this location
 
 # only alter system huge pages configuration in Travis CI environment
@@ -8,6 +8,16 @@ fi
 
 # Setup veths
 /bfn/veth_setup.sh 34 >&2
+
+# Environment variable PKTPY allows switching between PTF with scapy or PTF with bf-pktpy.
+[ -z "$PYTHONPATH" ] && delim='' || delim=':'
+export PYTHONPATH="/usr/local/lib/python2.7/site-packages${delim}${PYTHONPATH}"
+if [ "${PKTPY,,}" = "true" ]; then
+    echo "Using bf-pktpy as a packet manipulation framework."
+    export PYTHONPATH="/usr/local/lib/python2.7/site-packages/bf-ptf:${PYTHONPATH}"
+else
+    echo "Using scapy as a packet manipulation framework."
+fi
 
 # execute docker command
 exec "$@"

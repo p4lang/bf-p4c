@@ -8,6 +8,7 @@ from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 
 import scapy
+from scapy.layers.inet import IPOption
 logger = logging.getLogger('options_invalid')
 logger.addHandler(logging.StreamHandler())
 
@@ -26,7 +27,7 @@ class Test_IPv4_udp(P4RuntimeTest):
    def runTest(self):
         ingress_port = self.swports(0)
         egress_port  = self.swports(1)
-        
+
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
         self.push_update_add_entry_to_action(

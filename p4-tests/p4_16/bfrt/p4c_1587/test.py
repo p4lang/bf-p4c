@@ -27,6 +27,7 @@ import sys
 import os
 import random
 import re
+import time
 #from pprint import pprint
 
 from ptf import config
@@ -346,4 +347,3 @@ class BasicSanityTest(BfRuntimeTest):
 
         logger.info("Packet is expected to get dropped.")
         testutils.verify_no_other_packets(self)
-

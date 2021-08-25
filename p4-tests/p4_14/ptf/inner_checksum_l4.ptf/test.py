@@ -7,6 +7,7 @@ from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 
 import scapy
+from scapy.layers.inet import TCP
 logger = logging.getLogger('inner_checksum_l4')
 logger.addHandler(logging.StreamHandler())
 class InnerLayerTest_IPv4_encap_udp(P4RuntimeTest):
@@ -27,34 +28,34 @@ class InnerLayerTest_IPv4_encap_udp(P4RuntimeTest):
             'set_egr',
             [('port', stringify(egress_port,2))])
         self.write_request(req)
-        #pkt = testutils.simple_udp_packet( 
-        # eth_dst='00:11:11:11:11:11', 
-        # eth_src='00:22:22:22:22:22', 
-        # ip_dst='10.10.10.1', 
-        # ip_src='10.10.10.2', 
-        # ip_id = 0, 
-        # ip_ttl = 64, 
-        # pktlen = 70, 
-        # udp_sport=0x1234, 
-        # udp_dport=0x1234, 
+        #pkt = testutils.simple_udp_packet(
+        # eth_dst='00:11:11:11:11:11',
+        # eth_src='00:22:22:22:22:22',
+        # ip_dst='10.10.10.1',
+        # ip_src='10.10.10.2',
+        # ip_id = 0,
+        # ip_ttl = 64,
+        # pktlen = 70,
+        # udp_sport=0x1234,
+        # udp_dport=0x1234,
         # with_udp_chksum = True)
         pkt = testutils.simple_tcp_packet()
         exp_pkt = testutils.simple_tcp_packet()
 	exp_pkt[TCP].sport = 0xAB0B;
-         
-        vxlan_pkt = testutils.simple_vxlan_packet( 
-         eth_dst='00:11:11:11:11:11', 
-         eth_src='00:22:22:22:22:22', 
-         ip_id=0, 
-         ip_src= '10.10.10.2', 
-         ip_dst='10.10.10.1', 
+
+        vxlan_pkt = testutils.simple_vxlan_packet(
+         eth_dst='00:11:11:11:11:11',
+         eth_src='00:22:22:22:22:22',
+         ip_id=0,
+         ip_src= '10.10.10.2',
+         ip_dst='10.10.10.1',
          ip_ttl=64,
-         ip_options = False, 
-         ip_flags=0x0, 
-         udp_sport=0x1234, 
-         udp_dport=0x1234, 
-         with_udp_chksum=True, 
-         vxlan_vni=0x1234, 
+         ip_options = False,
+         ip_flags=0x0,
+         udp_sport=0x1234,
+         udp_dport=0x1234,
+         with_udp_chksum=True,
+         vxlan_vni=0x1234,
          inner_frame=pkt)
         exp_vxlan_pkt = testutils.simple_vxlan_packet(
          eth_dst='00:11:11:11:11:11',
@@ -70,8 +71,8 @@ class InnerLayerTest_IPv4_encap_udp(P4RuntimeTest):
          with_udp_chksum=True,
          vxlan_vni=0x1234,
          inner_frame=exp_pkt)
-        
-         # exp_pkt[UDP].sport = 0x440 
+
+         # exp_pkt[UDP].sport = 0x440
         print('sending udp packet')
         testutils.send_packet(self, ingress_port, str(vxlan_pkt))
         print('receiving vxlan_udp packet with option')

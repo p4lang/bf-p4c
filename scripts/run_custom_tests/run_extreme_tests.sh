@@ -17,9 +17,11 @@ cp $bfnhome/scripts/run_custom_tests/patches/scapy/*.py $shome/scapy/contrib/
 # Patch ptf
 echo "Patching ptf so it loads new scapy protocol modules"
 cat $bfnhome/scripts/run_custom_tests/patches/ptf/packet-patch.py >> /usr/local/lib/python2.7/site-packages/ptf/packet.py
+sed -i 's/sequence_number/seqence_number/g' /usr/local/lib/python2.7/site-packages/ptf/testutils.py
 
 # Run test
 export CTEST_OUTPUT_ON_FAILURE='true'
-export PYTHONPATH=/usr/local/lib/python2.7/site-packages/ptf/
+[ -z "$PYTHONPATH" ] && delim='' || delim=':'
+export PYTHONPATH="/usr/local/lib/python2.7/site-packages/ptf${delim}${PYTHONPATH}"
 echo "Running ptf test"
 cd $bfnhome/build/p4c && ctest -R "^tofino2/.*npb-master-ptf"

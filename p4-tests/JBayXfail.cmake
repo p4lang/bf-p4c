@@ -210,9 +210,9 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1228
 p4c_add_xfail_reason("tofino2"
-  "OSError: .* No such file or directory"
+  "AssertionError: False is not true"
   extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
-  )
+)
 
 endif() # PTF_REQUIREMENTS_MET
 
@@ -459,12 +459,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )
 
-# DRV-4433
-p4c_add_xfail_reason("tofino2"
-   "Unexpected port .*"
-   p4_16_programs_tna_multicast
-)
-
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"
   p4c-3614
@@ -515,4 +509,16 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: tofino2 supports up to 20 stages, using .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4
+)
+
+# P4C-3774
+p4c_add_xfail_reason("tofino2"
+  "AttributeError: 'str' object has no attribute 'copy'"
+  fabric-DWITH_INT_TRANSIT
+  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
+)
+p4c_add_xfail_reason("tofino2"
+  "AssertionError"
+  t2na_ghost_dod
+  t2na_ghost_dod_simpl
 )

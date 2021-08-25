@@ -27,6 +27,7 @@ import sys
 import os
 import random
 import re
+import time
 from pprint import pprint
 
 from ptf import config
@@ -34,6 +35,8 @@ from ptf.thriftutils import *
 import ptf.testutils as testutils
 from bfruntime_base_tests import BfRuntimeTest
 #import bfrt_grpc.bfruntime_pb2 as bfruntime_pb2
+
+from scapy.utils import rdpcap
 
 logger = logging.getLogger('Test')
 if logger.handlers:
@@ -73,7 +76,7 @@ for port in swports:
     elif pipe == 3:
         swports_3.append(port)
 
-        
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -89,23 +92,23 @@ class VxlanFailure(BfRuntimeTest):
         p4_name = "npb"
         BfRuntimeTest.setUp(self, client_id, p4_name)
 
-    # --------------------------------------------------------------------------        
-    def runTest(self):        
+    # --------------------------------------------------------------------------
+    def runTest(self):
 
         ig_port = swports[0]
         target = self.Target(device_id=0, pipe_id=0xffff)
 
         # Get bfrt_info and set it as part of the test
-        self.set_bfrt_info(self.parse_bfrt_info(self.get_bfrt_info("npb")))   
+        self.set_bfrt_info(self.parse_bfrt_info(self.get_bfrt_info("npb")))
 
         logger.info("Begin parser test: VxlanFailure\n")
 
         pkts = rdpcap("%s" %('/bfn/bf-p4c-compilers/p4c/extensions/p4_tests/p4_16/bfrt/p4c_2527/pkts_inner_VxlanFailure.pcap'))
 
         for pkt in pkts:
-         
+
             # Send packet(s)
-            testutils.send_packet(self, ig_port, str(pkt))        
+            testutils.send_packet(self, ig_port, str(pkt))
             time.sleep(2)
 
 
@@ -124,23 +127,21 @@ class VxlanFailure(BfRuntimeTest):
 #        p4_name = "npb"
 #        BfRuntimeTest.setUp(self, client_id, p4_name)
 #
-#    # --------------------------------------------------------------------------        
-#    def runTest(self):        
+#    # --------------------------------------------------------------------------
+#    def runTest(self):
 #
 #        ig_port = swports[0]
 #        target = self.Target(device_id=0, pipe_id=0xffff)
 #
 #        # Get bfrt_info and set it as part of the test
-#        self.set_bfrt_info(self.parse_bfrt_info(self.get_bfrt_info("npb")))   
+#        self.set_bfrt_info(self.parse_bfrt_info(self.get_bfrt_info("npb")))
 #
 #        logger.info("Begin parser test: NvgreFailure\n")
 #
 #        pkts = rdpcap("%s" %('/npb-dp/src/npb/tests/pkts_inner_NvgreFailure.pcap'))
 #
 #        for pkt in pkts:
-#         
+#
 #            # Send packet(s)
-#            testutils.send_packet(self, ig_port, str(pkt))        
+#            testutils.send_packet(self, ig_port, str(pkt))
 #            time.sleep(2)
-
-            

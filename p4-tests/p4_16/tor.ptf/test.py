@@ -22,9 +22,9 @@ class FullTest(P4RuntimeTest):
         response = self.write_request(p4runtime_request)
 
         h1_eth  = "EE:61:23:BC:E5:00"
-        h1_ip   = "172.24.111.01"
+        h1_ip   = "172.24.111.1"
         h2_eth  = "EE:30:CA:9D:1E:00"
-        h2_ip   = "172.24.112.01"
+        h2_ip   = "172.24.112.1"
         sw1_eth = "EE:CD:00:7E:70:01"
         sw2_eth = "EE:CD:00:7E:70:00"
 
@@ -209,7 +209,7 @@ class PacketInTest(P4RuntimeTest):
             [self.Ternary("standard_metadata.ingress_port", port3_hex, mask)],
             "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
-        payload = 'a' * 64 
+        payload = 'a' * 64
         for i in xrange(3):
             testutils.send_packet(self, port3, payload)
             packet_in = self.get_packet_in()

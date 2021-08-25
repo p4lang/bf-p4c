@@ -1,5 +1,6 @@
 import logging
 import time
+import copy
 from ptf import config
 from ptf.thriftutils import *
 import ptf.testutils as testutils

@@ -1,5 +1,5 @@
 # Dockerfile
-ARG DOCKER_BASE_IMAGE=amr-registry.caas.intel.com/bxd-sw/jarvis:tofino
+ARG DOCKER_BASE_IMAGE=amr-registry.caas.intel.com/bxd-sw/jarvis:latest
 FROM $DOCKER_BASE_IMAGE
 
 ARG USER=user
@@ -68,7 +68,7 @@ COPY --chown=root:root ${KEY_DIR}/ssh_host_ed25519_key.pub /etc/ssh/
 RUN service ssh start
 
 # Configure SSH to start when launching a root shell
-COPY run-ssh /sbin/ 
+COPY run-ssh /sbin/
 RUN chmod 755 /sbin/run-ssh
 COPY root-bashrc /root/.bashrc
 

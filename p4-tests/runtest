@@ -842,18 +842,11 @@ if $run_ptf && ! $run_bfrt ; then
     fi
 fi
 
-# For p4_16_programs and switch_16 BFRT tests
-if $run_bfrt ; then
-    set_env
+# For p4_16_programs
+if $run_bfrt; then
+    if [[ $name != *"switch_tofino"* ]]; then
+        set_env
 
-    if [[ $name == *"switch_tofino"* ]]; then
-        p4builddir="$(dirname $0)/p4_16/switch_16"
-        config_args="--with-p4c=$P4C --enable-thrift --prefix=$testout --with-cpu-veth \
-            LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include""
-        manifest=$testdir/${name}${out_ext}.out/p4src/switch/manifest.json
-        # Use name as `switch` as the output directory structure is not p4name based
-        name="switch"
-    else
         p4builddir="$(dirname $0)/p4-programs/p4-build"
         config_args="--with-${device} --with-p4c=$P4C --enable-thrift \
             --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
@@ -861,47 +854,105 @@ if $run_bfrt ; then
             P4_ARCHITECTURE=$arch P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file"
         manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
         installdiropt="--installdir $testout/${device}/$name/"
-    fi
 
-    pushd $testout > /dev/null
-    configure_and_build $p4builddir "$config_args" $testout $profile
-    popd > /dev/null  # $testout
+        pushd $testout > /dev/null
+        configure_and_build $p4builddir "$config_args" $testout $profile
+        popd > /dev/null  # $testout
 
-    manifest_realpath=$( realpath $manifest)
-    if [ -f $manifest_realpath ]; then
-        pipes=$(${MANIFEST_CONFIG} --pipe ${manifest_realpath})
-    fi
-
-    if [ $p4_version == "p4-16" ]; then
-        conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
-        model_logs_option=""
-        if [ $name == switch ]; then
-            model_logs_option="--enable-model-logging"
+        manifest_realpath=$( realpath $manifest)
+        if [ -f $manifest_realpath ]; then
+            pipes=$(${MANIFEST_CONFIG} --pipe ${manifest_realpath})
         fi
+
+        if [ $p4_version == "p4-16" ]; then
+            conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
+            model_logs_option=""
+            echo "gen_config_opts: ./p4c-gen-bfrt-conf $conf_args"
+            run ./p4c-gen-bfrt-conf $conf_args
+            PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf $model_logs_option"
+        fi
+
+        if [ -d ${ptftestdir} ]; then
+            PTF_CMD="$PTF_RUNNER --testdir $testout --name $name \
+                    --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
+                    --device ${device} \
+                    $ports_json_file \
+                    $PTF_EXTRA_ARGS"
+        else
+            native_compile "${P4C_ARGS[@]}" $file -o $testout
+        fi
+
+        if [ -n "$PTF_CMD" ]; then
+            echo $PTF_CMD
+            run $PTF_CMD
+            ptf_test_status=$?
+            clean_env
+            if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
+                rm -rf $testdir/${name}${out_ext}.out
+            fi
+            exit $ptf_test_status
+        fi
+    # For switch_16 BFRT tests
+    else
+        set_env
+
+        p4Builddir="$(dirname $0)/p4_16/switch_16"
+        switchBuild="$p4Builddir/${name}${out_ext}.out"
+        if [ ! -d $switchBuild ]; then
+            mkdir -p $switchBuild
+        fi
+
+        cmakeConfigure="cmake .. -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on"
+        echo "Configure command: $cmakeConfigure"
+        pushd $switchBuild > /dev/null
+        # cmake looks for ${CMAKE_INSTALL_PREFIX}/bin/bf-p4c, i.e. ${switchBuild}/bin/bf-p4c
+        rm -rf "bin/bf-p4c" && mkdir -p "bin" && ln -s "$P4C" "bin/bf-p4c"
+        run $cmakeConfigure
+        popd > /dev/null  # $switchBuild
+
+        makeCmd="make -j $nproc $profile"
+        echo "make command: $makeCmd > $switchBuild/p4-build-make.log"
+        pushd $switchBuild > /dev/null
+        touch $switchBuild/p4-build-make.log
+        run $makeCmd > $switchBuild/p4-build-make.log || die
+        makeInstallCmd="make -j $nproc install"
+        echo "make install command: $makeInstallCmd > $switchBuild/p4-build-make_install.log"
+        touch $switchBuild/p4-build-make_install.log
+        run $makeInstallCmd > $switchBuild/p4-build-make_install.log || die
+        popd > /dev/null  # $switchBuild
+        if $verbose ; then
+            tail -n 10 $switchBuild/p4-build-make.log
+        fi
+
+        # Generate config file
+        manifest="$switchBuild/p4src/switch/manifest.json"
+        if [ -f "$manifest" ]; then
+            pipes=$("$MANIFEST_CONFIG" --pipe "$manifest")
+        fi
+        conf_args="--name switch --device $device --testdir $switchBuild --pipe $pipes"
         echo "gen_config_opts: ./p4c-gen-bfrt-conf $conf_args"
         run ./p4c-gen-bfrt-conf $conf_args
-        PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf $model_logs_option"
-    fi
 
-    if [ -d ${ptftestdir} ]; then
-        PTF_CMD="$PTF_RUNNER --testdir $testout --name $name \
-                --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
-                --device ${device} \
-                $ports_json_file \
-                $PTF_EXTRA_ARGS"
-    else
-        native_compile "${P4C_ARGS[@]}" $file -o $testout
-    fi
-
-    if [ -n "$PTF_CMD" ]; then
-        echo $PTF_CMD
-        run $PTF_CMD
-        ptf_test_status=$?
-        clean_env
-        if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
-            rm -rf $testdir/${name}${out_ext}.out
+        if [ -d ${ptftestdir} ]; then
+            PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
+            PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $switchBuild/switch.conf --enable-model-logging"
+            PTF_CMD="$PTF_RUNNER --testdir $switchBuild --name switch \
+                        --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
+                        --device ${device} \
+                        $ports_json_file \
+                        $PTF_EXTRA_ARGS"
+            echo $PTF_CMD
         fi
-        exit $ptf_test_status
+
+        if [ -n "$PTF_CMD" ]; then
+            run $PTF_CMD
+            ptf_test_status=$?
+            clean_env
+            if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
+                rm -rf $switchBuild
+            fi
+            exit $ptf_test_status
+        fi
     fi
 fi
 

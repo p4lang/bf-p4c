@@ -6,6 +6,9 @@ import ptf.testutils as testutils
 from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 import scapy
+from scapy.layers.l2 import *
+from scapy.layers.inet import *
+from scapy.layers.vxlan import *
 
 logger = logging.getLogger('TestSetInnerVLAN')
 logger.addHandler(logging.StreamHandler())

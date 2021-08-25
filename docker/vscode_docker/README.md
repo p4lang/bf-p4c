@@ -19,7 +19,7 @@ Development VM:
   * [Visual Studio Code](https://code.visualstudio.com/)
   * SSH: SSH in WSL or native SSH in Windows/MacOS
 * Server
-  * Docker with pulled `amr-registry.caas.intel.com/bxd-sw/jarvis:tofino` image
+  * Docker with pulled `amr-registry.caas.intel.com/bxd-sw/jarvis:latest` image
 
 ### Main Idea
 
@@ -71,7 +71,7 @@ Steps to build the image:
 1. Pull the standard Jarvis image:
 
 ```bash
-docker pull amr-registry.caas.intel.com/bxd-sw/jarvis:tofino)
+docker pull amr-registry.caas.intel.com/bxd-sw/jarvis)
 ```
 
 2. Optional: Edit the Dockerfile if you wish to add additional packages to install.
@@ -218,7 +218,7 @@ VSCode allows project building and you can even have multiple build targets for 
     ]
 }
 ```
-This configuration file will offer you one build option called `standard make -j76` which will use the command `make -j76` and will execute it in the `bf-p4c-compiler/build` folder. 
+This configuration file will offer you one build option called `standard make -j76` which will use the command `make -j76` and will execute it in the `bf-p4c-compiler/build` folder.
 If you'll be using `make -76` just make sure that you have an access to the build pool (otherwise it would take a lot of time).
 
 3. To build your project with this configuration just press `ctrl + shift + b` and after short while a prompt should pop up containing all the builds added to the `tasks.json` file and here you can simply select the one you want to build with right now (build progress should show up in the VSCode terminal).
@@ -290,6 +290,6 @@ This configuration file sets up 2 debug options -- the first is for `p4c-barefoo
 
 3. Make sure you have the [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed, otherwise install it.
 
-4. You can now use `F5` which will run the target application or alternatively click the debug icon in the Activity bar (or press `ctrl+shift+d`) and in the top left of the panel next to `RUN AND DEBUG` select one of your debugging configurations. 
+4. You can now use `F5` which will run the target application or alternatively click the debug icon in the Activity bar (or press `ctrl+shift+d`) and in the top left of the panel next to `RUN AND DEBUG` select one of your debugging configurations.
 
 5. To run this debug simply click on the green start symbol (after creating some breakpoints by clicking on the space next to line number or by using the `F9` shortcut) and after little while the debug should start and it's output will be visible in the `DEBUG CONSOLE` tab same as additional information. Also a small control panel with debugging control should appear.

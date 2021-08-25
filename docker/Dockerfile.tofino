@@ -1,9 +1,10 @@
 # Intel CaaS (AMR)
 ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
-# 'jarvis' for jarvis image
-ARG MODEL_TAG=tofino_master
 
-FROM ${DOCKER_PROJECT}/model:${MODEL_TAG}
+# p4factory docker image tag to use (usually p4c-dev_stable or p4c-dev_master)
+ARG P4FACTORY_TAG=p4c-dev_stable
+
+FROM ${DOCKER_PROJECT}/p4factory:${P4FACTORY_TAG}
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 
@@ -29,11 +30,6 @@ ARG TOFINO_P414_TEST_ARCH_TNA=false
 
 # Set up environment variables.
 
-  # Force /usr/bin to be before /usr/local/bin because bf-driver
-  # installs a version of python3 in /usr/local and that version is not
-  # picking up modules installed with pip3
-  ENV PATH="/usr/bin:${PATH}"
-
   # Set things up for distcc.
   ENV CC="distcc gcc"
   ENV CXX="distcc g++"
@@ -46,10 +42,20 @@ ARG TOFINO_P414_TEST_ARCH_TNA=false
   ENV no_proxy='intel.com,*.intel.com,localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12'
   ENV ALL_PROXY='socks5://proxy-us.intel.com'
 
+# Handle p4factory/bf-p4c-compilers specifics
+RUN ln -rs /usr/local/bin/tofinoB0_test_harness /usr/local/bin/tofino_test_harness && \
+    ln -rs /usr/local/bin/jbayB0_test_harness /usr/local/bin/jbay_test_harness
+RUN rm -rf /root/.ssh/id_* && \
+    git config --global --remove-section url.ssh://git@github.com/ && \
+    git config --global --add https.proxy http://proxy-dmz.intel.com:912
+
 COPY . /bfn/bf-p4c-compilers/
 
 RUN chmod a+x /bfn/bf-p4c-compilers/docker/docker_build.sh
 RUN /bfn/bf-p4c-compilers/docker/docker_build.sh
+
+WORKDIR /bfn/bf-p4c-compilers
+CMD ["/bin/bash"]
 
 # setup huge pages
 ENTRYPOINT ["/bfn/docker_entry_point.sh"]

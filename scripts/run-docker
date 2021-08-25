@@ -1,6 +1,6 @@
 #!/bin/sh
 
-tag=tofino
+tag=latest
 
 while [ $# -gt 0 ]; do
     case $1 in

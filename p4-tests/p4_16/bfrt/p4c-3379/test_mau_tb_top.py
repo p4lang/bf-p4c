@@ -36,6 +36,8 @@ else: # docker
 	sys.path.append('/bf-sde/pkgsrc/ptf-modules/ptf/src/ptf')
 
 import scapy
+from scapy.layers.l2 import *
+from scapy.layers.inet import *
 from nsh import *
 
 from ptf import config, mask

@@ -1921,10 +1921,11 @@ Temporary fix: try to apply @pa_container_size pragma to small fields allocated 
   extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
 )
 
-# Python key error - PKTGEN_APPLICATION_CFG - should be fixed with Tomas's upcoming PRs
+# P4C-3774
 p4c_add_xfail_reason("tofino"
-  "KeyError: "
-  p4_16_programs_tna_pktgen
+  "AttributeError: 'str' object has no attribute 'copy'"
+  fabric-DWITH_INT_TRANSIT
+  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # P4C update 2021-07-12
@@ -1932,7 +1933,7 @@ p4c_add_xfail_reason("tofino"
 # a MethodCallExpression that is not inside a BlockStatement
 p4c_add_xfail_reason("tofino"
   "Null stat"
-  testdata/p4_16_samples/issue2258-bmv2.p4 
+  testdata/p4_16_samples/issue2258-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

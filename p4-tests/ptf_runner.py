@@ -233,11 +233,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device)
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
-    if installdir == "/usr/local" or sys.version_info.major == 3:
-        res_pd_rpc = os.path.join(installdir, 'lib', pythondir, 'dist-packages', 'tofino')
-    else:
-        res_pd_rpc = os.path.join(installdir, 'lib', pythondir, 'site-packages', 'tofino')
-    os.environ['PYTHONPATH'] += ":" + res_pd_rpc
+    os.environ['PYTHONPATH'] += ":" + os.path.join(installdir, site_pkg, 'tofino')
     info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
     if port_map_file is None:
@@ -658,7 +654,7 @@ def main():
                                   disable_logging=disable_model_logging)
             processes["model"] = model_p
 
-            switchd_status_port = 6789
+            switchd_status_port = 7777
             pi_choice = args.pdtest
             if args.bfrt_test:
                 pi_choice = args.bfrt_test

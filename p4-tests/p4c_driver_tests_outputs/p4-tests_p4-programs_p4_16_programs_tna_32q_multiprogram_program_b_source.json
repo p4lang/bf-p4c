@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 141,
+                    "line": 144,
                     "column": 33
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.ipv4_checksum",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 138,
+                "line": 141,
                 "column": 16
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -21,15 +21,15 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 109,
+                    "line": 110,
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser_b.digest",
+            "symbol_name": "SwitchIngressDeparser_b.digest_a",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
                 "line": 104,
-                "column": 24
+                "column": 26
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
@@ -37,14 +37,30 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 111,
+                    "line": 112,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser_b.digest_b",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 105,
+                "column": 26
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 114,
                     "column": 33
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.ipv4_checksum",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 105,
+                "line": 106,
                 "column": 16
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -53,14 +69,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 297,
+                    "line": 295,
                     "column": 8
                 }
             ],
             "symbol_name": "profile_b",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 295,
+                "line": 293,
                 "column": 36
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -69,12 +85,12 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 232,
+                    "line": 230,
                     "column": 13
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 236,
+                    "line": 234,
                     "column": 32
                 }
             ],
@@ -90,14 +106,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 276,
+                    "line": 274,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchEgress_b.hit",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 256,
+                "line": 254,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -106,19 +122,19 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 277,
+                    "line": 275,
                     "column": 13
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 280,
+                    "line": 278,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchEgress_b.miss",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 261,
+                "line": 259,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -134,7 +150,7 @@
             "symbol_name": "SwitchIngress_b.dmac_hit",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 201,
+                "line": 204,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -148,14 +164,14 @@
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 218,
-                    "column": 32
+                    "line": 217,
+                    "column": 26
                 }
             ],
             "symbol_name": "SwitchIngress_b.dmac_miss",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 204,
+                "line": 206,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -164,14 +180,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 193,
+                    "line": 196,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress_b.hit",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 175,
+                "line": 178,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -180,19 +196,19 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 194,
+                    "line": 197,
                     "column": 13
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 197,
+                    "line": 200,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress_b.miss",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 180,
+                "line": 183,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -201,14 +217,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 233,
+                    "line": 231,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress_b.modify_eg_port",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 222,
+                "line": 220,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -217,14 +233,46 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 285,
+                    "line": 283,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchEgress_b.forward",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 268,
+                "line": 266,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 239,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.forward",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 187,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 240,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.learning",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 209,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -237,42 +285,10 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngress_b.forward",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 184,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 242,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress_b.learning",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 208,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 243,
-                    "column": 9
-                }
-            ],
             "symbol_name": "SwitchIngress_b.pinning",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 226,
+                "line": 224,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -281,14 +297,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 156,
+                    "line": 159,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.custom_metadata",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -297,14 +313,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 154,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ethernet",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -313,46 +329,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 155,
+                    "line": 158,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
-                "column": 53
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 144,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.diffserv",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
-                "column": 53
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 152,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.dst_addr",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -365,10 +349,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.flags",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.diffserv",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -377,62 +361,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 148,
+                    "line": 155,
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.frag_offset",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.dst_addr",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
-                "column": 53
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 141,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.hdr_checksum",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
-                "column": 53
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 146,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.identification",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
-                "column": 53
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 143,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.ihl",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -445,10 +381,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.protocol",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.flags",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -461,10 +397,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.src_addr",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.frag_offset",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -473,14 +409,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 145,
-                    "column": 18
+                    "line": 144,
+                    "column": 9
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.total_len",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.hdr_checksum",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -493,10 +429,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.ttl",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.identification",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -505,14 +441,30 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 142,
+                    "line": 146,
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.version",
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.ihl",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 135,
+                "line": 138,
+                "column": 53
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 153,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.protocol",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 138,
                 "column": 53
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -522,23 +474,87 @@
                 {
                     "file": "tna_32q_multiprogram_b.p4",
                     "line": 154,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 138,
+                "column": 53
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 148,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.total_len",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 138,
+                "column": 53
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 152,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.ttl",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 138,
+                "column": 53
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 145,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser_b.hdr.ipv4.version",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 138,
+                "column": 53
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 157,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 155,
+                    "line": 158,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 156,
+                    "line": 159,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchEgressDeparser_b.pkt",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 134,
+                "line": 137,
                 "column": 43
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -658,14 +674,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 262,
+                    "line": 260,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchEgress_b.eg_intr_md_for_dprs.drop_ctl",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 252,
+                "line": 250,
                 "column": 52
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -674,40 +690,24 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 258,
+                    "line": 256,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 258,
+                    "line": 256,
                     "column": 42
                 },
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 272,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchEgress_b.hdr.custom_metadata.custom_tag",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 248,
-                "column": 27
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
                     "line": 270,
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchEgress_b.hdr.ipv4.dst_addr",
+            "symbol_name": "SwitchEgress_b.hdr.custom_metadata.custom_tag",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 248,
+                "line": 246,
                 "column": 27
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -716,24 +716,40 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 257,
+                    "line": 268,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchEgress_b.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 246,
+                "column": 27
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 255,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 257,
+                    "line": 255,
                     "column": 24
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 271,
+                    "line": 269,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchEgress_b.hdr.ipv4.ttl",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 248,
+                "line": 246,
                 "column": 27
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -742,7 +758,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 126,
+                    "line": 129,
                     "column": 18
                 }
             ],
@@ -758,7 +774,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 124,
+                    "line": 127,
                     "column": 18
                 }
             ],
@@ -774,8 +790,8 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 109,
-                    "column": 26
+                    "line": 110,
+                    "column": 28
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ethernet.dst_addr",
@@ -790,8 +806,8 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 109,
-                    "column": 49
+                    "line": 110,
+                    "column": 51
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.hdr.ethernet.src_addr",
@@ -806,7 +822,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 125,
+                    "line": 128,
                     "column": 18
                 }
             ],
@@ -822,7 +838,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 114,
+                    "line": 117,
                     "column": 18
                 }
             ],
@@ -838,7 +854,12 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 122,
+                    "line": 112,
+                    "column": 28
+                },
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 125,
                     "column": 18
                 }
             ],
@@ -854,7 +875,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 117,
+                    "line": 120,
                     "column": 18
                 }
             ],
@@ -870,7 +891,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 118,
+                    "line": 121,
                     "column": 18
                 }
             ],
@@ -886,7 +907,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 111,
+                    "line": 114,
                     "column": 9
                 }
             ],
@@ -902,7 +923,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 116,
+                    "line": 119,
                     "column": 18
                 }
             ],
@@ -918,7 +939,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 113,
+                    "line": 116,
                     "column": 18
                 }
             ],
@@ -934,7 +955,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 120,
+                    "line": 123,
                     "column": 18
                 }
             ],
@@ -950,7 +971,12 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 121,
+                    "line": 112,
+                    "column": 47
+                },
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 124,
                     "column": 18
                 }
             ],
@@ -966,7 +992,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 115,
+                    "line": 118,
                     "column": 18
                 }
             ],
@@ -982,7 +1008,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 119,
+                    "line": 122,
                     "column": 18
                 }
             ],
@@ -998,7 +1024,7 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 112,
+                    "line": 115,
                     "column": 18
                 }
             ],
@@ -1014,8 +1040,13 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 108,
+                    "line": 109,
                     "column": 13
+                },
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 111,
+                    "column": 20
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.ig_dprsr_md.digest_type",
@@ -1030,17 +1061,17 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 124,
+                    "line": 127,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 125,
+                    "line": 128,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 126,
+                    "line": 129,
                     "column": 9
                 }
             ],
@@ -1183,24 +1214,40 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 177,
+                    "line": 207,
+                    "column": 35
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.dmac_miss.dg_type",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 206,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 180,
                     "column": 9
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 177,
+                    "line": 180,
                     "column": 42
                 },
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 188,
+                    "line": 191,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress_b.hdr.custom_metadata.custom_tag",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 168,
+                "line": 171,
                 "column": 31
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1209,107 +1256,17 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 210,
+                    "line": 211,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress_b.hdr.ethernet.dst_addr",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 168,
+                "line": 171,
                 "column": 31
             },
             "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 186,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress_b.hdr.ipv4.dst_addr",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 168,
-                "column": 31
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 176,
-                    "column": 9
-                },
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 176,
-                    "column": 24
-                },
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 187,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress_b.hdr.ipv4.ttl",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 168,
-                "column": 31
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 205,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress_b.ig_dprsr_md.digest_type",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 172,
-                "column": 57
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 181,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress_b.ig_dprsr_md.drop_ctl",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 172,
-                "column": 57
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_32q_multiprogram_b.p4",
-                    "line": 228,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress_b.ig_intr_md.ingress_port",
-            "declaration": {
-                "file": "tna_32q_multiprogram_b.p4",
-                "line": 170,
-                "column": 41
-            },
-            "symbol_type": "Parameter_Type_Header"
         },
         {
             "references": [
@@ -1319,10 +1276,100 @@
                     "column": 13
                 }
             ],
+            "symbol_name": "SwitchIngress_b.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 171,
+                "column": 31
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 179,
+                    "column": 9
+                },
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 179,
+                    "column": 24
+                },
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 190,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.hdr.ipv4.ttl",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 171,
+                "column": 31
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 207,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.ig_dprsr_md.digest_type",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 175,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 184,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.ig_dprsr_md.drop_ctl",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 175,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 226,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress_b.ig_intr_md.ingress_port",
+            "declaration": {
+                "file": "tna_32q_multiprogram_b.p4",
+                "line": 173,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_32q_multiprogram_b.p4",
+                    "line": 192,
+                    "column": 13
+                }
+            ],
             "symbol_name": "SwitchIngress_b.ig_md.port_md.f1",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 169,
+                "line": 172,
                 "column": 28
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1331,14 +1378,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 223,
+                    "line": 221,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress_b.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 173,
+                "line": 176,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1347,14 +1394,14 @@
             "references": [
                 {
                     "file": "tna_32q_multiprogram_b.p4",
-                    "line": 223,
+                    "line": 221,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress_b.modify_eg_port.port",
             "declaration": {
                 "file": "tna_32q_multiprogram_b.p4",
-                "line": 222,
+                "line": 220,
                 "column": 36
             },
             "symbol_type": "Parameter_Type_Bits"

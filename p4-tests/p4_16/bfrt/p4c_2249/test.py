@@ -27,11 +27,9 @@ import sys
 import os
 import random
 import re
+import time
 #from pprint import pprint
 
-sys.path.append('/bfn/bf-p4c-compilers/p4-tests/p4_14/switch/switchsai/submodules/SAI/test/ptf/src/ptf')
-
-import packet as scapy
 import nsh
 
 from ptf import config
@@ -557,4 +555,3 @@ class NpbNshDecapTest(BfRuntimeTest):
         # -----------------
         # Egress Tunnel
         # -----------------
-
