@@ -77,9 +77,15 @@ class PvsTest(BfRuntimeTest):
         logger.info("====================================================")
 
         # Create two packets which are modified to go through the configured PVS
+        # The checksum (final 2 bytes) of h2 should be replaced by 0x0002
+        h1len = 16
+        h2len = 18
+        h3len = 16
+        payload = ("0" * (h1len + h2len - 2)) + chr(0) + chr(2) + ("0" * h3len)
+
         pkts = [
-            testutils.simple_eth_packet(pktlen=90, eth_type=vs_vals[0]),
-            testutils.simple_eth_packet(pktlen=90, eth_type=vs_vals[1]),
+            testutils.simple_eth_packet(pktlen=14, eth_type=vs_vals[0])/payload,
+            testutils.simple_eth_packet(pktlen=14, eth_type=vs_vals[1])/payload,
         ]
 
         ingress_port = testutils.test_param_get("ingress_port", 0)

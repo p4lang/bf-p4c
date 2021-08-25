@@ -66,6 +66,7 @@ struct headers {
 @pa_container_size("ingress", "csum_err", 16)
 struct metadata {
     bit<32> m1;
+    bit<16> m2;
     bool    csum_err;
 }
 
@@ -95,10 +96,15 @@ parser ParserI(packet_in packet,
     }
 
     state parse_h1 {
+        // Write const into 16b field that will be put into packet.
+        // Set in same state as a value_set to verify that padding logic
+        // is correct for value set entries.
+        // (Addresses issues found in P4C-3976.)
         packet.extract(hdr.h1);
-        transition select(hdr.h1.f1) {
-            32w0xaaaaaaaa: parse_h2;
-            default: accept;
+        md.m2 = 16w0x02;
+        transition select(hdr.eth.ether_type) {
+            pvs     : parse_h2;
+            default : accept;
         }
     }
 
@@ -138,6 +144,8 @@ control IngressP(
     
     apply {
         if (meta.csum_err) {
+            hdr.h2.csum = meta.m2;
+        } else {
             hdr.h2.f1 = meta.m1;
         }
         if (!hdr.h1.isValid()) {

@@ -1028,7 +1028,7 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
             vs_offset << " (row = " << nrow << ")");
         map =  reinterpret_cast<tofino_phv_output_map *>(
             parser->setup_phv_output_map(regs, parser->gress, nrow));
-        do_16b_padding(regs, map, from_idx, pad_idx);
+        do_16b_padding(regs, map, pad_idx, from_idx);
     }
 
     if (LOGGING(5)) {
