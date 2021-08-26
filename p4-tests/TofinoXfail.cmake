@@ -1480,12 +1480,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/microsoft/COMPILER-991/vag6589.p4
 )
 
-#P4C-2080
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Expression not found"
-  extensions/p4_tests/p4_16/compile_only/p4c-2080-min.p4
-)
-
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino"

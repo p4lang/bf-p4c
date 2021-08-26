@@ -13,16 +13,51 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
     LOG5("Header: " << h->name);
     LOG5("Header type: " << h->type);
     for (auto f : h->type->fields) {
-        cstring name = h->name + "." + f->name;
-        // Ignore compiler generated metadata fields that belong to different headers.
-        if (name.endsWith("$always_deparse") || name.endsWith(BFN::BRIDGED_MD_INDICATOR))
-            continue;
-        IR::Member* mem = gen_fieldref(h, f->name);
-        if (!mem) continue;
-        fieldNameToExpressionsMap[name] = mem;
-        LOG5("  Added field: " << name << ", " << mem);
+        if (auto hs = h->to<IR::HeaderStack>()) {
+            for (int i = 0; i < hs->size; i++) {
+                // add every header in header stack
+                cstring name = h->name + "[" + cstring::to_cstring(i)  + "]." + f->name;
+                if (name.endsWith("$always_deparse") || name.endsWith(BFN::BRIDGED_MD_INDICATOR))
+                    continue;
+                const IR::Type *ftype = nullptr;
+                auto field = hs->type->getField(f->name);
+                if (field != nullptr)
+                    ftype = field->type;
+                else
+                    BUG("Couldn't find header stack field %s in %s", f->name, hs->name);
+                IR::Member* mem =
+                    new IR::Member(
+                        ftype,
+                        new IR::HeaderStackItemRef(
+                            new IR::ConcreteHeaderRef(h), new IR::Constant(i)),
+                        f->name);
+                fieldNameToExpressionsMap[name] = mem;
+                LOG5("  Added field: " << name << ", " << mem);
+            }
+        } else {
+            cstring name = h->name + "." + f->name;
+            // Ignore compiler generated metadata fields that belong to different headers.
+            if (name.endsWith("$always_deparse") || name.endsWith(BFN::BRIDGED_MD_INDICATOR))
+                continue;
+            IR::Member* mem = gen_fieldref(h, f->name);
+            if (!mem) continue;
+            fieldNameToExpressionsMap[name] = mem;
+            LOG5("  Added field: " << name << ", " << mem);
+        }
     }
-    if (h->type->is<IR::Type_Header>()) {
+    if (auto hs = h->type->to<IR::HeaderStack>()) {
+        for (int i = 0; i < hs->size; i++) {
+            cstring name = h->name + "[" + cstring::to_cstring(i)  + "]." + ".$valid";
+            IR::Member* mem = new IR::Member(
+                IR::Type_Bits::get(1),
+                new IR::HeaderStackItemRef(new IR::ConcreteHeaderRef(h), new IR::Constant(i)),
+                "$valid");
+            if (mem) {
+                fieldNameToExpressionsMap[name] = mem;
+                LOG5("  Added field: " << name << ", " << mem);
+            }
+        }
+    } else if (h->type->is<IR::Type_Header>()) {
         cstring name = h->name + ".$valid";
         IR::Member* mem = new IR::Member(IR::Type_Bits::get(1),
                 new IR::ConcreteHeaderRef(h), "$valid");
