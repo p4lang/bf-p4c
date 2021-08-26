@@ -19,6 +19,8 @@ class ErrorType: public ::ErrorType {
         return instance;
     }
 
+    void printWarningsHelp(std::ostream& out);
+
  private:
     /// Barefoot specific error catalog.
     /// It simply adds all the supported errors and warnings in Barefoot's backend.

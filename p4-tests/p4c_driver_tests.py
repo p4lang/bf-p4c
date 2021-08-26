@@ -144,6 +144,15 @@ test_matrix = {
     # Tofino2U
     'tofino2u' : (['--target', 'tofino2u', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2u', t2na_program], None, None),
 
+    # Invocation tests
+    'disable_warnings': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program,
+                          '--Wdisable', '-o', 'wdisable'], None, None),
+    'warnings_to_errors': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program, '--Werror', '-o', 'werror'],
+                            "error: out parameter 'ig_md' may be uninitialized when 'SwitchIngressParser' terminates", None),
+    # Following test checks whether compiler can deal with comma separated list of values
+    'some_warnings_to_errors': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program, '--Werror=unused,uninitialized_out_param'],
+                            "error: out parameter 'ig_md' may be uninitialized when 'SwitchIngressParser' terminates", None),
+
     # source.json regression tests
     # If needed, use "test_p4c_driver.py --gen-src-json" to (re)generate reference source jsons
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_lpm_match' :

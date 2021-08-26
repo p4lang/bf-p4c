@@ -146,12 +146,15 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--verbose",
                                     action="store", default=0, type=int, choices=[0, 1, 2, 3],
                                     help="Set compiler logging verbosity level: 0=OFF, 1=SUMMARY, 2=INFO, 3=DEBUG")
-        self._argGroup.add_argument("--Wdisable", action="store", default=None, type=str,
+        self._argGroup.add_argument("--Wdisable", action="append", nargs="?", default=None, const="", type=str,
                                     help="Disable a compiler diagnostic, or disable all warnings "
                                     "if no diagnostic is specified.")
-        self._argGroup.add_argument("--Werror", action="store", default=None, type=str,
+        self._argGroup.add_argument("--Werror", action="append", nargs="?", default=None, const="", type=str,
                                     help="Report an error for a compiler diagnostic, or treat all "
                                     "warnings as errors if no diagnostic is specified.")
+        self._argGroup.add_argument("--help-warnings",
+                                    help="Print warning types that can be used for --Werror and --Wdisable options.",
+                                    action="store_true", default=False)
         self._argGroup.add_argument("--p4runtime-force-std-externs",
                                     action="store_true", default=False,
                                     help="Generate P4Info file using standard extern messages"
@@ -203,6 +206,36 @@ class BarefootBackend(BackendDriver):
         self._targetName = targetName
         self._no_link = False
         self._multi_parsers = False
+
+    def config_warning_modifiers(self, arguments, option):
+        """
+        Behaviour of warnings emitted by p4c can be modified by two options:
+        --Werror which turns all/selected warnings into errors
+        --Wdisable which ignores all/selected warnings
+
+        Both accept either no further options or they accept comma separated list of strings
+        or they can occur multiple times with a different CSL each time. If argparser is properly configured
+        (action="append", nargs="?", default=None, const="", type=str) it will create a list of strings
+        (plain or CSLs) or empty string (if no further option was provided).
+
+        You can then pass parsed argument to this function to properly select between everything or something
+        and to properly parse CSLs.
+        """
+        if option != "disable" and option != "error":
+            raise Exception("Programmer error - config_warning_modifiers does not support option " + option)
+
+        all = len(arguments) == 1 and arguments[0] == ""
+
+        if all:
+            self.add_command_option('compiler', '--W{}'.format(option))
+        else:
+            for diag in arguments:
+                subdiags = diag.split(',')
+                for sd in subdiags:
+                    self.add_command_option('compiler', '--W{}={}'.format(option, sd))
+
+    def should_not_check_input(self, opts):
+        return opts.help_pragmas or opts.help_warnings
 
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
@@ -346,10 +379,17 @@ class BarefootBackend(BackendDriver):
         if opts.disable_egress_latency_padding:
             self.add_command_option('assembler', '--disable-egress-latency-padding')
 
+        if opts.help_warnings:
+            self.add_command_option('compiler', '--help-warnings')
+            self.checkAndRunCmd('compiler')
+            # no need for anything else, we printed the pragmas and we need to exit
+            sys.exit(0)
+
         if opts.Wdisable is not None:
-            self.add_command_option('compiler', '--Wdisable={}'.format(opts.Wdisable))
+            self.config_warning_modifiers(opts.Wdisable, "disable")
+
         if opts.Werror is not None:
-            self.add_command_option('compiler', '--Werror={}'.format(opts.Werror))
+            self.config_warning_modifiers(opts.Werror, "error")
 
         self.pragmas_help = opts.help_pragmas
         if opts.help_pragmas:

@@ -17,6 +17,7 @@
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/pragma/pragma.h"
+#include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/logging/manifest.h"
 #include "frontends/parsers/parserDriver.h"
@@ -244,6 +245,13 @@ BFN_Options::BFN_Options() {
                        exit(0);
                        return false; },
                    "Print the documentation about supported pragmas and exit.");
+    registerOption("--help-warnings", nullptr,
+                   [](const char *) {
+                       BFN::ErrorType::getErrorTypes().printWarningsHelp(std::cout);
+                       exit(0);
+                       return false; },
+                   "Print a list of compiler diagnostics that can be silenced or turned "
+                   "into errors via --Wdisable and --Werror.");
     registerOption("--relax-phv-init", "arg",
         [this](const char* arg) {
             int temp = std::atoi(arg);
