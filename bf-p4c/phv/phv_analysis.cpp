@@ -20,6 +20,7 @@
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "ir/visitor.h"
+#include "bf-p4c/phv/fieldslice_live_range.h"
 
 class PhvInfo;
 
@@ -122,10 +123,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,
             new PhvInfo::DumpPhvFields(phv, uses),
             &table_ids,
-
             &strided_headers,
             &parser_info,
             phvLoggingInfo,
+            new PHV::FieldSliceLiveRangeDB(&alloc, &defuse, phv, pragmas),
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     field_to_parser_states, parser_critical_path, critical_path_clusters,
                     table_alloc, meta_init, dark_live_range, table_ids,

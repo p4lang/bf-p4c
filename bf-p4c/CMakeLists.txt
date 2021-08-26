@@ -572,6 +572,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/utils/report.cpp
   phv/utils/slice_alloc.cpp
   phv/utils/utils.cpp
+  phv/fieldslice_live_range.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -645,6 +646,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/utils/slice_alloc.h
   phv/utils/tables_to_ids.h
   phv/utils/utils.h
+  phv/fieldslice_live_range.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS
