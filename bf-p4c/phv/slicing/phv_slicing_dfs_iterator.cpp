@@ -35,6 +35,8 @@ struct DeferHelper {
 // cluster in the super cluster. We only need to iterate all possible slicing
 // by increasing the a bitvec representation of the cluster, where the n-th
 // bit is one indicates "split at 8*(n+1)-th bit on the rotation cluster".
+// Note that when there was pre-alignment of any field in the rotational cluster
+// the nth bit will take max(pre-alignment) into account, See below for details.
 namespace PHV {
 namespace Slicing {
 namespace NoSliceListItr {
@@ -85,7 +87,7 @@ bitvec enforce_le_32b(const bitvec& bv, int sentinel) {
 void no_slicelist_itr(const IterateCb& yield, const SuperCluster* sc) {
     int max_aligment = 0;
     sc->forall_fieldslices([&max_aligment](const FieldSlice& fs) {
-        int alignment = fs.alignment() ? (*fs.alignment()).align : 0;
+        const int alignment = fs.alignment() ? (*fs.alignment()).align : 0;
         max_aligment = std::max(max_aligment, alignment);
     });
     const int max_width = sc->max_width() + max_aligment;
@@ -119,6 +121,15 @@ void no_slicelist_itr(const IterateCb& yield, const SuperCluster* sc) {
 
 namespace PHV {
 namespace Slicing {
+
+// return the alignment of the first fieldslice for non exact containers lists.
+int compute_pre_alignment(const PHV::SuperCluster::SliceList& sl) {
+    if (sl.empty() || sl.front().field()->exact_containers()) {
+        return 0;
+    }
+    const auto& head = sl.front();
+    return head.alignment() ? (*head.alignment()).align : 0;
+}
 
 // return a std::map<int, FieldSlice> that maps i to the fieldslice on the i-th bit of @p sl.
 const std::map<int, FieldSlice> make_fs_bitmap(const SuperCluster::SliceList* sl) {
@@ -217,52 +228,88 @@ boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
 }
 
 // NextSplitChoiceMetrics is used during DFS to sort best slicing choice
-// from [8, 16, 32]. Generally, we prefer to sort them by
-// 1.  try to split at field boundaries. This one implicitly work with to_invalidate
-//     because if we are trying not to split the field in the middle, and we
-//     still meet some packing conflicts, then we should backtrack to avoid
-//     the packing.
-// 2.0 try split between referenced and non-referenced field.
-// 2.1 (TODO) container sizes that are more abundant. It allows allocation
-//     algorithm to balance between containers. More importantly, at the end
-//     of allocation, we can prune a lot of invalid slicing. We need to add this
-//     if pre-slicing is removed in allocation algorithm.
-// 2.2 (TODO) except the above, for metadata slicelist, an important case is
-//     that metadata fieldslices may be better to be sliced in the same way
-//     as the header fields in the its rotational cluster.
-// 3.  larger container to encourage more packings.
+// from [8, 16, 32].
 struct NextSplitChoiceMetrics {
     bool will_create_new_spilt = false;
     bool will_split_unreferenced = false;
+    int n_avoidable_packings = 0;
     SplitChoice size;
 
-    NextSplitChoiceMetrics(bool will_create_new_spilt, bool split_unreferenced, SplitChoice size)
+    NextSplitChoiceMetrics(bool will_create_new_spilt, bool split_unreferenced,
+                           int n_avoidable_packings, SplitChoice size)
         : will_create_new_spilt(will_create_new_spilt),
           will_split_unreferenced(split_unreferenced),
+          n_avoidable_packings(n_avoidable_packings),
           size(size) {}
 
-    // pick slice list with exact container, more constraints and
-    // has smaller size as next target to form a smaller search tree.
-    bool operator<(const NextSplitChoiceMetrics& other) {
-        if (will_create_new_spilt != other.will_create_new_spilt) {
-            return will_create_new_spilt > other.will_create_new_spilt;
-        } else if (will_split_unreferenced != other.will_split_unreferenced) {
-            return will_split_unreferenced < other.will_split_unreferenced;
+    // By default, we prefer to sort them by
+    // 1.  try to split at field boundaries. This one implicitly work with to_invalidate
+    //     because if we are trying not to split the field in the middle, and we
+    //     still meet some packing conflicts, then we should backtrack to avoid
+    //     the packing.
+    // 2.0 try split between referenced and non-referenced field.
+    // 2.1 (TODO) container sizes that are more abundant. It allows allocation
+    //     algorithm to balance between containers. More importantly, at the end
+    //     of allocation, we can prune a lot of invalid slicing. We need to add this
+    //     if pre-slicing is removed in allocation algorithm.
+    // 2.2 (TODO) except the above, for metadata slicelist, an important case is
+    //     that metadata fieldslices may be better to be sliced in the same way
+    //     as the header fields in the its rotational cluster.
+    // 3.  larger container to encourage more packings.
+    static bool default_heuristics(const NextSplitChoiceMetrics& a,
+                                   const NextSplitChoiceMetrics& b) {
+        if (a.will_create_new_spilt != b.will_create_new_spilt) {
+            return a.will_create_new_spilt < b.will_create_new_spilt;
+        } else if (a.will_split_unreferenced != b.will_split_unreferenced) {
+            return a.will_split_unreferenced > b.will_split_unreferenced;
         } else {
-            return size < other.size;
+            return a.size > b.size;
+        }
+    }
+
+    /// minimal packing choices that
+    /// 1.  try to split with minimal avoidable packings.
+    /// 2.  otherwise same as default.
+    static bool minimal_packing(const NextSplitChoiceMetrics& a, const NextSplitChoiceMetrics& b) {
+        // Use n_avoidable_packings to determinate how many fieldslices will
+        // be packed after split by the choice.
+        // For example
+        // [ a<18> [0:17],  b<14> [0:13]]
+        // in terms of packing, it is the same to either split first 16 or 32:
+        // + split at 16: pack a[17:17] with b;
+        // + split at 32: pack a[0:17] with b;
+        // we would prefer (firstly try) to split at 32 to create less fragments.
+        const int a_packings = a.n_avoidable_packings;
+        const int b_packings = b.n_avoidable_packings;
+        if (a_packings != b_packings) {
+            return a_packings < b_packings;
+        } else {
+            return default_heuristics(a, b);
         }
     }
 };
 
+std::ostream& operator<<(std::ostream& out, const NextSplitChoiceMetrics& c) {
+    out << "{" << "new_split: " << c.will_create_new_spilt << ", "
+        << "split_unref:" << c.will_split_unreferenced << ", "
+        << "n_avoidable_packings:" << c.n_avoidable_packings << ", "
+        << "size: " << int(c.size) << "}";
+    return out;
+}
+
 std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target) const {
+    const bool has_exact_containers =
+        SuperCluster::slice_list_has_exact_containers(*target.second);
+    const int pre_alignment = compute_pre_alignment(*target.second);
+    // for metadata field slicelist, we must add the alignment to the slicelist.
+    const int sl_sz = SuperCluster::slice_list_total_bits(*target.second) + pre_alignment;
+
     // marks 1 if that bit is in the middle of a fieldslice.
     bitvec middle_of_fieldslices;
-    int offset = 0;
+    int offset = pre_alignment;
     for (const auto& fs : *target.second) {
         if (!fs.field()->is_padding()) {
-            for (int i = offset + 1; i < offset + fs.size(); i++) {
-                middle_of_fieldslices.setbit(i);
-            }
+            middle_of_fieldslices.setrange(offset + 1, fs.size() - 1);
         }
         offset += fs.size();
         if (offset > 32) break;
@@ -271,7 +318,7 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
     // marks 1 if that bit is at a boundary of reference and unreferenced field,
     // that split [head...][rest...] into referenced list and unreferenced list.
     bitvec unreferenced_boundary;
-    offset = 0;
+    offset = pre_alignment;
     const bool is_head_referenced = is_used_i(target.second->front().field());
     for (const auto& fs : *target.second) {
         if (is_used_i(fs.field()) != is_head_referenced) {
@@ -282,22 +329,35 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
         if (offset > 32) break;
     }
 
-    int sl_sz = SuperCluster::slice_list_total_bits(*target.second);
-    bool has_exact_containers = SuperCluster::slice_list_has_exact_containers(*target.second);
-    if (!has_exact_containers) {
-        // for metadata field slicelist, we must add the alignment to the slicelist.
-        const auto& head = target.second->front();
-        sl_sz += head.alignment() ? (*head.alignment()).align : 0;
+    // the number of pairs of fieldslices that are not necessarily to be packed.
+    std::unordered_map<int, int> n_avoidable_packings;
+    // not necessary to set indexes before pre_alignment
+    // because max alignment is 7, while smallest split is 8.
+    offset = pre_alignment;
+    for (auto fs = target.second->begin(); fs != target.second->end(); fs++) {
+        int n = 0;
+        for (auto prev_fs = target.second->begin(); prev_fs != fs; prev_fs++) {
+            n += int(is_used_i(fs->field()) && is_used_i(prev_fs->field()) &&
+                     !phv_i.must_alloc_same_container(*fs, *prev_fs));
+        }
+        for (int i = offset + 1; i <= offset + fs->size(); i++) {
+            n_avoidable_packings[i] = n;
+        }
+        offset += fs->size();
+        if (offset > 32) break;
     }
-    bool has_tried_larger_sz = false;
+    for (int i = offset + 1; i <= 32; i++) {
+        n_avoidable_packings[i] = n_avoidable_packings[offset];
+    }
 
+    bool has_tried_larger_sz = false;
     std::vector<NextSplitChoiceMetrics> choices;
     for (const auto& c : {
              SplitChoice::B,
              SplitChoice::H,
              SplitChoice::W,
          }) {
-        // exact container slice list cannot be allocated to larger containters.
+        // exact container slice list cannot be allocated to larger containers.
         if (int(c) > sl_sz && has_exact_containers) {
             continue;
         }
@@ -313,13 +373,26 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
         choices.push_back({
             bool(middle_of_fieldslices[int(c)]),
             bool(unreferenced_boundary[int(c)]),
+            n_avoidable_packings.at(int(c)),
             c,
         });
     }
-    std::sort(choices.begin(), choices.end());
 
+    if (LOGGING(5)) {
+        LOG5("possible splice choices: ");
+        for (const auto& c : choices) {
+            LOG5(c);
+        }
+    }
+    if (minimal_packing_mode_i) {
+        std::sort(choices.begin(), choices.end(), NextSplitChoiceMetrics::minimal_packing);
+    } else {
+        std::sort(choices.begin(), choices.end(), NextSplitChoiceMetrics::default_heuristics);
+    }
+
+    // convert back to simple vector<SplitChoice>.
     std::vector<SplitChoice> rst;
-    for (const auto& v : boost::adaptors::reverse(choices)) {
+    for (const auto& v : choices) {
         rst.push_back(v.size);
     }
     return rst;
@@ -394,14 +467,11 @@ std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
             continue;
         }
         const int sz = SuperCluster::slice_list_total_bits(*sl);
-        const auto& head = sl->front();
         // For metadata fields with alignment, we should treat pre_aligment as virtual padding
         // before the field by setting the initial offset to the aligment, e.g.
         // meta<8> with alignment 3 cannot be allocated to 8-bit container, and the initial
         // offset will be 3.
-        const int pre_alignment = head.field()->exact_containers()
-                                      ? 0
-                                      : (head.alignment() ? (*head.alignment()).align : 0);
+        const int pre_alignment = compute_pre_alignment(*sl);
         if (pre_alignment + sz > first_n_bits) {
             schema[sl].setbit(first_n_bits - pre_alignment);
         }
@@ -744,7 +814,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     to_be_split_i = *after_pre_split;
 
     // start searching.
-    dfs(cb);
+    dfs(cb, to_be_split_i);
 }
 
 bool DfsItrContext::need_further_split(const SuperCluster::SliceList* sl) const {
@@ -1231,8 +1301,8 @@ bool DfsItrContext::dfs_prune_unsat_exact_list_size_mismatch(
     return false;
 }
 
-bool DfsItrContext::dfs_prune() const {
-    for (const auto* sc : to_be_split_i) {
+bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) const {
+    for (const auto* sc : unchecked) {
         // unwell_formed
         if (dfs_prune_unwell_formed(sc)) {
             return true;
@@ -1280,7 +1350,7 @@ std::vector<SuperCluster*> DfsItrContext::get_well_formed_no_more_split() const 
 }
 
 // return false if iteration should be terminated.
-bool DfsItrContext::dfs(const IterateCb& yield) {
+bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>& unchecked) {
     n_steps_i++;
     if (n_steps_i > n_step_limit_i) {
         return false;
@@ -1295,7 +1365,7 @@ bool DfsItrContext::dfs(const IterateCb& yield) {
     });
 
     // pruning
-    if (dfs_prune()) {
+    if (dfs_prune(unchecked)) {
         return true;
     }
 
@@ -1358,7 +1428,9 @@ bool DfsItrContext::dfs(const IterateCb& yield) {
                 }
                 slicelist_head_on_stack_i.pop_back();
             });
-            if (!dfs(yield)) {
+            ordered_set<SuperCluster*> newly_created;
+            newly_created.insert(rst->begin(), rst->end());
+            if (!dfs(yield, newly_created)) {
                 return false;
             }
             if (to_invalidate != nullptr) {

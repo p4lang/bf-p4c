@@ -41,6 +41,10 @@ class IteratorInterface {
     // invalidate is the feedback mechanism for allocation algorithm to
     // ask iterator to not produce slicing result contains @p sl.
     virtual void invalidate(const SuperCluster::SliceList* sl) = 0;
+
+    // set_minimal_packing_mode sets the slicing preference to create minimal
+    // packing of fieldslices.
+    virtual void set_minimal_packing_mode(bool enable) = 0;
 };
 
 }  // namespace Slicing

@@ -54,6 +54,7 @@ class DfsItrContext : public IteratorInterface {
     const PHVContainerSizeLayout pa_i;
     const PackConflictChecker has_pack_conflict_i;
     const IsReferencedChecker is_used_i;
+    bool minimal_packing_mode_i = false;
 
     // if a pa_container_size asks a field to be allocated to containers larger than it's
     // size, it's recorded here and will be used during pruning. Note that for one field,
@@ -115,8 +116,13 @@ class DfsItrContext : public IteratorInterface {
     /// ask iterator not to produce slicing result contains @p sl.
     void invalidate(const SuperCluster::SliceList* sl) override;
 
-    /// dfs search valid slicing.
-    bool dfs(const IterateCb& yield);
+    /// set minimal packing mode to true so that iterator will get slicing results
+    /// that prefers minimal packing first.
+    void set_minimal_packing_mode(bool enable) override { minimal_packing_mode_i = enable; }
+
+    /// dfs search valid slicing. @p unchecked are superclusters that needs to be checked
+    /// for pruning.
+    bool dfs(const IterateCb& yield, const ordered_set<SuperCluster*>& unchecked);
 
     /// split_by_pa_container_size will split @p sc by @p pa container size.
     boost::optional<std::list<SuperCluster*>> split_by_pa_container_size(
@@ -135,14 +141,19 @@ class DfsItrContext : public IteratorInterface {
     boost::optional<std::list<SuperCluster*>> split_by_adjacent_deparsed_and_non_deparsed(
         SuperCluster* sc) const;
 
-    /// return possible SplitChoice on @p target. The result is sorted that better choices
-    /// are at lower indexes.
+    /// return possible SplitChoice on @p target.
+    /// When minimal_packing_mode is false, results are sorted with a set of heuristics
+    /// that choices with more packing opportunities (generally larger container-sized chunks),
+    /// ,split at field boundaries, and better chances to split between ref/unref fields,
+    /// are placed at lower indexes. See implementation for more details on heuristics.
+    /// If minimal_packing_mode is true, then we will prefer to split with less packing
+    /// of fieldslices.
     std::vector<SplitChoice> make_choices(const SliceListLoc& target) const;
 
     /// pruning strategies
     /// return true if found any unsatisfactory case. This function will return true
     /// if any of the following pruning strategies returns true.
-    bool dfs_prune() const;
+    bool dfs_prune(const ordered_set<SuperCluster*>& unchecked) const;
 
     /// dfs_prune_unwell_formed: return true if
     /// (1) @p sc cannot be split further and is not well_formed.

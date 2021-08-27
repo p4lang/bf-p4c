@@ -15,7 +15,7 @@ namespace Slicing {
 // The input @p sc is better to be:
 // (1) split by pa_solitary already.
 // (2) split by deparsed_bottom_bits already.
-class ItrContext {
+class ItrContext : public IteratorInterface {
  private:
     IteratorInterface* pImpl;
 
@@ -25,11 +25,18 @@ class ItrContext {
                const IsReferencedChecker is_referenced);
 
     // iterate will pass valid slicing results to cb. Stop when cb returns false.
-    void iterate(const IterateCb& cb) { pImpl->iterate(cb); }
+    void iterate(const IterateCb& cb) override { pImpl->iterate(cb); }
 
     // invalidate is the feedback mechanism for allocation algorithm to
     // ask iterator to not produce slicing result contains @p sl.
-    void invalidate(const SuperCluster::SliceList* sl) { pImpl->invalidate(sl); }
+    void invalidate(const SuperCluster::SliceList* sl) override { pImpl->invalidate(sl); }
+
+    // set_minimal_packing_mode sets the slicing preference to create minimal
+    // packing of fieldslices. Slicing result that has less packing of fieldslices will be
+    // iterated before others.
+    void set_minimal_packing_mode(bool enable) override {
+        pImpl->set_minimal_packing_mode(enable);
+    };
 };
 
 }  // namespace Slicing
