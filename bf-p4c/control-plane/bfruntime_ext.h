@@ -10,7 +10,7 @@ namespace BFN {
 
 namespace BFRT {
 
-using namespace P4::BFRT;
+using namespace BFN::BFRT;
 
 static const p4configv1::Extern*
 findExternType(const p4configv1::P4Info& p4info, ::barefoot::P4Ids::Prefix externTypeId) {

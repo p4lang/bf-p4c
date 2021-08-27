@@ -1967,3 +1967,17 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2362-bmv2.p4
 )
 # P4C update 2021-07-12
+
+# P4C update 2021-08-16
+p4c_add_xfail_reason("tofino"
+  "source of modify_field invalid"
+  testdata/p4_16_samples/psa-dpdk-table-key-isValid2.p4
+  testdata/p4_16_samples/psa-dpdk-table-key-isValid3.p4
+  testdata/p4_16_samples/psa-dpdk-table-key-isValid4.p4
+  testdata/p4_16_samples/psa-dpdk-table-key-isValid5.p4
+  testdata/p4_16_samples/psa-dpdk-table-key-isValid6.p4
+)
+p4c_add_xfail_reason("tofino"
+  "extern Checksum does not have method matching this call"
+  testdata/p4_16_samples/internet_checksum1-bmv2.p4
+)

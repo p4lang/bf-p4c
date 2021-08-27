@@ -1,10 +1,10 @@
 #include "bfruntime.h"
 
-namespace P4 {
+namespace BFN {
 
 namespace BFRT {
 
-using P4::BFRT::P4Id;
+using BFN::BFRT::P4Id;
 
 TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
                        const p4configv1::P4DataTypeSpec& typeSpec,
@@ -887,4 +887,4 @@ void BFRuntimeGenerator::serializeBFRuntimeSchema(std::ostream* destination) {
 
 }  // namespace BFRT
 
-}  // namespace P4
+}  // namespace BFN
