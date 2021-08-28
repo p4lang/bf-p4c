@@ -674,7 +674,7 @@ class BarefootBackend(BackendDriver):
         # This logging feature is enabled during the DEVELOPER mode
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self.verbose > 0:
             self.add_command_option('assembler',
-                                    "-vvvvl {}/bfas.config.log".format(dirname))
+                                    "-vvvl {}/bfas.config.log".format(dirname))
         else:
             # Disable warnings when not in DEVELOPER Mode
             self.add_command_option('assembler', "--no-warn")
