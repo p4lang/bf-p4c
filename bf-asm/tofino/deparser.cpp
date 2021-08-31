@@ -60,35 +60,39 @@ HER_INTRINSIC(ecos, YES)
 #undef IER_INTRINSIC
 #undef HER_INTRINSIC
 
-#define TOFINO_DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                        \
-    DEPARSER_DIGEST(Tofino, GRESS, NAME, CNT, IFSHIFT(can_shift = true;)) {             \
-        CFG.phv = data.select->reg.deparser_id();                                       \
-        IFSHIFT(CFG.shft = data.shift + data.select->lo;)                               \
-        CFG.valid = 1;                                                                  \
-        if (data.select.pov)                                                            \
-            error(data.select.pov.lineno, "No POV bit support in tofino %s digest",     \
-                  #NAME);                                                               \
-        for (auto &set : data.layout) {                                                 \
-            int id = set.first >> data.shift;                                           \
-            unsigned idx = 0;                                                           \
-            bool first = true, ok = true;                                               \
-            int last = -1;                                                              \
-            int maxidx = TBL[id].phvs.size() - 1;                                       \
-            for (auto &reg : set.second) {                                              \
-                if (first) {                                                            \
-                    first = false;                                                      \
-                    IFID(TBL[id].id_phv = reg->reg.deparser_id(); continue;) }          \
-                if (last == reg->reg.deparser_id()) continue;                           \
-                for (int i = reg->reg.size/8; i > 0; i--) {                             \
-                    if (idx > maxidx) {                                                 \
-                        error(data.lineno, "%s digest limited to %d bytes",             \
-                              #NAME, maxidx + 1);                                       \
-                        ok = false;                                                     \
-                        break; }                                                        \
-                    TBL[id].phvs[idx++] = reg->reg.deparser_id(); }                     \
-                last = reg->reg.deparser_id();                                          \
-                if (!ok) break; }                                                       \
-            TBL[id].valid = 1;                                                          \
+#define TOFINO_DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                              \
+    DEPARSER_DIGEST(Tofino, GRESS, NAME, CNT, IFSHIFT(can_shift = true;)) {                   \
+        CFG.phv = data.select->reg.deparser_id();                                             \
+        IFSHIFT(CFG.shft = data.shift + data.select->lo;)                                     \
+        CFG.valid = 1;                                                                        \
+        if (data.select.pov)                                                                  \
+            error(data.select.pov.lineno, "No POV bit support in tofino %s digest",           \
+                  #NAME);                                                                     \
+        for (auto &set : data.layout) {                                                       \
+            int id = set.first >> data.shift;                                                 \
+            unsigned idx = 0;                                                                 \
+            bool first = true, ok = true;                                                     \
+            int last = -1;                                                                    \
+            int maxidx = TBL[id].phvs.size() - 1;                                             \
+            for (auto &reg : set.second) {                                                    \
+                if (first) {                                                                  \
+                    first = false;                                                            \
+                    IFID(TBL[id].id_phv = reg->reg.deparser_id(); continue;) }                \
+                /* The same 16b/32b container cannot appear consecutively, but 8b can. */     \
+                if (last == reg->reg.deparser_id() && reg->reg.size != 8) {                   \
+                    error(data.lineno, "%s: %db container %s seen in consecutive locations",  \
+                            #NAME, reg->reg.size, reg->reg.name);                             \
+                    continue; }                                                               \
+                for (int i = reg->reg.size/8; i > 0; i--) {                                   \
+                    if (idx > maxidx) {                                                       \
+                        error(data.lineno, "%s digest limited to %d bytes",                   \
+                              #NAME, maxidx + 1);                                             \
+                        ok = false;                                                           \
+                        break; }                                                              \
+                    TBL[id].phvs[idx++] = reg->reg.deparser_id(); }                           \
+                last = reg->reg.deparser_id();                                                \
+                if (!ok) break; }                                                             \
+            TBL[id].valid = 1;                                                                \
             TBL[id].len = idx; } }
 
 TOFINO_DIGEST(INGRESS, learning, regs.input.iir.ingr.learn_cfg,

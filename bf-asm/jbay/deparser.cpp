@@ -112,7 +112,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
  * ARRAY: Header+Ouput slice array (ho_i or ho_e, matching ingress or egress)
  * TBL: config register containing the table config
  * SEL: config register with the selection config
- * IFID: YES or NO -- if this config needs to pregram id_phv
+ * IFID: YES or NO -- if this config needs to program id_phv
  * CNT: how many patterns can be specified in the array
  * REVERSE: YES or NO -- if the entries in the table are reverse (0 is last byte of header)
  * IFIDX: YES or NO -- if CNT > 1 (if we index by id)
@@ -144,7 +144,11 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
                 if (first) {                                                                    \
                     first = false;                                                              \
                     IFID(REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue;) }          \
-                if (last == reg->reg.deparser_id()) continue;                                   \
+                /* The same 16b/32b container cannot appear consecutively, but 8b can. */       \
+                if (last == reg->reg.deparser_id() && reg->reg.size != 8) {                     \
+                    error(data.lineno, "%s: %db container %s seen in consecutive locations",    \
+                            #NAME, reg->reg.size, reg->reg.name);                               \
+                    continue; }                                                                 \
                 for (int i = reg->reg.size/8; i > 0; i--) {                                     \
                     if (idx > maxidx) {                                                         \
                         error(data.lineno, "%s digest limited to %d bytes",                     \
@@ -152,7 +156,7 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
                         break; }                                                                \
                     REG IFIDX([id]).phvs[REVERSE(maxidx -) idx++] = reg->reg.deparser_id(); }   \
                 last = reg->reg.deparser_id(); }                                                \
-            IFVALID(REG IFIDX([id]).valid = 1;)                                               \
+            IFVALID(REG IFIDX([id]).valid = 1;)                                                 \
             REG IFIDX([id]).len = idx; }
 
 JBAY_SIMPLE_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
