@@ -1245,6 +1245,10 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
         int pass_16b_nodes = ceil_and_wrap_to_fifo_size(extracts_16b, 2);
         int pass_8b_nodes = ceil_and_wrap_to_fifo_size(extracts_8b, 4);
 
+        // Temporary fix to let driver team continue: pad all states after the n2w extract
+        pass_8b_nodes = 255;
+        pass_16b_nodes = 255;
+
         pad_nodes_16b_extracts(parser, regs, pass_16b_nodes, m, visited_states, pstate);
         pad_nodes_8b_extracts(parser, regs, pass_8b_nodes, m, visited_states, pstate);
     }
