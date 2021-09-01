@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.6.0 (SHA: f6d0a70)
+// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -103,6 +103,7 @@
 @pa_alias("egress" , "Lookeba.Masontown.Cisco" , "Alstown.Barnhill.Allison")
 @pa_alias("egress" , "Lookeba.Masontown.Connell" , "Alstown.Barnhill.Kenney")
 @pa_alias("egress" , "Lookeba.Masontown.Hoagland" , "Alstown.Barnhill.Helton")
+@pa_alias("egress" , "Lookeba.Bergoo.$valid" , "Alstown.Wildorado.Basalt")
 @pa_alias("egress" , "Alstown.Goodwin.Whitefish" , "Alstown.Goodwin.Pachuta") header Sudbury {
     bit<8> Allgood;
 }
@@ -292,6 +293,9 @@ header Adona {
     bit<1>  Verdigris;
     @flexible 
     bit<6>  Hoagland;
+}
+
+header Nathalie {
 }
 
 header Ocoee {
@@ -568,6 +572,9 @@ typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
 typedef bit<16> NextHop_t;
+header Shongaloo {
+}
+
 struct Knierim {
     bit<16> Montross;
     bit<8>  Glenmora;
@@ -634,6 +641,7 @@ struct Caroleen {
     bit<1>  Elmsford;
     bit<1>  Baidland;
     bit<1>  LoneJack;
+    bit<1>  Bronaugh;
     bit<12> LaMonte;
     bit<12> Roxobel;
     bit<16> Ardara;
@@ -852,25 +860,26 @@ struct Monahans {
 }
 
 struct Corydon {
-    bit<2>  Loring;
-    bit<6>  Heuvelton;
-    bit<3>  Chavies;
-    bit<1>  Miranda;
-    bit<1>  Peebles;
-    bit<1>  Wellton;
-    bit<3>  Kenney;
-    bit<1>  Allison;
-    bit<6>  Helton;
-    bit<6>  Crestone;
-    bit<5>  Buncombe;
-    bit<1>  Pettry;
-    bit<1>  Montague;
-    bit<1>  Rocklake;
-    bit<1>  Fredonia;
-    bit<2>  Grannis;
-    bit<12> Stilwell;
-    bit<1>  LaUnion;
-    bit<8>  Cuprum;
+    bit<2>       Loring;
+    bit<6>       Heuvelton;
+    bit<3>       Chavies;
+    bit<1>       Miranda;
+    bit<1>       Peebles;
+    bit<1>       Wellton;
+    bit<3>       Kenney;
+    bit<1>       Allison;
+    bit<6>       Helton;
+    bit<6>       Crestone;
+    bit<5>       Buncombe;
+    bit<1>       Pettry;
+    MeterColor_t Moreland;
+    bit<1>       Montague;
+    bit<1>       Rocklake;
+    bit<1>       Fredonia;
+    bit<2>       Grannis;
+    bit<12>      Stilwell;
+    bit<1>       LaUnion;
+    bit<8>       Cuprum;
 }
 
 struct Belview {
@@ -1547,6 +1556,8 @@ struct ElkNeck {
     Madawaska  WebbCity;
     Mackville  Covert;
     Ewing      Verdigris;
+    Shongaloo  Bergoo;
+    Shongaloo  Dubach;
 }
 
 struct Ekwok {
@@ -4060,7 +4071,7 @@ control Owentown(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
     @name(".Woolwine") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Woolwine;
     @name(".Agawam.Mankato") Hash<bit<51>>(HashAlgorithm_t.CRC16, Woolwine) Agawam;
     @name(".Berlin") ActionSelector(32w1024, Agawam, SelectorMode_t.RESILIENT) Berlin;
-    @ternary(1) @disable_atomic_modify(1) @name(".Ardsley") table Ardsley {
+    @disable_atomic_modify(1) @name(".Ardsley") table Ardsley {
         actions = {
             Basye();
             @defaultonly NoAction();
@@ -4439,14 +4450,6 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
         Lookeba.Wesson.Calcasieu = Trion;
         Lookeba.Wesson.Levittown = Baldridge;
     }
-    @name(".Talbert") action Talbert() {
-        Lookeba.Daisytown.push_front(1);
-        Lookeba.Daisytown[0].setValid();
-        Lookeba.Daisytown[0].Spearman = Alstown.Elkville.Spearman;
-        Lookeba.Daisytown[0].Lathrop = (bit<16>)16w0x8100;
-        Lookeba.Daisytown[0].Topanga = Alstown.Barnhill.Kenney;
-        Lookeba.Daisytown[0].Allison = Alstown.Barnhill.Allison;
-    }
     @name(".Carlson") action Carlson(bit<24> Ivanpah, bit<24> Kevil) {
         Lookeba.Millhaven.Horton = Alstown.Elkville.Horton;
         Lookeba.Millhaven.Lacona = Alstown.Elkville.Lacona;
@@ -4473,9 +4476,6 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
     }
     @name(".Geeville") action Geeville() {
         Carlson(Lookeba.Empire.Grabill, Lookeba.Empire.Moorcroft);
-    }
-    @name(".Dunkerton") action Dunkerton() {
-        Talbert();
     }
     @name(".Gunder") action Gunder(bit<8> Bushland) {
         Lookeba.Wesson.Dugger = Alstown.Elkville.Dugger;
@@ -4555,7 +4555,6 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
             Waumandee();
             Nowlin();
             Geeville();
-            Dunkerton();
             Maury();
             Ashburn();
             Estrella();
@@ -6400,7 +6399,7 @@ control Sheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
                 }
                 Perkasie.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Belcher.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
-                Netarts.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
+                McDaniels.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Glenpool.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Gonzalez.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Kirkwood.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
@@ -6419,7 +6418,7 @@ control Sheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
                 if (Alstown.Elkville.Madera != 3w2 && Alstown.Elkville.Randall == 1w0) {
                     Alvwood.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 }
-                McDaniels.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
+                Netarts.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Wildell.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Roseville.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
                 Colburn.apply(Lookeba, Alstown, Gastonia, Tullytown, Heaton, Somis);
@@ -6447,7 +6446,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
     state Denning {
         Basco.extract<Otsego>(Lookeba.Empire);
         Basco.extract<Albemarle>(Lookeba.Balmorhea);
-        Alstown.Elkville.Iraan = (bit<1>)1w1;
+        Lookeba.Dubach.setValid();
         transition accept;
     }
     state Cross {
@@ -6522,7 +6521,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
         transition accept;
     }
     state Hookdale {
-        Alstown.Wildorado.Basalt = (bit<1>)1w1;
+        Lookeba.Bergoo.setValid();
         transition accept;
     }
     state Halltown {

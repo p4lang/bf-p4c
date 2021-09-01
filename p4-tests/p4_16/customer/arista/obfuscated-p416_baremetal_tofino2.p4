@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_baremetal_tofino2 --bf-rt-schema bf_arista_switch_baremetal_tofino2/context/bf-rt.json
-// p4c 9.6.0 (SHA: f6d0a70)
+// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
 
 #include <core.p4>
 #include <tofino2.p4>
@@ -128,6 +128,7 @@
 @pa_alias("egress" , "Baker.Biggers.Allison" , "Glenoma.Talco.Newfane")
 @pa_alias("egress" , "Baker.Pineville.Weinert" , "Glenoma.Crannell.LaLuz")
 @pa_alias("egress" , "Baker.Pineville.Garibaldi" , "Glenoma.Crannell.Garibaldi")
+@pa_alias("egress" , "Baker.Quamba.$valid" , "Glenoma.HighRock.Mickleton")
 @pa_alias("egress" , "Glenoma.Circle.LaUnion" , "Glenoma.Circle.Stilwell") header Bayshore {
     bit<8> Florien;
 }
@@ -316,6 +317,9 @@ header Hackett {
     bit<1>  Topanga;
     @flexible 
     bit<6>  Allison;
+}
+
+header Noonan {
 }
 
 header Spearman {
@@ -547,6 +551,9 @@ typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
 typedef bit<16> NextHop_t;
+header Tanner {
+}
+
 struct Guadalupe {
     bit<16> Buckfield;
     bit<8>  Moquah;
@@ -594,6 +601,7 @@ struct Lakehills {
     bit<1>  Jenners;
     bit<1>  RockPort;
     bit<1>  Piqua;
+    bit<1>  Spindale;
     bit<1>  Stratford;
     bit<1>  RioPecos;
     bit<1>  Weatherby;
@@ -614,6 +622,7 @@ struct Lakehills {
     bit<1>  Tilton;
     bit<1>  Wetonka;
     bit<1>  Lecompte;
+    bit<1>  Valier;
     bit<12> Lenexa;
     bit<12> Rudolph;
     bit<16> Bufalo;
@@ -822,25 +831,26 @@ struct Wondervu {
 }
 
 struct Broadwell {
-    bit<2>  Helton;
-    bit<6>  Grays;
-    bit<3>  Gotham;
-    bit<1>  Osyka;
-    bit<1>  Brookneal;
-    bit<1>  Hoven;
-    bit<3>  Shirley;
-    bit<1>  Riner;
-    bit<6>  Newfane;
-    bit<6>  Ramos;
-    bit<5>  Provencal;
-    bit<1>  Bergton;
-    bit<1>  Cassa;
-    bit<1>  Pawtucket;
-    bit<1>  Buckhorn;
-    bit<2>  Norcatur;
-    bit<12> Rainelle;
-    bit<1>  Paulding;
-    bit<8>  Millston;
+    bit<2>       Helton;
+    bit<6>       Grays;
+    bit<3>       Gotham;
+    bit<1>       Osyka;
+    bit<1>       Brookneal;
+    bit<1>       Hoven;
+    bit<3>       Shirley;
+    bit<1>       Riner;
+    bit<6>       Newfane;
+    bit<6>       Ramos;
+    bit<5>       Provencal;
+    bit<1>       Bergton;
+    MeterColor_t Waimalu;
+    bit<1>       Cassa;
+    bit<1>       Pawtucket;
+    bit<1>       Buckhorn;
+    bit<2>       Norcatur;
+    bit<12>      Rainelle;
+    bit<1>       Paulding;
+    bit<8>       Millston;
 }
 
 struct HillTop {
@@ -1999,6 +2009,8 @@ struct Empire {
     Solomon   Arapahoe;
     Naruna    Parkway;
     Chugwater Palouse;
+    Tanner    Quamba;
+    Tanner    Pettigrew;
 }
 
 struct Sespe {
@@ -2009,6 +2021,11 @@ struct Sespe {
 struct Monrovia {
     bit<32> Rienzi;
     bit<32> Ambler;
+}
+
+control Hartford(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_metadata_t Humeston, in ingress_intrinsic_metadata_from_parser_t Thurmond, inout ingress_intrinsic_metadata_for_deparser_t Lauada, inout ingress_intrinsic_metadata_for_tm_t Armagh) {
+    apply {
+    }
 }
 
 control Olmitz(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_metadata_t Humeston, in ingress_intrinsic_metadata_from_parser_t Thurmond, inout ingress_intrinsic_metadata_for_deparser_t Lauada, inout ingress_intrinsic_metadata_for_tm_t Armagh) {
@@ -2421,6 +2438,7 @@ control Mattapex(packet_out Tofte, inout Dacono Baker, in Empire Glenoma, in ing
             if (Lauada.mirror_type == 4w1) {
                 Freeburg Potosi;
                 Potosi.Matheson = Glenoma.Alstown.Matheson;
+                Potosi.Uintah = Glenoma.Alstown.Matheson;
                 Potosi.Blitchton = Glenoma.Humeston.Moorcroft;
                 Kapowsin.emit<Freeburg>((MirrorId_t)Glenoma.Picabo.Stilwell, Potosi);
             }
@@ -2550,6 +2568,7 @@ control Mulvane(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_m
             Glenoma.Balmorhea.Sledge : exact @name("Balmorhea.Sledge") ;
             Glenoma.Balmorhea.Quogue : exact @name("Balmorhea.Quogue") ;
             Glenoma.Balmorhea.Findlay: exact @name("Balmorhea.Findlay") ;
+            Baker.Frederika.isValid(): exact @name("Frederika") ;
         }
         size = 2048;
         const default_action = NoAction();
@@ -3500,10 +3519,11 @@ control Redvale(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_m
         Glenoma.HighRock.Suttle = Glenoma.Balmorhea.Suttle;
         Glenoma.HighRock.Mickleton[0:0] = Glenoma.Daisytown.Sheldahl[0:0];
     }
-    @name(".Willette") action Willette() {
+    @name(".Willette") action Willette(bit<3> Halstead, bit<1> Spindale) {
         Bains();
         Glenoma.Lindsborg.RossFork = (bit<1>)1w1;
         Glenoma.Crannell.Pajaros = (bit<3>)3w1;
+        Glenoma.Balmorhea.Spindale = Spindale;
         Franktown();
         Macon();
     }
@@ -4158,9 +4178,10 @@ control Gardena(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_m
             Luning();
         }
         key = {
-            Baker.Mayflower.Quogue : ternary @name("Mayflower.Quogue") ;
-            Baker.Mayflower.Findlay: ternary @name("Mayflower.Findlay") ;
-            Baker.Flaherty.Kendrick: exact @name("Flaherty.Kendrick") ;
+            Baker.Mayflower.Quogue    : ternary @name("Mayflower.Quogue") ;
+            Baker.Mayflower.Findlay   : ternary @name("Mayflower.Findlay") ;
+            Baker.Flaherty.isValid()  : exact @name("Flaherty") ;
+            Glenoma.Balmorhea.Spindale: exact @name("Balmorhea.Spindale") ;
         }
         const default_action = Verdery();
         size = 512;
@@ -4727,7 +4748,7 @@ control Cornish(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_me
     @name(".Dougherty") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Dougherty;
     @name(".Pelican.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Dougherty) Pelican;
     @name(".Unionvale") ActionSelector(32w1024, Pelican, SelectorMode_t.RESILIENT) Unionvale;
-    @ternary(1) @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
+    @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
         actions = {
             Hatchel();
             @defaultonly NoAction();
@@ -5204,13 +5225,6 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
         Baker.Pineville.Eldred = DeerPark;
         Baker.Pineville.Chloride = Boyes;
     }
-    @name(".Manville") action Manville() {
-        Baker.Wanamassa[0].setValid();
-        Baker.Wanamassa[0].Palmhurst = Glenoma.Crannell.Palmhurst;
-        Baker.Wanamassa[0].Bowden = (bit<16>)16w0x8100;
-        Baker.Wanamassa[0].Turkey = Glenoma.Talco.Shirley;
-        Baker.Wanamassa[0].Riner = Glenoma.Talco.Riner;
-    }
     @name(".Renfroe") action Renfroe(bit<24> McCallum, bit<24> Waucousta) {
         Baker.Nooksack.Quogue = Glenoma.Crannell.Quogue;
         Baker.Nooksack.Findlay = Glenoma.Crannell.Findlay;
@@ -5237,9 +5251,6 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
     }
     @name(".Kinard") action Kinard() {
         Renfroe(Baker.Hillside.Harbor, Baker.Hillside.IttaBena);
-    }
-    @name(".Kahaluu") action Kahaluu() {
-        Manville();
     }
     @name(".Pendleton") action Pendleton(bit<8> Noyes) {
         Baker.Pineville.StarLake = Glenoma.Crannell.StarLake;
@@ -5427,7 +5438,6 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
             Terry();
             Nipton();
             Kinard();
-            Kahaluu();
             Turney();
             Sodaville();
             Fittstown();
@@ -7070,6 +7080,7 @@ control McDaniels(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic
     @name(".Harvey") Chappell() Harvey;
     @name(".LongPine") Tekonsha() LongPine;
     @name(".Masardis") Goldsmith() Masardis;
+    @name(".Draketown") Hartford() Draketown;
     @name(".WolfTrap") Trail() WolfTrap;
     @name(".Isabel") Kevil() Isabel;
     @name(".Padonia") Ackerman() Padonia;
@@ -7148,6 +7159,7 @@ control McDaniels(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic
         {
             Navarro.apply(Baker, Glenoma, Humeston, Thurmond, Lauada, Armagh);
             Husum.apply(Baker, Glenoma, Humeston, Thurmond, Lauada, Armagh);
+            Draketown.apply(Baker, Glenoma, Humeston, Thurmond, Lauada, Armagh);
             Kalvesta.apply(Baker, Glenoma, Humeston, Thurmond, Lauada, Armagh);
             Columbus.apply(Baker, Glenoma, Humeston, Thurmond, Lauada, Armagh);
             Donnelly.apply(Baker, Glenoma, Humeston, Thurmond, Lauada, Armagh);
@@ -7225,7 +7237,7 @@ control Baidland(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
                 }
                 LoneJack.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Murdock.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Roxobel.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+                LaMonte.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Eureka.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Overton.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Tatum.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
@@ -7241,7 +7253,7 @@ control Baidland(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
                 if (Glenoma.Crannell.Pajaros != 3w2 && Glenoma.Crannell.Grassflat == 1w0) {
                     LaPointe.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 }
-                LaMonte.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+                Roxobel.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Newberg.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Coalton.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
                 Minneota.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
@@ -7267,7 +7279,7 @@ parser Shawville(packet_in Tofte, out Dacono Baker, out Empire Glenoma, out egre
     state Petroleum {
         Tofte.extract<Steger>(Baker.Hillside);
         Tofte.extract<Dowell>(Baker.Saugatuck);
-        Glenoma.Crannell.SomesBar = (bit<1>)1w1;
+        Baker.Pettigrew.setValid();
         transition accept;
     }
     state Frederic {
@@ -7358,7 +7370,7 @@ parser Shawville(packet_in Tofte, out Dacono Baker, out Empire Glenoma, out egre
         transition accept;
     }
     state Kempton {
-        Glenoma.HighRock.Mickleton = (bit<1>)1w1;
+        Baker.Quamba.setValid();
         transition accept;
     }
     state Sneads {
@@ -7439,6 +7451,7 @@ control Elsinore(packet_out Tofte, inout Dacono Baker, in Empire Glenoma, in egr
             if (PawCreek.mirror_type == 4w2) {
                 Freeburg Potosi;
                 Potosi.Matheson = Glenoma.Alstown.Matheson;
+                Potosi.Uintah = Glenoma.Alstown.Matheson;
                 Potosi.Blitchton = Glenoma.Basco.Vichy;
                 Kapowsin.emit<Freeburg>((MirrorId_t)Glenoma.Circle.Stilwell, Potosi);
             }

@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.6.0 (SHA: f6d0a70)
+// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -295,6 +295,9 @@ header Adona {
     bit<6>  Ocoee;
 }
 
+header Senatobia {
+}
+
 header Hackett {
     bit<6>  Kaluaaha;
     bit<10> Calcasieu;
@@ -524,6 +527,9 @@ typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
 typedef bit<14> NextHop_t;
+header Danforth {
+}
+
 struct Montross {
     bit<16> Glenmora;
     bit<8>  DonaAna;
@@ -590,6 +596,7 @@ struct Lordstown {
     bit<1>  NewMelle;
     bit<1>  Heppner;
     bit<1>  Wartburg;
+    bit<1>  Opelika;
     bit<12> Lakehills;
     bit<12> Sledge;
     bit<16> Ambrose;
@@ -822,25 +829,26 @@ struct Daleville {
 }
 
 struct Norma {
-    bit<2>  Suwannee;
-    bit<6>  SourLake;
-    bit<3>  Juneau;
-    bit<1>  Sunflower;
-    bit<1>  Aldan;
-    bit<1>  RossFork;
-    bit<3>  Maddock;
-    bit<1>  Spearman;
-    bit<6>  Grannis;
-    bit<6>  Sublett;
-    bit<5>  Wisdom;
-    bit<1>  Cutten;
-    bit<1>  Lewiston;
-    bit<1>  Lamona;
-    bit<1>  Naubinway;
-    bit<2>  StarLake;
-    bit<12> Ovett;
-    bit<1>  Murphy;
-    bit<8>  Edwards;
+    bit<2>       Suwannee;
+    bit<6>       SourLake;
+    bit<3>       Juneau;
+    bit<1>       Sunflower;
+    bit<1>       Aldan;
+    bit<1>       RossFork;
+    bit<3>       Maddock;
+    bit<1>       Spearman;
+    bit<6>       Grannis;
+    bit<6>       Sublett;
+    bit<5>       Wisdom;
+    bit<1>       Cutten;
+    MeterColor_t Yemassee;
+    bit<1>       Lewiston;
+    bit<1>       Lamona;
+    bit<1>       Naubinway;
+    bit<2>       StarLake;
+    bit<12>      Ovett;
+    bit<1>       Murphy;
+    bit<8>       Edwards;
 }
 
 struct Mausdale {
@@ -1277,6 +1285,7 @@ struct Hapeville {
     Littleton  Covert;
     Hampton    Ekwok;
     McBride    Crump;
+    Danforth   Qulin;
 }
 
 struct Wyndmoor {
@@ -2176,6 +2185,29 @@ control Camden(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intri
     }
 }
 
+control Caliente(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrinsic_metadata_t Masontown, in ingress_intrinsic_metadata_from_parser_t Knights, inout ingress_intrinsic_metadata_for_deparser_t Humeston, inout ingress_intrinsic_metadata_for_tm_t Wesson) {
+    @name(".Lauada") action Lauada() {
+        ;
+    }
+    @name(".Padroni") action Padroni() {
+        Yorkshire.NantyGlo.Opelika = (bit<1>)1w1;
+    }
+    @disable_atomic_modify(1) @name(".Opelika") table Opelika {
+        actions = {
+            Padroni();
+            Lauada();
+        }
+        key = {
+            Longwood.Boonsboro.Beasley & 8w0x17: exact @name("Boonsboro.Beasley") ;
+        }
+        size = 6;
+        const default_action = Lauada();
+    }
+    apply {
+        Opelika.apply();
+    }
+}
+
 control Castle(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrinsic_metadata_t Masontown, in ingress_intrinsic_metadata_from_parser_t Knights, inout ingress_intrinsic_metadata_for_deparser_t Humeston, inout ingress_intrinsic_metadata_for_tm_t Wesson) {
     @name(".Lauada") action Lauada() {
         ;
@@ -2373,7 +2405,7 @@ control Castle(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intri
                                 }
 
                             } else {
-                                if (Yorkshire.Livonia.Pettry == 1w0 && Yorkshire.Livonia.Montague == 1w0 && Longwood.Boonsboro.isValid() == true && Longwood.Boonsboro.Beasley & 8w7 != 8w0) {
+                                if (Yorkshire.Livonia.Pettry == 1w0 && Yorkshire.Livonia.Montague == 1w0 && Longwood.Boonsboro.isValid() == true && Yorkshire.NantyGlo.Opelika == 1w1) {
                                     switch (Tillson.apply().action_run) {
                                         Lauada: {
                                             Micro.apply();
@@ -4284,7 +4316,7 @@ control Estero(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
     @name(".Inkom") action Inkom(bit<6> Grannis) {
         Yorkshire.Bernice.Sublett = Grannis;
     }
-    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".BurrOak") table BurrOak {
+    @ternary(1) @disable_atomic_modify(1) @name(".BurrOak") table BurrOak {
         actions = {
             Inkom();
             @defaultonly NoAction();
@@ -4685,7 +4717,7 @@ control Nowlin(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
     @name(".Ragley") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Ragley;
     @name(".Dunkerton.Mankato") Hash<bit<51>>(HashAlgorithm_t.CRC16, Ragley) Dunkerton;
     @name(".Gunder") ActionSelector(32w1024, Dunkerton, SelectorMode_t.RESILIENT) Gunder;
-    @ternary(1) @disable_atomic_modify(1) @name(".Maury") table Maury {
+    @disable_atomic_modify(1) @name(".Maury") table Maury {
         actions = {
             Sully();
             @defaultonly NoAction();
@@ -5063,13 +5095,6 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
         Longwood.Sequim.Levittown = Konnarock;
         Longwood.Sequim.Maryhill = Tillicum;
     }
-    @name(".Devola") action Devola() {
-        Longwood.Udall[0].setValid();
-        Longwood.Udall[0].Chevak = Yorkshire.Ocracoke.Chevak;
-        Longwood.Udall[0].Lathrop = (bit<16>)16w0x8100;
-        Longwood.Udall[0].Allison = Yorkshire.Bernice.Maddock;
-        Longwood.Udall[0].Spearman = Yorkshire.Bernice.Spearman;
-    }
     @name(".Trail") action Trail(bit<24> Magazine, bit<24> McDougal) {
         Longwood.Hallwood.Lacona = Yorkshire.Ocracoke.Lacona;
         Longwood.Hallwood.Albemarle = Yorkshire.Ocracoke.Albemarle;
@@ -5096,9 +5121,6 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
     }
     @name(".Medulla") action Medulla() {
         Trail(Longwood.Earling.Grabill, Longwood.Earling.Moorcroft);
-    }
-    @name(".Oakley") action Oakley() {
-        Devola();
     }
     @name(".Ontonagon") action Ontonagon(bit<8> Loring) {
         Longwood.Sequim.Laurelton = Yorkshire.Ocracoke.Laurelton;
@@ -5178,7 +5200,6 @@ control Eudora(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
             Dundee();
             RedBay();
             Medulla();
-            Oakley();
             Ickesburg();
             Tulalip();
             Olivet();
@@ -6632,7 +6653,7 @@ control Elliston(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         const default_action = Sharon();
         size = 1024;
     }
-    @disable_atomic_modify(1) @stage(3) @name(".Quamba") table Quamba {
+    @disable_atomic_modify(1) @name(".Quamba") table Quamba {
         actions = {
             Spindale();
             Lauada();
@@ -6799,6 +6820,7 @@ control Elliston(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     @name(".Sturgeon") Brownson() Sturgeon;
     @name(".Putnam") Scotland() Putnam;
     @name(".Hartville") Lattimore() Hartville;
+    @name(".Ashley") Caliente() Ashley;
     @name(".Gurdon") Bluff() Gurdon;
     @name(".Poteet") Waseca() Poteet;
     @name(".Blakeslee") Varna() Blakeslee;
@@ -6878,6 +6900,7 @@ control Elliston(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
             }
             Blackwood.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Hartville.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
+            Ashley.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Oakford.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Anniston.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
             Hawthorne.apply(Longwood, Yorkshire, Masontown, Knights, Humeston, Wesson);
@@ -6967,7 +6990,7 @@ control Netarts(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
                 }
                 Hartford.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Snowflake.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
-                Cataract.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
+                Crossnore.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Conda.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Roseville.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Cowan.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
@@ -6992,7 +7015,7 @@ control Netarts(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
                 if (Yorkshire.Ocracoke.Blairsden != 3w2 && Yorkshire.Ocracoke.Gasport == 1w0) {
                     Wildell.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 }
-                Crossnore.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
+                Cataract.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Kirkwood.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Belcher.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
                 Vincent.apply(Longwood, Yorkshire, Yerington, Flynn, Algonquin, Beatrice);
@@ -7023,7 +7046,7 @@ parser Beaman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, out
     state Seaford {
         Orting.extract<Trammel>(Longwood.Earling);
         Orting.extract<Algodones>(Longwood.Crannell);
-        Yorkshire.Ocracoke.Dovray = (bit<1>)1w1;
+        Longwood.Qulin.setValid();
         transition accept;
     }
     state Craigtown {

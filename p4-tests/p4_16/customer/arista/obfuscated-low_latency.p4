@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.6.0 (SHA: f6d0a70)
+// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -173,6 +173,9 @@ header Dugger {
     bit<1>  Cecilton;
     @flexible 
     bit<12> Horton;
+}
+
+header RedLake {
 }
 
 header Lacona {
@@ -404,6 +407,9 @@ typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
 typedef bit<1> NextHop_t;
+header Ruston {
+}
+
 struct Ravena {
     bit<16> Redden;
     bit<8>  Yaurel;
@@ -656,25 +662,26 @@ struct Darien {
 }
 
 struct Juneau {
-    bit<2>  Eldred;
-    bit<6>  Sunflower;
-    bit<3>  Aldan;
-    bit<1>  RossFork;
-    bit<1>  Maddock;
-    bit<1>  Sublett;
-    bit<3>  Wisdom;
-    bit<1>  Quogue;
-    bit<6>  Kalida;
-    bit<6>  Cutten;
-    bit<5>  Lewiston;
-    bit<1>  Lamona;
-    bit<1>  Naubinway;
-    bit<1>  Ovett;
-    bit<1>  Murphy;
-    bit<2>  Wallula;
-    bit<12> Edwards;
-    bit<1>  Mausdale;
-    bit<8>  Bessie;
+    bit<2>       Eldred;
+    bit<6>       Sunflower;
+    bit<3>       Aldan;
+    bit<1>       RossFork;
+    bit<1>       Maddock;
+    bit<1>       Sublett;
+    bit<3>       Wisdom;
+    bit<1>       Quogue;
+    bit<6>       Kalida;
+    bit<6>       Cutten;
+    bit<5>       Lewiston;
+    bit<1>       Lamona;
+    MeterColor_t LaPlant;
+    bit<1>       Naubinway;
+    bit<1>       Ovett;
+    bit<1>       Murphy;
+    bit<2>       Wallula;
+    bit<12>      Edwards;
+    bit<1>       Mausdale;
+    bit<8>       Bessie;
 }
 
 struct Savery {

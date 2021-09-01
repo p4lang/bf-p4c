@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.6.0 (SHA: f6d0a70)
+// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -112,6 +112,7 @@
 @pa_alias("egress" , "Crannell.Goodwin.Connell" , "Aniak.Sopris.Kenney")
 @pa_alias("egress" , "Crannell.Goodwin.Hoagland" , "Aniak.Sopris.Helton")
 @pa_alias("egress" , "Crannell.Goodwin.Stratton" , "Aniak.Sopris.Grannis")
+@pa_alias("egress" , "Crannell.Paicines.$valid" , "Aniak.Lawai.Basalt")
 @pa_alias("egress" , "Aniak.Mentone.Whitefish" , "Aniak.Mentone.Pachuta") header Sudbury {
     bit<8> Allgood;
 }
@@ -384,6 +385,9 @@ header Adona {
     bit<6>  Hoagland;
 }
 
+header Timken {
+}
+
 header Ocoee {
     bit<6>  Hackett;
     bit<10> Kaluaaha;
@@ -643,6 +647,9 @@ typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
 typedef bit<16> NextHop_t;
+header Lamboglia {
+}
+
 struct Knierim {
     bit<16> Montross;
     bit<8>  Glenmora;
@@ -689,6 +696,7 @@ struct Caroleen {
     bit<1>  Bucktown;
     bit<1>  Hulbert;
     bit<1>  Philbrook;
+    bit<1>  CatCreek;
     bit<1>  Skyway;
     bit<1>  Rocklin;
     bit<1>  Wakita;
@@ -927,25 +935,26 @@ struct Monahans {
 }
 
 struct Corydon {
-    bit<2>  Loring;
-    bit<6>  Heuvelton;
-    bit<3>  Chavies;
-    bit<1>  Miranda;
-    bit<1>  Peebles;
-    bit<1>  Wellton;
-    bit<3>  Kenney;
-    bit<1>  Allison;
-    bit<6>  Helton;
-    bit<6>  Crestone;
-    bit<5>  Buncombe;
-    bit<1>  Pettry;
-    bit<1>  Montague;
-    bit<1>  Rocklake;
-    bit<1>  Fredonia;
-    bit<2>  Grannis;
-    bit<12> Stilwell;
-    bit<1>  LaUnion;
-    bit<8>  Cuprum;
+    bit<2>       Loring;
+    bit<6>       Heuvelton;
+    bit<3>       Chavies;
+    bit<1>       Miranda;
+    bit<1>       Peebles;
+    bit<1>       Wellton;
+    bit<3>       Kenney;
+    bit<1>       Allison;
+    bit<6>       Helton;
+    bit<6>       Crestone;
+    bit<5>       Buncombe;
+    bit<1>       Pettry;
+    MeterColor_t Aguilar;
+    bit<1>       Montague;
+    bit<1>       Rocklake;
+    bit<1>       Fredonia;
+    bit<2>       Grannis;
+    bit<12>      Stilwell;
+    bit<1>       LaUnion;
+    bit<8>       Cuprum;
 }
 
 struct Belview {
@@ -1635,6 +1644,8 @@ struct Provencal {
     Madawaska  Ekron;
     Mackville  Swisshome;
     Sahuarita  Dovray;
+    Lamboglia  Paicines;
+    Lamboglia  Krupp;
 }
 
 struct Sequim {
@@ -2771,10 +2782,11 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Aniak.Lawai.Hampton = Aniak.Cassa.Hampton;
         Aniak.Lawai.Basalt[0:0] = Aniak.Bergton.Hickox[0:0];
     }
-    @name(".Nixon") action Nixon() {
+    @name(".Nixon") action Nixon(bit<3> Baltic, bit<1> CatCreek) {
         Castle();
         Aniak.HillTop.Staunton = (bit<1>)1w1;
         Aniak.Rainelle.Madera = (bit<3>)3w1;
+        Aniak.Cassa.CatCreek = CatCreek;
         Aniak.Cassa.Grabill = Crannell.Newhalem.Grabill;
         Aniak.Cassa.Moorcroft = Crannell.Newhalem.Moorcroft;
         Aguila();
@@ -3387,9 +3399,10 @@ control Timnath(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
             Almota();
         }
         key = {
-            Crannell.Newhalem.Horton: ternary @name("Newhalem.Horton") ;
-            Crannell.Newhalem.Lacona: ternary @name("Newhalem.Lacona") ;
-            Crannell.Makawao.Dowell : exact @name("Makawao.Dowell") ;
+            Crannell.Newhalem.Horton  : ternary @name("Newhalem.Horton") ;
+            Crannell.Newhalem.Lacona  : ternary @name("Newhalem.Lacona") ;
+            Crannell.Makawao.isValid(): exact @name("Makawao") ;
+            Aniak.Cassa.CatCreek      : exact @name("Cassa.CatCreek") ;
         }
         const default_action = Woodsboro();
         size = 512;
@@ -3995,7 +4008,7 @@ control Mondovi(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
     @name(".OldTown") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) OldTown;
     @name(".Govan.Mankato") Hash<bit<51>>(HashAlgorithm_t.CRC16, OldTown) Govan;
     @name(".Gladys") ActionSelector(32w1024, Govan, SelectorMode_t.RESILIENT) Gladys;
-    @ternary(1) @disable_atomic_modify(1) @name(".Rumson") table Rumson {
+    @disable_atomic_modify(1) @name(".Rumson") table Rumson {
         actions = {
             Lynne();
             @defaultonly NoAction();
@@ -4443,14 +4456,6 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Livonia.Calcasieu = Natalbany;
         Crannell.Livonia.Levittown = Lignite;
     }
-    @name(".Waseca") action Waseca() {
-        Crannell.Hillsview.push_front(1);
-        Crannell.Hillsview[0].setValid();
-        Crannell.Hillsview[0].Spearman = Aniak.Rainelle.Spearman;
-        Crannell.Hillsview[0].Lathrop = (bit<16>)16w0x8100;
-        Crannell.Hillsview[0].Topanga = Aniak.Sopris.Kenney;
-        Crannell.Hillsview[0].Allison = Aniak.Sopris.Allison;
-    }
     @name(".Clarkdale") action Clarkdale(bit<24> Talbert, bit<24> Brunson) {
         Crannell.Readsboro.Horton = Aniak.Rainelle.Horton;
         Crannell.Readsboro.Lacona = Aniak.Rainelle.Lacona;
@@ -4477,9 +4482,6 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
     }
     @name(".Dilia") action Dilia() {
         Clarkdale(Crannell.Gastonia.Grabill, Crannell.Gastonia.Moorcroft);
-    }
-    @name(".Lowemont") action Lowemont() {
-        Waseca();
     }
     @name(".Wauregan") action Wauregan(bit<8> Bushland) {
         Crannell.Livonia.Dugger = Aniak.Rainelle.Dugger;
@@ -4632,7 +4634,6 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
             Antoine();
             Romeo();
             Dilia();
-            Lowemont();
             CassCity();
             Sanborn();
             Kerby();
@@ -6622,7 +6623,7 @@ control WestLine(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
                 }
                 Jigger.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Kenyon.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
-                Conklin.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
+                Anniston.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Freetown.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Rardin.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Switzer.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
@@ -6641,7 +6642,7 @@ control WestLine(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
                 if (Aniak.Rainelle.Madera != 3w2 && Aniak.Rainelle.Randall == 1w0) {
                     Skokomish.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 }
-                Anniston.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
+                Conklin.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Easley.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Horsehead.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Tolley.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
@@ -6666,7 +6667,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
     state Putnam {
         Talco.extract<Dalton>(Crannell.Gastonia);
         Talco.extract<Albemarle>(Crannell.Westbury);
-        Aniak.Rainelle.Dubuque = (bit<1>)1w1;
+        Crannell.Krupp.setValid();
         transition accept;
     }
     state Hartville {
@@ -6734,7 +6735,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         transition accept;
     }
     state Courtdale {
-        Aniak.Lawai.Basalt = (bit<1>)1w1;
+        Crannell.Paicines.setValid();
         transition accept;
     }
     state Cranbury {

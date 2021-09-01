@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
-// p4c 9.6.0 (SHA: f6d0a70)
+// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -59,6 +59,7 @@
 @pa_alias("egress" , "Sedan.SanRemo.Topanga" , "Almota.Swisshome.Turkey")
 @pa_alias("egress" , "Sedan.SanRemo.Allison" , "Almota.Swisshome.Plains")
 @pa_alias("egress" , "Sedan.SanRemo.Spearman" , "Almota.Swisshome.Norcatur")
+@pa_alias("egress" , "Sedan.Unity.$valid" , "Almota.Hallwood.Bergton")
 @pa_alias("egress" , "Almota.Aniak.Chavies" , "Almota.Aniak.Heuvelton") header Matheson {
     bit<8> Uintah;
 }
@@ -235,6 +236,9 @@ header Kaluaaha {
     bit<1>  Buckeye;
     @flexible 
     bit<6>  Spearman;
+}
+
+header Gerster {
 }
 
 header Chevak {
@@ -471,6 +475,9 @@ typedef bit<16> Ipv4PartIdx_t;
 typedef bit<16> Ipv6PartIdx_t;
 typedef bit<2> NextHopTable_t;
 typedef bit<1> NextHop_t;
+header Rodessa {
+}
+
 struct Buckfield {
     bit<16> Moquah;
     bit<8>  Forkville;
@@ -729,25 +736,26 @@ struct Quinault {
 }
 
 struct Moose {
-    bit<2>  Grannis;
-    bit<6>  Minturn;
-    bit<3>  McCaskill;
-    bit<1>  Stennett;
-    bit<1>  McGonigle;
-    bit<1>  Sherack;
-    bit<3>  Plains;
-    bit<1>  Turkey;
-    bit<6>  Norcatur;
-    bit<6>  Amenia;
-    bit<5>  Tiburon;
-    bit<1>  Freeny;
-    bit<1>  Sonoma;
-    bit<1>  Burwell;
-    bit<1>  Belgrade;
-    bit<2>  Burrel;
-    bit<12> Hayfield;
-    bit<1>  Calabash;
-    bit<8>  Wondervu;
+    bit<2>       Grannis;
+    bit<6>       Minturn;
+    bit<3>       McCaskill;
+    bit<1>       Stennett;
+    bit<1>       McGonigle;
+    bit<1>       Sherack;
+    bit<3>       Plains;
+    bit<1>       Turkey;
+    bit<6>       Norcatur;
+    bit<6>       Amenia;
+    bit<5>       Tiburon;
+    bit<1>       Freeny;
+    MeterColor_t Hookstown;
+    bit<1>       Sonoma;
+    bit<1>       Burwell;
+    bit<1>       Belgrade;
+    bit<2>       Burrel;
+    bit<12>      Hayfield;
+    bit<1>       Calabash;
+    bit<8>       Wondervu;
 }
 
 struct GlenAvon {
@@ -1347,6 +1355,8 @@ struct Martelle {
     Charco       Cotter;
     Palmhurst    Kinde;
     Palmhurst    Hillside;
+    Rodessa      Unity;
+    Rodessa      LaFayette;
 }
 
 struct Wanamassa {
@@ -2866,7 +2876,7 @@ control BigFork(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
     @name(".Rhine") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Rhine;
     @name(".LaJara.Selawik") Hash<bit<51>>(HashAlgorithm_t.CRC16, Rhine) LaJara;
     @name(".Bammel") ActionSelector(32w1024, LaJara, SelectorMode_t.RESILIENT) Bammel;
-    @ternary(1) @disable_atomic_modify(1) @name(".Mendoza") table Mendoza {
+    @disable_atomic_modify(1) @name(".Mendoza") table Mendoza {
         actions = {
             Kenvil();
             @defaultonly NoAction();
@@ -3277,14 +3287,6 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Sedan.Thawville.Chloride = Durant;
         Sedan.Thawville.Garibaldi = Kingsdale;
     }
-    @name(".Berlin") action Berlin() {
-        Sedan.Moultrie.push_front(1);
-        Sedan.Moultrie[0].setValid();
-        Sedan.Moultrie[0].Riner = Almota.Belmore.Riner;
-        Sedan.Moultrie[0].Keyes = (bit<16>)16w0x8100;
-        Sedan.Moultrie[0].Killen = Almota.Swisshome.Plains;
-        Sedan.Moultrie[0].Turkey = Almota.Swisshome.Turkey;
-    }
     @name(".Tekonsha") action Tekonsha(bit<24> Clermont, bit<24> Blanding) {
         Sedan.Harriet.Quogue = Almota.Belmore.Quogue;
         Sedan.Harriet.Findlay = Almota.Belmore.Findlay;
@@ -3311,9 +3313,6 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
     }
     @name(".Slayden") action Slayden() {
         Tekonsha(Sedan.Hearne.Adona, Sedan.Hearne.Connell);
-    }
-    @name(".Snook") action Snook() {
-        Berlin();
     }
     @name(".OjoFeliz") action OjoFeliz(bit<8> Helton) {
         Sedan.Thawville.Rains = Almota.Belmore.Rains;
@@ -3393,7 +3392,6 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
             Shelby();
             Chambers();
             Slayden();
-            Snook();
             Havertown();
             Napanoch();
             Pearcy();
@@ -5086,7 +5084,7 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
     state Millican {
         Recluse.extract<Supai>(Sedan.Hearne);
         Recluse.extract<Dowell>(Sedan.Pinetop);
-        Almota.Belmore.Fairchild = (bit<1>)1w1;
+        Sedan.LaFayette.setValid();
         transition accept;
     }
     state Decorah {
@@ -5154,7 +5152,7 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
         transition accept;
     }
     state Dwight {
-        Almota.Hallwood.Bergton = (bit<1>)1w1;
+        Sedan.Unity.setValid();
         transition accept;
     }
     state Ponder {
