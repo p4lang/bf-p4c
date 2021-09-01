@@ -583,7 +583,8 @@ bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
         return true;
     int st = t->stage();
     self.max_stage = st > self.max_stage ? st : self.max_stage;
-    self.mems[st].update(t->resources->memuse);
+    if (!self.mems[st]) self.mems[st].reset(Memories::create());
+    self.mems[st]->update(t->resources->memuse);
     if (*t->global_id() > static_cast<int>(self.stage_id[st]))
         self.stage_id[st] = *t->global_id();
     if (!findContext<IR::MAU::Table>())
@@ -1003,14 +1004,15 @@ void JbayNextTable::TagReduce::alloc_dt_mems() {
         // Need to store resources until allocation has finished
         std::map<IR::MAU::Table*, TableResourceAlloc*> tras;
         auto& mem = self.mems[stage.first];
+        if (!mem) mem.reset(Memories::create());
         for (auto* t : stage.second) {
             TableResourceAlloc* tra = new TableResourceAlloc;
             tras[t] = tra;
-            mem.add_table(t, nullptr, tra, nullptr, nullptr,
-                          ActionData::FormatType_t::default_for_table(t), 0, 0, {});
+            mem->add_table(t, nullptr, tra, nullptr, nullptr,
+                           ActionData::FormatType_t::default_for_table(t), 0, 0, {});
             self.num_dts++;
         }
-        bool success = mem.allocate_all_dummies();
+        bool success = mem->allocate_all_dummies();
         // Just to check that allocation succeeded. If a logical ID is available (which we check
         // when allocating dummy tables), we should be allocate a dummy table since there are 16 gws
         // NOTE: Chris says that this can actually be done with an always miss logical table. May

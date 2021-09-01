@@ -16,7 +16,7 @@ namespace Tofino {
 // Despite the namespace name, this code is shared for Tofino, JBay and Cloudbreak
 // tofino1/2/3
 
-struct Memories : public ::Memories::Base {
+struct Memories : public ::Memories {
     /* track memory allocations within a single stage */
     // FIXME -- these constants likely all need to change for Flatrock, so they need
     // to become virtual params of some kind.

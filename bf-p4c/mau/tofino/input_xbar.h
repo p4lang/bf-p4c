@@ -18,7 +18,7 @@
 
 namespace Tofino {
 
-struct IXBar : public ::IXBar::Base {
+struct IXBar : public ::IXBar {
     // FIXME -- make these per-device params
     static constexpr int EXACT_GROUPS = 8;
     static constexpr int EXACT_BYTES_PER_GROUP = 16;

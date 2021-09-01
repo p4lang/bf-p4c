@@ -70,8 +70,10 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         mergedGateways[t->name] = t->gateway_name;
         tableNames[t->gateway_name] = t->gateway_name; }
     if (t->resources) {
-        ixbar[t->stage()].update(t);
-        memory[t->stage()].update(t->resources->memuse);
+        if (!ixbar[t->stage()]) ixbar[t->stage()].reset(IXBar::create());
+        ixbar[t->stage()]->update(t);
+        if (!memory[t->stage()]) memory[t->stage()].reset(Memories::create());
+        memory[t->stage()]->update(t->resources->memuse);
         action_data_bus[t->stage()].update(t);
         imems[t->stage()].update(t); }
     auto stage_pragma = t->get_provided_stage();
@@ -275,7 +277,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
 
     if (LOGGING(3)) {
         for (auto &i : ts.ixbar)
-            out << "Stage " << i.first << std::endl << i.second << ts.memory.at(i.first);
+            out << "Stage " << i.first << std::endl << *i.second << *ts.memory.at(i.first);
     }
 
     return out;

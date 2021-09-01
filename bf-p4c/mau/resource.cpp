@@ -83,9 +83,9 @@ int TableResourceAlloc::rng_unit() const {
 std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     // FIXME -- there's a huge amount of data in alloc -- what should we log?
     // this is a prime candidate for structured logging.
-    Memories mem;
+    std::unique_ptr<Memories> mem(Memories::create());
     for (auto &mu : alloc.memuse)
-        mem.update(mu.first.build_name(), mu.second);
-    out << mem;
+        mem->update(mu.first.build_name(), mu.second);
+    out << *mem;
     return out;
 }

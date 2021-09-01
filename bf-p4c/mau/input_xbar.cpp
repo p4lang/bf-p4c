@@ -485,10 +485,10 @@ static int need_align_flags[4][IXBar::REPEATING_CONSTRAINT_SECT] = {
 };
 
 /* Add the pre-allocated bytes to the Use structure */
-void IXBar::Base::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
-                          const PhvInfo &phv, const IR::MAU::Table *ctxt,
-                          boost::optional<cstring> aliasSourceName, const le_bitrange *bits,
-                          int flags, byte_type_t byte_type, unsigned extra_align, int range_index) {
+void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
+                    const PhvInfo &phv, const IR::MAU::Table *ctxt,
+                    boost::optional<cstring> aliasSourceName, const le_bitrange *bits,
+                    int flags, byte_type_t byte_type, unsigned extra_align, int range_index) {
     LOG5("Adding IXBar Use for field - " << field << "on table : " << ctxt->name
             << ", flags : " << flags << ", byte_type: " << byte_type
             << ", extra_align: " << extra_align << ", range_index: " << range_index);
@@ -578,7 +578,7 @@ void IXBar::Base::add_use(ContByteConversion &map_alloc, const PHV::Field *field
  *  just becomes difficult
  *
  */
-void IXBar::Base::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes) {
+void IXBar::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes) {
     for (auto &entry : map_alloc) {
         safe_vector<IXBar::Use::Byte> created_bytes;
 
@@ -623,42 +623,42 @@ void IXBar::Base::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::B
     }
 }
 
-void IXBar::Base::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
+void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
     create_alloc(map_alloc, alloc.use);
 }
 
-/** IXBar::Base::FieldManagement: This is for adding fields to be allocated in the ixbar
+/** IXBar::FieldManagement: This is for adding fields to be allocated in the ixbar
   * allocation scheme.  Used by match tables, selectors, and hash distribution */
-bool IXBar::Base::FieldManagement::preorder(const IR::ListExpression *) {
+bool IXBar::FieldManagement::preorder(const IR::ListExpression *) {
     if (!ki.hash_dist)
         BUG("A field list is somehow contained within the reads in table %s", tbl->name);
     return true;
 }
 
-bool IXBar::Base::FieldManagement::preorder(const IR::Mask *) {
+bool IXBar::FieldManagement::preorder(const IR::Mask *) {
     BUG("Masks should have been converted to Slices before input xbar allocation");
     return true;
 }
 
-bool IXBar::Base::FieldManagement::preorder(const IR::MAU::TableKey *read) {
+bool IXBar::FieldManagement::preorder(const IR::MAU::TableKey *read) {
     if (ki.is_atcam) {
         if (ki.partition != read->partition_index)
             return false; }
     return true;
 }
 
-bool IXBar::Base::FieldManagement::preorder(const IR::Constant *c) {
+bool IXBar::FieldManagement::preorder(const IR::Constant *c) {
     field_list_order.push_back(c);
     return true;
 }
 
-bool IXBar::Base::FieldManagement::preorder(const IR::MAU::ActionArg *aa) {
+bool IXBar::FieldManagement::preorder(const IR::MAU::ActionArg *aa) {
     error(ErrorType::ERR_INVALID, "Can't use action argument %1% in a hash in the same action;"
           " try splitting the action", aa);
     return false;
 }
 
-bool IXBar::Base::FieldManagement::preorder(const IR::Expression *e) {
+bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
     LOG3("IXBar::FieldManagement preorder expression : " << e);
     le_bitrange bits = { };
     auto *finfo = phv.field(e, &bits);
@@ -707,7 +707,7 @@ bool IXBar::Base::FieldManagement::preorder(const IR::Expression *e) {
     return false;
 }
 
-void IXBar::Base::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
+void IXBar::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
     BUG_CHECK(!field_list_order.empty(), "SignExtend on nonexistant field");
     BUG_CHECK(field_list_order.back() == c->expr, "SignExtend mismatch");
     int size = c->expr->type->width_bits();
@@ -723,7 +723,7 @@ void IXBar::Base::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
  * doesn't crash .  When the dynamic hashing is correctly handled in the backend,
  * this can go away.
  */
-void IXBar::Base::FieldManagement::end_apply() {
+void IXBar::FieldManagement::end_apply() {
     if (ki.repeats_allowed)
         return;
     std::map<cstring, bitvec> field_list_check;
@@ -808,7 +808,7 @@ void dump(const IXBar &ixbar) {
     std::cout << ixbar;
 }
 
-void IXBar::Base::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
+void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
     const IR::MAU::Selector *as = nullptr;
     const IR::MAU::Meter *mtr = nullptr;
     const IR::MAU::StatefulAlu *salu = nullptr;
@@ -852,23 +852,16 @@ void IXBar::Base::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rs
     }
 }
 
-void IXBar::Base::update(const IR::MAU::Table *tbl) {
+void IXBar::update(const IR::MAU::Table *tbl) {
     if (tbl->is_placed())
         update(tbl, tbl->resources);
 }
 
-IXBar::IXBar() {
+IXBar *IXBar::create() {
 #if HAVE_FLATROCK
     // FIXME -- add Device::newIXBar() method?
-    if (Device::currentDevice() == Device::FLATROCK) {
-        rep = new Flatrock::IXBar();
-        return; }
+    if (Device::currentDevice() == Device::FLATROCK)
+        return new Flatrock::IXBar();
 #endif
-    rep = new Tofino::IXBar();
+    return new Tofino::IXBar();
 }
-
-IXBar::~IXBar() { delete rep; }
-IXBar::IXBar(IXBar &&a) : rep(a.rep) { a.rep = nullptr; }
-IXBar &IXBar::operator=(IXBar &&a) {
-    std::swap(rep, a.rep);
-    return *this; }

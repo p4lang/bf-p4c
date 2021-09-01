@@ -14,7 +14,7 @@ class IXBarVerify: public MauModifier {
     void postorder(IR::MAU::Table *) override;
     void verify_format(const IXBar::Use &);
     class GetCurrentUse;
-    safe_vector<IXBar>       stage;
+    safe_vector<std::unique_ptr<IXBar>> stage;
 
  public:
     explicit IXBarVerify(const PhvInfo &phv) : phv(phv) {}

@@ -170,7 +170,7 @@ class JbayNextTable : public PassRepeated, public NextTable {
         return use_next_table.count(tbl) > 0; }
 
     /*===================================Data gathered by Prop===================================*/
-    std::map<int, Memories>                         mems;       // Map from stage to tables
+    std::map<int, std::unique_ptr<Memories>>        mems;       // Map from stage to tables
     std::map<int, int>                              stage_id;   // Map from stage to next open LID
     ordered_set<LBUse>                              lbus;       // Long branches that are needed
     ordered_map<UniqueId, ordered_set<UniqueId>>    dest_src;   // Map from dest. to set of srcs

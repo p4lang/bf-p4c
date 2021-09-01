@@ -46,10 +46,4 @@ std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2
     return out;
 }
 
-Memories::Memories() : rep(new Tofino::Memories) {}
-Memories::~Memories() { delete rep; }
-Memories::Memories(Memories &&a) : rep(a.rep) { a.rep = nullptr; }
-Memories &Memories::operator=(Memories &&a) {
-    std::swap(rep, a.rep);
-    return *this;
-}
+Memories *Memories::create() { return new Tofino::Memories; }

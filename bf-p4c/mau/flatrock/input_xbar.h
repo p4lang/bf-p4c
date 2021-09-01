@@ -5,7 +5,7 @@
 
 namespace Flatrock {
 
-class IXBar : public ::IXBar::Base {
+class IXBar : public ::IXBar {
     static constexpr int GATEWAY_BYTES = 6;
     static constexpr int GATEWAY_ROWS = 32;
     static constexpr int EXACT_BYTES = 20;

@@ -147,59 +147,33 @@ struct Memories {
         // depth in memory units + mask to use for memory selection per way
     };
 
-    // abstract base class for per-device Memories implementations
-    struct Base {
-        virtual ~Base() {}
-        virtual bool allocate_all() = 0;
-        virtual bool allocate_all_dummies() = 0;
-        virtual void update(cstring table_name, const Use &alloc) = 0;
-        virtual void update(const std::map<UniqueId, Use> &alloc) = 0;
-        virtual void remove(cstring table_name, const Use &alloc) = 0;
-        virtual void remove(const std::map<UniqueId, Use> &alloc) = 0;
-        virtual void clear() = 0;
-        virtual void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                       TableResourceAlloc *resources, const LayoutOption *lo,
-                       const ActionData::Format::Use *af, ActionData::FormatType_t ft,
-                       int entries, int stage_table, attached_entries_t attached_entries) = 0;
-        virtual void shrink_allowed_lts() = 0;
-        virtual void printOn(std::ostream &) const = 0;
-        cstring last_failure() const { return failure_reason ? failure_reason : ""; }
-
-     protected:
-        enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,
-                             UPDATE_PAYLOAD, UPDATE_RESULT_BUS };
-        virtual void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn) = 0;
-        cstring failure_reason;
-    };
-
- private:
-    Base *rep;
-
  public:
-    Memories();
-    Memories(const Memories &) = delete;
-    Memories(Memories &&);
-    ~Memories();
-    Memories &operator=(const Memories &) = delete;
-    Memories &operator=(Memories &&);
-
-    bool allocate_all() { return rep->allocate_all(); }
-    bool allocate_all_dummies() { return rep->allocate_all_dummies(); }
-    void update(cstring table_name, const Use &alloc) { rep->update(table_name, alloc); }
-    void update(const std::map<UniqueId, Use> &alloc) { rep->update(alloc); }
-    void remove(cstring table_name, const Use &alloc) { rep->remove(table_name, alloc); }
-    void remove(const std::map<UniqueId, Use> &alloc) { rep->remove(alloc); }
-    void clear() { rep->clear(); }
-    void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+    virtual ~Memories() {}
+    virtual bool allocate_all() = 0;
+    virtual bool allocate_all_dummies() = 0;
+    virtual void update(cstring table_name, const Use &alloc) = 0;
+    virtual void update(const std::map<UniqueId, Use> &alloc) = 0;
+    virtual void remove(cstring table_name, const Use &alloc) = 0;
+    virtual void remove(const std::map<UniqueId, Use> &alloc) = 0;
+    virtual void clear() = 0;
+    virtual void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo,
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
-                   int entries, int stage_table, attached_entries_t attached_entries) {
-        rep->add_table(t, gw, resources, lo, af, ft, entries, stage_table, attached_entries); }
-    void shrink_allowed_lts() { rep->shrink_allowed_lts(); }
-    cstring last_failure() const { return rep->last_failure(); }
+                   int entries, int stage_table, attached_entries_t attached_entries) = 0;
+    virtual void shrink_allowed_lts() = 0;
+    virtual void printOn(std::ostream &) const = 0;
+    cstring last_failure() const { return failure_reason ? failure_reason : ""; }
 
+ protected:
+    enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,
+                         UPDATE_PAYLOAD, UPDATE_RESULT_BUS };
+    virtual void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn) = 0;
+    cstring failure_reason;
+
+ public:
+    static Memories *create();
     friend std::ostream &operator<<(std::ostream &out, const Memories &m) {
-        m.rep->printOn(out);
+        m.printOn(out);
         return out; }
 };
 

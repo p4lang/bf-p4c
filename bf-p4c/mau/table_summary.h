@@ -116,8 +116,8 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, cstring> tableNames;
 
     std::map<int, const IR::MAU::Table *>    order;
-    std::map<int, IXBar>                     ixbar;
-    std::map<int, Memories>                  memory;
+    std::map<int, std::unique_ptr<IXBar>>    ixbar;
+    std::map<int, std::unique_ptr<Memories>> memory;
     std::map<int, ActionDataBus>             action_data_bus;
     std::map<int, InstructionMemory>         imems;
 

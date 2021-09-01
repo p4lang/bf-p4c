@@ -9,9 +9,9 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
     bool preorder(const IR::MAU::Table *t) override {
         BUG_CHECK(t->is_always_run_action() || t->global_id(), "Table not placed");
         unsigned stage = t->stage();
-        if (stage >= self.stage.size())
-            self.stage.resize(stage + 1);
-        self.stage[stage].update(t);
+        while (stage >= self.stage.size())
+            self.stage.emplace_back(IXBar::create());
+        self.stage[stage]->update(t);
         return true; }
  public:
     explicit GetCurrentUse(IXBarVerify &s) : self(s) {}

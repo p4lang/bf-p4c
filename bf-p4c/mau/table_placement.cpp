@@ -615,17 +615,18 @@ void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPla
 
 namespace {
 class StageSummary {
-    IXBar       ixbar;
-    Memories    mem;
+    std::unique_ptr<IXBar>      ixbar;
+    std::unique_ptr<Memories>   mem;
  public:
-    StageSummary(int stage, const TablePlacement::Placed *pl) {
+    StageSummary(int stage, const TablePlacement::Placed *pl)
+    : ixbar(IXBar::create()), mem(Memories::create()) {
         while (pl && pl->stage > stage) pl = pl->prev;
         while (pl && pl->stage == stage) {
-            ixbar.update(pl->table, &pl->resources);
-            mem.update(pl->resources.memuse);
+            ixbar->update(pl->table, &pl->resources);
+            mem->update(pl->resources.memuse);
             pl = pl->prev; } }
     friend std::ostream &operator<<(std::ostream &out, const StageSummary &sum) {
-        return out << sum.ixbar << Log::endl << sum.mem; }
+        return out << *sum.ixbar << Log::endl << *sum.mem; }
 };
 }  // end anonymous namespace
 
@@ -972,11 +973,11 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
 
 bool TablePlacement::try_alloc_ixbar(Placed *next) {
     next->resources.clear_ixbar();
-    IXBar current_ixbar;
+    std::unique_ptr<IXBar> current_ixbar(IXBar::create());
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        current_ixbar.update(p->table, &p->resources);
+        current_ixbar->update(p->table, &p->resources);
     }
-    current_ixbar.add_collisions();
+    current_ixbar->add_collisions();
 
     const ActionData::Format::Use *action_format = next->use.preferred_action_format();
     auto *table = next->table;
@@ -991,10 +992,10 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
         table = table->apply(RewriteForSplitAttached(*this, next));
     }
 
-    if (!current_ixbar.allocTable(table, phv, next->resources, next->use.preferred(),
-                                  action_format, next->attached_entries) ||
-        !current_ixbar.allocTable(next->gw, phv, next->resources, next->use.preferred(),
-                                  nullptr, next->attached_entries)) {
+    if (!current_ixbar->allocTable(table, phv, next->resources, next->use.preferred(),
+                                   action_format, next->attached_entries) ||
+        !current_ixbar->allocTable(next->gw, phv, next->resources, next->use.preferred(),
+                                   nullptr, next->attached_entries)) {
         next->resources.clear_ixbar();
         error_message = "The table " + next->table->name + " could not fit within a single "
                         "input crossbar in an MAU stage";
@@ -1002,19 +1003,19 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
         return false;
     }
 
-    IXBar verify_ixbar;
+    std::unique_ptr<IXBar> verify_ixbar(IXBar::create());
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev)
-        verify_ixbar.update(p->table, &p->resources);
-    verify_ixbar.update(next->table, &next->resources);
-    verify_ixbar.verify_hash_matrix();
+        verify_ixbar->update(p->table, &p->resources);
+    verify_ixbar->update(next->table, &next->resources);
+    verify_ixbar->verify_hash_matrix();
     LOG7(IndentCtl::indent << IndentCtl::indent);
-    LOG7(verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
+    LOG7(*verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
 
     return true;
 }
 
 bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage) {
-    Memories current_mem;
+    std::unique_ptr<Memories> current_mem(Memories::create());
     // This is to guarantee for Tofino to have at least a table per gress within a stage, as
     // a path is required from the parser
     std::array<bool, 2> gress_in_stage = { { false, false} };
@@ -1033,7 +1034,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     }
 
     if (shrink_lt)
-        current_mem.shrink_allowed_lts();
+        current_mem->shrink_allowed_lts();
 
     const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
@@ -1042,19 +1043,19 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
             table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, p));
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
         // Always Run Tables cannot be counted in the logical table check
-        current_mem.add_table(table_to_add, p->gw, &p->resources, p->use.preferred(),
-                              p->use.preferred_action_format(), p->use.format_type,
-                              p->entries, p->stage_split, p->attached_entries);
+        current_mem->add_table(table_to_add, p->gw, &p->resources, p->use.preferred(),
+                               p->use.preferred_action_format(), p->use.format_type,
+                               p->entries, p->stage_split, p->attached_entries);
         p->resources.memuse.clear(); }
     table_to_add = next->table;
     if (!next->use.format_type.matchThisStage())
         table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, next));
-    current_mem.add_table(table_to_add, next->gw, &next->resources, next->use.preferred(),
-                          next->use.preferred_action_format(), next->use.format_type,
-                          next->entries, next->stage_split, next->attached_entries);
+    current_mem->add_table(table_to_add, next->gw, &next->resources, next->use.preferred(),
+                           next->use.preferred_action_format(), next->use.format_type,
+                           next->entries, next->stage_split, next->attached_entries);
     next->resources.memuse.clear();
 
-    if (!current_mem.allocate_all()) {
+    if (!current_mem->allocate_all()) {
         error_message = next->table->toString() + " could not fit in stage " +
                         std::to_string(next->stage) + " with " + std::to_string(next->entries)
                         + " entries";
@@ -1065,7 +1066,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                                  ae.first->toString();
                 sep = " and "; } }
         LOG3("    " << error_message);
-        LOG3("    " << current_mem.last_failure());
+        LOG3("    " << current_mem->last_failure());
         next->stage_advance_log = "ran out of memories";
         next->resources.memuse.clear();
         for (auto *p : whole_stage)
@@ -1073,14 +1074,14 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
         return false;
     }
 
-    Memories verify_mem;
+    std::unique_ptr<Memories> verify_mem(Memories::create());
     if (shrink_lt)
-        verify_mem.shrink_allowed_lts();
+        verify_mem->shrink_allowed_lts();
     for (auto *p : whole_stage)
-        verify_mem.update(p->resources.memuse);
-    verify_mem.update(next->resources.memuse);
+        verify_mem->update(p->resources.memuse);
+    verify_mem->update(next->resources.memuse);
     LOG7(IndentCtl::indent << IndentCtl::indent);
-    LOG7(verify_mem << IndentCtl::unindent << IndentCtl::unindent);
+    LOG7(*verify_mem << IndentCtl::unindent << IndentCtl::unindent);
 
     return true;
 }

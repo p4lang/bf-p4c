@@ -3972,7 +3972,7 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
 }
 
 void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
-    Base::update(tbl, rsrc);
+    ::IXBar::update(tbl, rsrc);
     tbl_hash_dists.emplace(tbl, &rsrc->hash_dists);
 }
 
@@ -3983,7 +3983,7 @@ void IXBar::update(const IR::MAU::Table *tbl) {
             return;
         dleft_updates.emplace(orig_name);
     }
-    Base::update(tbl);
+    ::IXBar::update(tbl);
 }
 
 /**
