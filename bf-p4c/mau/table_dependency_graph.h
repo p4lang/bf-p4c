@@ -25,6 +25,7 @@
  *
  */
 class TableGraphNode;
+class TableSummary;
 struct DependencyGraph {
     typedef enum {
         MAU_DEP_MATCH      = 2,  // Field written is read at match input crossbar.
@@ -249,6 +250,7 @@ struct DependencyGraph {
                             // must be placed in a stage after it.
         dep_stages_control,
         dep_stages_control_anti,
+        dep_stages_control_anti_split,
         dep_stages_dom_frontier;
     };
 
@@ -308,6 +310,12 @@ struct DependencyGraph {
         table_dep_.clear();
     }
 
+    /// Fill up the stage_info map value regarding dep_stages_control_anti or
+    /// dep_stages_control_anti_split based on include_stages argument.
+    void fill_dep_stages_from_topo(
+        const std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>> &topo,
+        bool include_stages, const TableSummary *summary);
+
     /// @returns boolean indicating if an edge is a type of anti edge
     bool is_anti_edge(DependencyGraph::dependencies_t dep) const;
 
@@ -357,7 +365,7 @@ struct DependencyGraph {
         } else {
             auto v = boost::add_vertex(label, g);
             labelToVertex[label] = v;
-            stage_info[label] = {0, 0, 0, 0, 0};
+            stage_info[label] = {0, 0, 0, 0, 0, 0};
             return v; }
     }
 
@@ -532,6 +540,12 @@ struct DependencyGraph {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).dep_stages_control_anti;
+    }
+
+    int dependence_tail_size_control_anti_split(const IR::MAU::Table *t) const {
+        check_finalized();
+        check_stage_info_exist(t);
+        return stage_info.at(t).dep_stages_control_anti_split;
     }
 
     int min_stage(const IR::MAU::Table* t) const {
@@ -948,12 +962,13 @@ class DepStagesThruDomFrontier : public MauInspector {
     const CalculateNextTableProp &ntp;
     DependencyGraph &dg;
     FindDependencyGraph &self;
+    const TableSummary *summary;
 
     void postorder(const IR::MAU::Table *) override;
 
  public:
     DepStagesThruDomFrontier(const CalculateNextTableProp &n, DependencyGraph &d,
-        FindDependencyGraph &s) : ntp(n), dg(d), self(s) {}
+        FindDependencyGraph &s, const TableSummary *ts) : ntp(n), dg(d), self(s), summary(ts) {}
 };
 
 class PrintPipe : public MauInspector {
@@ -989,6 +1004,7 @@ class FindDependencyGraph : public Logging::PassManager {
     IgnoreTableDeps ignore;
     cstring dotFile;
     cstring passContext;
+    const TableSummary *summary;
 
     void end_apply(const IR::Node *root) override;
     void add_logical_deps_from_control_deps();
@@ -997,7 +1013,7 @@ class FindDependencyGraph : public Logging::PassManager {
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
     calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, const BFN_Options *o = nullptr,
-        cstring dotFileName = "", cstring passContext = "");
+        cstring dotFileName = "", cstring passContext = "", const TableSummary *s = nullptr);
 };
 
 std::ostream &operator<<(std::ostream &, DependencyGraph::dependencies_t);

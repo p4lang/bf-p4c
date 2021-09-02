@@ -5,6 +5,7 @@
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/device.h"
 
@@ -121,6 +122,9 @@ class TableSummary: public MauInspector {
     std::map<int, ActionDataBus>             action_data_bus;
     std::map<int, InstructionMemory>         imems;
 
+    /// Sum of all resources being used for all stages on last pass
+    StageUseEstimate allStages;
+
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::MAU::Table* t) override;
     void postorder(const IR::BFN::Pipe* pipe) override;
@@ -136,8 +140,9 @@ class TableSummary: public MauInspector {
     /// compiler-generated name otherwise.
     static cstring getTableName(const IR::MAU::Table* tbl);
 
-    /// @return the set of stages to which table @t has been allocated.
-    const ordered_set<int> stages(const IR::MAU::Table* tbl) const;
+    /// @return the set of stages to which table @t has been allocated. optional internal flag
+    /// can be used to retrieve the information from the internalTableAlloc map.
+    const ordered_set<int> stages(const IR::MAU::Table* tbl, bool internal = false) const;
 
     /// @returns the maximum number of stages used by the program.
     int maxStages() const { return maxStage; }
@@ -153,6 +158,8 @@ class TableSummary: public MauInspector {
     void FinalizePlacement() { state = FINAL_PLACEMENT; }
     void resetPlacement() { state = INITIAL; }
     state_t getActualState() { return state; }
+    void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
+    StageUseEstimate getAllStagesResources() { return allStages; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

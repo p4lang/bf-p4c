@@ -4526,7 +4526,7 @@ control Wattsburg(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
         Yorkshire.Greenland.RedElm = Thaxton;
         Yorkshire.NantyGlo.Brinklow = DeBeque.get();
     }
-    @disable_atomic_modify(1) @stage(4) @name(".Plush") table Plush {
+    @disable_atomic_modify(1) @stage(5) @name(".Plush") table Plush {
         actions = {
             Latham();
             Truro();
@@ -4790,7 +4790,7 @@ control Natalbany(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
     @name(".Lauada") action Clarkdale() {
         Yorkshire.NantyGlo.Kremlin = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @stage(5) @name(".Talbert") table Talbert {
+    @disable_atomic_modify(1) @stage(6) @name(".Talbert") table Talbert {
         actions = {
             Lignite();
             Clarkdale();

@@ -185,7 +185,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  p4c_3343
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
@@ -195,7 +194,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   # extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-3254.p4
   extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-347/switch_bug.p4

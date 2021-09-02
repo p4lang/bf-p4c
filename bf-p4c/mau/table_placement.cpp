@@ -469,6 +469,33 @@ struct TablePlacement::Placed {
     static int uid_counter;
 };
 
+// Retrieve the stage resources for a given placement
+static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
+    StageUseEstimate    rv;
+    if (pl) {
+        int stage = pl->stage;
+        for (; pl && pl->stage == stage; pl = pl->prev)
+            rv += pl->use; }
+    return rv;
+}
+
+// Retrieve the total resources for a given placement
+static StageUseEstimate get_total_stage_use(const TablePlacement::Placed *pl) {
+    StageUseEstimate    rv;
+    for (; pl ; pl = pl->prev)
+        rv += pl->use;
+    return rv;
+}
+
+// Count the number of tables being placed
+static int count(const TablePlacement::Placed *pl) {
+    int rv = 0;
+    while (pl) {
+        pl = pl->prev;
+        rv++; }
+    return rv;
+}
+
 int TablePlacement::Placed::uid_counter = 0;
 DecidePlacement::DecidePlacement(TablePlacement &s) : self(s) {}
 
@@ -499,9 +526,12 @@ class DecidePlacement::BacktrackPlacement {
     const Placed *operator->() const { return pl; }
     const Placed *get_placed() const { return pl; }
 
-    const Placed *reset_place_table(ordered_set<const GroupPlace *> &w) {
+    // Optionally increment or not the backtrack count. The backtrack count should not be
+    // incremented if the backtracking mechanism is being used to evaluate multiple solutions.
+    const Placed *reset_place_table(ordered_set<const GroupPlace *> &w, bool bt_inc = true) {
         tried = true;
-        ++self.backtrack_count;
+        if (bt_inc)
+            ++self.backtrack_count;
         w = work;
         return self.place_table(w, pl); }
 
@@ -613,6 +643,303 @@ void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPla
     }
 }
 
+class DecidePlacement::PlacementScore {
+    DecidePlacement &self;
+    // This backtrack placement point to the first table allocated in the next stage which also
+    // carry all of the current stage placement.
+    BacktrackPlacement *bt;
+    // Metric relative to resource being allocated for this stage for this allocation
+    StageUseEstimate stage_use;
+
+    // Carry the metric for a given downward dependency value
+    struct stage_metric_t {
+        // Number of tables in this downward dependency set
+        int num_dep_chain = 0;
+        // Number of incomplete tables in this downward dependency set
+        int num_incomplete_dep_chain = 0;
+        // Number of entries that refer to incomplete tables in this downward dependency set
+        int entries_incomplete_dep_chain = 0;
+        // List of completed table names for this set
+        cstring tables_completed = "";
+        // List of incomplete table names for this set
+        cstring tables_incomplete = "";
+    };
+    // Map of downward dependency table set metrics
+    std::map<int, stage_metric_t> stage_metric;
+
+    // Look down to which downward dependency value to accept a solution.
+    static constexpr int MaxDepLookup = 1;
+
+    // Weight of each metrics used to compare and select the best allocation. Initially all of the
+    // resources have the same weight but after the first table allocation pass, each of them are
+    // re-computed to reflect the actual program needs. The weight is also updated during the
+    // placement to increase or decrease each individual resource priority based on previous
+    // placement. For exemple, if a given program uses 80% of the total SRAM, 50% of the TCAM and
+    // 25% of the Logical Id and after some stages the previous stages was filled with something
+    // like: 85% of total SRAM, 40% of the TCAM and 35% of the Logical Id then the weight will be
+    // re-computed to:
+    //     SRAM: 80% - 5% = 75% because we were doing a bit better than required so far
+    //     TCAM: 50% + 10% = 60% because we were behind in this area
+    //     LogId: 25% - 6.25% = 18.75% because the delta can't cross 1/4 of the original value
+    int tcam_weight = 333;
+    int sram_weight = 333;
+    int logid_weight = 333;
+
+    void fill_score() {
+        const Placed *pl = bt->get_placed();
+        if (pl->prev) {
+            pl = pl->prev;
+            stage_use = get_current_stage_use(pl);
+            int init_stage = pl->stage;
+
+            StageUseEstimate total_res = self.self.summary.getAllStagesResources();
+            // Make sure it is filled with valid information
+            if (total_res.logical_ids) {
+                int delta;
+                StageUseEstimate current_res = get_total_stage_use(pl);
+
+                // Using integer to carry floating point, 40.5% would be expressed as 405.
+                int cur_tcam_usage = (current_res.tcams * 1000) /
+                                     (StageUse::MAX_TCAMS * (init_stage + 1));
+                int cur_sram_usage = (current_res.srams * 1000) /
+                                     (StageUse::MAX_SRAMS * (init_stage + 1));
+                int cur_logid_usage = (current_res.logical_ids * 1000) /
+                                      (StageUse::MAX_LOGICAL_IDS * (init_stage + 1));
+
+                int tot_tcam_usage = (total_res.tcams * 1000) /
+                                     (StageUse::MAX_TCAMS * Device::numStages());
+                int tot_sram_usage = (total_res.srams * 1000) /
+                                     (StageUse::MAX_SRAMS * Device::numStages());
+                int tot_logid_usage = (total_res.logical_ids * 1000) /
+                                      (StageUse::MAX_LOGICAL_IDS * Device::numStages());
+
+                LOG3("tot_tcam_usage:" << tot_tcam_usage << " tot_sram_usage:" << tot_sram_usage <<
+                     " tot_logid_usage:" << tot_logid_usage);
+                LOG3("cur_tcam_usage:" << cur_tcam_usage << " cur_sram_usage:" << cur_sram_usage <<
+                     " cur_logid_usage:" << cur_logid_usage);
+
+                // The delta can't exceed 1/4 of the original total usage.
+                delta = tot_tcam_usage - cur_tcam_usage;
+                if (delta && -delta > (tot_tcam_usage / 4)) delta = -(tot_tcam_usage / 4);
+                tcam_weight = tot_tcam_usage + delta;
+                LOG3("tcam_weight:" << tcam_weight << " delta:" << delta);
+
+                delta = tot_sram_usage - cur_sram_usage;
+                if (delta && -delta > (tot_sram_usage / 4)) delta = -(tot_sram_usage / 4);
+                sram_weight = tot_sram_usage + delta;
+                LOG3("sram_weight:" << sram_weight << " delta:" << delta);
+
+                delta = tot_logid_usage - cur_logid_usage;
+                if (delta && -delta > (tot_logid_usage / 4)) delta = -(tot_logid_usage / 4);
+                logid_weight = tot_logid_usage + delta;
+                LOG3("logid_weight:" << logid_weight << " delta:" << delta);
+            }
+
+            while (pl) {
+                if (pl->stage != init_stage)
+                    break;
+
+                // Uses the downward dependency chain that assume every table only consume a single
+                // stage. The "dep_stages_control_anti_split" variant was added to use previous
+                // table stages usage for a more accurate compute but experiment shows worse result
+                // with it. Can be revisited in the future.
+                int dep_chain = self.self.deps.stage_info[pl->table].dep_stages_control_anti;
+                stage_metric_t metric = stage_metric[dep_chain];
+
+                metric.num_dep_chain++;
+                if (pl->need_more_match) {
+                    metric.num_incomplete_dep_chain++;
+                    metric.entries_incomplete_dep_chain += pl->entries;
+                    metric.tables_incomplete += pl->name;
+                    metric.tables_incomplete += " ";
+                } else {
+                    metric.tables_completed += pl->name;
+                    metric.tables_completed += " ";
+                }
+                stage_metric[dep_chain] = metric;
+
+                pl = pl->prev;
+            }
+        }
+    }
+
+ public:
+    PlacementScore(DecidePlacement &self, BacktrackPlacement *bt) :
+        self(self), bt(bt) { fill_score(); }
+    int get_score() const {
+        return (((tcam_weight * stage_use.tcams * 100) / StageUse::MAX_TCAMS) +
+                ((sram_weight * stage_use.srams * 100) / StageUse::MAX_SRAMS) +
+                ((logid_weight * stage_use.logical_ids * 100) / StageUse::MAX_LOGICAL_IDS)); }
+
+    // Used to compare two placement score to find which one is the best
+    bool operator>(const PlacementScore &other) const {
+        // Only 1 level deep by default. Can be increased or decreased to increase or decrease
+        // the dependency requirement over the resources metric.
+        int dep_stage_wins_over_res = MaxDepLookup;
+        auto lit = stage_metric.rbegin();
+        auto rit = other.stage_metric.rbegin();
+        while (dep_stage_wins_over_res) {
+            if (lit == stage_metric.rend()) return false;
+            if (rit == other.stage_metric.rend()) return true;
+
+            if (lit->first > rit->first) return true;
+            else if (lit->first < rit->first) return false;
+
+            const stage_metric_t &lmetric = lit->second;
+            const stage_metric_t &rmetric = rit->second;
+
+            if (lmetric.num_dep_chain > rmetric.num_dep_chain) return true;
+            else if (lmetric.num_dep_chain < rmetric.num_dep_chain) return false;
+
+            // Prefer complete table over incomplete placement to minimize logical id usage
+            if (lmetric.num_incomplete_dep_chain > rmetric.num_incomplete_dep_chain)
+                return false;
+            else if (lmetric.num_incomplete_dep_chain < rmetric.num_incomplete_dep_chain)
+                return true;
+
+            // Prefer incomplete table with more entries on critical path
+            if (lmetric.entries_incomplete_dep_chain > rmetric.entries_incomplete_dep_chain)
+                return true;
+            else if (lmetric.entries_incomplete_dep_chain < rmetric.entries_incomplete_dep_chain)
+                return false;
+
+            // Only look for next level if that one is adjacent to the prior one
+            if (!stage_metric.count(lit->first - 1) && !other.stage_metric.count(rit->first - 1))
+                break;
+
+            ++lit;
+            ++rit;
+            dep_stage_wins_over_res--;
+        }
+        LOG3("score:" << get_score() << " other_score:" << other.get_score());
+
+        if (get_score() > other.get_score())
+            return true;
+        else
+            return false; }
+    bool operator<(const PlacementScore &other) const { return *this > other; }
+    BacktrackPlacement *get_backtrack() { return bt; }
+
+    void printScore() const {
+        LOG3("    num_log_id:" << stage_use.logical_ids);
+        LOG3("    total_sram:" << stage_use.srams);
+        LOG3("    total_tcam:" << stage_use.tcams);
+        LOG3("    total_eixbar:" << stage_use.exact_ixbar_bytes);
+        LOG3("    total_tixbar:" << stage_use.ternary_ixbar_groups);
+        for (auto it = stage_metric.rbegin(); it != stage_metric.rend(); ++it) {
+            const stage_metric_t &metric = it->second;
+            LOG3("    dep_chain:" << it->first);
+            LOG3("        num:" << metric.num_dep_chain);
+            LOG3("        incomplete_tbl:" << metric.num_incomplete_dep_chain);
+            LOG3("        incomplete_entries:" << metric.entries_incomplete_dep_chain);
+            LOG3("        tables_completed:" << metric.tables_completed);
+            LOG3("        tables_incomplete:" << metric.tables_incomplete);
+        }
+    }
+};
+
+class DecidePlacement::ResourceBasedAlloc {
+    // These references are used to rebuild the active placed and work object when backtracking
+    DecidePlacement &self;
+    ordered_set<const GroupPlace *> &active_work;
+    ordered_set<const IR::MAU::Table *> &partly_placed;
+    const Placed *&active_placed;
+
+    // Carry the tables visited for this particular stage. The algo try to include all of the
+    // visited table in at least one solution.
+    ordered_set<const IR::MAU::Table *> visited;
+    // These incomplete placement refer to branch point where multiple choices was available and
+    // some of them included unvisited tables. Incomplete position will be revisited later using
+    // backtracking to produce a complete solution.
+    ordered_map<const IR::MAU::Table *, BacktrackPlacement *> incomplete;
+    // Carry the various complete solutions that will be evaluated when all of the incomplete
+    // placement will be finalized.
+    ordered_set<PlacementScore *> complete;
+
+ public:
+    ResourceBasedAlloc(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
+                       ordered_set<const IR::MAU::Table *> &p, const Placed *&a) :
+        self(self), active_work(w), partly_placed(p), active_placed(a) { }
+
+    // Creating a backtracking position for this solution and return the placement score.
+    PlacementScore *add_stage_complete(const Placed *pl,
+                                       const ordered_set<const GroupPlace *> &work) {
+        BacktrackPlacement *bt = new BacktrackPlacement(self, pl, work, true);
+        PlacementScore *pl_score = new PlacementScore(self, bt);
+        complete.insert(pl_score);
+        return pl_score;
+    }
+    // Look for incomplete position to revisit. If at least one exist, backtrack to that position
+    // and remove it from the incomplete set. This function returns true if other incomplete
+    // placement exist and false otherwise.
+    bool found_other_placement() {
+        if (!incomplete.empty()) {
+            auto bt_it = incomplete.begin();
+            auto bt = bt_it->second;
+            active_placed = bt->reset_place_table(active_work, false);
+            self.recomputePartlyPlaced(active_placed, partly_placed);
+            incomplete.erase(bt_it->first);
+            return true;
+        }
+        return false;
+    }
+    // This should be called when all the incomplete solution was finalized to compare and select
+    // the best solution out of the complete set. This function return true if the best solution
+    // is the current one and false otherwise. The idea being that if the best solution is the
+    // current one, we can continue the allocation without any backtracking.
+    bool select_best_solution(const Placed *pl, PlacementScore *cur_score) {
+        // Compare the different solution and pick the best
+        PlacementScore *best_score = cur_score;
+        for (PlacementScore *pl_score : complete) {
+            LOG3("Comparing placement score:");
+            pl_score->printScore();
+            if (*pl_score > *best_score) {
+                LOG3("Updating best score with current based on metrics");
+                best_score = pl_score;
+            }
+        }
+        LOG3("Selected best placement with score:");
+        best_score->printScore();
+
+        // Do not backtrack if the current solution is the best or if the solution goes beyond the
+        // number of stages of the device and backtracking is still enabled. The idea for this
+        // last use case is to let the backtracking mechanism find a better backtracking point to
+        // relaxe the actual allocation constraint.
+        if (best_score != cur_score &&
+            (pl->stage < Device::numStages() ||
+             (pl->stage >= Device::numStages() &&
+              (self.backtrack_count > MaxBacktracksPerPipe)))) {
+            auto bt = best_score->get_backtrack();
+            active_placed = bt->reset_place_table(active_work, false);
+            self.recomputePartlyPlaced(active_placed, partly_placed);
+            complete.clear();
+            visited.clear();
+            return false;
+        }
+        complete.clear();
+        visited.clear();
+        return true;
+    }
+    // Eligible tables are considered as a backtrack point if not already visited. The best table
+    // is considered as part of the next solution which is why incomplete solution based on this
+    // node is removed.
+    void add_placed_pos(const Placed *pl, const ordered_set<const GroupPlace *> &work,
+                        bool is_best) {
+        if (is_best) {
+            incomplete.erase(pl->table);
+        } else if (!visited.count(pl->table)) {
+            BacktrackPlacement *bt = new BacktrackPlacement(self, pl, work, false);
+            incomplete.insert({pl->table, bt});
+        }
+        visited.insert(pl->table);
+    }
+    void clear_stage() {
+        complete.clear();
+        incomplete.clear();
+        visited.clear();
+    }
+};
+
 namespace {
 class StageSummary {
     std::unique_ptr<IXBar>      ixbar;
@@ -673,23 +1000,6 @@ void DecidePlacement::GroupPlace::finish_if_placed(
             p->finish_if_placed(work, pl);
     } else {
         LOG4("    seq " << seq->clone_id << " not finished"); }
-}
-
-static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
-    StageUseEstimate    rv;
-    if (pl) {
-        int stage = pl->stage;
-        for (; pl && pl->stage == stage; pl = pl->prev)
-            rv += pl->use; }
-    return rv;
-}
-
-static int count(const TablePlacement::Placed *pl) {
-    int rv = 0;
-    while (pl) {
-        pl = pl->prev;
-        rv++; }
-    return rv;
 }
 
 TablePlacement::GatewayMergeChoices
@@ -2451,9 +2761,12 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
                 // stage then both table must be moved to an earlier stage.
                 if (same_stage.count(log_tbl)) {
                     const Placed *tbl_pl = same_stage.at(log_tbl);
-                    auto bt = find_previous_placement(tbl_pl, offset, local_bt, process_stage + 1);
-                    if (bt)
-                        return bt;
+                    if (saved_placements.count(tbl_pl->name)) {
+                        auto bt = find_previous_placement(tbl_pl, offset, local_bt,
+                                                          process_stage + 1);
+                        if (bt)
+                            return bt;
+                    }
                 }
                 // Data dependency of the control dependent table must also be analyzed.
                 if (!to_be_analyzed_next_pre.count(log_tbl)) {
@@ -2508,6 +2821,9 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
     BacktrackPlacement *original_flow = nullptr;
+    BacktrackPlacement *start_flow = nullptr;
+    bool resource_mode = false;
+
     /* all the state for a partial table placement is stored in the work
      * set and placed list, which are const pointers, so we can backtrack
      * by just saving a snapshot of a work set and corresponding placed
@@ -2516,6 +2832,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
 
     ordered_set<const IR::MAU::Table *> partly_placed;
     Backfill backfill(*this);
+    ResourceBasedAlloc res_based_alloc(*this, work, partly_placed, placed);
     while (!work.empty()) {
         erase_if(partly_placed, [placed](const IR::MAU::Table *t) -> bool {
                                         return placed->is_placed(t); });
@@ -2721,15 +3038,42 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             }
         }
 
+        if (resource_mode && placed && best->stage > placed->stage) {
+            savePlacement(best, work, true);
+            LOG3("Resource mode and placement completed for stage:" << placed->stage);
+            PlacementScore *pl_score = res_based_alloc.add_stage_complete(best, work);
+            if (res_based_alloc.found_other_placement()) {
+                LOG3("Found incompleted placement to try");
+                backfill.clear();
+                continue;
+            } else {
+                LOG3("Found NO other incomplete placement");
+                bool cur_is_best = res_based_alloc.select_best_solution(best, pl_score);
+                backfill.clear();
+                if (!cur_is_best)
+                    continue;
+            }
+        }
+
         // Tables being placed because of pragmas can't be overriden by backtrack.
         if (!best_with_pragmas) {
             for (auto t : trial) {
-                if (t->stage == best->stage)
+                if (t->stage == best->stage) {
+                    if (resource_mode)
+                        res_based_alloc.add_placed_pos(t, work, t == best);
+
                     savePlacement(t, work, t == best);
+                }
             }
         } else {
+            if (resource_mode)
+                res_based_alloc.add_placed_pos(best, work, true);
+
             savePlacement(best, work, true);
         }
+
+        if (!start_flow)
+            start_flow = new BacktrackPlacement(*this, best, work, true);
 
         if (placed && best->stage > placed->stage &&
             !self.options.disable_table_placement_backfill) {
@@ -2769,9 +3113,9 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             int dep_chain = self.deps.stage_info[best->table].dep_stages_control_anti;
             if ((best->stage + dep_chain >= Device::numStages()) &&
                 (backtrack_count <= MaxBacktracksPerPipe) &&
-                (self.summary.getActualState() > TableSummary::NOCC_TRY1)) {
+                (self.summary.getActualState() >= TableSummary::NOCC_TRY1)) {
                 // Save the original placement to return at this point if backtracking fail.
-                if (backtrack_count == 0)
+                if (!original_flow)
                     original_flow = new BacktrackPlacement(*this, best, work, true);
 
                 LOG3("Found dependency chain of " << dep_chain << " at stage " << best->stage);
@@ -2790,6 +3134,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                         placed = bt->reset_place_table(work);
                         recomputePartlyPlaced(placed, partly_placed);
                         backfill.clear();
+                        res_based_alloc.clear_stage();
                         continue;
                     } else {
                         boost::optional<BacktrackPlacement&> bt = find_backtrack_point(best, offset,
@@ -2799,6 +3144,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                             placed = bt->reset_place_table(work);
                             recomputePartlyPlaced(placed, partly_placed);
                             backfill.clear();
+                            res_based_alloc.clear_stage();
                             continue;
                         }
                     }
@@ -2808,11 +3154,23 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 // solution. Set the backtrack_count to the maximum value to disable any more
                 // backtracking for this table allocation pass.
                 if (original_flow) {
+                    if (start_flow && !resource_mode) {
+                        LOG3("Try with resource mode enabled");
+                        placed = start_flow->reset_place_table(work);
+                        recomputePartlyPlaced(placed, partly_placed);
+                        backfill.clear();
+                        res_based_alloc.clear_stage();
+                        backtrack_count = 0;
+                        resource_mode = true;
+                        continue;
+                    }
                     LOG3("Reset the flow to the original one");
                     placed = original_flow->reset_place_table(work);
                     recomputePartlyPlaced(placed, partly_placed);
                     backfill.clear();
+                    res_based_alloc.clear_stage();
                     backtrack_count = MaxBacktracksPerPipe + 1;
+                    resource_mode = false;
                     continue;
                 }
             }
@@ -2839,6 +3197,9 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         LOG_FEATURE("stage_advance", 2,
                     "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
                     StageSummary(placed->stage, placed) << IndentCtl::unindent); }
+
+    self.summary.setAllStagesResources(get_total_stage_use(placed));
+
     self.placement = placed;
     self.table_placed.clear();
     for (auto p = self.placement; p; p = p->prev) {

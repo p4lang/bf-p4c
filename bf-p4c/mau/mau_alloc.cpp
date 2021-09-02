@@ -29,7 +29,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),
             new CheckTableNameDuplicate,
-            new FindDependencyGraph(phv, deps, &options, "", "Before Table Placement"),
+            new FindDependencyGraph(phv, deps, &options, "", "Before Table Placement", &summary),
             new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
             &ignore,
             &mutex,

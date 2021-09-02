@@ -407,11 +407,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
 
-p4c_add_xfail_reason ("tofino2"
-  "error: tofino2 supports up to 20 stages, using 22"
-  extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
-)
-
 # P4C-2141
 p4c_add_xfail_reason("tofino2"
   "error: Can't access DW0 in parser"

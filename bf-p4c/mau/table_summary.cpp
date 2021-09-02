@@ -222,11 +222,21 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
     }
 }
 
-const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {
+const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl, bool internal) const {
     ordered_set<int> rs;
-    cstring tbl_name = getTableName(tbl);
-    if (!tableAlloc.count(tbl_name)) return rs;
-    for (auto logical_id : tableAlloc.at(tbl_name))
+    const ordered_map<cstring, ordered_set<int>> *tableAllocPtr;
+    cstring tbl_name;
+
+    if (internal) {
+        tableAllocPtr = &internalTableAlloc;
+        tbl_name = tbl->name;
+    } else {
+        tableAllocPtr = &tableAlloc;
+        tbl_name = getTableName(tbl);
+    }
+
+    if (!tableAllocPtr->count(tbl_name)) return rs;
+    for (auto logical_id : tableAllocPtr->at(tbl_name))
         rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
     return rs;
 }

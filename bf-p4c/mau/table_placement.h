@@ -165,6 +165,8 @@ class DecidePlacement : public MauInspector {
     struct GroupPlace;
     class Backfill;
     class BacktrackPlacement;
+    class PlacementScore;
+    class ResourceBasedAlloc;
     explicit DecidePlacement(TablePlacement &s);
 
  private:

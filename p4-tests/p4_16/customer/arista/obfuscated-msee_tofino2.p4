@@ -6083,7 +6083,8 @@ control McGovern(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     @name(".Heron") action Heron() {
         Eggleston.count();
     }
-    @disable_atomic_modify(1) @name(".Paisley") table Paisley {
+    // Forcing a stage to avoid table split that consume 2 tEOP buses
+    @disable_atomic_modify(1) @stage(15) @name(".Paisley") table Paisley {
         actions = {
             Heron();
             @defaultonly NoAction();

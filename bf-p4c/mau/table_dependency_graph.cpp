@@ -14,6 +14,7 @@
 #include "table_injected_deps.h"
 #include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/mau/table_placement.h"
+#include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/table_tree.h"
@@ -123,17 +124,21 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
 
     out << "MIN STAGE INFO" << std::endl;
     out << "    Each table also indicates its dependency chain length" << std::endl;
+    out << "    First number refers to a dependency chain from which each tables are not split"
+        << std::endl;
+    out << "    Second number refers to a dependency chain from which each tables are split as on "
+        << " last allocation pass" << std::endl;
 
-    ordered_map<int, safe_vector<std::pair<const IR::MAU::Table *, int>>> min_stage_info;
-    for (auto &kv : dg.stage_info) {
-        min_stage_info[kv.second.min_stage].emplace_back(kv.first,
-                                                         kv.second.dep_stages_control_anti);
-    }
+    std::map<int, safe_vector<std::pair<const IR::MAU::Table *,
+                                        DependencyGraph::StageInfo>>> min_stage_info;
+    for (auto &kv : dg.stage_info)
+        min_stage_info[kv.second.min_stage].emplace_back(kv.first, kv.second);
 
     for (auto &msi : min_stage_info) {
         out << " Stage #" << msi.first << std::endl;
         for (auto val : msi.second) {
-            out << "     " << val.first->name << " " << val.second << std::endl;
+            out << "     " << val.first->name << " " << val.second.dep_stages_control_anti << " "
+                << val.second.dep_stages_control_anti_split << std::endl;
             if (!dg.display_min_edges)
                 continue;
             if (dg.min_stage_edges.count(val.first) == 0)
@@ -1219,6 +1224,43 @@ void FindDataDependencyGraph::flow_merge(Visitor &v) {
     }
 }
 
+void DependencyGraph::fill_dep_stages_from_topo(
+        const std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>> &topo,
+        bool include_stages, const TableSummary *summary) {
+    for (int i = int(topo.size()) - 1; i >= 0; --i) {
+        for (const auto& vertex : topo[i]) {
+            const IR::MAU::Table* table = get_vertex(vertex);
+            auto& happens_later = happens_before_work_map[table];
+            int tbl_dep_stages =
+                std::accumulate(happens_later.begin(), happens_later.end(), 0,
+                        [&] (int sz, const IR::MAU::Table* later) {
+                    int stage_addition = 0;
+                    if (dep_type_map.count(table) && dep_type_map.at(table).count(later)
+                        && !(is_ctrl_edge(dep_type_map.at(table).at(later)))
+                        && dep_type_map.at(table).at(later) != DependencyGraph::CONT_CONFLICT
+                        && dep_type_map.at(table).at(later) != DependencyGraph::REDUCTION_OR_READ
+                        && dep_type_map.at(table).at(later) != DependencyGraph::REDUCTION_OR_OUTPUT
+                        && !(is_anti_edge(dep_type_map.at(table).at(later)))) {
+                        if (include_stages && summary)
+                            stage_addition = summary->stages(table, true).size();
+                        if (!stage_addition)
+                            stage_addition = 1;
+                    }
+                    if (include_stages)
+                        stage_addition += stage_info[later].dep_stages_control_anti_split;
+                    else
+                        stage_addition += stage_info[later].dep_stages_control_anti;
+
+                    return std::max(sz, stage_addition);
+            });
+            if (include_stages)
+                stage_info[table].dep_stages_control_anti_split = tbl_dep_stages;
+            else
+                stage_info[table].dep_stages_control_anti = tbl_dep_stages;
+        }
+    }
+}
+
 bool DependencyGraph::is_anti_edge(DependencyGraph::dependencies_t dep) const {
     return ((dep == DependencyGraph::ANTI_EXIT)
      || (dep == DependencyGraph::ANTI_TABLE_READ)
@@ -1857,31 +1899,12 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
         }
     }
 
-    for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
-        for (const auto& vertex : topo_rst[i]) {
-            const IR::MAU::Table* table = local_dg.get_vertex(vertex);
-            auto& happens_later = local_dg.happens_before_work_map[table];
-            local_dg.stage_info[table].dep_stages_control_anti =
-                std::accumulate(happens_later.begin(), happens_later.end(), 0,
-                        [&] (int sz, const IR::MAU::Table* later) {
-                    int stage_addition = 0;
-                    if (local_dg.dep_type_map.count(table)
-                        && local_dg.dep_type_map.at(table).count(later)
-                        && !(local_dg.is_ctrl_edge(local_dg.dep_type_map.at(table).at(later)))
-                        && local_dg.dep_type_map.at(table).at(later) !=
-                           DependencyGraph::CONT_CONFLICT
-                        && local_dg.dep_type_map.at(table).at(later) !=
-                           DependencyGraph::REDUCTION_OR_READ
-                        && local_dg.dep_type_map.at(table).at(later) !=
-                           DependencyGraph::REDUCTION_OR_OUTPUT
-                        && !(local_dg.is_anti_edge(local_dg.dep_type_map.at(table).at(later)))) {
-                        stage_addition = 1;
-                    }
-                    return std::max(sz, local_dg.stage_info[later].dep_stages_control_anti
-                                        + stage_addition);
-            });
-        }
-    }
+    local_dg.fill_dep_stages_from_topo(topo_rst, false, summary);
+
+    // Compute the downward dependency chain by adding the number of stages required for each
+    // indivual table based on last table allocation pass.
+    local_dg.fill_dep_stages_from_topo(topo_rst, true, summary);
+
     dg.stage_info[tbl].dep_stages_dom_frontier
         = local_dg.stage_info.at(tbl).dep_stages_control_anti;
 }
@@ -2154,33 +2177,11 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         }
     }
 
-    for (int i = int(topo_rst_logical.size()) - 1; i >= 0; --i) {
-        for (const auto& vertex : topo_rst_logical[i]) {
-            const IR::MAU::Table* table = dg.get_vertex(vertex);
-            auto& happens_later = dg.happens_before_work_map[table];
-            dg.stage_info[table].dep_stages_control_anti = std::accumulate(happens_later.begin(),
-                happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
-                    int stage_addition = 0;
-                    if (dg.dep_type_map.count(table) && dg.dep_type_map.at(table).count(later)
-                        && !(dg.is_ctrl_edge(dg.dep_type_map.at(table).at(later)))
-                        && dg.dep_type_map.at(table).at(later) !=
-                           DependencyGraph::REDUCTION_OR_READ
-                        && dg.dep_type_map.at(table).at(later) !=
-                           DependencyGraph::REDUCTION_OR_OUTPUT
-                        && !(dg.is_anti_edge(dg.dep_type_map.at(table).at(later)))
-                        && dg.dep_type_map.at(table).at(later) !=
-                           DependencyGraph::CONT_CONFLICT) {
-                        stage_addition = 1;
-                    }
-                    return std::max(sz, dg.stage_info[later].dep_stages_control_anti
-                                        + stage_addition);
-            });
-            LOG4("Dep stages of " << dg.stage_info[table].dep_stages <<
-                " for table " << table->name);
-            LOG4("Dep stages control anti of " << dg.stage_info[table].dep_stages_control_anti <<
-                " for table " << table->name);
-        }
-    }
+    dg.fill_dep_stages_from_topo(topo_rst_logical, false, summary);
+
+    // Compute the downward dependency chain by adding the number of stages required for each
+    // indivual table based on last table allocation pass.
+    dg.fill_dep_stages_from_topo(topo_rst_logical, true, summary);
 
     // Build min_stage
     // Min_stage for a table T is the minimum stage in which T (and any table that T is
@@ -2319,9 +2320,10 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,
                                          const BFN_Options *o,
                                          cstring dotFileName,
-                                         cstring passCont) :
+                                         cstring passCont,
+                                         const TableSummary *s) :
         Logging::PassManager("table_dependency_graph", Logging::Mode::AUTO),
-        dg(out), options(o), dotFile(dotFileName), passContext(passCont) {
+        dg(out), options(o), dotFile(dotFileName), passContext(passCont), summary(s) {
     addPasses({
         new NameToTableMapBuilder(dg),
         &mutex,
@@ -2332,7 +2334,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         new PrintPipe,
         new TableFindInjectedDependencies(phv, dg, fg, options),
         new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
-        new DepStagesThruDomFrontier(ntp, dg, *this)
+        new DepStagesThruDomFrontier(ntp, dg, *this, s)
     });
 }
 
