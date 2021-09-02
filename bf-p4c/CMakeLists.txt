@@ -1191,14 +1191,13 @@ add_dependencies(p4c_driver schema-versions)
 install (FILES ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
   DESTINATION share/p4c/p4c_src)
 
-if(ENABLE_CLOUDBREAK)
-  set(SED_RELEASE_FILTERS -e '')
-else()
-  set(SED_RELEASE_FILTERS -e '/\\<CLOUDBREAK_ONLY\\>/d')
-endif(ENABLE_CLOUDBREAK)
-if(!ENABLE_FLATROCK)
-  list(APPEND SED_RELEASE_FILTERS -e '/\\<FLATROCK_ONLY\\>/d')
-endif(!ENABLE_FLATROCK)
+set(SED_RELEASE_FILTERS "-e ''")
+if(NOT ENABLE_CLOUDBREAK)
+  list(APPEND SED_RELEASE_FILTERS "-e '/\\<CLOUDBREAK_ONLY\\>/d'")
+endif()
+if(NOT ENABLE_FLATROCK)
+  list(APPEND SED_RELEASE_FILTERS "-e '/\\<FLATROCK_ONLY\\>/d'")
+endif()
 
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
