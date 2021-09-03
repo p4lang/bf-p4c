@@ -904,11 +904,10 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
 
                     LOG4("\t\tAdd dep from " << fromDep->name << " --> " << toDep->name);
                     phv.addMetadataDependency(fromDep, toDep);
-
-                    // Keep track of Slices we add container confict dependences to
-                    next_dep_slices.insert(nextAlloc);
                 }
             }
+            // Keep track of Slices we add container confict dependences to
+            next_dep_slices.insert(nextAlloc);
         }
     }
 }
