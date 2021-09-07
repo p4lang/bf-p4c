@@ -1,11 +1,6 @@
 #ifndef TOFINO3_P4_
 #define TOFINO3_P4_
 
-#include<core.p4>
-
-#define PACK_VERSION(a, b, c) (((a) << 24) + ((b) << 12) + (c))
-#define COMPILER_VERSION PACK_VERSION(__p4c_major__, __p4c_minor__, __p4c_patchlevel)
-
 //XXX Open issues:
 // Meter color
 // Math unit
@@ -13,17 +8,30 @@
 // Digest
 // Coalesce mirroring
 
+#define PACK_VERSION(a, b, c) (((a) << 24) + ((b) << 12) + (c))
+#define COMPILER_VERSION PACK_VERSION(__p4c_major__, __p4c_minor__, __p4c_patchlevel)
+
+#include <core.p4>
+
 // ----------------------------------------------------------------------------
 // COMMON TYPES
 // ----------------------------------------------------------------------------
-typedef bit<11> PortId_t;               // Port id -- ingress or egress port
-typedef bit<16> MulticastGroupId_t;     // Multicast group id
-typedef bit<7>  QueueId_t;              // Queue id
-typedef bit<4>  MirrorType_t;           // Mirror type
-typedef bit<8>  MirrorId_t;             // Mirror id
-typedef bit<3>  ResubmitType_t;         // Resubmit type
-typedef bit<3>  DigestType_t;           // Digest type
-typedef bit<16> ReplicationId_t;        // Replication id
+#define PORT_ID_WIDTH                  11
+typedef bit<PORT_ID_WIDTH>             PortId_t;            // Port id -- ingress or egress port
+#define MULTICAST_GROUP_ID_WIDTH       16
+typedef bit<MULTICAST_GROUP_ID_WIDTH>  MulticastGroupId_t;  // Multicast group id
+#define QUEUE_ID_WIDTH                 7
+typedef bit<QUEUE_ID_WIDTH>            QueueId_t;           // Queue id
+#define MIRROR_TYPE_WIDTH              4
+typedef bit<MIRROR_TYPE_WIDTH>         MirrorType_t;        // Mirror type
+#define MIRROR_ID_WIDTH                8
+typedef bit<MIRROR_ID_WIDTH>           MirrorId_t;          // Mirror id
+#define RESUBMIT_TYPE_WIDTH            3
+typedef bit<RESUBMIT_TYPE_WIDTH>       ResubmitType_t;      // Resubmit type
+#define DIGEST_TYPE_WIDTH              3
+typedef bit<DIGEST_TYPE_WIDTH>         DigestType_t;        // Digest type
+#define REPLICATION_ID_WIDTH           16
+typedef bit<REPLICATION_ID_WIDTH>      ReplicationId_t;     // Replication id
 
 // CloneId_t will be deprecated in 9.4. Adding a typedef for any old references.
 typedef MirrorType_t CloneId_t;
@@ -31,6 +39,11 @@ typedef MirrorType_t CloneId_t;
 typedef error ParserError_t;
 
 const bit<32> PORT_METADATA_SIZE = 32w192;
+
+#define DEVPORT_PIPE_MASK   0x780
+#define DEVPORT_PIPE(port)  (port)[10:7]
+#define DEVPORT_PORT_MASK   0x7f
+#define DEVPORT_PORT(port)  (port)[6:0]
 
 const bit<16> PARSER_ERROR_OK            = 16w0x0000;
 const bit<16> PARSER_ERROR_NO_MATCH      = 16w0x0001;
@@ -106,9 +119,9 @@ header ingress_intrinsic_metadata_t {
 
     bit<2> packet_version;              // Read-only Packet version.
 
-    @padding bit<1> _pad2;
+    @padding bit<(4 - PORT_ID_WIDTH % 8)> _pad2;
 
-    PortId_t ingress_port;               // Ingress physical port id.
+    PortId_t ingress_port;              // Ingress physical port id.
                                         // this field is passed to the deparser
 
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
@@ -117,7 +130,7 @@ header ingress_intrinsic_metadata_t {
 
 @__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
-    PortId_t ucast_egress_port;          // Egress port for unicast packets. must
+    PortId_t ucast_egress_port;         // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
     bit<1> bypass_egress;               // Request flag for the warp mode
@@ -214,7 +227,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
     bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
     bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
-    PortId_t mirror_egress_port;         // Mirror packet egress port.
+    PortId_t mirror_egress_port;        // Mirror packet egress port.
     QueueId_t mirror_qid;               // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
@@ -247,9 +260,9 @@ header ghost_intrinsic_metadata_t {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header egress_intrinsic_metadata_t {
-    @padding bit<5> _pad0;
+    @padding bit<(8 - PORT_ID_WIDTH % 8)> _pad0;
 
-    PortId_t egress_port;                // Egress port id.
+    PortId_t egress_port;               // Egress port id.
                                         // this field is passed to the deparser
 
     @padding bit<5> _pad1;
@@ -290,7 +303,7 @@ header egress_intrinsic_metadata_t {
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    @padding bit<1> _pad6;
+    @padding bit<(8 - QUEUE_ID_WIDTH % 8)> _pad6;
 
     QueueId_t egress_qid;               // Egress (physical) queue id within a MAC via which
                                         // this packet was served.
@@ -346,7 +359,7 @@ struct egress_intrinsic_metadata_for_deparser_t {
     bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
     bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
     bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
-    PortId_t mirror_egress_port;         // Mirror packet egress port.
+    PortId_t mirror_egress_port;        // Mirror packet egress port.
     QueueId_t mirror_qid;               // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
@@ -406,8 +419,8 @@ header pktgen_port_down_header_t {
     @padding bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
-    @padding bit<13> _pad2;
-    PortId_t port_num;                   // Port number
+    @padding bit<(16 - PORT_ID_WIDTH % 8)> _pad2;
+    PortId_t port_num;                  // Port number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
                                         // programmed number

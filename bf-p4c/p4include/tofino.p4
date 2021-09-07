@@ -8,29 +8,44 @@
  - Initial release
  1.0.2:
  - Rename PARSER_ERROR_NO_TCAM to PARSER_ERROR_NO_MATCH
+ 1.0.3:
+ - Add portable macros and types
 
 */
 
 #define PACK_VERSION(a, b, c) (((a) << 24) + ((b) << 12) + (c))
 #define COMPILER_VERSION PACK_VERSION(__p4c_major__, __p4c_minor__, __p4c_patchlevel)
 
-#include<core.p4>
+#include <core.p4>
 
 // ----------------------------------------------------------------------------
 // COMMON TYPES
 // ----------------------------------------------------------------------------
-typedef bit<9>  PortId_t;               // Port id -- ingress or egress port
-typedef bit<16> MulticastGroupId_t;     // Multicast group id
-typedef bit<5>  QueueId_t;              // Queue id
-typedef bit<3>  MirrorType_t;           // Mirror type
-typedef bit<10> MirrorId_t;             // Mirror id
-typedef bit<3>  ResubmitType_t;         // Resubmit type
-typedef bit<3>  DigestType_t;           // Digest type
-typedef bit<16> ReplicationId_t;        // Replication id
+#define PORT_ID_WIDTH                  9
+typedef bit<PORT_ID_WIDTH>             PortId_t;            // Port id -- ingress or egress port
+#define MULTICAST_GROUP_ID_WIDTH       16
+typedef bit<MULTICAST_GROUP_ID_WIDTH>  MulticastGroupId_t;  // Multicast group id
+#define QUEUE_ID_WIDTH                 5
+typedef bit<QUEUE_ID_WIDTH>            QueueId_t;           // Queue id
+#define MIRROR_TYPE_WIDTH              3
+typedef bit<MIRROR_TYPE_WIDTH>         MirrorType_t;        // Mirror type
+#define MIRROR_ID_WIDTH                10
+typedef bit<MIRROR_ID_WIDTH>           MirrorId_t;          // Mirror id
+#define RESUBMIT_TYPE_WIDTH            3
+typedef bit<RESUBMIT_TYPE_WIDTH>       ResubmitType_t;      // Resubmit type
+#define DIGEST_TYPE_WIDTH              3
+typedef bit<DIGEST_TYPE_WIDTH>         DigestType_t;        // Digest type
+#define REPLICATION_ID_WIDTH           16
+typedef bit<REPLICATION_ID_WIDTH>      ReplicationId_t;     // Replication id
 
 typedef error ParserError_t;
 
 const bit<32> PORT_METADATA_SIZE = 32w64;
+
+#define DEVPORT_PIPE_MASK   0x180
+#define DEVPORT_PIPE(port)  (port)[8:7]
+#define DEVPORT_PORT_MASK   0x7f
+#define DEVPORT_PORT(port)  (port)[6:0]
 
 const bit<16> PARSER_ERROR_OK           = 16w0x0000;
 const bit<16> PARSER_ERROR_NO_MATCH     = 16w0x0001;
@@ -105,9 +120,9 @@ header ingress_intrinsic_metadata_t {
 
     bit<2> packet_version;              // Read-only Packet version.
 
-    @padding bit<3> _pad2;
+    @padding bit<(4 - PORT_ID_WIDTH % 8)> _pad2;
 
-    PortId_t ingress_port;                // Ingress physical port id.
+    PortId_t ingress_port;              // Ingress physical port id.
 
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
@@ -115,7 +130,7 @@ header ingress_intrinsic_metadata_t {
 
 @__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
-    PortId_t ucast_egress_port;           // Egress port for unicast packets. must
+    PortId_t ucast_egress_port;         // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
     bit<1> bypass_egress;               // Request flag for the warp mode
@@ -211,9 +226,9 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header egress_intrinsic_metadata_t {
-    @padding bit<7> _pad0;
+    @padding bit<(8 - PORT_ID_WIDTH % 8)> _pad0;
 
-    PortId_t egress_port;                 // Egress port id.
+    PortId_t egress_port;               // Egress port id.
                                         // this field is passed to the deparser
 
     @padding bit<5> _pad1;
@@ -256,7 +271,7 @@ header egress_intrinsic_metadata_t {
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    @padding bit<3> _pad8;
+    @padding bit<(8 - QUEUE_ID_WIDTH % 8)> _pad8;
 
     QueueId_t egress_qid;               // Egress (physical) queue id via which
                                         // this packet was served.
@@ -351,8 +366,8 @@ header pktgen_port_down_header_t {
     @padding bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
-    @padding bit<15> _pad2;
-    PortId_t port_num;                    // Port number
+    @padding bit<(16 - PORT_ID_WIDTH % 8)> _pad2;
+    PortId_t port_num;                  // Port number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
                                         // programmed number
