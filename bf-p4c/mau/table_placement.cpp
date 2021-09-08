@@ -645,9 +645,12 @@ void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPla
 
 class DecidePlacement::PlacementScore {
     DecidePlacement &self;
-    // This backtrack placement point to the first table allocated in the next stage which also
+    // This backtrack placement point to the best table allocated in the next stage which also
     // carry all of the current stage placement.
     BacktrackPlacement *bt;
+    // These backtrack point are all of the other non-best first table possible placements on the
+    // next stage.
+    ordered_map<const IR::MAU::Table *, BacktrackPlacement *> no_best;
     // Metric relative to resource being allocated for this stage for this allocation
     StageUseEstimate stage_use;
 
@@ -819,6 +822,10 @@ class DecidePlacement::PlacementScore {
             return false; }
     bool operator<(const PlacementScore &other) const { return *this > other; }
     BacktrackPlacement *get_backtrack() { return bt; }
+    void add_no_best_bt(const IR::MAU::Table *tbl, BacktrackPlacement *bt) {
+        no_best.insert({tbl, bt});
+    }
+    ordered_map<const IR::MAU::Table *, BacktrackPlacement *> &get_no_best_bt() { return no_best; }
 
     void printScore() const {
         LOG3("    num_log_id:" << stage_use.logical_ids);
@@ -863,9 +870,19 @@ class DecidePlacement::ResourceBasedAlloc {
 
     // Creating a backtracking position for this solution and return the placement score.
     PlacementScore *add_stage_complete(const Placed *pl,
-                                       const ordered_set<const GroupPlace *> &work) {
+                                       const ordered_set<const GroupPlace *> &work,
+                                       const safe_vector<const Placed *> &trial,
+                                       bool only_best) {
         BacktrackPlacement *bt = new BacktrackPlacement(self, pl, work, true);
         PlacementScore *pl_score = new PlacementScore(self, bt);
+        if (!only_best) {
+            for (auto t : trial) {
+                if (t != pl && t->stage == pl->stage) {
+                    BacktrackPlacement *not_best_bt = new BacktrackPlacement(self, t, work, false);
+                    pl_score->add_no_best_bt(t->table, not_best_bt);
+                }
+            }
+        }
         complete.insert(pl_score);
         return pl_score;
     }
@@ -912,6 +929,7 @@ class DecidePlacement::ResourceBasedAlloc {
             auto bt = best_score->get_backtrack();
             active_placed = bt->reset_place_table(active_work, false);
             self.recomputePartlyPlaced(active_placed, partly_placed);
+            incomplete = best_score->get_no_best_bt();
             complete.clear();
             visited.clear();
             return false;
@@ -3041,7 +3059,8 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         if (resource_mode && placed && best->stage > placed->stage) {
             savePlacement(best, work, true);
             LOG3("Resource mode and placement completed for stage:" << placed->stage);
-            PlacementScore *pl_score = res_based_alloc.add_stage_complete(best, work);
+            PlacementScore *pl_score = res_based_alloc.add_stage_complete(best, work, trial,
+                                                                          best_with_pragmas);
             if (res_based_alloc.found_other_placement()) {
                 LOG3("Found incompleted placement to try");
                 backfill.clear();
