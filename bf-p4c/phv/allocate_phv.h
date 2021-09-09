@@ -185,6 +185,13 @@ struct AllocUtils {
     static void update_slice_refs(PhvInfo& phv, const FieldDefUse& defuse);
 };
 
+namespace Diagnostics {
+
+std::string printField(const PHV::Field* f);
+std::string printSlice(const PHV::FieldSlice& slice);
+
+}  // namespace Diagnostics
+
 }  // namespace PHV
 
 /// For each field, calculate the possible packing opportunities, if they are allocated
@@ -848,29 +855,22 @@ class AllocatePHV : public Visitor {
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
     const IR::BFN::Pipe *root;
+    // const DependencyGraph &deps_i;
+    PHV::ConcreteAllocation *alloc;
+    std::list<const PHV::SuperCluster*> &unallocated_i;
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work.
      */
     const IR::Node *apply_visitor(const IR::Node* root, const char *name = 0) override;
 
-    /// Throw a pretty-printed error when allocation fails due to resource constraints.
-    void formatAndThrowError(
-        const PHV::Allocation& alloc,
-        const std::list<const PHV::SuperCluster *>& unallocated);
-
     /// Throw a pretty-printed error when allocation fails due to
     /// unsatisfiable constraints.
-    void formatAndThrowUnsat(const std::list<const PHV::SuperCluster *>& unallocated) const;
-
-    /** Diagnose why unallocated clusters remained unallocated, and throw the appropriate error
-      * message.
-      */
-    bool diagnoseFailures(const std::list<const PHV::SuperCluster *>& unallocated) const;
+    static void formatAndThrowUnsat(const std::list<const PHV::SuperCluster *>& unallocated);
 
     /** Diagnose why unallocated supercluster sc remained unallocated, and throw appropriate error
       * message.
       */
-    bool diagnoseSuperCluster(const PHV::SuperCluster* sc) const;
+    static bool diagnoseSuperCluster(const PHV::SuperCluster* sc, const PHV::AllocUtils &utils);
 
     /// use brute force strategy to allocate.
     AllocResult brute_force_alloc(
@@ -880,11 +880,32 @@ class AllocatePHV : public Visitor {
         const std::list<PHV::ContainerGroup*>& container_groups, const int pipe_id) const;
 
  public:
-    AllocatePHV(const PHV::AllocUtils& utils, const MauBacktracker& mau, PhvInfo& phv)
+    AllocatePHV(const PHV::AllocUtils& utils,
+                const MauBacktracker& mau,
+                PhvInfo& phv,
+                // const DependencyGraph &deps,
+                std::list<const PHV::SuperCluster*> &unallocated)
         : utils_i(utils),
           mau_i(mau),
           core_alloc_i(utils, mau.disableMetadataInitialization()),
-          phv_i(phv) {}
+          phv_i(phv),
+          // deps_i(deps),
+          unallocated_i(unallocated) {}
+
+    /** Diagnose why unallocated clusters remained unallocated, and throw the appropriate error
+     * message.
+     */
+    static bool diagnoseFailures(const std::list<const PHV::SuperCluster *>& unallocated,
+                                 const PHV::AllocUtils &utils);
+
+    /** Throw a pretty-printed ::error when allocation fails due to resource constraints.
+     */
+    static void formatAndThrowError(const PHV::Allocation& alloc,
+                                    const std::list<const PHV::SuperCluster *>& unallocated);
+
+    PHV::ConcreteAllocation *getAllocation() {
+        return alloc;
+    }
 };
 
 /// IncrementalPHVAllocation incrementally allocates fields.

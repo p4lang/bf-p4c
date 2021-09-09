@@ -13,9 +13,89 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/dominator_tree.h"
+#include "bf-p4c/phv/analysis/non_mocha_dark_fields.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
 #include "bf-p4c/logging/event_logger.h"
+
+// Structure that represents the live range map.
+class DarkLiveRangeMap {
+ public:
+    using StageAndAccess = PHV::StageAndAccess;
+    using ReadWritePair = std::pair<const PHV::AllocSlice*, const PHV::AllocSlice*>;
+    // Pair of sets of units in which the field has been used, and a bool set to true, if all those
+    // units use the field such that it can be sourced/written to a dark container.
+    using AccessInfo = std::pair<ordered_set<const IR::BFN::Unit*>, bool>;
+    // Single entry in live range map.
+    using Entry = ordered_map<StageAndAccess, AccessInfo>;
+
+ private:
+    static constexpr unsigned READ = PHV::FieldUse::READ;
+    static constexpr unsigned WRITE = PHV::FieldUse::WRITE;
+
+    ordered_map<const PHV::Field*, Entry> livemap;
+    int DEPARSER = -1;
+
+ public:
+    /// Pretty print the live ranges of all metadata fields.
+    cstring printDarkLiveRanges() const;
+
+    void setDeparserStageValue(int dep) { DEPARSER = dep; }
+
+    int getDeparserStageValue() const { return DEPARSER; }
+
+    boost::optional<Entry> getDarkLiveRange(const PHV::Field* f) const {
+        if (livemap.count(f)) return livemap.at(f);
+        return boost::none;
+    }
+
+    void addAccess(const PHV::Field* f,
+                   int stage,
+                   unsigned access,
+                   const IR::BFN::Unit* unit,
+                   bool dark) {
+        StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
+        bool fieldEntryPresent = livemap.count(f);
+        bool accessEntryPresent = fieldEntryPresent && livemap.at(f).count(key);
+        if (!fieldEntryPresent || !accessEntryPresent) {
+            ordered_set<const IR::BFN::Unit*> units;
+            units.insert(unit);
+            AccessInfo val = std::make_pair(units, dark);
+            livemap[f][key] = val;
+            return;
+        }
+        livemap[f][key].first.insert(unit);
+        livemap[f][key].second &= dark;
+    }
+
+    void clear() {
+        livemap.clear();
+    }
+
+    bool count(const PHV::Field* f) const {
+        return livemap.count(f);
+    }
+
+    const Entry& at(const PHV::Field* f) const {
+        return livemap.at(f);
+    }
+
+    const AccessInfo& at(const PHV::Field* f, int stage, unsigned access) const {
+        StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
+        return livemap.at(f).at(key);
+    }
+
+    bool hasAccess(const PHV::Field* f, StageAndAccess sa) const {
+        return livemap.count(f) && livemap.at(f).count(sa);
+    }
+
+    bool hasAccess(const PHV::Field* f, int stage, unsigned access) const {
+        return hasAccess(f, std::make_pair(stage, PHV::FieldUse(access)));
+    }
+
+    boost::optional<StageAndAccess> getEarliestAccess(const PHV::Field *f) const;
+    boost::optional<StageAndAccess> getLatestAccess(const PHV::Field *f) const;
+};
 
 /** This class calculates the live range of fields to determine potential for overlay due to
   * spilling into dark containers. The calculated live ranges use the min_stage value for tables
@@ -30,76 +110,9 @@ class DarkLiveRange : public Inspector {
     static constexpr int PARSER = -1;
     using StageAndAccess = PHV::StageAndAccess;
 
-    // Pair of sets of units in which the field has been used, and a bool set to true, if all those
-    // units use the field such that it can be sourced/written to a dark container.
-    using AccessInfo = std::pair<ordered_set<const IR::BFN::Unit*>, bool>;
-    // Single entry in live range map.
-    using DarkLiveRangeEntry = ordered_map<StageAndAccess, AccessInfo>;
+    using AccessInfo = DarkLiveRangeMap::AccessInfo;
+    using DarkLiveRangeEntry = ordered_map<StageAndAccess, DarkLiveRange::AccessInfo>;
     using ReadWritePair = std::pair<const PHV::AllocSlice*, const PHV::AllocSlice*>;
-
-    // Structure that represents the live range map.
-    class DarkLiveRangeMap {
-     private:
-        ordered_map<const PHV::Field*, DarkLiveRangeEntry> livemap;
-        int DEPARSER = -1;
-
-     public:
-        /// Pretty print the live ranges of all metadata fields.
-        cstring printDarkLiveRanges() const;
-
-        void setDeparserStageValue(int dep) { DEPARSER = dep; }
-
-        int getDeparserStageValue() const { return DEPARSER; }
-
-        boost::optional<DarkLiveRangeEntry> getDarkLiveRange(const PHV::Field* f) const {
-            if (livemap.count(f)) return livemap.at(f);
-            return boost::none;
-        }
-
-        void addAccess(
-                const PHV::Field* f,
-                int stage,
-                unsigned access,
-                const IR::BFN::Unit* unit,
-                bool dark) {
-            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
-            bool fieldEntryPresent = livemap.count(f);
-            bool accessEntryPresent = fieldEntryPresent && livemap.at(f).count(key);
-            if (!fieldEntryPresent || !accessEntryPresent) {
-                ordered_set<const IR::BFN::Unit*> units;
-                units.insert(unit);
-                AccessInfo val = std::make_pair(units, dark);
-                livemap[f][key] = val;
-                return;
-            }
-            livemap[f][key].first.insert(unit);
-            livemap[f][key].second &= dark;
-        }
-
-        void clear() {
-            livemap.clear();
-        }
-
-        bool count(const PHV::Field* f) const {
-            return livemap.count(f);
-        }
-
-        const DarkLiveRangeEntry& at(const PHV::Field* f) const {
-            return livemap.at(f);
-        }
-
-        const AccessInfo& at(const PHV::Field* f, int stage, unsigned access) const {
-            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
-            return livemap.at(f).at(key);
-        }
-
-        bool hasAccess(const PHV::Field* f, int stage, unsigned access) const {
-            if (!livemap.count(f)) return false;
-            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
-            if (!livemap.at(f).count(key)) return false;
-            return true;
-        }
-    };
 
  public:
     struct OrderedFieldInfo {
@@ -211,7 +224,6 @@ class DarkLiveRange : public Inspector {
     const BuildDominatorTree                &domTree;
     const ActionPhvConstraints              &actionConstraints;
     const MauBacktracker                    &tableAlloc;
-    ordered_map<FieldDefUse::locpair, bool> non_dark_refs;
 
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.
@@ -228,6 +240,7 @@ class DarkLiveRange : public Inspector {
 
     const TablesMutuallyExclusive           &tableMutex;
     const MapTablesToActions                &tablesToActions;
+    const NonMochaDarkFields                &nonMochaDark;
 
     int DEPARSER;
 
@@ -380,13 +393,18 @@ class DarkLiveRange : public Inspector {
             const ActionPhvConstraints& actions,
             const MauBacktracker& a,
             const TablesMutuallyExclusive& t,
-            const MapTablesToActions& m)
+            const MapTablesToActions& m,
+            const NonMochaDarkFields& nmd)
         : phv(p), clot(c), dg(g), defuse(f), noOverlay(pragmas.pa_no_overlay()), uses(u),
           domTree(d), actionConstraints(actions), tableAlloc(a),
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotParsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),
-          overlay(phv.dark_mutex()), tableMutex(t), tablesToActions(m) { }
+          overlay(phv.dark_mutex()), tableMutex(t), tablesToActions(m), nonMochaDark(nmd) { }
+
+    const DarkLiveRangeMap &getLiveMap() const {
+        return livemap;
+    }
 };
 
 static inline
@@ -442,6 +460,10 @@ class DarkOverlay : public PassManager {
                                                 prioritizeARAinits);
     }
 
+    const DarkLiveRangeMap &getLiveMap() const {
+        return initNode.getLiveMap();
+    }
+
     explicit DarkOverlay(
             PhvInfo& p,
             const ClotInfo& c,
@@ -452,7 +474,8 @@ class DarkOverlay : public PassManager {
             const ActionPhvConstraints& actions,
             const BuildDominatorTree& d,
             const MapTablesToActions& m,
-            const MauBacktracker& a);
+            const MauBacktracker& a,
+            const NonMochaDarkFields& nmd);
 };
 
 #endif  /* BF_P4C_PHV_ANALYSIS_DARK_LIVE_RANGE_H_ */

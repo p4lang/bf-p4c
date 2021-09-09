@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/analysis/non_mocha_dark_fields.h"
 
 /** This pass analyzes all fields used in the program and marks the fields suitable for allocation
   * in mocha containers by setting the `is_mocha_candidate()` property of the corresponding
@@ -17,14 +18,9 @@
   */
 class CollectMochaCandidates : public Inspector {
  private:
-    PhvInfo&        phv;
-    const PhvUse&   uses;
-
-    /// Represents all fields written in the MAU.
-    bitvec          fieldsWritten;
-    /// Represents all fields written by nonset operations, action data/constant, and/or speciality
-    /// operations: HASH_DIST, RNG, meters, etc.
-    bitvec          fieldsNotWrittenForMocha;
+    PhvInfo                  &phv;
+    const PhvUse             &uses;
+    const NonMochaDarkFields &nonMochaDark;
 
     /// Number of mocha candidates detected.
     size_t          mochaCount;
@@ -35,15 +31,9 @@ class CollectMochaCandidates : public Inspector {
     bool preorder(const IR::MAU::Action* act) override;
     void end_apply() override;
 
-    /// Given an action and a ActionAnalysis::FieldActionsMap related to that action, analyze all
-    /// reads and writes in that action and populate CollectMochaCandidates' data members.
-    void populateMembers(
-            const IR::MAU::Action* act,
-            const ActionAnalysis::FieldActionsMap &fieldMap);
-
  public:
-    explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u) :
-      phv(p), uses(u), mochaCount(0), mochaSize(0) { }
+    explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u, const NonMochaDarkFields &nmd) :
+        phv(p), uses(u), nonMochaDark(nmd), mochaCount(0), mochaSize(0) { }
 
     /// @returns true when @p f is a field from a packet (not metadata, pov, or bridged field).
     static bool isPacketField(const PHV::Field* f) {

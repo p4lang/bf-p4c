@@ -29,6 +29,7 @@
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
+#include "bf-p4c/phv/analysis/non_mocha_dark_fields.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/analysis/parser_critical_path.h"
 #include "bf-p4c/phv/utils/tables_to_ids.h"
@@ -74,6 +75,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     MapTablesToActions tableActionsMap;
     /// Metadata live range overlay potential information based on table dependency graph.
     MetadataLiveRange meta_live_range;
+    // Gets fields that are not mocha and/or dark compatible.
+    NonMochaDarkFields non_mocha_dark;
     /// Identification of fields that could be allocated to the same container pending the copying
     /// of one or more fields into a dark container.
     DarkOverlay dark_live_range;
@@ -102,6 +105,9 @@ class PHV_AnalysisPass : public Logging::PassManager {
 
     // Similar as AllocUtils but only used by v2::allocator.
     PHV::v2::PhvKit kit;
+
+    AllocatePHV allocate_phv;
+    std::list<const PHV::SuperCluster*> unallocated;
 
  public:
     PHV_AnalysisPass(

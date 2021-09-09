@@ -12,6 +12,7 @@
 #include "bf-p4c/phv/add_special_constraints.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/phv/live_range_split.h"
 #include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/analysis/deparser_zero.h"
 #include "bf-p4c/phv/analysis/memoize_min_stage.h"
@@ -79,8 +80,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       action_constraints(phv, uses, pack_conflicts, tableActionsMap, deps),
       domTree(flowGraph),
       meta_live_range(phv, deps, defuse, pragmas, uses, alloc),
+      non_mocha_dark(phv, uses, defuse, pragmas),
       dark_live_range(phv, clot, deps, defuse, pragmas, uses, action_constraints, domTree,
-              tableActionsMap, alloc),
+                      tableActionsMap, alloc, non_mocha_dark),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
                 domTree, alloc),
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), pragmas.pa_byte_pack(),
@@ -94,15 +96,17 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt),
       kit(phv, clot, clustering, uses, defuse, action_constraints,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
-            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt, alloc) {
+            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt, alloc),
+      allocate_phv(utils, alloc, phv, unallocated) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
         addPasses({
             // Identify uses of fields in MAU, PARDE
             &uses,
             new PhvInfo::DumpPhvFields(phv, uses),
             // Determine candidates for mocha PHVs.
+            Device::phvSpec().hasContainerKind(PHV::Kind::mocha) ? &non_mocha_dark : nullptr,
             Device::phvSpec().hasContainerKind(PHV::Kind::mocha)
-                ? new CollectMochaCandidates(phv, uses) : nullptr,
+                ? new CollectMochaCandidates(phv, uses, non_mocha_dark) : nullptr,
             Device::phvSpec().hasContainerKind(PHV::Kind::dark)
                 ? new CollectDarkCandidates(phv, uses) : nullptr,
             // Pragmas need to be run here because the later passes may add constraints encoded as
@@ -173,10 +177,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,                                                     //    |
             options.alt_phv_alloc                                            //    |
                 ? (Visitor*)new PHV::v2::PhvAllocation(kit, alloc, phv)      //    |
-                : (Visitor*)new AllocatePHV(utils, alloc, phv),              // ----
+                : (Visitor*)&allocate_phv,                                   // ----
             options.alt_phv_alloc
                 ? nullptr
                 : new AddSliceInitialization(phv, defuse, deps, meta_live_range),
+            new PHV::LiveRangeSplitOrFail([this]() { return this->allocate_phv.getAllocation(); },
+                                          unallocated, phv, utils, deps,
+                                          dark_live_range.getLiveMap(), non_mocha_dark),
             &defuse,
             phvLoggingInfo,
             // Validate results of PHV allocation.

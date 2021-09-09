@@ -18,7 +18,8 @@ const cstring& Logging::FileLog::name2type(cstring logName) {
         {"phv_trivial_allocation",      "phv"},
         {"phv_greedy_allocation",       "phv"},
         {"table_",                      "mau"},
-        {"pragmas",                     "phv"}
+        {"pragmas",                     "phv"},
+        {"live_range_split",            "phv"},
     };
 
     for (auto &logType : logNames2Type)

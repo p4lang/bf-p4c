@@ -595,6 +595,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/create_thread_local_instances.cpp
   phv/finalize_physical_liverange.cpp
   phv/finalize_stage_allocation.cpp
+  phv/live_range_split.cpp
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
   phv/optimize_phv.cpp
@@ -617,6 +618,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/memoize_min_stage.cpp
   phv/analysis/meta_live_range.cpp
   phv/analysis/mutex_overlay.cpp
+  phv/analysis/non_mocha_dark_fields.cpp
   phv/analysis/live_range_shrinking.cpp
   phv/analysis/pack_conflicts.cpp
   phv/analysis/parser_critical_path.cpp
@@ -685,6 +687,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/parser_extract_balance_score.h
   phv/finalize_physical_liverange.h
   phv/finalize_stage_allocation.h
+  phv/live_range_split.h
   phv/make_clusters.h
   phv/mau_backtracker.h
   phv/optimize_phv.h
@@ -708,6 +711,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/analysis/memoize_min_stage.h
   phv/analysis/meta_live_range.h
   phv/analysis/mutex_overlay.h
+  phv/analysis/non_mocha_dark_fields.h
   phv/analysis/live_range_shrinking.h
   phv/analysis/pack_conflicts.h
   phv/analysis/parser_critical_path.h

@@ -76,7 +76,6 @@ Visitor::profile_t DarkLiveRange::init_apply(const IR::Node* root) {
     doNotInitActions.clear();
     doNotInitToDark.clear();
     doNotInitTables.clear();
-    non_dark_refs.clear();
     BUG_CHECK(dg.finalized, "Dependence graph is not populated.");
     // For each use of the field, parser implies stage `dg.max_min_stage + 2`, deparser implies
     // stage `dg.max_min_stage + 1` (12 for Tofino), and a table implies the corresponding
@@ -122,40 +121,6 @@ bool DarkLiveRange::preorder(const IR::MAU::Action* act) {
         doNotInitActions.insert(act);
         LOG_DEBUG3("Pragma @no_field_initialization found for action: "<< act->externalName()
                    << " in table " << tbl->externalName());
-    }
-
-    ActionAnalysis aa(phv, false, false, tbl);
-    ActionAnalysis::FieldActionsMap fieldActionsMap;
-    aa.set_field_actions_map(&fieldActionsMap);
-    act->apply(aa);
-
-    LOG5("\tAnalyzing action " << act->name << " in table " << tbl->name);
-    for (auto& faEntry : fieldActionsMap) {
-        LOG5("\tInstruction: " << faEntry.first);
-        auto fieldAction = faEntry.second;
-
-        const PHV::Field* write = phv.field(fieldAction.write.expr);
-        BUG_CHECK(write, "Action %1% does not have a write?", fieldAction.write.expr);
-        FieldDefUse::locpair wr_pair(tbl, fieldAction.write.expr);
-        non_dark_refs[wr_pair] = defuse.hasNonDarkContext(wr_pair);
-
-        if (fieldAction.name != "set") {
-            LOG5("\t  Field written by nonset: " << write);
-            non_dark_refs[wr_pair] = true;
-        }
-
-        for (auto& readSrc : fieldAction.reads) {
-            if (readSrc.type == ActionAnalysis::ActionParam::ACTIONDATA ||
-                readSrc.type == ActionAnalysis::ActionParam::CONSTANT) {
-                LOG5("\t  Field written by action data/constant: " << write);
-                non_dark_refs[wr_pair] = true;
-            }
-            if (readSrc.speciality != ActionAnalysis::ActionParam::NO_SPECIAL) {
-                LOG5("\t  Field written by speciality: " << write);
-                BUG_CHECK((non_dark_refs.count(wr_pair) && non_dark_refs[wr_pair] == true),
-                          "Non-dark ref not found for table %1%", wr_pair.first);
-            }
-        }
     }
 
     return true;
@@ -231,8 +196,9 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             int def_stage = dg.min_stage(t);
             LOG_DEBUG4(TAB1 "  Defined in stage " << def_stage << " in table " << t->name);
             livemap.addAccess(f, def_stage, WRITE, def_unit,
-                    !non_dark_refs[def]);
-            if (!non_dark_refs[def]) LOG_DEBUG4(TAB2 "Can use in a dark container");
+                              !(nonMochaDark.isNotDark(f, t).isWrite()));
+            if (!(nonMochaDark.isNotDark(f, t).isWrite()))
+                LOG_DEBUG4(TAB2 "Can use in a dark container");
         } else {
             BUG("Unknown unit encountered %1%", def_unit->toString());
         }
@@ -1691,7 +1657,7 @@ bool DarkLiveRange::mutexSatisfied(const OrderedFieldInfo& info, const IR::MAU::
     return true;
 }
 
-cstring DarkLiveRange::DarkLiveRangeMap::printDarkLiveRanges() const {
+cstring DarkLiveRangeMap::printDarkLiveRanges() const {
     std::stringstream ss;
     auto numStages = DEPARSER;
     const int PARSER = -1;
@@ -1735,6 +1701,26 @@ cstring DarkLiveRange::DarkLiveRangeMap::printDarkLiveRanges() const {
     return ss.str();
 }
 
+boost::optional<PHV::StageAndAccess>
+DarkLiveRangeMap::getEarliestAccess(const PHV::Field *f) const {
+    if (!count(f)) {
+        return boost::none;
+    }
+    const auto &keys = Keys(at(f));
+    auto min = std::min_element(keys.begin(), keys.end());
+    return min == keys.end() ? boost::none : boost::optional<PHV::StageAndAccess>(*min);
+}
+
+boost::optional<PHV::StageAndAccess>
+DarkLiveRangeMap::getLatestAccess(const PHV::Field *f) const {
+    if (!count(f)) {
+        return boost::none;
+    }
+    const auto &keys = Keys(at(f));
+    auto max = std::max_element(keys.begin(), keys.end());
+    return max == keys.end() ? boost::none : boost::optional<PHV::StageAndAccess>(*max);
+}
+
 bool DarkOverlay::suitableForDarkOverlay(const PHV::AllocSlice& slice) const {
     if (slice.field()->is_solitary() && (slice.container().size() - slice.width() > 7))
         return false;
@@ -1751,8 +1737,9 @@ DarkOverlay::DarkOverlay(
         const ActionPhvConstraints& actions,
         const BuildDominatorTree& d,
         const MapTablesToActions& m,
-        const MauBacktracker& a)
-    : initNode(p, c, g, f, pragmas, u, d, actions, a, tableMutex, m) {
+        const MauBacktracker& a,
+        const NonMochaDarkFields& nmd)
+    : initNode(p, c, g, f, pragmas, u, d, actions, a, tableMutex, m, nmd) {
     addPasses({
         &tableMutex,
         &initNode

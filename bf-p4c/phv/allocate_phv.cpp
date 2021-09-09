@@ -12,6 +12,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/live_range_split.h"
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/optimize_phv.h"
 #include "bf-p4c/phv/parser_extract_balance_score.h"
@@ -3900,8 +3901,8 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     // clear allocation result to create an empty concrete allocation.
     PHV::AllocUtils::clear_slices(phv_i);
-    PHV::ConcreteAllocation alloc = make_concrete_allocation(phv_i, utils_i.uses);
-    PHV::ConcreteAllocation empty_alloc = alloc;
+    alloc = new PHV::ConcreteAllocation(phv_i, utils_i.uses);
+    PHV::ConcreteAllocation empty_alloc = *alloc;
     auto container_groups = PHV::AllocUtils::make_device_container_groups();
     std::list<PHV::SuperCluster*> cluster_groups = utils_i.make_superclusters();
 
@@ -3917,14 +3918,14 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     std::vector<const PHV::SuperCluster::SliceList*> unallocatable_lists;
     AllocResult result(
-        AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
-    result = brute_force_alloc(alloc, empty_alloc, unallocatable_lists, cluster_groups,
+        AllocResultCode::UNKNOWN, alloc->makeTransaction(), {});
+    result = brute_force_alloc(*alloc, empty_alloc, unallocatable_lists, cluster_groups,
                                container_groups, pipeId);
-    alloc.commit(result.transaction);
+    alloc->commit(result.transaction);
 
     bool allocationDone = (result.status == AllocResultCode::SUCCESS);
     if (allocationDone) {
-        PHV::AllocUtils::bind_slices(alloc, phv_i);
+        PHV::AllocUtils::bind_slices(*alloc, phv_i);
         PHV::AllocUtils::update_slice_refs(phv_i, utils_i.defuse);
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
         phv_i.set_done(false);
@@ -3941,7 +3942,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
             throw PHVTrigger::failure(tables, tables, mergedGateways, firstRoundFit,
                                     true /* ignorePackConflicts */, false /* metaInitDisable */);
         }
-        PHV::AllocUtils::bind_slices(alloc, phv_i);
+        PHV::AllocUtils::bind_slices(*alloc, phv_i);
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
     }
 
@@ -3950,32 +3951,28 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG_DEBUG1("PHV ALLOCATION SUCCESSFUL");
-        LOG1(alloc);  // Not emitting to EventLog on purpose
-    } else {
-        bool failure_diagnosed = (result.remaining_clusters.size() == 0) ? false :
-            diagnoseFailures(result.remaining_clusters);
-
-        if (result.status == AllocResultCode::FAIL_UNSAT_SLICING) {
-            formatAndThrowError(alloc, result.remaining_clusters);
-            formatAndThrowUnsat(result.remaining_clusters);
-        } else if (!failure_diagnosed) {
-            formatAndThrowError(alloc, result.remaining_clusters);
-        }
+        LOG1(*alloc);  // Not emitting to EventLog on purpose
+    } else if (result.status == AllocResultCode::FAIL_UNSAT_SLICING) {
+        formatAndThrowError(*alloc, result.remaining_clusters);
+        formatAndThrowUnsat(result.remaining_clusters);
     }
+    unallocated_i = result.remaining_clusters;
+    phv_i.set_done(true);
     Logging::FileLog::close(logfile);
 
     return root;
 }
 
-bool AllocatePHV::diagnoseFailures(const std::list<const PHV::SuperCluster*>& unallocated) const {
+bool AllocatePHV::diagnoseFailures(const std::list<const PHV::SuperCluster*>& unallocated,
+                                   const PHV::AllocUtils &utils) {
     bool rv = false;
     // Prefer actionable error message if we can precisely identify failures for any supercluster.
     for (auto& sc : unallocated)
-        rv |= diagnoseSuperCluster(sc);
+        rv |= diagnoseSuperCluster(sc, utils);
     return rv;
 }
 
-bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
+bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc, const PHV::AllocUtils &utils) {
     auto info = SuperClusterActionDiagnoseInfo(sc);
     if (!info.scCannotBeSplitFurther) {
         return false;
@@ -3986,7 +3983,7 @@ bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
         LOG_DEBUG3(TAB1 << kv.second << " : " << kv.first);
     std::stringstream ss;
     bool diagnosed =
-        utils_i.actions.diagnoseSuperCluster(info.sliceListsOfInterest, info.fieldAlignments, ss);
+        utils.actions.diagnoseSuperCluster(info.sliceListsOfInterest, info.fieldAlignments, ss);
     if (diagnosed) ::error("%1%", ss.str());
     return diagnosed;
 }
@@ -3994,11 +3991,11 @@ bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
 namespace PHV {
 namespace Diagnostics {
 
-static std::string printField(const PHV::Field* f) {
+std::string printField(const PHV::Field* f) {
     return f->externalName() + "<" + std::to_string(f->size) + "b>";
 }
 
-static std::string printSlice(const PHV::FieldSlice& slice) {
+std::string printSlice(const PHV::FieldSlice& slice) {
     auto* f = slice.field();
     if (slice.size() == f->size)
         return printField(f);
@@ -4199,7 +4196,7 @@ void AllocatePHV::formatAndThrowError(
             "%2%", unallocated_slices, errorMessage.str());
 }
 
-void AllocatePHV::formatAndThrowUnsat(const std::list<const PHV::SuperCluster*>& unsat) const {
+void AllocatePHV::formatAndThrowUnsat(const std::list<const PHV::SuperCluster*>& unsat) {
     std::stringstream msg;
     msg << "Some fields cannot be allocated because of unsatisfiable constraints."
        << std::endl << std::endl;

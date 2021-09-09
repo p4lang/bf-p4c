@@ -17,6 +17,8 @@
 
 #include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/phv/analysis/dark.h"
+#include "bf-p4c/phv/analysis/non_mocha_dark_fields.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 namespace Test {
 
@@ -140,11 +142,13 @@ apply {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
+    PHV::Pragmas pragmas(phv);
+    NonMochaDarkFields nonMochaDark(phv, uses, defuse, pragmas);
 
     auto* pipe = runMockPasses(test->pipe, phv, defuse, uses);
     ASSERT_TRUE(pipe);
 
-    auto* mocha = new CollectMochaCandidates(phv, uses);
+    auto* mocha = new CollectMochaCandidates(phv, uses, nonMochaDark);
     auto* after_analysis = pipe->apply(*mocha);
     ASSERT_TRUE(after_analysis);
 

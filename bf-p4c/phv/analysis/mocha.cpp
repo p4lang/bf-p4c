@@ -2,8 +2,6 @@
 
 Visitor::profile_t CollectMochaCandidates::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
-    fieldsWritten.clear();
-    fieldsNotWrittenForMocha.clear();
     mochaCount = 0;
     mochaSize = 0;
     return rv;
@@ -15,46 +13,7 @@ bool CollectMochaCandidates::preorder(const IR::MAU::Action* act) {
     ActionAnalysis::FieldActionsMap fieldActionsMap;
     aa.set_field_actions_map(&fieldActionsMap);
     act->apply(aa);
-    populateMembers(act, fieldActionsMap);
     return true;
-}
-
-void CollectMochaCandidates::populateMembers(
-        const IR::MAU::Action* act,
-        const ActionAnalysis::FieldActionsMap& fieldActionsMap) {
-    const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
-    BUG_CHECK(tbl != nullptr,
-        "No associated table found for collecting mocha candidates - %1%", act->name);
-    LOG5("\tAnalyzing action " << act->name << " in table " << tbl->name);
-    for (auto& fieldAction : Values(fieldActionsMap)) {
-        const PHV::Field* write = phv.field(fieldAction.write.expr);
-        BUG_CHECK(write, "Action %1% does not have a write?", fieldAction.write.expr);
-        fieldsWritten[write->id] = true;
-        if (fieldAction.name != "set") {
-            LOG5("\t  Field written by nonset: " << write);
-            fieldsNotWrittenForMocha[write->id] = true;
-        }
-        for (auto& readSrc : fieldAction.reads) {
-            // This is not an hardware limitation but because mocha container don't have the
-            // capability to rotate action data this lead to inefficient SRAM packing.
-            if (readSrc.type == ActionAnalysis::ActionParam::ACTIONDATA ||
-                readSrc.type == ActionAnalysis::ActionParam::CONSTANT) {
-                auto annot = tbl->match_table->getAnnotations();
-                if (auto s = annot->getSingle("use_hash_action")) {
-                    auto pragma_val = s->expr.at(0)->to<IR::Constant>()->asInt();
-                    if (pragma_val == 1) {
-                        LOG5("\t  Field written by action data/constant through hash_action: " <<
-                             write);
-                        fieldsNotWrittenForMocha[write->id] = true;
-                    }
-                }
-            }
-            if (readSrc.speciality != ActionAnalysis::ActionParam::NO_SPECIAL) {
-                LOG5("\t  Field written by speciality: " << write);
-                fieldsNotWrittenForMocha[write->id] = true;
-            }
-        }
-    }
 }
 
 void CollectMochaCandidates::end_apply() {
@@ -83,7 +42,8 @@ void CollectMochaCandidates::end_apply() {
             LOG5(ss.str());
             continue;
         }
-        if (fieldsNotWrittenForMocha[f.id]) {
+        ss << " ... isNotMocha: " << nonMochaDark.isNotMocha(&f, nullptr);
+        if (nonMochaDark.isNotMocha(&f, nullptr).isReadWrite()) {
             ss << "    ...write by action data/constant/speciality operation/nonset operation";
             LOG5(ss.str());
             continue;
