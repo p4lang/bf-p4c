@@ -31,6 +31,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 		in switch_header_inner_t       hdr_curr,
 		in switch_header_inner_inner_t hdr_next,
 		in switch_lookup_fields_t      lkp_curr,
+		in bool                        flags_unsupported_tunnel,
 
 		inout switch_lookup_fields_t   lkp
 ) {
@@ -38,52 +39,53 @@ control Scoper_DataMux_Hdr2ToLkp(
 	// -----------------------------
 	// L2
 	// -----------------------------
-
+/*
 	action scope_l2_none() {
 #ifdef INGRESS_MAU_NO_LKP_2
-		lkp.l2_valid     = false;
 		// do nothing...keep previous layer's values
 #else
-		lkp.l2_valid     = false;
+//		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
-		lkp.mac_type     = 0;
+//		lkp.mac_type     = 0;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
 #endif
+		lkp.l2_valid     = false;
+		lkp.mac_type     = 0;
 	}
-
+*/
 	action scope_l2_none_v4() {
 #ifdef INGRESS_MAU_NO_LKP_2
-		lkp.l2_valid     = false;
 		// do nothing...keep previous layer's values
-		lkp.mac_type     = ETHERTYPE_IPV4;
 #else
-		lkp.l2_valid     = false;
+//		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
-		lkp.mac_type     = 0;
+//		lkp.mac_type     = ETHERTYPE_IPV4;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
 #endif
+		lkp.l2_valid     = false;
+		lkp.mac_type     = ETHERTYPE_IPV4;
 	}
 
 	action scope_l2_none_v6() {
 #ifdef INGRESS_MAU_NO_LKP_2
-		lkp.l2_valid     = false;
 		// do nothing...keep previous layer's values
-		lkp.mac_type     = ETHERTYPE_IPV6;
 #else
-		lkp.l2_valid     = false;
+//		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
-		lkp.mac_type     = 0;
+//		lkp.mac_type     = ETHERTYPE_IPV6;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
 #endif
+		lkp.l2_valid     = false;
+		lkp.mac_type     = ETHERTYPE_IPV6;
 	}
 
 	action scope_l2_0tag() {
@@ -119,7 +121,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 #endif // IPV6_ENABLE
 		}
 		actions = {
-			scope_l2_none;
+//			scope_l2_none;
 			scope_l2_none_v4;
 			scope_l2_none_v6;
 			scope_l2_0tag;
@@ -128,7 +130,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 		const entries = {
 			// l2          l3
 			// ----------- ------------
-			(false, false, false, false): scope_l2_none();
+//			(false, false, false, false): scope_l2_none();
 			(false, false, true,  false): scope_l2_none_v4();
 			(false, false, false, true ): scope_l2_none_v6();
 
@@ -318,9 +320,13 @@ control Scoper_DataMux_Hdr2ToLkp(
 		lkp.tunnel_id      = lkp_curr.tunnel_id;
 		lkp.next_lyr_valid = lkp_curr_next_lyr_valid;
 	}
+
+	// -----------------------------
 /*
 	table scope_tunnel_ {
 		key = {
+			flags_unsupported_tunnel: exact;
+			
 			hdr_curr.gre.isValid():  exact;
 			hdr_curr.gtp_v1_base.isValid():  exact;
 			hdr_curr.gtp_v2_base.isValid():  exact;
@@ -334,24 +340,29 @@ control Scoper_DataMux_Hdr2ToLkp(
 			scope_tunnel_gtpu;
 			scope_tunnel_gtpc;
 			scope_tunnel_none;
+			scope_tunnel_unsupported;
 		}
 		const entries = {
-			// hdr2               hdr3
-			// ------------------ ------------
-			(true,  false, false, false, false): scope_tunnel_gre(); // hdr3 is a don't care
-			(true,  false, false, true,  false): scope_tunnel_gre(); // hdr3 is a don't care
-			(true,  false, false, false, true ): scope_tunnel_gre(); // hdr3 is a don't care
+			//      hdr2                 hdr3
+			// ---- -------------------- ------------
+			(true,  true,  false, false, false, false): scope_tunnel_unsupported(); // hdr3 is a don't care
+			(false, true,  false, false, false, false): scope_tunnel_gre(); // hdr3 is a don't care
+			(false, true,  false, false, true,  false): scope_tunnel_gre(); // hdr3 is a don't care
+			(false, true,  false, false, false, true ): scope_tunnel_gre(); // hdr3 is a don't care
 
-			(false, true,  false, false, false): scope_tunnel_gtpu(); // hdr3 is a don't care
-			(false, true,  false, true,  false): scope_tunnel_gtpu(); // hdr3 is a don't care
-			(false, true,  false, false, true ): scope_tunnel_gtpu(); // hdr3 is a don't care
+			(true,  false, true,  false, false, false): scope_tunnel_unsupported(); // hdr3 is a don't care
+			(false, false, true,  false, false, false): scope_tunnel_gtpu(); // hdr3 is a don't care
+			(false, false, true,  false, true,  false): scope_tunnel_gtpu(); // hdr3 is a don't care
+			(false, false, true,  false, false, true ): scope_tunnel_gtpu(); // hdr3 is a don't care
 
-			(false, false, true,  false, false): scope_tunnel_gtpc(); // hdr3 is a don't care
-			(false, false, true,  true,  false): scope_tunnel_gtpc(); // hdr3 is a don't care
-			(false, false, true,  false, true ): scope_tunnel_gtpc(); // hdr3 is a don't care
+			(true,  false, false, true,  false, false): scope_tunnel_unsupported(); // hdr3 is a don't care
+			(false, false, false, true,  false, false): scope_tunnel_gtpc(); // hdr3 is a don't care
+			(false, false, false, true,  true,  false): scope_tunnel_gtpc(); // hdr3 is a don't care
+			(false, false, false, true,  false, true ): scope_tunnel_gtpc(); // hdr3 is a don't care
 
-			(false, false, false, true,  false): scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
-			(false, false, false, false, true ): scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
+			(true,  false, false, false, false, false): scope_tunnel_unsupported(); // no tunnels valid, but next layer is...so must be ip-in-ip
+			(false, false, false, false, true,  false): scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
+			(false, false, false, false, false, true ): scope_tunnel_ipinip(); // no tunnels valid, but next layer is...so must be ip-in-ip
 		}
 		const default_action = scope_tunnel_none;
 	}
@@ -378,7 +389,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 	// L2 / L3 / L4
 	// -----------------------------
 
-	action scope_l2_none_l3_none_l4_none() { scope_l2_none_v4(); scope_l3_none(); scope_l4_none(); }
+//	action scope_l2_none_l3_none_l4_none() { scope_l2_none();    scope_l3_none(); scope_l4_none(); }
 	// l2 only
 	action scope_l2_0tag_l3_none_l4_none() { scope_l2_0tag();    scope_l3_none(); scope_l4_none(); }
 	action scope_l2_1tag_l3_none_l4_none() { scope_l2_1tag();    scope_l3_none(); scope_l4_none(); }
@@ -424,7 +435,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 			hdr_curr.sctp.isValid(): exact;
 		}
 		actions = {
-			scope_l2_none_l3_none_l4_none;
+//			scope_l2_none_l3_none_l4_none;
 			// l2 only
 			scope_l2_0tag_l3_none_l4_none;
 			scope_l2_1tag_l3_none_l4_none;
@@ -532,7 +543,7 @@ control Scoper_DataMux_Hdr2ToLkp(
 			(false, false,     true,             false, false, true ): scope_l2_none_l3_v4_l4_sctp();
 #endif
 		}
-		const default_action = scope_l2_none_l3_none_l4_none;
+//		const default_action = scope_l2_none_l3_none_l4_none;
 	}
 
 	// -----------------------------

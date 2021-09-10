@@ -1,4 +1,3 @@
-
 #ifndef _NPB_EGR_SF_PROXY_TOP_
 #define _NPB_EGR_SF_PROXY_TOP_
 
@@ -9,7 +8,6 @@
 #ifdef SF_2_DEDUP_ENABLE
   #include "npb_ing_sf_npb_basic_adv_dedup.p4"
 #endif
-#include "table_sizes.p4"
 
 #include "acl.p4"
 
@@ -89,8 +87,7 @@ control npb_egr_sf_proxy_top (
 
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_ip_len;  // direct counter
 
-	bit<SF_L3_LEN_RNG_WIDTH> ip_len = 0;
-	bool                     ip_len_is_rng_bitmask = false;
+	bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng = 0;
 
 #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
 	action egr_sf_ip_len_rng_hit(
@@ -98,23 +95,12 @@ control npb_egr_sf_proxy_top (
 	) {
 		stats_ip_len.count();
 
-		ip_len = rng_bitmask;
-		ip_len_is_rng_bitmask = true;
+		ip_len_rng = rng_bitmask;
 	}
 
 	// =====================================
 
 	action egr_sf_ip_len_rng_miss(
-	) {
-		stats_ip_len.count();
-
-		ip_len = lkp.ip_len;
-		ip_len_is_rng_bitmask = false;
-	}
-
-	// =====================================
-
-	action no_action_ip_len_rng(
 	) {
 		stats_ip_len.count();
 	}
@@ -128,7 +114,6 @@ control npb_egr_sf_proxy_top (
 
 		actions = {
 //			NoAction;
-			no_action_ip_len_rng;
 			egr_sf_ip_len_rng_hit;
 			egr_sf_ip_len_rng_miss;
 		}
@@ -145,8 +130,7 @@ control npb_egr_sf_proxy_top (
 
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_l4_src_port;  // direct counter
 
-	bit<SF_L4_SRC_RNG_WIDTH> l4_src_port = 0;
-	bool                     l4_src_port_is_rng_bitmask = false;
+	bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng = 0;
 
 #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
 	action egr_sf_l4_src_port_rng_hit(
@@ -154,23 +138,12 @@ control npb_egr_sf_proxy_top (
 	) {
 		stats_l4_src_port.count();
 
-		l4_src_port = rng_bitmask;
-		l4_src_port_is_rng_bitmask = true;
+		l4_src_port_rng = rng_bitmask;
 	}
 
 	// =====================================
 
 	action egr_sf_l4_src_port_rng_miss(
-	) {
-		stats_l4_src_port.count();
-
-		l4_src_port = lkp.l4_src_port;
-		l4_src_port_is_rng_bitmask = false;
-	}
-
-    // =====================================
-
-	action no_action_l4_src_port_rng(
 	) {
 		stats_l4_src_port.count();
 	}
@@ -184,7 +157,6 @@ control npb_egr_sf_proxy_top (
 
 		actions = {
 //			NoAction;
-			no_action_l4_src_port_rng;
 			egr_sf_l4_src_port_rng_hit;
 			egr_sf_l4_src_port_rng_miss;
 		}
@@ -201,8 +173,7 @@ control npb_egr_sf_proxy_top (
 
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats_l4_dst_port;  // direct counter
 
-	bit<SF_L4_DST_RNG_WIDTH> l4_dst_port = 0;
-	bool                     l4_dst_port_is_rng_bitmask = false;
+	bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng = 0;
 
 #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
 	action egr_sf_l4_dst_port_rng_hit(
@@ -210,23 +181,12 @@ control npb_egr_sf_proxy_top (
 	) {
 		stats_l4_dst_port.count();
 
-		l4_dst_port = rng_bitmask;
-		l4_dst_port_is_rng_bitmask = true;
+		l4_dst_port_rng = rng_bitmask;
 	}
 
 	// =====================================
 
 	action egr_sf_l4_dst_port_rng_miss(
-	) {
-		stats_l4_dst_port.count();
-
-		l4_dst_port = lkp.l4_dst_port;
-		l4_dst_port_is_rng_bitmask = false;
-	}
-
-    // =====================================
-
-	action no_action_l4_dst_port_rng(
 	) {
 		stats_l4_dst_port.count();
 	}
@@ -240,7 +200,6 @@ control npb_egr_sf_proxy_top (
 
 		actions = {
 //			NoAction;
-			no_action_l4_dst_port_rng;
 			egr_sf_l4_dst_port_rng_hit;
 			egr_sf_l4_dst_port_rng_miss;
 		}
@@ -292,33 +251,24 @@ control npb_egr_sf_proxy_top (
 
 #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
 			egr_sf_ip_len_rng.apply();
-#else
-			ip_len = lkp.ip_len;
-			ip_len_is_rng_bitmask = false;
 #endif
 #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
 			egr_sf_l4_src_port_rng.apply();
-#else
-			l4_src_port = lkp.l4_src_port;
-			l4_src_port_is_rng_bitmask = false;
 #endif
 #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
 			egr_sf_l4_dst_port_rng.apply();
-#else
-			l4_dst_port = lkp.l4_dst_port;
-			l4_dst_port_is_rng_bitmask = false;
 #endif
 
 			acl.apply(
 				lkp,
 				eg_md,
 				eg_intr_md_for_dprsr,
-				ip_len,
-				ip_len_is_rng_bitmask,
-				l4_src_port,
-				l4_src_port_is_rng_bitmask,
-				l4_dst_port,
-				l4_dst_port_is_rng_bitmask,
+				lkp.ip_len,
+				ip_len_rng,
+				lkp.l4_src_port,
+				l4_src_port_rng,
+				lkp.l4_dst_port,
+				l4_dst_port_rng,
 				hdr_0,
 				int_ctrl_flags
 			);
@@ -392,4 +342,4 @@ control npb_egr_sf_proxy_top (
 	}
 }
 
-#endif /* _NPB_EGR_SF_PROXY_TOP_ */
+#endif

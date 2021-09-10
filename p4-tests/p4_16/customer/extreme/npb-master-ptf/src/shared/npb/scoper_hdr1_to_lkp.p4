@@ -30,7 +30,8 @@
 control Scoper_DataMux_Hdr1ToLkp(
 		in switch_header_outer_t     hdr_curr,
 		in switch_header_inner_t     hdr_next,
-		in    switch_lookup_fields_t lkp_curr,
+		in switch_lookup_fields_t    lkp_curr,
+		in bool                      flags_unsupported_tunnel,
 
 		inout switch_lookup_fields_t lkp
 ) {
@@ -38,52 +39,53 @@ control Scoper_DataMux_Hdr1ToLkp(
 	// -----------------------------
 	// L2
 	// -----------------------------
-
+/*
 	action scope_l2_none() {
 #ifdef INGRESS_MAU_NO_LKP_1
-		lkp.l2_valid     = false;
 		// do nothing...keep previous layer's values
 #else
-		lkp.l2_valid     = false;
+//		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
-		lkp.mac_type     = 0;
+//		lkp.mac_type     = 0;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
 #endif
+		lkp.l2_valid     = false;
+		lkp.mac_type     = 0;
 	}
-
+*/
 	action scope_l2_none_v4() {
 #ifdef INGRESS_MAU_NO_LKP_1
-		lkp.l2_valid     = false;
 		// do nothing...keep previous layer's values
-		lkp.mac_type     = ETHERTYPE_IPV4;
 #else
-		lkp.l2_valid     = false;
+//		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
-		lkp.mac_type     = 0;
+//		lkp.mac_type     = ETHERTYPE_IPV4;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
 #endif
+		lkp.l2_valid     = false;
+		lkp.mac_type     = ETHERTYPE_IPV4;
 	}
 
 	action scope_l2_none_v6() {
 #ifdef INGRESS_MAU_NO_LKP_1
-		lkp.l2_valid     = false;
 		// do nothing...keep previous layer's values
-		lkp.mac_type     = ETHERTYPE_IPV6;
 #else
-		lkp.l2_valid     = false;
+//		lkp.l2_valid     = false;
 		lkp.mac_src_addr = 0;
 		lkp.mac_dst_addr = 0;
-		lkp.mac_type     = 0;
+//		lkp.mac_type     = ETHERTYPE_IPV6;
 		lkp.pcp          = 0;
 		lkp.pad          = 0;
 		lkp.vid          = 0;
 #endif
+		lkp.l2_valid     = false;
+		lkp.mac_type     = ETHERTYPE_IPV6;
 	}
 
 	action scope_l2_0tag() {
@@ -136,9 +138,9 @@ control Scoper_DataMux_Hdr1ToLkp(
 		lkp.mac_src_addr = hdr_curr.ethernet.src_addr;
 		lkp.mac_dst_addr = hdr_curr.ethernet.dst_addr;
 		lkp.mac_type     = hdr_curr.vlan_tag[1].ether_type;
-		lkp.pcp          = hdr_curr.vlan_tag[0].pcp;
+		lkp.pcp          = hdr_curr.vlan_tag[1].pcp;
 		lkp.pad          = 0;
-		lkp.vid          = hdr_curr.vlan_tag[0].vid;
+		lkp.vid          = hdr_curr.vlan_tag[1].vid;
 	}
 
 	// -----------------------------
@@ -162,7 +164,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 #endif // IPV6_ENABLE
 		}
 		actions = {
-			scope_l2_none;
+//			scope_l2_none;
 			scope_l2_none_v4;
 			scope_l2_none_v6;
 			scope_l2_0tag;
@@ -181,9 +183,9 @@ control Scoper_DataMux_Hdr1ToLkp(
 #if defined(ETAG_ENABLE) && defined(VNTAG_ENABLE)
 			// l2                               l3
 			// -------------------------------- ------------
-			(false, false, false, false, false, false, false): scope_l2_none();
-			(false, false, false, false, false, true,  false): scope_l2_none();
-			(false, false, false, false, false, false, true ): scope_l2_none();
+//			(false, false, false, false, false, false, false): scope_l2_none();
+			(false, false, false, false, false, true,  false): scope_l2_none_v4();
+			(false, false, false, false, false, false, true ): scope_l2_none_v6();
 
 			(true,  false, false, false, false, false, false): scope_l2_0tag();
 			(true,  false, false, false, false, true,  false): scope_l2_0tag();
@@ -219,7 +221,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 #elif defined(ETAG_ENABLE) && !defined(VNTAG_ENABLE)
 			// l2                        l3
 			// ------------------------- ------------
-			(false, false, false, false, false, false): scope_l2_none();
+//			(false, false, false, false, false, false): scope_l2_none();
 			(false, false, false, false, true,  false): scope_l2_none_v4();
 			(false, false, false, false, false, true ): scope_l2_none_v6();
 
@@ -248,7 +250,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 #elif !defined(ETAG_ENABLE) && defined(VNTAG_ENABLE)
 			// l2                        l3
 			// ------------------------- ------------
-			(false, false, false, false, false, false): scope_l2_none();
+//			(false, false, false, false, false, false): scope_l2_none();
 			(false, false, false, false, true,  false): scope_l2_none_v4();
 			(false, false, false, false, false, true ): scope_l2_none_v6();
 
@@ -277,7 +279,7 @@ control Scoper_DataMux_Hdr1ToLkp(
 #else // !defined(ETAG_ENABLE) && !defined(VNTAG_ENABLE)
 			// l2                 l3
 			// ------------------ ------------
-			(false, false, false, false, false): scope_l2_none();
+//			(false, false, false, false, false): scope_l2_none();
 			(false, false, false, true,  false): scope_l2_none_v4();
 			(false, false, false, false, true ): scope_l2_none_v6();
 
@@ -316,8 +318,8 @@ control Scoper_DataMux_Hdr1ToLkp(
 		lkp.ip_tos        = hdr_curr.ipv4.tos;
 		lkp.ip_proto      = hdr_curr.ipv4.protocol;
 		lkp.ip_flags      = hdr_curr.ipv4.flags;
-		lkp.ip_src_addr   = (bit<128>) hdr_curr.ipv4.src_addr;
-		lkp.ip_dst_addr   = (bit<128>) hdr_curr.ipv4.dst_addr;
+		lkp.ip_src_addr_v4= hdr_curr.ipv4.src_addr;
+		lkp.ip_dst_addr_v4= hdr_curr.ipv4.dst_addr;
 		lkp.ip_len        = hdr_curr.ipv4.total_len;
 	}
 
@@ -769,6 +771,8 @@ control Scoper_DataMux_Hdr1ToLkp(
 		lkp.tunnel_id      = lkp_curr.tunnel_id;
 		lkp.next_lyr_valid = lkp_curr_next_lyr_valid;
 	}
+
+	// -----------------------------
 /*
 	table scope_tunnel_ {
 		key = {

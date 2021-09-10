@@ -36,6 +36,10 @@
 // YES Set Lkp Data
 
 control Scoper_DataOnly(
+		in    bool flags_unsupported_tunnel_0_in,
+		in    bool flags_unsupported_tunnel_1_in,
+		in    bool flags_unsupported_tunnel_2_in,
+
 		in    switch_lookup_fields_t lkp0_in,
 //		in    switch_lookup_fields_t lkp1_in,
 		in    switch_lookup_fields_t lkp2_in,
@@ -50,19 +54,19 @@ control Scoper_DataOnly(
 	apply {
 		if(scope == 0) {
 #ifdef INGRESS_MAU_NO_LKP_0
-//			Scoper_DataMux_Hdr0ToLkp.apply(hdr_0, hdr_1, lkp0_in, lkp);
+//			Scoper_DataMux_Hdr0ToLkp.apply(hdr_0, hdr_1, lkp0_in, flags_unsupported_tunnel_0_in, lkp);
 #else
 //			Scoper_DataMux_LkpToLkp.apply(lkp0_in, lkp);
 #endif
 		} else if(scope == 1) {
 #ifdef INGRESS_MAU_NO_LKP_1
-//			Scoper_DataMux_Hdr1ToLkp.apply(hdr_1, hdr_2, lkp1_in, lkp);
+//			Scoper_DataMux_Hdr1ToLkp.apply(hdr_1, hdr_2, lkp1_in, flags_unsupported_tunnel_1_in, lkp);
 #else
 //			Scoper_DataMux_LkpToLkp.apply(lkp1_in, lkp);
 #endif
 		} else {
 #ifdef INGRESS_MAU_NO_LKP_2
-			Scoper_DataMux_Hdr2ToLkp.apply(hdr_2, hdr_3, lkp2_in, lkp);
+			Scoper_DataMux_Hdr2ToLkp.apply(hdr_2, hdr_3, lkp2_in, flags_unsupported_tunnel_2_in, lkp);
 #else
 			Scoper_DataMux_LkpToLkp.apply(lkp2_in, lkp);
 #endif
@@ -161,6 +165,10 @@ control Scoper_ScopeAndTermOnly(
 // YES Set Lkp Data
 
 control Scoper_ScopeAndTermAndData(
+		in    bool flags_unsupported_tunnel_0_in,
+		in    bool flags_unsupported_tunnel_1_in,
+		in    bool flags_unsupported_tunnel_2_in,
+
 		inout switch_lookup_fields_t lkp0_in,
 //		inout switch_lookup_fields_t lkp1_in,
 		inout switch_lookup_fields_t lkp2_in,
@@ -256,7 +264,7 @@ control Scoper_ScopeAndTermAndData(
 */
 		if(scope_inc.apply().hit) {
 #ifdef INGRESS_MAU_NO_LKP_2
-			Scoper_DataMux_Hdr2ToLkp.apply(hdr_2, hdr_3, lkp2_in, lkp);
+			Scoper_DataMux_Hdr2ToLkp.apply(hdr_2, hdr_3, lkp2_in, flags_unsupported_tunnel_2_in, lkp);
 #else
 			Scoper_DataMux_LkpToLkp.apply(lkp2_in, lkp);
 #endif

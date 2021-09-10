@@ -20,6 +20,9 @@
  *
  ******************************************************************************/
 
+#ifndef _NPB_
+#define _NPB_
+
 #include <core.p4>
 #if __TARGET_TOFINO__ == 2
   #include <t2na.p4>
@@ -70,8 +73,6 @@
 @pa_auto_init_metadata
 @pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
 @pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
-@pa_container_size("egress", "hdr.outer.vn_tag.svif_id", 16)  // table-fitting CODE HACK
-@pa_container_size("egress", "hdr.transport.ipv4.protocol", 16)  // table-fitting CODE HACK
 
 #ifdef PA_MONOGRESS
 @pa_parser_group_monogress  //grep for monogress in phv_allocation log to confirm
@@ -359,7 +360,12 @@ control SwitchEgress(
 			tunnel_encap.apply(hdr.transport, hdr.outer, hdr.inner, hdr.inner_inner, eg_md, eg_md.tunnel_0, eg_md.tunnel_1, eg_md.tunnel_2);
 			tunnel_rewrite.apply(hdr.transport, eg_md, eg_md.tunnel_0);
 			vlan_xlate.apply(hdr.transport, eg_md);
-
+/*
+			// fix ip total length field if packet is being truncated (todo: adjust by 16w20 in case of vlan tag present)
+			if(hdr.transport.ipv4.total_len > (bit<16>)eg_md.nsh_md.truncate_len - 16w14) {
+				hdr.transport.ipv4.total_len = (bit<16>)eg_md.nsh_md.truncate_len - 16w14;
+			}
+*/
 #ifdef DTEL_ENABLE
 			dtel.apply(hdr.outer, eg_md, eg_intr_md, eg_md.dtel.hash);
 			dtel_config.apply(hdr.outer, eg_md, eg_intr_md_for_dprsr);
@@ -385,3 +391,5 @@ Pipeline(
         SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
+
+#endif // _NPB_

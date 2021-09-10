@@ -144,8 +144,8 @@ const switch_cpu_reason_t SWITCH_CPU_REASON_PTP             = 8;
 // -------------------------------------
 // Extreme Networks - Added
 // -------------------------------------
-const switch_cpu_reason_t SWITCH_CPU_REASON_IG_PORT_MIRRROR = 254;
-const switch_cpu_reason_t SWITCH_CPU_REASON_EG_PORT_MIRRROR = 255;
+const switch_cpu_reason_t SWITCH_CPU_REASON_IG_PORT_MIRROR = 254;
+const switch_cpu_reason_t SWITCH_CPU_REASON_EG_PORT_MIRROR = 255;
 
 struct switch_cpu_port_value_set_t {
     bit<16> ether_type;
@@ -406,6 +406,8 @@ struct switch_tunnel_metadata_t { // for transport
 
 	bool terminate;
 	bool encap;
+
+	bool unsupported_tunnel;
 }
 
 struct switch_tunnel_metadata_reduced_t { // for outer and inner
@@ -416,6 +418,8 @@ struct switch_tunnel_metadata_reduced_t { // for outer and inner
 	bit<8> nvgre_flow_id;
 	bool terminate;
 	bool encap;
+
+	bool unsupported_tunnel;
 }
 
 // Data-plane telemetry (DTel) ------------------------------------------------
@@ -523,7 +527,7 @@ header switch_dtel_drop_mirror_metadata_h {
     bit<1> _pad4;
 #endif
     switch_qid_t qid;
-//  switch_drop_reason_t drop_reason;
+    switch_drop_reason_t drop_reason;
 }
 
 // Used for dtel truncate_only and ifa_clone mirror sessions
@@ -651,14 +655,12 @@ struct switch_lookup_fields_t {
     bit<128>          ip_dst_addr;
 	bit<32>           ip_src_addr_v4;
 	bit<32>           ip_dst_addr_v4;
-//  @pa_alias("ingress" , "ig_md.lkp_0.ip_src_addr[31:0]", "ig_md.lkp_0.ip_src_addr_v4" )
-//  @pa_alias("ingress" , "ig_md.lkp_0.ip_dst_addr[31:0]", "ig_md.lkp_0.ip_dst_addr_v4" )
+    @pa_alias("ingress" , "ig_md.lkp_0.ip_src_addr[31:0]", "ig_md.lkp_0.ip_src_addr_v4" )
+    @pa_alias("ingress" , "ig_md.lkp_0.ip_dst_addr[31:0]", "ig_md.lkp_0.ip_dst_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_1.ip_src_addr[31:0]", "ig_md.lkp_1.ip_src_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_1.ip_dst_addr[31:0]", "ig_md.lkp_1.ip_dst_addr_v4" )
-//#ifdef INGRESS_PARSER_POPULATES_LKP_2
     @pa_alias("ingress" , "ig_md.lkp_2.ip_src_addr[31:0]", "ig_md.lkp_2.ip_src_addr_v4" )
     @pa_alias("ingress" , "ig_md.lkp_2.ip_dst_addr[31:0]", "ig_md.lkp_2.ip_dst_addr_v4" )
-//#endif
     @pa_alias("egress" ,  "eg_md.lkp_1.ip_src_addr[31:0]", "eg_md.lkp_1.ip_src_addr_v4" )
     @pa_alias("egress" ,  "eg_md.lkp_1.ip_dst_addr[31:0]", "eg_md.lkp_1.ip_dst_addr_v4" )
     bit<16>           ip_len;
@@ -879,10 +881,7 @@ struct switch_ingress_metadata_t {
 	switch_ingress_bypass_t bypass;
 
 	switch_cpu_reason_t cpu_reason;
-//  switch_drop_reason_t drop_reason;
-//  switch_drop_reason_t drop_reason_0;
-//  switch_drop_reason_t drop_reason_1;
-//  switch_drop_reason_t drop_reason_2;
+    switch_drop_reason_t drop_reason; // used by dtel code
 
 //#ifdef INGRESS_PARSER_POPULATES_LKP_0
     switch_lookup_fields_t              lkp_0;
@@ -950,10 +949,7 @@ struct switch_egress_metadata_t {
 	switch_egress_bypass_t bypass;
 
 	switch_cpu_reason_t cpu_reason;
-//  switch_drop_reason_t drop_reason;
-//  switch_drop_reason_t drop_reason_0;
-//  switch_drop_reason_t drop_reason_1;
-//  switch_drop_reason_t drop_reason_2;
+    switch_drop_reason_t drop_reason; // used by dtel code
 
     switch_lookup_fields_t              lkp_1;    //     scoped version of fields
 //  switch_tunnel_type_t   lkp_1_tunnel_outer_type;
@@ -1001,28 +997,57 @@ struct switch_header_transport_t {
 
 #ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE
     mpls_h[MPLS_DEPTH] mpls;
-#endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE    
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+#endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE
+    
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
     ipv4_h ipv4;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
 
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
     ipv6_h ipv6;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(GRE_TRANSPORT_EGRESS_ENABLE_V6)
 
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || \
+    defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
     gre_h gre;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(GRE_TRANSPORT_EGRESS_ENABLE_V4) || \
+       // defined(GRE_TRANSPORT_EGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
 
-#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
+#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_EGRESS_ENABLE)
 	gre_extension_sequence_h gre_sequence;
     erspan_type2_h erspan_type2;
     //erspan_type3_h erspan_type3;
-#endif /* defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) */
+#endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_EGRESS_ENABLE) */
 
-#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
     udp_h udp;
-#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
 #ifdef GENEVE_TRANSPORT_INGRESS_ENABLE_V4
     geneve_h geneve;
 #endif // GENEVE_TRANSPORT_INGRESS_ENABLE_V4

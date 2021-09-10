@@ -224,14 +224,33 @@ control npb_ing_sfc_top (
 //			ig_md.nsh_md.start_of_path = false;
 //			ig_md.nsh_md.sfc_enable    = false;
 
+			// ----- table -----
+  #ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
+			if(ig_md.nsh_md.ver == 2) {
+    #ifdef SFF_PREDECREMENTED_SI_ENABLE
+				// get predecremented si
+				ing_sfc_sf_sel.apply();
+    #endif
+			} else {
+				// xlate, get predecremented si
+				ing_sfc_sf_sel_nsh_xlate.apply();
+			}
+  #else
+    #ifdef SFF_PREDECREMENTED_SI_ENABLE
+			// get predecremented si
+			ing_sfc_sf_sel.apply();
+    #endif
+  #endif
 			// ---- advance data to match incoming scope value ----
 /*
 #ifdef INGRESS_MAU_NO_LKP_1
-			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.lkp_0);
+			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.tunnel_1.unsupported_tunnel, ig_md.lkp_0);
 #else
 			Scoper_DataMux_LkpToLkp_inst.apply(ig_md.lkp_1, ig_md.lkp_0);
 #endif
 */
+//			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.tunnel_1.unsupported_tunnel, ig_md.lkp_1);
+
 			// ---- advance data to match incoming scope value ----
 /*
 			Scoper_DataOnly.apply(
@@ -250,21 +269,6 @@ control npb_ing_sfc_top (
 			if(ig_md.nsh_md.scope == 2) {
 				scope_flag = true;
 			}
-
-			// ----- table -----
-  #ifdef INGRESS_NSH_HDR_VER_1_SUPPORT
-			if(ig_md.nsh_md.ver == 2) {
-    #ifdef SFF_PREDECREMENTED_SI_ENABLE
-				ing_sfc_sf_sel.apply();
-    #endif
-			} else {
-				ing_sfc_sf_sel_nsh_xlate.apply();
-			}
-  #else
-    #ifdef SFF_PREDECREMENTED_SI_ENABLE
-			ing_sfc_sf_sel.apply();
-    #endif
-  #endif
 		} else {
 #endif // SFC_NSH_ENABLE
 			// -----------------------------------------------------------------
@@ -371,11 +375,13 @@ control npb_ing_sfc_top (
 			ig_md.nsh_md.scope = 1;
 /*
 #ifdef INGRESS_MAU_NO_LKP_1
-			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.lkp_0);
+			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.tunnel_1.unsupported_tunnel, ig_md.lkp_0);
 #else
 			Scoper_DataMux_LkpToLkp_inst.apply(ig_md.lkp_1, ig_md.lkp_0);
 #endif
 */
+//			Scoper_DataMux_Hdr1ToLkp_inst.apply(hdr_1, hdr_2, ig_md.lkp_1, ig_md.tunnel_1.unsupported_tunnel, ig_md.lkp_1);
+
 			// -----------------------
 			// Inner SAP
 			// -----------------------
@@ -424,7 +430,7 @@ control npb_ing_sfc_top (
 #endif // SFC_NSH_ENABLE
 
 		if(scope_flag && ig_md.lkp_1.next_lyr_valid) {
-			Scoper_DataMux_Hdr2ToLkp_inst.apply(hdr_2, hdr_3, ig_md.lkp_2, ig_md.lkp_1);
+			Scoper_DataMux_Hdr2ToLkp_inst.apply(hdr_2, hdr_3, ig_md.lkp_2, ig_md.tunnel_2.unsupported_tunnel, ig_md.lkp_1);
 		}
 	}
 }

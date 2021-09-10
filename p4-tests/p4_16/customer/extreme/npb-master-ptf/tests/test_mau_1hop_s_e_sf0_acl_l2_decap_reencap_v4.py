@@ -116,9 +116,6 @@ class test(BfRuntimeTest):
 		# Ingress Tunnel
 		# -----------------
 
-
-		# -----------------
-
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, terminate=1)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, terminate=1)
 		npb_npb_sf0_policy_l2_add(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, terminate=1)
@@ -222,9 +219,6 @@ class test(BfRuntimeTest):
 
 		# -----------------
 		# Ingress Tunnel
-		# -----------------
-
-
 		# -----------------
 
 		npb_npb_sf0_policy_l2_del(self, self.target, sap=sap, vpn=vpn, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf)

@@ -210,7 +210,7 @@ action hit (                                                                  \
 	bool mirror_enable,                                                       \
 	switch_mirror_session_t mirror_session_id,                                \
 	switch_cpu_reason_t cpu_reason_code,                                      \
-	switch_mirror_meter_id_t mirror_meter_id,                                   \
+	switch_mirror_meter_id_t mirror_meter_id,                                 \
 	switch_qid_t qid,                                                         \
 /*	bool dtel_report_type_enable,              */                             \
 /*	switch_dtel_report_type_t dtel_report_type */                             \
@@ -232,7 +232,7 @@ action hit (                                                                  \
 	mirror_enable_              = mirror_enable;                              \
 	mirror_session_id_          = mirror_session_id;                          \
 	cpu_reason_                 = cpu_reason_code;                            \
-	mirror_meter_id_              = mirror_meter_id;                              \
+	mirror_meter_id_            = mirror_meter_id;                            \
                                                                               \
 	qid_                        = qid;                                        \
                                                                               \
@@ -272,7 +272,7 @@ action hit(                                                                   \
 	bool mirror_enable,                                                       \
 	switch_mirror_session_t mirror_session_id,                                \
 	switch_cpu_reason_t cpu_reason_code,                                      \
-	switch_mirror_meter_id_t mirror_meter_id,                                   \
+	switch_mirror_meter_id_t mirror_meter_id,                                 \
 	bit<6> indirect_counter_index                                             \
 ) {                                                                           \
 /*	eg_intr_md_for_dprsr.drop_ctl = drop; */                                  \
@@ -293,7 +293,7 @@ action hit(                                                                   \
 	mirror_enable_              = mirror_enable;                              \
 	mirror_session_id_          = mirror_session_id;                          \
 	cpu_reason_                 = cpu_reason_code;                            \
-	mirror_meter_id_              = mirror_meter_id;                              \
+	mirror_meter_id_            = mirror_meter_id;                            \
                                                                               \
 	stats.count();                                                            \
 	indirect_counter_index_     = indirect_counter_index;                     \
@@ -314,12 +314,12 @@ control IngressMacAcl(
 	in    switch_header_transport_t hdr,
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -385,12 +385,12 @@ control IngressIpAcl(
 	in    switch_header_transport_t hdr,
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -430,36 +430,30 @@ control IngressIpAcl(
 			lkp.vid                                : ternary;
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
 			ip_len                                 : ternary @name("lkp.ip_len");
-			ip_len_is_rng_bitmask                  : ternary @name("lkp.ip_len_is_rng_bitmask");
+#ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
+			ip_len_rng                             : ternary @name("lkp.ip_len_rng");
 #else
   #ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE_IN_ACL
-			lkp.ip_len                             : range   @name("lkp.ip_len");
-  #else
-			lkp.ip_len                             : ternary @name("lkp.ip_len");
+			lkp.ip_len                             : range   @name("lkp.ip_len_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
 			l4_src_port                            : ternary @name("lkp.l4_src_port");
-			l4_src_port_is_rng_bitmask             : ternary @name("lkp.l4_src_port_is_rng_bitmask");
+#ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
+			l4_src_port_rng                        : ternary @name("lkp.l4_src_port_rng");
 #else
   #ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_src_port                        : range   @name("lkp.l4_src_port");
-  #else
-			lkp.l4_src_port                        : ternary @name("lkp.l4_src_port");
+			lkp.l4_src_port                        : range   @name("lkp.l4_src_port_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
 			l4_dst_port                            : ternary @name("lkp.l4_dst_port");
-			l4_dst_port_is_rng_bitmask             : ternary @name("lkp.l4_dst_port_is_rng_bitmask");
+#ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
+			l4_dst_port_rng                        : ternary @name("lkp.l4_dst_port_rng");
 #else
   #ifdef SF_0_L4_DST_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port");
-  #else
-			lkp.l4_dst_port                        : ternary @name("lkp.l4_dst_port");
+			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port_rng");
   #endif
 #endif
 		}
@@ -490,12 +484,12 @@ control IngressIpv4Acl(
 	in    switch_header_transport_t hdr,
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -537,36 +531,30 @@ control IngressIpv4Acl(
 			lkp.vid                                : ternary;
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
 			ip_len                                 : ternary @name("lkp.ip_len");
-			ip_len_is_rng_bitmask                  : ternary @name("lkp.ip_len_is_rng_bitmask");
+#ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
+			ip_len_rng                             : ternary @name("lkp.ip_len_rng");
 #else
   #ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE_IN_ACL
-			lkp.ip_len                             : range   @name("lkp.ip_len");
-  #else
-			lkp.ip_len                             : ternary @name("lkp.ip_len");
+			lkp.ip_len                             : range   @name("lkp.ip_len_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
 			l4_src_port                            : ternary @name("lkp.l4_src_port");
-			l4_src_port_is_rng_bitmask             : ternary @name("lkp.l4_src_port_is_rng_bitmask");
+#ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
+			l4_src_port_rng                        : ternary @name("lkp.l4_src_port_rng");
 #else
   #ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_src_port                        : range   @name("lkp.l4_src_port");
-  #else
-			lkp.l4_src_port                        : ternary @name("lkp.l4_src_port");
+			lkp.l4_src_port                        : range   @name("lkp.l4_src_port_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
 			l4_dst_port                            : ternary @name("lkp.l4_dst_port");
-			l4_dst_port_is_rng_bitmask             : ternary @name("lkp.l4_dst_port_is_rng_bitmask");
+#ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
+			l4_dst_port_rng                        : ternary @name("lkp.l4_dst_port_rng");
 #else
   #ifdef SF_0_L4_DST_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port");
-  #else
-			lkp.l4_dst_port                        : ternary @name("lkp.l4_dst_port");
+			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port_rng");
   #endif
 #endif
 		}
@@ -598,12 +586,12 @@ control IngressIpv6Acl(
 	in    switch_header_transport_t hdr,
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -645,36 +633,30 @@ control IngressIpv6Acl(
 			lkp.vid                                : ternary;
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
 			ip_len                                 : ternary @name("lkp.ip_len");
-			ip_len_is_rng_bitmask                  : ternary @name("lkp.ip_len_is_rng_bitmask");
+#ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE
+			ip_len_rng                             : ternary @name("lkp.ip_len_rng");
 #else
   #ifdef SF_0_L3_LEN_RNG_TABLE_ENABLE_IN_ACL
-			lkp.ip_len                             : range   @name("lkp.ip_len");
-  #else
-			lkp.ip_len                             : ternary @name("lkp.ip_len");
+			lkp.ip_len                             : range   @name("lkp.ip_len_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
 			l4_src_port                            : ternary @name("lkp.l4_src_port");
-			l4_src_port_is_rng_bitmask             : ternary @name("lkp.l4_src_port_is_rng_bitmask");
+#ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE
+			l4_src_port_rng                        : ternary @name("lkp.l4_src_port_rng");
 #else
   #ifdef SF_0_L4_SRC_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_src_port                        : range   @name("lkp.l4_src_port");
-  #else
-			lkp.l4_src_port                        : ternary @name("lkp.l4_src_port");
+			lkp.l4_src_port                        : range   @name("lkp.l4_src_port_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
 			l4_dst_port                            : ternary @name("lkp.l4_dst_port");
-			l4_dst_port_is_rng_bitmask             : ternary @name("lkp.l4_dst_port_is_rng_bitmask");
+#ifdef SF_0_L4_DST_RNG_TABLE_ENABLE
+			l4_dst_port_rng                        : ternary @name("lkp.l4_dst_port_rng");
 #else
   #ifdef SF_0_L4_DST_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port");
-  #else
-			lkp.l4_dst_port                        : ternary @name("lkp.l4_dst_port");
+			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port_rng");
   #endif
 #endif
 		}
@@ -708,12 +690,12 @@ control IngressL7Acl(
 	in    udf_h hdr_udf,
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -784,12 +766,12 @@ control IngressAcl(
 	inout switch_ingress_metadata_t ig_md,
 	inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
 	inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	inout switch_header_transport_t hdr_0,
 	in    udf_h hdr_udf,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags
@@ -919,9 +901,9 @@ control IngressAcl(
 			hdr_0,
 			ig_md,
 			ig_intr_md_for_dprsr,
-			ip_len, ip_len_is_rng_bitmask,
-			l4_src_port, l4_src_port_is_rng_bitmask,
-			l4_dst_port, l4_dst_port_is_rng_bitmask,
+			ip_len, ip_len_rng,
+			l4_src_port, l4_src_port_rng,
+			l4_dst_port, l4_dst_port_rng,
 			int_ctrl_flags,
 			// ----- results -----
 			prev_table_hit,
@@ -941,9 +923,9 @@ control IngressAcl(
 				hdr_0,
 				ig_md,
 				ig_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -963,9 +945,9 @@ control IngressAcl(
 				hdr_0,
 				ig_md,
 				ig_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -983,9 +965,9 @@ control IngressAcl(
 				hdr_0,
 				ig_md,
 				ig_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -1008,9 +990,9 @@ control IngressAcl(
 				hdr_udf,
 				ig_md,
 				ig_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -1030,9 +1012,9 @@ control IngressAcl(
 			hdr_0,
 			ig_md,
 			ig_intr_md_for_dprsr,
-			ip_len, ip_len_is_rng_bitmask,
-			l4_src_port, l4_src_port_is_rng_bitmask,
-			l4_dst_port, l4_dst_port_is_rng_bitmask,
+			ip_len, ip_len_rng,
+			l4_src_port, l4_src_port_rng,
+			l4_dst_port, l4_dst_port_rng,
 			int_ctrl_flags,
 			// ----- results -----
 			prev_table_hit,
@@ -1195,12 +1177,12 @@ control EgressMacAcl(
 	in    switch_lookup_fields_t lkp,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -1267,12 +1249,12 @@ control EgressIpAcl(
 	in    switch_lookup_fields_t lkp,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -1306,36 +1288,30 @@ control EgressIpAcl(
 			lkp.vid                                : ternary;
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
 			ip_len                                 : ternary @name("lkp.ip_len");
-			ip_len_is_rng_bitmask                  : ternary @name("lkp.ip_len_is_rng_bitmask");
+#ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
+			ip_len_rng                             : ternary @name("lkp.ip_len_rng");
 #else
   #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE_IN_ACL
-			lkp.ip_len                             : range   @name("lkp.ip_len");
-  #else
-			lkp.ip_len                             : ternary @name("lkp.ip_len");
+			lkp.ip_len                             : range   @name("lkp.ip_len_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
 			l4_src_port                            : ternary @name("lkp.l4_src_port");
-			l4_src_port_is_rng_bitmask             : ternary @name("lkp.l4_src_port_is_rng_bitmask");
+#ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
+			l4_src_port_rng                        : ternary @name("lkp.l4_src_port_rng");
 #else
   #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_src_port                        : range   @name("lkp.l4_src_port");
-  #else
-			lkp.l4_src_port                        : ternary @name("lkp.l4_src_port");
+			lkp.l4_src_port                        : range   @name("lkp.l4_src_port_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
 			l4_dst_port                            : ternary @name("lkp.l4_dst_port");
-			l4_dst_port_is_rng_bitmask             : ternary @name("lkp.l4_dst_port_is_rng_bitmask");
+#ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
+			l4_dst_port_rng                        : ternary @name("lkp.l4_dst_port_rng");
 #else
   #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port");
-  #else
-			lkp.l4_dst_port                        : ternary @name("lkp.l4_dst_port");
+			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port_rng");
   #endif
 #endif
 			// -------------------------------------------
@@ -1372,12 +1348,12 @@ control EgressIpv4Acl(
 	in    switch_lookup_fields_t lkp,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -1413,36 +1389,30 @@ control EgressIpv4Acl(
 			lkp.vid                                : ternary;
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
 			ip_len                                 : ternary @name("lkp.ip_len");
-			ip_len_is_rng_bitmask                  : ternary @name("lkp.ip_len_is_rng_bitmask");
+#ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
+			ip_len_rng                             : ternary @name("lkp.ip_len_rng");
 #else
   #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE_IN_ACL
-			lkp.ip_len                             : range   @name("lkp.ip_len");
-  #else
-			lkp.ip_len                             : ternary @name("lkp.ip_len");
+			lkp.ip_len                             : range   @name("lkp.ip_len_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
 			l4_src_port                            : ternary @name("lkp.l4_src_port");
-			l4_src_port_is_rng_bitmask             : ternary @name("lkp.l4_src_port_is_rng_bitmask");
+#ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
+			l4_src_port_rng                        : ternary @name("lkp.l4_src_port_rng");
 #else
   #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_src_port                        : range   @name("lkp.l4_src_port");
-  #else
-			lkp.l4_src_port                        : ternary @name("lkp.l4_src_port");
+			lkp.l4_src_port                        : range   @name("lkp.l4_src_port_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
 			l4_dst_port                            : ternary @name("lkp.l4_dst_port");
-			l4_dst_port_is_rng_bitmask             : ternary @name("lkp.l4_dst_port_is_rng_bitmask");
+#ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
+			l4_dst_port_rng                        : ternary @name("lkp.l4_dst_port_rng");
 #else
   #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port");
-  #else
-			lkp.l4_dst_port                        : ternary @name("lkp.l4_dst_port");
+			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port_rng");
   #endif
 #endif
 			// -------------------------------------------
@@ -1481,12 +1451,12 @@ control EgressIpv6Acl(
 	in    switch_lookup_fields_t lkp,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_control_flags,
 	// ----- results -----
 	inout bool prev_table_hit_,
@@ -1522,36 +1492,30 @@ control EgressIpv6Acl(
 			lkp.vid                                : ternary;
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
 			ip_len                                 : ternary @name("lkp.ip_len");
-			ip_len_is_rng_bitmask                  : ternary @name("lkp.ip_len_is_rng_bitmask");
+#ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE
+			ip_len_rng                             : ternary @name("lkp.ip_len_rng");
 #else
   #ifdef SF_2_L3_LEN_RNG_TABLE_ENABLE_IN_ACL
-			lkp.ip_len                             : range   @name("lkp.ip_len");
-  #else
-			lkp.ip_len                             : ternary @name("lkp.ip_len");
+			lkp.ip_len                             : range   @name("lkp.ip_len_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
 			l4_src_port                            : ternary @name("lkp.l4_src_port");
-			l4_src_port_is_rng_bitmask             : ternary @name("lkp.l4_src_port_is_rng_bitmask");
+#ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE
+			l4_src_port_rng                        : ternary @name("lkp.l4_src_port_rng");
 #else
   #ifdef SF_2_L4_SRC_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_src_port                        : range   @name("lkp.l4_src_port");
-  #else
-			lkp.l4_src_port                        : ternary @name("lkp.l4_src_port");
+			lkp.l4_src_port                        : range   @name("lkp.l4_src_port_rng");
   #endif
 #endif
 			// -------------------------------------------
-#ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
 			l4_dst_port                            : ternary @name("lkp.l4_dst_port");
-			l4_dst_port_is_rng_bitmask             : ternary @name("lkp.l4_dst_port_is_rng_bitmask");
+#ifdef SF_2_L4_DST_RNG_TABLE_ENABLE
+			l4_dst_port_rng                        : ternary @name("lkp.l4_dst_port_rng");
 #else
   #ifdef SF_2_L4_DST_RNG_TABLE_ENABLE_IN_ACL
-			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port");
-  #else
-			lkp.l4_dst_port                        : ternary @name("lkp.l4_dst_port");
+			lkp.l4_dst_port                        : range   @name("lkp.l4_dst_port_rng");
   #endif
 #endif
 			// -------------------------------------------
@@ -1588,12 +1552,12 @@ control EgressAcl(
 	inout switch_lookup_fields_t lkp,
 	inout switch_egress_metadata_t eg_md,
 	inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len,
-	in    bool                     ip_len_is_rng_bitmask,
-	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port,
-	in    bool                     l4_src_port_is_rng_bitmask,
-	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port,
-	in    bool                     l4_dst_port_is_rng_bitmask,
+	in    bit<16>                  ip_len,
+	in    bit<SF_L3_LEN_RNG_WIDTH> ip_len_rng,
+	in    bit<16>                  l4_src_port,
+	in    bit<SF_L4_SRC_RNG_WIDTH> l4_src_port_rng,
+	in    bit<16>                  l4_dst_port,
+	in    bit<SF_L4_DST_RNG_WIDTH> l4_dst_port_rng,
 	inout switch_header_transport_t hdr_0,
 	in    bit<SF_INT_CTRL_FLAGS_WIDTH> int_ctrl_flags
 ) (
@@ -1748,9 +1712,9 @@ control EgressAcl(
 			lkp,
 			eg_md,
 			eg_intr_md_for_dprsr,
-			ip_len, ip_len_is_rng_bitmask,
-			l4_src_port, l4_src_port_is_rng_bitmask,
-			l4_dst_port, l4_dst_port_is_rng_bitmask,
+			ip_len, ip_len_rng,
+			l4_src_port, l4_src_port_rng,
+			l4_dst_port, l4_dst_port_rng,
 			int_ctrl_flags,
 			// ----- results -----
 			prev_table_hit,
@@ -1767,9 +1731,9 @@ control EgressAcl(
 				lkp,
 				eg_md,
 				eg_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -1786,9 +1750,9 @@ control EgressAcl(
 				lkp,
 				eg_md,
 				eg_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -1803,9 +1767,9 @@ control EgressAcl(
 				lkp,
 				eg_md,
 				eg_intr_md_for_dprsr,
-				ip_len, ip_len_is_rng_bitmask,
-				l4_src_port, l4_src_port_is_rng_bitmask,
-				l4_dst_port, l4_dst_port_is_rng_bitmask,
+				ip_len, ip_len_rng,
+				l4_src_port, l4_src_port_rng,
+				l4_dst_port, l4_dst_port_rng,
 				int_ctrl_flags,
 				// ----- results -----
 				prev_table_hit,
@@ -1822,9 +1786,9 @@ control EgressAcl(
 			lkp,
 			eg_md,
 			eg_intr_md_for_dprsr,
-			ip_len, ip_len_is_rng_bitmask,
-			l4_src_port, l4_src_port_is_rng_bitmask,
-			l4_dst_port, l4_dst_port_is_rng_bitmask,
+			ip_len, ip_len_rng,
+			l4_src_port, l4_src_port_rng,
+			l4_dst_port, l4_dst_port_rng,
 			int_ctrl_flags,
 			// ----- results -----
 			prev_table_hit,

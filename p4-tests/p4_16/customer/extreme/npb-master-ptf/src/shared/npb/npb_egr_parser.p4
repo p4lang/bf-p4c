@@ -160,7 +160,8 @@ parser NpbEgressParser(
 #else
         eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
 #endif
-		eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRRROR; // for cpu header (derek added)
+//		eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRROR;  // for cpu header (derek added)
+		eg_md.cpu_reason = port_md.reason_code;               // for cpu header
 /*
         eg_md.mirror.session_id = port_md.session_id;         // for ??? header
 //      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
@@ -188,7 +189,8 @@ parser NpbEgressParser(
 #else
         eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
 #endif
-		eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRRROR; // for cpu header (derek added)
+//		eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRROR;  // for cpu header (derek added)
+		eg_md.cpu_reason = port_md.reason_code;               // for cpu header
 /*
         eg_md.mirror.session_id = port_md.session_id;         // for ??? header
 //      eg_md.ingress_timestamp = port_md.timestamp;          // for ??? header
@@ -433,7 +435,7 @@ parser NpbEgressParser(
 			default:       parse_outer_ethernet_scope0;
         }
 //#else
-        transition reject;
+//      transition reject;
     }
 #endif
 
@@ -745,8 +747,8 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
         eg_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos;
         eg_md.lkp_1.ip_flags      = hdr.outer.ipv4.flags;
-        eg_md.lkp_1.ip_src_addr   = (bit<128>)hdr.outer.ipv4.src_addr;
-        eg_md.lkp_1.ip_dst_addr   = (bit<128>)hdr.outer.ipv4.dst_addr;
+        eg_md.lkp_1.ip_src_addr_v4= hdr.outer.ipv4.src_addr;
+        eg_md.lkp_1.ip_dst_addr_v4= hdr.outer.ipv4.dst_addr;
         eg_md.lkp_1.ip_len        = hdr.outer.ipv4.total_len;
 #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
 
@@ -1736,8 +1738,8 @@ parser NpbEgressParser(
         eg_md.lkp_1.ip_proto    = hdr.inner.ipv4.protocol;
         eg_md.lkp_1.ip_tos      = hdr.inner.ipv4.tos;
         eg_md.lkp_1.ip_flags    = hdr.inner.ipv4.flags;
-        eg_md.lkp_1.ip_src_addr = (bit<128>)hdr.inner.ipv4.src_addr;
-        eg_md.lkp_1.ip_dst_addr = (bit<128>)hdr.inner.ipv4.dst_addr;
+        eg_md.lkp_1.ip_src_addr_v4 = hdr.inner.ipv4.src_addr;
+        eg_md.lkp_1.ip_dst_addr_v4 = hdr.inner.ipv4.dst_addr;
         eg_md.lkp_1.ip_len      = hdr.inner.ipv4.total_len;
 
         // Flag packet (to be sent to host) if it's a frag or has options.

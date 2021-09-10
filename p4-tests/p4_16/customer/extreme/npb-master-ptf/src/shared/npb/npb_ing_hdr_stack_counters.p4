@@ -70,19 +70,46 @@ control IngressHdrStackCounters(
             hdr.transport.mpls[2].isValid(): exact;
             hdr.transport.mpls[3].isValid(): exact;
 #endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4)
+            
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
             hdr.transport.ipv4.isValid(): exact;
-#endif //#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4)
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+#endif //#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //    defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+            hdr.transport.ipv6.isValid(): exact;
+#endif //#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       //    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+   
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             hdr.transport.gre.isValid(): exact;
-#endif // #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
+#endif // #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       //     defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+
+#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)            
             hdr.transport.gre_sequence.isValid(): exact;
             hdr.transport.erspan_type2.isValid(): exact;
-#endif // #ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
-#if defined (VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#endif // #if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+            
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
             hdr.transport.udp.isValid(): exact;
-#endif // #if defined (VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#endif // #if defined (VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
 #ifdef GENEVE_TRANSPORT_INGRESS_ENABLE_V4
             hdr.transport.geneve.isValid(): exact;
 #endif // #ifdef GENEVE_TRANSPORT_INGRESS_ENABLE_V4
@@ -97,39 +124,43 @@ control IngressHdrStackCounters(
             bump_transport_stack_hdr_cntr;
         }
         counters = transport_stack_hdr_cntrs;
-        size = 16;  // Little slop built-in here
+        size = 32;  // Little slop built-in here
 
         // // Cannot have constant entries if we're going to clear counters in our test.
         // const entries = {
         // 
-        //      //enet  vlan0   nsh    ipv4   gre    greSeq erspan udp    geneve vxlan  mpls0  mpls1  mpls2  mpls3
-        //                                                                
-        //      // None
-        //      ( false, false, false, false, false, false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr;
-        // 
-        //      // NSH
-        //      ( true,  false, true,  false, false, false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
-        //      ( true,  true,  true,  false, false, false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
-        // 
-        //      // GRE
-        //      ( true,  false, false, true,  true,  false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
-        //      ( true,  true,  false, true,  true,  false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr;
-        // 
-        //      // ERSPAN-TYPE2
-        //      ( true,  false, false, true,  true,  true,  true,  false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
-        //      ( true,  true,  false, true,  true,  true,  true,  false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
-        // 
-        //      // GENEVE
-        //      ( true,  false, false, true,  false, false, false, true,  true,  false, false, false, false, false): bump_transport_stack_hdr_cntr; 
-        // 
-        //      // VXLAN
-        //      ( true,  false, false, true,  false, false, false, true,  false, true,  false, false, false, false): bump_transport_stack_hdr_cntr; 
-        // 
-        //      // MPLS
-        //      ( true,  false, false, false, false, false, false, false, false, false, true,  false, false, false): bump_transport_stack_hdr_cntr; 
-        //      ( true,  false, false, false, false, false, false, false, false, false, true,  true,  false, false): bump_transport_stack_hdr_cntr; 
-        //      ( true,  false, false, false, false, false, false, false, false, false, true,  true,  true,  false): bump_transport_stack_hdr_cntr; 
-        //      ( true,  false, false, false, false, false, false, false, false, false, true,  true,  true,  true ): bump_transport_stack_hdr_cntr; 
+        //      //enet  vlan0   nsh    ipv4   ipv6   gre    greSeq erspan udp    geneve vxlan  mpls0  mpls1  mpls2  mpls3
+        //                                                                       
+        //      // None                              
+        //      ( false, false, false, false, false, false, false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr;
+        //                                           
+        //      // NSH                               
+        //      ( true,  false, true,  false, false, false, false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  true,  true,  false, false, false, false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //                                           
+        //      // GRE                               
+        //      ( true,  false, false, true,  false, true,  false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  true,  false, true,  false, true,  false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr;
+        //      ( true,  false, false, false, true,  true,  false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  true,  false, false, true,  true,  false, false, false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr;
+        //                                           
+        //      // ERSPAN-TYPE2                      
+        //      ( true,  false, false, true,  false, true,  true,  true,  false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  true,  false, true,  false, true,  true,  true,  false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  false, false, false, true,  true,  true,  true,  false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  true,  false, false, true,  true,  true,  true,  false, false, false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //                                           
+        //      // GENEVE                            
+        //      ( true,  false, false, true,  true,  false, false, false, true,  true,  false, false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //                                           
+        //      // VXLAN                             
+        //      ( true,  false, false, true,  true,  false, false, false, true,  false, true,  false, false, false, false): bump_transport_stack_hdr_cntr; 
+        //                                           
+        //      // MPLS                              
+        //      ( true,  false, false, false, false, false, false, false, false, false, false, true,  false, false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  false, false, false, false, false, false, false, false, false, false, true,  true,  false, false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  false, false, false, false, false, false, false, false, false, false, true,  true,  true,  false): bump_transport_stack_hdr_cntr; 
+        //      ( true,  false, false, false, false, false, false, false, false, false, false, true,  true,  true,  true ): bump_transport_stack_hdr_cntr; 
         // }
     }
 

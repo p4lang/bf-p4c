@@ -81,7 +81,7 @@ control PktValidation(
 	// L3, v4
     // -----------------------------
 
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
+#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE_V4
     action malformed_ipv4_pkt(bit<8> reason) {
         // Set common lookup fields just for dtel acl and hash purposes
         malformed_pkt(reason);
@@ -109,7 +109,7 @@ control PktValidation(
 
         size = table_size;
     }
-#endif /* ERSPAN_TRANSPORT_INGRESS_ENABLE */
+#endif /* ERSPAN_TRANSPORT_INGRESS_ENABLE_V4 */
 
 // Current encap requirments do not include UDP in the transport stack
 //     // -----------------------------
@@ -323,11 +323,11 @@ control PktValidation(
                         malformed_non_ip_pkt : {}
 
                         default : {
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
+#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE_V4
                             if (hdr.ipv4.isValid()) {
                                 validate_ipv4.apply();
                             }
-#endif /* ERSPAN_TRANSPORT_INGRESS_ENABLE */
+#endif /* ERSPAN_TRANSPORT_INGRESS_ENABLE_V4 */
                             //validate_other.apply();
 
                             validate_tunnel.apply();

@@ -12,11 +12,6 @@ parser NpbIngressParser(
     Checksum() ipv4_checksum_inner;
 
     value_set<switch_cpu_port_value_set_t>(4) cpu_port;
-
-    //value_set<bit<32>>(20) my_mac_lo;
-    //value_set<bit<16>>(20) my_mac_hi;
-    //value_set<bit<32>>(8) my_mac_lo;
-    //value_set<bit<16>>(8) my_mac_hi;
     value_set<bit<32>>(1) my_mac_lo;
     value_set<bit<16>>(1) my_mac_hi;
     
@@ -203,9 +198,9 @@ parser NpbIngressParser(
         transition select(pkt.lookahead<snoop_enet_my_mac_h>().dst_addr_lo) {
             my_mac_lo: check_my_mac_hi;
 #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
-            default:   snoop_head_unsure_tunnel; // Bridging path
+            default: check_special_case_enet_ipv4; // Bridging path
 #else
-            default:   parse_outer_ethernet; // Bridging path
+            default: parse_outer_ethernet; // Bridging path
 #endif
         }
     }
@@ -221,9 +216,9 @@ parser NpbIngressParser(
         transition select(pkt.lookahead<snoop_enet_my_mac_h>().dst_addr_hi) {
             my_mac_hi: parse_transport_ethernet; // SFC Network-Tap / SFC Bypass Path
 #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
-            default:   snoop_head_unsure_tunnel; // Bridging path
+            default: check_special_case_enet_ipv4; // Bridging path
 #else
-            default:   parse_outer_ethernet; // Bridging path       
+            default: parse_outer_ethernet; // Bridging path       
 #endif
        }
     }
@@ -231,11 +226,7 @@ parser NpbIngressParser(
     state check_my_mac_hi_cpu {
         transition select(pkt.lookahead<snoop_enet_my_mac_h>().dst_addr_hi) {
             my_mac_hi: parse_transport_ethernet_cpu; // SFC Network-Tap / SFC Bypass Path
-//#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
-//            default:   snoop_head_unsure_tunnel_cpu;  // Bridging path
-//#else
             default:   parse_outer_ethernet_cpu;     // Bridging path
-//#endif
         }
     }
 
@@ -243,11 +234,27 @@ parser NpbIngressParser(
 #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
     defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4) || \
     defined(MPLS_SR_TRANSPORT_INGRESS_ENABLE)
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
-    // "Transport and Outer" Headers / Stack - Unsure if tunnel-of-interest
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    // Special-Case Snooping Path
+    // 
+    // Special-case parsing path to enable deeper parsing on a small set of
+    // specific packets on a my-mac miss. Information from these packets will
+    // be presented to dest-vtep table (transport) instead of the traditional
+    // inner-sap table (outer).
+    //
+    //    enet / mpls-sr
+    //    enet / ipv4 / udp / vxlan
+    //    enet / ipv4 / udp / geneve
+    //    todo: add vlan-tag cases to this list?
+    //
+    // To accomplish this, we need to lookahead and in some cases begin
+    // extracting headers prior to knowing where the headers belong (transport
+    // versus outer). Unfortunately, all packets that experience a my-mac miss
+    // will start down this path and be subjected to additional parsing states.
+    //
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     // state snoop_head_unsure_tunnel {  // compile errors w/ vlan tag case
     //     transition select(
@@ -260,7 +267,7 @@ parser NpbIngressParser(
     //     }
     // }
     
-    state snoop_head_unsure_tunnel {
+    state check_special_case_enet_ipv4 {
         transition select(
             pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
             pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {
@@ -268,22 +275,14 @@ parser NpbIngressParser(
 #ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE
             (ETHERTYPE_MPLS, _               ): parse_transport_ethernet;
 #endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE
-            (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_unsure_tunnel;
+            (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_unsure_special_case_ipv4;
             default                           : parse_outer_ethernet;
         }
     }
 
-    // state snoop_head_unsure_tunnel_cpu {
-    //     transition select(
-    //         pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
-    //         pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {
-    // 
-    //         (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): parse_ethernet_unsure_tunnel_cpu;
-    //         default                           : parse_outer_ethernet_cpu;
-    //     }
-    // }
+    // todo: Insert new state check_special_case_enet_vlan_ipv4 here?
     
-    state parse_ethernet_unsure_tunnel {
+    state parse_ethernet_unsure_special_case_ipv4 {
         pkt.extract(hdr.transport.ethernet);
 
         hdr.outer.ethernet.setValid();
@@ -291,13 +290,6 @@ parser NpbIngressParser(
         hdr.outer.ethernet.dst_addr = hdr.transport.ethernet.dst_addr;
         hdr.outer.ethernet.src_addr = hdr.transport.ethernet.src_addr;
         // hdr.outer.ethernet.ether_type = hdr.transport.ethernet.ether_type;
-/*
-            hdr.outer.ethernet = {
-                dst_addr   = hdr.transport.ethernet.dst_addr,
-                src_addr   = hdr.transport.ethernet.src_addr,
-                ether_type = hdr.transport.ethernet.ether_type
-            };
-*/
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
 		ig_md.lkp_0.l2_valid     = true;
@@ -326,19 +318,19 @@ parser NpbIngressParser(
         //     (UDP_PORT_GENV, 0,0,0,0,ETHERTYPE_ENET): parse_transport_ipv4;
         //     (UDP_PORT_GENV, 0,0,0,0,ETHERTYPE_IPV4): parse_transport_ipv4;
         //     (UDP_PORT_GENV, 0,0,0,0,ETHERTYPE_IPV6): parse_transport_ipv4;
-        //     default: no_tunnel_jump_to_outer;
+        //     default: not_special_case_jump_to_outer_ipv4;
         //     //default: accept;
         // }
         transition select(pkt.lookahead<snoop_ipv4_udp_h>().udp_dst_port) {
             UDP_PORT_VXLAN: parse_transport_ipv4;
             UDP_PORT_GENV : parse_transport_ipv4;
-            default: no_tunnel_jump_to_outer;
+            default: not_special_case_jump_to_outer_ipv4;
             //default: accept;
         }
     }
 
-    state no_tunnel_jump_to_outer {
-//      hdr.transport.ethernet.setInvalid();
+    state not_special_case_jump_to_outer_ipv4 {
+        // hdr.transport.ethernet.setInvalid();
         ig_md.flags.outer_enet_in_transport = true;
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_0
@@ -398,12 +390,16 @@ parser NpbIngressParser(
         transition select(hdr.transport.ethernet.ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
             ETHERTYPE_VLAN: parse_transport_vlan;
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
             ETHERTYPE_IPV4: parse_transport_ipv4;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 #ifdef MPLS_SR_TRANSPORT_INGRESS_ENABLE
             ETHERTYPE_MPLS: parse_transport_mpls;
 #endif // MPLS_SR_TRANSPORT_INGRESS_ENABLE       
@@ -425,7 +421,7 @@ parser NpbIngressParser(
 		ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
 #endif
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
-        ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
+//      ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
 		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
 //		ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
 		hdr.transport.ethernet.ether_type = hdr.cpu.ether_type;
@@ -461,12 +457,16 @@ parser NpbIngressParser(
         transition select(hdr.cpu.ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
             ETHERTYPE_VLAN: parse_transport_vlan;
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
             ETHERTYPE_IPV4: parse_transport_ipv4;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             default: accept;
         }
     }
@@ -513,12 +513,16 @@ parser NpbIngressParser(
         
         transition select(hdr.transport.vlan_tag[0].ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
             ETHERTYPE_IPV4: parse_transport_ipv4;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             ETHERTYPE_IPV6: parse_transport_ipv6;
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             default: accept;
         }
     }
@@ -528,8 +532,11 @@ parser NpbIngressParser(
     // Layer3 - Transport
     ///////////////////////////////////////////////////////////////////////////
 
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || \
-    defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+
 
     state parse_transport_ipv4 {    
         ig_md.flags.transport_valid = true;
@@ -544,25 +551,28 @@ parser NpbIngressParser(
         ig_md.lkp_0.ip_proto      = hdr.transport.ipv4.protocol;
         ig_md.lkp_0.ip_tos        = hdr.transport.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_0.ip_flags      = hdr.transport.ipv4.flags;
-        ig_md.lkp_0.ip_src_addr   = (bit<128>)hdr.transport.ipv4.src_addr;
-        ig_md.lkp_0.ip_dst_addr   = (bit<128>)hdr.transport.ipv4.dst_addr;
+        ig_md.lkp_0.ip_src_addr_v4= hdr.transport.ipv4.src_addr;
+        ig_md.lkp_0.ip_dst_addr_v4= hdr.transport.ipv4.dst_addr;
         ig_md.lkp_0.ip_len        = hdr.transport.ipv4.total_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_0
 
         transition select(hdr.transport.ipv4.protocol) {
            IP_PROTOCOLS_GRE: parse_transport_gre;
-#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
            IP_PROTOCOLS_UDP: parse_transport_udp_tunnel;
 #endif
            default : accept;
         }
     }
 
-#endif // #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || \
-       //     defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#endif // #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
 
-
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+    defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
     state parse_transport_ipv6 {
         pkt.extract(hdr.transport.ipv6);
@@ -571,8 +581,10 @@ parser NpbIngressParser(
 //      ig_md.lkp_0.ip_type       = SWITCH_IP_TYPE_IPV6;
         ig_md.lkp_0.ip_proto      = hdr.transport.ipv6.next_hdr;
         //ig_md.lkp_0.ip_tos        = hdr.transport.ipv6.tos; // not byte-aligned so set in mau
-        ig_md.lkp_0.ip_src_addr   = hdr.transport.ipv6.src_addr;
-        ig_md.lkp_0.ip_dst_addr   = hdr.transport.ipv6.dst_addr;
+//      ig_md.lkp_0.ip_src_addr   = hdr.transport.ipv6.src_addr;
+//      ig_md.lkp_0.ip_dst_addr   = hdr.transport.ipv6.dst_addr;
+        ig_md.lkp_0.ip_src_addr_v4= hdr.transport.ipv6.src_addr[95:64];
+        ig_md.lkp_0.ip_dst_addr_v4= hdr.transport.ipv6.dst_addr[95:64];
         ig_md.lkp_0.ip_len        = hdr.transport.ipv6.payload_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_0
         
@@ -581,7 +593,8 @@ parser NpbIngressParser(
             default: accept;
         }
     }
-#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || \
+       // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
 
     
@@ -589,7 +602,8 @@ parser NpbIngressParser(
     // Layer4 - UDP
     ///////////////////////////////////////////////////////////////////////////
 
-#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+    defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
 
     state parse_transport_udp_tunnel {
         // hdr.outer.ethernet.setInvalid();
@@ -619,7 +633,8 @@ parser NpbIngressParser(
         }
     }
 
-#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
+#endif // #if defined(VXLAN_TRANSPORT_INGRESS_ENABLE_V4) || \
+       //     defined(GENEVE_TRANSPORT_INGRESS_ENABLE_V4)
 
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -729,7 +744,7 @@ parser NpbIngressParser(
     // GRE - Transport
     //-------------------------------------------------------------------------
 
-#if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || \
+#if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || \
     defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
     
     state parse_transport_gre {    
@@ -749,9 +764,9 @@ parser NpbIngressParser(
 
           // C R K S s r f v
             (0,0,0,0,0,0,0,0): parse_transport_gre_qualified;
-#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             (0,0,0,1,0,0,0,0): parse_transport_gre_qualified;
-#endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             default: accept;
         }
     }
@@ -768,8 +783,10 @@ parser NpbIngressParser(
 #if defined(MPLSoGRE_ENABLE) && defined(MPLS_SR_TRANSPORT_INGRESS_ENABLE)
             (0,,ETHERTYPE_MPLS): parse_transport_mpls;
 #endif // defined(MPLSoGRE_ENABLE) && defined(MPLS_SR_TRANSPORT_INGRESS_ENABLE)
+#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             (1,GRE_PROTOCOLS_ERSPAN_TYPE_2): parse_transport_erspan_t2;
             //(1,GRE_PROTOCOLS_ERSPAN_TYPE_3): parse_transport_erspan_t3;
+#endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
             default: accept;
         }
     }
@@ -793,10 +810,10 @@ parser NpbIngressParser(
 //           // C R K S s r f v
 //             (0,0,0,0,0,0,0,0,ETHERTYPE_IPV4): parse_transport_gre_qualified;
 //             (0,0,0,0,0,0,0,0,ETHERTYPE_IPV6): parse_transport_gre_qualified;
-// #if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+// #if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 //             (0,0,0,1,0,0,0,0,GRE_PROTOCOLS_ERSPAN_TYPE_2): parse_transport_gre_qualified;
 //           //(0,0,0,1,0,0,0,0,GRE_PROTOCOLS_ERSPAN_TYPE_3): parse_transport_gre_qualified;
-// #endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+// #endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 //             default: accept;
 //         }
 //     }
@@ -814,7 +831,7 @@ parser NpbIngressParser(
 //         }
 //     }
 
-#endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) ||
+#endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) ||
        //    defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
     
@@ -822,7 +839,7 @@ parser NpbIngressParser(
     // ERSPAN - Transport
     //-------------------------------------------------------------------------
 
-#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#if defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
     state parse_transport_erspan_t2 {
         pkt.extract(hdr.transport.gre_sequence);
@@ -853,7 +870,7 @@ parser NpbIngressParser(
     //     transition parse_outer_ethernet;
     // }
    
-#endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+#endif // defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 
     
     //-------------------------------------------------------------------------
@@ -946,7 +963,7 @@ parser NpbIngressParser(
 		ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
 #endif
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
-        ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
+//      ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
 		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
 //		ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
 		hdr.outer.ethernet.ether_type = hdr.cpu.ether_type;
@@ -1123,8 +1140,8 @@ parser NpbIngressParser(
 //         ig_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
 //         ig_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
 //         ig_md.lkp_1.ip_flags      = hdr.outer.ipv4.flags;
-//         ig_md.lkp_1.ip_src_addr   = (bit<128>)hdr.outer.ipv4.src_addr;
-//         ig_md.lkp_1.ip_dst_addr   = (bit<128>)hdr.outer.ipv4.dst_addr;
+//         ig_md.lkp_1.ip_src_addr_v4= hdr.outer.ipv4.src_addr;
+//         ig_md.lkp_1.ip_dst_addr_v4= hdr.outer.ipv4.dst_addr;
 //         ig_md.lkp_1.ip_len        = hdr.outer.ipv4.total_len;
 // #endif // INGRESS_PARSER_POPULATES_LKP_1
 //         // Flag packet (to be sent to host) if it's a frag or has options.
@@ -1153,8 +1170,8 @@ parser NpbIngressParser(
         ig_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
         ig_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_1.ip_flags      = hdr.outer.ipv4.flags;
-        ig_md.lkp_1.ip_src_addr   = (bit<128>)hdr.outer.ipv4.src_addr;
-        ig_md.lkp_1.ip_dst_addr   = (bit<128>)hdr.outer.ipv4.dst_addr;
+        ig_md.lkp_1.ip_src_addr_v4= hdr.outer.ipv4.src_addr;
+        ig_md.lkp_1.ip_dst_addr_v4= hdr.outer.ipv4.dst_addr;
         ig_md.lkp_1.ip_len        = hdr.outer.ipv4.total_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_1
         // Flag packet (to be sent to host) if it's a frag or has options.
@@ -1964,8 +1981,8 @@ parser NpbIngressParser(
 //         ig_md.lkp_2.ip_proto      = hdr.inner.ipv4.protocol;
 //         ig_md.lkp_2.ip_tos        = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
 //         ig_md.lkp_2.ip_flags      = hdr.inner.ipv4.flags;
-//         ig_md.lkp_2.ip_src_addr   = (bit<128>)hdr.inner.ipv4.src_addr;
-//         ig_md.lkp_2.ip_dst_addr   = (bit<128>)hdr.inner.ipv4.dst_addr;
+//         ig_md.lkp_2.ip_src_addr_v4= hdr.inner.ipv4.src_addr;
+//         ig_md.lkp_2.ip_dst_addr_v4= hdr.inner.ipv4.dst_addr;
 //         ig_md.lkp_2.ip_len        = hdr.inner.ipv4.total_len;
 // #endif // INGRESS_PARSER_POPULATES_LKP_2        
 //         
@@ -2001,8 +2018,8 @@ parser NpbIngressParser(
         ig_md.lkp_2.ip_proto      = hdr.inner.ipv4.protocol;
         ig_md.lkp_2.ip_tos        = hdr.inner.ipv4.tos; // not byte-aligned so set in mau
         ig_md.lkp_2.ip_flags      = hdr.inner.ipv4.flags;
-        ig_md.lkp_2.ip_src_addr   = (bit<128>)hdr.inner.ipv4.src_addr;
-        ig_md.lkp_2.ip_dst_addr   = (bit<128>)hdr.inner.ipv4.dst_addr;
+        ig_md.lkp_2.ip_src_addr_v4= hdr.inner.ipv4.src_addr;
+        ig_md.lkp_2.ip_dst_addr_v4= hdr.inner.ipv4.dst_addr;
         ig_md.lkp_2.ip_len        = hdr.inner.ipv4.total_len;
 #endif // INGRESS_PARSER_POPULATES_LKP_2        
         

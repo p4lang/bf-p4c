@@ -20,6 +20,9 @@
  *
  ******************************************************************************/
 
+#ifndef _P4_NEXTHOP_
+#define _P4_NEXTHOP_
+
 // ----------------------------------------------------------------------------
 // Nexthop/ECMP resolution
 //
@@ -203,4 +206,6 @@ control OuterFib(inout switch_ingress_metadata_t ig_md)(
         fib.apply();
     }
 }
+#endif
+
 #endif

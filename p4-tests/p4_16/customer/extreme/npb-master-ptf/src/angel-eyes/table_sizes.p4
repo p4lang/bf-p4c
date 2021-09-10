@@ -87,9 +87,9 @@ const bit<32> INGRESS_IPV6_ACL_TABLE_SIZE                          = 2048;
 const bit<32> INGRESS_L7_ACL_TABLE_SIZE                            = 1024;
 
 // Egress ACL
-const bit<32> EGRESS_MAC_ACL_TABLE_SIZE                            = 128;
-const bit<32> EGRESS_IPV4_ACL_TABLE_SIZE                           = 128;
-const bit<32> EGRESS_IPV6_ACL_TABLE_SIZE                           = 128;
+const bit<32> EGRESS_MAC_ACL_TABLE_SIZE                            = 512;
+const bit<32> EGRESS_IPV4_ACL_TABLE_SIZE                           = 512;
+const bit<32> EGRESS_IPV6_ACL_TABLE_SIZE                           = 512;
 
 const bit<32> INGRESS_IP_DTEL_ACL_TABLE_SIZE = 512;
 const bit<32> DTEL_GROUP_TABLE_SIZE = 4;
@@ -116,8 +116,8 @@ const bit<32> NPB_ING_SFC_SF_SEL_NSH_XLATE_TABLE_DEPTH             = 8192; // de
 // sf #0 -- basic / advanced
 const bit<32> NPB_ING_SF_0_BAS_ADV_SFF_TABLE_DEPTH                 = 1024;
 const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L3_LEN_RNG_TABLE_DEPTH   = 128;
-const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_SRC_RNG_TABLE_DEPTH   = 128;
-const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH   = 128;
+const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_SRC_RNG_TABLE_DEPTH   = 256;
+const bit<32> NPB_ING_SF_0_BAS_ADV_POLICY_L4_DST_RNG_TABLE_DEPTH   = 256;
 
 // sf #0 - sfp select
 const bit<32> NPB_ING_SF_0_SFP_FLW_CLS_TABLE_DEPTH                 = 128;
@@ -138,8 +138,8 @@ const bit<32> NPB_ING_SF_1_MULTICAST_RID_TABLE_SIZE                = 2096;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH              = 8192;
 #define       NPB_EGR_SF_2_EGRESS_SFP_SFF_TABLE_DEPTH_POW2           10 // unused in latest spec
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L3_LEN_RNG_TABLE_DEPTH= 128;
-const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_SRC_RNG_TABLE_DEPTH= 128;
-const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_DST_RNG_TABLE_DEPTH= 128;
+const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_SRC_RNG_TABLE_DEPTH= 256;
+const bit<32> NPB_EGR_SF_2_EGRESS_SFP_POLICY_L4_DST_RNG_TABLE_DEPTH= 256;
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_HDR_STRIP_TABLE_DEPTH        = 8; // unused in latest spec
 const bit<32> NPB_EGR_SF_2_EGRESS_SFP_TRUNC_TABLE_DEPTH            = 8; // unused in latest spec
 

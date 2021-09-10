@@ -30,7 +30,9 @@
 control PortMirror(
 		in switch_port_t port,
 		in switch_pkt_src_t src,
-		inout switch_mirror_metadata_t mirror_md // derek added
+		inout switch_mirror_metadata_t mirror_md, // derek added
+		in switch_cpu_reason_t cpu_reason_in, // derek added
+		inout switch_cpu_reason_t cpu_reason // derek added
 ) (
 		switch_uint32_t table_size=288
 ) {
@@ -45,6 +47,7 @@ control PortMirror(
 #ifdef MIRROR_METER_ENABLE
 		mirror_md.meter_index = meter_index; // derek added
 #endif
+		cpu_reason = cpu_reason_in; // derek added
 	}
 
 	table port_mirror {
@@ -97,7 +100,8 @@ control IngressPortMapping(
 		// ig_md.bypass = (bit<8>) hdr.cpu.reason_code;                                 // Done in parser
 //		ig_md.port = (switch_port_t) hdr.cpu.ingress_port;                              // Done in parser
 //		ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index; // Done in parser
-//		ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue;                    // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+		ig_intr_md_for_tm.ucast_egress_port = (bit<9>) hdr.cpu.port_lag_index;          // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+		ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue;                    // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
 #ifdef CPU_TX_BYPASS_ENABLE
 //		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;                           // Done in parser
 //		DEREK: This next line should be deleted, but doing so causes us not to fit!?!?  ¯\_('')_/¯
@@ -309,7 +313,7 @@ control IngressPortMapping(
 		}
 
 #ifdef MIRROR_INGRESS_PORT_ENABLE
-		port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror);
+		port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror, SWITCH_CPU_REASON_IG_PORT_MIRROR, ig_md.cpu_reason);
 #endif
 	}
 }
@@ -526,7 +530,7 @@ control EgressPortMapping(
 		port_mapping.apply();
 
 #ifdef MIRROR_EGRESS_PORT_ENABLE
-		port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror);
+		port_mirror.apply(port, SWITCH_PKT_SRC_CLONED_EGRESS, eg_md.mirror, SWITCH_CPU_REASON_EG_PORT_MIRROR, eg_md.cpu_reason);
 #endif
 	}
 }

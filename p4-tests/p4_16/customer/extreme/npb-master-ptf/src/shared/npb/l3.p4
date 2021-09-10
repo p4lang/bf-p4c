@@ -22,6 +22,9 @@
 
 // DEREK: NOT USING THIS TABLE ANYMORE -- USING THE TABLE IN TUNNEL.P4 INSTEAD.
 
+#ifndef _P4_L3_
+#define _P4_L3_
+
 #include "acl.p4"
 #include "l2.p4"
 
@@ -79,3 +82,5 @@ control IngressUnicast(
 //      }
     }
 }
+
+#endif

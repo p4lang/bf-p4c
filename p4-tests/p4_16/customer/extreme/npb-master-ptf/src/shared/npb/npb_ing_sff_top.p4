@@ -38,7 +38,7 @@ control npb_ing_sff_top (
 	) {
 		stats.count();
 
-		ig_md.egress_port_lag_index = port_lag_index;
+//		ig_md.egress_port_lag_index = port_lag_index;
 
 //		ig_md.nsh_md.end_of_path = end_of_chain;
 		ig_md.nsh_md.end_of_path = true;

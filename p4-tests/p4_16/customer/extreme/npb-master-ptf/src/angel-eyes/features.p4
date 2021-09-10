@@ -20,6 +20,9 @@
  *
  ******************************************************************************/
 
+#ifndef _P4_FEATURES_
+#define _P4_FEATURES_
+
 // List of all supported #define directives.
 
 #define PA_AUTO_INIT_METADATA
@@ -29,17 +32,17 @@
 // ===== pkt header defines =================================
 
 // ----- applies to: transport -----
-#define GRE_TRANSPORT_INGRESS_ENABLE // v4 only
-#undef  GRE_TRANSPORT_INGRESS_ENABLE_V6
+#define GRE_TRANSPORT_INGRESS_ENABLE_V4
+#define GRE_TRANSPORT_INGRESS_ENABLE_V6
 #define GRE_TRANSPORT_EGRESS_ENABLE_V4
 #undef  GRE_TRANSPORT_EGRESS_ENABLE_V6
 
-#define ERSPAN_TRANSPORT_INGRESS_ENABLE // v4 only
+#define ERSPAN_TRANSPORT_INGRESS_ENABLE_V4
 #undef  ERSPAN_TRANSPORT_INGRESS_ENABLE_V6
 #undef  ERSPAN_TRANSPORT_EGRESS_ENABLE // v4 only
 
-#undef  GENEVE_TRANSPORT_INGRESS_ENABLE_V4  // v4 only - ignores mymac check
-#define VXLAN_TRANSPORT_INGRESS_ENABLE_V4   // v4 only - ignores mymac check
+#undef  GENEVE_TRANSPORT_INGRESS_ENABLE_V4  // ignores mymac check
+#define VXLAN_TRANSPORT_INGRESS_ENABLE_V4   // ignores mymac check
 #define MPLS_SR_TRANSPORT_INGRESS_ENABLE    // ignores mymac check
 
 // ----- applies to: outer -----
@@ -68,7 +71,7 @@
 
 // ----- parser -----
 #undef  INGRESS_PARSER_POPULATES_ERSPAN_TUNNEL_ID  // populate tunnei_id w/ session_id
-#undef  INGRESS_PARSER_POPULATES_LKP_0
+#define INGRESS_PARSER_POPULATES_LKP_0
 #define INGRESS_PARSER_POPULATES_LKP_1
 #undef  INGRESS_PARSER_POPULATES_LKP_2
 #define INGRESS_PARSER_INNER_TUNNEL_INFO_OVERLOAD
@@ -187,3 +190,5 @@
 #define EGRESS_NSH_HDR_VER_1_SUPPORT
 #define INGRESS_MAU_NO_LKP_1                  // only valid if INGRESS_PARSER_POPULATES_LKP_1 not defined
 #define INGRESS_MAU_NO_LKP_2                  // only valid if INGRESS_PARSER_POPULATES_LKP_2 not defined
+
+#endif // _P4_FEATURES_

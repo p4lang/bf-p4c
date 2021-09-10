@@ -56,6 +56,7 @@ control npb_ing_top (
 			hdr_0,
 			hdr_1,
 			ig_md.lkp_0,
+			ig_md.tunnel_0.unsupported_tunnel,
 
 			ig_md.lkp_0
 		);
@@ -67,6 +68,7 @@ control npb_ing_top (
 			hdr_1,
 			hdr_2,
 			ig_md.lkp_1,
+			ig_md.tunnel_1.unsupported_tunnel,
 
 			ig_md.lkp_1
 		);
@@ -79,6 +81,7 @@ control npb_ing_top (
 			hdr_2,
 			hdr_3,
 			ig_md.lkp_2,
+			ig_md.tunnel_2.unsupported_tunnel,
 
 			ig_md.lkp_2
 		);
@@ -98,7 +101,7 @@ control npb_ing_top (
 		// SFC
 		// -------------------------------------
 
-		if (!INGRESS_BYPASS(SFC)) {
+//		if (!INGRESS_BYPASS(SFC)) {
 			npb_ing_sfc_top.apply (
 				hdr_0,
 				tunnel_0,
@@ -115,7 +118,7 @@ control npb_ing_top (
 				ig_intr_md_for_dprsr,
 				ig_intr_md_for_tm
 			);
-		}
+//		}
 
 		// -------------------------------------
 		// SF #0 - SFP Hashes

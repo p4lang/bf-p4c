@@ -1,3 +1,5 @@
+#ifndef _NPB_EGR_SF_PROXY_HDR_EDIT_
+#define _NPB_EGR_SF_PROXY_HDR_EDIT_
 
 control npb_egr_sf_proxy_hdr_edit (
 	inout switch_header_transport_t                   hdr_0,
@@ -298,3 +300,5 @@ control npb_egr_sf_proxy_hdr_edit (
 	}
 
 }
+
+#endif

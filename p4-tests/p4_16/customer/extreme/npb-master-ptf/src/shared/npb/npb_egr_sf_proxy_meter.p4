@@ -1,3 +1,5 @@
+#ifndef _NPB_EGR_SF_PROXY_METER_
+#define _NPB_EGR_SF_PROXY_METER_
 
 control npb_egr_sf_proxy_meter (
 	inout switch_header_transport_t                   hdr_0,
@@ -48,3 +50,5 @@ control npb_egr_sf_proxy_meter (
 	}
 
 }
+
+#endif

@@ -18,7 +18,7 @@ control npb_ing_sf_multicast_top_part1 (
 
 	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
 
-	// sets: mgid (and resets nexthop and port_lag_index -- just in case the user selected the wrong action in the sff)
+	// sets: mgid (and resets port_lag_index -- just in case the user selected the wrong action in the sff)
 	action ing_sf_action_sel_hit(
 		switch_mgid_t mgid
 	) {
@@ -26,7 +26,7 @@ control npb_ing_sf_multicast_top_part1 (
 
 		ig_md.multicast.id = mgid;
 
-//		ig_md.nexthop = 0;
+//		ig_md.nexthop = 0; // don't reset nexthop, as this controls were the original packet will go.
 		ig_md.egress_port_lag_index = 0;
 	}
 

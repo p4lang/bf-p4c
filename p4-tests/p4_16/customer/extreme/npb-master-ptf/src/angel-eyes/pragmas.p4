@@ -1,3 +1,5 @@
+#ifndef _P4_PRAGMAS_
+#define _P4_PRAGMAS_
 
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
 @pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
@@ -11,3 +13,4 @@
 @pa_container_size("egress" , "protocol_inner_0" , 8)
 @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 
+#endif // _P4_PRAGMAS_

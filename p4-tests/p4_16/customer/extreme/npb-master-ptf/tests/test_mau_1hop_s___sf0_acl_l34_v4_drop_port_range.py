@@ -116,8 +116,8 @@ class test(BfRuntimeTest):
 		npb_npb_sf0_l4_src_port_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
 		npb_npb_sf0_l4_src_port_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
 
-		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_src=0, l4_src_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
-		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_src=1, l4_src_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_src_rng=0, l4_src_rng_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_src_rng=1, l4_src_rng_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
 
 		# -----------------
 
@@ -180,8 +180,8 @@ class test(BfRuntimeTest):
 		npb_npb_sf0_l4_src_port_rng_del(self, self.target,    0x0, 0x1fff) # <  8k
 		npb_npb_sf0_l4_src_port_rng_del(self, self.target, 0x2000, 0xffff) # >= 8k
 
-		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_src=0, l4_src_mask=0xffff) # don't drop
-		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_src=1, l4_src_mask=0xffff) # drop
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_src_rng=0, l4_src_rng_mask=0xffff) # don't drop
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_src_rng=1, l4_src_rng_mask=0xffff) # drop
 
 
 		# -----------------
@@ -192,8 +192,8 @@ class test(BfRuntimeTest):
 		npb_npb_sf0_l4_dst_port_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
 		npb_npb_sf0_l4_dst_port_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
 
-		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_dst=0, l4_dst_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
-		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_dst=1, l4_dst_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_dst_rng=0, l4_dst_rng_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
+		npb_npb_sf0_policy_l34_v4_add(self, self.target, sap=sap, l4_dst_rng=1, l4_dst_rng_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
 
 
 		# -----------------
@@ -271,6 +271,6 @@ class test(BfRuntimeTest):
 		npb_npb_sf0_l4_dst_port_rng_del(self, self.target,    0x0, 0x1fff) # <  8k
 		npb_npb_sf0_l4_dst_port_rng_del(self, self.target, 0x2000, 0xffff) # >= 8k
 
-		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_dst=0, l4_dst_mask=0xffff) # don't drop
-		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_dst=1, l4_dst_mask=0xffff) # drop
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_dst_rng=0, l4_dst_rng_mask=0xffff) # don't drop
+		npb_npb_sf0_policy_l34_v4_del(self, self.target, sap=sap, l4_dst_rng=1, l4_dst_rng_mask=0xffff) # drop
 

@@ -116,22 +116,22 @@ class test(BfRuntimeTest):
 		# -----------------
 
 		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+2, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+4, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+5, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+6, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+7, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf, sap=sap, vpn=vpn+8, port_lag_ptr=ig_lag_ptr, drop=0)
 
 		# -----------------
 
 #		time.sleep(1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (GRE)
+		# Create / Send / Verify the packet (VXLAN)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
+		src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
@@ -159,7 +159,7 @@ class test(BfRuntimeTest):
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+7
 		)
 
 		# -----------------------------------------------------------
@@ -176,14 +176,61 @@ class test(BfRuntimeTest):
 		testutils.verify_no_other_packets(self, 0, 1)
 
 		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN)
+		# Create / Send / Verify the packet (GRE)
 		# -----------------------------------------------------------
 
-		src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
+		src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+8
+		)
+
+		# -----------------------------------------------------------
+
+		logger.info("Sending packet on port %d", ig_port)
+		testutils.send_packet(self, ig_port, str(src_pkt))
+
+		# -----------------------------------------------------------
+
+		logger.info("Verify packet on port %d", eg_port)
+		testutils.verify_packets(self, exp_pkt, [eg_port])
+
+		logger.info("Verify no other packets")
+		testutils.verify_no_other_packets(self, 0, 1)
+
+		# -----------------------------------------------------------
+		# Reconfigure for "transport" to be ipv6 instead of ipv4
+		# -----------------------------------------------------------
+
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf)
+
+		sip = '0.0.0.0' # v6 bits [95:64] of the ip addresses are used in the dst_vtep table
+		dip = '0.0.0.0' # v6 bits [95:64] of the ip addresses are used in the dst_vtep table
+
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+2, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+4, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+5, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+6, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+7, port_lag_ptr=ig_lag_ptr, drop=0)
+		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf, sap=sap, vpn=vpn+8, port_lag_ptr=ig_lag_ptr, drop=0)
+
+		# -----------------------------------------------------------
+		# Create / Send / Verify the packet (GREv6)
+		# -----------------------------------------------------------
+
+		src_pkt, exp_pkt = npb_simple_2lyr_grev6_ip(
+			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+			dmac=dmac, smac=smac,
+			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+8
 		)
 
 		# -----------------------------------------------------------
@@ -218,7 +265,7 @@ class test(BfRuntimeTest):
 		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf)
 		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf)
 		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf)
 		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf)
 		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf)
 		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf)
+		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf)

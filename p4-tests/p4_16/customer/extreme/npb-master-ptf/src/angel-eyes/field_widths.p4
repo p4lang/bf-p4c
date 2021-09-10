@@ -1,7 +1,6 @@
 #ifndef _P4_FIELD_WIDTHS_
 #define _P4_FIELD_WIDTHS_
 
-
 #ifdef FIELD_WIDTHS_REDUCED // to help w/ fitting
 
     // -------------------------------------
@@ -32,14 +31,14 @@
     #define SSAP_ID_WIDTH                   16                                // original value: 16
     #define DSAP_ID_WIDTH                   16                                // original value: 16
     #define VPN_ID_WIDTH                    16                                // original value: 16
-    #define SF_FLOW_CLASS_WIDTH_A            8 // for sf0...acl               // original value:  8
-    #define SF_FLOW_CLASS_WIDTH_B           10 // for sf0...sfp select        // original value: 10
+    #define SF_FLOW_CLASS_WIDTH_A            8 // for sf0...acl               // original value:  8 (unused if udf disabled)
+    #define SF_FLOW_CLASS_WIDTH_B           10 // for sf0...sfp select        // original value: 10 (unused if simple sfp sel enabled)
     #define SF_HASH_WIDTH                   16 // for sf0...sfp select        // original value: 16(?)
     #define SF_INT_CTRL_FLAGS_WIDTH          8 // for sf0 and sf2             // original value: 16
     #define SF_SRVC_FUNC_CHAIN_WIDTH        12 // for sf0                     // original value: 16
-    #define SF_L3_LEN_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16 (must be 16)
-    #define SF_L4_SRC_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16 (must be 16)
-    #define SF_L4_DST_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16 (must be 16)
+    #define SF_L3_LEN_RNG_WIDTH              8 // for sf0 and sf2             // original value: 16
+    #define SF_L4_SRC_RNG_WIDTH              8 // for sf0 and sf2             // original value: 16
+    #define SF_L4_DST_RNG_WIDTH              8 // for sf0 and sf2             // original value: 16
     #define SF_L2_EDIT_BD_PTR_WIDTH          8                                // original value: xx
     #define UDF_WIDTH                      128 // 16B
 
@@ -79,14 +78,14 @@
     #define SSAP_ID_WIDTH                   16                                // original value: 16
     #define DSAP_ID_WIDTH                   16                                // original value: 16
     #define VPN_ID_WIDTH                    16                                // original value: 16
-    #define SF_FLOW_CLASS_WIDTH_A            8 // for sf0...acl               // original value:  8
-    #define SF_FLOW_CLASS_WIDTH_B           10 // for sf0...sfp select        // original value: 10
+    #define SF_FLOW_CLASS_WIDTH_A            8 // for sf0...acl               // original value:  8 (unused if udf disabled)
+    #define SF_FLOW_CLASS_WIDTH_B           10 // for sf0...sfp select        // original value: 10 (unused if simple sfp sel enabled)
     #define SF_HASH_WIDTH                   16 // for sf0...sfp select        // original value: 16(?)
     #define SF_INT_CTRL_FLAGS_WIDTH         16 // for sf0 and sf2             // original value: 16
     #define SF_SRVC_FUNC_CHAIN_WIDTH        16 // for sf0                     // original value: 16
-    #define SF_L3_LEN_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16 (must be 16)
-    #define SF_L4_SRC_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16 (must be 16)
-    #define SF_L4_DST_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16 (must be 16)
+    #define SF_L3_LEN_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16
+    #define SF_L4_SRC_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16
+    #define SF_L4_DST_RNG_WIDTH             16 // for sf0 and sf2             // original value: 16
     #define SF_L2_EDIT_BD_PTR_WIDTH         16                                // original value: xx
     #define UDF_WIDTH                      256 // 32B
 

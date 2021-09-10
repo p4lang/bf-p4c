@@ -20,6 +20,9 @@
  *
  ******************************************************************************/
 
+#ifndef _P4_FEATURES_
+#define _P4_FEATURES_
+
 // List of all supported #define directives.
 
 #define PA_AUTO_INIT_METADATA
@@ -181,3 +184,5 @@
 #define INGRESS_NSH_HDR_VER_1_SUPPORT
 #define EGRESS_NSH_HDR_VER_1_SUPPORT
 #undef  INGRESS_MAU_NO_LKP_2                  // only valid if INGRESS_PARSER_POPULATES_LKP_2 not defined
+
+#endif // _P4_FEATURES_

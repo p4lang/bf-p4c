@@ -691,8 +691,12 @@ def npb_tunnel_dmac_del(self, target, ig_port_lag_ptr, ethertype, ethertype_mask
 # ing sfc: decap 0 (transport)
 
 def npb_tunnel_network_dst_vtep_add(self, target,
+		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_type        = 0, l3_type_mask         = 0,
 		l3_src   = '0.0.0.0', l3_src_mask   = 0,
 		l3_dst   = '0.0.0.0', l3_dst_mask   = 0,
+		l4_src   = 0,         l4_src_mask   = 0,
+		l4_dst   = 0,         l4_dst_mask   = 0,
 		tun_type = 0,         tun_type_mask = 0,
 		tun_id   = 0,         tun_id_mask   = 0,
 		# results
@@ -707,10 +711,14 @@ def npb_tunnel_network_dst_vtep_add(self, target,
 		table.entry_add(
 			target,
 			[table.make_key(
-				[gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
+				[gc.KeyTuple('type',                          l3_type,     l3_type_mask),
+				 gc.KeyTuple('proto',                            l3_proto,    l3_proto_mask),
+				 gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
 				 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
+				 gc.KeyTuple('src_port',                               l4_src,      l4_src_mask),
+				 gc.KeyTuple('dst_port',                               l4_dst,      l4_dst_mask),
 				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
-				 gc.KeyTuple('tunnel_id',                               tun_id, tun_id_mask)],
+				 gc.KeyTuple('tunnel_id',                                 tun_id, tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('sap',                                      sap),
@@ -724,22 +732,69 @@ def npb_tunnel_network_dst_vtep_add(self, target,
 		)
 
 def npb_tunnel_network_dst_vtep_del(self, target,
+		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_type        = 0, l3_type_mask         = 0,
 		l3_src   = '0.0.0.0', l3_src_mask   = 0,
 		l3_dst   = '0.0.0.0', l3_dst_mask   = 0,
+		l4_src   = 0,         l4_src_mask         = 0,
+		l4_dst   = 0,         l4_dst_mask         = 0,
 		tun_id   = 0,         tun_id_mask   = 0,
-		tun_type = 0,         tun_type_mask = 0
+		tun_type = 0,         tun_type_mask = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep')
+
+		# read counter
+		resp = table.entry_get(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('type',                          l3_type,     l3_type_mask),
+				 gc.KeyTuple('proto',                         l3_proto,    l3_proto_mask),
+				 gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
+				 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
+				 gc.KeyTuple('src_port',                                  l4_src,      l4_src_mask),
+				 gc.KeyTuple('dst_port',                                  l4_dst,      l4_dst_mask),
+				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
+				 gc.KeyTuple('tunnel_id',                                 tun_id, tun_id_mask)],
+			)],
+			{"from_hw": True},
+			table.make_data(
+				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+				'SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep_hit',
+				get=True
+			)
+		)
+
+		data_dict = next(resp)[0].to_dict()
+		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+
+		print "Dumping npb_tunnel_network_dst_vtep counters: pkts", recv_pkts, "bytes", recv_bytes 
+
+		# delete entry
 		table.entry_del(
 			target,
 			[table.make_key(
-				[gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
+				[gc.KeyTuple('type',                          l3_type,     l3_type_mask),
+				 gc.KeyTuple('proto',                         l3_proto,    l3_proto_mask),
+				 gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
 				 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
+				 gc.KeyTuple('src_port',                                  l4_src,      l4_src_mask),
+				 gc.KeyTuple('dst_port',                                  l4_dst,      l4_dst_mask),
 				 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
 				 gc.KeyTuple('tunnel_id',                                 tun_id, tun_id_mask)],
 			)],
 		)
+
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected npb_tunnel_network_dst_vtep packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: npb_tunnel_network_dst_vtep packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected npb_tunnel_network_dst_vtep byte counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: npb_tunnel_network_dst_vtep byte count check")
 
 ########################################
 
@@ -889,6 +944,7 @@ def npb_tunnel_inner_sap_add(self, target,
 		sap_new   = 0,
 		vpn       = 0,
 		scope     = 0,
+		drop      = 0,
 		terminate = 0 # note: terminate & !scope is nonsense
 		):
 
@@ -914,6 +970,7 @@ def npb_tunnel_inner_sap_add(self, target,
 				[gc.DataTuple('sap',                             sap_new),
 				 gc.DataTuple('vpn',                             vpn),
 				 gc.DataTuple('scope',                           scope),
+				 gc.DataTuple('drop',                            drop),
 				 gc.DataTuple('terminate',                       terminate)],
 				'SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam_hit'
 			)]
@@ -928,10 +985,49 @@ def npb_tunnel_inner_sap_del(self, target,
 		l4_src         = 0, l4_src_mask         = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
 		tun_id    = 0,      tun_id_mask         = 0,
-		tun_type  = 0, tun_type_mask = 0
+		tun_type  = 0, tun_type_mask = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam')
+
+		# read counter
+		resp = table.entry_get(
+			target,
+			[table.make_key(
+				[gc.KeyTuple('sap',                              sap, 0xffff),
+				 gc.KeyTuple('ip_type',                          l3_type,     l3_type_mask),
+				 gc.KeyTuple('ip_src_addr',                      gc.ipv4_to_bytes(l3_sip),      l3_sip_mask),
+				 gc.KeyTuple('ip_dst_addr',                      gc.ipv4_to_bytes(l3_dip),      l3_dip_mask),
+				 gc.KeyTuple('ip_proto',                         l3_proto,    l3_proto_mask),
+				 gc.KeyTuple('l4_src_port',                      l4_src,      l4_src_mask),
+				 gc.KeyTuple('l4_dst_port',                      l4_dst,      l4_dst_mask),
+				 gc.KeyTuple('tunnel_id',                        tun_id,      tun_id_mask),
+				 gc.KeyTuple('tunnel_type',                      tun_type, tun_type_mask)]
+			)],
+			{"from_hw": True},
+			table.make_data(
+				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+				'SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam_hit',
+				get=True
+			)
+		)
+
+		data_dict = next(resp)[0].to_dict()
+		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+
+		print "Dumping npb_tunnel_inner_sap counters: pkts", recv_pkts, "bytes", recv_bytes 
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected npb_tunnel_network_dst_vtep packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: npb_tunnel_network_dst_vtep packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected npb_tunnel_network_dst_vtep byte counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: npb_tunnel_network_dst_vtep byte count check")
+
+		# delete entry
 		table.entry_del(
 			target,
 			[table.make_key(
@@ -1048,7 +1144,7 @@ def npb_npb_sf0_action_sel_del(self, target, spi, si):
 
 # ing sf #0: ip_len range
 
-def npb_npb_sf0_len_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
+def npb_npb_sf0_len_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_ip_len_rng')
 		table.entry_add(
@@ -1057,7 +1153,7 @@ def npb_npb_sf0_len_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
 				[gc.KeyTuple('ip_len',                              low=l3_len_lo, high=l3_len_hi)],
 			)],
 			[table.make_data(
-				[gc.DataTuple('rng_bitmask',                        l3_len_bitmask)],
+				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
 				'SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_ip_len_rng_hit'
 			)]
 		)
@@ -1076,7 +1172,7 @@ def npb_npb_sf0_len_rng_del(self, target, l3_len_lo, l3_len_hi):
 
 # ing sf #0: l4_src_port range
 
-def npb_npb_sf0_l4_src_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
+def npb_npb_sf0_l4_src_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_src_port_rng')
 		table.entry_add(
@@ -1085,7 +1181,7 @@ def npb_npb_sf0_l4_src_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_b
 				[gc.KeyTuple('l4_src_port',                         low=l3_len_lo, high=l3_len_hi)],
 			)],
 			[table.make_data(
-				[gc.DataTuple('rng_bitmask',                        l3_len_bitmask)],
+				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
 				'SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_src_port_rng_hit'
 			)]
 		)
@@ -1104,7 +1200,7 @@ def npb_npb_sf0_l4_src_port_rng_del(self, target, l3_len_lo, l3_len_hi):
 
 # ing sf #0: l4_dst_port range
 
-def npb_npb_sf0_l4_dst_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
+def npb_npb_sf0_l4_dst_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_dst_port_rng')
 		table.entry_add(
@@ -1113,7 +1209,7 @@ def npb_npb_sf0_l4_dst_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_b
 				[gc.KeyTuple('l4_dst_port',                         low=l3_len_lo, high=l3_len_hi)],
 			)],
 			[table.make_data(
-				[gc.DataTuple('rng_bitmask',                        l3_len_bitmask)],
+				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
 				'SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_dst_port_rng_hit'
 			)]
 		)
@@ -1139,6 +1235,7 @@ def npb_npb_sf0_policy_l2_add(self, target,
 		l2_da       = '0:0:0:0:0:0', l2_da_mask = 0,
 		l2_etype    = 0, l2_etype_mask = 0,
 		tun_type    = 0, tun_type_mask = 0,
+		tun_id         = 0, tun_id_mask         = 0,
 		# results
 		flow_class  = 0,
 		drop        = 0,
@@ -1164,7 +1261,8 @@ def npb_npb_sf0_policy_l2_add(self, target,
 				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes(l2_sa), l2_sa_mask),
 				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes(l2_da), l2_da_mask),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype, l2_etype_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask)],
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('flow_class',                      flow_class),
@@ -1188,7 +1286,9 @@ def npb_npb_sf0_policy_l2_del(self, target,
 		l2_sa       = '0:0:0:0:0:0', l2_sa_mask = 0,
 		l2_da       = '0:0:0:0:0:0', l2_da_mask = 0,
 		l2_etype    = 0, l2_etype_mask = 0,
-		tun_type    = 0, tun_type_mask = 0
+		tun_type    = 0, tun_type_mask = 0,
+		tun_id         = 0, tun_id_mask         = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.acl')
@@ -1202,7 +1302,8 @@ def npb_npb_sf0_policy_l2_del(self, target,
 				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes(l2_sa), l2_sa_mask),
 				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes(l2_da), l2_da_mask),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype, l2_etype_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask)],
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 			{"from_hw": True},
 			table.make_data(
@@ -1218,6 +1319,18 @@ def npb_npb_sf0_policy_l2_del(self, target,
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
 		print "Dumping npb_npb_sf0_policy_l2 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected SF0 L2 ACL packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: SF0 L2 ACL packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected SF0 L2 ACL byte counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: SF0 L2 ACL byte count check")
+		#if (recv_pkts != 1): 
+			#logging.error("Number of received packets on SF0 L2 ACL is incorrect!!!!")
+			#test.fail("Number of received packets on SF0 L2 ACL is incorrect")
+			#return None
+
 
 		# delete entry
 		table.entry_del(
@@ -1228,7 +1341,8 @@ def npb_npb_sf0_policy_l2_del(self, target,
 				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes(l2_sa), l2_sa_mask),
 				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes(l2_da), l2_da_mask),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype, l2_etype_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask)],
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type, tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)]
 		)
 
@@ -1238,11 +1352,18 @@ def npb_npb_sf0_policy_l2_del(self, target,
 
 def npb_npb_sf0_policy_l34_v4_add(self, target,
 		sap            = 0, sap_mask            = 0xffff,
-		l3_len_bitmask = 0, l3_len_bitmask_mask = 0,
+		vpn            = 0, vpn_mask            = 0x0,
+		l3_len         = 0, l3_len_mask         = 0,
+		l3_len_rng     = 0, l3_len_rng_mask     = 0,
 		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_sip         = '0.0.0.0', l3_sip_mask         = 0,
+		l3_dip         = '0.0.0.0', l3_dip_mask         = 0,
 		l4_src         = 0, l4_src_mask         = 0,
+		l4_src_rng     = 0, l4_src_rng_mask     = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
+		l4_dst_rng     = 0, l4_dst_rng_mask     = 0,
 		tun_type       = 0, tun_type_mask       = 0,
+		tun_id         = 0, tun_id_mask         = 0,
 		# results
 		flow_class     = 0,
 		drop           = 0,
@@ -1264,13 +1385,18 @@ def npb_npb_sf0_policy_l34_v4_add(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('vpn',                              vpn,            vpn_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
-				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
-				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
+				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes(l3_sip), l3_sip_mask),
+				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes(l3_dip), l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask),
 				 gc.KeyTuple('$MATCH_PRIORITY',                  655426)],
 			)],
 			[table.make_data(
@@ -1291,11 +1417,19 @@ def npb_npb_sf0_policy_l34_v4_add(self, target,
 
 def npb_npb_sf0_policy_l34_v4_del(self, target,
 		sap            = 0, sap_mask            = 0xffff,
-		l3_len_bitmask = 0, l3_len_bitmask_mask = 0,
+		vpn            = 0, vpn_mask            = 0x0,
+		l3_len         = 0, l3_len_mask         = 0,
+		l3_len_rng     = 0, l3_len_rng_mask     = 0,
 		l3_proto       = 0, l3_proto_mask       = 0,
+		l3_sip         = '0.0.0.0', l3_sip_mask         = 0,
+		l3_dip         = '0.0.0.0', l3_dip_mask         = 0,
 		l4_src         = 0, l4_src_mask         = 0,
+		l4_src_rng     = 0, l4_src_rng_mask     = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
-		tun_type       = 0, tun_type_mask       = 0
+		l4_dst_rng     = 0, l4_dst_rng_mask     = 0,
+		tun_type       = 0, tun_type_mask       = 0,
+		tun_id         = 0, tun_id_mask         = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.acl')
@@ -1305,13 +1439,18 @@ def npb_npb_sf0_policy_l34_v4_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('vpn',                              vpn,            vpn_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
-				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
-				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
+				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes(l3_sip), l3_sip_mask),
+				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes(l3_dip), l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask),
 				 gc.KeyTuple('$MATCH_PRIORITY',                  655426)],
 			)],
 			{"from_hw": True},
@@ -1328,19 +1467,35 @@ def npb_npb_sf0_policy_l34_v4_del(self, target,
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
 		print "Dumping npb_npb_sf0_policy_l34_v4 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected SF0 L3/4 v4 ACL packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: SF0 L3/4 v4 ACL packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected SF0 L3/4 v4 ACL byte counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: SF0 L3/4 ACL v4 byte count check")
+		#if (recv_pkts != 1): 
+			#logging.error("Number of received packets on SF0 L3/4 ACL is incorrect!!!!")
+			#test.fail("Number of received packets on SF0 L3/4 ACL is incorrect")
+			#return None
 
 		# delete entry
 		table.entry_del(
 			target,
 			[table.make_key(
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('vpn',                              vpn,            vpn_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
-				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
-				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
+				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes(l3_sip), l3_sip_mask),
+				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes(l3_dip), l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask),
 				 gc.KeyTuple('$MATCH_PRIORITY',                  655426)],
 			)]
 		)
@@ -1354,13 +1509,16 @@ def npb_npb_sf0_policy_l34_v6_add(self, target,
 		vpn            = 0, vpn_mask            = 0xffff,
 		mac_type       = 0, mac_type_mask       = 0xffff,
 		vid            = 0, vid_mask            = 0xfff,
-		l3_len_bitmask = 0, l3_len_bitmask_mask = 0,
+		l3_len         = 0, l3_len_mask         = 0,
+		l3_len_rng     = 0, l3_len_rng_mask     = 0,
 		l3_proto       = 0, l3_proto_mask       = 0,
 		l3_tos         = 0, l3_tos_mask         = 0,
 		l3_sip         = "0:0:0:0:0:0:0:0", l3_sip_mask         = 0,
 		l3_dip         = "0:0:0:0:0:0:0:0", l3_dip_mask         = 0,
 		l4_src         = 0, l4_src_mask         = 0,
+		l4_src_rng     = 0, l4_src_rng_mask     = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
+		l4_dst_rng     = 0, l4_dst_rng_mask     = 0,
 		tcp_flags      = 0, tcp_flags_mask      = 0,
 		tun_type       = 0, tun_type_mask       = 0,
 		tun_id         = 0, tun_id_mask         = 0,
@@ -1391,13 +1549,16 @@ def npb_npb_sf0_policy_l34_v6_add(self, target,
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
 				 #gc.KeyTuple('vpn',                             vpn,            vpn_mask),
 				 gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_tos',                       l3_tos,         l3_tos_mask),
 				 gc.KeyTuple('lkp.ip_src_addr',                  gc.ipv6_to_bytes(l3_sip),         l3_sip_mask),
 				 gc.KeyTuple('lkp.ip_dst_addr',                  gc.ipv6_to_bytes(l3_dip),         l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
 				 gc.KeyTuple('lkp.tcp_flags',                    tcp_flags,      tcp_flags_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
 				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
@@ -1422,16 +1583,20 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 		sap            = 0, sap_mask            = 0xffff,
 		vpn            = 0, vpn_mask            = 0xffff,
 		vid            = 0, vid_mask            = 0xfff,
-		l3_len_bitmask = 0, l3_len_bitmask_mask = 0,
+		l3_len         = 0, l3_len_mask         = 0,
+		l3_len_rng     = 0, l3_len_rng_mask     = 0,
 		l3_proto       = 0, l3_proto_mask       = 0,
 		l3_tos         = 0, l3_tos_mask         = 0,
 		l3_sip         = "0:0:0:0:0:0:0:0", l3_sip_mask         = 0,
 		l3_dip         = "0:0:0:0:0:0:0:0", l3_dip_mask         = 0,
 		l4_src         = 0, l4_src_mask         = 0,
+		l4_src_rng     = 0, l4_src_rng_mask     = 0,
 		l4_dst         = 0, l4_dst_mask         = 0,
+		l4_dst_rng     = 0, l4_dst_rng_mask     = 0,
 		tcp_flags      = 0, tcp_flags_mask      = 0,
 		tun_type       = 0, tun_type_mask       = 0,
-		tun_id         = 0, tun_id_mask         = 0
+		tun_id         = 0, tun_id_mask         = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl')
@@ -1443,13 +1608,16 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
 				 #gc.KeyTuple('vpn',                             vpn,            vpn_mask),
 				 gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_tos',                       l3_tos,         l3_tos_mask),
 				 gc.KeyTuple('lkp.ip_src_addr',                  gc.ipv6_to_bytes(l3_sip),         l3_sip_mask),
 				 gc.KeyTuple('lkp.ip_dst_addr',                  gc.ipv6_to_bytes(l3_dip),         l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
 				 gc.KeyTuple('lkp.tcp_flags',                    tcp_flags,      tcp_flags_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
 				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
@@ -1468,6 +1636,13 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
 		print "Dumping npb_npb_sf0_policy_l34_v6 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected SF0 L3/4 v6 ACL packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: SF0 L3/4 v6 ACL packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected SF0 L3/4 v6 ACL byte counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: SF0 L3/4 ACL v6 byte count check")
 
 		# delete entry
 		table.entry_del(
@@ -1476,13 +1651,16 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 				[gc.KeyTuple('sap',                              sap,            sap_mask),
 				 #gc.KeyTuple('vpn',                              vpn,            vpn_mask),
 				 gc.KeyTuple('lkp.vid',                          vid,            vid_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_tos',                       l3_tos,         l3_tos_mask),
 				 gc.KeyTuple('lkp.ip_src_addr',                  gc.ipv6_to_bytes(l3_sip),         l3_sip_mask),
 				 gc.KeyTuple('lkp.ip_dst_addr',                  gc.ipv6_to_bytes(l3_dip),         l3_dip_mask),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
 				 gc.KeyTuple('lkp.tcp_flags',                    tcp_flags,      tcp_flags_mask),
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
 				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
@@ -1535,7 +1713,8 @@ def npb_npb_sf0_policy_l7_add(self, target,
 
 def npb_npb_sf0_policy_l7_del(self, target,
 		sap         = 0, sap_mask      = 0xffff,
-		udf         = 0, udf_mask      = 0
+		udf         = 0, udf_mask      = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.l7_acl.acl')
@@ -1561,6 +1740,13 @@ def npb_npb_sf0_policy_l7_del(self, target,
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
 		print "Dumping npb_npb_sf0_policy_l7 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected SF0 L7 ACL packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: SF0 L7 ACL packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected SF0 L7 ACL byte counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: SF0 L7 ACL byte count check")
 
 		# delete entry
 		table.entry_del(
@@ -2602,7 +2788,7 @@ def npb_npb_sf2_action_sel_del(self, target, spi, si):
 
 # ing sf #2: ip_len range
 
-def npb_npb_sf2_len_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
+def npb_npb_sf2_len_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		table = self.bfrt_info.table_get('SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng')
 		table.entry_add(
@@ -2611,7 +2797,7 @@ def npb_npb_sf2_len_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
 				[gc.KeyTuple('ip_len',                              low=l3_len_lo, high=l3_len_hi)],
 			)],
 			[table.make_data(
-				[gc.DataTuple('rng_bitmask',                        l3_len_bitmask)],
+				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
 				'SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng_hit'
 			)]
 		)
@@ -2630,7 +2816,7 @@ def npb_npb_sf2_len_rng_del(self, target, l3_len_lo, l3_len_hi):
 
 # ing sf #2: l4_src_port range
 
-def npb_npb_sf2_l4_src_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
+def npb_npb_sf2_l4_src_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		table = self.bfrt_info.table_get('SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng')
 		table.entry_add(
@@ -2639,7 +2825,7 @@ def npb_npb_sf2_l4_src_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_b
 				[gc.KeyTuple('l4_src_port',                         low=l3_len_lo, high=l3_len_hi)],
 			)],
 			[table.make_data(
-				[gc.DataTuple('rng_bitmask',                        l3_len_bitmask)],
+				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
 				'SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng_hit'
 			)]
 		)
@@ -2658,7 +2844,7 @@ def npb_npb_sf2_l4_src_port_rng_del(self, target, l3_len_lo, l3_len_hi):
 
 # ing sf #2: l4_dst_port range
 
-def npb_npb_sf2_l4_dst_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_bitmask):
+def npb_npb_sf2_l4_dst_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		table = self.bfrt_info.table_get('SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng')
 		table.entry_add(
@@ -2667,7 +2853,7 @@ def npb_npb_sf2_l4_dst_port_rng_add(self, target, l3_len_lo, l3_len_hi, l3_len_b
 				[gc.KeyTuple('l4_dst_port',                         low=l3_len_lo, high=l3_len_hi)],
 			)],
 			[table.make_data(
-				[gc.DataTuple('rng_bitmask',                        l3_len_bitmask)],
+				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
 				'SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng_hit'
 			)]
 		)
@@ -2690,6 +2876,7 @@ def npb_npb_sf2_policy_l2_add(self, target,
 		dsap            = 0, dsap_mask           = 0x03ff,
 		l2_etype        = 0, l2_etype_mask       = 0,
 		tun_type        = 0, tun_type_mask       = 0,
+		tun_id        = 0, tun_id_mask       = 0,
 		# results
 		drop            = 0,
 		terminate_outer = 0,
@@ -2713,7 +2900,8 @@ def npb_npb_sf2_policy_l2_add(self, target,
 				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
 				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype,       l2_etype_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                  tun_id,       tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('drop',                            drop),
@@ -2737,7 +2925,9 @@ def npb_npb_sf2_policy_l2_add(self, target,
 def npb_npb_sf2_policy_l2_del(self, target,
 		dsap            = 0, dsap_mask           = 0x03ff,
 		l2_etype        = 0, l2_etype_mask       = 0,
-		tun_type        = 0, tun_type_mask       = 0
+		tun_type        = 0, tun_type_mask       = 0,
+		tun_id          = 0, tun_id_mask       = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.acl')
@@ -2750,7 +2940,8 @@ def npb_npb_sf2_policy_l2_del(self, target,
 				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
 				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype,       l2_etype_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,       tun_id_mask)],
 			)],
 			{"from_hw": True},
 			table.make_data(
@@ -2775,9 +2966,17 @@ def npb_npb_sf2_policy_l2_del(self, target,
 				 gc.KeyTuple('lkp.mac_src_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
 				 gc.KeyTuple('lkp.mac_dst_addr',                 gc.mac_to_bytes('0:0:0:0:0:0'), 0),
 				 gc.KeyTuple('lkp.mac_type',                     l2_etype,       l2_etype_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                  tun_id,       tun_id_mask)],
 			)],
 		)
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected npb_npb_sf2_policy_l2 packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: npb_npb_sf2_policy_l2 packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected npb_npb_sf2_policy_l2 counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: npb_npb_sf2_policy_l2 byte count check")
 
 ########################################
 
@@ -2785,11 +2984,15 @@ def npb_npb_sf2_policy_l2_del(self, target,
 
 def npb_npb_sf2_policy_l34_v4_add(self, target,
 		dsap            = 0, dsap_mask           = 0x03ff,
-		l3_len_bitmask  = 0, l3_len_bitmask_mask = 0,
+		l3_len          = 0, l3_len_mask         = 0,
+		l3_len_rng      = 0, l3_len_rng_mask     = 0,
 		l3_proto        = 0, l3_proto_mask       = 0,
 		l4_src          = 0, l4_src_mask         = 0,
+		l4_src_rng      = 0, l4_src_rng_mask     = 0,
 		l4_dst          = 0, l4_dst_mask         = 0,
+		l4_dst_rng      = 0, l4_dst_rng_mask     = 0,
 		tun_type        = 0, tun_type_mask       = 0,
+		tun_id          = 0, tun_id_mask       = 0,
 		# results
 		drop            = 0,
 		terminate_outer = 0,
@@ -2810,13 +3013,17 @@ def npb_npb_sf2_policy_l34_v4_add(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('dsap',                             dsap,           dsap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
 				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                  tun_id,       tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('drop',                            drop),
@@ -2839,11 +3046,16 @@ def npb_npb_sf2_policy_l34_v4_add(self, target,
 
 def npb_npb_sf2_policy_l34_v4_del(self, target,
 		dsap            = 0, dsap_mask           = 0x03ff,
-		l3_len_bitmask  = 0, l3_len_bitmask_mask = 0,
+		l3_len          = 0, l3_len_mask         = 0,
+		l3_len_rng      = 0, l3_len_rng_mask     = 0,
 		l3_proto        = 0, l3_proto_mask       = 0,
 		l4_src          = 0, l4_src_mask         = 0,
+		l4_src_rng      = 0, l4_src_rng_mask     = 0,
 		l4_dst          = 0, l4_dst_mask         = 0,
-		tun_type        = 0, tun_type_mask       = 0
+		l4_dst_rng      = 0, l4_dst_rng_mask     = 0,
+		tun_type        = 0, tun_type_mask       = 0,
+		tun_id        = 0, tun_id_mask       = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.acl')
@@ -2852,13 +3064,17 @@ def npb_npb_sf2_policy_l34_v4_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('dsap',                             dsap,           dsap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
 				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                  tun_id,       tun_id_mask)],
 			)],
 			{"from_hw": True},
 			table.make_data(
@@ -2880,15 +3096,27 @@ def npb_npb_sf2_policy_l34_v4_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('dsap',                             dsap,           dsap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_src_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
 				 gc.KeyTuple('lkp.ip_dst_addr[31:0]',            gc.ipv4_to_bytes('0.0.0.0'), 0),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                  tun_id,       tun_id_mask)],
 			)],
 		)
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected npb_npb_sf2_policy_l34_v4 packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: npb_npb_sf2_policy_l34_v4 packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected npb_npb_sf2_policy_l34_v4 counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL: npb_npb_sf2_policy_l34_v4 byte count check")
+
 
 ########################################
 
@@ -2896,11 +3124,15 @@ def npb_npb_sf2_policy_l34_v4_del(self, target,
 
 def npb_npb_sf2_policy_l34_v6_add(self, target,
 		dsap            = 0, dsap_mask           = 0x03ff,
-		l3_len_bitmask  = 0, l3_len_bitmask_mask = 0,
+		l3_len          = 0, l3_len_mask         = 0,
+		l3_len_rng      = 0, l3_len_rng_mask     = 0,
 		l3_proto        = 0, l3_proto_mask       = 0,
 		l4_src          = 0, l4_src_mask         = 0,
+		l4_src_rng      = 0, l4_src_rng_mask     = 0,
 		l4_dst          = 0, l4_dst_mask         = 0,
+		l4_dst_rng      = 0, l4_dst_rng_mask     = 0,
 		tun_type        = 0, tun_type_mask       = 0,
+		tun_id        = 0, tun_id_mask       = 0,
 		# results
 		drop            = 0,
 		terminate_outer = 0,
@@ -2921,13 +3153,17 @@ def npb_npb_sf2_policy_l34_v6_add(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('dsap',                             dsap,           dsap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_src_addr',                  0,              0),
 				 gc.KeyTuple('lkp.ip_dst_addr',                  0,              0),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 			[table.make_data(
 				[gc.DataTuple('drop',                            drop),
@@ -2950,11 +3186,16 @@ def npb_npb_sf2_policy_l34_v6_add(self, target,
 
 def npb_npb_sf2_policy_l34_v6_del(self, target,
 		dsap            = 0, dsap_mask           = 0x03ff,
-		l3_len_bitmask  = 0, l3_len_bitmask_mask = 0,
+		l3_len          = 0, l3_len_mask         = 0,
+		l3_len_rng      = 0, l3_len_rng_mask     = 0,
 		l3_proto        = 0, l3_proto_mask       = 0,
 		l4_src          = 0, l4_src_mask         = 0,
+		l4_src_rng      = 0, l4_src_rng_mask     = 0,
 		l4_dst          = 0, l4_dst_mask         = 0,
-		tun_type        = 0, tun_type_mask       = 0
+		l4_dst_rng      = 0, l4_dst_rng_mask     = 0,
+		tun_type        = 0, tun_type_mask       = 0,
+		tun_id        = 0, tun_id_mask       = 0,
+		exp_recv_pkts = 0, exp_recv_bytes = 0, check_stats = False
 		):
 
 		table = self.bfrt_info.table_get('SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.acl')
@@ -2964,13 +3205,17 @@ def npb_npb_sf2_policy_l34_v6_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('dsap',                             dsap,           dsap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_src_addr',                  0,              0),
 				 gc.KeyTuple('lkp.ip_dst_addr',                  0,              0),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 			{"from_hw": True},
 			table.make_data(
@@ -2992,15 +3237,27 @@ def npb_npb_sf2_policy_l34_v6_del(self, target,
 			target,
 			[table.make_key(
 				[gc.KeyTuple('dsap',                             dsap,           dsap_mask),
-				 gc.KeyTuple('lkp.ip_len',                       l3_len_bitmask, l3_len_bitmask_mask),
+				 gc.KeyTuple('lkp.ip_len',                       l3_len,         l3_len_mask),
+				 gc.KeyTuple('lkp.ip_len_rng',                   l3_len_rng,     l3_len_rng_mask),
 				 gc.KeyTuple('lkp.ip_proto',                     l3_proto,       l3_proto_mask),
 				 gc.KeyTuple('lkp.ip_src_addr',                  0,              0),
 				 gc.KeyTuple('lkp.ip_dst_addr',                  0,              0),
 				 gc.KeyTuple('lkp.l4_src_port',                  l4_src,         l4_src_mask),
+				 gc.KeyTuple('lkp.l4_src_port_rng',              l4_src_rng,     l4_src_rng_mask),
 				 gc.KeyTuple('lkp.l4_dst_port',                  l4_dst,         l4_dst_mask),
-				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
+				 gc.KeyTuple('lkp.l4_dst_port_rng',              l4_dst_rng,     l4_dst_rng_mask),
+				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask),
+				 gc.KeyTuple('lkp.tunnel_id',                    tun_id,         tun_id_mask)],
 			)],
 		)
+
+		if(check_stats == True):
+			if(recv_pkts != exp_recv_pkts) :
+				print"FAIL: Expected npb_npb_sf2_policy_l34_v6 packet counter does not match actual. Actual:", recv_pkts, "Exp:", exp_recv_pkts
+				self.fail("FAIL: npb_npb_sf2_policy_l34_v6 packet count check")
+			if(recv_bytes != exp_recv_bytes) :
+				print "FAIL: Expected npb_npb_sf2_policy_l34_v6 counter does not match actual. Actual:", recv_bytes, "Exp:", exp_recv_bytes
+				self.fail("FAIL:npb_npb_sf2_policy_l34_v6  byte count check")
 
 ########################################
 
@@ -3551,7 +3808,7 @@ def npb_npb_sfp_sel_del(self, target,
 	if(len(spi) == 1):
 		npb_npb_sf0_policy_sfp_sel_single_del       (self, target, sfc,                sfc_member_ptr)
 	else:
-		npb_npb_sf0_policy_sfp_sel_multi_del        (self, target, sfc, sfc_group_ptr, sfc_member_ptr, spi_num_entries, spi, si)
+		npb_npb_sf0_policy_sfp_sel_multi_del        (self, target, sfc, sfc_group_ptr, sfc_member_ptr, spi, si)
 
 #######################################
 

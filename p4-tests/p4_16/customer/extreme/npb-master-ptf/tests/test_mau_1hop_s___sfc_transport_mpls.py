@@ -72,7 +72,8 @@ class test(BfRuntimeTest):
 #		dip = "0.0.0.4"
 		sip = '192.168.0.1'
 		dip = '192.168.0.2'
-		mpls_label = [0x12345]
+
+		mpls_label_bottom = [0x12345]
 
 		rmac = dmac
 
@@ -116,18 +117,10 @@ class test(BfRuntimeTest):
 		# Ingress Tunnel
 		# -----------------
 
-
 		npb_tunnel_network_dst_vtep_add(self=self, target=self.target, 
 			tun_type=IngressTunnelType.MPLS.value,   tun_type_mask=0xf, 
-			tun_id=mpls_label[0],                         tun_id_mask=0x0fffff, 
+			tun_id=(mpls_label_bottom[0]<<12)|(0x1<<8)|(0xff<<0), tun_id_mask=0xffffffff,
 			sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
-
-
-
-		# -----------------
-
-
-
 
 		# -----------------
 
@@ -137,11 +130,13 @@ class test(BfRuntimeTest):
 		# Create / Send / Verify the packet (MPLS SR) 1 Label
 		# -----------------------------------------------------------
 
+		mpls_label = [0x6789a, mpls_label_bottom]
+
 		src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -153,19 +148,18 @@ class test(BfRuntimeTest):
 
 		logger.info("Verify packet on port %d", eg_port)
 		testutils.verify_packets(self, exp_pkt, [eg_port])
-
-
 
 		# -----------------------------------------------------------
 		# Create / Send / Verify the packet (MPLS SR) 2 Labels
 		# -----------------------------------------------------------
-		mpls_label = [0x12345, 0x6789a]
+
+		mpls_label = [0x6789a, mpls_label_bottom]
 
 		src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -177,18 +171,18 @@ class test(BfRuntimeTest):
 
 		logger.info("Verify packet on port %d", eg_port)
 		testutils.verify_packets(self, exp_pkt, [eg_port])
-
 
 		# -----------------------------------------------------------
 		# Create / Send / Verify the packet (MPLS SR) 3 Labels
 		# -----------------------------------------------------------
-		mpls_label = [0x12345, 0x6789a, 0xbcdef]
+
+		mpls_label = [0xbcdef, 0x6789a, mpls_label_bottom]
 
 		src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -201,17 +195,17 @@ class test(BfRuntimeTest):
 		logger.info("Verify packet on port %d", eg_port)
 		testutils.verify_packets(self, exp_pkt, [eg_port])
 
-
 		# -----------------------------------------------------------
 		# Create / Send / Verify the packet (MPLS SR) 4 Labels
 		# -----------------------------------------------------------
-		mpls_label = [0x12345, 0x6789a, 0xbcdef, 0x11223]
+
+		mpls_label = [0x11223, 0xbcdef, 0x6789a, mpls_label_bottom]
 
 		src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 			dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
 			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 		)
 
 		# -----------------------------------------------------------
@@ -246,8 +240,7 @@ class test(BfRuntimeTest):
 
 		npb_tunnel_network_dst_vtep_del(self=self, target=self.target, 
 			tun_type=IngressTunnelType.MPLS.value,   tun_type_mask=0xf, 
-			tun_id=mpls_label[0],                         tun_id_mask=0x0fffff)
-#			tun_id=0x12345,                         tun_id_mask=0x0fffff)
+			tun_id=(mpls_label_bottom[0]<<12)|(0x1<<8)|(0xff<<0), tun_id_mask=0xffffffff,
+			exp_recv_pkts = 4, exp_recv_bytes = 516, check_stats = True)
 
 		# -----------------
-

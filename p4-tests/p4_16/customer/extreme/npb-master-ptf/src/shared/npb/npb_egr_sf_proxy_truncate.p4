@@ -1,3 +1,5 @@
+#ifndef _NPB_EGR_SF_PROXY_TRUNCATE_
+#define _NPB_EGR_SF_PROXY_TRUNCATE_
 
 control npb_egr_sf_proxy_truncate (
 	inout switch_header_transport_t                   hdr,
@@ -26,3 +28,5 @@ control npb_egr_sf_proxy_truncate (
 	}
 
 }
+
+#endif

@@ -149,13 +149,10 @@ control IngressTunnel(
 
 	table src_vtep {
 		key = {
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
-  #ifdef INGRESS_PARSER_POPULATES_LKP_0
+			// l3
 			lkp_0.ip_src_addr_v4    : ternary @name("src_addr");
-  #else
-			hdr_0.ipv4.src_addr     : ternary @name("src_addr");
-  #endif
-#endif
+
+			// tunnel
 //			tunnel_0.type           : ternary @name("tunnel_type");
 			lkp_0.tunnel_type       : ternary @name("tunnel_type");
 		}
@@ -198,13 +195,10 @@ control IngressTunnel(
 
 	table src_vtepv6 {
 		key = {
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
-  #ifdef INGRESS_PARSER_POPULATES_LKP_0
+			// l3
 			lkp_0.ip_src_addr   : ternary @name("src_addr");
-  #else
-			hdr_0.ipv6.src_addr : ternary @name("src_addr");
-  #endif
-#endif
+
+			// tunnel
 //			tunnel_0.type       : ternary @name("tunnel_type");
 			lkp_0.tunnel_type   : ternary @name("tunnel_type");
 		}
@@ -244,7 +238,8 @@ control IngressTunnel(
 		,
 		bool mirror_enable,
         switch_mirror_session_t mirror_session_id,
-        switch_mirror_meter_id_t mirror_meter_index // derek added
+        switch_mirror_meter_id_t mirror_meter_index, // derek added
+		switch_cpu_reason_t cpu_reason_code // derek added
 	) {
 		stats_dst_vtep.count();
 
@@ -269,6 +264,7 @@ control IngressTunnel(
 #ifdef MIRROR_METER_ENABLE
 			ig_md.mirror.meter_index = mirror_meter_index; // derek added
 #endif
+			ig_md.cpu_reason = cpu_reason_code; // derek added
 		}
 	}
 
@@ -290,27 +286,37 @@ control IngressTunnel(
 
 	table dst_vtep {
 		key = {
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
-  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+#ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			ig_md.nsh_md.sap        : ternary @name("sap");
-  #endif
-  #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
+#endif
+			// l3
+#ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
+  #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+//			lkp_0.ip_src_addr       : ternary @name("src_addr");
+			lkp_0.ip_src_addr_v4    : ternary @name("src_addr");
+  #else
 			lkp_0.ip_src_addr_v4    : ternary @name("src_addr");
   #endif
-			// l3
+#endif
 			lkp_0.ip_type           : ternary @name("type");
+  #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
+//			lkp_0.ip_dst_addr       : ternary @name("dst_addr");
 			lkp_0.ip_dst_addr_v4    : ternary @name("dst_addr");
+  #else
+			lkp_0.ip_dst_addr_v4    : ternary @name("dst_addr");
+  #endif
 			lkp_0.ip_proto          : ternary @name("proto");
 
 			// l4
+//#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
 			lkp_0.l4_src_port       : ternary @name("src_port");
 			lkp_0.l4_dst_port       : ternary @name("dst_port");
-#endif
+//#endif
 			// tunnel
 			lkp_0.tunnel_type       : ternary @name("tunnel_type");
-  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+#ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			lkp_0.tunnel_id         : ternary @name("tunnel_id");
-  #endif
+#endif
 		}
 
 		actions = {
@@ -346,7 +352,8 @@ control IngressTunnel(
 		,
 		bool mirror_enable,
         switch_mirror_session_t mirror_session_id,
-        switch_mirror_meter_id_t mirror_meter_index // derek added
+        switch_mirror_meter_id_t mirror_meter_index, // derek added
+		switch_cpu_reason_t cpu_reason_code // derek added
   #endif
 	) {
 		stats_dst_vtepv6.count();
@@ -372,6 +379,7 @@ control IngressTunnel(
 #ifdef MIRROR_METER_ENABLE
 			ig_md.mirror.meter_index = mirror_meter_index; // derek added
 #endif
+			ig_md.cpu_reason = cpu_reason_code; // derek added
 		}
 	}
 
@@ -393,27 +401,27 @@ control IngressTunnel(
 
 	table dst_vtepv6 {
 		key = {
-#ifdef ERSPAN_TRANSPORT_INGRESS_ENABLE
-  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+#ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			ig_md.nsh_md.sap        : ternary @name("sap");
-  #endif
-  #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-			lkp_0.ip_src_addr       : ternary @name("src_addr");
-  #endif
+#endif
 			// l3
+#ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
+			lkp_0.ip_src_addr       : ternary @name("src_addr");
+#endif
 			lkp_0.ip_type           : ternary @name("ip_type");
 			lkp_0.ip_dst_addr       : ternary @name("dst_addr");
 			lkp_0.ip_proto          : ternary @name("proto");
 
 			// l4
+//#ifdef VXLAN_TRANSPORT_INGRESS_ENABLE_V4
 			lkp_0.l4_src_port       : ternary @name("src_port");
 			lkp_0.l4_dst_port       : ternary @name("dst_port");
-#endif
+//#endif
 			// tunnel
 			lkp_0.tunnel_type       : ternary @name("tunnel_type");
-  #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
+#ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			lkp_0.tunnel_id         : ternary @name("tunnel_id");
-  #endif
+#endif
 		}
 
 		actions = {
@@ -473,10 +481,11 @@ control IngressTunnel(
 
 	apply {
 #ifdef TUNNEL_ENABLE
+/*
 		// outer RMAC lookup for tunnel termination.
 //		switch(rmac.apply().action_run) {
 //			rmac_hit : {
-  #if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+  #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
     #if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
 				if (hdr_0.ipv4.isValid()) {
 //				if (lkp_0.ip_type == SWITCH_IP_TYPE_IPV4) {
@@ -510,9 +519,19 @@ control IngressTunnel(
 
 				}
     #endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE_V6) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V6)
-  #endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE)
+  #endif // if defined(GRE_TRANSPORT_INGRESS_ENABLE_V4) || defined(ERSPAN_TRANSPORT_INGRESS_ENABLE_V4)
 //			}
 //		}
+*/
+
+		switch(dst_vtep.apply().action_run) {
+//			dst_vtep_tunid_hit : {
+//				// Vxlan
+//				vni_to_bd_mapping.apply();
+//			}
+			dst_vtep_hit : {
+			}
+		}
 
 		// --------------------
 
