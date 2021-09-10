@@ -42,10 +42,12 @@ struct DependencyGraph {
         CONTROL_TABLE_HIT           = (1 << 4),   // Control dependence due to a table hit.
         CONTROL_TABLE_MISS          = (1 << 5),   // Control dependence due to a table miss.
         CONTROL_DEFAULT_NEXT_TABLE  = (1 << 6),   // Control dependence due to default next table.
+        CONTROL_EXIT                = (1 << 19),  // Control dependence due to tables needing to
+                                                  // run last, before exit. (Tofino only!)
         IXBAR_READ                  = (1 << 7),   // Read-after-write (data) dependence.
         ACTION_READ                 = (1 << 8),   // Read-after-write dependence.
                                                   // Different from IXBAR_READ for power analysis.
-        OUTPUT                      = (1 << 9),  // Write-after-write (output) dependence.(ACTION?)
+        OUTPUT                      = (1 << 9),   // Write-after-write (output) dependence.(ACTION?)
         REDUCTION_OR_READ           = (1 << 10),  // Read-after-write dependence,
                                                   // Not a true dependency as hardware supports
                                                   // OR'n on action data bus.
@@ -77,15 +79,16 @@ struct DependencyGraph {
                                   | CONTROL_TABLE_HIT
                                   | CONTROL_TABLE_MISS
                                   | CONTROL_DEFAULT_NEXT_TABLE
+                                  | CONTROL_EXIT
                                   | ANTI_NEXT_TABLE_CONTROL;
     static const unsigned CONTROL_AND_ANTI = CONTROL | ANTI;
     typedef boost::adjacency_list<
         boost::vecS,
         boost::vecS,
-        boost::bidirectionalS,   // Directed edges.
+        boost::bidirectionalS,  // Directed edges.
         boost::property<boost::vertex_table_t, const IR::MAU::Table*>,  // Vertex labels
-        dependencies_t     // Edge labels.
-        > Graph;
+        dependencies_t  // Edge labels.
+    > Graph;
 
     /** A map of all tables that cannot be placed in the same stage as the key table, because
      *  they share an ALU operation over a container.  The following example will indicate why
@@ -133,7 +136,7 @@ struct DependencyGraph {
     ordered_map<const IR::MAU::Table*,
              ordered_set<const IR::MAU::Table*>> unavoidable_container_conflicts;
 
-    Graph g;                // Dependency graph.
+    Graph g;  // Dependency graph.
 
     // True once the graph has been fully constructed.
     bool finalized;
@@ -181,57 +184,74 @@ struct DependencyGraph {
     // happens_phys_after/before_map, although this could change.
 
     // Work happens after map
-    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_after_work_map;
+    ordered_map<const IR::MAU::Table*,
+                ordered_set<const IR::MAU::Table*>> happens_after_work_map;
 
     // Work happens before map
-    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_before_work_map;
+    ordered_map<const IR::MAU::Table*,
+                ordered_set<const IR::MAU::Table*>> happens_before_work_map;
 
     // For a given table t, happens_phys_after_map[t] is the set of tables that must be placed in an
     // earlier stage than t---i.e. there is a data dependence between t and any table in the
     // set. This is the default result of the calc_topological_stage function.
-    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_phys_after_map;
+    ordered_map<const IR::MAU::Table*,
+                ordered_set<const IR::MAU::Table*>> happens_phys_after_map;
 
     // Analagous to above, but for the tables that must be placed in a later stage than t
-    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_phys_before_map;
+    ordered_map<const IR::MAU::Table*,
+                ordered_set<const IR::MAU::Table*>> happens_phys_before_map;
 
     // Same as happens_phys_before_map, with the additional inclusion of control dependences when
     // calculating the happens_before relationship.
     ordered_map<const IR::MAU::Table*,
-             ordered_set<const IR::MAU::Table*>> happens_before_control_map;
+                ordered_set<const IR::MAU::Table*>> happens_before_control_map;
 
     // Same as happens_phys_after_map, with the additional inclusion of control and anti dependences
     // when calculating the happens_after relationship, which corresponds to an ordering on logical
     // IDs.
-    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_logi_after_map;
+    ordered_map<const IR::MAU::Table*,
+                ordered_set<const IR::MAU::Table*>> happens_logi_after_map;
 
     // Analagous to above, but for tables that must be placed into a later logical ID than t. New
     // name for happens_before_control_anti_map
-    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_logi_before_map;
+    ordered_map<const IR::MAU::Table*,
+                ordered_set<const IR::MAU::Table*>> happens_logi_before_map;
 
     ordered_map<const IR::MAU::Table*,
-             ordered_map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
+                ordered_map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
 
     ordered_map<const IR::MAU::Table*,
-             typename Graph::vertex_descriptor> labelToVertex;
+                typename Graph::vertex_descriptor> labelToVertex;
 
     // Map from <t1, t2> to its dependency type
     // e.g.  <tbl1, tbl2> = MATCH means that tbl1 has a match dependency on tbl2
     ordered_map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
-             DependencyGraph::dependencies_t> dependency_map;
+                DependencyGraph::dependencies_t> dependency_map;
 
-    ordered_map<typename Graph::edge_descriptor, ordered_map<const PHV::Field*,
-             std::pair<ordered_set<const IR::MAU::Action*>,
-             ordered_set<const IR::MAU::Action*>>>> data_annotations;
+    ordered_map<
+        typename Graph::edge_descriptor,
+        ordered_map<
+            const PHV::Field*,
+            std::pair<
+                ordered_set<const IR::MAU::Action*>,
+                ordered_set<const IR::MAU::Action*>
+            >
+        >
+    > data_annotations;
 
-    ordered_map<typename Graph::edge_descriptor, const std::vector<const IR::MAU::Action*>>
-                                                                    data_annotations_exit;
-    ordered_map<typename Graph::edge_descriptor, const PHV::Container> data_annotations_conflicts;
-    ordered_map<typename Graph::edge_descriptor, const PHV::FieldSlice*> data_annotations_metadata;
-    ordered_map<typename Graph::edge_descriptor, std::string> ctrl_annotations;
+    ordered_map<typename Graph::edge_descriptor,
+                const std::vector<const IR::MAU::Action*>> data_annotations_exit;
+    ordered_map<typename Graph::edge_descriptor,
+                const PHV::Container> data_annotations_conflicts;
+    ordered_map<typename Graph::edge_descriptor,
+                const PHV::FieldSlice*> data_annotations_metadata;
+    ordered_map<typename Graph::edge_descriptor,
+                std::string> ctrl_annotations;
 
     // Note: these maps only make sense if there is a PHV allocation.
     // Map from table to PHV containers written.
-    std::map<const IR::MAU::Table*, std::map<const PHV::Container, bool>> containers_write_ = {};
+    std::map<const IR::MAU::Table*,
+             std::map<const PHV::Container, bool>> containers_write_ = {};
     // Map from table to PHV containers read at the match input crossbar.
     std::map<const IR::MAU::Table*,
              std::map<const PHV::Container, bool>> containers_read_xbar_ = {};
@@ -322,6 +342,10 @@ struct DependencyGraph {
     /// @returns boolean indicating if an edge is a type of control edge
     bool is_ctrl_edge(DependencyGraph::dependencies_t dep) const;
 
+    /// @returns boolean indicating if an edge is non-directional (tables can't share the same
+    /// stage, but could be placed in any order)
+    bool is_non_directional_edge(DependencyGraph::dependencies_t dep) const;
+
     /// @returns boolean indicating if an edge is critical, i.e. appears in the
     /// min_stage_edges
     bool is_edge_critical(typename Graph::edge_descriptor e) const;
@@ -333,14 +357,14 @@ struct DependencyGraph {
 
     // For a src -> dst edge check if back edge dst -> src exists
     bool has_back_edge(const IR::MAU::Table *src, const IR::MAU::Table *dst) {
-       bool backEdgePresent = false;
-       DependencyGraph::Graph::edge_descriptor backEdge;
+        bool backEdgePresent = false;
+        DependencyGraph::Graph::edge_descriptor backEdge;
 
-       auto src_v = labelToVertex.at(dst);
-       auto dst_v = labelToVertex.at(src);
-       boost::tie(backEdge, backEdgePresent) = boost::edge(src_v, dst_v, g);
+        auto src_v = labelToVertex.at(dst);
+        auto dst_v = labelToVertex.at(src);
+        boost::tie(backEdge, backEdgePresent) = boost::edge(src_v, dst_v, g);
 
-       return backEdgePresent;
+        return backEdgePresent;
     }
 
     // Check for cycle in the graph
@@ -428,16 +452,17 @@ struct DependencyGraph {
         if (happens_phys_before_map.count(t1)) {
             if (t2 != t1 && happens_phys_before_map.at(t1).count(t2)) return true;
             for (auto *next : Values(t2->next))
-                if (happens_phys_before_recursive(t1, next)) return true; }
+                if (happens_phys_before_recursive(t1, next)) return true;
+        }
         return false;
     }
 
     bool happens_before_control(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         check_finalized();
-        if (happens_before_control_map.count(t1)) {
+        if (happens_before_control_map.count(t1))
             return happens_before_control_map.at(t1).count(t2);
-        } else {
-            return false; }
+        else
+            return false;
     }
 
     bool happens_logi_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
@@ -717,6 +742,7 @@ class TableGraphEdge {
             case DependencyGraph::CONTROL_TABLE_HIT         :
             case DependencyGraph::CONTROL_TABLE_MISS        :
             case DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE:
+            case DependencyGraph::CONTROL_EXIT:
                 break;
 
             /* Should never reach here */

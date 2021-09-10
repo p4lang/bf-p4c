@@ -2557,8 +2557,6 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
                 safe_vector<NextTableSet> next_table_map;
                 self.next_table_non_action_map(table, next_table_map);
-                for (auto entry : next_table_map) {
-                }
                 NextTableSet act_set = self.next_for(table, act->name.originalName);
                 auto it = std::find(next_table_map.begin(), next_table_map.end(), act_set);
                 BUG_CHECK(it != next_table_map.end(), "Next table cannot be associated");
@@ -3877,7 +3875,6 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
                 next_table_map[0] = *unique_gw_next_tables.begin();
         }
     }
-
 
     if (no_match_hit) {
         out << indent << "next: " << gw_miss << std::endl;

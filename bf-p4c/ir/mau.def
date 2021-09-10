@@ -81,6 +81,7 @@ class Table : BFN::Unit, IAnnotated  {
     bool                                        has_dark_init = false;
     AlwaysRun                                   always_run = AlwaysRun::NONE;
     bool                                        suppress_context_json = false;
+    bool                                        run_before_exit = false;
 
 
     class IndirectAddress {

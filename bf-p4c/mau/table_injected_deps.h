@@ -68,8 +68,8 @@ class AbstractDependencyInjector : public MauInspector {
         return rv;
     }
 
-    bool preorder(const IR::MAU::Table *t) override {
-        tables_placed |= t->is_placed();
+    bool preorder(const IR::MAU::Table *table) override {
+        tables_placed |= table->is_placed();
         return true;
     }
 
@@ -119,6 +119,38 @@ class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
         : AbstractDependencyInjector(g, cp), cntp(cntp) { }
 };
 
+class InjectControlExitDependencies : public AbstractDependencyInjector {
+    std::map<gress_t, std::vector<const IR::MAU::Table *>> run_before_exit_tables;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        LOG3("InjectControlExitDependencies begins");
+        auto rv = AbstractDependencyInjector::init_apply(node);
+        run_before_exit_tables.clear();
+        return rv;
+    }
+
+    void end_apply(const IR::Node* node) override {
+        Visitor::end_apply(node);
+        link_run_before_exit_tables();
+        LOG3("InjectControlExitDependencies ends");
+    }
+
+    bool preorder(const IR::MAU::Table* table) override;
+    void postorder(const IR::MAU::Table* table) override;
+
+    void collect_run_before_exit_table(const IR::MAU::Table* table);
+    void inject_dependencies_from_gress_root_tables_to_first_rbe_table(
+        const IR::MAU::Table* first_rbe_table);
+    bool is_first_run_before_exit_table_in_gress(const IR::MAU::Table* rbe_table);
+    const IR::MAU::TableSeq* get_gress_root_table_seq(const IR::MAU::Table* table);
+    void link_run_before_exit_tables();
+    void inject_control_exit_dependency(const IR::MAU::Table* source,
+                                        const IR::MAU::Table* destination);
+
+ public:
+    InjectControlExitDependencies(DependencyGraph &dg, const ControlPathwaysToTable &cp)
+        : AbstractDependencyInjector(dg, cp) {}
+};
 
 class InjectDarkAntiDependencies : public AbstractDependencyInjector {
     const PhvInfo &phv;

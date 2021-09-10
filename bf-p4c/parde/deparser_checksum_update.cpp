@@ -713,6 +713,7 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
     }
     auto ma = new MatchAction(keys, outputs, match_to_action_param);
     auto encoder = create_pov_encoder(gress, tableName, actionName, *ma);
+    encoder->run_before_exit = true;
     tableSeq->tables.push_back(encoder);
 
     LOG3("Created table " << tableName << " in " << gress << " for match action:");

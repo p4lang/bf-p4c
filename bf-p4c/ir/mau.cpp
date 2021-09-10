@@ -367,7 +367,8 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
            suppress_context_json == a.suppress_context_json &&
            layout == a.layout &&
            ways == a.ways &&
-           resources == a.resources;
+           resources == a.resources &&
+           run_before_exit == a.run_before_exit;
 }
 
 cstring IR::MAU::Table::get_table_type_string() const {

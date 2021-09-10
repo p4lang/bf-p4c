@@ -85,7 +85,7 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
 /**
  * In Tofino, extra ordering is occasionally required due to the requirements of each table
  * having a single next table.  Examine the following program:
- * 
+ *
  *     apply {
  *         switch (t1.apply().action_run) {
  *             a1 : {
@@ -335,6 +335,87 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
     }
 }
 
+bool InjectControlExitDependencies::preorder(const IR::MAU::Table* table) {
+    if (tables_placed) return false;
+    tables_placed |= table->is_placed();
+    if (!table->run_before_exit) return false;
+    collect_run_before_exit_table(table);
+    return true;
+}
+
+void InjectControlExitDependencies::postorder(const IR::MAU::Table* table) {
+    if (tables_placed) return;
+    if (!is_first_run_before_exit_table_in_gress(table)) return;
+    inject_dependencies_from_gress_root_tables_to_first_rbe_table(table);
+}
+
+void InjectControlExitDependencies::collect_run_before_exit_table(
+        const IR::MAU::Table* rbe_table) {
+    auto it = run_before_exit_tables.find(rbe_table->gress);
+    LOG3("  Adding "
+         << rbe_table->gress
+         << " "
+         << rbe_table->name
+         << " to run_before_exit_tables map");
+    if (it != run_before_exit_tables.end())
+        it->second.push_back(rbe_table);
+    else
+        run_before_exit_tables.emplace(rbe_table->gress,
+                                       std::vector<const IR::MAU::Table *>{ rbe_table });
+}
+
+bool InjectControlExitDependencies::is_first_run_before_exit_table_in_gress(
+        const IR::MAU::Table* rbe_table) {
+    auto first = run_before_exit_tables[rbe_table->gress].begin();
+    if (run_before_exit_tables[rbe_table->gress].empty())
+        return false;
+    else
+        return rbe_table == *first;
+}
+
+void InjectControlExitDependencies::inject_dependencies_from_gress_root_tables_to_first_rbe_table(
+        const IR::MAU::Table* first_rbe_table) {
+    LOG3("  Injecting CONTROL_EXIT dependencies from all "
+         << first_rbe_table->gress
+         << " root tables to first run before exit table "
+         << first_rbe_table->name);
+    auto root_table_seq = get_gress_root_table_seq(first_rbe_table);
+    for (auto source : root_table_seq->tables) {
+        if (!source->run_before_exit)
+            inject_control_exit_dependency(source, first_rbe_table);
+    }
+}
+
+const IR::MAU::TableSeq* InjectControlExitDependencies::get_gress_root_table_seq(
+        const IR::MAU::Table* table) {
+    auto paths = ctrl_paths.table_pathways.at(table);
+    auto root_table_seq = paths[0][1]->to<IR::MAU::TableSeq>();
+    return root_table_seq;
+}
+
+void InjectControlExitDependencies::link_run_before_exit_tables() {
+    for (auto kv : run_before_exit_tables) {
+        LOG3("  Linking " << kv.first << " run before exit tables");
+        auto first = kv.second.begin();
+        auto last = kv.second.empty() ? kv.second.end() : std::prev(kv.second.end());
+        for (auto it = first; it != last; ++it)
+            inject_control_exit_dependency(*it, *std::next(it));
+    }
+}
+
+void InjectControlExitDependencies::inject_control_exit_dependency(
+        const IR::MAU::Table* source,
+        const IR::MAU::Table* destination) {
+    auto annotation = "exit";
+    auto edge_pair = dg.add_edge(source, destination, DependencyGraph::CONTROL_EXIT);
+    if (!edge_pair.first) return;
+    LOG4("    Injecting CONTROL_EXIT dependency: "
+         << source->name
+         << " --> "
+         << destination->name);
+    dg.ctrl_annotations[*edge_pair.first] = annotation;
+}
+
 const IR::MAU::Table* InjectDarkAntiDependencies::getTable(UniqueId uid) {
     if (id_to_table.count(uid))
         return id_to_table.at(uid);
@@ -430,6 +511,11 @@ TableFindInjectedDependencies
         new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths),
         &cntp,
         new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths),
+        new PassIf(
+            [] {
+                return Device::currentDevice() == Device::TOFINO;
+            },
+            { new InjectControlExitDependencies(dg, ctrl_paths) }),
         new InjectDarkAntiDependencies(phv, dg, ctrl_paths)
     });
 }

@@ -42,13 +42,14 @@ ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_
     { DependencyGraph::ANTI_NEXT_TABLE_CONTROL,     "control"},
     { DependencyGraph::ANTI_NEXT_TABLE_METADATA,    "control"},
     { DependencyGraph::ANTI_EXIT,                   "control"},
-    { DependencyGraph::NONE,                         "none"},
+    { DependencyGraph::NONE,                        "none"},
     { DependencyGraph::CONTROL_ACTION,              "control"},
     { DependencyGraph::CONTROL_COND_TRUE,           "control"},
     { DependencyGraph::CONTROL_COND_FALSE,          "control"},
     { DependencyGraph::CONTROL_TABLE_HIT,           "control"},
     { DependencyGraph::CONTROL_TABLE_MISS,          "control"},
-    { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,  "control"}
+    { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,  "control"},
+    { DependencyGraph::CONTROL_EXIT,                "control"}
 };
 ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_sub_types = {
     { DependencyGraph::IXBAR_READ,                  "ixbar_read"},
@@ -63,13 +64,14 @@ ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_
     { DependencyGraph::ANTI_NEXT_TABLE_CONTROL,     "anti"},
     { DependencyGraph::ANTI_NEXT_TABLE_METADATA,    "anti"},
     { DependencyGraph::ANTI_EXIT,                   "exit"},
-    { DependencyGraph::NONE,                         "none"},
+    { DependencyGraph::NONE,                        "none"},
     { DependencyGraph::CONTROL_ACTION,              "action"},
     { DependencyGraph::CONTROL_COND_TRUE,           "condition"},
     { DependencyGraph::CONTROL_COND_FALSE,          "condition"},
     { DependencyGraph::CONTROL_TABLE_HIT,           "table_hit"},
     { DependencyGraph::CONTROL_TABLE_MISS,          "table_miss"},
-    { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,  "default_next_table"}
+    { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,  "default_next_table"},
+    { DependencyGraph::CONTROL_EXIT,                "control_exit"}
 };
 ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_anti_types = {
     { DependencyGraph::ANTI_TABLE_READ,             "table_read"},
@@ -85,13 +87,14 @@ ordered_map<DependencyGraph::dependencies_t, bool> TableGraphEdge::labels_to_con
 
 static const char* dep_types(DependencyGraph::dependencies_t dep) {
     switch (dep) {
-        case DependencyGraph::NONE:                          return "NONE";
+        case DependencyGraph::NONE:                         return "NONE";
         case DependencyGraph::CONTROL_ACTION:               return "CONTROL_ACTION";
         case DependencyGraph::CONTROL_COND_TRUE:            return "CONTROL_COND_TRUE";
         case DependencyGraph::CONTROL_COND_FALSE:           return "CONTROL_COND_FALSE";
         case DependencyGraph::CONTROL_TABLE_HIT:            return "CONTROL_TABLE_HIT";
         case DependencyGraph::CONTROL_TABLE_MISS:           return "CONTROL_TABLE_MISS";
         case DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE:   return "CONTROL_DEFAULT_NEXT_TABLE";
+        case DependencyGraph::CONTROL_EXIT:                 return "CONTROL_EXIT";
         case DependencyGraph::CONT_CONFLICT:                return "CONT_CONFLICT";
         case DependencyGraph::IXBAR_READ:                   return "IXBAR_READ";
         case DependencyGraph::ACTION_READ:                  return "ACTION_READ";
@@ -111,9 +114,7 @@ static const char* dep_types(DependencyGraph::dependencies_t dep) {
 std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "GRAPH" << std::endl;
     DependencyGraph::Graph::edge_iterator edges, edges_end;
-    for (boost::tie(edges, edges_end) = boost::edges(dg.g);
-         edges != edges_end;
-         ++edges) {
+    for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
         auto src = boost::source(*edges, dg.g);
         const IR::MAU::Table* source = dg.get_vertex(src);
         auto dst = boost::target(*edges, dg.g);
@@ -161,36 +162,37 @@ void DependencyGraph::print_dep_type_map(std::ostream &out) const {
       out << "  table " << t2.first->externalName() << " : "
         << TableGraphEdge::labels_to_sub_types.at(dep_type_map.at(t1.first).at(t2.first))
         << std::endl;
-  } }
+        }
+    }
 }
 
 void DependencyGraph::print_container_access(std::ostream &out) const {
-  ordered_set<const IR::MAU::Table*> tbls;
-  for (auto t1 : containers_write_) {
-    tbls.insert(t1.first); }
-  for (auto t1 : containers_read_xbar_) {
-    tbls.insert(t1.first); }
-  for (auto t1 : containers_read_alu_) {
-    tbls.insert(t1.first); }
+    ordered_set<const IR::MAU::Table*> tbls;
+    for (auto t1 : containers_write_) {
+        tbls.insert(t1.first); }
+    for (auto t1 : containers_read_xbar_) {
+        tbls.insert(t1.first); }
+    for (auto t1 : containers_read_alu_) {
+        tbls.insert(t1.first); }
 
-  for (auto t1 : tbls) {
-    out << "Table " << t1->externalName() << std::endl;
-    if (containers_write_.find(t1) != containers_write_.end()) {
-      out << " writes containers:" << std::endl;
-      for (auto c : containers_write_.at(t1)) {
-        out << "   " << c.first << std::endl; }
+    for (auto t1 : tbls) {
+        out << "Table " << t1->externalName() << std::endl;
+        if (containers_write_.find(t1) != containers_write_.end()) {
+        out << " writes containers:" << std::endl;
+        for (auto c : containers_write_.at(t1)) {
+            out << "   " << c.first << std::endl; }
+        }
+        if (containers_read_xbar_.find(t1) != containers_read_xbar_.end()) {
+        out << " reads containers at match input crossbar:" << std::endl;
+        for (auto c : containers_read_xbar_.at(t1)) {
+            out << "   " << c.first << std::endl; }
+        }
+        if (containers_read_alu_.find(t1) != containers_read_alu_.end()) {
+        out << " reads containers at PHV ALUs:" << std::endl;
+        for (auto c : containers_read_alu_.at(t1)) {
+            out << "   " << c.first << std::endl; }
+        }
     }
-    if (containers_read_xbar_.find(t1) != containers_read_xbar_.end()) {
-      out << " reads containers at match input crossbar:" << std::endl;
-      for (auto c : containers_read_xbar_.at(t1)) {
-        out << "   " << c.first << std::endl; }
-    }
-    if (containers_read_alu_.find(t1) != containers_read_alu_.end()) {
-      out << " reads containers at PHV ALUs:" << std::endl;
-      for (auto c : containers_read_alu_.at(t1)) {
-        out << "   " << c.first << std::endl; }
-    }
-  }
 }
 
 void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
@@ -230,7 +232,9 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
         { DependencyGraph::CONTROL_TABLE_MISS,
             std::make_pair("control_table_miss",         "green")},
         { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,
-            std::make_pair("control_default_next_table", "green")}
+            std::make_pair("control_default_next_table", "green")},
+        { DependencyGraph::CONTROL_EXIT,
+            std::make_pair("control_exit",               "green")}
     };
 
     auto tableName = [](const IR::MAU::Table *tbl) {
@@ -350,7 +354,8 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
              || (edge == "CONTROL_COND_FALSE")
              || (edge == "CONTROL_TABLE_HIT")
              || (edge == "CONTROL_TABLE_MISS")
-             || (edge == "CONTROL_DEFAULT_NEXT_TABLE")) {
+             || (edge == "CONTROL_DEFAULT_NEXT_TABLE")
+             || (edge == "CONTROL_EXIT")) {
                 simple_edges.insert("CONTROL");
             } else if (edge == "CONT_CONFLICT") {
                 simple_edges.insert("CONT_CONFLICT");
@@ -737,7 +742,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
         auto graphs = new Util::JsonArray();
         check_and_add_graph(graphs);
         dgsJson->emplace("graphs", graphs);
-        dgsJson->emplace("schema_version", "1.0.0");
+        dgsJson->emplace("schema_version", "1.0.1");
     }
 }
 
@@ -1262,21 +1267,28 @@ void DependencyGraph::fill_dep_stages_from_topo(
 }
 
 bool DependencyGraph::is_anti_edge(DependencyGraph::dependencies_t dep) const {
-    return ((dep == DependencyGraph::ANTI_EXIT)
-     || (dep == DependencyGraph::ANTI_TABLE_READ)
-     || (dep == DependencyGraph::ANTI_ACTION_READ)
-     || (dep == DependencyGraph::ANTI_NEXT_TABLE_DATA)
-     || (dep == DependencyGraph::ANTI_NEXT_TABLE_METADATA)
-     || (dep == DependencyGraph::ANTI_NEXT_TABLE_CONTROL));
+    return (dep == DependencyGraph::ANTI_EXIT
+        || dep == DependencyGraph::ANTI_TABLE_READ
+        || dep == DependencyGraph::ANTI_ACTION_READ
+        || dep == DependencyGraph::ANTI_NEXT_TABLE_DATA
+        || dep == DependencyGraph::ANTI_NEXT_TABLE_METADATA
+        || dep == DependencyGraph::ANTI_NEXT_TABLE_CONTROL);
 }
 
 bool DependencyGraph::is_ctrl_edge(DependencyGraph::dependencies_t dep) const {
-    return ((dep == DependencyGraph::CONTROL_ACTION)
-     || (dep == DependencyGraph::CONTROL_COND_TRUE)
-     || (dep == DependencyGraph::CONTROL_COND_FALSE)
-     || (dep == DependencyGraph::CONTROL_TABLE_HIT)
-     || (dep == DependencyGraph::CONTROL_TABLE_MISS)
-     || (dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE));
+    return (dep == DependencyGraph::CONTROL_ACTION
+        || dep == DependencyGraph::CONTROL_COND_TRUE
+        || dep == DependencyGraph::CONTROL_COND_FALSE
+        || dep == DependencyGraph::CONTROL_TABLE_HIT
+        || dep == DependencyGraph::CONTROL_TABLE_MISS
+        || dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE
+        || dep == DependencyGraph::CONTROL_EXIT);
+}
+
+bool DependencyGraph::is_non_directional_edge(DependencyGraph::dependencies_t dep) const {
+    return (dep == DependencyGraph::CONT_CONFLICT
+        || dep == DependencyGraph::REDUCTION_OR_READ
+        || dep == DependencyGraph::REDUCTION_OR_OUTPUT);
 }
 
 bool DependencyGraph::is_edge_critical(typename Graph::edge_descriptor e) const {
@@ -1385,7 +1397,8 @@ cstring DependencyGraph::dep_to_name(dependencies_t dep) {
         (dep == DependencyGraph::CONTROL_COND_FALSE) ||
         (dep == DependencyGraph::CONTROL_TABLE_HIT) ||
         (dep == DependencyGraph::CONTROL_TABLE_MISS) ||
-        (dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE)) {
+        (dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE) ||
+        (dep == DependencyGraph::CONTROL_EXIT)) {
         return "control";
     } else if (dep == IXBAR_READ) {
         return "ixbar_read";
@@ -1415,6 +1428,8 @@ DependencyGraph::dependencies_t DependencyGraph::get_control_edge_type(cstring a
         return DependencyGraph::CONTROL_COND_TRUE;
     else if (annot == "$false")
         return DependencyGraph::CONTROL_COND_FALSE;
+    else if (annot == "exit")
+        return DependencyGraph::CONTROL_EXIT;
     else
         return DependencyGraph::CONTROL_ACTION;
 }
@@ -1460,9 +1475,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
     happens_after_work_map.clear();
     happens_before_work_map.clear();
 
-    for (boost::tie(v, v_end) = boost::vertices(dep_graph);
-         v != v_end;
-         ++v) {
+    for (boost::tie(v, v_end) = boost::vertices(dep_graph); v != v_end; ++v) {
         n_depending_on[*v] = 0;
 
         const IR::MAU::Table* label_table = curr_dg.get_vertex(*v);
@@ -1470,9 +1483,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
         happens_before_work_map[label_table] = {};
     }
 
-    for (boost::tie(out, out_end) = boost::edges(dep_graph);
-         out != out_end;
-         ++out) {
+    for (boost::tie(out, out_end) = boost::edges(dep_graph); out != out_end; ++out) {
         auto dep = dep_graph[*out];
         if ((include_anti || !(dg.is_anti_edge(dep)))
             && (include_control || !(dg.is_ctrl_edge(dep)))
@@ -1514,8 +1525,8 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
                  v != v_end;
                  ++v) {
                 if (processed.count(*v) == 0) {
-                    LOG5("Unprocessed vertex " << curr_dg.get_vertex(*v)->name
-                            << " with " << n_depending_on[*v] << " incoming deps ");
+                    LOG5("Unprocessed vertex " << curr_dg.get_vertex(*v)->name <<
+                         " with " << n_depending_on[*v] << " incoming deps");
                     if (n_depending_on_with_edges.count(*v)) {
                         auto back_edges = n_depending_on_with_edges[*v];
                         for (auto be : back_edges) {
@@ -1528,7 +1539,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
                 }
             }
             LOG5(dg);
-            ::error("There is a loop in the table dependency graph.");
+            BUG("There is a loop in the table dependency graph.");
             break;
         }
 
@@ -1550,8 +1561,8 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
 
                     happens_after_work_map[table_later].insert(table);
                     happens_after_work_map[table_later].insert(
-                            happens_after_work_map[table].begin(),
-                            happens_after_work_map[table].end());
+                        happens_after_work_map[table].begin(),
+                        happens_after_work_map[table].end());
                     n_depending_on[vertex_later]--;
                     auto &vertex_later_edges = n_depending_on_with_edges[vertex_later];
                     auto rm_edge = std::find(vertex_later_edges.begin(),
@@ -2366,7 +2377,9 @@ std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps
             "CONTROL_TABLE_HIT", "CONTROL_TABLE_MISS", "CONTROL_DEFAULT_NEXT_TABLE",
             "IXBAR_READ", "ACTION_READ", "OUTPUT", "REDUCTION_OR_READ", "REDUCTION_OR_OUTPUT",
             "CONT_CONFLICT", "ANTI_EXIT", "ANTI_TABLE_READ", "ANTI_ACTION_READ",
-            "ANTI_NEXT_TABLE_DATA", "ANTI_NEXT_TABLE_CONTROL", "ANTI_NEXT_TABLE_METADATA" };
+            "ANTI_NEXT_TABLE_DATA", "ANTI_NEXT_TABLE_CONTROL", "ANTI_NEXT_TABLE_METADATA",
+            "CONTROL_EXIT"
+    };
 
     bool first = true;
     uint64_t bits = static_cast<uint64_t>(deps);
