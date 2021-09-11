@@ -753,10 +753,10 @@ class PaddingInfoCollector {
 };
 
 /// Size of internal parser FIFO
-static const int parser_fifo_size = 16;
+static const int parser_fifo_size = 32;
 
 /// Compute the \p val / \p div and ceil it to the nearest upper value. The result
-/// will be wrapped to the 16 (FIFO size in parser).
+/// will be wrapped to the FIFO size in parser.
 int ceil_and_wrap_to_fifo_size(int val, int div) {
     int fifo_items = val > parser_fifo_size ? parser_fifo_size : val;
     return (fifo_items + div - 1) / div;
@@ -1132,8 +1132,15 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
     return 4 - (used % 4);
 }
 
-/// Add the padding to child nodes matches, added padding is controlled via the
-/// template \p use_8bit parameter
+/// Add padding extracts to a parser state and its children.
+///
+/// \tparam use_8bit Apply to 8b extracts (true) or 16b extracts (false)
+/// \param parser Parser containing the state being padded
+/// \param regs
+/// \param node_count Number of states to pad, including this state. States with zero extracts are
+///        not counted in \p node_count.
+/// \param visited
+/// \param pstate
 template<bool use_8bit>
 void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int node_count,
                             Parser::State::Match* match, std::set<Parser::State*> &visited,
@@ -1158,14 +1165,14 @@ void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int n
     // extactions - due to possible FIFO stalls. If the node doesn't contain the required
     // extraction, we don't decrement the node_count value.
     int new_node_count = node_count;
-    auto phv_type = use_8bit ? AnalysisType::BIT16 : AnalysisType::BIT8;
+    auto phv_type = use_8bit ? AnalysisType::BIT8 : AnalysisType::BIT16;
     if (count_number_of_extractions(parser, regs, match, phv_type)) {
         if (use_8bit)  {
-            int pad = pad_to_16b_extracts_to_2n(parser, regs, match);
-            pstate->addPadInfo(match, AnalysisType::BIT16, pad);
-        } else {
             int pad = pad_to_8b_extracts_to_4n(parser, regs, match);
             pstate->addPadInfo(match, AnalysisType::BIT8, pad);
+        } else {
+            int pad = pad_to_16b_extracts_to_2n(parser, regs, match);
+            pstate->addPadInfo(match, AnalysisType::BIT16, pad);
         }
 
         new_node_count--;
@@ -1245,12 +1252,16 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
         int pass_16b_nodes = ceil_and_wrap_to_fifo_size(extracts_16b, 2);
         int pass_8b_nodes = ceil_and_wrap_to_fifo_size(extracts_8b, 4);
 
-        // Temporary fix to let driver team continue: pad all states after the n2w extract
-        pass_8b_nodes = 255;
-        pass_16b_nodes = 255;
+        // The state counts represent the states _after_ the n2w state. Increment by 1 to account
+        // for n2w state.
+        if (pass_8b_nodes) pass_8b_nodes++;
+        if (pass_16b_nodes) pass_16b_nodes++;
 
-        pad_nodes_16b_extracts(parser, regs, pass_16b_nodes, m, visited_states, pstate);
-        pad_nodes_8b_extracts(parser, regs, pass_8b_nodes, m, visited_states, pstate);
+        // Pad extracts: 8b extracts should be padded based on the number of states to flush 16b
+        // narrow-to-wide extracts, and 16b extracts should be padded based on the number
+        // of states to flush 8b narrow-to-wide extracts.
+        pad_nodes_16b_extracts(parser, regs, pass_8b_nodes, m, visited_states, pstate);
+        pad_nodes_8b_extracts(parser, regs, pass_16b_nodes, m, visited_states, pstate);
     }
 
     if (LOGGING(1)) {
