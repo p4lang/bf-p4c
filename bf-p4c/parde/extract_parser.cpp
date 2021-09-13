@@ -392,13 +392,20 @@ class GetBackendParser {
 
     IR::BFN::ParserState* convertState(cstring name, bool& isLoopState);
 
+    cstring
+    getName(const IR::ParserState* state) {
+        auto anno = state->getAnnotation(IR::Annotation::nameAnnotation);
+        cstring name = (anno != nullptr) ? anno->getName() : state->name.name;
+        return name.startsWith(".") ? name.substr(1) : name;
+    }
+
     // For v1model, compiler may insert parser states, e.g. if @pragma packet_entry is specified.
     // Therefore, the program "start" state may not be the true start state.
     // For TNA, the program "start" state is the start state.
     cstring
     getStateName(const IR::ParserState* state) {
         if (BackendOptions().arch == "v1model") {
-            auto stateName = state->controlPlaneName();
+            auto stateName = getName(state);
             p4StateNameToStateName.emplace(state->name, stateName);
             return stateName;
         } else {

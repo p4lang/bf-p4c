@@ -57,6 +57,23 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
     )
 
+  # P4C-2985 - tests added to p4c compile but do not pass in simple test harness
+  p4c_add_xfail_reason("tofino"
+    "mismatch from expected(.*) at byte .*"
+    testdata/p4_16_samples/parser-inline/parser-inline-test5.p4
+    testdata/p4_16_samples/parser-inline/parser-inline-test6.p4
+    parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test5.p4
+    parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test6.p4
+    )
+  p4c_add_xfail_reason("tofino"
+    "expected packet[s]* on port .* not seen"
+    testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
+    parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
+    testdata/p4_16_samples/parser-inline/parser-inline-test8.p4
+    testdata/p4_16_samples/parser-inline/parser-inline-test9.p4
+    testdata/p4_16_samples/parser-inline/parser-inline-test10.p4
+    )
+
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -1299,11 +1316,15 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
-  extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
   testdata/p4_14_samples/issue2196.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
+  extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1605,8 +1626,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Use of uninitialized parser value"
-  testdata/p4_16_samples/array-copy-bmv2.p4
+  "Compiler Bug.*: The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
   testdata/p4_16_samples/issue1607-bmv2.p4
 )
 
@@ -1902,6 +1922,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Value used in select statement needs to be set from input packet"
   extensions/p4_tests/p4_16/compile_only/p4c-3765-fail.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
   extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
 )
 
@@ -1978,4 +2001,38 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "extern Checksum does not have method matching this call"
   testdata/p4_16_samples/internet_checksum1-bmv2.p4
+)
+
+# P4C-2985 - tests added to p4c do not compile for tofino
+p4c_add_xfail_reason("tofino"
+  "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
+  testdata/p4_16_samples/parser-inline/parser-inline-test1.p4
+  testdata/p4_16_samples/parser-inline/parser-inline-test2.p4
+  testdata/p4_16_samples/parser-inline/parser-inline-test3.p4
+  testdata/p4_16_samples/parser-inline/parser-inline-test4.p4
+  testdata/p4_16_samples/parser-inline/parser-inline-test11.p4
+  testdata/p4_16_samples/parser-inline/parser-inline-test12.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test1.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test2.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test3.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test4.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test11.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test12.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error: Current path with historic data usage has an intersection with a previously analyzed historic data path at node"
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test8.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test9.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test10.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error: Field '__bfp4c_fields' of 'header __bfp4c_bridged_metadata_header' cannot have type 'struct fields'"
+  testdata/p4_16_samples/parser-inline/parser-inline-test13.p4
+  parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test13.p4
+)
+
+# P4C update - commit: 8eb012beae5c ("Support of Operation_Ternary for ExpressionEvaluator (#2861)")
+p4c_add_xfail_reason("tofino"
+  "error: packet.lookahead: functions or methods returning structures are not supported on this target"
+  testdata/p4_16_samples/psa-example-dpdk-varbit.p4
 )

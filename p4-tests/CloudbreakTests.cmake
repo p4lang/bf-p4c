@@ -52,6 +52,16 @@ set (CLOUDBREAK_V1_TEST_SUITES_P416
 p4c_add_bf_backend_tests("tofino3" "cb" "${CLOUDBREAK_P414_TEST_ARCH}" "base" "${CLOUDBREAK_V1_TEST_SUITES_P414}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 p4c_add_bf_backend_tests("tofino3" "cb" "v1model" "base" "${CLOUDBREAK_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
+# P4C-2985
+# We need to create two tests with different args for one p4 file.
+# We utilize the fact that p4c_add_bf_backend_tests and p4c_add_test_with_args use the same name
+# of the *.test file if there is more tests for one *.p4 file, so we create test with command line option
+# --parser-inline-opt here, and let the other test be created as part of tests created from variable
+# CLOUDBREAK_JNA_TEST_SUITES.
+p4c_find_test_names("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2985.p4" P4C_2985_TESTNAME)
+p4c_add_test_with_args("tofino3" ${P4C_RUNTEST} FALSE "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
+p4c_add_test_label("tofino3" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
+
 set (CLOUDBREAK_JNA_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4)
 p4c_find_tests("${CLOUDBREAK_JNA_TEST_SUITES}" cloudbreak_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")

@@ -15,7 +15,7 @@ set (V1_EXCLUDE_FILES
     "header-stack-ops-bmv2\\.p4"
     "gauntlet.*-bmv2\\.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
-set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
+set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4" "${P4TESTDATA}/p4_16_samples/parser-inline/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" P4_16_V1_TESTS INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_V1_TESTS}" v1tests EXCLUDE "${V1_EXCLUDE_FILES}")
 
@@ -117,6 +117,19 @@ p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p41
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 1600")
 set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 1600)
 
+# P4C-2985
+# We need to create one more test for each ${P4TESTDATA}/p4_16_samples/parser-inline/*.p4
+# file with command line option --parser-inline-opt (which enables parser inlining optimization).
+# As tests created by p4c_add_bf_backend_tests and p4c_add_test_with_args macros use the same *.test file
+# regardless the name of the test if they have the same *.p4 file, we create first this test providing
+# the extra test argument "--parser-inline-opt" and then let the *.test file be rewritten by
+# p4c_add_bf_backend_tests macro when tests are creates from variable v1tests.
+p4c_find_test_names("${P4TESTDATA}/p4_16_samples/parser-inline/*.p4" P4TESTS_PARSER_INLINE)
+foreach (ts ${P4TESTS_PARSER_INLINE})
+  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "parser-inline-opt/${ts}" ${ts} "" "--parser-inline-opt")
+  p4c_add_test_label("tofino" "base;stf" "parser-inline-opt/${ts}")
+endforeach()
+
 set (TOFINO_V1_TEST_SUITES_P416
   ${v1tests}
   ${p16_v1tests}
@@ -124,6 +137,16 @@ set (TOFINO_V1_TEST_SUITES_P416
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+
+# P4C-2985
+# We need to create two tests with different args for one p4 file.
+# We utilize the fact that p4c_add_bf_backend_tests and p4c_add_test_with_args use the same name
+# of the *.test file if there is more tests for one *.p4 file, so we create test with command line option
+# --parser-inline-opt here, and let the other test be created as part of tests created from variable
+# TOFINO_TNA_TEST_SUITES.
+p4c_find_test_names("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2985.p4" P4C_2985_TESTNAME)
+p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
+p4c_add_test_label("tofino" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
 
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}

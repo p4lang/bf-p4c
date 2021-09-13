@@ -130,6 +130,7 @@ struct ResolveExtractSaves : Modifier {
             auto f = phv.field(extract->dest->field, &f_bits);
             auto x = phv.field(expr, &x_bits);
 
+            LOG4("Searching in extract: " << extract << ", f: " << f << ", x: " << x);
             if (f == x) {
                 if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
                     auto clone = rval->clone();
@@ -152,19 +153,19 @@ struct ResolveExtractSaves : Modifier {
     };
 
     bool preorder(IR::BFN::Extract* extract) override {
+        auto state = findOrigCtxt<IR::BFN::ParserState>();
+        LOG4("state: " << state->name << ", extract: " << extract);
         if (auto save = extract->source->to<IR::BFN::SavedRVal>()) {
-            LOG4("resolve extract save: " << save);
-
             if (auto rval = save->source->to<IR::BFN::InputBufferRVal>()) {
                 extract->source = rval;
             } else {
-                auto state = findOrigCtxt<IR::BFN::ParserState>();
-
                 FindRVal find_rval(phv, save->source);
                 state->apply(find_rval);
 
                 if (find_rval.rv)
                     extract->source = find_rval.rv;
+
+                LOG4("Found rval: " << find_rval.rv);
             }
 
             if (extract->source->is<IR::BFN::SavedRVal>())
@@ -175,6 +176,149 @@ struct ResolveExtractSaves : Modifier {
 
         return false;
     }
+};
+
+/**
+ * @brief Run ResolveExtractConst pass until every IR::BFN::ConstantRVal which
+ * can be propagated is propagated as far as it can.
+ */
+class PropagateExtractConst : public PassRepeated {
+    /**
+     * @brief For each extract 'extract' which has IR::BFN::SavedRVal source,
+     * check if the source can be substituted by a constant and if yes,
+     * substitute the source in the given 'extract' by IR::BFN::ConstantRVal.
+     *
+     * Source of 'extract' can be substituted by a constant if following
+     * conditions are met:
+     * 1.) previous extract in a parser graph which has an expression in dest equal
+     *     to the expression in source of 'extract' has a constant
+     *     (IR::BFN::ConstantRVal) as a source
+     * 2.) there is only 1 such extract as described in 1.) or if there are
+     *     multiple such extracts, they all have equal source constants
+     *
+     * Example:
+     * --------
+     *
+     * before ResolveExtractConst pass:
+     *
+     * ingress parser state ingress::s1:
+     *   extract constant 1 to ingress::hdr.h1.$valid;
+     *   match const: *: (shift=0)
+     *   goto ingress::s2
+     * ingress parser state ingress::s2:
+     *   extract [ ingress::hdr.h1.$valid; ] to ingress::hdr_0.$valid;
+     *   ...
+     *
+     * after ResolveExtractConst pass:
+     *
+     * ingress parser state ingress::s1:
+     *   extract constant 1 to ingress::hdr.h1.$valid;
+     *   match const: *: (shift=0)
+     *   goto ingress::s2
+     * ingress parser state ingress::s2:
+     *   extract constant 1 to ingress::hdr_0.$valid;
+     *   ...
+     */
+    struct ResolveExtractConst : Modifier {
+        struct AmbiguousPropagation {
+            std::string message;
+            explicit AmbiguousPropagation(const char* msg) : message(msg) {}
+        };
+
+        const CollectParserInfo& parserInfo;
+
+        explicit ResolveExtractConst(const CollectParserInfo* pi) : parserInfo{*pi} {}
+
+        const IR::BFN::ConstantRVal* find_constant(const IR::BFN::Extract* extract,
+                const IR::BFN::ParserGraph& graph,
+                const IR::BFN::ParserState* state,
+                const bool start) {
+            std::vector<const IR::BFN::Extract*> defExtracts;
+            auto source = extract->source->to<IR::BFN::SavedRVal>()->source;
+
+            for (const auto& statement : state->statements) {
+                LOG4("  statement: " << statement);
+                if (auto ext = statement->to<IR::BFN::Extract>()) {
+                    LOG4("    ext: " << ext);
+                    if (start && *ext == *extract) {
+                        LOG4("    ext: " << ext << " and extract: " << extract <<
+                                " are equal, breaking the loop!");
+                        break;
+                    }
+                    if (source->equiv(*(ext->dest->field))) {
+                        LOG4("source: " << source <<
+                                " and dest: " << ext->dest->field <<
+                                " from ext: " << ext <<
+                                " in state: " << state->name <<
+                                " are equal!");
+                        defExtracts.push_back(ext);
+                    }
+                }
+            }
+
+            if (!defExtracts.empty()) {
+                auto ext = defExtracts.back();
+                if (ext->source->is<IR::BFN::ConstantRVal>())
+                    return ext->source->to<IR::BFN::ConstantRVal>();
+                else
+                    throw AmbiguousPropagation("source is not a constant");
+            }
+
+            const IR::BFN::ConstantRVal* foundConstant = nullptr;
+
+            if (graph.predecessors().count(state)) {
+                for (const auto& predState : graph.predecessors().at(state)) {
+                    LOG4("predState: " << predState);
+                    auto ret = find_constant(extract, graph, predState, false);
+                    if (ret) {
+                        if (foundConstant) {
+                            if (!foundConstant->equiv(*ret)) {
+                                throw AmbiguousPropagation("multiple possible definitions");
+                            }
+                        } else {
+                            // foundConstant == nullptr && ret->source->is<IR::BFN::ConstantRVal>()
+                            foundConstant = ret;
+                        }
+                    }
+                }
+            }
+
+            return foundConstant;
+        }
+
+        bool preorder(IR::BFN::Extract* extract) override {
+            if (!extract->source->is<IR::BFN::SavedRVal>())
+                return false;
+
+            auto state = findOrigCtxt<IR::BFN::ParserState>();
+
+            LOG4("ResolveExtractConst extract: " << extract <<
+                    ", in state: " << std::endl << state);
+
+            const auto& graph = parserInfo.graph(state);
+
+            try {
+                auto foundConst = find_constant(extract, graph, state, true);
+                if (foundConst) {
+                    LOG4("Propagating constant: " << foundConst << " to extract: " << extract);
+                    extract->source = foundConst->clone();
+                    LOG4("New extract is: " << extract);
+                } else {
+                    LOG4("No constant to propagate found for extract: " << extract);
+                }
+            } catch (AmbiguousPropagation &e) {
+                LOG4("Can not propagate constant to extract: " << extract <<
+                        " in state: " << state->name <<
+                        ", because of: " << e.message << "!");
+            }
+
+            return false;
+        }
+    };
+
+ public:
+    explicit PropagateExtractConst(CollectParserInfo* pi) :
+            PassManager({new ResolveExtractConst(pi), pi}) {}
 };
 
 /// Collect Use-Def for all select fields
@@ -408,6 +552,10 @@ struct CollectParserUseDef : PassManager {
 
             for (auto def : defs)
                 parser_use_def[parser].add_def(phv, use, def);
+
+            if (!select)
+                return false;
+
             if (!parser_use_def[parser].use_to_defs.count(use))
                 ::fatal_error("Use of uninitialized parser value in a select statement %1%. "
                               , use->print());
@@ -433,6 +581,13 @@ struct CollectParserUseDef : PassManager {
 
         bool preorder(const IR::BFN::Parser* parser) override {
             parser_use_def[parser] = {};
+
+            std::stringstream ss;
+            ss << "MapToUse parser:" << std::endl;
+            parser->dbprint(ss);
+            ss << std::endl << std::endl;
+            LOG4(ss.str());
+
             return true;
         }
     };
@@ -469,12 +624,22 @@ struct CopyPropParserDef : public ParserModifier {
         auto select = findOrigCtxt<IR::BFN::Select>();
 
         auto use = parser_use_def.at(parser).get_use(state, save, select);
+
+        if (parser_use_def.at(parser).use_to_defs.count(use) == 0) {
+            LOG4("No defs for use: " << use->print());
+            return nullptr;
+        }
+
         auto defs = parser_use_def.at(parser).use_to_defs.at(use);
+
+        LOG4("defs.size(): " << defs.size() << ", usedef: " <<
+                parser_use_def.at(parser).print(use));
 
         if (defs.size() == 1) {
             auto def = *defs.begin();
             auto shifts = parser_info.get_all_shift_amounts(def->state, state);
 
+            LOG4("shifts->size(): " << shifts->size());
             // if has single def of absolute offset, propagate to use
             if (shifts->size() == 1) {
                 auto rval = def->rval->clone();
@@ -530,6 +695,7 @@ struct ParserCopyProp : public PassManager {
             LOGGING(4) ? new DumpParser("before_parser_copy_prop") : nullptr,
             new ResolveExtractSaves(phv),
             parserInfo,
+            new PropagateExtractConst(parserInfo),
             collectUseDef,
             copyPropDef,
             new ResolveExtractSaves(phv),

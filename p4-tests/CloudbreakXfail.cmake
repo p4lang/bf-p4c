@@ -429,6 +429,10 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "error: Use of uninitialized parser value"
   testdata/p4_14_samples/issue2196.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
   extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
 )
 
