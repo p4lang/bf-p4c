@@ -1,24 +1,18 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #
 # This script reads in a json schema document and generates a set of C++
 # classes that allow logging to a json file that is compatible with the schema.
 #
-
-from __future__ import print_function
 
 import argparse, os, sys, re
 import json, jsonschema
 
 debug = 0
 
-def escape_cpp(to_translate, translate_to=u'_'):
-    not_letters_or_digits = u'!"#%\'()*+,-./:;<=>?@[\]^`{|}~'
+def escape_cpp(to_translate, translate_to='_'):
+    not_letters_or_digits = '!"#%\'()*+,-./:;<=>?@[\]^`{|}~'
     # translate_table = dict((ord(char), translate_to) for char in not_letters_or_digits)
-    if sys.version_info.major == 2:
-        from string import maketrans
-        translate_table = maketrans(not_letters_or_digits, translate_to*len(not_letters_or_digits))
-    else:
-        translate_table = str.maketrans(not_letters_or_digits, translate_to*len(not_letters_or_digits))
+    translate_table = str.maketrans(not_letters_or_digits, translate_to*len(not_letters_or_digits))
     # if debug > 4: print("from:", to_translate, "using:", translate_table)
     return to_translate.translate(translate_table)
 
@@ -241,7 +235,7 @@ class EnumDataMember(DataMember):
         self.enumMemberCount = 0
         self.defaultVal = self.cppType() + '::__NONE' if isOptional else 0
         for e in self.body['enum']:
-            if not (isinstance(e, str) or isinstance(e, (int, long))):
+            if not (isinstance(e, str) or isinstance(e, int)):
                 raise TypeError("Unknown enum type " + e)
             if isinstance(e, str): self.enumMemberType = 'const char *'
             else:                  self.enumMemberType = 'long'
@@ -732,6 +726,10 @@ class ClassGenerator:
         self.generator.write(stmt, indent)
 
     def generate(self, indent = False):
+        # Return if we already generated this class (possibly base class)
+        if self.cppClassName in self.generator.classesGenerated:
+            return
+
         if indent: self.generator.incrIndent()
 
         if self.classBody.get('event_type', False):
@@ -997,9 +995,16 @@ if opts.schemas is None:
 if opts.output is None:
     opts.output = "./"
 
+# Python3 has hash randomization by default - this produces a different ordering
+# of json everytime we run, so disable hash randomization by setting the seed to 0.
+if os.getenv('PYTHONHASHSEED') == None:
+    os.environ['PYTHONHASHSEED'] = '0'
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
 for schema in opts.schemas:
     file_name, ext = os.path.splitext(os.path.basename(schema))
     schema_version = "1.0"
+
     if ext != '.json':
         if debug > 0: print("loading Python")
         MYPATH = os.path.dirname(__file__)
@@ -1020,3 +1025,7 @@ for schema in opts.schemas:
             sjson.write('\n')
     gen = Generator(schema_json, schema_version, file_name, opts.output)
     gen.generate()
+
+# Unset PYTHONHASHSEED that we set above
+if os.getenv('PYTHONHASHSEED') == '0':
+    os.environ.pop('PYTHONHASHSEED')
