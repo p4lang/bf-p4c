@@ -83,7 +83,7 @@ def main():
         pipe_config["config"] = os.path.join(share_path, args.device + '.bin')
         if 'tofino2' in args.device:
             # Tofino-2 uses pipes 0,1 as external and 2,3 as internal
-            pipe_config["pipe_scope"] = [2*index+x for x in range(int(MAX_PIPES/npipes))]
+            pipe_config["pipe_scope"] = [int(MAX_PIPES/npipes)*index+x for x in range(int(MAX_PIPES/npipes))]
         else:
             # Tofino-1 32Q folded pipe systems uses pipes 0,2 as the external pipes and 1,3 as the internal pipes
             pipe_config["pipe_scope"] = [x*npipes+index for x in range(int(MAX_PIPES/npipes))]

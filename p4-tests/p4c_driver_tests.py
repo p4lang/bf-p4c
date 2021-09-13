@@ -16,6 +16,7 @@ t2na_program = os.path.join(tests_dir, 'p4_16/ptf/ipv4_checksum.p4')
 p4_16_includes_dir = os.path.join(tests_dir, 'p4_16/includes')
 p4c_driver_tests_outputs = os.path.join(tests_dir, 'p4c_driver_tests_outputs')
 p4c_3078_program = os.path.join(tests_dir, 'p4_16/compile_only/p4c-3078.p4')
+multipipe_program = os.path.join(tests_dir, 'p4_16/compile_only/multipipe.p4')
 
 # A map of test name to: (compiler args, xfail_msg, files to check for (non)existence)
 # **** Note *****
@@ -307,4 +308,31 @@ test_matrix = {
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_range_match_source.json', '-I', p4_16_path,
         os.path.join(p4_16_path, 'tna_range_match/tna_range_match.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_range_match_source.json')),
+
+    # .conf regression tests
+    # If needed, use "test_p4c_driver.py --gen-prg-conf" to (re)generate reference program conf
+    'conf_tofino_pipes1: p4-tests/p4_16/compile_only/multipipe.p4' :
+        (['--target', 'tofino', '--arch', 'tna', '-o', 'tofino_pipes1', '-DPIPES=1', '-I', p4_16_path,
+        multipipe_program, '-g'], None, None, None,
+        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4_16_compile_only_multipipe_tofino_pipes1.conf')),
+    'conf_tofino_pipes2: p4-tests/p4_16/compile_only/multipipe.p4' :
+        (['--target', 'tofino', '--arch', 'tna', '-o', 'tofino_pipes2', '-DPIPES=2', '-I', p4_16_path,
+        multipipe_program, '-g'], None, None, None,
+        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4_16_compile_only_multipipe_tofino_pipes2.conf')),
+    'conf_tofino_pipes4: p4-tests/p4_16/compile_only/multipipe.p4' :
+        (['--target', 'tofino', '--arch', 'tna', '-o', 'tofino_pipes4', '-DPIPES=4', '-I', p4_16_path,
+        multipipe_program, '-g'], None, None, None,
+        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4_16_compile_only_multipipe_tofino_pipes4.conf')),
+    'conf_tofino2_pipes1: p4-tests/p4_16/compile_only/multipipe.p4' :
+        (['--target', 'tofino2', '--arch', 't2na', '-o', 'tofino2_pipes1', '-DPIPES=1', '-I', p4_16_path,
+        multipipe_program, '-g'], None, None, None,
+        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4_16_compile_only_multipipe_tofino2_pipes1.conf')),
+    'conf_tofino2_pipes2: p4-tests/p4_16/compile_only/multipipe.p4' :
+        (['--target', 'tofino2', '--arch', 't2na', '-o', 'tofino2_pipes2', '-DPIPES=2', '-I', p4_16_path,
+        multipipe_program, '-g'], None, None, None,
+        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4_16_compile_only_multipipe_tofino2_pipes2.conf')),
+    'conf_tofino2_pipes4: p4-tests/p4_16/compile_only/multipipe.p4' :
+        (['--target', 'tofino2', '--arch', 't2na', '-o', 'tofino2_pipes4', '-DPIPES=4', '-I', p4_16_path,
+        multipipe_program, '-g'], None, None, None,
+        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4_16_compile_only_multipipe_tofino2_pipes4.conf')),
 }

@@ -343,6 +343,14 @@ class Test:
                 raise TestError(
                     "ERROR: File {} does not exist".format(path))
 
+    def printDiff(self, reference, actual):
+        with open(reference, 'r') as ref_file:
+            with open(actual, 'r') as act_file:
+                diff = difflib.unified_diff(ref_file.readlines(), act_file.readlines(),
+                        fromfile='reference ' + reference, tofile='actual ' + actual)
+                for line in diff:
+                    print(line, end='')
+
     def checkSourceJson(self, args, ref_src_json):
         """
         Compare output source.json file with file specified as fourth item of test_matrix
@@ -372,15 +380,45 @@ class Test:
                     reference['file']=""
         # Compare the rest
         if act_src != ref_src:
-            with open(ref_src_json, 'r') as ref_file:
-                with open(act_src_json, 'r') as act_file:
-                    diff = difflib.unified_diff(ref_file.readlines(), act_file.readlines(),
-                            fromfile='reference source.json', tofile='actual source.json')
-                    for line in diff:
-                        print(line, end='')
+            self.printDiff(ref_src_json, act_src_json)
             raise TestError("ERROR: Output source.json file differs from the reference one."
                 "\n       Different absolute paths may be ignored, they don't cause this error."
                 "\n       If the differences are expected, refer to the --gen-src-json knob.")
+
+    def checkProgramConf(self, args, ref_prg_conf):
+        """
+        Compare output conf file with file specified as fifth item of test_matrix
+        """
+        if ref_prg_conf is None:
+            return
+
+        program_name, ext = os.path.splitext(os.path.basename(args.source_file))
+        act_prg_conf = os.path.join(args.output_directory, program_name + ".conf")
+        with open(act_prg_conf, 'r') as act_file:
+            act_src = json.load(act_file)
+        with open(ref_prg_conf, 'r') as ref_file:
+            ref_src = json.load(ref_file)
+        # Ignore PCIe-related nodes
+        for chip in act_src['chip_list']:
+            chip['pcie_sysfs_prefix']=""
+            chip['pcie_domain']=0
+            chip['pcie_bus']=0
+            chip['pcie_dev']=0
+            chip['pcie_fn']=0
+            chip['id']=0
+        for chip in ref_src['chip_list']:
+            chip['pcie_sysfs_prefix']=""
+            chip['pcie_domain']=0
+            chip['pcie_bus']=0
+            chip['pcie_dev']=0
+            chip['pcie_fn']=0
+            chip['id']=0
+        # Compare the rest
+        if act_src != ref_src:
+            self.printDiff(ref_prg_conf, act_prg_conf)
+            raise TestError("ERROR: Output conf file differs from the reference one."
+                "\n       Different absolute paths may be ignored, they don't cause this error."
+                "\n       If the differences are expected, refer to the --gen-prg-conf knob.")
 
     def checkRemovedFiles(self, args):
         """Check that files are cleaned when the debug mode has been enabled.
@@ -425,7 +463,7 @@ class Test:
                 if __check_with_rfiles(filesToRemove, f):
                     raise TestError("ERROR: File {} exists but is should not!".format(f))
 
-    def checkTest(self, options, file_list, ref_src_json):
+    def checkTest(self, options, file_list, ref_src_json, ref_prg_conf):
         """
         Check that the generated output is correct.
         file_list contains list of files to check for (non)existence
@@ -441,6 +479,7 @@ class Test:
             self.checkMAUStagesForTarget(args)
             self.checkOutputFiles(args, file_list)
             self.checkSourceJson(args, ref_src_json)
+            self.checkProgramConf(args, ref_prg_conf)
             self.checkRemovedFiles(args)
         except TestError as e:
             print("********************", file=sys.stderr)
@@ -470,7 +509,7 @@ class Test:
         return 0
 
 
-    def runTest(self, options, xfail_msg = None, file_list = None, ref_src_json = None):
+    def runTest(self, options, xfail_msg = None, file_list = None, ref_src_json = None, ref_prg_conf = None):
         """Run an individual test using the options and if the run is
         successful check the outputs.
 
@@ -483,7 +522,7 @@ class Test:
             if rcCode == 0: return "XFAIL"
             else: return "XPASS"
 
-        ctCode = self.checkTest(options, file_list, ref_src_json)
+        ctCode = self.checkTest(options, file_list, ref_src_json, ref_prg_conf)
         if rcCode == 0 and ctCode == 0 and xfail_msg is None:
             return "PASS"
         elif ctCode != 0: return "VALIDATION_FAIL"
@@ -546,6 +585,8 @@ p.add_argument("--verbose", "-v", help="increase verbosity",
                action="store_true", default=False)
 p.add_argument("--gen-src-json", "-s", help="generate reference source jsons",
                action="store_true", default=False)
+p.add_argument("--gen-prg-conf", help="generate reference program conf",
+               action="store_true", default=False)
 args = p.parse_args()
 
 # ------------ load the tests that need to run
@@ -572,12 +613,32 @@ def generateReferenceSourceJson(test_runner, test_name, options, ref_src_json):
         print('SUCC:', test_name)
     return 0
 
-def runOneTest(test_runner, test_name, args, xfail_msg, file_list, ref_src_json):
+def generateReferenceProgramConf(test_runner, test_name, options, ref_prg_conf):
+    """Generate reference source json for source.json regression
+
+    """
+    if ref_prg_conf != None:
+        print('Generating reference program conf for', test_name, '......')
+        rc = test_runner.runCompiler(options, None)
+        if rc != 0:
+            print('FAIL:', test_name)
+            return 1
+        args = test_runner._parser.parse_known_args(options)[0]
+        try:
+            program_name, ext = os.path.splitext(os.path.basename(args.source_file))
+            os.replace(os.path.join(args.output_directory, program_name + '.conf'), ref_prg_conf)
+        except:
+            print('FAIL:', test_name)
+            return 1
+        print('SUCC:', test_name)
+    return 0
+
+def runOneTest(test_runner, test_name, args, xfail_msg, file_list, ref_src_json, ref_prg_conf):
     """Run a test and print the status
 
     """
     print('Starting', test_name, '......')
-    rc = test_runner.runTest(args, xfail_msg, file_list, ref_src_json)
+    rc = test_runner.runTest(args, xfail_msg, file_list, ref_src_json, ref_prg_conf)
     print(rc, ':', test_name)
     if rc == "PASS" or rc == "XFAIL": return 0
     else: return 1
@@ -605,10 +666,14 @@ def worker(test_name):
     if args.gen_src_json:
         rc = generateReferenceSourceJson(test_runner, test_name, test_matrix[test_name][0],
                 test_matrix[test_name][3] if len(test_matrix[test_name]) > 3 else None)
+    elif args.gen_prg_conf:
+        rc = generateReferenceProgramConf(test_runner, test_name, test_matrix[test_name][0],
+                test_matrix[test_name][4] if len(test_matrix[test_name]) > 4 else None)
     else:
         rc = runOneTest(test_runner, test_name,
                 test_matrix[test_name][0], test_matrix[test_name][1], test_matrix[test_name][2],
-                test_matrix[test_name][3] if len(test_matrix[test_name]) > 3 else None)
+                test_matrix[test_name][3] if len(test_matrix[test_name]) > 3 else None,
+                test_matrix[test_name][4] if len(test_matrix[test_name]) > 4 else None)
     if rc != 0:
         failed.put(test_name)
     else:
