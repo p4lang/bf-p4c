@@ -174,8 +174,38 @@ int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel) {
       sel_len_mod = math.ceil(math.log2((r>>sel_shift) + 1))
       if (r == 1):
           sel_len_mod = 0
-      print("ram_word=", r, "\tsel_shift=", hex(sel_shift),
+      sel_len_shift = math.ceil(math.log2(sel_shift + 1)) if sel_shift != 0 else 0
+      print("ram_word=", r, "\tsel_shift=", hex(sel_shift), "\tsel_len_shift=", hex(sel_len_shift),
             "\tsel_len_mod=", hex(sel_len_mod))
+
+   Running the above script generates the following table for sel_len_shift and sel_len_mod for
+   all edges cases, pasted here for future references. In particular, the second column is
+   documented in uarch 6.2.8.4.7 figure 6.38 and 6.39. The third column is needed by driver
+   as the length of sel_shift bits to reserve enough space to program all possible values for
+   column 2.
+
+   ram_word= 1     sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x0
+   ram_word= 2     sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x2
+   ram_word= 3     sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x2
+   ram_word= 5     sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x3
+   ram_word= 9     sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x4
+   ram_word= 17    sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x5
+   ram_word= 31    sel_shift= 0x0  sel_len_shift= 0x0      sel_len_mod= 0x5
+   ram_word= 32    sel_shift= 0x1  sel_len_shift= 0x1      sel_len_mod= 0x5
+   ram_word= 34    sel_shift= 0x1  sel_len_shift= 0x1      sel_len_mod= 0x5
+   ram_word= 62    sel_shift= 0x1  sel_len_shift= 0x1      sel_len_mod= 0x5
+   ram_word= 64    sel_shift= 0x2  sel_len_shift= 0x2      sel_len_mod= 0x5
+   ram_word= 68    sel_shift= 0x2  sel_len_shift= 0x2      sel_len_mod= 0x5
+   ram_word= 124   sel_shift= 0x2  sel_len_shift= 0x2      sel_len_mod= 0x5
+   ram_word= 128   sel_shift= 0x3  sel_len_shift= 0x2      sel_len_mod= 0x5
+   ram_word= 136   sel_shift= 0x3  sel_len_shift= 0x2      sel_len_mod= 0x5
+   ram_word= 248   sel_shift= 0x3  sel_len_shift= 0x2      sel_len_mod= 0x5
+   ram_word= 256   sel_shift= 0x4  sel_len_shift= 0x3      sel_len_mod= 0x5
+   ram_word= 272   sel_shift= 0x4  sel_len_shift= 0x3      sel_len_mod= 0x5
+   ram_word= 496   sel_shift= 0x4  sel_len_shift= 0x3      sel_len_mod= 0x5
+   ram_word= 512   sel_shift= 0x5  sel_len_shift= 0x3      sel_len_mod= 0x5
+   ram_word= 544   sel_shift= 0x5  sel_len_shift= 0x3      sel_len_mod= 0x5
+   ram_word= 992   sel_shift= 0x5  sel_len_shift= 0x3      sel_len_mod= 0x5
  */
 
 int SelectorModBits(const IR::MAU::Selector *sel) {
@@ -212,9 +242,10 @@ int SelectorHashModBits(const IR::MAU::Selector *sel) {
     return SelectorShiftBits(sel) + StageUseEstimate::MOD_INPUT_BITS;
 }
 
+/* see comments above */
 int SelectorLengthShiftBits(const IR::MAU::Selector *sel) {
     int sel_shift = SelectorShiftBits(sel);
-    return sel_shift == 0 ? 0 : ceil_log2(sel_shift);
+    return sel_shift == 0 ? 0 : ceil_log2(sel_shift + 1);
 }
 
 int SelectorLengthBits(const IR::MAU::Selector *sel) {
