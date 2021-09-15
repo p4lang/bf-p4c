@@ -38,3 +38,8 @@ p4c_add_xfail_reason("tofino"
   "Parser counter decrement argument is not a constant integer"
   extensions/p4_tests/p4_16/errors/p4c-3804-dec.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Name 'pipe.abc' is used for multiple table objects in the P4Info message"
+  extensions/p4_tests/p4_16/errors/p4c-3967.p4
+)

@@ -94,6 +94,7 @@ void generateRuntime(const IR::P4Program* program,
         } else {
             p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4Runtime, options);
         }
+        if (::errorCount() > 0) return;
     }
 
     // Generate BFRT json o/p
@@ -113,6 +114,7 @@ void generateRuntime(const IR::P4Program* program,
         auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
         auto *bfrt = new BFRT::BFRuntimeSchemaGenerator(*p4Runtime.p4Info);
         bfrt->serializeBFRuntimeSchema(out);
+        if (::errorCount() > 0) return;
     }
 }
 
