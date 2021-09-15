@@ -153,10 +153,38 @@ int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel) {
             / StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
 }
 
+/**
+ * Here is the simple python code to generate the sel_len_mod and sel_len_shift
+ * for all cases as agreed upon with driver team (Steve Licking and Pawel Kaminski).
+ * The corresponding c++ implementation is used in compiler.
+ *
+  #!/bin/python
+  import math
+
+  ram = [1, 2, 3, 5, 9, 17, 31, 32, 34, 62, 64, 68,
+         124, 128, 136, 248, 256, 272, 496, 512, 544, 992]
+
+  for r in ram:
+      sel_shift = 0
+      while (r >> sel_shift) > 31:
+          sel_shift = sel_shift + 1
+      hash=0x123456789
+      word_idx_1=(hash & 0x3ff) % (r >> sel_shift)
+      word_idx_2=((word_idx_1 << sel_shift) | (hash >> 10)) & ((1 << sel_shift) - 1)
+      sel_len_mod = math.ceil(math.log2((r>>sel_shift) + 1))
+      if (r == 1):
+          sel_len_mod = 0
+      print("ram_word=", r, "\tsel_shift=", hex(sel_shift),
+            "\tsel_len_mod=", hex(sel_len_mod))
+ */
+
 int SelectorModBits(const IR::MAU::Selector *sel) {
     int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary <= StageUseEstimate::MAX_MOD) {
-        return ceil_log2(RAM_lines_necessary);
+        auto sel_num_words = ceil_log2((RAM_lines_necessary >> SelectorShiftBits(sel)) + 1);
+        if (RAM_lines_necessary == 1)
+            sel_num_words = 0;
+        return sel_num_words;
     }
     return ceil_log2(StageUseEstimate::MAX_MOD);
 }
@@ -169,17 +197,11 @@ int SelectorShiftBits(const IR::MAU::Selector *sel) {
               sel->name, RAM_lines_necessary, StageUseEstimate::MAX_POOL_RAMLINES);
     }
 
-    int rv = 0;
-    if (RAM_lines_necessary <= StageUseEstimate::MAX_MOD)
-        return rv;
-
-    rv = ceil_log2(RAM_lines_necessary) - StageUseEstimate::MAX_MOD_SHIFT;
-
-    if (ceil_log2(RAM_lines_necessary) == floor_log2(RAM_lines_necessary))
-        rv += 1;
-
-    rv = std::max(StageUseEstimate::MAX_MOD_SHIFT, rv);
-    return rv;
+    int sel_shift = 0;
+    while ((RAM_lines_necessary >> sel_shift) > StageUseEstimate::MAX_MOD) {
+      sel_shift++;
+    }
+    return sel_shift;
 }
 
 int SelectorHashModBits(const IR::MAU::Selector *sel) {
@@ -373,7 +395,7 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * identity optimization if and only if the miss-entry never uses that resource, which is
  * a more complex check, but not hard to add
  *
- * UPDATE: 
+ * UPDATE:
  * (P4C-3656) Based on driver fixes in DRV-4341, driver checks if the EXM table
  * requires a table location to be reserved for the default (miss) entry.
  * Originally the check was simply whether or not the table used direct
