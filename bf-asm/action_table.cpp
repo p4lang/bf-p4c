@@ -550,7 +550,7 @@ template<> void ActionTable::write_regs_vt(Target::Flatrock::mau_regs &) {
 template<class REGS>
 void ActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Action table " << name() << " write_regs " << loc());
-    unsigned fmt_log2size = format->log2size;
+    unsigned fmt_log2size = format ? format->log2size : 0;
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
     for (auto fmt : Values(action_formats)) {
         fmt_log2size = std::max(fmt_log2size, fmt->log2size);

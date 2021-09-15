@@ -28,7 +28,11 @@ struct LiveRangeInfo {
         live_on_deparser = DEAD;
         fs = fs_;
     }
-    LiveRangeInfo() {}
+    LiveRangeInfo():
+        live_on_stage(Device::numStages(), OpInfo::DEAD) {
+        live_on_parser = DEAD;
+        live_on_deparser = DEAD;
+    }
 };
 
 LiveRangeInfo::OpInfo operator||(const LiveRangeInfo::OpInfo&, const LiveRangeInfo::OpInfo&);

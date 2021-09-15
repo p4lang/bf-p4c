@@ -11,7 +11,7 @@
 #include "jbay/counter.cpp"              // NOLINT(build/include)
 #endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/counter.cpp"        //NOLINT(build/include)
+#include "cloudbreak/counter.cpp"        // NOLINT(build/include)
 #endif  /* HAVE_CLOUDBREAK */
 
 void CounterTable::setup(VECTOR(pair_t) &data) {
@@ -182,16 +182,18 @@ template<class REGS> void CounterTable::write_merge_regs_vt(REGS &regs, MatchTab
     unsigned per_entry_en_mux_ctl = 0;
     unsigned adr_default = 0;
 
-    if (args[0].type == Table::Call::Arg::Name && strcmp(args[0].name(), "$DIRECT") == 0) {
+    if (args[0].type == Table::Call::Arg::Name && args[0].name() != nullptr &&
+        strcmp(args[0].name(), "$DIRECT") == 0) {
         adr_mask |= ((1U << STAT_ADDRESS_BITS) - 1) & ~counter_masks[format->groups()];
-    } else if (args[0].type == Table::Call::Arg::Field) {
+    } else if (args[0].type == Table::Call::Arg::Field && args[0].field() != nullptr) {
         auto addr = args[0].field();
         auto address_bits = addr->size;
         adr_mask |= ((1U << address_bits) - 1) << (counter_shifts[format->groups()]);
     }
 
 
-    if (args[1].type == Table::Call::Arg::Name && strcmp(args[1].name(), "$DEFAULT") == 0) {
+    if (args[1].type == Table::Call::Arg::Name && args[1].name() != nullptr &&
+        strcmp(args[1].name(), "$DEFAULT") == 0) {
         adr_default = (1U << STATISTICS_PER_FLOW_ENABLE_START_BIT);
     } else if (args[1].type == Table::Call::Arg::Field) {
         if (args[0].type == Table::Call::Arg::Field) {
