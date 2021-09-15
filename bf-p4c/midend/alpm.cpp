@@ -373,6 +373,8 @@ const IR::P4Table* SplitAlpm::create_preclassifier_table(const IR::P4Table* tbl,
     auto table_property = new IR::TableProperties(*properties);
     auto name = tbl->name + "__alpm_preclassifier";
     auto table = new IR::P4Table(tbl->srcInfo, IR::ID(name), tbl->annotations, table_property);
+    alpm_tables.insert(tbl->name);
+    preclassifier_tables.emplace(tbl->name, name);
 
     return table;
 }
@@ -696,6 +698,49 @@ const IR::Node* SplitAlpm::postorder(IR::IfStatement* c) {
             IR::ID("apply")), {})));
     stmts->push_back(c);
     return stmts;
+}
+
+const IR::Node* SplitAlpm::postorder(IR::SwitchStatement* statement) {
+    auto expr = statement->expression;
+    auto member = expr->to<IR::Member>();
+    if (member->member != "action_run")
+        return statement;
+    if (!member->expr->is<IR::MethodCallExpression>())
+        return statement;
+    auto mce = member->expr->to<IR::MethodCallExpression>();
+    auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap);
+    auto gen_apply = [](cstring table) {
+        IR::Statement *expr = new IR::MethodCallStatement(
+                new IR::MethodCallExpression(
+                new IR::Member(new IR::PathExpression(table),
+                IR::ID(IR::IApply::applyMethodName))));
+        return expr;
+    };
+
+    if (auto apply = mi->to<P4::ApplyMethod>()) {
+        if (!apply->isTableApply())
+            return statement;
+        auto table = apply->object->to<IR::P4Table>();
+        if (alpm_tables.count(table->name) == 0)
+            return statement;
+        // switch(t0.apply()) {} is converted to
+        //
+        // t0_preclassifier.apply();
+        // switch(t0.apply()) {}
+        //
+        auto tableName = apply->object->getName().name;
+        if (preclassifier_tables.count(tableName) == 0) {
+            ::error("Unable to find member table %1%", tableName);
+            return statement; }
+        auto preclassifier_table = preclassifier_tables.at(tableName);
+        auto preclassifier_apply = gen_apply(preclassifier_table);
+
+        auto decls = new IR::IndexedVector<IR::StatOrDecl>();
+        decls->push_back(preclassifier_apply);
+        decls->push_back(statement);
+        return new IR::BlockStatement(*decls);
+    }
+    return statement;
 }
 
 AlpmImplementation::AlpmImplementation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

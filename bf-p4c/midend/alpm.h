@@ -103,6 +103,8 @@ class SplitAlpm : public Transform {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
     static const std::set<unsigned> valid_partition_values;
+    std::set<cstring> alpm_tables;
+    std::map<cstring, cstring> preclassifier_tables;
 
     const IR::MAU::Table* create_pre_classifier_tcam(
             IR::MAU::Table* tbl, IR::TempVar* tv, IR::TempVar* tk,
@@ -120,6 +122,7 @@ class SplitAlpm : public Transform {
     const IR::Node* postorder(IR::P4Table* tbl) override;
     const IR::Node* postorder(IR::MethodCallStatement*) override;
     const IR::Node* postorder(IR::IfStatement*) override;
+    const IR::Node* postorder(IR::SwitchStatement*) override;
 
     const IR::IndexedVector<IR::Declaration>* create_temp_var(
             const IR::P4Table*, unsigned, unsigned, unsigned, unsigned,
