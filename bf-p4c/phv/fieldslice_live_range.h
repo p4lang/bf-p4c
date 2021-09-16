@@ -19,7 +19,10 @@ struct LiveRangeInfo {
     };
     OpInfo live_on_parser;
     OpInfo live_on_deparser;
-    std::vector<OpInfo> live_on_stage;
+    // Dynamic Vector is required to support cases where the compiler result exceed the number of
+    // stages on the device. In such case the vector will be automatically resized to avoid out of
+    // bound access.
+    dyn_vector<OpInfo> live_on_stage;
     PHV::FieldSlice fs;
     bool is_live_at(int stage) const;
     explicit LiveRangeInfo(const PHV::FieldSlice& fs_):
