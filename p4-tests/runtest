@@ -902,7 +902,7 @@ if $run_bfrt; then
             mkdir -p $switchBuild
         fi
 
-        cmakeConfigure="cmake .. -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on"
+        cmakeConfigure="cmake .. -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on -DPYTHON_EXECUTABLE=python"
         echo "Configure command: $cmakeConfigure"
         pushd $switchBuild > /dev/null
         # cmake looks for ${CMAKE_INSTALL_PREFIX}/bin/bf-p4c, i.e. ${switchBuild}/bin/bf-p4c
