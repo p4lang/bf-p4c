@@ -799,10 +799,12 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
                             auto varbit_field = cve.header_type_to_varbit_field.at(type);
                             auto path = arg->expression->to<IR::Member>()->expr;
                             auto instance =  arg->expression->to<IR::Member>()->member;
-                            for (auto& kv : varbit_hdr_instance_to_header_types.at(instance)) {
-                                auto emit = create_emit_statement(method, kv.second, path,
-                                                   create_instance_name(kv.second->name));
-                                components.push_back(emit);
+                            if (varbit_hdr_instance_to_header_types.count(instance)) {
+                                for (auto& kv : varbit_hdr_instance_to_header_types.at(instance)) {
+                                    auto emit = create_emit_statement(method, kv.second, path,
+                                                       create_instance_name(kv.second->name));
+                                    components.push_back(emit);
+                                }
                             }
 
                             if (varbit_field_to_post_header_type.count(varbit_field)) {

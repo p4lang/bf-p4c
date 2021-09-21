@@ -819,6 +819,13 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 continue;
             }
 
+            // Detached attached tables should be control/data independent.
+            if (((upstream_t->is_detached_attached_tbl) || (table->is_detached_attached_tbl))) {
+                LOG7("\t addDeps: Will not add edge " << dep_types(dep) << " between tables " <<
+                     upstream_t->name << " and " << table->name);
+                continue;
+            }
+
             auto edge_pair = self.dg.add_edge(upstream_t, table, new_dep);
             if (!edge_pair.first) continue;
             const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
@@ -914,7 +921,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                     //   1) the zero-init is the first access of this field or
                     //   2) the read of the move is dependent to prior accesses.
                     if (isWrite()) {
-                        if (table->is_always_run_action()) {
+                        if (table->is_always_run_action() || (table->is_detached_attached_tbl)) {
                             LOG7("\t Skipping dependencies for write expression " << e <<
                                  " of ARA " << table->name);
                         } else {

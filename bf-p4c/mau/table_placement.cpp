@@ -3916,7 +3916,9 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             }
 
             BUG_CHECK(!rv->empty(), "first stage has no match entries?");
-            rv->push_back(table_part); }
+            table_part->is_detached_attached_tbl = true;
+            rv->push_back(table_part);
+          }
 
         if (rv->empty()) {
             rv->push_back(table_part);

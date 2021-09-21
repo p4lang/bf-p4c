@@ -22,6 +22,11 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
                 continue;
             }
 
+            if ((parent->is_detached_attached_tbl) || (child->is_detached_attached_tbl)) {
+                LOG5("\t\tSkiping detached attached tables " << parent->name << child->name);
+                continue;
+            }
+
             auto edge_label = DependencyGraph::NONE;
             auto ctrl_annot = "";
             // Find control type relationship between parent & child

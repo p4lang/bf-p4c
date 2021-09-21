@@ -82,7 +82,7 @@ class Table : BFN::Unit, IAnnotated  {
     AlwaysRun                                   always_run = AlwaysRun::NONE;
     bool                                        suppress_context_json = false;
     bool                                        run_before_exit = false;
-
+    bool                                        is_detached_attached_tbl = false;
 
     class IndirectAddress {
         bool shifter_enabled = false;

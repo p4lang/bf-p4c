@@ -396,6 +396,7 @@ struct JbayNextTable::Prop::NTInfo {
         for (auto t : ts->tables) {
             auto st = t->stage();
             if (t->is_always_run_action()) continue;
+            if (t->is_detached_attached_tbl) continue;
             BUG_CHECK(t->global_id(), "Unplaced table %s", t->name);
             BUG_CHECK(tbl->global_id(), "Unplaced table %s", tbl->name);
             BUG_CHECK(first_stage <= st, "Table %s (LID: %d) placed before parent %s (LID: %d)",

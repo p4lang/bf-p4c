@@ -23,6 +23,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
     bool preorder(const IR::MAU::Table *tbl) override {
         LOG3(id << ": DefaultNext::preorder(" << tbl->name << ") prev=" <<
              DBPrint::Brief << prev_tbls << DBPrint::Reset);
+        if (tbl->is_detached_attached_tbl) return true;
         if (tbl->run_before_exit)
             collect_run_before_exit_table(tbl);
         for (auto prev : prev_tbls) {
