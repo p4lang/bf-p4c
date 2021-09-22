@@ -22,9 +22,10 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
  *  alignment.  Currently the algorithm does not take advantage of the TCAM byte swizzle,
  *  and would have to be expanded, as TCAM bytes don't have to be at their alignment
  */
-void IXBarVerify::verify_format(const IXBar::Use &use) {
+void IXBarVerify::verify_format(const IXBar::Use *use) {
     BUG_CHECK(currentTable, "No table context found for input crossbar use");
-    for (auto &byte : use.use) {
+    if (!use) return;
+    for (auto &byte : use->use) {
         bitvec byte_use;
         PHV::Container container;
         size_t mod_4_offset = -1;
@@ -62,7 +63,7 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
                 throw IXBar::failure(-1, byte.loc.group);
         }
 
-        if (use.type != IXBar::Use::TERNARY_MATCH) {
+        if (use->type != IXBar::Use::TERNARY_MATCH) {
             if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset)
                 throw IXBar::failure(-1, byte.loc.group);
         } else {
@@ -89,14 +90,14 @@ void IXBarVerify::postorder(IR::MAU::Table *tbl) {
         return;         // FIXME -- skip for flatrock for now
 #endif  /* HAVE_FLATROCK */
     currentTable = tbl;
-    verify_format(tbl->resources->gateway_ixbar);
-    verify_format(tbl->resources->match_ixbar);
-    verify_format(tbl->resources->selector_ixbar);
-    verify_format(tbl->resources->salu_ixbar);
-    verify_format(tbl->resources->meter_ixbar);
+    verify_format(tbl->resources->gateway_ixbar.get());
+    verify_format(tbl->resources->match_ixbar.get());
+    verify_format(tbl->resources->selector_ixbar.get());
+    verify_format(tbl->resources->salu_ixbar.get());
+    verify_format(tbl->resources->meter_ixbar.get());
     for (auto &hash_dist_use : tbl->resources->hash_dists) {
         for (auto &ir_alloc : hash_dist_use.ir_allocations) {
-            verify_format(ir_alloc.use);
+            verify_format(ir_alloc.use.get());
         }
     }
 }

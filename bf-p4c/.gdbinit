@@ -451,6 +451,29 @@ class MemoriesUsePrinter(object):
         rv += ')'
         return rv
 
+class IXBarUseBytePrinter(object):
+    "Print an IXBar::Use::Byte object"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        rv = ""
+        rv += str(self.val['container'])
+        rv += "[" + str(self.val['lo']) + "]("
+        rv += str(self.val['loc']['group']) + ','
+        rv += str(self.val['loc']['byte']) + ')'
+        if int(self.val['flags']) != 0:
+            rv += " flags=" + hex(int(self.val['flags']))
+        fields = self.val['field_bytes']
+        for i in range(0, vec_size(fields)):
+            field_info = vec_at(fields, i)
+            rv += " " + field_info['field']['str'].string()
+            rv += "(" + str(field_info['lo']) + ".." + str(field_info['hi']) + ")"
+        if int(self.val['search_bus']) >= 0:
+            rv += " search_bus=" + str(int(self.val['search_bus']))
+        if int(self.val['match_index']) >= 0:
+            rv += " match_index=" + str(int(self.val['match_index']))
+        return rv
+
 class IXBarUsePrinter(object):
     "Print an IXBar::Use object"
     use_types = [ "Exact", "ATCam", "Ternary", "Trie", "Gateway", "ProxyHash", "Selector",
@@ -464,16 +487,7 @@ class IXBarUsePrinter(object):
         for i in range(0, vec_size(arr)):
             rv += "\n" + indent + "use[" + str(i) +"]: "
             byte = vec_at(arr, i)
-            rv += str(byte['container'])
-            rv += "[" + str(byte['lo']) + "]("
-            rv += str(byte['loc']['group']) + ','
-            rv += str(byte['loc']['byte']) + ')'
-            if int(byte['flags']) != 0:
-                rv += " flags=" + hex(int(byte['flags']))
-            if int(byte['search_bus']) >= 0:
-                rv += " search_bus=" + str(int(byte['search_bus']))
-            if int(byte['match_index']) >= 0:
-                rv += " match_index=" + str(int(byte['match_index']))
+            rv += IXBarUseBytePrinter(byte).to_string()
         return rv;
     def to_string(self):
         rv = ""
@@ -482,12 +496,10 @@ class IXBarUsePrinter(object):
             rv = "<type %d>" % type_tag
             if type_tag >= 0 and type_tag < len(self.use_types):
                 rv = self.use_types[type_tag]
-            try:
+            if any(field.name == 'hash_dist_type' for field in self.val.type.fields()):
                 type_tag = int(self.val['hash_dist_type'])
                 if type_tag >= 0 and type_tag < len(self.hash_dist_use_types):
                     rv += "/" + self.hash_dist_use_types[type_tag]
-            except:
-                pass
             rv += self.use_array(self.val['use'], '   ')
             for i in range(0, vec_size(self.val['hash_table_inputs'])):
                 hti = vec_at(self.val['hash_table_inputs'], i)
@@ -499,33 +511,37 @@ class IXBarUsePrinter(object):
                             rv += "%d " % j
                         j += 1
                         hti /= 2
-            for i in range(0, vec_size(self.val['bit_use'])):
-                rv += "\n   bit_use[" + str(i) +"]: "
-                bits = vec_at(self.val['bit_use'], i)
-                rv += str(bits['group']) + ':' + str(bits['bit']+40) + ': '
-                rv += bits['field']['str'].string()
-                rv += "(" + str(bits['lo'])
-                if bits['width'] > 1:
-                    rv += ".." + str(bits['lo'] + bits['width'] - 1)
-                rv += ")"
-            for i in range(0, vec_size(self.val['way_use'])):
-                rv += "\n   way_use[" + str(i) +"]: "
-                way = vec_at(self.val['way_use'], i)
-                rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
+            if any(field.name == 'bit_use' for field in self.val.type.fields()):
+                for i in range(0, vec_size(self.val['bit_use'])):
+                    rv += "\n   bit_use[" + str(i) +"]: "
+                    bits = vec_at(self.val['bit_use'], i)
+                    rv += str(bits['group']) + ':' + str(bits['bit']+40) + ': '
+                    rv += bits['field']['str'].string()
+                    rv += "(" + str(bits['lo'])
+                    if bits['width'] > 1:
+                        rv += ".." + str(bits['lo'] + bits['width'] - 1)
+                    rv += ")"
+            if any(field.name == 'way_use' for field in self.val.type.fields()):
+                for i in range(0, vec_size(self.val['way_use'])):
+                    rv += "\n   way_use[" + str(i) +"]: "
+                    way = vec_at(self.val['way_use'], i)
+                    rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
             #for i in range(0, vec_size(self.val['select_use'])):
             #    rv += "\n   sel_use[" + str(i) +"]: "
             #    sel = vec_at(self.val['select_use'], i)
             #    rv += "%d:%x - %s" % (int(sel['group']), int(sel['bit_mask']), str(sel['alg']))
-            mah = self.val['meter_alu_hash']
-            if mah['allocated']:
-                rv += "\n   meter_alu_hash: group=" + str(mah['group'])
-            hdh = self.val['hash_dist_hash']
-            if hdh['allocated']:
-                rv += "\n   hash_dist_hash: "
-                rv += " group=" + str(hdh['group'])
-                rv += " gm_bits=" + str(hdh['galois_matrix_bits'])
-                rv += " algorithm=" + str(hdh['algorithm'])
-            if type_tag == 5:
+            if any(field.name == 'meter_alu_hash' for field in self.val.type.fields()):
+                mah = self.val['meter_alu_hash']
+                if mah['allocated']:
+                    rv += "\n   meter_alu_hash: group=" + str(mah['group'])
+            if any(field.name == 'hash_dist_hash' for field in self.val.type.fields()):
+                hdh = self.val['hash_dist_hash']
+                if hdh['allocated']:
+                    rv += "\n   hash_dist_hash: "
+                    rv += " group=" + str(hdh['group'])
+                    rv += " gm_bits=" + str(hdh['galois_matrix_bits'])
+                    rv += " algorithm=" + str(hdh['algorithm'])
+            if type_tag == 8 and any(field.name == 'salu_input_source' for field in self.val.type.fields()):
                 sis = self.val['salu_input_source']
                 rv += "\n   data_bytemask=%x hash_bytemask=%x" % (
                             sis['data_bytemask'], sis['hash_bytemask'])
@@ -621,6 +637,8 @@ def bfp4c_pp(val):
         return IXBarUsePrinter(val)
     if str(val.type.tag).endswith('IXBar::Use'):
         return IXBarUsePrinter(val)
+    if str(val.type.tag).endswith('IXBar::Use::Byte'):
+        return IXBarUseBytePrinter(val)
     if val.type.tag == 'Memories':
         return MemoriesPrinter(val)
     if val.type.tag == 'Memories::Use':

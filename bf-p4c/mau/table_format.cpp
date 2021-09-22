@@ -1,6 +1,7 @@
 #include "table_format.h"
 #include "lib/dyn_vector.h"
 #include "memories.h"
+#include "tofino/input_xbar.h"
 
 void ByteInfo::InterleaveInfo::dbprint(std::ostream &out) const {
     if (!interleaved) return;
@@ -194,12 +195,12 @@ bool TableFormat::analyze_layout_option() {
         analyze_proxy_hash_option(per_RAM);
     } else {
         use->identity_hash = layout_option.identity;
-        auto total_info = match_ixbar.bits_per_search_bus();
+        auto total_info = match_ixbar->bits_per_search_bus();
 
         for (auto gi : total_info[0].all_group_info)
              LOG4("   Group info " << gi);
 
-        single_match = *(match_ixbar.match_hash()[0]);
+        single_match = *(match_ixbar->match_hash()[0]);
         if (!is_match_entry_wide()) {
             bool rv = analyze_skinny_layout_option(per_RAM, total_info[0].all_group_info);
             if (!rv) return false;
@@ -243,7 +244,9 @@ bool TableFormat::analyze_layout_option() {
  * basis.
  */
 void TableFormat::analyze_proxy_hash_option(int per_RAM) {
-    auto &ph = proxy_hash_ixbar.proxy_hash_key_use;
+    auto *tphi = dynamic_cast<const Tofino::IXBar::Use *>(proxy_hash_ixbar);
+    if (!tphi) return;  // TODO for flatrock
+    auto &ph = tphi->proxy_hash_key_use;
     BUG_CHECK(ph.allocated, "%s: Proxy Hash Table %s does not have an allocation for a proxy "
               "hash key", tbl->srcInfo, tbl->name);
 
@@ -285,7 +288,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
     // to leave at most one search bus.  If that's the case, then choose_ghost_bits will
     // prioritize those search buses
     skinny = true;
-    if (match_ixbar.search_buses_single() > 1) {
+    if (match_ixbar->search_buses_single() > 1) {
         std::sort(sizes.begin(), sizes.end(),
             [](const IXBar::Use::GroupInfo &a, const IXBar::Use::GroupInfo &b) {
             int t;
@@ -304,7 +307,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
                 break;
             }
         }
-        if (match_ixbar.search_buses_single() - ghostable_search_buses > 1)
+        if (match_ixbar->search_buses_single() - ghostable_search_buses > 1)
             return false;
     }
 
@@ -352,7 +355,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
                   "could easily be split.", tbl->name, layout_option.way.match_groups,
                   layout_option.way.width);
     }
-    if (size_t(match_ixbar.search_buses_single()) > RAM_per) {
+    if (size_t(match_ixbar->search_buses_single()) > RAM_per) {
         return false;  // FIXME: Again, can potentially be saved by ghosting off certain bits
     }
 
@@ -1141,7 +1144,7 @@ bool TableFormat::allocate_all_instr_selection() {
  * This match_entry_wide leads to different strategies during allocation
  */
 bool TableFormat::is_match_entry_wide() const {
-    return !(match_ixbar.search_buses_single() == 1 || layout_option.way.width == 1);
+    return !(match_ixbar->search_buses_single() == 1 || layout_option.way.width == 1);
 }
 
 /** Save information on a byte by byte basis so that fill out use can correctly be used.
@@ -1340,7 +1343,7 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
 
 void TableFormat::classify_match_bits() {
     if (layout_option.layout.atcam) {
-        auto partition = match_ixbar.atcam_partition();
+        auto partition = match_ixbar->atcam_partition();
         for (auto byte : partition) {
             use->ghost_bits[byte] = byte.bit_use;
         }
@@ -1913,7 +1916,7 @@ bool TableFormat::allocate_match_with_algorithm() {
     }
 
     // Determine if everything is fully allocated
-    safe_vector<int> search_bus_alloc(match_ixbar.search_buses_single(), 0);
+    safe_vector<int> search_bus_alloc(match_ixbar->search_buses_single(), 0);
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
         int search_bus = search_bus_per_width[width_sect];
         if (search_bus < 0)
@@ -2077,7 +2080,7 @@ bool TableFormat::allocate_all_ternary_match() {
     std::map<int, std::pair<bool, bool>> midbyte_lo_hi;
     std::map<int, int> range_indexes;
 
-    for (auto &byte : match_ixbar.use) {
+    for (auto &byte : match_ixbar->use) {
         LOG5("  Checking match ixbar use byte : " << byte);
         if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
             // Reserves groups and the mid bytes

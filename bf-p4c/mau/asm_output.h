@@ -4,17 +4,20 @@
 #include <map>
 #include <set>
 #include <vector>
-#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
+#include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/next_table.h"
 #include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/safe_vector.h"
 
 class PhvInfo;
+class BFN_Options;
+namespace MauPower {
+class FinalizeMauPredDepsPower;
+}
 
 class MauAsmOutput : public MauInspector {
  protected:
@@ -62,7 +65,6 @@ class MauAsmOutput : public MauInspector {
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
 
  public:
-    class TableMatch;
     class NextTableSet;
 
  private:
@@ -73,46 +75,7 @@ class MauAsmOutput : public MauInspector {
         const Memories::Use *mem) const;
     void emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
-    void emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-        std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
-        const IR::MAU::Table *tbl, bool ternary, bool atcam = false) const;
-    void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
-        safe_vector<Slice> &ghost, const TableMatch *fmt,
-        std::map<int, std::map<int, Slice>> &sort) const;
-    void emit_ixbar_gather_map(std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map,
-        const safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
-        int &total_bits) const;
-    void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-        safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
-        int &ident_bits_prev_alloc) const;
-    void ixbar_hash_exact_info(int &min_way_size, int &min_way_slice, const IXBar::Use *use,
-        int hash_group, std::map<int, bitvec> &slice_to_select_bits) const;
-    void emit_ixbar_match_func(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, Slice *ghost, le_bitrange hash_bits) const;
-    void ixbar_hash_exact_bitrange(Slice ghost_slice, int min_way_size,
-        le_bitrange non_rotated_slice, le_bitrange comp_slice, int initial_lo_bit,
-        safe_vector<std::pair<le_bitrange, Slice>> &ghost_positions) const;
-    void emit_ixbar_hash_atcam(std::ostream &out, indent_t indent, safe_vector<Slice> &ghost,
-        const IXBar::Use *use, int hash_group) const;
-    void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
-        int hash_group, int &ident_bits_prev_alloc) const;
-    void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-        const safe_vector<const IR::Expression *> &field_list_order) const;
-    void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
-        const safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-        const safe_vector<const IR::Expression *> &field_list_order,
-        const LTBitMatrix &sym_keys) const;
-    void emit_ixbar_proxy_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-        const IXBar::Use::ProxyHashKey &ph,
-        const safe_vector<const IR::Expression *> &field_list_order,
-        const LTBitMatrix &sym_keys) const;
 
-    void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
-            const TableMatch *fmt, const IR::MAU::Table *) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
         const IR::MAU::Table::Layout *l = nullptr, const TableFormat::Use *f = nullptr) const;
     bool emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
@@ -165,13 +128,43 @@ class MauAsmOutput : public MauInspector {
     class EmitAlwaysRunAction;
     class EmitAttached;
     class UnattachedName;
-    class EmitHashExpression;
+    // class EmitHashExpression;
 
  public:
     MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe,
                  const NextTable *nxts, const MauPower::FinalizeMauPredDepsPower* pmpr,
                  const BFN_Options &options)
             : phv(phv), pipe(pipe), nxt_tbl(nxts), power_and_mpr(pmpr), options(options) { }
+};
+
+class TableMatch {
+ public:
+    // TODO -- a bunch of this is tofino-specific and probably needs to change for flatrock, but
+    // something like it might still be needed or at least useful
+    // 'match_fields', 'proxy_hash'  and 'proxy_hash_fields' here are used only by
+    // 'emit_table_format' while 'ghost_bits' and 'identity_hash' are used only by
+    // 'emit_ixbar_hash_table' (called via emit_ixbar and emit_single_ixbar), so they
+    // could be two independent data structures (or just extra arguments) -- the combo
+    // here into a single object is accidental.
+    safe_vector<Slice>       match_fields;
+    safe_vector<Slice>       ghost_bits;
+
+    struct ProxyHashSlice {
+        le_bitrange bits;
+        explicit ProxyHashSlice(le_bitrange b) : bits(b) {}
+
+     public:
+        friend std::ostream &operator<<(std::ostream &out, const ProxyHashSlice &sl) {
+            return out << "hash_group" << "(" << sl.bits.lo << ".." << sl.bits.hi << ")"; }
+    };
+    safe_vector<ProxyHashSlice> proxy_hash_fields;
+    bool proxy_hash = false;
+    bool identity_hash = false;
+
+    const IR::MAU::Table     *table = nullptr;
+    void init_proxy_hash(const IR::MAU::Table *tbl);
+
+    TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

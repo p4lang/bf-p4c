@@ -7,6 +7,7 @@
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/phv/phv.h"
 #include "lib/safe_vector.h"
 
@@ -252,10 +253,12 @@ class AdjustStatefulInstructions : public MauTransform {
 
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, le_bitrange field_bits,
         int starting_bit);
-    bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const IXBar::Use &salu_ixbar,
+    // FIXME -- these need to be folded into a virtual function on IXBar::Use to support
+    // both tofino and flatrock
+    bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const Tofino::IXBar::Use &salu_ixbar,
         const PHV::Field *field, le_bitrange bits, bool &is_hi);
     bool verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
-         const IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
+         const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
          bool &is_hi);
 
  public:

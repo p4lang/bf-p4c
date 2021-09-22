@@ -307,9 +307,13 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LIB_SRCS}")
 build_unified(BF_P4C_BACKEND_LIB_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_LIB_HDRS
+  lib/autoclone.h
   lib/boost_graph.h
   lib/cmp.h
+  lib/dyn_vector.h
+  lib/error_macros.h
   lib/error_type.h
+  lib/pad_alignment.h
   lib/pointer_wrapper.h
   lib/union_find.hpp
   )
@@ -372,6 +376,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
+  mau/tofino/asm_output.cpp
   mau/tofino/input_xbar.cpp
   mau/tofino/memories.cpp
   )
@@ -379,6 +384,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}
 build_unified(BF_P4C_BACKEND_MAU_TOFINO_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
+  mau/flatrock/asm_output.cpp
   mau/flatrock/input_xbar.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")

@@ -2238,7 +2238,7 @@ class WarnTernaryMatchFields : public MauInspector {
 
         auto& ixbar_use = tbl->resources->match_ixbar;
 
-        for (auto& b : ixbar_use.use) {
+        for (auto& b : ixbar_use->use) {
             for (auto &fi : b.field_bytes) {
                 auto f = phv.field(fi.field);
                 ternary_match_fields[tbl].insert(f);

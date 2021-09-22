@@ -18,8 +18,8 @@
 #include "resources_clot.h"
 
 namespace std {
-    std::string to_string(BFN::ResourcesLogging::HashBitResource::UsageType type) {
-        using UsageType = BFN::ResourcesLogging::HashBitResource::UsageType;
+    std::string to_string(BFN::Resources::HashBitResource::UsageType type) {
+        using UsageType = BFN::Resources::HashBitResource::UsageType;
         switch (type) {
         case UsageType::WaySelect:     return "way_select";
         case UsageType::WayLineSelect: return "way_line_select";
@@ -99,17 +99,17 @@ static ResourcesLogging::PhvResourceUsage *logPhvContainers(const PhvSpec &spec)
     return result;
 }
 
-ResourcesLogging::XbarByteResource::XbarByteResource(const std::string &ub,
-                                                      const std::string &uf,
-                                                      const IXBar::Use::Byte &b) : byte(b) {
+Resources::XbarByteResource::XbarByteResource(const std::string &ub,
+                                              const std::string &uf,
+                                              const IXBar::Use::Byte &b) : byte(b) {
     usedBy = stripLeadingDot(ub);
     usedFor = stripLeadingDot(uf);
 }
 
-void ResourcesLogging::HashBitResource::append(std::string ub,
-                                               std::string uf,
-                                               ResourcesLogging::HashBitResource::UsageType type,
-                                               int value, const std::string &fieldName) {
+void Resources::HashBitResource::append(std::string ub,
+                                        std::string uf,
+                                        Resources::HashBitResource::UsageType type,
+                                        int value, const std::string &fieldName) {
     ub = stripLeadingDot(ub);
     uf = stripLeadingDot(uf);
 
@@ -129,12 +129,12 @@ void ResourcesLogging::HashBitResource::append(std::string ub,
     usages.insert({value, fieldName, type});
 }
 
-void ResourcesLogging::HashDistResource::append(const std::string &ub, const std::string &uf) {
+void Resources::HashDistResource::append(const std::string &ub, const std::string &uf) {
     usedBy.insert(stripLeadingDot(ub));
     usedFor.insert(stripLeadingDot(uf));
 }
 
-void ResourcesLogging::ActionBusByteResource::append(const std::string &ub) {
+void Resources::ActionBusByteResource::append(const std::string &ub) {
     usedBy.insert(stripLeadingDot(ub));
 }
 
@@ -225,14 +225,14 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
 
     LOG3("\tadding resource table: " << name);
 
-    stageResources[stage].memories.push_back(
-        MemoriesResource(name.c_str(), table->build_gateway_name().c_str(), alloc));
+    stageResources[stage].memories.emplace_back(
+        name.c_str(), table->build_gateway_name().c_str(), alloc);
 
-    collectXbarBytesUsage(stage, alloc->match_ixbar);
-    collectXbarBytesUsage(stage, alloc->salu_ixbar);
-    collectXbarBytesUsage(stage, alloc->meter_ixbar);
-    collectXbarBytesUsage(stage, alloc->selector_ixbar);
-    collectXbarBytesUsage(stage, alloc->gateway_ixbar);
+    collectXbarBytesUsage(stage, alloc->match_ixbar.get());
+    collectXbarBytesUsage(stage, alloc->salu_ixbar.get());
+    collectXbarBytesUsage(stage, alloc->meter_ixbar.get());
+    collectXbarBytesUsage(stage, alloc->selector_ixbar.get());
+    collectXbarBytesUsage(stage, alloc->gateway_ixbar.get());
 
     for (auto &hash_dist : alloc->hash_dists) {
         collectHashDistUsage(stage, hash_dist);
@@ -247,121 +247,19 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
     LOG1("collectTableUsage: " << name << " done!");
 }
 
-void ResourcesLogging::collectXbarBytesUsage(unsigned int stage, const IXBar::Use &alloc) {
-    if (alloc.use.empty())
+void ResourcesLogging::collectXbarBytesUsage(unsigned int stage, const IXBar::Use *alloc) {
+    if (!alloc || alloc->use.empty())
         return;
 
     auto &stageResource = stageResources[stage];
+    alloc->update_resources(stage, stageResource);
 
-    LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc.used_by);
-    for (auto &byte : alloc.use) {
-        bool ternary = alloc.type == IXBar::Use::TERNARY_MATCH;
-        LOG3("\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
-        stageResource.xbarBytes[byte.loc.getOrd(ternary)].insert(
-            XbarByteResource(alloc.used_by, alloc.used_for(), byte));
-    }
-
-    using UsageType = HashBitResource::UsageType;
-
-    // Used for the upper 12 bits of gateways
-    for (auto &bits : alloc.bit_use) {
-        for (int b = 0; b < bits.width; b++) {
-            int bit = bits.bit + b + IXBar::HASH_INDEX_GROUPS * TableFormat::RAM_GHOST_BITS;
-            auto key = std::make_pair(bit, bits.group);
-
-            LOG3("\tadding resource hash_bits from bit_use(" << bit << ", " << bits.group
-                 << "): {" << alloc.used_by << " --> " << alloc.used_for() << ": "
-                 << (bits.field + std::to_string(bits.lo + b)) << "}");
-            BUG_CHECK(alloc.used_for() == "gateway", "Not gateway use of upper hash bit");
-            stageResource.hashBits[key].append(
-                alloc.used_by,
-                alloc.used_for(),
-                UsageType::Gateway,
-                bits.lo + b,
-                bits.field.c_str());
-        }
-    }
-
-    // Used for the bits to do exact match/atcam match
-    int wayIndex = 0;
-    for (auto &way : alloc.way_use) {
-        for (int bitOffset = 0; bitOffset < IXBar::RAM_LINE_SELECT_BITS; bitOffset++) {
-            int bit = bitOffset + way.slice * IXBar::RAM_LINE_SELECT_BITS;
-            auto key = std::make_pair(bit, way.group);
-
-            LOG3("\tadding resource hash_bits from way_use(" << bit << ", " << way.group
-                 << "): {" << alloc.used_by << " --> " << alloc.used_for() << ": "
-                 << "Hash Way " << wayIndex << " RAM line select" << "}");
-            stageResource.hashBits[key].append(
-                alloc.used_by,
-                alloc.used_for(),
-                UsageType::WayLineSelect,
-                wayIndex);
-        }
-
-        for (auto bit : bitvec(way.mask)) {
-            bit += IXBar::RAM_SELECT_BIT_START;
-            auto key = std::make_pair(bit, way.group);
-
-            LOG3("\tadding resource hash_bits from way_use(" << bit << ", " << way.group
-                 << "): {" << alloc.used_by << " --> " << alloc.used_for() << ": "
-                 << "Hash Way " << wayIndex << " RAM select" << "}");
-            stageResource.hashBits[key].append(
-                alloc.used_by,
-                alloc.used_for(),
-                UsageType::WaySelect,
-                wayIndex);
-        }
-
-        wayIndex++;
-    }
-
-    // Used for the bits provided to the selector
-    if (alloc.meter_alu_hash.allocated) {
-        auto &mah = alloc.meter_alu_hash;
-        for (auto bit : mah.bit_mask) {
-            auto key = std::make_pair(bit, mah.group);
-
-            LOG3("\tadding resource hash_bits from select_use(" << bit << ", " << mah.group
-                 << "): {" << alloc.used_by << " --> " << alloc.used_for() << ": "
-                 << "Selection Hash Bit " << bit << "}");
-            stageResource.hashBits[key].append(
-                alloc.used_by,
-                alloc.used_for(),
-                UsageType::SelectionBit,
-                bit);
-        }
-    }
-    // Used for the bits for hash distribution
-    auto &hdh = alloc.hash_dist_hash;
-    if (hdh.allocated) {
-        for (auto bit : hdh.galois_matrix_bits) {
-            int position = -1;
-            for (auto bit_start : hdh.galois_start_bit_to_p4_hash) {
-                int init_hb = bit_start.first;
-                auto br = bit_start.second;
-                if (bit >= init_hb && bit < init_hb + br.size())
-                    position = br.lo + (bit - init_hb);
-            }
-            auto key = std::make_pair(bit, hdh.group);
-
-            LOG3("\tadding resource hash_bits from hash_dist(" << bit << ", " << hdh.group
-                 << "): {" << alloc.used_by << " --> " << alloc.used_for() << ": "
-                 << "Hash Dist Bit " << position << "}");
-            stageResource.hashBits[key].append(
-                alloc.used_by,
-                alloc.used_for(),
-                UsageType::DistBit,
-                position);
-        }
-    }
-
-    LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc.used_by << " done!");
+    LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc->used_by << " done!");
 }
 
 void ResourcesLogging::collectHashDistUsage(unsigned int stage, const IXBar::HashDistUse &hdUse) {
     for (auto &irAlloc : hdUse.ir_allocations) {
-        collectXbarBytesUsage(stage, irAlloc.use);
+        collectXbarBytesUsage(stage, irAlloc.use.get());
     }
 
     int hashId = hdUse.unit / IXBar::HASH_DIST_SLICES;
@@ -403,7 +301,7 @@ void ResourcesLogging::collectVliwUsage(unsigned int stage, const InstructionMem
         auto instr = entry.second;
         int row = instr.row;
 
-        IMemColorResource imr;
+        Resources::IMemColorResource imr;
         imr.color = instr.color;
         imr.gress = gress;
 

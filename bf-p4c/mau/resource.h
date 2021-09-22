@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_RESOURCE_H_
 
 #include <map>
+#include "bf-p4c/lib/autoclone.h"
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/instruction_memory.h"
@@ -14,7 +15,7 @@ struct TableResourceAlloc {
     // TODO: Currently we only have a std::map for the UniqueId objects for Memories.  This would
     // make sense to eventually move to IXBar::Use, and even potentially
     // ActionFormat::Use/ActionDataBus::Use for the different types of allocations
-    IXBar::Use                          match_ixbar, gateway_ixbar, proxy_hash_ixbar,
+    autoclone_ptr<IXBar::Use>           match_ixbar, gateway_ixbar, proxy_hash_ixbar,
                                         selector_ixbar, salu_ixbar, meter_ixbar;
     safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;
@@ -28,12 +29,12 @@ struct TableResourceAlloc {
                                int logical_table = -1);
 
     void clear_ixbar() {
-        match_ixbar.clear();
-        gateway_ixbar.clear();
-        proxy_hash_ixbar.clear();
-        selector_ixbar.clear();
-        salu_ixbar.clear();
-        meter_ixbar.clear();
+        match_ixbar.reset();
+        gateway_ixbar.reset();
+        proxy_hash_ixbar.reset();
+        selector_ixbar.reset();
+        salu_ixbar.reset();
+        meter_ixbar.reset();
         hash_dists.clear();
     }
     void clear() {

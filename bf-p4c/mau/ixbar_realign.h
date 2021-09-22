@@ -12,7 +12,7 @@ class IXBarVerify: public MauModifier {
     profile_t init_apply(const IR::Node *) override;
     bool preorder(IR::Expression *) override { return false; }
     void postorder(IR::MAU::Table *) override;
-    void verify_format(const IXBar::Use &);
+    void verify_format(const IXBar::Use *);
     class GetCurrentUse;
     safe_vector<std::unique_ptr<IXBar>> stage;
 

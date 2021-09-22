@@ -3,9 +3,12 @@
 
 #include "bf-p4c/mau/input_xbar.h"
 
+class Slice;
+
 namespace Flatrock {
 
 class IXBar : public ::IXBar {
+ public:
     static constexpr int GATEWAY_BYTES = 6;
     static constexpr int GATEWAY_ROWS = 32;
     static constexpr int EXACT_BYTES = 20;
@@ -19,9 +22,31 @@ class IXBar : public ::IXBar {
 
     using Loc = ::IXBar::Loc;
     using FieldInfo = ::IXBar::FieldInfo;
-    using Use = ::IXBar::Use;
     using HashDistUse = ::IXBar::HashDistUse;
 
+    struct Use : public ::IXBar::Use {
+        Use *clone() const { return new Use(*this); }
+        void emit_salu_bytemasks(std::ostream &, indent_t) const { BUG(""); }
+        void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
+                            const TableMatch *fmt, const IR::MAU::Table *) const;
+        bitvec galois_matrix_bits() const { BUG(""); }
+        const std::map<int, const IR::Expression *> &hash_computed_expressions() const { BUG(""); }
+        int hash_groups() const { BUG(""); return 0; }
+        int hash_dist_hash_group() const { BUG(""); return 0; }
+        std::string hash_dist_used_for() const { BUG(""); return ""; }
+        bool is_parity_enabled() const { return false; }
+        bitvec meter_bit_mask() const { BUG(""); }
+        int total_input_bits() const { BUG(""); }
+        void update_resources(int, BFN::Resources::StageResources &) const { BUG(""); }
+
+     private:
+        void gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Slice>> &sort,
+                          const IR::MAU::Table *tbl) const;
+    };
+    static Use &getUse(autoclone_ptr<::IXBar::Use> &ac);
+    static const Use &getUse(const autoclone_ptr<::IXBar::Use> &ac);
+
+ private:
     /** IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
      * to record the name of the field it will be getting and the bit offset within the field.
      * cstrings here are field names as used in PhvInfo (so PhvInfo::field can be used to find
@@ -65,7 +90,7 @@ class IXBar : public ::IXBar {
                            safe_vector<IXBar::Use::Byte *> &alloced);
 
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
-    void setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
+    Use *setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &);
     bool allocExact(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
                     const LayoutOption *, const ActionData::Format::Use *);
     bool allocTernary(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
@@ -79,7 +104,7 @@ class IXBar : public ::IXBar {
     bool allocTable(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
                     const LayoutOption *, const ActionData::Format::Use *,
                     const attached_entries_t &);
-    void update(cstring name, const Use &alloc);
+    void update(cstring name, const ::IXBar::Use &alloc);
     void update(cstring name, const HashDistUse &hash_dist_alloc);
     void add_collisions();
     void verify_hash_matrix() const;

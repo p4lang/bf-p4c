@@ -1401,7 +1401,8 @@ bool AdjustStatefulInstructions::check_bit_positions(std::map<int, le_bitrange> 
 }
 
 bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu *salu,
-        const IXBar::Use &salu_ixbar, const PHV::Field *field, le_bitrange bits, bool &is_hi) {
+        const Tofino::IXBar::Use &salu_ixbar, const PHV::Field *field, le_bitrange bits,
+        bool &is_hi) {
     std::map<int, le_bitrange> salu_inputs;
     bitvec salu_bytes;
     int group = 0;
@@ -1474,7 +1475,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
 }
 
 bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
-        const IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
+        const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
         bool &is_hi) {
     for (auto &exp : mah.computed_expressions) {
         if (exp.second->equiv(*expr)) {
@@ -1509,15 +1510,18 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     auto salu = findContext<IR::MAU::StatefulAlu>();
     if (!salu) return expr;
 
-    auto &salu_ixbar = tbl->resources->salu_ixbar;
+    auto *salu_ixbar = dynamic_cast<const Tofino::IXBar::Use *>(tbl->resources->salu_ixbar.get());
     bool is_hi = false;
-    if (!salu_ixbar.meter_alu_hash.allocated) {
-        if (!verify_on_search_bus(salu, salu_ixbar, field, bits, is_hi)) {
+    if (!salu_ixbar) {
+        prune();
+        return expr;
+    } else if (!salu_ixbar->meter_alu_hash.allocated) {
+        if (!verify_on_search_bus(salu, *salu_ixbar, field, bits, is_hi)) {
             prune();
             return expr;
         }
     } else {
-        if (!verify_on_hash_bus(salu, salu_ixbar.meter_alu_hash, expr, is_hi)) {
+        if (!verify_on_hash_bus(salu, salu_ixbar->meter_alu_hash, expr, is_hi)) {
             prune();
             return expr;
         }

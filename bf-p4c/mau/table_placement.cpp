@@ -1427,8 +1427,8 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     erase_if(tbl->attached, [next](const IR::MAU::BackendAttached *ba) {
         return !next->attached_entries.count(ba->attached) ||
                next->attached_entries.at(ba->attached).entries == 0; });
-    TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
-                               next->resources.proxy_hash_ixbar, tbl,
+    TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar.get(),
+                               next->resources.proxy_hash_ixbar.get(), tbl,
                                immediate_mask, gw_linked, lc.fpc);
 
     if (!current_format.find_format(&next->resources.table_format)) {

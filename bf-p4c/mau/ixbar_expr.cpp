@@ -327,7 +327,7 @@ bool AdjustIXBarExpression::preorder(IR::MAU::IXBarExpression *e) {
     if (!tbl->resources) {
         // no allocation for table -- can happen it TablePlacement failed
         return false; }
-    for (auto &ce : tbl->resources->salu_ixbar.meter_alu_hash.computed_expressions) {
+    for (auto &ce : tbl->resources->salu_ixbar->hash_computed_expressions()) {
         if (e->expr->equiv(*ce.second)) {
             e->bit = ce.first;
             return false; } }

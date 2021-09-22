@@ -81,18 +81,6 @@ int IXBar::Use::groups() const {
     return rv;
 }
 
-int IXBar::Use::hash_groups() const {
-    int rv = 0;
-    unsigned counted = 0;
-    for (auto way : way_use) {
-        if (((1U << way.group) & counted) == 0) {
-            rv++;
-            counted |= 1U << way.group;
-        }
-    }
-    return rv;
-}
-
 /** Returns each vector of match data.  If multiple hash groups are used, then the allocation,
  *  per hash group is provided
  */
@@ -250,12 +238,8 @@ unsigned IXBar::Use::compute_hash_tables() {
 /* Combining the allocation of multiple separately allocated hash groups of the same
    table.  Done if the table requires two hash groups */
 void IXBar::Use::add(const IXBar::Use &alloc) {
-    gw_search_bus = alloc.gw_search_bus;
-    gw_search_bus_bytes = alloc.gw_search_bus_bytes;
-    gw_hash_group = alloc.gw_hash_group;
     type = alloc.type;
     used_by = alloc.used_by;
-    parity = alloc.parity;
 
     for (auto old_byte : use) {
         for (auto new_byte : alloc.use) {
@@ -264,21 +248,7 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
                 BUG("Two combined input xbar groups are using the same byte location");
         }
     }
-    for (auto old_way : way_use) {
-        for (auto new_way : alloc.way_use) {
-            if (old_way.group == new_way.group)
-                BUG("Ways from supposedly different hash groups have same group?");
-        }
-    }
-    for (auto old_bits : bit_use) {
-        for (auto new_bits : alloc.bit_use) {
-            if (old_bits.group == new_bits.group)
-                BUG("Bit uses from separate hash groups are within same slice");
-        }
-    }
     use.insert(use.end(), alloc.use.begin(), alloc.use.end());
-    bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
-    way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
     for (auto &input : alloc.hash_table_inputs) {
         int i = &input - &alloc.hash_table_inputs[0];
         if (hash_table_inputs[i] != 0 && input != 0)
@@ -318,16 +288,9 @@ std::string IXBar::Use::used_for() const {
 
 /** Visualization Information on Hash Distribution Units
  */
-std::string IXBar::Use::hash_dist_used_for() const {
-    return IXBar::hash_dist_name(hash_dist_type);
-}
-
-std::ostream &operator<<(std::ostream &out, const IXBar::Use &use) {
-    for (auto &b : use.use)
+void IXBar::Use::dbprint(std::ostream &out) const {
+    for (auto &b : use)
         out << b << Log::endl;
-    for (auto &w : use.way_use)
-        out << "[ " << w.group << ", " << w.slice << ", 0x" << hex(w.mask) << " ]" << Log::endl;
-    return out;
 }
 
 void dump(const IXBar::Use *use) {
@@ -757,9 +720,9 @@ int IXBar::HashDistUse::hash_group() const {
     int hash_group = -1;
     for (auto &ir_alloc : ir_allocations) {
         if (hash_group == -1)
-            hash_group = ir_alloc.use.hash_dist_hash.group;
+            hash_group = ir_alloc.use->hash_dist_hash_group();
         else
-            BUG_CHECK(hash_group == ir_alloc.use.hash_dist_hash.group, "Hash Groups "
+            BUG_CHECK(hash_group == ir_alloc.use->hash_dist_hash_group(), "Hash Groups "
                  "are different across units");
     }
     return hash_group;
@@ -768,7 +731,7 @@ int IXBar::HashDistUse::hash_group() const {
 unsigned IXBar::HashDistUse::hash_table_inputs() const {
     unsigned rv = 0;
     for (auto &ir_alloc : ir_allocations) {
-        rv |= ir_alloc.use.hash_table_inputs[hash_group()];
+        rv |= ir_alloc.use->hash_table_inputs[hash_group()];
     }
     return rv;
 }
@@ -784,7 +747,7 @@ bitvec IXBar::HashDistUse::destinations() const {
 bitvec IXBar::HashDistUse::galois_matrix_bits() const {
     bitvec rv;
     for (auto &ir_alloc : ir_allocations) {
-        rv |= ir_alloc.use.hash_dist_hash.galois_matrix_bits;
+        rv |= ir_alloc.use->galois_matrix_bits();
     }
     return rv;
 }
@@ -824,12 +787,14 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
 
     auto name = tbl->name;
     if (as && (allocated_attached.count(as) == 0)) {
-        update(name + "$select", rsrc->selector_ixbar);
-        allocated_attached.emplace(as, rsrc->selector_ixbar);
+        if (rsrc->selector_ixbar) {
+            update(name + "$select", *rsrc->selector_ixbar);
+            allocated_attached.emplace(as, *rsrc->selector_ixbar); }
     }
     if (mtr && (allocated_attached.count(mtr) == 0)) {
-        update(name + "$mtr", rsrc->meter_ixbar);
-        allocated_attached.emplace(mtr, rsrc->meter_ixbar);
+        if (rsrc->meter_ixbar) {
+            update(name + "$mtr", *rsrc->meter_ixbar);
+            allocated_attached.emplace(mtr, *rsrc->meter_ixbar); }
     }
     if (salu && (allocated_attached.count(salu) == 0)) {
         if (!tbl->for_dleft() && salu->for_dleft()) {
@@ -838,14 +803,18 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
             // properly.  So we hack it by simply skipping it when we see it with a
             // non-dleft table
         } else {
-            update(name + "$salu", rsrc->salu_ixbar);
-            allocated_attached.emplace(salu, rsrc->salu_ixbar);
+            if (rsrc->salu_ixbar) {
+                update(name + "$salu", *rsrc->salu_ixbar);
+                allocated_attached.emplace(salu, *rsrc->salu_ixbar); }
         }
     }
 
-    update(name + "$proxy_hash", rsrc->proxy_hash_ixbar);
-    update(name + "$gw", rsrc->gateway_ixbar);
-    update(name, rsrc->match_ixbar);
+    if (rsrc->proxy_hash_ixbar)
+        update(name + "$proxy_hash", *rsrc->proxy_hash_ixbar);
+    if (rsrc->gateway_ixbar)
+        update(name + "$gw", *rsrc->gateway_ixbar);
+    if (rsrc->match_ixbar)
+        update(name, *rsrc->match_ixbar);
     int index = 0;
     for (auto &hash_dist : rsrc->hash_dists) {
         update(name + "$hash_dist" + std::to_string(index++), hash_dist);

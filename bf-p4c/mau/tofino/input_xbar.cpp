@@ -1,6 +1,7 @@
 #include "input_xbar.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/resource.h"
@@ -38,6 +39,179 @@ std::ostream &operator<<(std::ostream &out,
 }
 
 namespace Tofino {
+
+IXBar::Use &IXBar::getUse(autoclone_ptr<::IXBar::Use> &ac) {
+    Use *rv;
+    if (ac) {
+        rv = dynamic_cast<Use *>(ac.get());
+        BUG_CHECK(rv, "Wrong kind of IXBar::Use present");
+    } else {
+        ac.reset((rv = new Use)); }
+    return *rv;
+}
+
+const IXBar::Use &IXBar::getUse(const autoclone_ptr<::IXBar::Use> &ac) {
+    BUG_CHECK(ac, "Null autoclone");
+    const Use *rv = dynamic_cast<const Use *>(ac.get());
+    BUG_CHECK(rv, "Wrong kind of IXBar::Use present");
+    return *rv;
+}
+
+void IXBar::Use::add(const IXBar::Use &alloc) {
+    ::IXBar::Use::add(alloc);
+    gw_search_bus = alloc.gw_search_bus;
+    gw_search_bus_bytes = alloc.gw_search_bus_bytes;
+    gw_hash_group = alloc.gw_hash_group;
+    parity = alloc.parity;
+
+    for (auto old_way : way_use) {
+        for (auto new_way : alloc.way_use) {
+            if (old_way.group == new_way.group)
+                BUG("Ways from supposedly different hash groups have same group?");
+        }
+    }
+    for (auto old_bits : bit_use) {
+        for (auto new_bits : alloc.bit_use) {
+            if (old_bits.group == new_bits.group)
+                BUG("Bit uses from separate hash groups are within same slice");
+        }
+    }
+    bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
+    way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
+}
+
+void IXBar::Use::dbprint(std::ostream &out) const {
+    ::IXBar::Use::dbprint(out);
+    for (auto &w : way_use)
+        out << "[ " << w.group << ", " << w.slice << ", 0x" << hex(w.mask) << " ]" << Log::endl;
+}
+
+void IXBar::Use::emit_salu_bytemasks(std::ostream &out, indent_t indent) const {
+    if (salu_input_source.data_bytemask)
+        out << indent << "data_bytemask: " << salu_input_source.data_bytemask << std::endl;
+    if (salu_input_source.hash_bytemask)
+        out << indent << "hash_bytemask: " << salu_input_source.hash_bytemask << std::endl;
+}
+
+int IXBar::Use::hash_groups() const {
+    int rv = 0;
+    unsigned counted = 0;
+    for (auto way : way_use) {
+        if (((1U << way.group) & counted) == 0) {
+            rv++;
+            counted |= 1U << way.group;
+        }
+    }
+    return rv;
+}
+
+void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &stageResource) const {
+    LOG_FEATURE("resources", 2, "add_xbar_bytes_usage (stage=" << stage <<
+                                "), table: " << used_by);
+    for (auto &byte : use) {
+        bool ternary = type == IXBar::Use::TERNARY_MATCH;
+        LOG_FEATURE("resources", 3, "\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
+        stageResource.xbarBytes[byte.loc.getOrd(ternary)].emplace(used_by, used_for(), byte);
+    }
+
+    using UsageType = BFN::Resources::HashBitResource::UsageType;
+
+    // Used for the upper 12 bits of gateways
+    for (auto &bits : bit_use) {
+        for (int b = 0; b < bits.width; b++) {
+            int bit = bits.bit + b + IXBar::HASH_INDEX_GROUPS * TableFormat::RAM_GHOST_BITS;
+            auto key = std::make_pair(bit, bits.group);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from bit_use(" << bit <<
+                                        ", " << bits.group << "): {" << used_by << " --> " <<
+                                        used_for() << ": " <<
+                                        (bits.field + std::to_string(bits.lo + b)) << "}");
+            BUG_CHECK(used_for() == "gateway", "Not gateway use of upper hash bit");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::Gateway,
+                bits.lo + b,
+                bits.field.c_str());
+        }
+    }
+
+    // Used for the bits to do exact match/atcam match
+    int wayIndex = 0;
+    for (auto &way : way_use) {
+        for (int bitOffset = 0; bitOffset < IXBar::RAM_LINE_SELECT_BITS; bitOffset++) {
+            int bit = bitOffset + way.slice * IXBar::RAM_LINE_SELECT_BITS;
+            auto key = std::make_pair(bit, way.group);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from way_use(" << bit <<
+                                        ", " << way.group << "): {" << used_by << " --> " <<
+                                        used_for() << ": " << "Hash Way " << wayIndex <<
+                                        " RAM line select" << "}");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::WayLineSelect,
+                wayIndex);
+        }
+
+        for (auto bit : bitvec(way.mask)) {
+            bit += IXBar::RAM_SELECT_BIT_START;
+            auto key = std::make_pair(bit, way.group);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from way_use(" << bit <<
+                                        ", " << way.group << "): {" << used_by << " --> " <<
+                                        used_for() << ": " << "Hash Way " << wayIndex <<
+                                        " RAM select" << "}");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::WaySelect,
+                wayIndex);
+        }
+
+        wayIndex++;
+    }
+
+    // Used for the bits provided to the selector
+    if (meter_alu_hash.allocated) {
+        auto &mah = meter_alu_hash;
+        for (auto bit : mah.bit_mask) {
+            auto key = std::make_pair(bit, mah.group);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from select_use(" << bit <<
+                                        ", " << mah.group << "): {" << used_by << " --> " <<
+                                        used_for() << ": " << "Selection Hash Bit " << bit << "}");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::SelectionBit,
+                bit);
+        }
+    }
+    // Used for the bits for hash distribution
+    auto &hdh = hash_dist_hash;
+    if (hdh.allocated) {
+        for (auto bit : hdh.galois_matrix_bits) {
+            int position = -1;
+            for (auto bit_start : hdh.galois_start_bit_to_p4_hash) {
+                int init_hb = bit_start.first;
+                auto br = bit_start.second;
+                if (bit >= init_hb && bit < init_hb + br.size())
+                    position = br.lo + (bit - init_hb);
+            }
+            auto key = std::make_pair(bit, hdh.group);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from hash_dist(" << bit <<
+                                        ", " << hdh.group << "): {" << used_by << " --> " <<
+                                        used_for() << ": " << "Hash Dist Bit " << position << "}");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::DistBit,
+                position);
+        }
+    }
+}
 
 constexpr int IXBar::HASH_INDEX_GROUPS;
 constexpr IXBar::HashDistDest_t IXBar::HD_STATS_ADR;
@@ -2192,7 +2366,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
                           const PhvInfo &phv, Use &alloc, cstring name) {
     auto pos = allocated_attached.find(as);
     if (pos != allocated_attached.end()) {
-        alloc = pos->second;
+        alloc = dynamic_cast<const Use &>(pos->second);
         return true;
     }
 
@@ -2335,7 +2509,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
                        Use &alloc, bool on_search_bus) {
     auto pos = allocated_attached.find(mtr);
     if (pos != allocated_attached.end()) {
-        alloc = pos->second;
+        alloc = dynamic_cast<const Use &>(pos->second);
         return true;
     }
 
@@ -2692,7 +2866,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
                           const PhvInfo &phv, Use &alloc, bool on_search_bus) {
     auto pos = allocated_attached.find(salu);
     if (pos != allocated_attached.end()) {
-        alloc = pos->second;
+        alloc = dynamic_cast<const Use &>(pos->second);
         return true;
     }
 
@@ -2920,11 +3094,13 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
  * hash dist object, (i.e. multiple IR nodes that are 8 bit immediate sections).  The purpose
  * of this is to subset the IR section
  */
-void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
+void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &hdu,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
         bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring name) {
-    use.ir_allocations.emplace_back();
-    auto &rv = use.ir_allocations.back();
+    hdu.ir_allocations.emplace_back();
+    auto &rv = hdu.ir_allocations.back();
+    Use *use = new Use();
+    rv.use.reset(use);
     ContByteConversion               map_alloc;
     std::map<cstring, bitvec>        fields_needed;
     safe_vector <IXBar::Use::Byte *> alloced;
@@ -2937,15 +3113,15 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         FieldManagement(&map_alloc, flo, input, &fields_needed, phv, ki, tbl);
     }
 
-    rv.use.field_list_order.insert(rv.use.field_list_order.end(), alloc_req.func->inputs.begin(),
+    use->field_list_order.insert(use->field_list_order.end(), alloc_req.func->inputs.begin(),
                                    alloc_req.func->inputs.end());
-    rv.use.symmetric_keys = alloc_req.func->symmetrically_hashed_inputs;
+    use->symmetric_keys = alloc_req.func->symmetrically_hashed_inputs;
     // Create pre-allocated bytes of the subset
-    create_alloc(map_alloc, rv.use);
+    create_alloc(map_alloc, *use);
 
     // Coordinate allocation of those bytes through Container Name/Container Byte.  Only need
     // XBar loc for assembly generation
-    for (auto &byte : rv.use.use) {
+    for (auto &byte : use->use) {
         bool found = false;
         for (auto &alloc_byte : all_reqs.use) {
             if (!byte.is_subset(alloc_byte)) continue;
@@ -2956,7 +3132,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         BUG_CHECK(found, "Byte not found in total allocation for table");
     }
 
-    auto &hdh = rv.use.hash_dist_hash;
+    auto &hdh = use->hash_dist_hash;
 
     int bits_seen = 0;
     int bits_of_my_hash_seen = 0;
@@ -3018,18 +3194,18 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     // object vs. HashDistUse, as each HashDistIRUse is output individually.
     // This is the requirement for assembly generation. The HashDistUse
     // requirements are just the OR of all of its HashDistIRUse hash_tables
-    rv.use.hash_table_inputs[hash_group] = rv.use.compute_hash_tables();
+    use->hash_table_inputs[hash_group] = use->compute_hash_tables();
     if (hdh.hash_gen_expr) {
         for (auto &slice : hdh.galois_start_bit_to_p4_hash) {
             bitvec seed = IXBarExprSeed(hdh.hash_gen_expr, slice.second);
-            rv.use.hash_seed[hash_group] |= seed << slice.first; }
+            use->hash_seed[hash_group] |= seed << slice.first; }
     } else {
-        rv.use.hash_seed[hash_group]
+        use->hash_seed[hash_group]
             |= determine_final_xor(&alloc_req.func->algorithm, phv, hdh.galois_start_bit_to_p4_hash,
-                                   rv.use.field_list_order, rv.use.total_input_bits()); }
-    rv.use.type = IXBar::Use::HASH_DIST;
-    rv.use.used_by = tbl->match_table->externalName();
-    rv.use.hash_dist_type = alloc_req.dest;
+                                   use->field_list_order, use->total_input_bits()); }
+    use->type = IXBar::Use::HASH_DIST;
+    use->used_by = tbl->match_table->externalName();
+    use->hash_dist_type = alloc_req.dest;
 }
 
 /**
@@ -3242,25 +3418,27 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
     for (auto &ir_alloc : hd_alloc.ir_allocations) {
         // For updating functions, need to have the same bytes and the same hash_table_inputs
         HashDistIRUse curr;
+        Use &curr_use = getUse(curr.use);
+        const Use &ir_alloc_use = getUse(ir_alloc.use);
         // FIXME -- why are we not just copying the whole ir_alloc (just curr = ir_alloc)?
         // what needs to be different?  Currently not copying:
         //     use.algorithm, use.galois_matrix_bitsm use, galois_start_bit_to_p4_hash,
         //     dyn_hash_name
         // so they remain uninitialized on curr?
-        curr.use.field_list_order.insert(curr.use.field_list_order.end(),
-             ir_alloc.use.field_list_order.begin(), ir_alloc.use.field_list_order.end());
-        curr.use.use.insert(curr.use.use.end(), ir_alloc.use.use.begin(), ir_alloc.use.use.end());
+        curr_use.field_list_order.insert(curr_use.field_list_order.end(),
+             ir_alloc_use.field_list_order.begin(), ir_alloc_use.field_list_order.end());
+        curr_use.use.insert(curr_use.use.end(), ir_alloc_use.use.begin(), ir_alloc_use.use.end());
         curr.p4_hash_range = ir_alloc.p4_hash_range;
         curr.dest = HD_IMMED_HI;
         curr.created_hd = ir_alloc.created_hd;
         for (int i = 0; i < HASH_GROUPS; i++) {
-            curr.use.hash_table_inputs[i] = ir_alloc.use.hash_table_inputs[i];
+            curr_use.hash_table_inputs[i] = ir_alloc_use.hash_table_inputs[i];
         }
-        curr.use.hash_dist_hash.allocated = true;
-        curr.use.hash_dist_hash.group = ir_alloc.use.hash_dist_hash.group;
-        curr.use.hash_dist_hash.hash_gen_expr = ir_alloc.use.hash_dist_hash.hash_gen_expr;
-        curr.use.type = Use::HASH_DIST;
-        curr.use.hash_dist_type = curr.dest;
+        curr_use.hash_dist_hash.allocated = true;
+        curr_use.hash_dist_hash.group = ir_alloc_use.hash_dist_hash.group;
+        curr_use.hash_dist_hash.hash_gen_expr = ir_alloc_use.hash_dist_hash.hash_gen_expr;
+        curr_use.type = Use::HASH_DIST;
+        curr_use.hash_dist_type = curr.dest;
         chained_hd_alloc.ir_allocations.emplace_back(curr);
     }
 
@@ -3722,7 +3900,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 && !(allocMatch(ternary, tbl, phv, next_alloc, alloced, max_hm_reqs)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last, max_hm_reqs))) {
                 next_alloc.clear();
-                alloc.match_ixbar.clear();
+                alloc.match_ixbar.reset();
                 return false;
             } else {
                fill_out_use(alloced, ternary);
@@ -3736,7 +3914,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 finished = true;
         }
         for (auto a : all_tbl_allocs) {
-            alloc.match_ixbar.add(a);
+            getUse(alloc.match_ixbar).add(a);
         }
 
         // Used to print initialization information for gtest
@@ -3760,8 +3938,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     } else if (tbl->layout.atcam) {
         safe_vector<IXBar::Use::Byte *> alloced;
         hash_matrix_reqs hm_reqs;
-        if (!allocMatch(false, tbl, phv, alloc.match_ixbar, alloced, hm_reqs)) {
-            alloc.match_ixbar.clear();
+        if (!allocMatch(false, tbl, phv, getUse(alloc.match_ixbar), alloced, hm_reqs)) {
+            alloc.match_ixbar.reset();
             alloced.clear();
             return false;
         } else {
@@ -3769,13 +3947,14 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         }
         LOG3("atcam " << tbl->match_table->name << " " << tbl->layout.partition_count);
 
-        if (!allocPartition(tbl, phv, alloc.match_ixbar, false)
-            && !allocPartition(tbl, phv, alloc.match_ixbar, true)) {
-            alloc.match_ixbar.clear();
+        if (!allocPartition(tbl, phv, getUse(alloc.match_ixbar), false)
+            && !allocPartition(tbl, phv, getUse(alloc.match_ixbar), true)) {
+            alloc.match_ixbar.reset();
             return false;
         }
     } else if (tbl->layout.proxy_hash) {
-        if (!allocProxyHash(tbl, phv, lo, alloc.match_ixbar, alloc.proxy_hash_ixbar)) {
+        if (!allocProxyHash(tbl, phv, lo, getUse(alloc.match_ixbar),
+                            getUse(alloc.proxy_hash_ixbar))) {
             alloc.clear_ixbar();
             return false;
         }
@@ -3785,22 +3964,22 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         auto at_mem = back_at->attached;
         if (attached_entries.at(at_mem).entries <= 0) continue;
         if (auto as = at_mem->to<IR::MAU::Selector>()) {
-            if (!allocSelector(as, tbl, phv, alloc.selector_ixbar, tbl->name)) {
+            if (!allocSelector(as, tbl, phv, getUse(alloc.selector_ixbar), tbl->name)) {
                 alloc.clear_ixbar();
                 return false; }
         } else if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
-            if (!allocMeter(mtr, tbl, phv, alloc.meter_ixbar, true) &&
-                !allocMeter(mtr, tbl, phv, alloc.meter_ixbar, false)) {
+            if (!allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar), true) &&
+                !allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar), false)) {
                 alloc.clear_ixbar();
                 return false; }
         } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-            if (!allocStateful(salu, tbl, phv, alloc.salu_ixbar, true) &&
-                !allocStateful(salu, tbl, phv, alloc.salu_ixbar, false)) {
+            if (!allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar), true) &&
+                !allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar), false)) {
                 alloc.clear_ixbar();
                 return false; } } }
 
-    if (!allocGateway(tbl, phv, alloc.gateway_ixbar, lo, false) &&
-        !allocGateway(tbl, phv, alloc.gateway_ixbar, lo, true)) {
+    if (!allocGateway(tbl, phv, getUse(alloc.gateway_ixbar), lo, false) &&
+        !allocGateway(tbl, phv, getUse(alloc.gateway_ixbar), lo, true)) {
         alloc.clear_ixbar();
         return false; }
 
@@ -3823,7 +4002,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
  *  IXBar structure, so that when a new table is allocated to the IXBar, the previous stage table
  *  resources are known
  */
-void IXBar::update(cstring name, const Use &alloc) {
+void IXBar::update(cstring name, const ::IXBar::Use &alloc_) {
+    auto &alloc = dynamic_cast<const Use &>(alloc_);
     auto &use = alloc.type == Use::TERNARY_MATCH ? ternary_use.base() : exact_use.base();
     auto &fields = alloc.type == Use::TERNARY_MATCH ? ternary_fields : exact_fields;
     cstring xbar_type = alloc.type == Use::TERNARY_MATCH ? "TCAM" : "SRAM";
@@ -3952,7 +4132,7 @@ void IXBar::update(cstring name, const Use &alloc) {
 
 void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
     for (auto &ir_alloc : hash_dist_alloc.ir_allocations) {
-        update(name, ir_alloc.use);
+        update(name, *ir_alloc.use);
     }
 
     for (int i = 0; i < HASH_TABLES; i++) {

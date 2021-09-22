@@ -7,6 +7,15 @@
 #include "lib/bitops.h"
 #include "lib/range.h"
 
+/* TODO -- we don't yet have a flatrock memory alloc, so this code ends up getting used
+ * for it.  We guard a number of places to avoid crashes, but all IS_FLATROCK code should
+ * go away once we have flatrock alloc */
+#ifdef HAVE_FLATROCK
+#define IS_FLATROCK     (Device::currentDevice() == Device::FLATROCK)
+#else
+#define IS_FLATROCK     0
+#endif
+
 // FIXME -- should be in algorithm.h
 template<class C, class Pred> inline bool any_of(C c, Pred pred) {
     return std::any_of(std::begin(c), std::end(c), pred); }
@@ -256,23 +265,25 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
         ActionData::FormatType_t ft, int entries, int stage_table,
         attached_entries_t attached_entries) {
     table_alloc *ta;
+    auto gw_ixbar = resources->gateway_ixbar.get();
+    // auto gw_ixbar = dynamic_cast<const IXBar::Use *>(resources->gateway_ixbar.get());
     if (!t->conditional_gateway_only()) {
-        const IXBar::Use *match_ixbar = &resources->match_ixbar;
+        auto match_ixbar = resources->match_ixbar.get();
+        // auto match_ixbar = dynamic_cast<const IXBar::Use *>(resources->match_ixbar.get());
         if (lo->layout.gateway_match || !ft.matchThisStage())
-            match_ixbar = &resources->gateway_ixbar;
+            match_ixbar = gw_ixbar;
         ta = new table_alloc(t, match_ixbar, &resources->table_format, &resources->instr_mem, af,
                              &resources->memuse, lo, ft, entries, stage_table,
                              std::move(attached_entries));
     } else {
-        ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, nullptr, nullptr,
-                             &resources->memuse, lo, ft, entries, stage_table,
-                             std::move(attached_entries));
+        ta = new table_alloc(t, gw_ixbar, nullptr, nullptr, nullptr, &resources->memuse, lo, ft,
+                             entries, stage_table, std::move(attached_entries));
     }
     LOG2("Adding table " << ta->table->name << " with " << entries << " entries");
     tables.push_back(ta);
     if (gw != nullptr)  {
-        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, nullptr,
-                                      nullptr, &resources->memuse, lo, ft, -1, stage_table, {});
+        auto *ta_gw = new table_alloc(gw, gw_ixbar, nullptr, nullptr, nullptr, &resources->memuse,
+                                      lo, ft, -1, stage_table, {});
         LOG2("Adding gateway table " << ta_gw->table->name << " to table "
              << ta_gw->table->name);
         ta_gw->link_table(ta);
@@ -963,11 +974,14 @@ safe_vector<int> Memories::available_match_SRAMs_per_row(unsigned selected_colum
 void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
     for (auto *ta : exact_tables) {
+        if (IS_FLATROCK) continue;  // TODO
+        auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+        BUG_CHECK(match_ixbar, "No match ixbar allocated?");
         for (auto u_id : ta->allocation_units()) {
             (*ta->memuse)[u_id].ways.clear();
             (*ta->memuse)[u_id].row.clear();
             int index = 0;
-            for (auto &way : ta->match_ixbar->way_use) {
+            for (auto &way : match_ixbar->way_use) {
                 SRAM_group *wa
                       = new SRAM_group(ta, ta->layout_option->way_sizes[index],
                                        ta->layout_option->way.width, index, way.group,
@@ -980,7 +994,7 @@ void Memories::break_exact_tables_into_ways() {
                 index++;
             }
         }
-        BUG_CHECK(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size(),
+        BUG_CHECK(match_ixbar->way_use.size() == ta->layout_option->way_sizes.size(),
                   "Mismatch of memory ways and ixbar ways");
     }
 
@@ -1213,11 +1227,14 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         // the RAM. Since JBAY HW has a way to deal with this (by introducing a
         // bubble) stashes are not required. We disable it for now.
         for (auto *ta : exact_tables) {
+            if (IS_FLATROCK) continue;  // TODO
+            auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+            BUG_CHECK(match_ixbar, "match_ixbar wrong type");
             for (auto u_id : ta->allocation_units()) {
                 LOG5("Exact match table " << u_id.build_name());
                 auto &alloc = (*ta->memuse)[u_id];
                 int wayno = 0;
-                auto ixbar_way = ta->match_ixbar->way_use.begin();
+                auto ixbar_way = match_ixbar->way_use.begin();
                 // Store stash rows per hash group which need stash allocation
                 std::map<int, std::vector<int>> stash_map;
                 for (auto mem_way : alloc.ways) {
@@ -1401,9 +1418,12 @@ void Memories::break_atcams_into_partitions() {
                 part->logical_table = lt;
                 atcam_partitions.push_back(part);
             }
-            BUG_CHECK(ta->match_ixbar->way_use.size() == 1, "Somehow multiple ixbar ways "
+            if (IS_FLATROCK) continue;  // TODO
+            auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+            BUG_CHECK(match_ixbar, "No match ixbar allocated?");
+            BUG_CHECK(match_ixbar->way_use.size() == 1, "Somehow multiple ixbar ways "
                       "calculated for an ATCAM table");
-            auto way = ta->match_ixbar->way_use[0];
+            auto way = match_ixbar->way_use[0];
             for (int j = 0; j < ta->layout_option->partition_sizes[lt]; j++) {
                 (*ta->memuse)[u_id].ways.emplace_back(search_bus_per_lt, way.mask);
             }
@@ -3515,8 +3535,11 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row
     int lo = TableFormat::SINGLE_RAM_BYTES * search_bus.width_section;
 
     auto avail_bytes = exact_ta->table_format->avail_sb_bytes;
-    if (avail_bytes.getslice(lo, ta->match_ixbar->gw_search_bus_bytes).popcount()
-        != ta->match_ixbar->gw_search_bus_bytes)
+    if (IS_FLATROCK) return true;  // TODO
+    auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+    BUG_CHECK(match_ixbar, "No match ixbar allocated?");
+    if (avail_bytes.getslice(lo, match_ixbar->gw_search_bus_bytes).popcount()
+        != match_ixbar->gw_search_bus_bytes)
         return false;
     return true;
 }
@@ -3548,6 +3571,9 @@ bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_se
  *  share, then it finds the first free search bus to use
  */
 bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name) {
+    if (IS_FLATROCK) return true;  // TODO
+    auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+    BUG_CHECK(match_ixbar, "No match ixbar allocated?");
     for (int i = 0; i < SRAM_ROWS; i++) {
         for (int j = 0; j < GATEWAYS_PER_ROW; j++) {
             if (gateway_use[i][j]) continue;
@@ -3558,7 +3584,7 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
                 if (exact_ta == nullptr) continue;
                 // FIXME: currently we have to fold in the table format to this equation
                 // in order to share a format
-                if (ta->match_ixbar->gw_search_bus) {
+                if (match_ixbar->gw_search_bus) {
                     if (gw_bytes_reserved[i][k])
                         continue;
                     if (!gw_search_bus_fit(ta, exact_ta, i, k))
@@ -3566,16 +3592,16 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
                 }
                 // Because multiple ways could have different hash groups, this check is no
                 // longer valid
-                if (ta->match_ixbar->gw_hash_group) {
+                if (match_ixbar->gw_hash_group) {
                     auto sbi = sram_search_bus[i][k];
-                    if (sbi.hash_group != ta->match_ixbar->bit_use[0].group)
+                    if (sbi.hash_group != match_ixbar->bit_use[0].group)
                         continue;
                     // FIXME: Currently all ways do not share the same hash_group
-                    // if (ta->match_ixbar->bit_use[0].group
-                       //  != exact_ta->match_ixbar->way_use[0].group)
+                    // if (match_ixbar->bit_use[0].group
+                       //  != exact_match_ixbar->way_use[0].group)
                          // continue;
                 }
-                exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
+                exact_ta->attached_gw_bytes += match_ixbar->gw_search_bus_bytes;
                 gw_bytes_reserved[i][k] = true;
                 alloc.row.clear();
                 alloc.row.emplace_back(i, k);
@@ -3724,6 +3750,9 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
  */
 bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
     for (auto *ta : payload_gws) {
+        if (IS_FLATROCK) continue;  // TODO
+        auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+        BUG_CHECK(match_ixbar, "No match ixbar allocated?");
         safe_vector<UniqueId> u_ids;
         UniqueId unique_id;
         if (ta->table_link) {
@@ -3738,7 +3767,7 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
             alloc.used_by = ta->table->build_gateway_name();
-            if (alloc_search_bus != ta->match_ixbar->search_data())
+            if (alloc_search_bus != match_ixbar->search_data())
                 continue;
 
             bool gw_found = false;
@@ -3771,6 +3800,9 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
  */
 bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
     for (auto *ta : normal_gws) {
+        bool need_search_bus = false;
+        if (auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar)) {
+            need_search_bus = match_ixbar->search_data(); }
         safe_vector<UniqueId> u_ids = ta->table_link
                                           ? ta->table_link->allocation_units(nullptr, true)
                                           : ta->allocation_units(nullptr, true);
@@ -3779,7 +3811,7 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
             alloc.used_by = used_by;
-            if (alloc_search_bus != ta->match_ixbar->search_data())
+            if (alloc_search_bus != need_search_bus)
                 continue;
             bool gw_found = false;
             if (alloc_search_bus)

@@ -9,6 +9,7 @@
 #include "lib/json.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 struct HashFuncLoc {
@@ -87,7 +88,7 @@ class GenerateDynamicHashJson : public MauInspector {
     bool all_placed = true;
 
     bool preorder(const IR::MAU::Table *tbl) override;
-    void gen_ixbar_json(const IXBar::Use &ixbar_use,
+    void gen_ixbar_json(const IXBar::Use *ixbar_use,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
         const IR::NameList *algorithms, int hash_width = -1);
 
@@ -98,7 +99,7 @@ class GenerateDynamicHashJson : public MauInspector {
     void gen_algo_json(Util::JsonObject *_dhc, const IR::MAU::HashGenExpression *hge);
     void gen_single_algo_json(Util::JsonArray *_algos, const IR::MAU::HashFunction *alg,
         cstring alg_name, bool &is_default);
-    void gen_hash_json(Util::JsonArray *_hash_cfgs, int stage, IXBar::Use &ixbar_use,
+    void gen_hash_json(Util::JsonArray *_hash_cfgs, int stage, Tofino::IXBar::Use &ixbar_use,
         int &hash_bit_width);
     void gen_field_list_json(Util::JsonObject *_field_list, const IR::MAU::HashGenExpression *hge,
         std::map<cstring, cstring> &fieldNames);

@@ -5,6 +5,24 @@
 
 namespace Flatrock {
 
+IXBar::Use &IXBar::getUse(autoclone_ptr<::IXBar::Use> &ac) {
+    Use *rv;
+    if (ac) {
+        rv = dynamic_cast<Use *>(ac.get());
+        BUG_CHECK(rv, "Wrong kind of IXBar::Use present");
+    } else {
+        ac.reset((rv = new Use)); }
+    return *rv;
+}
+
+const IXBar::Use &IXBar::getUse(const autoclone_ptr<::IXBar::Use> &ac) {
+    BUG_CHECK(ac, "Null autoclone");
+    const Use *rv = dynamic_cast<const Use *>(ac.get());
+    BUG_CHECK(rv, "Wrong kind of IXBar::Use present");
+    return *rv;
+}
+
+
 static PHV::Container word_base(PHV::Container c) {
     switch (c.size()) {
     case 8:
@@ -36,11 +54,13 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 
 bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
                      Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use) {
-    auto next = byte_use.begin();
+    // Find the first free byte slot
+    auto next = std::find_if(byte_use.begin(), byte_use.end(),
+            [](std::pair<PHV::Container, int> &a) { return !a.first; } );
     for (auto *byte : to_alloc) {
-        while (next != byte_use.end() && next->first) next++;
         if (next == byte_use.end()) return false;
-        byte->loc = Loc(0, next - byte_use.begin()); }
+        byte->loc = Loc(0, next - byte_use.begin());
+        while (++next != byte_use.end() && next->first) {} }
     return true;
 }
 
@@ -71,12 +91,12 @@ bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
             if (word == exact_word_use.end()) return false;
             for (auto *b : grp)
                 b->loc = Loc(1, word - exact_word_use.begin());
-            ++word;
+            while (++word != exact_word_use.end() && word->first) {}
         } else {
             for (auto *b : grp) {
                 if (byte == exact_byte_use.end()) return false;
                 b->loc = Loc(0, byte - exact_byte_use.begin());
-                ++byte; } } }
+                while (++byte != exact_byte_use.end() && byte->first) {} } } }
     return true;
 }
 
@@ -152,11 +172,12 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
-                            ContByteConversion &map_alloc, Use &alloc) {
+IXBar::Use *IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
+                                   ContByteConversion &map_alloc) {
     std::map<cstring, bitvec> fields_needed;
     KeyInfo ki;
     ki.is_atcam = tbl->layout.atcam;
+    Use *alloc = new Use();
 
     // For overlapping keys of different types where one type is "range", the
     // range key takes precedence to correctly set up dirtcam bits
@@ -174,16 +195,17 @@ void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
         }
         validKeys[idx] = ixbar_read;
     }
-    if (validKeys.empty()) return;
+    if (validKeys.empty()) return alloc;
 
     for (auto vkey : validKeys) {
-        FieldManagement(&map_alloc, alloc.field_list_order, vkey.second, &fields_needed,
+        safe_vector<const IR::Expression *> field_list_order;
+        FieldManagement(&map_alloc, field_list_order, vkey.second, &fields_needed,
                         phv, ki, tbl);
     }
 
-    create_alloc(map_alloc, alloc);
-    LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
-    return;
+    create_alloc(map_alloc, *alloc);
+    LOG3("need " << alloc->use.size() << " bytes for table " << tbl->name);
+    return alloc;
 }
 
 bool IXBar::exact_find_hash(Use &alloc, const LayoutOption *lo) {
@@ -210,7 +232,7 @@ bool IXBar::exact_find_hash(Use &alloc, const LayoutOption *lo) {
     // FIXME -- Flatrock cuckoo have exact 2 ways, and BPH do not have ways, so this is
     // mostly irrelevant, but needs to match the layout option.  Hack to make something
     // work until TablePlacement and Memories are updated
-    alloc.way_use.resize(lo->way_sizes.size(), Use::Way(0, 0, 0));
+    // alloc.way_use.resize(lo->way_sizes.size(), Use::Way(0, 0, 0));
 
     return true;
 }
@@ -219,17 +241,19 @@ bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                        const LayoutOption *lo, const ActionData::Format::Use *af) {
     if (tbl->match_key.empty()) return true;
     LOG1("IXBar::allocExact(" << tbl->name << ")");
+    BUG_CHECK(!alloc.match_ixbar, "match ixbar already allocated?");
     ContByteConversion map_alloc;
-    setupMatchAlloc(tbl, phv, map_alloc, alloc.match_ixbar);
-    if (!alloc.match_ixbar.use.empty()) {
+    Use *ixbar = setupMatchAlloc(tbl, phv, map_alloc);
+    alloc.match_ixbar.reset(ixbar);
+    if (!ixbar->use.empty()) {
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
-        if (!exact_find_hash(alloc.match_ixbar, lo) ||
-            !exact_find_alloc(alloc.match_ixbar.use, xbar_alloced)) {
-            alloc.match_ixbar.clear();
+        if (!exact_find_hash(*ixbar, lo) ||
+            !exact_find_alloc(ixbar->use, xbar_alloced)) {
+            alloc.match_ixbar.reset();
             return false; }
-        alloc.match_ixbar.type = Use::EXACT_MATCH;
-        alloc.match_ixbar.used_by = tbl->name;
-        update(tbl->name, alloc.match_ixbar); }
+        ixbar->type = Use::EXACT_MATCH;
+        ixbar->used_by = tbl->name;
+        update(tbl->name, *ixbar); }
     if (lo || af) return true;
     return true;
 }
@@ -238,16 +262,18 @@ bool IXBar::allocTernary(const IR::MAU::Table *tbl, const PhvInfo &phv, TableRes
                          const LayoutOption *lo, const ActionData::Format::Use *af) {
     if (tbl->match_key.empty()) return true;
     LOG1("IXBar::allocTernary(" << tbl->name << ")");
+    BUG_CHECK(!alloc.match_ixbar, "match ixbar already allocated?");
     ContByteConversion map_alloc;
-    setupMatchAlloc(tbl, phv, map_alloc, alloc.match_ixbar);
-    if (!alloc.match_ixbar.use.empty()) {
+    Use *ixbar = setupMatchAlloc(tbl, phv, map_alloc);
+    alloc.match_ixbar.reset(ixbar);
+    if (!ixbar->use.empty()) {
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
-        if (!ternary_find_alloc(alloc.match_ixbar.use, xbar_alloced)) {
-            alloc.match_ixbar.clear();
+        if (!ternary_find_alloc(ixbar->use, xbar_alloced)) {
+            alloc.match_ixbar.reset();
             return false; }
-        alloc.match_ixbar.type = Use::TERNARY_MATCH;
-        alloc.match_ixbar.used_by = tbl->name;
-        update(tbl->name, alloc.match_ixbar); }
+        ixbar->type = Use::TERNARY_MATCH;
+        ixbar->used_by = tbl->name;
+        update(tbl->name, *ixbar); }
     if (lo || af) return true;
     return true;
 }
@@ -299,26 +325,27 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
          auto at_mem = back_at->attached;
          if (attached_entries.at(at_mem).entries <= 0) continue;
          if (auto as = at_mem->to<IR::MAU::Selector>()) {
-             if (!allocSelector(as, tbl, phv, alloc.selector_ixbar, tbl->name)) {
+             if (!allocSelector(as, tbl, phv, getUse(alloc.selector_ixbar), tbl->name)) {
                  alloc.clear_ixbar();
                  return false; }
          } else if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
-             if (!allocMeter(mtr, tbl, phv, alloc.meter_ixbar)) {
+             if (!allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar))) {
                  alloc.clear_ixbar();
                  return false;
              }
          } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
-             if (!allocStateful(salu, tbl, phv, alloc.salu_ixbar)) {
+             if (!allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar))) {
                  alloc.clear_ixbar();
                  return false; } } }
 
-    if (!allocGateway(tbl, phv, alloc.gateway_ixbar, lo)) {
+    if (!allocGateway(tbl, phv, getUse(alloc.gateway_ixbar), lo)) {
         alloc.clear_ixbar();
         return false; }
     return true;
 }
 
-void IXBar::update(cstring /* table_name */, const Use &use) {
+void IXBar::update(cstring /* table_name */, const ::IXBar::Use &use_) {
+    auto &use = dynamic_cast<const Use &>(use_);
     if (use.empty()) return;
     switch (use.type) {
     case Use::EXACT_MATCH:

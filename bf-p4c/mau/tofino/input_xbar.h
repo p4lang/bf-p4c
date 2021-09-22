@@ -3,19 +3,6 @@
 
 #include "bf-p4c/mau/input_xbar.h"
 
-#include <array>
-#include <map>
-#include <random>
-#include <unordered_set>
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/mau/attached_entries.h"
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "ir/ir.h"
-#include "lib/alloc.h"
-#include "lib/hex.h"
-#include "lib/safe_vector.h"
-
 namespace Tofino {
 
 struct IXBar : public ::IXBar {
@@ -168,7 +155,144 @@ struct IXBar : public ::IXBar {
     static constexpr auto HD_HASHMOD = ::IXBar::HD_HASHMOD;
     static constexpr auto HD_DESTS = ::IXBar::HD_DESTS;
 
-    using Use = ::IXBar::Use;
+    struct Use : public ::IXBar::Use {
+        bool            gw_search_bus = false;
+        int             gw_search_bus_bytes = 0;
+        bool            gw_hash_group = false;
+        parity_status_t parity = PARITY_NONE;
+
+        bool search_data() const { return gw_search_bus || gw_hash_group; }
+        bool is_parity_enabled() const { return parity == PARITY_ENABLED; }
+
+        HashDistDest_t hash_dist_type = HD_DESTS;
+        std::string hash_dist_used_for() const {
+            return IXBar::hash_dist_name(hash_dist_type); }
+
+        /* tracking bits that are placed into the upper 12 bits of a hash group
+         * (with an identity hash) for use by a gateway */
+        struct Bits {
+            cstring     field;
+            int         group;
+            int         lo, bit, width;
+            Bits(cstring f, int g, int l, int b, int w)
+            : field(f), group(g), lo(l), bit(b), width(w) {}
+            int hi() const { return lo + width - 1; } };
+        safe_vector<Bits>    bit_use;
+
+        /* hash tables used for way address computation */
+        struct Way {
+            int         group, slice;  // group refers to which 8 of the hash groups used,
+                                       // slice refers to the 10b way used
+                                       // slice = bit / 10
+            // Upper 12 bits. Also want a seed over the bits used in the mask.
+            unsigned    mask;
+            Way() = delete;
+            Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
+        safe_vector<Way>     way_use;
+
+        /* tracks hash use for Stateful and Selectors (and meter?) */
+        struct MeterAluHash {
+            bool allocated = false;
+            int group = -1;
+            bitvec bit_mask;
+            IR::MAU::HashFunction algorithm;
+            std::map<int, const IR::Expression *> computed_expressions;
+
+            void clear() {
+                allocated = false;
+                group = -1;
+                bit_mask.clear();
+                // identity_positions.clear();
+                computed_expressions.clear();
+            }
+        } meter_alu_hash;
+        const std::map<int, const IR::Expression *> &hash_computed_expressions() const {
+            return meter_alu_hash.computed_expressions; }
+
+        /* tracks hash dist use (and hashes */
+        struct HashDistHash {
+            bool allocated = false;
+            int group = -1;
+            bitvec galois_matrix_bits;
+            IR::MAU::HashFunction algorithm;
+            std::map<int, le_bitrange> galois_start_bit_to_p4_hash;
+            const IR::Expression *hash_gen_expr = nullptr;   // expression from HashGenExpr
+            cstring name;    // Original name in case of hash distribution unit sharing
+
+            void clear() {
+                allocated = false;
+                group = -1;
+                galois_matrix_bits.clear();
+                galois_start_bit_to_p4_hash.clear();
+            }
+        } hash_dist_hash;
+        int hash_dist_hash_group() const { return hash_dist_hash.group; }
+
+        struct ProxyHashKey {
+            bool allocated = false;
+            int group = -1;
+            bitvec hash_bits;
+            IR::MAU::HashFunction algorithm;
+
+            void clear() {
+                allocated = false;
+                group = -1;
+                hash_bits.clear();
+            }
+        } proxy_hash_key_use;
+
+        struct SaluInputSource {
+            unsigned    data_bytemask = 0;
+            unsigned    hash_bytemask = 0;  // redundant with meter_alu_hash.bit_mask?
+
+            void clear() { data_bytemask = hash_bytemask = 0; }
+            bool empty() const { return !data_bytemask && !hash_bytemask; }
+        } salu_input_source;
+
+        // The order in the P4 program that the fields appear in the list
+        safe_vector<const IR::Expression *> field_list_order;
+        LTBitMatrix symmetric_keys;
+
+        void clear() {
+            ::IXBar::Use::clear();
+            gw_search_bus = false;
+            gw_search_bus_bytes = 0;
+            gw_hash_group = false;
+            parity = PARITY_NONE;
+            hash_dist_type = HD_DESTS;
+            hash_table_inputs.clear();
+            bit_use.clear();
+            way_use.clear();
+            meter_alu_hash.clear();
+            hash_seed.clear();
+            hash_dist_hash.clear();
+            proxy_hash_key_use.clear();
+            salu_input_source.clear();
+            field_list_order.clear();
+        }
+        Use *clone() const { return new Use(*this); }
+        bool empty() const {
+            return ::IXBar::Use::empty() && bit_use.empty() && way_use.empty() &&
+                !meter_alu_hash.allocated && !hash_dist_hash.allocated &&
+                !proxy_hash_key_use.allocated && salu_input_source.empty(); }
+        void dbprint(std::ostream &) const;
+
+        void add(const Use &alloc);
+        void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
+                            const TableMatch *fmt, const IR::MAU::Table *) const;
+        void emit_salu_bytemasks(std::ostream &out, indent_t indent) const;
+        bitvec galois_matrix_bits() const { return hash_dist_hash.galois_matrix_bits; }
+        int hash_groups() const;
+        bitvec meter_bit_mask() const { return meter_alu_hash.bit_mask; }
+        int total_input_bits() const {
+            int rv = 0;
+            for (auto fl : field_list_order) {
+                rv += fl->type->width_bits(); }
+            return rv; }
+        void update_resources(int, BFN::Resources::StageResources &) const;
+    };
+    static Use &getUse(autoclone_ptr<::IXBar::Use> &ac);
+    static const Use &getUse(const autoclone_ptr<::IXBar::Use> &ac);
     using HashDistAllocPostExpand = ::IXBar::HashDistAllocPostExpand;
     using HashDistIRUse = ::IXBar::HashDistIRUse;
     using HashDistUse = ::IXBar::HashDistUse;
@@ -369,7 +493,7 @@ struct IXBar : public ::IXBar {
                     const LayoutOption *lo, const ActionData::Format::Use *af,
                     const attached_entries_t &ae);
 
-    void update(cstring name, const Use &alloc);
+    void update(cstring name, const ::IXBar::Use &alloc);
     void update(cstring name, const HashDistUse &hash_dist_alloc);
     virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
     virtual void update(const IR::MAU::Table *tbl);

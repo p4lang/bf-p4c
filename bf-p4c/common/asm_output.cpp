@@ -59,11 +59,12 @@ Slice Slice::join(Slice &a) const {
     return Slice(field, lo, a.hi);
 }
 
-int Slice::bytealign() const {
+int Slice::align(int size) const {
+    BUG_CHECK((size & (size - 1)) == 0, "size not power of two");
     if (field) {
         auto &alloc = field->for_bit(lo);
-        return (lo - alloc.field_slice().lo + alloc.container_slice().lo) & 7; }
-    return lo & 7;
+        return (lo - alloc.field_slice().lo + alloc.container_slice().lo) & (size-1); }
+    return lo & (size-1);
 }
 
 Slice Slice::fullbyte() const {

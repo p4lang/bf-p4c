@@ -21,7 +21,7 @@ TableResourceAlloc *TableResourceAlloc::rename(const IR::MAU::Table *tbl, int st
             break; } }
 
     if (!has_gateway)
-        gateway_ixbar.clear();
+        gateway_ixbar.reset();
 
     return this;
 }

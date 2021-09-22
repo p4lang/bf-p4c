@@ -110,7 +110,8 @@ class Slice {
     safe_vector<Slice> split(const safe_vector<Slice> &vec,
                              safe_vector<Slice> &splitters);
     int width() const { return hi - lo + 1; }
-    int bytealign() const;
+    int align(int size) const;
+    int bytealign() const { return align(8); }
     Slice fullbyte() const;
     const PHV::Field *get_field() const { return field; }
     int get_lo() const { return lo; }

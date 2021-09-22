@@ -12,6 +12,8 @@
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/resource.h"
@@ -396,33 +398,6 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     return out;
 }
 
-class MauAsmOutput::TableMatch {
- public:
-    safe_vector<Slice>       match_fields;
-    safe_vector<Slice>       ghost_bits;
-
-    struct ProxyHashSlice {
-        le_bitrange bits;
-        explicit ProxyHashSlice(le_bitrange b) : bits(b) {}
-
-     public:
-        friend std::ostream &operator<<(std::ostream &, const ProxyHashSlice &);
-    };
-    safe_vector<ProxyHashSlice> proxy_hash_fields;
-    bool proxy_hash = false;
-    bool identity_hash = false;
-
-    const IR::MAU::Table     *table = nullptr;
-    void init_proxy_hash(const IR::MAU::Table *tbl);
-
-    TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
-};
-
-std::ostream &operator<<(std::ostream &out, const MauAsmOutput::TableMatch::ProxyHashSlice &sl) {
-    out << "hash_group" << "(" << sl.bits.lo << ".." << sl.bits.hi << ")";
-    return out;
-}
-
 void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
         const ActionData::Parameter *param, le_bitrange adt_range, cstring alias,
         safe_vector<ActionData::Argument> &full_args, cstring action_name) const {
@@ -643,232 +618,11 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
     out << " }" << std::endl;
 }
 
-
-struct FormatHash {
-    using RangeOfConstant = std::map<le_bitrange, const IR::Constant*>;
-    const safe_vector<Slice>         *match_data;
-    const std::multimap<int, Slice>  *match_data_map;
-    const RangeOfConstant            *constant_map;
-    const Slice                      *ghost;
-    IR::MAU::HashFunction            func;
-    int                              total_bits = 0;
-    le_bitrange                      *field_range;
-
-    FormatHash(const safe_vector<Slice> *md, const std::multimap<int, Slice> *mdm,
-               const std::map<le_bitrange, const IR::Constant*> *cm, const Slice *g,
-               IR::MAU::HashFunction f, int tb = 0, le_bitrange *fr = nullptr)
-        : match_data(md), match_data_map(mdm), constant_map(cm), ghost(g),
-        func(f), total_bits(tb), field_range(fr) {
-        BUG_CHECK(match_data == nullptr || match_data_map == nullptr, "FormatHash not "
-                  "configured correctly");
-    }
-
-    // functors for formatting expressions as hash expression in bfa.  FIXME -- Should be
-    // folded in to operator<< or as non-static methods?  Problem is we need dynamic
-    // dispatch on IR types, which can only be done with visitors (or messy dynamic_cast
-    // chains)  So we just define them as nested classes here.
-    class SliceWidth;   // find maximum slice width that can output as one line
-    class ZeroHash;     // true iff slice contributes nothing to hash table (all 0s)
-    class Output;       // output a .bfa expression for a slice of a hash expression
-};
-
-std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
-    if (hash.field_range != nullptr) {
-        FormatHash hash2(hash.match_data, hash.match_data_map, hash.constant_map,
-                         hash.ghost, hash.func, hash.total_bits);
-        out << "slice(" << hash2 << ", " << hash.field_range->lo << "..";
-        out << hash.field_range->hi << ")";
-        return out;
-    }
-
-    if (hash.func.type == IR::MAU::HashFunction::IDENTITY) {
-        BUG_CHECK(hash.match_data, "For an identity, must be a standard vector");
-        out << "stripe(" << emit_vector(*hash.match_data) << ")";
-    } else if (hash.func.type == IR::MAU::HashFunction::RANDOM) {
-        BUG_CHECK(hash.match_data, "For a random, must be a standard vector");
-        if (!hash.match_data->empty()) {
-            out << "random(" << emit_vector(*hash.match_data, ", ") << ")";
-            if (hash.ghost) out << " ^ ";
-        }
-        if (hash.ghost) {
-            out << *hash.ghost;
-        }
-    } else if (hash.func.type == IR::MAU::HashFunction::CRC) {
-        BUG_CHECK(hash.match_data_map, "For a crc, must be a map");
-        out << "stripe(crc";
-        if (hash.func.reverse) out << "_rev";
-        out << "(0x" << hex(hash.func.poly) << ", ";
-        out << "0x" << hex(hash.func.init) << ", ";
-        out << "0x" << hex(hash.func.final_xor) << ", ";
-        out << hash.total_bits << ", ";
-        out << *hash.match_data_map;
-        // could not use the operator<< on std::map because the le_bitrange
-        // does not print to valid json range.
-        if (hash.constant_map) {
-            out << ", {";
-            const char *sep = " ";
-            for (const auto &kv : *hash.constant_map) {
-                out << sep << kv.first.lo << ".." << kv.first.hi << ": " << kv.second;
-                sep = ", ";
-            }
-            out << " }"; }
-        out << ")";
-        // FIXME -- final_xor needs to go into the seed for the hash group
-        out << ")";
-    } else if (hash.func.type == IR::MAU::HashFunction::XOR) {
-        // fixme -- should be able to implement this in a hash function
-        BUG("xor hashing algorithm not supported");
-    } else if (hash.func.type == IR::MAU::HashFunction::CSUM) {
-        BUG("csum hashing algorithm not supported");
-    } else {
-        BUG("unknown hashing algorithm %d", hash.func.type);
-    }
-    return out;
-}
-
-class MauAsmOutput::EmitHashExpression : public Inspector {
-    const MauAsmOutput          &self;
-    std::ostream                &out;
-    indent_t                    indent;
-    int                         bit;
-    const safe_vector<Slice>    &match_data;
-
-    bool preorder(const IR::Concat *c) override {
-        visit(c->right, "right");
-        bit += c->right->type->width_bits();
-        visit(c->left, "left");
-        return false; }
-    bool preorder(const IR::BFN::SignExtend *c) override {
-        le_bitrange     bits;
-        if (auto *field = self.phv.field(c->expr, &bits)) {
-            Slice f(field, bits);
-            int ext = c->type->width_bits() - bits.size();
-            out << indent << bit << ".." << (bit + bits.size() - 1) << ": " << f << std::endl
-                << indent << (bit + bits.size());
-            if (ext > 1) out << ".." << (bit + c->type->width_bits() - 1);
-            out << ": stripe(" << Slice(f, bits.size()-1) << ")" << std::endl;
-        } else {
-            BUG("%s too complex in EmitHashExpression", c);
-        }
-        return false; }
-    bool preorder(const IR::Constant *) override {
-        // FIXME -- if the constant is non-zero, it should be included into the 'seed'
-        return false; }
-    bool preorder(const IR::Expression *e) override {
-        le_bitrange     bits;
-        if (auto *field = self.phv.field(e, &bits)) {
-            Slice sl(field, bits);
-            for (auto match_sl : match_data) {
-                auto overlap = sl & match_sl;
-                if (!overlap) continue;
-                auto bit = this->bit + overlap.get_lo() - sl.get_lo();
-                out << indent << bit;
-                if (overlap.width() > 1)
-                    out << ".." << (bit + overlap.width() - 1);
-                out << ": " << overlap << std::endl; }
-        } else if (e->is<IR::Slice>()) {
-            // allow for slice on HashGenExpression
-            return true;
-        } else {
-            BUG("%s too complex in EmitHashExpression", e);
-        }
-        return false; }
-    bool preorder(const IR::MAU::HashGenExpression *hge) override {
-        auto *fl = hge->expr->to<IR::MAU::FieldListExpression>();
-        BUG_CHECK(fl, "HashGenExpression not a field list: %s", hge);
-        if (hge->algorithm.type == IR::MAU::HashFunction::IDENTITY) {
-            // For identity, just output each field individually
-            for (auto *el : boost::adaptors::reverse(fl->components)) {
-                visit(el, "component");
-                bit += el->type->width_bits(); }
-            return false; }
-        le_bitrange br = { 0, hge->hash_output_width };
-        if (auto *sl = getParent<IR::Slice>()) {
-            br.lo = sl->getL();
-            br.hi = sl->getH(); }
-        out << indent << bit << ".." << (bit + br.size() - 1) << ": ";
-        safe_vector<const IR::Expression *> field_list_order;
-        int total_bits = 0;
-        for (auto e : fl->components)
-            field_list_order.push_back(e);
-        if (hge->algorithm.ordered()) {
-            std::multimap<int, Slice> match_data_map;
-            std::map<le_bitrange, const IR::Constant*> constant_map;
-            LTBitMatrix sym_keys;  // FIXME -- needed?  always empty for now
-            self.emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                                       field_list_order, sym_keys, total_bits);
-            out << FormatHash(nullptr, &match_data_map, &constant_map, nullptr,
-                              hge->algorithm, total_bits, &br);
-        } else {
-            // FIXME -- need to set total_bits to something?
-            out << FormatHash(&match_data, nullptr, nullptr, nullptr,
-                              hge->algorithm, total_bits, &br); }
-        out << std::endl;
-        return false; }
-
- public:
-    EmitHashExpression(const MauAsmOutput &self, std::ostream &out, indent_t indent, int bit,
-                       const safe_vector<Slice> &match_data)
-    : self(self), out(out), indent(indent), bit(bit), match_data(match_data) {}
-};
-
-/* Calculate the hash tables used by an individual P4 table in the IXBar */
-void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-        std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
-        const IR::MAU::Table *tbl, bool ternary, bool atcam) const {
-    // FIXME -- probably needs to be completely different for flatrock
-    PHV::FieldUse f_use(PHV::FieldUse::READ);
-    for (auto &b : use) {
-        BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
-        int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
-        if (atcam && !b.is_spec(IXBar::ATCAM_INDEX))
-            continue;
-        for (auto &fi : b.field_bytes) {
-            auto field = phv.field(fi.get_use_name());
-            le_bitrange field_bits = { fi.lo, fi.hi };
-            // It is not a guarantee, especially in Tofino2 due to live ranges being different
-            // that a FieldInfo is not corresponding to a single alloc_slice object
-            field->foreach_alloc(field_bits, tbl, &f_use, [&](const PHV::AllocSlice &sl) {
-                if (b.loc.byte == byte_loc && ternary) {
-                    Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
-                    auto n = midbytes[b.loc.group/2].emplace(asm_sl.bytealign(), asm_sl);
-#ifdef HAVE_FLATROCK
-                    if (Device::currentDevice() != Device::FLATROCK)
-#endif   /* HAVE_FLATROCK */
-                        BUG_CHECK(n.second, "duplicate byte use in ixbar");
-                } else {
-                    Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
-                    auto n = sort[b.loc.group].emplace(b.loc.byte*8 + asm_sl.bytealign(), asm_sl);
-#ifdef HAVE_FLATROCK
-                    if (Device::currentDevice() != Device::FLATROCK)
-#endif   /* HAVE_FLATROCK */
-                        BUG_CHECK(n.second, "duplicate byte use in ixbar");
-                }
-            });
-        }
-    }
-
-    for (auto &group : sort) {
-        auto it = group.second.begin();
-        while (it != group.second.end()) {
-            auto next = it;
-            if (++next != group.second.end()) {
-                Slice j = it->second.join(next->second);
-                if (j && it->first + it->second.width() == next->first) {
-                    it->second = j;
-                    group.second.erase(next);
-                    continue;
-                }
-            }
-            it = next;
-        }
-    }
-}
-
 /* Generate asm for the way information, such as the size, select mask, and specifically which
    RAMs belong to a specific way */
-void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
+void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use_,
         const Memories::Use *mem) const {
+    auto *use = dynamic_cast<const Tofino::IXBar::Use *>(use_);
     if (use == nullptr || use->way_use.empty())
         return;
     out << indent++ << "ways:" << std::endl;
@@ -899,7 +653,7 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
     bool first = true;
     for (auto &hash_dist : *hash_dist_use) {
         for (auto &ir_alloc : hash_dist.ir_allocations) {
-            BUG_CHECK(ir_alloc.use.type == IXBar::Use::HASH_DIST, "Hash Dist allocation on "
+            BUG_CHECK(ir_alloc.use->type == IXBar::Use::HASH_DIST, "Hash Dist allocation on "
                       "a non-hash dist xbar region");
         }
     // if (hash_dist.use.type != IXBar::Use::HASH_DIST) continue;
@@ -933,937 +687,8 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
     }
 }
 
-/* Determine which bytes of a table's input xbar belong to an individual hash table,
-   so that we can output the hash of this individual table. */
-void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
-        safe_vector<Slice> &ghost, const TableMatch *fmt,
-        std::map<int, std::map<int, Slice>> &sort) const {
-    if (sort.empty())
-        return;
-    unsigned half = hash_table & 1;
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK && !sort.count(hash_table/2))
-        return;  // FIXME
-#endif  /* HAVE_FLATROCK */
-    for (auto &match : sort.at(hash_table/2)) {
-        Slice reg = match.second;
-        if (match.first/64U != half) {
-            if ((match.first + reg.width() - 1)/64U != half)
-                continue;
-            assert(half);
-            reg = reg(64 - match.first, 64);
-        } else if ((match.first + reg.width() - 1)/64U != half) {
-            assert(!half);
-            reg = reg(0, 63 - match.first); }
-        if (!reg) continue;
-        if (fmt != nullptr) {
-            safe_vector<Slice> reg_ghost;
-            safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
-            ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
-            if (!fmt->identity_hash)
-                match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
-        } else {
-            match_data.emplace_back(reg);
-        }
-    }
-}
-
-/**
- * This funciton is to emit the match data function associated with an SRAM match table.
- */
-void MauAsmOutput::emit_ixbar_match_func(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, Slice *ghost, le_bitrange hash_bits) const {
-    if (match_data.empty() && ghost == nullptr)
-        return;
-    out << indent << hash_bits.lo;
-    if (hash_bits.size() != 1)
-        out << ".." << hash_bits.hi;
-    out << ": " << FormatHash(&match_data, nullptr, nullptr, ghost,
-                              IR::MAU::HashFunction::random()) << std::endl;
-}
-
-/** This function is necessary due to the limits of the driver's handling of ATCAM tables.
- *  The driver requires that the partition index hash be in the same order as the bits
- *  of the partition index.
- *
- *  This will eventually force limitations in the implementation of ATCAM tables, i.e.
- *  multiple fields or potentially a slice being used as the partition index.  The true
- *  way this should be handled is the same way as an exact match table, by generating the
- *  hash from the hash matrix provided to driver.  When this support is provided, this
- *  function becomes unnecessary, and can just go through the same pathway that exact
- *  match goes through.
- */
-void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const {
-    safe_vector<Slice> empty;
-    BUG_CHECK(use->way_use.size() == 1, "One and only one way necessary for ATCAM tables");
-    for (auto ghost_slice : ghost) {
-        int start_bit = 0;  int end_bit = 0;
-        if (ghost_slice.get_lo() >= TableFormat::RAM_GHOST_BITS)
-            continue;
-        start_bit = ghost_slice.get_lo();
-        Slice adapted_ghost = ghost_slice;
-        if (ghost_slice.get_hi() < TableFormat::RAM_GHOST_BITS) {
-            end_bit = ghost_slice.get_hi();
-        } else {
-            int diff = ghost_slice.get_hi() - TableFormat::RAM_GHOST_BITS + 1;
-            end_bit = TableFormat::RAM_GHOST_BITS - 1;
-            adapted_ghost.shrink_hi(diff);
-        }
-
-        le_bitrange hash_bits = { start_bit, end_bit };
-        hash_bits = hash_bits.shiftedByBits(use->way_use[0].slice * IXBar::RAM_LINE_SELECT_BITS);
-        emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
-    }
-
-    unsigned mask_bits = 0;
-    for (auto way : use->way_use) {
-        if (way.group != hash_group)
-            continue;
-        mask_bits |= way.mask;
-    }
-
-    for (auto ghost_slice : ghost) {
-        // int start_bit = 0;  int end_bit = 0;
-        if (ghost_slice.get_hi() < TableFormat::RAM_GHOST_BITS)
-            continue;
-
-        int bits_seen = TableFormat::RAM_GHOST_BITS;
-        for (auto br : bitranges(mask_bits)) {
-            le_bitrange ixbar_bits = { bits_seen, bits_seen + (br.second - br.first) };
-            le_bitrange ghost_bits = { ghost_slice.get_lo(), ghost_slice.get_hi() };
-            bits_seen += ixbar_bits.size();
-            auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
-                            (ixbar_bits.intersectWith(ghost_bits));
-            if (boost_sl == boost::none)
-                continue;
-            le_bitrange sl_overlap = *boost_sl;
-            le_bitrange hash_bits = { br.first + sl_overlap.lo - ixbar_bits.lo,
-                                      br.second - (ixbar_bits.hi - sl_overlap.hi) };
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_SELECT_BIT_START);
-            Slice adapted_ghost = ghost_slice;
-            if (ghost_slice.get_lo() < sl_overlap.lo)
-                adapted_ghost.shrink_lo(sl_overlap.lo - ghost_slice.get_lo());
-            if (ghost_slice.get_hi() > sl_overlap.hi)
-                adapted_ghost.shrink_hi(ghost_slice.get_hi() - sl_overlap.hi);
-            emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
-        }
-    }
-}
-
-void MauAsmOutput::ixbar_hash_exact_bitrange(Slice ghost_slice, int min_way_size,
-        le_bitrange non_rotated_slice, le_bitrange comp_slice, int initial_lo_bit,
-        safe_vector<std::pair<le_bitrange, Slice>> &ghost_positions) const {
-    auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
-                        (non_rotated_slice.intersectWith(comp_slice));
-    if (boost_sl == boost::none)
-        return;
-    le_bitrange overlap = *boost_sl;
-    int lo = overlap.lo - initial_lo_bit;
-    int hi = overlap.hi - initial_lo_bit;
-    le_bitrange hash_position = overlap;
-    if (hash_position.lo >= min_way_size)
-        hash_position = hash_position.shiftedByBits(-1 * min_way_size);
-    ghost_positions.emplace_back(hash_position, ghost_slice(lo, hi));
-}
-
-/**
- * Fills in the slice_to_select_bits map, described in emit_ixbar_hash_exact
- */
-void MauAsmOutput::ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
-        const IXBar::Use *use, int hash_group, std::map<int, bitvec> &slice_to_select_bits) const {
-    for (auto way : use->way_use) {
-        if (way.group != hash_group)
-            continue;
-        bitvec local_select_mask = bitvec(way.mask);
-        int curr_way_size = IXBar::RAM_LINE_SELECT_BITS + local_select_mask.popcount();
-        min_way_size = std::min(min_way_size, curr_way_size);
-        min_way_slice = std::min(way.slice, min_way_slice);
-
-        // Guarantee that way object that have the same slice bits also use a
-        // similar pattern of select bits
-        auto mask_p = slice_to_select_bits.find(way.slice);
-        if (mask_p != slice_to_select_bits.end()) {
-            bitvec curr_mask = mask_p->second;
-            BUG_CHECK(curr_mask.min().index() == local_select_mask.min().index()
-                      || local_select_mask.empty(), "Shared line select bits are not coordinated "
-                      "to shared ram select index");
-            slice_to_select_bits[way.slice] |= local_select_mask;
-        } else {
-            slice_to_select_bits[way.slice] = local_select_mask;
-        }
-    }
-
-    bitvec verify_overlap;
-    for (auto kv : slice_to_select_bits) {
-        BUG_CHECK((verify_overlap & kv.second).empty(), "The RAM select bits are not unique per "
-                  "way");
-        verify_overlap |= kv.second;
-        BUG_CHECK(kv.second.empty() || kv.second.is_contiguous(), "The RAM select bits must "
-                  "currently be contiguous for the context JSON");
-    }
-}
-
-/**
- * The purpose of this code is to output the hash matrix specifically for exact tables.
- * This code classifies all of the ghost bits for this particular hash table.  The ghost bits
- * are the bits that appear in the hash but not in the table format.  This reduces the
- * number of bits actually needed to match against.
- *
- * The ghost bits themselves are spread through an identity hash, while the bits that appear
- * in the match are randomized.  Thus each ghost bit is assigned a corresponding bit in the
- * way bits or select bits within the match format.
- *
- * The hash matrix is specified on a hash table by hash table basis.  16 x 64b hash tables
- * at most are specified, and if the ghost bits do not appear in that particular hash table,
- * they will not be output.  The ident_bits_prev_alloc is used to track how where to start
- * the identity of the ghost bits within this particular hash table.
- *
- * The hash for an exact match function is the following:
- *
- *     1.  Random for all of the match related bits.
- *     2.  An identity hash for the ghost bits across each way.
- *
- * Each way is built up of both RAM line select bits and RAM select bits.  The RAM line select
- * bits is a 10 bit window ranging from 0-4 way * 10 bit sections of the 52 bit hash bus. The
- * RAM select bits is any section of the upper 12 bits of the hash.
- *
- * In order to increase randomness, the identity hash across different ways is different.
- * Essentially each identity hash is shifted by 1 bit per way, so that the same identity hash
- * does not end up on the same RAM line.
- */
-void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
-        int hash_group, int &ident_bits_prev_alloc) const {
-    if (use->type == IXBar::Use::ATCAM_MATCH) {
-        emit_ixbar_hash_atcam(out, indent, ghost, use, hash_group);
-        return;
-    }
-
-    int min_way_size = IXBar::RAM_LINE_SELECT_BITS + IXBar::HASH_SINGLE_BITS + 1;
-    int min_way_slice = IXBar::HASH_INDEX_GROUPS + 1;
-    // key is way.slice i.e. RAM line select, value is the RAM select mask.  Due to an optimization
-    // multiple IXBar::Use::Way may have the same way.slice, and different way.mask values.
-    std::map<int, bitvec> slice_to_select_bits;
-
-    ixbar_hash_exact_info(min_way_size, min_way_slice, use, hash_group, slice_to_select_bits);
-    bool select_bits_needed = min_way_size > IXBar::RAM_LINE_SELECT_BITS;
-    bitvec ways_done;
-
-    for (auto way : use->way_use) {
-        if (ways_done.getbit(way.slice))
-            continue;
-        if (way.group != hash_group)
-            continue;
-        ways_done.setbit(way.slice);
-        // pair is portion of identity function, slice of PHV field
-        safe_vector<std::pair<le_bitrange, Slice>> ghost_line_select_positions;
-        safe_vector<std::pair<le_bitrange, Slice>> ghost_ram_select_positions;
-        int ident_pos = ident_bits_prev_alloc;
-        for (auto ghost_slice : ghost) {
-            int ident_pos_shifted = ident_pos + way.slice - min_way_slice;
-            // This is the identity bits starting at bit 0 that this ghost slice will impact on
-            // a per way basis.
-            le_bitrange non_rotated_slice = { ident_pos_shifted,
-                                              ident_pos_shifted + ghost_slice.width() - 1 };
-
-            // The bits in the RAM line select that begin at the ident_pos_shifted bit up to 10
-            bool pre_rotation_line_sel_needed = ident_pos_shifted < IXBar::RAM_LINE_SELECT_BITS;
-            if (pre_rotation_line_sel_needed) {
-                le_bitrange ident_bits = { ident_pos_shifted, IXBar::RAM_LINE_SELECT_BITS - 1};
-                ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
-                                          ident_bits, ident_pos_shifted,
-                                          ghost_line_select_positions);
-            }
-
-            // The bits in the RAM select, i.e. the upper 12 bits
-            if (select_bits_needed) {
-                le_bitrange ident_select_bits = { IXBar::RAM_LINE_SELECT_BITS, min_way_size - 1};
-                ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
-                                          ident_select_bits, ident_pos_shifted,
-                                          ghost_ram_select_positions);
-            }
-
-            // The bits that start at bit 0 of the RAM line select
-            bool post_rotation_needed = ident_pos_shifted + ghost_slice.width() > min_way_size;
-            if (post_rotation_needed) {
-                le_bitrange post_rotation_bits = { min_way_size,
-                                                   min_way_size + ident_pos_shifted - 1 };
-                ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
-                                          post_rotation_bits, ident_pos_shifted,
-                                          ghost_line_select_positions);
-            }
-            ident_pos += ghost_slice.width();
-        }
-
-        bitvec used_line_select_range;
-        for (auto ghost_pos : ghost_line_select_positions) {
-            used_line_select_range.setrange(ghost_pos.first.lo, ghost_pos.first.size());
-        }
-
-        safe_vector<le_bitrange> non_ghosted;
-        bitvec no_ghost_line_select_bits
-            = bitvec(0, IXBar::RAM_LINE_SELECT_BITS)
-              - used_line_select_range.getslice(0, IXBar::RAM_LINE_SELECT_BITS);
-
-        // Print out the portions that have no ghost impact, but have hash impact due to the
-        // random hash on the normal match data (RAM line select)
-        for (auto br : bitranges(no_ghost_line_select_bits)) {
-            le_bitrange hash_bits = { br.first, br.second };
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_LINE_SELECT_BITS * way.slice);
-            emit_ixbar_match_func(out, indent, match_data, nullptr, hash_bits);
-        }
-
-        // Print out the portions that have both match data and ghost data (RAM line select)
-        for (auto ghost_pos : ghost_line_select_positions) {
-            le_bitrange hash_bits = ghost_pos.first;
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_LINE_SELECT_BITS * way.slice);
-            emit_ixbar_match_func(out, indent, match_data, &(ghost_pos.second), hash_bits);
-        }
-
-        bitvec ram_select_mask = slice_to_select_bits.at(way.slice);
-        bitvec used_ram_select_range;
-        for (auto ghost_pos : ghost_ram_select_positions) {
-            used_ram_select_range.setrange(ghost_pos.first.lo, ghost_pos.first.size());
-        }
-        used_ram_select_range >>= IXBar::RAM_LINE_SELECT_BITS;
-
-        bitvec no_ghost_ram_select_bits =
-            bitvec(0, ram_select_mask.popcount()) - used_ram_select_range;
-
-        // Print out the portions of that have no ghost data in RAM select
-        for (auto br : bitranges(no_ghost_ram_select_bits)) {
-            le_bitrange hash_bits = { br.first, br.second };
-            // start at bit 40
-            int shift = IXBar::RAM_SELECT_BIT_START + ram_select_mask.min().index();
-            hash_bits = hash_bits.shiftedByBits(shift);
-            emit_ixbar_match_func(out, indent, match_data, nullptr, hash_bits);
-        }
-
-
-        // Print out the portions that have ghost impact.  Assumed at the point that
-        // the select bits are contiguous, not a hardware requirement, but a context JSON req.
-        for (auto ghost_pos : ghost_ram_select_positions) {
-            le_bitrange hash_bits = ghost_pos.first;
-            int shift = IXBar::RAM_SELECT_BIT_START + ram_select_mask.min().index();
-            shift -= IXBar::RAM_LINE_SELECT_BITS;
-            hash_bits = hash_bits.shiftedByBits(shift);
-            emit_ixbar_match_func(out, indent, match_data, &(ghost_pos.second), hash_bits);
-        }
-    }
-
-    for (auto ghost_slice : ghost) {
-        ident_bits_prev_alloc += ghost_slice.width();
-    }
-}
-
-/* Find the maximum width of a slice starting from bit that can be output as a single
- * expression in a hash table in a .bfa file
- */
-class FormatHash::SliceWidth : public Inspector {
-    const PhvInfo &phv;
-    safe_vector<Slice> &match_data;
-    int bit;
-    int width;
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::BXor *) { return true; }
-    bool preorder(const IR::BAnd *) { return true; }
-    bool preorder(const IR::BOr *) { return true; }
-    bool preorder(const IR::Constant *c) {
-        if (getParent<IR::BOr>()) {
-            // can't do OR in the .bfa -- need to slice based on bit ranges
-            big_int v = c->value >> bit;
-            if (v != 0) {
-                int b(v & 1);
-                int w = 1;
-                while (((v >> w) & 1) == b) ++w;
-                if (width > w)
-                    width = w; } }
-        return false; }
-    bool preorder(const IR::Concat *e) {
-        if (bit < e->right->type->width_bits()) {
-            if (width > e->right->type->width_bits() - bit)
-                width = e->right->type->width_bits() - bit;
-            visit(e->right, "right");
-        } else {
-            int tmp = bit;
-            bit -= e->right->type->width_bits();
-            BUG_CHECK(bit < e->left->type->width_bits(), "bit out of range in SliceWidth");
-            if (width > e->left->type->width_bits() - bit)
-                width = e->left->type->width_bits() - bit;
-            visit(e->left, "left");
-            bit = tmp; }
-        return false; }
-    bool preorder(const IR::ListExpression *fl) {
-        int tmp = bit;
-        for (auto *e : boost::adaptors::reverse(fl->components)) {
-            if (bit < e->type->width_bits()) {
-                if (width > e->type->width_bits() - bit)
-                    width = e->type->width_bits() - bit;
-                visit(e);
-                break; }
-            bit -= e->type->width_bits(); }
-        bit = tmp;
-        return false; }
-    bool preorder(const IR::StructExpression *sl) {
-        int tmp = bit;
-        for (auto *e : boost::adaptors::reverse(sl->components)) {
-            if (bit < e->expression->type->width_bits()) {
-                if (width > e->expression->type->width_bits() - bit)
-                    width = e->expression->type->width_bits() - bit;
-                visit(e->expression);
-                break; }
-            bit -= e->expression->type->width_bits(); }
-        bit = tmp;
-        return false; }
-    bool preorder(const IR::BFN::SignExtend *e) {
-        int w = e->type->width_bits() - bit;
-        if (width > w)
-            width = w;
-        w = width;
-        visit(e->expr, "e");
-        if (width < w && width >= e->expr->type->width_bits())
-            width = w;
-        return false; }
-    bool preorder(const IR::Expression *e) {
-        int w = e->type->width_bits() - bit;
-        if (width > w)
-            width = w;
-        Slice sl(phv, e, bit, bit + width - 1);
-        BUG_CHECK(sl, "Invalid expression %s in FormatHash::SliceWidth", e);
-        for (auto &md : match_data) {
-            if (auto tmp = sl & md) {
-                if (tmp.get_lo() > sl.get_lo()) {
-                    w = tmp.get_lo() - sl.get_lo();
-                    if (width > w)
-                        width = w;
-                    continue; }
-                if (width > tmp.width())
-                    width = tmp.width();
-                break; } }
-        return false; }
-
- public:
-    SliceWidth(const PhvInfo &p, const IR::Expression *e, int b, safe_vector<Slice> &md)
-    : phv(p), match_data(md), bit(b), width(e->type->width_bits() - b) { e->apply(*this); }
-    operator int() const { return width; }
-};
-
-/* True if a slice of a hash expression is all 0s in the GF matrix.  Slice cannot be
- * be wider than what is returned by SliceWidth for its start bit */
-class FormatHash::ZeroHash : public Inspector {
-    const PhvInfo &phv;
-    le_bitrange slice;
-    safe_vector<Slice> &match_data;
-    bool    rv = false;
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::BXor *e) {
-        if (!rv) {
-            visit(e->left, "left");
-            bool tmp = rv;
-            rv = false;
-            visit(e->right, "right");
-            rv &= tmp; }
-        return false; }
-    bool preorder(const IR::BAnd *) { return true; }
-    bool preorder(const IR::BOr *) { return true; }
-    bool preorder(const IR::BFN::SignExtend *) { return true; }
-    bool preorder(const IR::Constant *k) {
-        if (getParent<IR::BAnd>() || getParent<IR::BOr>()) {
-            big_int v = k->value, mask = 1;
-            v >>= slice.lo;
-            mask <<= slice.size();
-            mask -= 1;
-            v &= mask;
-            if (getParent<IR::BAnd>()) {
-                if (v == 0) rv = true;
-            } else if (v == mask) {
-                rv = true;
-            } else {
-                BUG_CHECK(v == 0, "Incorrect slicing of BOr in hash expression"); }
-        } else {
-            rv = true; }
-        return false; }
-    bool preorder(const IR::Concat *e) {
-        int rwidth = e->right->type->width_bits();
-        if (slice.lo < rwidth) {
-            BUG_CHECK(slice.hi < rwidth, "Slice too wide in FormatHash::ZeroHash");
-            visit(e->right, "right");
-        } else {
-            auto tmp = slice;
-            slice = slice.shiftedByBits(-rwidth);
-            visit(e->left, "left");
-            slice = tmp; }
-        return false; }
-    bool preorder(const IR::ListExpression *fl) {
-        auto tmp = slice;
-        for (auto *e : boost::adaptors::reverse(fl->components)) {
-            int width = e->type->width_bits();
-            if (slice.lo < width) {
-                BUG_CHECK(slice.hi < width, "Slice too wide in FormatHash::ZeroHash");
-                visit(e);
-                break; }
-            slice = slice.shiftedByBits(-width); }
-        slice = tmp;
-        return false; }
-    bool preorder(const IR::StructExpression *sl) {
-        auto tmp = slice;
-        for (auto *e : boost::adaptors::reverse(sl->components)) {
-            int width = e->expression->type->width_bits();
-            if (slice.lo < width) {
-                BUG_CHECK(slice.hi < width, "Slice too wide in FormatHash::ZeroHash");
-                visit(e);
-                break; }
-            slice = slice.shiftedByBits(-width); }
-        slice = tmp;
-        return false; }
-    bool preorder(const IR::Expression *e) {
-        Slice sl(phv, e, slice);
-        BUG_CHECK(sl, "Invalid expression %s in FormatHash::ZeroHash", e);
-        for (auto &md : match_data) {
-            if (auto tmp = sl & md) {
-                return false; } }
-        rv = true;
-        return false; }
-
- public:
-    ZeroHash(const PhvInfo &p, const IR::Expression *e, le_bitrange s, safe_vector<Slice> &md)
-    : phv(p), slice(s), match_data(md) { e->apply(*this); }
-    explicit operator bool() const { return rv; }
-};
-
-/* output a slice of a hash expression as a .bfa hash expression */
-class FormatHash::Output : public Inspector {
-    const PhvInfo &phv;
-    std::ostream &out;
-    le_bitrange slice;
-    safe_vector<Slice> &match_data;
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::BXor *e) {
-        bool need_left = !ZeroHash(phv, e->left, slice, match_data);
-        bool need_right = !ZeroHash(phv, e->right, slice, match_data);
-        if (need_left) visit(e->left, "left");
-        if (need_left && need_right) out << " ^ ";
-        if (need_right) visit(e->right, "right");
-        return false; }
-    bool preorder(const IR::BAnd *e) {
-        visit(e->left, "left"); out << "&"; visit(e->right, "right"); return false; }
-    bool preorder(const IR::BOr *e) {
-        auto k = e->left->to<IR::Constant>();
-        auto &op = k ? e->right : e->left;
-        if (!k) k = e->right->to<IR::Constant>();
-        big_int v = k->value >> slice.lo;
-        if ((v & 1) == 0) {
-            visit(op);
-        } else {
-            out << "0"; }
-        return false; }
-    bool preorder(const IR::Constant *k) {
-        big_int v = k->value, mask = 1;
-        v >>= slice.lo;
-        mask <<= slice.size();
-        mask -= 1;
-        v &= mask;
-        out << "0x" << std::hex << v << std::dec;
-        return false; }
-    bool preorder(const IR::Concat *e) {
-        if (slice.lo < e->right->type->width_bits()) {
-            visit(e->right, "right");
-        } else {
-            auto tmp = slice;
-            slice = slice.shiftedByBits(-e->right->type->width_bits());
-            visit(e->left, "left");
-            slice = tmp; }
-        return false; }
-    bool preorder(const IR::ListExpression *fl) {
-        auto tmp = slice;
-        for (auto *e : boost::adaptors::reverse(fl->components)) {
-            if (slice.lo < e->type->width_bits()) {
-                visit(e);
-                break; }
-            slice = slice.shiftedByBits(-e->type->width_bits()); }
-        slice = tmp;
-        return false; }
-    bool preorder(const IR::StructExpression *sl) {
-        auto tmp = slice;
-        for (auto *e : boost::adaptors::reverse(sl->components)) {
-            if (slice.lo < e->expression->type->width_bits()) {
-                visit(e->expression);
-                break; }
-            slice = slice.shiftedByBits(-e->expression->type->width_bits()); }
-        slice = tmp;
-        return false; }
-    bool preorder(const IR::BFN::SignExtend *e) {
-        if (slice.hi < e->expr->type->width_bits()) {
-            // a slice or mask on a sign extension such that we don't need any of the
-            // sign extended bits.  Could have been eliinated earlier, but ignore it here
-            return true; }
-        auto tmp = slice;
-        slice.hi = e->expr->type->width_bits() - 1;
-        out << "sign_extend(";
-        visit(e->expr, "expr");
-        slice = tmp;
-        out << ")";
-        return false; }
-    bool preorder(const IR::Expression *e) {
-        Slice sl(phv, e, slice);
-        BUG_CHECK(sl, "Invalid expression %s in FormatHash::Output", e);
-        for (auto &md : match_data) {
-            if (auto tmp = sl & md) {
-                out << tmp;
-                break; } }
-        return false; }
-
- public:
-    Output(const PhvInfo &p, std::ostream &o, const IR::Expression *e, le_bitrange s,
-           safe_vector<Slice> &md)
-    : phv(p), out(o), slice(s), match_data(md) { e->apply(*this); }
-};
-
-/** Given a bitrange to allocate into the ixbar hash matrix, as well as a list of fields to
- *  be the identity, this coordinates the field slice to a portion of the bit range.  This
- *  really only applies for identity matches.
- */
-void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-        const safe_vector<const IR::Expression *> & /*field_list_order*/) const {
-    if (hdh.hash_gen_expr) {
-        int hash_gen_expr_width = hdh.hash_gen_expr->type->width_bits();
-        BUG_CHECK(hash_gen_expr_width > 0, "zero width hash expression: %s ?", hdh.hash_gen_expr);
-        for (auto bit_pos : hdh.galois_start_bit_to_p4_hash) {
-            int out_bit = bit_pos.first, in_bit = bit_pos.second.lo;
-            while (in_bit <= bit_pos.second.hi && in_bit < hash_gen_expr_width) {
-                int width = FormatHash::SliceWidth(phv, hdh.hash_gen_expr, in_bit, match_data);
-                le_bitrange slice(in_bit, in_bit + width - 1);
-                slice = slice.intersectWith(bit_pos.second);
-                out << indent << out_bit;
-                if (width > 1 ) out << ".." << (out_bit + slice.size() - 1);
-                out << ": ";
-                if (!FormatHash::ZeroHash(phv, hdh.hash_gen_expr, slice, match_data)) {
-                    FormatHash::Output(phv, out, hdh.hash_gen_expr, slice, match_data);
-                } else {
-                    out << "0"; }
-                out << std::endl;
-                in_bit += slice.size();
-                out_bit += slice.size(); }
-            BUG_CHECK(in_bit == bit_pos.second.hi + 1 || in_bit >= hash_gen_expr_width,
-                      "mismatched hash width"); }
-        return; }
-
-    BUG("still need this code?");
-#if 0
-    int bits_seen = 0;
-    for (auto it = field_list_order.rbegin(); it != field_list_order.rend(); it++) {
-        auto fs = PHV::AbstractField::create(phv, *it);
-        for (auto &sl : match_data) {
-            if (!(fs->field() && fs->field() == sl.get_field()))
-                continue;
-            auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
-                                  (fs->range().intersectWith(sl.range()));
-            if (boost_sl == boost::none)
-                continue;
-            // Which slice bits of this field are overlapping
-            le_bitrange field_overlap = *boost_sl;
-            int ident_range_lo = bits_seen + field_overlap.lo - fs->range().lo;
-            int ident_range_hi = ident_range_lo + field_overlap.size() - 1;
-            le_bitrange identity_range = { ident_range_lo, ident_range_hi };
-            for (auto bit_pos : hdh.galois_start_bit_to_p4_hash) {
-                // Portion of the p4_output_hash that overlaps with the identity range
-                auto boost_sl2 = toClosedRange<RangeUnit::Bit, Endian::Little>
-                                 (identity_range.intersectWith(bit_pos.second));
-                if (boost_sl2 == boost::none)
-                    continue;
-                le_bitrange ident_overlap = *boost_sl2;
-                int hash_lo = bit_pos.first + (ident_overlap.lo - bit_pos.second.lo);
-                int hash_hi = hash_lo + ident_overlap.size() - 1;
-                int field_range_lo = field_overlap.lo + (ident_overlap.lo - identity_range.lo);
-                int field_range_hi = field_range_lo + ident_overlap.size() - 1;
-                Slice asm_sl(fs->field(), field_range_lo, field_range_hi);
-                safe_vector<Slice> ident_slice;
-                ident_slice.push_back(asm_sl);
-                out << indent << hash_lo << ".." << hash_hi << ": "
-                    << FormatHash(&ident_slice, nullptr, nullptr, nullptr,
-                                  IR::MAU::HashFunction::identity())
-                    << std::endl;
-            }
-        }
-        bits_seen += fs->size();
-    }
-#endif
-}
-
-void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
-        const safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-        const safe_vector<const IR::Expression *> &field_list_order,
-        const LTBitMatrix &sym_keys) const {
-    if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
-        auto mask = mah.bit_mask;
-        for (auto &el : mah.computed_expressions) {
-            el.second->apply(EmitHashExpression(*this, out, indent, el.first, match_data));
-            mask.clrrange(el.first, el.second->type->width_bits());
-        }
-        for (int to_clear = mask.ffs(0); to_clear >= 0;) {
-            int end = mask.ffz(to_clear);
-            out << indent << to_clear;
-            if (end - 1 > to_clear) out << ".." << (end - 1);
-            out << ": 0" << std::endl;
-            to_clear = mask.ffs(end); }
-    } else {
-        le_bitrange br = { mah.bit_mask.min().index(), mah.bit_mask.max().index() };
-        int total_bits = 0;
-        std::multimap<int, Slice> match_data_map;
-        std::map<le_bitrange, const IR::Constant*> constant_map;
-        bool use_map = false;
-        if (mah.algorithm.ordered()) {
-            emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                    field_list_order, sym_keys, total_bits);
-            use_map = true;
-        }
-        out << indent << br.lo << ".." << br.hi << ": ";
-        if (use_map)
-            out << FormatHash(nullptr, &match_data_map, nullptr, nullptr,
-                    mah.algorithm, total_bits, &br);
-        else
-            out << FormatHash(&match_data, nullptr, nullptr, nullptr,
-                    mah.algorithm, total_bits, &br);
-        out << std::endl;
-    }
-}
-
-void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, const IXBar::Use::ProxyHashKey &ph,
-        const safe_vector<const IR::Expression *> &field_list_order,
-        const LTBitMatrix &sym_keys) const {
-    int start_bit = ph.hash_bits.ffs();
-    do {
-        int end_bit = ph.hash_bits.ffz(start_bit);
-        le_bitrange br = { start_bit, end_bit - 1 };
-        int total_bits = 0;
-        out << indent << br.lo << ".." << br.hi << ": ";
-        if (ph.algorithm.ordered()) {
-            std::multimap<int, Slice> match_data_map;
-            std::map<le_bitrange, const IR::Constant*> constant_map;
-            emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                    field_list_order, sym_keys, total_bits);
-            out << FormatHash(nullptr, &match_data_map, nullptr, nullptr,
-                    ph.algorithm, total_bits, &br);
-        } else {
-            out << FormatHash(&match_data, nullptr, nullptr, nullptr,
-                    ph.algorithm, total_bits, &br);
-        }
-        out << std::endl;
-        start_bit = ph.hash_bits.ffs(end_bit);
-    } while (start_bit >= 0);
-}
-
-/**
- * Given an order for an allocation, will determine the input position of the slice in
- * the allocation, and save it in the match_data_map
- *
- * When two keys are considered symmetric, currently they are given the same bit stream position
- * in the crc calculation in order to guarantee that their hash algorithm is identical for
- * those two keys.  This change, however, notes that the output of the function is not truly
- * the CRC function they requested, but a variation on it
- */
-void MauAsmOutput::emit_ixbar_gather_map(std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map,
-        const safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
-        int &total_size) const {
-    std::map<int, int> field_start_bits;
-    std::map<int, int> reverse_sym_keys;
-    int bits_seen = 0;
-    for (int i = field_list_order.size() - 1; i >= 0; i--) {
-        auto fs = PHV::AbstractField::create(phv, field_list_order.at(i));
-        field_start_bits[i] = bits_seen;
-        bitvec sym_key = sym_keys[i];
-        if (!sym_key.empty()) {
-            BUG_CHECK(sym_key.popcount() == 1 && reverse_sym_keys.count(sym_key.min().index()) == 0,
-                "Symmetric hash broken in the backend");
-            reverse_sym_keys[sym_key.min().index()] = i;
-        }
-        bits_seen += fs->size();
-    }
-
-    for (auto sl : match_data) {
-        int order_bit = 0;
-        // Traverse field list in reverse order. For a field list the convention
-        // seems to indicate the field offsets are determined based on first
-        int index = field_list_order.size();
-        for (auto fs_itr = field_list_order.rbegin(); fs_itr != field_list_order.rend(); fs_itr++) {
-            index--;
-            auto fs = PHV::AbstractField::create(phv, *fs_itr);
-            if (fs->is<PHV::Constant>()) {
-                auto cons = fs->to<PHV::Constant>();
-                le_bitrange br = { order_bit, order_bit + fs->size() - 1 };
-                constant_map[br] = cons->value;
-                order_bit += fs->size();
-                continue;
-            }
-
-            if (fs->field() != sl.get_field()) {
-                order_bit += fs->size();
-                continue;
-            }
-
-            auto half_open_intersect = fs->range().intersectWith(sl.range());
-            if (half_open_intersect.empty()) {
-                order_bit += fs->size();
-                continue;
-            }
-
-            le_bitrange intersect = { half_open_intersect.lo, half_open_intersect.hi - 1 };
-            Slice adapted_sl = sl;
-
-
-            int lo_adjust = std::max(intersect.lo - sl.range().lo, sl.range().lo - intersect.lo);
-            int hi_adjust = std::max(intersect.hi - sl.range().hi, sl.range().hi - intersect.hi);
-            adapted_sl.shrink_lo(lo_adjust);
-            adapted_sl.shrink_hi(hi_adjust);
-            int offset = adapted_sl.get_lo() - fs->range().lo;
-
-            int sym_order_bit = reverse_sym_keys.count(index) > 0 ?
-                                field_start_bits.at(reverse_sym_keys.at(index)) : order_bit;
-            match_data_map.emplace(sym_order_bit + offset, adapted_sl);
-            order_bit += fs->size();
-        }
-    }
-
-    total_size = 0;
-    for (auto fs : field_list_order) {
-        total_size += fs->type->width_bits();
-    }
-}
-
-/* Generate asm for the hash of a table, specifically either a match, gateway, or selector
-   table.  Also used for hash distribution hash */
-void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
-                                   safe_vector<Slice> &match_data,
-                                   safe_vector<Slice> &ghost,
-                                   const IXBar::Use *use, int hash_group,
-                                   int &ident_bits_prev_alloc) const {
-    if (!use->way_use.empty()) {
-        emit_ixbar_hash_exact(out, indent, match_data, ghost, use, hash_group,
-                              ident_bits_prev_alloc);
-    }
-
-    if (use->meter_alu_hash.allocated) {
-        emit_ixbar_meter_alu_hash(out, indent, match_data, use->meter_alu_hash,
-                                  use->field_list_order, use->symmetric_keys);
-    }
-
-    if (use->proxy_hash_key_use.allocated) {
-        emit_ixbar_proxy_hash(out, indent, match_data, use->proxy_hash_key_use,
-                              use->field_list_order, use->symmetric_keys);
-    }
-
-
-    // Printing out the hash for gateway tables
-    for (auto ident : use->bit_use) {
-        // Gateway fields in the hash are continuous bitranges, but may not match up
-        // with the fields.  So we figure out the overlap between each use and each
-        // match field and split them up where they don't match.  Do we really need to
-        // do this?
-        Slice range_sl(phv, ident.field, ident.lo, ident.lo + ident.width - 1);
-        for (auto sl : match_data) {
-            auto overlap = range_sl & sl;
-            if (!overlap) continue;
-            int bit = 40 + ident.bit + overlap.get_lo() - range_sl.get_lo();
-            out << indent << bit;
-            if (overlap.width() > 1)
-                out << ".." << (bit + overlap.width() - 1);
-            out << ": " << overlap << std:: endl;
-        }
-    }
-
-
-    if (use->hash_dist_hash.allocated) {
-        auto &hdh = use->hash_dist_hash;
-        if (hdh.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
-            emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, use->field_list_order);
-            return;
-        }
-        std::multimap<int, Slice> match_data_map;
-        std::map<le_bitrange, const IR::Constant*> constant_map;
-        bool use_map = false;
-        int total_bits = 0;
-        if (hdh.algorithm.ordered()) {
-            emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                    use->field_list_order, use->symmetric_keys, total_bits);
-            use_map = true;
-        }
-
-        for (auto bit_start : hdh.galois_start_bit_to_p4_hash) {
-            int start_bit = bit_start.first;
-            le_bitrange br = bit_start.second;
-            int end_bit = start_bit + br.size() - 1;
-            out << indent << start_bit << ".." << end_bit;
-            if (use_map)
-                out << ": " << FormatHash(nullptr, &match_data_map, &constant_map,
-                        nullptr, hdh.algorithm, total_bits, &br);
-            else
-                out << ": " << FormatHash(&match_data, nullptr, nullptr,
-                        nullptr, hdh.algorithm, total_bits, &br);
-            out << std::endl;
-        }
-    }
-}
-
-void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const TableMatch *fmt, const IR::MAU::Table *tbl) const {
-    std::map<int, std::map<int, Slice>> sort;
-    std::map<int, std::map<int, Slice>> midbytes;
-    emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl, use->type == IXBar::Use::TERNARY_MATCH);
-    cstring group_type = use->type == IXBar::Use::TERNARY_MATCH ? "ternary" : "exact";
-    for (auto &group : sort)
-        out << indent << group_type << " group "
-            << group.first << ": " << group.second << std::endl;
-    for (auto &midbyte : midbytes)
-        out << indent << "byte group "
-            << midbyte.first << ": " << midbyte.second << std::endl;
-    if (use->type == IXBar::Use::ATCAM_MATCH) {
-        sort.clear();
-        midbytes.clear();
-        emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl,
-                                use->type == IXBar::Use::TERNARY_MATCH,
-                                use->type == IXBar::Use::ATCAM_MATCH);
-    }
-    for (int hash_group = 0; hash_group < IXBar::HASH_GROUPS; hash_group++) {
-        unsigned hash_table_input = use->hash_table_inputs[hash_group];
-        bitvec hash_seed = use->hash_seed[hash_group];
-        int ident_bits_prev_alloc = 0;
-        if (hash_table_input || hash_seed) {
-            for (int ht : bitvec(hash_table_input)) {
-                out << indent++ << "hash " << ht << ":" << std::endl;
-                safe_vector<Slice> match_data;
-                safe_vector<Slice> ghost;
-                emit_ixbar_hash_table(ht, match_data, ghost, fmt, sort);
-                // FIXME: This is obviously an issue for larger selector tables,
-                //  whole function needs to be replaced
-                emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group,
-                                ident_bits_prev_alloc);
-                if (use->is_parity_enabled())
-                    out << indent << IXBar::HASH_PARITY_BIT << ": parity" << std::endl;
-                --indent;
-            }
-            out << indent++ << "hash group " << hash_group << ":" << std::endl;
-            if (hash_table_input)
-                out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
-                    << std::endl;
-            out << indent << "seed: 0x" << hash_seed << std::endl;
-            if (use->is_parity_enabled())
-                out << indent << "seed_parity: true" << std::endl;
-            --indent;
-        }
-    }
-}
-
-
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const IXBar::Use *proxy_hash_use, const safe_vector<IXBar::HashDistUse> *hash_dist_use,
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const ::IXBar::Use *use,
+        const ::IXBar::Use *proxy_hash_use, const safe_vector<IXBar::HashDistUse> *hash_dist_use,
         const Memories::Use *mem, const TableMatch *fmt, const IR::MAU::Table *tbl,
         bool ternary) const {
     if (!ternary) {
@@ -1878,21 +703,24 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
     if (ternary && use && use->type != IXBar::Use::TERNARY_MATCH) return;
     out << indent++ << "input_xbar:" << std::endl;
     if (use) {
-        emit_single_ixbar(out, indent, use, fmt, tbl);
+        use->emit_ixbar_asm(phv, out, indent, fmt, tbl);
     }
 
     if (proxy_hash_use) {
-        emit_single_ixbar(out, indent, proxy_hash_use, nullptr, tbl);
+        proxy_hash_use->emit_ixbar_asm(phv, out, indent, nullptr, tbl);
     }
 
     if (hash_dist_use) {
         for (auto &hash_dist : *hash_dist_use) {
             for (auto &ir_alloc : hash_dist.ir_allocations) {
-                emit_single_ixbar(out, indent, &(ir_alloc.use), nullptr, tbl);
+                ir_alloc.use->emit_ixbar_asm(phv, out, indent, nullptr, tbl);
             }
         }
     }
 
+    // FIXME -- this has to do with the table rather than the ixbar, so should be somewhere
+    // else?  Its a messy hack as it is in the assembler ixbar code, reseeding the random
+    // number generator just before evaluting the hash expressions in this ixbar
     if (fmt && fmt->table && fmt->table->random_seed != -1) {
         out << indent++ << "random_seed:" << fmt->table->random_seed << std::endl;
     }
@@ -1994,7 +822,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                     << r.stash_col << ", unit: " << r.stash_unit);
         }
     }
-    BUG_CHECK(!row.empty(), "empty memory use");
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) {
@@ -2028,7 +855,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                 out << indent << "- " << r.vpn << std::endl;
             }
         }
-    } else {
+    } else if (row.size() == 1) {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) {
             if (separate_bus) {
@@ -3074,7 +1901,7 @@ class MauAsmOutput::EmitAlwaysRunAction : public MauAsmOutput::EmitAction {
     }
 };
 
-void MauAsmOutput::TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
+void TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
     proxy_hash = true;
     for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
         const IXBar::Use::Byte &byte = match_info.first;
@@ -3096,7 +1923,7 @@ void MauAsmOutput::TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
 /* Information on which tables are matched and ghosted.  This is used by the emit table format,
    and the hashing information.  Comes directly from the table_format object in the resources
    of a table*/
-MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
+TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
         const IR::MAU::Table *tbl) /*: self(s)*/ {
     if (tbl->resources->table_format.match_groups.size() == 0)
         return;
@@ -3273,7 +2100,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
 bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         const IR::MAU::Table *tbl, bool no_match, NextTableSet next_hit,
         NextTableSet &gw_miss) const {
-    CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
+    CollectGatewayFields collect(phv, tbl->resources->gateway_ixbar.get());
     tbl->apply(collect);
     bool gw_can_miss = false;
     if (collect.compute_offsets()) {
@@ -3921,8 +2748,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (!tbl->layout.no_match_miss_path()) {
             emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
             const IXBar::Use *proxy_ixbar = tbl->layout.proxy_hash ?
-                                            &tbl->resources->proxy_hash_ixbar : nullptr;
-            emit_ixbar(out, indent, &tbl->resources->match_ixbar, proxy_ixbar,
+                                            tbl->resources->proxy_hash_ixbar.get() : nullptr;
+            emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), proxy_ixbar,
                          &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
                          &fmt, tbl, tbl->layout.ternary);
         }
@@ -3972,13 +2799,14 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (!tbl->conditional_gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
-        emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, nullptr,
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar.get(), nullptr, nullptr, nullptr,
                    nullptr, tbl, false);
         bool ok = false;
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
-                out << gw_indent << "row: " << use.row[0].row << std::endl;
-                out << gw_indent << "bus: " << use.row[0].bus << std::endl;
+                if (!use.row.empty()) {
+                    out << gw_indent << "row: " << use.row[0].row << std::endl;
+                    out << gw_indent << "bus: " << use.row[0].bus << std::endl; }
                 out << gw_indent << "unit: " << use.gateway.unit << std::endl;
                 if (use.gateway.payload_row >= 0)
                     out << gw_indent << "payload_row: " << use.gateway.payload_row << std::endl;
@@ -4468,7 +3296,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << ", how_referenced: direct";
     out << " }" << std::endl;
     if (meter->input)
-        self.emit_ixbar(out, indent, &tbl->resources->meter_ixbar, nullptr, nullptr, nullptr,
+        self.emit_ixbar(out, indent, tbl->resources->meter_ixbar.get(), nullptr, nullptr, nullptr,
                         nullptr, tbl, false);
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     cstring imp_type;
@@ -4521,10 +3349,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         BUG_CHECK(hd_use != nullptr, "Could not find hash distribution unit in link up "
                                      "for meter precolor");
         out << indent << "pre_color: hash_dist(";
-        auto &hdh = hd_ir_use->use.hash_dist_hash;
-        int lo = hdh.galois_matrix_bits.min().index() % IXBar::HASH_DIST_BITS;
+        auto gm_bits = hd_ir_use->use->galois_matrix_bits();
+        int lo = gm_bits.min().index() % IXBar::HASH_DIST_BITS;
         int hi = lo + IXBar::METER_PRECOLOR_SIZE - 1;
         out << hd_use->unit << ", " << lo << ".." << hi << ")" << std::endl;
+
         // FIXME: Eventually should not be necessary due to DRV-1856
         out << indent << "color_aware: true" << std::endl;
     }
@@ -4566,7 +3395,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
         out << ", size: " << as->size;
     out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr,
+    self.emit_ixbar(out, indent, tbl->resources->selector_ixbar.get(), nullptr,
                     nullptr, nullptr, nullptr, tbl, false);
     out << indent << "mode: ";
     out << ((as->mode == IR::MAU::SelectorMode::FAIR) ? "fair": "resilient");
@@ -4582,7 +3411,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
      * currently the algorithm takes all 3 inputs, or 0x7.
      */
     if (as->mode == IR::MAU::SelectorMode::FAIR) {
-        bitvec galois_bits = tbl->resources->selector_ixbar.meter_alu_hash.bit_mask;
+        bitvec galois_bits = tbl->resources->selector_ixbar->meter_bit_mask();
         BUG_CHECK(galois_bits.is_contiguous() &&
                   galois_bits.popcount() == IXBar::FAIR_MODE_HASH_BITS &&
                   (galois_bits.min().index() % IXBar::FAIR_MODE_HASH_BITS) == 0 ,
@@ -4599,8 +3428,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     if (as->hash_mod) {
         safe_vector<IXBar::HashDistUse> sel_hash_dist;
         bool found = false;
-        for (auto hash_dist_use : tbl->resources->hash_dists) {
-            for (auto ir_alloc : hash_dist_use.ir_allocations) {
+        for (auto &hash_dist_use : tbl->resources->hash_dists) {
+            for (auto &ir_alloc : hash_dist_use.ir_allocations) {
                 if (ir_alloc.dest == IXBar::dest_location(as)) {
                     sel_hash_dist.push_back(hash_dist_use);
                     found = true;
@@ -4618,7 +3447,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     auto unique_id = tbl->unique_id(ti);
     out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-    self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, nullptr,
+    self.emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), nullptr,
                       &tbl->resources->hash_dists, nullptr, nullptr, tbl, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
@@ -4688,13 +3517,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id)); }
 
     auto &ixbar = tbl->resources->salu_ixbar;
-    BUG_CHECK(ixbar.type == IXBar::Use::STATEFUL_ALU || ixbar.type == IXBar::Use::TYPES,
+    BUG_CHECK(ixbar->type == IXBar::Use::STATEFUL_ALU || ixbar->type == IXBar::Use::TYPES,
               "incorrect type on %s salu_ixbar", tbl);
-    self.emit_ixbar(out, indent, &ixbar, nullptr, nullptr, nullptr, nullptr, tbl, false);
-    if (ixbar.salu_input_source.data_bytemask)
-        out << indent << "data_bytemask: " << ixbar.salu_input_source.data_bytemask << std::endl;
-    if (ixbar.salu_input_source.hash_bytemask)
-        out << indent << "hash_bytemask: " << ixbar.salu_input_source.hash_bytemask << std::endl;
+    self.emit_ixbar(out, indent, ixbar.get(), nullptr, nullptr, nullptr, nullptr, tbl, false);
+    ixbar->emit_salu_bytemasks(out, indent);
 
     out << indent << "format: { lo: ";
     if (salu->dual)

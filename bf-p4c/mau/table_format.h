@@ -219,8 +219,8 @@ struct TableFormat {
  private:
     Use *use;
     const LayoutOption &layout_option;
-    const IXBar::Use &match_ixbar;
-    const IXBar::Use &proxy_hash_ixbar;
+    const IXBar::Use *match_ixbar;
+    const IXBar::Use *proxy_hash_ixbar;
     const IR::MAU::Table *tbl;
 
     // Vector for a hash group, as large tables could potentially use multiple hash groups
@@ -334,7 +334,7 @@ struct TableFormat {
     bool interleave_match_and_overhead();
 
  public:
-    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IXBar::Use &phi,
+    TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
                 const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)
         : layout_option(l), match_ixbar(mi), proxy_hash_ixbar(phi), tbl(t), immediate_mask(im),
           gw_linked(gl), fpc(fpc) {}

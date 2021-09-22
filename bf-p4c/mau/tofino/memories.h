@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include "bf-p4c/mau/attached_entries.h"
-#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/action_format.h"
@@ -203,7 +203,7 @@ struct Memories : public ::Memories {
     // stage.  Could coordinate to multiple logical tables, (i.e. dleft or atcam tables)
     struct table_alloc {
         const IR::MAU::Table *table;
-        const IXBar::Use *match_ixbar;
+        const ::IXBar::Use *match_ixbar;
         const TableFormat::Use *table_format;
         const InstructionMemory::Use *instr_mem;
         const ActionData::Format::Use *action_format;
@@ -225,7 +225,7 @@ struct Memories : public ::Memories {
         // FIXME -- hack to avoid problems in payload calculation when the only reason we
         // have a payload is to set the match address for P4C-2938
         bool payload_match_addr_only = false;
-        table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi, const TableFormat::Use *tf,
+        table_alloc(const IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,
                     std::map<UniqueId, Memories::Use> *mu, const LayoutOption *lo,
                     ActionData::FormatType_t ft,

@@ -145,15 +145,16 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
   if (Device::currentDevice() != Device::TOFINO) {
     if (t && t->resources) {
       PHV::FieldUse READ(PHV::FieldUse::READ);
-      std::vector<IXBar::Use> ixbar_uses {t->resources->match_ixbar,
-                                          t->resources->gateway_ixbar,
-                                          t->resources->proxy_hash_ixbar,
-                                          t->resources->selector_ixbar,
-                                          t->resources->salu_ixbar,
-                                          t->resources->meter_ixbar};
+      std::vector<IXBar::Use *> ixbar_uses { t->resources->match_ixbar.get(),
+                                             t->resources->gateway_ixbar.get(),
+                                             t->resources->proxy_hash_ixbar.get(),
+                                             t->resources->selector_ixbar.get(),
+                                             t->resources->salu_ixbar.get(),
+                                             t->resources->meter_ixbar.get() };
       // Direct crossbar uses.
-      for (auto use : ixbar_uses) {
-        for (auto byte : use.use) {
+      for (auto *use : ixbar_uses) {
+        if (!use) continue;
+        for (auto byte : use->use) {
           for (auto fi : byte.field_bytes) {
               auto field = phv_.field(fi.field);
               if (!field) continue;
@@ -169,10 +170,10 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
                 return true;
       } } }
       // Crossbar uses via hash distribution.
-      for (auto hash_dist : t->resources->hash_dists) {
-        for (auto hash_dist_use : hash_dist.ir_allocations) {
-          for (auto byte : hash_dist_use.use.use) {
-            for (auto fi : byte.field_bytes) {
+      for (auto &hash_dist : t->resources->hash_dists) {
+        for (auto &hash_dist_use : hash_dist.ir_allocations) {
+          for (auto &byte : hash_dist_use.use->use) {
+            for (auto &fi : byte.field_bytes) {
                 auto field = phv_.field(fi.field);
                 if (!field) continue;
                 le_bitrange range = StartLen(fi.lo, fi.hi - fi.lo + 1);

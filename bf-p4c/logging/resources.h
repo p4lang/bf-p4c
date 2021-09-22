@@ -11,11 +11,110 @@
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
 #include "resources_schema.h"
+#include "bf-p4c/mau/instruction_memory.h"
 
 using Logging::Resources_Schema_Logger;
 class ClotInfo;  // Forward declaration
 
 namespace BFN {
+
+namespace Resources {
+/**
+ *  XBar bytes can be shared by multiple tables for different purposes. These cases can happen:
+ *  * One table can use the same data for two purposes
+ *  * Two tables can use the same data for whatever purposes
+ *  * Each table use different slice of the byte for different purposes, slices do not overlap
+ *      * (validity bits)
+ *  * Mutually exclusive tables source mutually exclusive data from the same byte
+ *  * Use might be duplicated (bug possibly?) This is why this structure is held inside set and
+ *    implements < operator so we can deduplicate these cases.
+ */
+struct XbarByteResource {
+    std::string usedBy;
+    std::string usedFor;
+    IXBar::Use::Byte byte;
+
+    XbarByteResource(const std::string &ub, const std::string &uf, const IXBar::Use::Byte &b);
+
+    bool operator<(const XbarByteResource &other) const {
+        return std::tie(usedBy, usedFor, byte) < std::tie(other.usedBy, other.usedFor, other.byte);
+    }
+};
+
+// Each hash bit is reserved to a single table or side effect.  However, because the
+// same bit can be the select bits/RAM line bit for two different ways in the same
+// table, then they can be shared
+struct HashBitResource {
+    enum class UsageType {
+        WaySelect = 0, WayLineSelect, SelectionBit, DistBit, Gateway
+    };
+
+    struct Usage {
+        int value;
+        std::string fieldName;
+        UsageType type;
+
+        bool operator<(const Usage &other) const {
+            return std::tie(type, value, fieldName) <
+                   std::tie(other.type, other.value, other.fieldName);
+        }
+    };
+
+    std::string usedBy;
+    std::string usedFor;
+    std::set<Usage> usages;
+
+    void append(std::string ub, std::string uf, UsageType type, int value,
+                const std::string &fieldName = "");
+};
+
+// This represents the 48 bits of hash distribution before the hash distribution units
+// are expanded, masked and shifted
+// Hash Distribution units can be used for multiple purposes (i.e. two wide addresses
+// between tables
+struct HashDistResource {
+    std::set<std::string> usedBy;
+    std::set<std::string> usedFor;
+
+    void append(const std::string &ub, const std::string &uf);
+};
+
+struct ActionBusByteResource {
+    std::set<std::string> usedBy;
+
+    void append(const std::string &ub);
+};
+
+struct MemoriesResource {
+    std::string              tableName;
+    std::string              gatewayName;
+    const TableResourceAlloc *use;
+
+    MemoriesResource(const std::string &name, const std::string &gwname,
+                     const TableResourceAlloc *use) :
+        tableName(name), gatewayName(gwname), use(use) {}
+};
+
+struct IMemColorResource {
+    unsigned int color = 0;
+    gress_t gress = INGRESS;
+
+    // Key is used_by, value is list of action names
+    ordered_map<std::string, std::set<std::string>> usages;
+};
+
+struct StageResources {
+    ordered_map<int, cstring> logicalIds;  // Map table logical ids to table names
+    ordered_map<int, std::set<XbarByteResource>> xbarBytes;
+    // key is (hashBitNumber, hashFunction)
+    ordered_map<std::pair<int, int>, HashBitResource>  hashBits;
+    // key is (hashId, unitId)
+    ordered_map<std::pair<int, int>, HashDistResource> hashDist;
+    ordered_map<int, ActionBusByteResource>            actionBusBytes;
+    ordered_map<int, std::vector<IMemColorResource>>   imemColor;
+    std::vector<MemoriesResource>                      memories;
+};
+}  // end namespace Resources
 
 /**
  *  \brief Class for generating resources.json logfile
@@ -58,106 +157,11 @@ class ResourcesLogging : public Inspector {
     using VliwResourceUsage = Resources_Schema_Logger::VliwResourceUsage;
     using XbarResourceUsage = Resources_Schema_Logger::XbarResourceUsage;
 
-    /**
-     *  XBar bytes can be shared by multiple tables for different purposes. These cases can happen:
-     *  * One table can use the same data for two purposes
-     *  * Two tables can use the same data for whatever purposes
-     *  * Each table use different slice of the byte for different purposes, slices do not overlap
-     *      * (validity bits)
-     *  * Mutually exclusive tables source mutually exclusive data from the same byte
-     *  * Use might be duplicated (bug possibly?) This is why this structure is held inside set and
-     *    implements < operator so we can deduplicate these cases.
-     */
-    struct XbarByteResource {
-        std::string usedBy;
-        std::string usedFor;
-        IXBar::Use::Byte byte;
-
-        XbarByteResource(const std::string &ub, const std::string &uf, const IXBar::Use::Byte &b);
-
-        bool operator<(const XbarByteResource &other) const {
-            return usedBy < other.usedBy || usedFor < other.usedFor || byte < other.byte;
-        }
-    };
-
-    // Each hash bit is reserved to a single table or side effect.  However, because the
-    // same bit can be the select bits/RAM line bit for two different ways in the same
-    // table, then they can be shared
-    struct HashBitResource {
-        enum class UsageType {
-            WaySelect = 0, WayLineSelect, SelectionBit, DistBit, Gateway
-        };
-
-        struct Usage {
-            int value;
-            std::string fieldName;
-            UsageType type;
-
-            bool operator<(const Usage &other) const {
-                return type < other.type || value < other.value || fieldName < other.fieldName;
-            }
-        };
-
-        std::string usedBy;
-        std::string usedFor;
-        std::set<Usage> usages;
-
-        void append(std::string ub, std::string uf, UsageType type, int value,
-                    const std::string &fieldName = "");
-    };
-
-    // This represents the 48 bits of hash distribution before the hash distribution units
-    // are expanded, masked and shifted
-    // Hash Distribution units can be used for multiple purposes (i.e. two wide addresses
-    // between tables
-    struct HashDistResource {
-        std::set<std::string> usedBy;
-        std::set<std::string> usedFor;
-
-        void append(const std::string &ub, const std::string &uf);
-    };
-
-    struct ActionBusByteResource {
-        std::set<std::string> usedBy;
-
-        void append(const std::string &ub);
-    };
-
-    struct MemoriesResource {
-        std::string              tableName;
-        std::string              gatewayName;
-        const TableResourceAlloc *use;
-
-        MemoriesResource(const std::string &name, const std::string &gwname,
-                         const TableResourceAlloc *use) :
-            tableName(name), gatewayName(gwname), use(use) {}
-    };
-
-    struct IMemColorResource {
-        unsigned int color = 0;
-        gress_t gress = INGRESS;
-
-        // Key is used_by, value is list of action names
-        ordered_map<std::string, std::set<std::string>> usages;
-    };
-
  protected:
-    struct StageResources {
-        ordered_map<int, cstring> logicalIds;  // Map table logical ids to table names
-        ordered_map<int, std::set<XbarByteResource>> xbarBytes;
-        // key is (hashBitNumber, hashFunction)
-        ordered_map<std::pair<int, int>, HashBitResource>  hashBits;
-        // key is (hashId, unitId)
-        ordered_map<std::pair<int, int>, HashDistResource> hashDist;
-        ordered_map<int, ActionBusByteResource>            actionBusBytes;
-        ordered_map<int, std::vector<IMemColorResource>>   imemColor;
-        std::vector<MemoriesResource>                      memories;
-    };
-
     const ClotInfo &clotInfo;  // ClotInfo reference is only passed to CLOT resource logger
     std::string filePath;  // path to logged file
     std::string manifestPath;  // path from manifest to logged file
-    std::vector<StageResources> stageResources;  // Data for logging are collected here
+    std::vector<Resources::StageResources> stageResources;  // Data for logging are collected here
     const ParserResources *parserResources;  // Logged data for parser
     std::vector<ClotResourceUsage*> clotResources;  // Logged data for clots
 
@@ -181,7 +185,7 @@ class ResourcesLogging : public Inspector {
 
     void collectTableUsage(cstring name, const IR::MAU::Table *table);
 
-    void collectXbarBytesUsage(unsigned int stage, const IXBar::Use &alloc);
+    void collectXbarBytesUsage(unsigned int stage, const IXBar::Use *alloc);
 
     void collectHashDistUsage(unsigned int stage, const IXBar::HashDistUse &hd_use);
 

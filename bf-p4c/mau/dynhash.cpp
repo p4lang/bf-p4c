@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 
 /**
  * Guarantees that each dynamic hash function is the same across all calls of this dynamic
@@ -85,8 +86,8 @@ bool GenerateDynamicHashJson::preorder(const IR::MAU::Table *tbl) {
                 _dynHashCalc->emplace("handle", dynHashHandleBase + dynHashHandle++);
                 LOG4("Generating dynamic hash schema for "
                         << fieldListCalcName << " and field list " << fieldListName);
-                gen_ixbar_json(res->selector_ixbar, _dynHashCalc, tbl->stage(),
-                                fieldListName, &algorithms, hash_bit_width);
+                gen_ixbar_json(res->selector_ixbar.get(), _dynHashCalc, tbl->stage(),
+                               fieldListName, &algorithms, hash_bit_width);
                 _dynHashNode->append(_dynHashCalc);
             }
         }
@@ -132,10 +133,11 @@ void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
     gen_field_list_json(_fieldList, hge, fieldNames);
 
     for (auto func_to_alloc : alloc_to_use) {
-        IXBar::Use combined_use;
+        Tofino::IXBar::Use combined_use;
         const HashFuncLoc &hfl = func_to_alloc.first;
         for (auto &alloc : func_to_alloc.second) {
-            for (auto &b : alloc->use.use) {
+            BUG_CHECK(alloc->use, "no IXBar::Use");
+            for (auto &b : alloc->use->use) {
                 bool repeat_byte = false;
                 for (auto &c_b : combined_use.use) {
                     if (b.loc == c_b.loc) {
@@ -149,7 +151,7 @@ void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
                     combined_use.use.push_back(b);
             }
             auto &hdh = combined_use.hash_dist_hash;
-            auto &local_hdh = alloc->use.hash_dist_hash;
+            auto &local_hdh = dynamic_cast<Tofino::IXBar::Use &>(*alloc->use).hash_dist_hash;
             hdh.allocated = true;
             hdh.group = hfl.hash_group;
             hdh.galois_start_bit_to_p4_hash.insert(
@@ -189,7 +191,7 @@ void GenerateDynamicHashJson::end_apply() {
 /*
 void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
     return;
-    auto hash_dists = tbl->resources->hash_dists;
+    auto &hash_dists = tbl->resources->hash_dists;
     HashDistToAlloc ir_to_alloc;
     // Gather up all IXBar::HashDistIRUse per IR::MAU::HashDist allocation
     for (auto &hash_dist_use : hash_dists) {
@@ -414,7 +416,7 @@ void GenerateDynamicHashJson::gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, 
 }
 
 void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int stage,
-        IXBar::Use &ixbar_use, int &hash_bit_width) {
+        Tofino::IXBar::Use &ixbar_use, int &hash_bit_width) {
     int hashGroup = -1;
     Util::JsonArray *_hash_bits = new Util::JsonArray();
     int num_hash_bits = 0;
@@ -464,9 +466,10 @@ void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int sta
     _hash_cfgs->append(_hash_cfg);
 }
 
-void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
+void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
         const IR::NameList *algorithms, int hash_width) {
+    auto *ixbar_use = dynamic_cast<const Tofino::IXBar::Use *>(ixbar_use_);
     Util::JsonArray *_field_lists = new Util::JsonArray();
     Util::JsonObject *_field_list = new Util::JsonObject();
     Util::JsonArray *_fields = new Util::JsonArray();
@@ -481,7 +484,7 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
     _field_list->emplace("can_rotate", false);
     int numConstants = 0;
     std::map<cstring, cstring> fieldNames;
-    for (auto *e : ixbar_use.field_list_order) {
+    for (auto *e : ixbar_use->field_list_order) {
         auto field = PHV::AbstractField::create(phv, e);
         Util::JsonObject *_field = new Util::JsonObject();
         cstring name = "";
@@ -512,7 +515,7 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
     Util::JsonObject *_xbar_cfg = new Util::JsonObject();
     _xbar_cfg->emplace("stage_number", stage);
     Util::JsonArray *_xbar = new Util::JsonArray();
-    for (auto &byte : ixbar_use.use) {
+    for (auto &byte : ixbar_use->use) {
         for (auto &fieldinfo : byte.field_bytes) {
             for (int i = fieldinfo.lo; i <= fieldinfo.hi; i++) {
                 Util::JsonObject *_xbar_byte = new Util::JsonObject();
@@ -536,8 +539,8 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
     Util::JsonArray *_hash_bits = new Util::JsonArray();
     int num_hash_bits = 0;
     int hash_bit_width = -1;
-    if (ixbar_use.meter_alu_hash.allocated) {
-        auto mah = ixbar_use.meter_alu_hash;
+    if (ixbar_use->meter_alu_hash.allocated) {
+        auto mah = ixbar_use->meter_alu_hash;
         hashAlgo = &mah.algorithm;
         hashGroup = mah.group;
         hash_bit_width = hash_width <= 0 ? hashAlgo->size : hash_width;
