@@ -169,7 +169,10 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
     const char *stage_tbl_type = "match_with_no_key";
     size = 1;
-    if (!p4_params_list.empty()) {
+    if (p4_table && p4_table->p4_stage_table_type() == "gateway_with_entries") {
+        stage_tbl_type = "gateway_with_entries";
+        size = p4_size();
+    } else if (!p4_params_list.empty()) {
         stage_tbl_type = "hash_action";
         size = p4_size();
     }
@@ -191,7 +194,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
         action->actions->gen_tbl_cfg(tbl["actions"]);
         action->actions->add_action_format(this, stage_tbl); }
     common_tbl_cfg(tbl);
-    if (!p4_params_list.empty())
+    if (stage_tbl_type == "hash_action" && !p4_params_list.empty())
         add_hash_functions(stage_tbl);
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);

@@ -89,6 +89,9 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tSTR))
                 if (strncmp(kv.value.s, "true", 4) == 0)
                     rv->disable_atomic_modify = true;
+        } else if (kv.key == "stage_table_type") {
+            if (CHECKTYPE(kv.value, tSTR))
+                rv->stage_table_type = kv.value.s;
         } else if (kv.key == "how_referenced") {
             if (CHECKTYPE(kv.value, tSTR)) {
                 if (strcmp(kv.value.s, "direct") != 0 && strcmp(kv.value.s, "indirect") != 0)

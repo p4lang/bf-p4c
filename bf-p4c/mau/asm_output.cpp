@@ -296,10 +296,11 @@ class ExtractKeyDetails {
     Iterator begin() { auto ekd = this; return Iterator{table_begin, ekd}; }
     Iterator end() { auto ekd = this; return Iterator{table_end, ekd}; }
 
-    ExtractKeyDetails(const IR::MAU::Table *tbl, const PhvInfo &phv, bool warn) :
-                table_begin{tbl->match_key.begin()},
-                table_end{tbl->match_key.end()},
-                config{phv, (warn? tbl->externalName() : nullptr)} {}
+    ExtractKeyDetails(const IR::Vector<IR::MAU::TableKey>& match_key, const PhvInfo &phv,
+                      cstring tbl_name) :
+                table_begin{match_key.begin()},
+                table_end{match_key.end()},
+                config{phv, tbl_name} {}
 };
 
 }  // namespace
@@ -2273,13 +2274,25 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             if (disable_atomic_modify) out << ", disable_atomic_modify : true";
         }
     }
+    if (tbl->is_a_gateway_table_only())
+        out << ", stage_table_type: gateway_with_entries" << std::endl;
     out << " }" << std::endl;
 
-    if (tbl->match_key.empty())
+    if (tbl->match_key.empty() && tbl->gateway_constant_entries_key.empty())
         return;
 
     out << indent++ <<  "p4_param_order: " << std::endl;
-    for (const auto& key_info : ExtractKeyDetails(tbl, phv, true)) {
+    IR::Vector<IR::MAU::TableKey> match_key;
+    // Include regular match keys
+    if (!tbl->match_key.empty()) {
+        match_key.append(tbl->match_key);
+    }
+    // But also the ones that might have been removed due to entries being offloaded to
+    // gateway table (those are currently also needed by the driver in context.json)
+    if (!tbl->gateway_constant_entries_key.empty()) {
+        match_key.append(tbl->gateway_constant_entries_key);
+    }
+    for (const auto& key_info : ExtractKeyDetails(match_key, phv, tbl->externalName())) {
         Item_Format format(key_info.table_keys(), indent);
         out << indent++ << canon_name(key_info.name()) << ":" << format.open;
         out << "type: " << key_info.match_type();
@@ -2322,7 +2335,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         out << indent++ << "- priority: " << priority++ << std::endl;
         out << indent << "match_key_fields_values:" << std::endl;
 
-        auto extract = ExtractKeyDetails(tbl, phv, false);
+        auto extract = ExtractKeyDetails(tbl->match_key, phv, nullptr);
         auto key_info = extract.begin();
         for (auto key : entry->getKeys()->components) {
             ERROR_CHECK(key_info != extract.end(), ErrorType::ERR_INVALID,

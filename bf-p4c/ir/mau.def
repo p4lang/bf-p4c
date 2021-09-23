@@ -56,6 +56,10 @@ class Table : BFN::Unit, IAnnotated  {
      *     of the action
      */
     std::map<cstring, std::pair<cstring, std::vector<Constant>>> gateway_payload;
+    
+    // For now we are keeping the keys even for gateway inhibited tables
+    // (only for populating context.json, due to current driver needs)
+    inline Vector<TableKey>                     gateway_constant_entries_key;
 
     // match_table never visited, keys are in match_key, default action also in action
     NullOK IR::P4Table                          match_table;

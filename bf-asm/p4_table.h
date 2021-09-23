@@ -22,6 +22,7 @@ struct alpm_t {
 class P4Table {
     int                 lineno = -1;
     std::string         name, preferred_match_type;
+    std::string         stage_table_type;
     unsigned            handle = 0;
     bool                explicit_size = false;
     bool                hidden = false;
@@ -49,6 +50,7 @@ class P4Table {
     const char *p4_name() const { return name.empty() ? 0 : name.c_str(); }
     unsigned get_handle() { return handle; }
     unsigned p4_size() { return size; }
+    std::string p4_stage_table_type() { return stage_table_type; }
     json::map *base_tbl_cfg(json::vector &out, int size, const Table *table) const;
     void base_alpm_tbl_cfg(json::map &out, int size, const Table *table,
             P4Table::alpm_type atype) const;
