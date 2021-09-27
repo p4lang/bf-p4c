@@ -610,6 +610,57 @@ DfsItrContext::split_by_deparsed_bottom_bits(SuperCluster* sc) const {
     return PHV::Slicing::split(sc, schema);
 }
 
+boost::optional<std::list<SuperCluster*>>
+DfsItrContext::split_by_valid_container_range(SuperCluster* sc) const {
+    SplitSchema schema;
+    for (auto* sl : sc->slice_lists()) {
+        schema[sl] = bitvec();
+        int offset = 0;
+        auto itr = sl->begin();
+        while (itr != sl->end()) {
+            const auto valid_range = itr->validContainerRange();
+            if (valid_range.size() == itr->size()) {
+                schema[sl].setbit(offset + itr->size());
+            }
+            offset += itr->size();
+            itr = std::next(itr);
+        }
+        schema[sl].clrbit(0);
+        schema[sl].clrbit(offset);
+    }
+    LOG5("split_by_valid_container_range schema: " << schema);
+    return PHV::Slicing::split(sc, schema);
+}
+
+boost::optional<std::list<SuperCluster*>>
+DfsItrContext::split_by_long_fieldslices(SuperCluster* sc) const {
+    SplitSchema schema;
+    for (auto* sl : sc->slice_lists()) {
+        schema[sl] = bitvec();
+        int offset = 0;
+        for (auto itr = sl->begin(); itr != sl->end();
+             offset += itr->size(), itr = std::next(itr)) {
+            const auto& fs = *itr;
+            if (fs.size() >= 64) {
+                schema[sl].setbit(offset);
+                int splitted_bits = 0;
+                for (const int c : {32, 16, 8}) {
+                    while (splitted_bits + c <= fs.size()) {
+                        schema[sl].setbit(offset + splitted_bits + c);
+                        splitted_bits += c;
+                    }
+                }
+            }
+        }
+        schema[sl].clrbit(0);
+        schema[sl].clrbit(offset);
+    }
+    // high log level because we use this presplit only when we cannot find a solution.
+    LOG1("split_long_fieldslices schema: " << schema);
+    return PHV::Slicing::split(sc, schema);
+}
+
+
 // split by pa_container_size for those pragmas that are not up-casting,
 // i.e. ignore cases like pa_container_sz(f1<8>, 32); Those will be left
 // to be iterated by the allocation algorithm to figure out the best way.
@@ -813,8 +864,48 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     }
     to_be_split_i = *after_pre_split;
 
+    // XXX(yumin): this is temporarily disabled because although it is doing the right thing,
+    // PHV allocation and Table Placement failed to fit several customer profile.
+    // We should enable this when alt-phv-alloc is stable.
+    // presplit by valid container range constraint that a field cannot be packed with adjacent
+    // field, when its valid container range is equal to the size of the field.
+    // after_pre_split = presplit_by(
+    //     to_be_split_i,
+    //     [&](SuperCluster* sc) { return split_by_valid_container_range(sc); },
+    //     "valid_container_range_limit");
+    // if (!after_pre_split) {
+    //     LOG1("split by valid_container_range_limit fields failed, iteration stopped.");
+    //     return;
+    // }
+    // to_be_split_i = *after_pre_split;
+
     // start searching.
     dfs(cb, to_be_split_i);
+
+    // true indicates that we had troubles in finding a solution. Try aggressively presplit
+    // large fieldslice to 32-bit chunks first and then rerun dfs.
+    // XXX(yumin): this is a HACK to prevent extremely long compilation because
+    // DFS was not effectively searching through critical slicing choices
+    // that can produce a valid slicing.
+    // An example is that when there are multiple bit<128> fields being searched for different
+    // slicing between two critical choices, and the slicing of bit<128> fields does not matter.
+    // TODO(yumin): There should be a algorithmic way to prune those cases.
+    if (n_steps_since_last_solution > n_step_limit_per_solution) {
+        LOG1("failed to find one valid solution within step limit. "
+            "Retry with pre-splitting large fieldslice");
+        after_pre_split = presplit_by(
+            to_be_split_i, [&](SuperCluster* sc) { return split_by_long_fieldslices(sc); },
+            "split_by_long_fieldslices");
+        if (!after_pre_split) {
+            LOG1("split by split_by_long_fieldslices fields failed, iteration stopped.");
+            return;
+        }
+        to_be_split_i = *after_pre_split;
+
+        // restart searching.
+        n_steps_since_last_solution = 0;
+        dfs(cb, to_be_split_i);
+    }
 }
 
 bool DfsItrContext::need_further_split(const SuperCluster::SliceList* sl) const {
@@ -1111,7 +1202,7 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_max_size(
 bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
     const ordered_map<FieldSlice, AfterSplitConstraint>& decided_sz, const SuperCluster* sc) const {
     // XXX(yumin): can be further improved by constraints that exact_container
-    // slice lists starts with byte-boundry. But it maybe too complicated.
+    // slice lists starts with byte-boundary. But it maybe too complicated.
     for (auto* sl : sc->slice_lists()) {
         // apply on exact container slicelists only.
         if (!sl->front().field()->exact_containers()) {
@@ -1123,6 +1214,9 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
         std::vector<AfterSplitConstraint> constraint_vec(
             sl_sz,
             AfterSplitConstraint{.t = AfterSplitConstraint::ConstraintType::NONE, .size = 0});
+        // start_bit_left_bound is maintained during the next for loop, representing the
+        // leftbound of starting bit of the fieldslice (fs) that is being iterated.
+        int start_bit_left_bound = 0;
         int offset = 0;
         for (const auto& fs : *sl) {
             if (!decided_sz.count(fs) ||
@@ -1142,7 +1236,7 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
 
             // seek back to the left-most possible starting bit.
             int leftmost_start = offset;
-            for (; leftmost_start >= 0; leftmost_start--) {
+            for (; leftmost_start >= start_bit_left_bound; leftmost_start--) {
                 const auto prev_fs = fs_bitmap.at(leftmost_start);
                 const auto* prev_field = prev_fs.field();
                 if (prev_field != fs.field() && !phv_i.must_alloc_same_container(prev_fs, fs) &&
@@ -1197,6 +1291,17 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             for (int i = leftmost_start; i < leftmost_start + sz_req.size; i++) {
                 constraint_vec[i] = *constraint_vec[i].intersect(sz_req);
             }
+
+            // update start_bit_left_bound by assuming this field slice will be allocated
+            // starting from the left most possible position.
+            // We can only update this value when the container size requirement for field slice
+            // is EXACT and the size of the field equals to the container size.
+            if (sz_req.t == AfterSplitConstraint::ConstraintType::EXACT &&
+                sz_req.size == fs.size()) {
+                start_bit_left_bound = leftmost_start + fs.size();
+            }
+
+            // update offset.
             offset += fs.size();
         }
     }
@@ -1351,8 +1456,18 @@ std::vector<SuperCluster*> DfsItrContext::get_well_formed_no_more_split() const 
 
 // return false if iteration should be terminated.
 bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>& unchecked) {
+    // prune when we reached the limit of steps.
     n_steps_i++;
     if (n_steps_i > n_step_limit_i) {
+        return false;
+    }
+
+    // prune when we spend too much time in finding one solution.
+    // It usually means that we made wrong decisions at the beginning of DFS, that
+    // our prune strategy cannot detect and it takes too long time to backtrack to
+    // overwrite wrong decisions.
+    n_steps_since_last_solution++;
+    if (n_steps_since_last_solution > n_step_limit_per_solution) {
         return false;
     }
 
@@ -1385,6 +1500,7 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
     // found one solution.
     if (to_be_split_i.empty()) {
         LOG4("found a solution after " << n_steps_i << " steps");
+        n_steps_since_last_solution = 0;
         return yield(std::list<SuperCluster*>(done_i.begin(), done_i.end()));
     }
 
