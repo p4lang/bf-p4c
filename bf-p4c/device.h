@@ -56,6 +56,7 @@ class Device {
     static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
     static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }
     /* type is 'int' because width_bits() is defined as 'int' in ir/base.def */
+    static int mirrorTypeWidth() { return Device::get().getMirrorTypeWidth(); }
     static int cloneSessionIdWidth() { return Device::get().getCloneSessionIdWidth(); }
     static int queueIdWidth() { return Device::get().getQueueIdWidth(); }
     static int portBitWidth() { return Device::get().getPortBitWidth(); }
@@ -89,6 +90,7 @@ class Device {
     virtual unsigned getMaxResubmitId() const = 0;
     virtual unsigned getMaxDigestId() const = 0;
     virtual unsigned getMaxDigestSizeInBytes() const = 0;
+    virtual int getMirrorTypeWidth() const = 0;
     virtual int getCloneSessionIdWidth() const = 0;
     virtual int getQueueIdWidth() const = 0;
     virtual int getPortBitWidth() const = 0;
@@ -130,6 +132,7 @@ class TofinoDevice : public Device {
     gress_t getMaxGress() const override { return EGRESS; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
+    int getMirrorTypeWidth() const override { return 3; }
     int getCloneSessionIdWidth() const override { return 10; }
     int getQueueIdWidth() const override { return 5; }
     int getPortBitWidth() const override { return 9; }
@@ -174,6 +177,7 @@ class JBayDevice : public Device {
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
+    int getMirrorTypeWidth() const override { return 4; }
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
     int getPortBitWidth() const override { return 9; }
@@ -247,6 +251,7 @@ class CloudbreakDevice : public Device {
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
+    int getMirrorTypeWidth() const override { return 4; }
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
     int getPortBitWidth() const override { return 11; }
@@ -292,6 +297,7 @@ class FlatrockDevice : public Device {
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
+    int getMirrorTypeWidth() const override { return 4; }
     int getCloneSessionIdWidth() const override { return 10; }
     int getQueueIdWidth() const override { return 5; }
     int getPortBitWidth() const override { return 9; }

@@ -176,8 +176,8 @@ void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc, int 
     BUG_CHECK(st != nullptr,
             "Parameter type %1% must be a struct", param->type);
     auto meta = new IR::Metadata(param->name, st);
-    auto member = new IR::Member(new IR::ConcreteHeaderRef(meta),
-            "mirror_type");
+    auto member = new IR::Member(IR::Type_Bits::get(Device::mirrorTypeWidth()),
+            new IR::ConcreteHeaderRef(meta), "mirror_type");
     processMirrorEmit(mc, member, idx);
 }
 
