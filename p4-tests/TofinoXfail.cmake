@@ -1385,9 +1385,13 @@ p4c_add_xfail_reason("tofino"
 
 # no support for runtime-variable indexing
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: No PhvInfo::header for header|Compiler Bug.*Exiting with SIGSEGV"
+  "For Tofino, Index of the header stack.*has to be a const value and can't be a variable.*"
   testdata/p4_16_samples/runtime-index-bmv2.p4
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
+  testdata/p4_16_samples/predication_issue_2.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
+  testdata/p4_16_samples/issue2726-bmv2.p4
+  testdata/p4_16_samples/issue1989-bmv2.p4
 )
 
 # select ranges not supported
@@ -1844,13 +1848,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "No PhvInfo::header for header named"
-  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
-  testdata/p4_16_samples/issue2726-bmv2.p4
-  testdata/p4_16_samples/issue1989-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "condition too complex"
   testdata/p4_16_samples/psa-e2e-cloning-basic-bmv2.p4
 )
@@ -1949,11 +1946,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Null stat"
   testdata/p4_16_samples/issue2258-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "No PhvInfo::header for header named"
-  testdata/p4_16_samples/predication_issue_2.p4
 )
 
 # This one fails beause we do not support multistage actions

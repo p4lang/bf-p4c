@@ -1693,6 +1693,26 @@ class MarkPaddingAsDeparsed : public Inspector {
 
     bool preorder(const IR::HeaderRef* hr) {
         LOG5("Mark padding in HeaderRef " << hr);
+
+        if (auto hdrref = hr->to<IR::HeaderStackItemRef>()) {
+            // Tofino doesn't support for indexing with a virable for header stack.
+            auto idx = (hdrref->index())->to<IR::Constant>();
+            // Is the index a constant?
+            if (idx == nullptr) {
+               BUG("For Tofino, Index of the header stack \"%s\" has to be a const value and "
+                   "can't be a variable. (Please Note: Don't use a const value with width.)",
+                   hdrref->base()->toString());
+            }
+
+            // If the constant has non-zero width, It might be propagated from some variable.
+            auto tb = (idx->type)->to<IR::Type_Bits>();
+            if ((tb != nullptr) && (tb->size != 0)) {
+               BUG("For Tofino, Index of the header stack \"%s\" has to be a const value and "
+                   "can't be a variable. (Please Note: Don't use a const value with width.)",
+                   hdrref->base()->toString());
+            }
+        }
+
         const PhvInfo::StructInfo& struct_info = phv.struct_info(hr);
 
         // Only analyze headers, not metadata structs.
