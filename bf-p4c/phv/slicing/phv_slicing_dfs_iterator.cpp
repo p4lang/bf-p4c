@@ -230,14 +230,14 @@ boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
 // NextSplitChoiceMetrics is used during DFS to sort best slicing choice
 // from [8, 16, 32].
 struct NextSplitChoiceMetrics {
-    bool will_create_new_spilt = false;
+    bool will_create_new_split = false;
     bool will_split_unreferenced = false;
     int n_avoidable_packings = 0;
     SplitChoice size;
 
-    NextSplitChoiceMetrics(bool will_create_new_spilt, bool split_unreferenced,
+    NextSplitChoiceMetrics(bool will_create_new_split, bool split_unreferenced,
                            int n_avoidable_packings, SplitChoice size)
-        : will_create_new_spilt(will_create_new_spilt),
+        : will_create_new_split(will_create_new_split),
           will_split_unreferenced(split_unreferenced),
           n_avoidable_packings(n_avoidable_packings),
           size(size) {}
@@ -258,8 +258,8 @@ struct NextSplitChoiceMetrics {
     // 3.  larger container to encourage more packings.
     static bool default_heuristics(const NextSplitChoiceMetrics& a,
                                    const NextSplitChoiceMetrics& b) {
-        if (a.will_create_new_spilt != b.will_create_new_spilt) {
-            return a.will_create_new_spilt < b.will_create_new_spilt;
+        if (a.will_create_new_split != b.will_create_new_split) {
+            return a.will_create_new_split < b.will_create_new_split;
         } else if (a.will_split_unreferenced != b.will_split_unreferenced) {
             return a.will_split_unreferenced > b.will_split_unreferenced;
         } else {
@@ -290,7 +290,7 @@ struct NextSplitChoiceMetrics {
 };
 
 std::ostream& operator<<(std::ostream& out, const NextSplitChoiceMetrics& c) {
-    out << "{" << "new_split: " << c.will_create_new_spilt << ", "
+    out << "{" << "new_split: " << c.will_create_new_split << ", "
         << "split_unref:" << c.will_split_unreferenced << ", "
         << "n_avoidable_packings:" << c.n_avoidable_packings << ", "
         << "size: " << int(c.size) << "}";

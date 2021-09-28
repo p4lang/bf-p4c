@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_ALLOCATE_PHV_H_
 #define BF_P4C_PHV_ALLOCATE_PHV_H_
 
+#include <sstream>
 #include <boost/optional.hpp>
 
 #include "bf-p4c/common/field_defuse.h"
@@ -12,6 +13,7 @@
 #include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
+#include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv.h"
@@ -19,10 +21,126 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/slicing/types.h"
+#include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
+
+namespace PHV {
+
+// AllocSetting holds const references to various alloc settings.
+struct AllocSetting {
+    /// trivial allocation mode that
+    /// (1) do minimal packing, i.e., pack fieldslices only when unavoidable.
+    /// (2) assume that there were infinite number of containers.
+    /// (3) no metadata or dark initialization, as if no_code_change mode is enabled.
+    bool trivial_alloc = false;
+    bool no_code_change = false;              // true if disable metadata and dark init.
+    bool physical_liverange_overlay = false;  // true if allow physical liverange overlay.
+};
+
+/// AllocUtils is a collection of const references to misc passes that PHV allocation depends on.
+/// It also provides some helper methods that are used by different allocation strategies.
+struct AllocUtils {
+    // PHV fields and clot info.
+    const PhvInfo& phv;
+    const ClotInfo& clot;
+
+    // clustering results (super clusters) and no_pack constraint found during clustering.
+    const Clustering& clustering;
+
+    // defuses and action constraints.
+    const PhvUse& uses;
+    const FieldDefUse& defuse;
+    const ActionPhvConstraints& actions;
+
+    // Metadata initialization possibilities.
+    const LiveRangeShrinking& meta_init;
+    // Dark overlay possibilities.
+    const DarkOverlay& dark_init;
+
+    // parser-related
+    const MapFieldToParserStates& field_to_parser_states;
+    const CalcParserCriticalPath& parser_critical_path;
+    const CollectParserInfo& parser_info;
+    const CollectStridedHeaders& strided_headers;
+
+    // physical live range (available only after table has been allocated)
+    const PHV::FieldSliceLiveRangeDB& physical_liverange_db;
+
+    // pragma
+    const PHV::Pragmas& pragmas;
+
+    // misc allocation settings.
+    const AllocSetting& settings;
+
+    AllocUtils(const PhvInfo& phv, const ClotInfo& clot, const Clustering& clustering,
+               const PhvUse& uses, const FieldDefUse& defuse, const ActionPhvConstraints& actions,
+               const LiveRangeShrinking& meta_init,
+               const DarkOverlay& dark_init,
+               const MapFieldToParserStates& field_to_parser_states,
+               const CalcParserCriticalPath& parser_critical_path,
+               const CollectParserInfo& parser_info, const CollectStridedHeaders& strided_headers,
+               const PHV::FieldSliceLiveRangeDB& physical_liverange_db,
+               const PHV::Pragmas& pragmas,
+               const AllocSetting& settings)
+        : phv(phv),
+          clot(clot),
+          clustering(clustering),
+          uses(uses),
+          defuse(defuse),
+          actions(actions),
+          meta_init(meta_init),
+          dark_init(dark_init),
+          field_to_parser_states(field_to_parser_states),
+          parser_critical_path(parser_critical_path),
+          parser_info(parser_info),
+          strided_headers(strided_headers),
+          physical_liverange_db(physical_liverange_db),
+          pragmas(pragmas),
+          settings(settings) {}
+
+    const SymBitMatrix& mutex() const {
+        return phv.field_mutex();
+    }
+
+    // has_pack_conflict should be used as the only source of pack conflict checks.
+    // It checks mutex + pack conflict from mau + no pack constraint from cluster.
+    bool has_pack_conflict(const PHV::Field* f1, const PHV::Field* f2) const {
+        if (f1 == f2 || mutex()(f1->id, f2->id)) return false;
+        return clustering.no_pack(f1, f2) || actions.hasPackConflict(f1, f2);
+    }
+
+    // return true if field is used and not padding.
+    bool is_referenced(const PHV::Field* f) const { return !f->padding && uses.is_referenced(f); };
+
+    /// @returns a copy of all SuperClusters from clustering_i.
+    std::list<PHV::SuperCluster*> make_superclusters() const {
+        return clustering.cluster_groups();
+    }
+
+    // @returns a slicing iterator.
+    PHV::Slicing::IteratorInterface* make_slicing_ctx(PHV::SuperCluster* sc) const;
+
+    /// @returns the container groups available on this Device. All fieldslices in
+    /// a cluster must be allocated to the same container group.
+    static std::list<PHV::ContainerGroup *> make_device_container_groups();
+
+    /// clear alloc_slices allocated in @phv, if any.
+    static void clear_slices(PhvInfo& phv);
+
+    /// Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
+    /// attach it to the PHV::Field it slices.
+    static void bind_slices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv);
+
+    /// Merge Adjacent AllocSlices of the same field into one AllocSlice.
+    /// MUST run this after allocation because later passes assume that
+    /// phv alloc info is sorted in field bit order, msb first.
+    static void sort_and_merge_alloc_slices(PhvInfo& phv);
+};
+
+}  // namespace PHV
 
 /// For each field, calculate the possible packing opportunities, if they are allocated
 /// in the given order, with fields that are allocated later than it.
@@ -130,20 +248,23 @@ struct AllocScore {
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score);
 
-/// AllocContext will will create alloc scores.
-class AllocContext {
+/// ScoreContext can compute a alloc score for an PHV::Transaction.
+class ScoreContext {
  private:
     cstring name_i;
 
     /// Opportunities for packing if allocated in some order.
     FieldPackingOpportunity* packing_opportunities_i = nullptr;
 
+    /// stop at first valid allocation instead of comparing socres.
+    bool stop_at_first_i = false;
+
     /// comparison function
     AllocScore::IsBetterFunc is_better_i;
 
  public:
-    AllocContext(cstring name, AllocScore::IsBetterFunc is_better)
-        : name_i(name), is_better_i(is_better) { }
+    ScoreContext(cstring name, bool stop_at_first, AllocScore::IsBetterFunc is_better)
+        : name_i(name), stop_at_first_i(stop_at_first), is_better_i(is_better) { }
 
     AllocScore make_score(
         const PHV::Transaction& alloc,
@@ -158,7 +279,9 @@ class AllocContext {
         return is_better_i(left, right);
     }
 
-    AllocContext with(FieldPackingOpportunity* packing) {
+    bool stop_at_first() const { return stop_at_first_i; }
+
+    ScoreContext with(FieldPackingOpportunity* packing) {
         auto cloned = *this;
         cloned.packing_opportunities_i = packing;
         return cloned;
@@ -176,35 +299,14 @@ struct AllocAlignment {
 /** A set of functions used in PHV allocation.
  */
 class CoreAllocation {
-    // Input.
-    const SymBitMatrix& mutex_i;
-    const PhvUse& uses_i;
-    const FieldDefUse& defuse_i;
-    const ClotInfo& clot_i;
-
-    // Modified in this pass.
-    PhvInfo& phv_i;
-    ActionPhvConstraints& actions_i;
-    PHV::Pragmas& pragmas_i;  // Some might not be satisfied.
-
-    // Metadata initialization possibilities.
-    LiveRangeShrinking& meta_init_i;
-    // Dark overlay possibilities.
-    DarkOverlay& dark_init_i;
+    const PHV::AllocUtils& utils_i;
 
     // Table allocation information from the previous round.
-    bool disableMetadataInit;
+    // XXX(yumin): legacy, this might actually never be used at all because it is
+    // initialized in value instead of references.
+    const bool disableMetadataInit;
     // Enforce single gress parser groups
     bool singleGressParserGroups;
-
-    const MapFieldToParserStates& field_to_parser_states_i;
-    const CalcParserCriticalPath& parser_critical_path_i;
-    const CollectParserInfo& parser_info_i;
-    const CollectStridedHeaders& strided_headers_i;
-
-    // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
-    // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
-    ordered_set<const PHV::Field*> fieldsWithAlignmentConflicts;
 
     boost::optional<PHV::Transaction> alloc_super_cluster_with_alignment(
         const PHV::Allocation& alloc,
@@ -212,13 +314,13 @@ class CoreAllocation {
         PHV::SuperCluster& super_cluster,
         const AllocAlignment& alignment,
         const std::list<const PHV::SuperCluster::SliceList*>& sorted_slice_lists,
-        const AllocContext& score_ctx) const;
+        const ScoreContext& score_ctx) const;
 
     /// returns @p max_n possible alloc alignments for a super cluster vs a container group
     std::vector<AllocAlignment> build_alignments(
         int max_n,
         const PHV::ContainerGroup& container_group,
-        PHV::SuperCluster& super_cluster) const;
+        const PHV::SuperCluster& super_cluster) const;
 
     /// Builds a vector of alignments for @p slice_list,
     /// because there are multiple starting point of a slice list
@@ -228,32 +330,18 @@ class CoreAllocation {
       const PHV::SuperCluster::SliceList* slice_list) const;
 
  public:
-    CoreAllocation(const SymBitMatrix& mutex,
-                   const PhvUse& uses,
-                   const FieldDefUse& defuse,
-                   const ClotInfo& clot,
-                   PHV::Pragmas& pragmas,
-                   PhvInfo& phv,
-                   ActionPhvConstraints& actions,
-                   LiveRangeShrinking& meta,
-                   DarkOverlay& dark,
-                   const MapFieldToParserStates& field_to_parser_states,
-                   const CalcParserCriticalPath& parser_critical_path,
-                   const MauBacktracker& alloc,
-                   const CollectParserInfo& parser_info,
-                   const CollectStridedHeaders& strided_headers)
-        : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
-          clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
-          dark_init_i(dark), disableMetadataInit(alloc.disableMetadataInitialization()),
-          singleGressParserGroups(false), field_to_parser_states_i(field_to_parser_states),
-          parser_critical_path_i(parser_critical_path), parser_info_i(parser_info),
-          strided_headers_i(strided_headers) { }
+    CoreAllocation(const PHV::AllocUtils& utils, bool disable_metainit)
+        : utils_i(utils), disableMetadataInit(disable_metainit) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
             const SymBitMatrix& mutually_exclusive_field_ids,
             const PHV::Field* f,
             const ordered_set<PHV::AllocSlice>& slices);
+
+    /// @returns true if @f can overlay all fields in @slices in terms of physical liveranges.
+    bool can_physical_liverange_overlay(const PHV::AllocSlice& slice,
+                                        const ordered_set<PHV::AllocSlice>& allocated) const;
 
     /// @returns true if slice list<-->container constraints are satisfied.
     bool satisfies_constraints(std::vector<PHV::AllocSlice> slices,
@@ -306,25 +394,24 @@ class CoreAllocation {
      *
      * Uses mutex_i and uses_i.
      */
-    boost::optional<PHV::Transaction> tryAlloc(
+    boost::optional<PHV::Transaction> try_alloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         PHV::SuperCluster& cluster,
         int max_alignment_tries,
-        const AllocContext& score_ctx) const;
+        const ScoreContext& score_ctx) const;
 
     boost::optional<const PHV::SuperCluster::SliceList*> find_first_unallocated_slicelist(
         const PHV::Allocation& alloc, const std::list<PHV::ContainerGroup*>& container_groups,
-        PHV::SuperCluster& cluster, const AllocContext& score_ctx) const;
+        const PHV::SuperCluster& cluster) const;
 
     /** Helper function that tries to allocate all fields in the deparser zero supercluster
       * @cluster to containers B0 (for ingress) and B16 (for egress). The DeparserZero analysis
       * earlier in PHV allocation already ensures that these fields can be safely allocated to the
       * zero-ed containers.
       */
-    boost::optional<PHV::Transaction> tryDeparserZeroAlloc(
-        const PHV::Allocation& alloc,
-        PHV::SuperCluster& cluster) const;
+    boost::optional<PHV::Transaction> try_deparser_zero_alloc(
+        const PHV::Allocation& alloc, PHV::SuperCluster& cluster, PhvInfo& phv) const;
 
     bool checkDarkOverlay(const std::vector<PHV::AllocSlice>& candidate_slices,
                           const PHV::Transaction& alloc) const;
@@ -365,7 +452,7 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
         const PHV::Allocation::ConditionalConstraint& start_positions,
-        const AllocContext& score_ctx) const;
+        const ScoreContext& score_ctx) const;
 
     /// Convenience method that transforms start_positions map into a map of ConditionalConstraint,
     /// which is passed to `tryAllocSliceList` above.
@@ -375,7 +462,7 @@ class CoreAllocation {
         const PHV::SuperCluster& super_cluster,
         const PHV::SuperCluster::SliceList& slice_list,
         const ordered_map<PHV::FieldSlice, int>& start_positions,
-        const AllocContext& score_ctx) const;
+        const ScoreContext& score_ctx) const;
 
     bool generateNewAllocSlices(
         const PHV::AllocSlice& origSlice,
@@ -387,20 +474,6 @@ class CoreAllocation {
 
     bool hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidate_slices,
                                ordered_set<PHV::AllocSlice> alloc_slices) const;
-
-
-    PhvInfo& phv() const                                  { return phv_i; }
-    const PhvUse& uses() const                            { return uses_i; }
-    const SymBitMatrix& mutex() const                     { return mutex_i; }
-    const FieldDefUse& defuse() const                     { return defuse_i; }
-    const ActionPhvConstraints& actionConstraints() const { return actions_i; }
-    PHV::Pragmas& pragmas() const                         { return pragmas_i; }
-    const MapFieldToParserStates& field_to_parser_states() const {
-        return field_to_parser_states_i; }
-    const CalcParserCriticalPath& parser_critical_path() const { return parser_critical_path_i; }
-    const ClotInfo& clot() const { return clot_i; }
-    // const CollectParserInfo& parser_info_i;
-    const CollectStridedHeaders& strided_headers() const { return strided_headers_i; }
 };
 
 enum class AllocResultCode {
@@ -413,11 +486,11 @@ enum class AllocResultCode {
 struct AllocResult {
     AllocResultCode status;
     PHV::Transaction transaction;
-    std::list<PHV::SuperCluster *> remaining_clusters;
+    std::list<const PHV::SuperCluster *> remaining_clusters;
     // To avoid copy on those large objects, constructor only takes rvalue,
     // so use std::move() if needed.
     AllocResult(AllocResultCode r, PHV::Transaction&& t,  // NOLINT
-                std::list<PHV::SuperCluster *>&& c)
+                std::list<const PHV::SuperCluster *>&& c)
         : status(r), transaction(t), remaining_clusters(c) {}
 };
 
@@ -437,11 +510,12 @@ struct AllocResult {
 class AllocationStrategy {
  protected:
     const cstring name;
+    const PHV::AllocUtils& utils_i;
     const CoreAllocation& core_alloc_i;
 
  public:
-    AllocationStrategy(cstring name, const CoreAllocation& alloc)
-        : name(name), core_alloc_i(alloc) {}
+    AllocationStrategy(cstring name, const PHV::AllocUtils& utils, const CoreAllocation& core)
+        : name(name), utils_i(utils), core_alloc_i(core) {}
 
     /** Run this strategy
      * Returns: a AllocResult that
@@ -452,13 +526,13 @@ class AllocationStrategy {
      */
     virtual AllocResult
     tryAllocation(const PHV::Allocation& alloc,
-                  const std::list<PHV::SuperCluster *>& cluster_groups_input,
-                  const std::list<PHV::ContainerGroup *>& container_groups) = 0;
+                  const std::list<PHV::SuperCluster*>& cluster_groups_input,
+                  const std::list<PHV::ContainerGroup*>& container_groups) = 0;
 };
 
 struct BruteForceStrategyConfig {
     cstring name;
-    // heristic set of alloc score:
+    // heuristics of alloc score:
     AllocScore::IsBetterFunc is_better;
     // if max_failure_retry > 1, will retry (n-1) times by allocating
     // previsouly failed fields at the beginning of the allocation.
@@ -481,25 +555,16 @@ struct BruteForceStrategyConfig {
 class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
     const PHV::Allocation& empty_alloc_i;
-    const CalcParserCriticalPath& parser_critical_path_i;
-    const CalcCriticalPathClusters& critical_path_clusters_i;
-    const ClotInfo& clot_i;
-    const CollectStridedHeaders& strided_headers_i;
-    const PhvUse& uses_i;
-    const Clustering& clustering_i;
     const BruteForceStrategyConfig& config_i;
-    PHV::Slicing::PackConflictChecker has_pack_conflict_i;
-    PHV::Slicing::IsReferencedChecker is_referenced_i;
     boost::optional<const PHV::SuperCluster::SliceList*> unallocatable_list_i;
     int pipe_id_i;  /// used for logging purposes
+    PhvInfo& phv_i;  // mutable because of deparsed zero allocation.
 
  public:
-    BruteForceAllocationStrategy(const PHV::Allocation& empty_alloc, const cstring name,
-                                 const CoreAllocation& alloc, const CalcParserCriticalPath& ccp,
-                                 const CalcCriticalPathClusters& cpc, const ClotInfo& clot,
-                                 const CollectStridedHeaders& hs, const PhvUse& uses,
-                                 const Clustering& clustering,
-                                 const BruteForceStrategyConfig& config, int pipeId);
+    BruteForceAllocationStrategy(
+        const cstring name, const PHV::AllocUtils& utils, const CoreAllocation& core,
+        const PHV::Allocation& empty_alloc,
+        const BruteForceStrategyConfig& config, int pipeId, PhvInfo& phv);
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
@@ -509,26 +574,14 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     boost::optional<const PHV::SuperCluster::SliceList*> get_unallocatable_list() const {
         return unallocatable_list_i;
     }
+
     int getPipeId() const {return pipe_id_i;}
 
  protected:
-    AllocResult
-    tryAllocationFailuresFirst(const PHV::Allocation &alloc,
-                  const std::list<PHV::SuperCluster*>& cluster_groups_input,
-                  const std::list<PHV::ContainerGroup *>& container_groups,
-                  const ordered_set<const PHV::Field*>& failures);
-
-    /// remove singleton unreferenced fields.
-    std::list<PHV::SuperCluster*> remove_unreferenced_clusters(
-            const std::list<PHV::SuperCluster*>& cluster_groups_input) const;
-
-    /// remove superclusters with deparser zero fields.
-    std::list<PHV::SuperCluster*> remove_deparser_zero_superclusters(
-            const std::list<PHV::SuperCluster*>& cluster_groups_input,
-            std::list<PHV::SuperCluster*>& deparser_zero_superclusters) const;
-
-    std::list<PHV::SuperCluster*>
-    create_strided_clusters(const std::list<PHV::SuperCluster*>& cluster_groups) const;
+    AllocResult tryAllocationFailuresFirst(
+        const PHV::Allocation& alloc, const std::list<PHV::SuperCluster*>& cluster_groups_input,
+        const std::list<PHV::ContainerGroup*>& container_groups,
+        const ordered_set<const PHV::Field*>& failures);
 
     std::list<PHV::SuperCluster*> crush_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups);
@@ -537,12 +590,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     std::list<PHV::SuperCluster*> preslice_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups,
             const std::list<PHV::ContainerGroup *>& container_groups,
-            std::list<PHV::SuperCluster*>& unsliceable);
-
-    /// remove singleton metadata slice list. This was introduced because some metadata fields are
-    /// placed in a supercluster but they should not be.
-    std::list<PHV::SuperCluster*> remove_singleton_slicelist_metadata(
-            const std::list<PHV::SuperCluster*>& cluster_groups) const;
+            std::list<const PHV::SuperCluster*>& unsliceable);
 
     /// Sort list of superclusters into the order in which they should be allocated.
     void sortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
@@ -551,36 +599,36 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
         const std::list<PHV::SuperCluster*>& slicing,
         const std::list<PHV::ContainerGroup *>& container_groups,
         PHV::Transaction& slicing_alloc,
-        const AllocContext& score_ctx);
+        const ScoreContext& score_ctx);
 
     bool tryAllocStride(const std::list<PHV::SuperCluster*>& stride,
                         const std::list<PHV::ContainerGroup *>& container_groups,
                         PHV::Transaction& stride_alloc,
-                        const AllocContext& score_ctx);
+                        const ScoreContext& score_ctx);
 
     bool tryAllocStrideWithLeaderAllocated(
         const std::list<PHV::SuperCluster*>& stride,
         PHV::Transaction& leader_alloc,
-        const AllocContext& score_ctx);
+        const ScoreContext& score_ctx);
 
     bool tryAllocSlicingStrided(unsigned num_strides,
                                 const std::list<PHV::SuperCluster*>& slicing,
                                 const std::list<PHV::ContainerGroup *>& container_groups,
                                 PHV::Transaction& slicing_alloc,
-                                const AllocContext& score_ctx);
+                                const ScoreContext& score_ctx);
 
     boost::optional<PHV::Transaction>
     tryVariousSlicing(PHV::Transaction& rst,
                       PHV::SuperCluster* cluster_group,
                       const std::list<PHV::ContainerGroup *>& container_groups,
-                      const AllocContext& score_ctx,
+                      const ScoreContext& score_ctx,
                       std::stringstream& alloc_history);
 
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
               std::list<PHV::SuperCluster*>& cluster_groups,
               const std::list<PHV::ContainerGroup *>& container_groups,
-              const AllocContext& score_ctx);
+              const ScoreContext& score_ctx);
 
     /// Allocate deparser zero fields to zero-initialized containers. B0 for ingress and B16 for
     /// egress.
@@ -629,6 +677,65 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     friend class BruteForceOptimizationStrategy;
 };
 
+/// TrivialAllocStrategy will try to allocate every minimally packed clusters to
+/// a emtpy PHV and fields in a container to a new container while ignoring container
+/// ingress constraint.
+class TrivialAllocStrategy {
+    /// PhvStatus bookkeeper for containers.
+    class PhvStatus {
+        std::unordered_map<PHV::Size, int> next_container_idx;
+     public:
+        PhvStatus();
+        PHV::Container next_container(PHV::Size) const;
+        void inc_next_container(PHV::Size);
+    };
+    const PHV::AllocUtils& utils_i;
+    const CoreAllocation& core_i;
+    PhvInfo& phv_i;
+    const int pipe_id_i;  /// used for logging purposes
+
+    struct PartialAllocResult {
+        bool ok = false;
+        std::vector<PHV::AllocSlice> alloc_slices;
+        PhvStatus phv_status;
+        const PHV::SuperCluster::SliceList* cannot_allocate = nullptr;
+        ordered_set<const PHV::SuperCluster*> unallocated;
+        PartialAllocResult(bool ok, std::vector<PHV::AllocSlice> alloc_slices,
+                           PhvStatus phv_status,
+                           const PHV::SuperCluster::SliceList* cannot_allocate,
+                           ordered_set<const PHV::SuperCluster*> unallocated)
+            : ok(ok),
+              alloc_slices(alloc_slices),
+              phv_status(phv_status),
+              cannot_allocate(cannot_allocate),
+              unallocated(unallocated) {}
+    };
+
+    // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
+    // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
+    // and phv_status will be updated.
+    std::vector<PHV::AllocSlice> gen_alloc_slices_from_tx(const PHV::Transaction& tx,
+                                                          PhvStatus& phv_status) const;
+
+    // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
+    // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
+    // and phv_status will be updated.
+    void bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices);
+
+    PartialAllocResult alloc_clusters(PHV::Transaction& rst,
+                                      PhvStatus phv_status,
+                                      const std::list<PHV::ContainerGroup*>& container_groups,
+                                      const std::list<PHV::SuperCluster*>& clusters) const;
+
+ public:
+    TrivialAllocStrategy(const PHV::AllocUtils& utils, const CoreAllocation& core, PhvInfo& phv,
+                         int pipe_id);
+
+    // @returns spliced SuperClusters that cannot be allocated.
+    ordered_set<const PHV::SuperCluster*> allocate(const PHV::Allocation& alloc,
+                                                   const std::list<PHV::SuperCluster*>& clusters);
+};
+
 /** Given constraints gathered from compilation thus far, allocate fields to
  * PHV containers.
  *
@@ -641,99 +748,48 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
  */
 class AllocatePHV : public Visitor {
  private:
+    const PHV::AllocUtils& utils_i;
+    const MauBacktracker& mau_i;
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
-    const PhvUse& uses_i;
-    const ClotInfo& clot_i;
-    const Clustering& clustering_i;
-    const MauBacktracker& alloc_i;
-    const SymBitMatrix& mutex_i;
-    PHV::Pragmas& pragmas_i;
     const IR::BFN::Pipe *root;
-
-    // Used to balance container usage for parser states on the critical path
-    const CalcParserCriticalPath& parser_critical_path_i;
-
-    // Used to create strategies, if needed
-    const CalcCriticalPathClusters& critical_path_clusters_i;
-    const MapTablesToIDs table_ids_i;
-    const CollectStridedHeaders& strided_headers_i;
-
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work.
      */
     const IR::Node *apply_visitor(const IR::Node* root, const char *name = 0) override;
 
-    /// @returns a SuperClusters from clustering_i.
-    std::list<PHV::SuperCluster*> make_cluster_groups() const {
-        return clustering_i.cluster_groups(); }
-
     /// Throw a pretty-printed ::error when allocation fails due to resource constraints.
     void formatAndThrowError(
         const PHV::Allocation& alloc,
-        const std::list<PHV::SuperCluster *>& unallocated);
+        const std::list<const PHV::SuperCluster *>& unallocated);
 
     /// Throw a pretty-printed ::error when allocation fails due to
     /// unsatisfiable constraints.
-    void formatAndThrowUnsat(const std::list<PHV::SuperCluster *>& unallocated) const;
-
-    /// Throws backtracking exception, if we need to backtrack because of conflicting alignment
-    /// constraints induced by bridged metadata packing.
-    ordered_set<cstring> throwBacktrackException(
-            const size_t numBridgedConflicts,
-            const std::list<PHV::SuperCluster*>& unallocated) const;
+    void formatAndThrowUnsat(const std::list<const PHV::SuperCluster *>& unallocated) const;
 
     /** Diagnose why unallocated clusters remained unallocated, and throw the appropriate error
       * message.
       */
-    bool diagnoseFailures(const std::list<PHV::SuperCluster *>& unallocated) const;
+    bool diagnoseFailures(const std::list<const PHV::SuperCluster *>& unallocated) const;
 
     /** Diagnose why unallocated supercluster sc remained unallocated, and throw appropriate error
       * message.
       */
     bool diagnoseSuperCluster(const PHV::SuperCluster* sc) const;
 
+    /// use brute force strategy to allocate.
+    AllocResult brute_force_alloc(
+        PHV::ConcreteAllocation& alloc, PHV::ConcreteAllocation& empty_alloc,
+        std::vector<const PHV::SuperCluster::SliceList*>& unallocatable_lists,
+        std::list<PHV::SuperCluster*>& cluster_groups,
+        const std::list<PHV::ContainerGroup*>& container_groups, const int pipe_id) const;
+
  public:
-    // Select if dark overlays (spilling and zero-initialization) will
-    // be using AlwaysRunActions (ARA)
-
-    AllocatePHV(const Clustering& clustering,
-                const PhvUse& uses,
-                const FieldDefUse& defuse,
-                const ClotInfo& clot,
-                PHV::Pragmas& pragmas,
-                PhvInfo& phv,
-                ActionPhvConstraints& actions,
-                const MapFieldToParserStates& field_to_parser_states,
-                const CalcParserCriticalPath& parser_critical_path,
-                const CalcCriticalPathClusters& critical_cluster,
-                const MauBacktracker& alloc,
-                LiveRangeShrinking& meta_init,
-                DarkOverlay& dark,
-                const MapTablesToIDs& t,
-                const CollectStridedHeaders& hs,
-                const CollectParserInfo& parser_info)
-        : core_alloc_i(phv.field_mutex(), uses, defuse, clot, pragmas, phv, actions,
-           meta_init, dark, field_to_parser_states, parser_critical_path, alloc, parser_info, hs),
-          phv_i(phv), uses_i(uses), clot_i(clot),
-          clustering_i(clustering), alloc_i(alloc),
-          mutex_i(phv.field_mutex()), pragmas_i(pragmas),
-          parser_critical_path_i(parser_critical_path),
-          critical_path_clusters_i(critical_cluster), table_ids_i(t),
-          strided_headers_i(hs) { }
-
-    /** @returns the container groups available on this Device.  All fields in
-     * a cluster must be allocated to the same container group.
-     */
-    static std::list<PHV::ContainerGroup *> makeDeviceContainerGroups();
-
-    /// Clear alloc_slices allocated in @phv, if any.
-    static void clearSlices(PhvInfo& phv);
-
-    /** Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
-     * attach it to the PHV::Field it slices.
-     */
-    static void bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv);
+    AllocatePHV(const PHV::AllocUtils& utils, const MauBacktracker& mau, PhvInfo& phv)
+        : utils_i(utils),
+          mau_i(mau),
+          core_alloc_i(utils, mau.disableMetadataInitialization()),
+          phv_i(phv) {}
 };
 
 /// IncrementalPHVAllocation incrementally allocates fields.
@@ -741,19 +797,9 @@ class AllocatePHV : public Visitor {
 /// XXX(yumin): we need to check whether mutex and live range info for those fields
 /// are correct or not.
 class IncrementalPHVAllocation : public Visitor {
+    const PHV::AllocUtils& utils_i;
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
-    const PhvUse& uses_i;
-    const ClotInfo& clot_i;
-    const Clustering& clustering_i;
-    const MauBacktracker& alloc_i;
-    const SymBitMatrix& mutex_i;
-    PHV::Pragmas& pragmas_i;
-    const IR::BFN::Pipe *root;
-    const CalcParserCriticalPath& parser_critical_path_i;
-    const CalcCriticalPathClusters& critical_path_clusters_i;
-    const MapTablesToIDs table_ids_i;
-    const CollectStridedHeaders& strided_headers_i;
 
     // fields to be allocated.
     const ordered_set<PHV::Field*>& temp_vars_i;
@@ -762,23 +808,9 @@ class IncrementalPHVAllocation : public Visitor {
     const IR::Node *apply_visitor(const IR::Node* root, const char* name = 0) override;
 
  public:
-    explicit IncrementalPHVAllocation(
-        const ordered_set<PHV::Field*>& temp_vars, const Clustering& clustering, const PhvUse& uses,
-        const FieldDefUse& defuse, const ClotInfo& clot, PHV::Pragmas& pragmas, PhvInfo& phv,
-        ActionPhvConstraints& actions, const MapFieldToParserStates& field_to_parser_states,
-        const CalcParserCriticalPath& parser_critical_path,
-        const CalcCriticalPathClusters& critical_cluster, const MauBacktracker& alloc,
-        LiveRangeShrinking& meta_init, DarkOverlay& dark, const MapTablesToIDs& t,
-        const CollectStridedHeaders& hs, const CollectParserInfo& parser_info)
-        : core_alloc_i(phv.field_mutex(), uses, defuse, clot, pragmas, phv, actions,
-           meta_init, dark, field_to_parser_states, parser_critical_path, alloc, parser_info, hs),
-          phv_i(phv), uses_i(uses), clot_i(clot),
-          clustering_i(clustering), alloc_i(alloc),
-          mutex_i(phv.field_mutex()), pragmas_i(pragmas),
-          parser_critical_path_i(parser_critical_path),
-          critical_path_clusters_i(critical_cluster), table_ids_i(t),
-          strided_headers_i(hs),
-          temp_vars_i(temp_vars) {}
+    explicit IncrementalPHVAllocation(const ordered_set<PHV::Field*>& temp_vars,
+                                      const PHV::AllocUtils& utils, PhvInfo& phv)
+        : utils_i(utils), core_alloc_i(utils, true), phv_i(phv), temp_vars_i(temp_vars) {}
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

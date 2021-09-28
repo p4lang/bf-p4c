@@ -6,6 +6,7 @@ void AddAliasAllocation::addAllocation(
         PHV::Field* aliasSource,
         PHV::Field* aliasDest,
         le_bitrange range) {
+    LOG3("aliasSource: " << aliasSource << ", aliasDest: " << aliasDest << ", range: " << range);
     BUG_CHECK(aliasSource->size == range.size(), "Alias source (%1%b) and destination (%2%b) of "
               "different sizes", aliasSource->size, range.size());
 
@@ -20,6 +21,7 @@ void AddAliasAllocation::addAllocation(
                                   alloc.container_slice().lo,
                                   alloc.width(), alloc.getInitPoints());
         new_slice.setLiveness(alloc.getEarliestLiveness(), alloc.getLatestLiveness());
+        new_slice.setIsPhysicalStageBased(alloc.isPhysicalStageBased());
         // Workaround to ensure only one of the aliased fields has an always run instruction in the
         // last stage.
         new_slice.setShadowAlwaysRun(alloc.getInitPrimitive()->mustInitInLastMAUStage());

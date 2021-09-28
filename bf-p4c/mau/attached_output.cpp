@@ -173,16 +173,9 @@ bool Format::preorder(const IR::MAU::Table *tbl) {
  * Bit 0 of the meter address user is output to bit 0 of the home row action bus, and
  * corresponds directly to bit 0 of an action data RAM.  Thus each bit of the slice of
  * AttachedOutput corresponds to that bit on the home row action bus, which is then
- * coordinated to the adb slot itself. 
+ * coordinated to the adb slot itself.
  */
 void Format::build_use(OperationsPerAction &ops_per_action, Use *use) {
-    if (phv.trivial_alloc()) {
-        // FIXME -- with a trivial alloc, the wrong kind of container may be allocated
-        // leading to this code not working (hitting a bug check due to allocation problems),
-        // so for now we skip it -- we'll backtrack and rerun table allocation with the
-        // real PHV alloc anyways.  Would be nice to make this work without depending on
-        // the PHV alloc
-        return; }
     for (auto &entry : ops_per_action) {
         auto &alu_positions = use->alu_positions[entry.first];
         for (auto *init_alu_op : entry.second) {

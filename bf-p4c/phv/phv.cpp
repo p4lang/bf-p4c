@@ -139,7 +139,7 @@ std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u) {
 }
 
 std::ostream& operator<<(std::ostream& out, const StageAndAccess s) {
-    return out << " [ " << s.first << ", " << s.second << "] ";
+    return out << s.first << s.second;
 }
 
 }  // namespace PHV

@@ -321,7 +321,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
         prior_tables.insert(tbl->get_uid());
         LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
 
-        // *ALEX* Using dependendence graph min_stage() instead of phv.minStage()
+        // *ALEX* Using dependency graph min_stage() instead of PhvInfo::minStage()
         //        due to corner case hit in P4C-3522
         auto minStg = dg.min_stage(tbl);
         prior_max_stage = std::max(prior_max_stage, minStg);
@@ -334,7 +334,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
         post_tables.insert(tbl->get_uid());
         LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
 
-        for (auto minStg : phv.minStage(tbl))
+        for (auto minStg : PhvInfo::minStages(tbl))
             post_min_stage = std::min(post_min_stage, minStg);
     }
 
@@ -348,7 +348,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
 
     if (same_dst_src_cont) {
         BUG_CHECK(ara_tbl, "AlwaysRun Table not set ...?");
-        int stg = *(PhvInfo::minStage(ara_tbl).begin());
+        int stg = *(PhvInfo::minStages(ara_tbl).begin());
 
         if (stg == alloc_sl.getEarliestLiveness().first) {
             use_existing_ara = true;

@@ -13,6 +13,7 @@
 #include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/allocate_phv.h"
+#include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
@@ -78,6 +79,14 @@ class PHV_AnalysisPass : public Logging::PassManager {
     /// Collect header stacks that need strided allocation
     CollectStridedHeaders strided_headers;
     CollectParserInfo  parser_info;
+    // physical live ranges of field slices.
+    PHV::FieldSliceLiveRangeDB physical_liverange_db;
+
+    // allocation settings.
+    PHV::AllocSetting settings;
+
+    // a collection class of above passe.
+    PHV::AllocUtils utils;
 
  public:
     PHV_AnalysisPass(
@@ -93,6 +102,12 @@ class PHV_AnalysisPass : public Logging::PassManager {
 
     Visitor* make_incremental_alloc_pass(
         const ordered_set<PHV::Field *> &temp_vars);
+
+    void set_trivial_alloc(bool enable) { settings.trivial_alloc = enable; }
+    void set_no_code_change(bool enable) { settings.no_code_change = enable; }
+    void set_physical_liverange_overlay(bool enable) {
+        settings.physical_liverange_overlay = enable;
+    }
 };
 
 #endif  /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

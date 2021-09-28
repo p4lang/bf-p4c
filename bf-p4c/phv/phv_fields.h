@@ -521,11 +521,6 @@ class Field : public LiftLess<Field> {
     /// @returns true if this field is a packet field.
     bool isPacketField() const { return (!metadata && !pov); }
 
-    bool checkContext(
-            const PHV::AllocSlice& slice,
-            const PHV::AllocContext* ctxt,
-            const PHV::FieldUse* use) const;
-
     /// @returns the PHV::AllocSlice in which field @bit is allocated.  Fails
     /// catastrophically if @bit is not allocated or not within the range of @this
     /// field's size.
@@ -1019,7 +1014,10 @@ using ConstraintMap = ordered_map<const IR::MAU::Table*, InsertionConstraints>;
  */
 class PhvInfo {
  public:
-    static ordered_map<cstring, std::set<int>> table_to_min_stage;
+    // min-stage-based mapping from table to stages.
+    static ordered_map<cstring, std::set<int>> table_to_min_stages;
+    // physical-stage-based mapping from table to physical stages of the last table placement.
+    static ordered_map<cstring, std::set<int>> table_to_physical_stages;
     static int deparser_stage;
     static bool darkSpillARA;
     static const bool DARK_SPILL_ARA_DEFAULT = true;
@@ -1256,7 +1254,8 @@ class PhvInfo {
     // Clear insertion constraints
     void clearARAconstraints() { alwaysRunTables.clear(); }
 
-    static void clearMinStageInfo() { PhvInfo::table_to_min_stage.clear(); }
+    static void clearMinStageInfo() { PhvInfo::table_to_min_stages.clear(); }
+    static void clearPhysicalStageInfo() { PhvInfo::table_to_physical_stages.clear(); }
 
     static void resetDeparserStage() { PhvInfo::deparser_stage = -1; }
 
@@ -1264,10 +1263,12 @@ class PhvInfo {
 
     static int getDeparserStage() { return PhvInfo::deparser_stage; }
 
-    static std::set<int> minStage(const IR::MAU::Table *tbl);
+    static std::set<int> minStages(const IR::MAU::Table *tbl);
+    static std::set<int> physicalStages(const IR::MAU::Table *tbl);
 
     static void addMinStageEntry(const IR::MAU::Table *tbl, int stage,
                                  bool remove_prev_stages = false);
+    static void setPhysicalStages(const IR::MAU::Table *tbl, const std::set<int>& stage);
 
     static bool hasMinStageEntry(const IR::MAU::Table *tbl);
 

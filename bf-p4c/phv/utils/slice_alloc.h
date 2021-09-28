@@ -15,6 +15,7 @@ using ActionSet = ordered_set<const IR::MAU::Action*>;
 class DarkInitPrimitive;
 class DarkInitEntry;
 class Field;
+class AllocContext;
 
 class AllocSlice {
     const PHV::Field* field_i;
@@ -32,6 +33,10 @@ class AllocSlice {
     bool shadow_always_run_i = false;
 
     bool has_meta_init_i = false;
+
+    // true if all stageAndAccess vars are generated from physical_live_range, i.e.,
+    // min_stage_i and max_stage_i are based on physical stage info instead of min_stages.
+    bool is_physical_stage_based_i = false;
 
  public:
     AllocSlice(const PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo,
@@ -70,18 +75,12 @@ class AllocSlice {
 
     bool hasInitPrimitive() const;
 
-    bool isLiveAt(int stage, unsigned access) const {
-        PHV::FieldUse use(access);
-        if (stage > min_stage_i.first && stage < max_stage_i.first)
-            return true;
-        if (stage == min_stage_i.first && use >= min_stage_i.second)
-            return true;
-        if (stage == max_stage_i.first && use <= max_stage_i.second)
-            return true;
-        return false;
-    }
+    // @returns true is this alloc slice is live at @p stage for @p use.
+    bool isLiveAt(int stage, const PHV::FieldUse& use) const;
 
+    // @returns true if @p other and this AllocSlice have disjoint live ranges.
     bool isLiveRangeDisjoint(const AllocSlice& other) const;
+
     bool representsSameFieldSlice(const AllocSlice& other) const {
         if (field_i != other.field()) return false;
         if (field_slice() != other.field_slice()) return false;
@@ -124,6 +123,18 @@ class AllocSlice {
 
     bool isUsedDeparser() const;
     bool isUsedParser() const;
+
+    bool isPhysicalStageBased() const { return is_physical_stage_based_i; }
+    void setIsPhysicalStageBased(bool v) { is_physical_stage_based_i = v; }
+
+    // @returns true if this alloc slice is referenced within @p ctxt for @p use.
+    bool isReferenced(const PHV::AllocContext* ctxt, const PHV::FieldUse* use) const;
+
+ private:
+    // helpers to get id of parde units for StageAndAccess. Depending on is_physical_live_i,
+    // stage indexes of parser and deparser are different.
+    int parser_stage_idx() const;
+    int deparser_stage_idx() const;
 };
 
 class DarkInitPrimitive {

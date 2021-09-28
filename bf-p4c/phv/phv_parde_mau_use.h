@@ -76,6 +76,13 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bool is_extracted_from_constant(const PHV::Field *f,
             boost::optional<gress_t> gress = boost::none) const;
 
+    /// @returns true if @f needs to be allocated for PHV.
+    /// A field must be allocated to a PHV if is_ignore_alloc() is false and
+    /// (1) is referenced or
+    /// (2) not referenced, but is ghost field (we should try to
+    ///     eliminated this case once P4C-3925 add ghost field writes to IR).
+    bool is_allocation_required(const PHV::Field *f) const;
+
  protected:
     const PhvInfo &phv;
     gress_t       thread = INGRESS;

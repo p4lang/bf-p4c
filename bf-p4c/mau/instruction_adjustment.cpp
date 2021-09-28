@@ -340,26 +340,26 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
   *  -> No Translation needed
   */
 const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
+    cstring opcode = inst->name;
+
+    // Currently only support signed shift right operation since all of the other shift operation
+    // working on a single slice must have been handled through slicing + deposit field.
+    if (opcode != "shrs") return inst;
+
     le_bitrange bits;
     auto* field = phv.field(inst->operands.at(0), &bits);
     if (!field) return inst;  // error?
 
     int num_slices = 0;
     int dst_cont_size;
-    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    const PHV::FieldUse use(PHV::FieldUse::WRITE);
     field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
                          [&](const PHV::AllocSlice& alloc) {
         num_slices++;
         dst_cont_size = alloc.container().size();
     });
-    BUG_CHECK(num_slices >= 1, "No PHV slices allocated for %s", &use);
+    BUG_CHECK(num_slices >= 1, "No PHV slices allocated for %1%", PHV::FieldSlice(field, bits));
     if (num_slices > 1) return inst;  // This will be handled by split instruction
-
-    cstring opcode = inst->name;
-
-    // Currently only support signed shift right operation since all of the other shift operation
-    // working on a single slice must have been handled through slicing + deposit field.
-    if (opcode != "shrs") return inst;
 
     // Instruction only needs to be adjusted if the destination container is smaller than the
     // source field. Otherwise, the operation will be aligned properly.
@@ -436,7 +436,8 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
                          [&](const PHV::AllocSlice& alloc) {
         slices.push_back(alloc.field_slice());
     });
-    BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %s", &use);
+    BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %1%, instruction: %2%.",
+              PHV::FieldSlice(field, bits), inst);
     if (slices.size() <= 1) return inst;  // nothing to split
 
     LOG5("Splitting instruction:" << inst);

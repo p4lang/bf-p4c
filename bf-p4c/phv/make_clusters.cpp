@@ -1191,9 +1191,23 @@ void Clustering::MakeSuperClusters::end_apply() {
                         slices_in_these_lists.insert(slice);
                     }
 
-        // side-effect: cluster_set and these_lists might changes.
+        // side-effect: cluster_set and these_lists might changes, and also global phvInfo.
+        // XXX(yumin): new dummy padding fields might be added to PhvInfo.
+        // They will not be deleted unless rerun collect fields. So if this pass will be
+        // run multiple times, e.g., in table placement first alloc, we need to ignore
+        // dummy fields added in all previous runs.
         addPaddingForMarshaledFields(*cluster_set, these_lists);
-        self.super_clusters_i.emplace_back(new PHV::SuperCluster(*cluster_set, these_lists));
+
+        // filter out unreferenced cluster.
+        // This will also allow us to ignore dummy padding fields added in previous runs.
+        auto* sc = new PHV::SuperCluster(*cluster_set, these_lists);
+        if (sc->all_of_fieldslices([&](const PHV::FieldSlice& fs) {
+                return !self.uses_i.is_allocation_required(fs.field());
+            })) {
+            LOG1("ignore completely unreferenced SuperCluster: " << sc);
+        } else {
+            self.super_clusters_i.emplace_back(sc);
+        }
     }
 
     if (LOGGING(1)) {
@@ -1243,6 +1257,9 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
             // because we do not adjust bridged metadata state.
             // TODO(yumin): in a long term, we need a way to deal with those marshaled fields,
             // bridged/mirrored/resubmited uniformly.
+            // XXX(yumin): as of SDE 9.3, we already have flexible packing for ^. However, for
+            // those profiles that has not updated to use fleixble packing, we still need this
+            // function so that the field list they deparsed is byte-sized.
             if (has_bridged) {
                 continue;
             }
@@ -1255,6 +1272,7 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
             if (padding_size == 0) continue;
             auto* padding = phv_i.create_dummy_padding(padding_size, slice_list->front().gress());
             padding->set_exact_containers(true);
+            padding->set_ignore_alloc(true);
             auto padding_fs = PHV::FieldSlice(padding);
             slice_list->push_back(padding_fs);
             auto* aligned_cluster_padding = new PHV::AlignedCluster(

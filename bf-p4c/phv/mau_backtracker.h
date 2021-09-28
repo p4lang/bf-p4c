@@ -25,6 +25,10 @@ class MauBacktracker : public Backtrack {
     /// on stage() function with internal == true.
     ordered_map<cstring, ordered_set<int>> internalTables;
 
+    // true if a valid table placement is stored in tables. NOTE: we need this variable instead
+    // of just using !tables.empty() because for program with no table, an empty alloc is valid.
+    bool has_table_placement = false;
+
     /// Store the number of stages required by table allocation
     int maxStage = -1;
 

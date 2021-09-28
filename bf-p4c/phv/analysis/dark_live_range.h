@@ -159,7 +159,7 @@ class DarkLiveRange : public Inspector {
             for (auto unit : units) {
                 const auto* tbl = unit->to<IR::MAU::Table>();
                 if (!tbl) continue;
-                for (auto stg_val : PhvInfo::minStage(tbl)) {
+                for (auto stg_val : PhvInfo::minStages(tbl)) {
                     if (stage < 0) stage = stg_val;
                     else
                         stage = std::min(stage, stg_val);

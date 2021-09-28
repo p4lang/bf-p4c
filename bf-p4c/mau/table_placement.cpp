@@ -4181,7 +4181,7 @@ void MergeAlwaysRunActions::Scan::end_apply() {
             for (auto instr : local_act->action)
                 act->action.push_back(instr);
             resources->merge_instr(tbl->resources);
-            for (auto stg : PhvInfo::minStage(tbl)) minDgStages.insert(stg);
+            for (auto stg : PhvInfo::minStages(tbl)) minDgStages.insert(stg);
         }
 
         auto tbl_to_replace = self.ar_replacement(araKey.stage, araKey.gress);
@@ -4258,7 +4258,7 @@ void MergeAlwaysRunActions::Update::end_apply() {
         ss << "Merged tables: ";
 
         for (auto tbl : tables) {
-            int oldStg = *(PhvInfo::minStage(tbl).begin());
+            int oldStg = *(PhvInfo::minStages(tbl).begin());
 
             ss << tbl->externalName() << "  (stage:" << oldStg << ")  ";
 
@@ -4348,7 +4348,7 @@ bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const IR::MAU:
 
     revisit_visited();
 
-    int oldMinStage = *(PhvInfo::minStage(tbl).begin());
+    int oldMinStage = *(PhvInfo::minStages(tbl).begin());
     int newMinStage = self.self.deps.min_stage(tbl);
 
     tableMinStageShifts[tbl] = std::make_pair(oldMinStage, newMinStage);

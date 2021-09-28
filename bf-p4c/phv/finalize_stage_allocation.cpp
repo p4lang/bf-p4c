@@ -42,7 +42,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
             if (usePhysicalStages) {
                 BUG_CHECK(t->global_id() || (t->is_always_run_action() && t->stage() >= 0),
                           "Table %1% is unallocated", t->name);
-                auto minStages = phv.minStage(t);
+                const auto minStages = PhvInfo::minStages(t);
                 for (auto stage : minStages) {
                     stageToTables[stage][t].insert(bits);
                     LOG5("\tUsed in table " << t->name << " (Stage " << stage << ") : " <<

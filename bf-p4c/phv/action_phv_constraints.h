@@ -462,7 +462,8 @@ class ActionPhvConstraints : public Inspector {
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::AllocSlice& dst,
-        const IR::MAU::Action* action) const;
+        const IR::MAU::Action* action,
+        const int stage) const;
 
     /** @returns true if @slices packed in the same container read from action
      * data or from constant in action @act
@@ -745,8 +746,10 @@ class ActionPhvConstraints : public Inspector {
         const ordered_set<const IR::MAU::Action*>& actions,
         const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
-    /// @returns the min_stage for the table associated with action @action.
-    int min_stage(const IR::MAU::Action* action) const;
+    /// @returns the stages for the table associated with action @action.
+    /// The @p physical_stage is true, it will return physical live ranges, otherwise
+    /// return min stage from table dependency graph.
+    std::set<int> stages(const IR::MAU::Action* action, bool physical_stage) const;
 
  public:
     // Summary of sources for an action
@@ -932,12 +935,12 @@ class ActionPhvConstraints : public Inspector {
       * sources is the same as another slice list, the slice list which is written to in more
       * actions ranks earlier in the sorting.
       */
-    void sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list);
+    void sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list) const;
 
     /** Approximates a topographical sorting of FieldSlices such that all FieldSlices used only as
       * sources are considered for allocation before destination-only FieldSlices
       */
-    void sort(std::vector<PHV::FieldSlice>& slice_list);
+    void sort(std::vector<PHV::FieldSlice>& slice_list) const;
 
     /** @returns the set of fields that are read in action @act
       */

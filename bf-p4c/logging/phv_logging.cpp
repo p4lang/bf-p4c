@@ -115,8 +115,12 @@ void PhvLogging::end_apply(const IR::Node *root) {
     populateContainerGroups("deparser");
 
     logHeaders();
-    logFields();
-    logContainers();
+
+    if (tableSummary.getActualState() != TableSummary::ALT_INITIAL) {
+        logFields();
+        logContainers();
+    }
+
     logConstraintReasons();
     logger.log();
     Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->id, "phv", "phv.json");

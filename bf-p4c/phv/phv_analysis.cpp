@@ -20,7 +20,6 @@
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "ir/visitor.h"
-#include "bf-p4c/phv/fieldslice_live_range.h"
 
 class PhvInfo;
 
@@ -55,7 +54,12 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
                 domTree, alloc),
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), action_constraints),
-      strided_headers(phv) {
+      strided_headers(phv),
+      physical_liverange_db(&alloc, &defuse, phv, pragmas),
+      utils(phv, clot, clustering, uses, defuse, action_constraints, meta_init, dark_live_range,
+            field_to_parser_states, parser_critical_path, parser_info, strided_headers,
+            physical_liverange_db, pragmas, settings) {
+        auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
         addPasses({
             // Identify uses of fields in MAU, PARDE
             &uses,
@@ -79,7 +83,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &parser_critical_path,
             // Refresh dependency graph for live range analysis
             new FindDependencyGraph(phv, deps, &options, "", "Just Before PHV allocation"),
-            new MemoizeMinStage(phv, deps),
+            new MemoizeStage(deps, alloc),
             // Refresh defuse
             &defuse,
             // Analysis of operations on PHV fields.
@@ -126,15 +130,17 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &strided_headers,
             &parser_info,
             phvLoggingInfo,
-            // Disable the FieldSliceLiveRangeDB pass to reduce risk on 9.7.0
-            // new PHV::FieldSliceLiveRangeDB(&alloc, &defuse, phv, pragmas),
-            new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
-                    field_to_parser_states, parser_critical_path, critical_path_clusters,
-                    table_alloc, meta_init, dark_live_range, table_ids,
-                    strided_headers, parser_info),
+            &physical_liverange_db,
+            new AllocatePHV(utils, alloc, phv),
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,
-            phvLoggingInfo
+            phvLoggingInfo,
+            // Validate results of PHV allocation.
+            new VisitFunctor([=](){
+                validate_allocation->set_physical_liverange_overlay(
+                        settings.physical_liverange_overlay);
+            }),
+            validate_allocation
         });
 
     phvLoggingInfo->superclusters = &clustering.cluster_groups();
@@ -173,9 +179,12 @@ Visitor* PHV_AnalysisPass::make_incremental_alloc_pass(
          // &meta_live_range,
          // LiveRangeShrinking pass has its own MapTablesToActions pass, have to rerun it.
          &meta_init,
-         new IncrementalPHVAllocation(
-             temp_vars, clustering, uses_i, defuse_i, clot_i, pragmas, phv_i, action_constraints,
-             field_to_parser_states, parser_critical_path, critical_path_clusters, table_alloc,
-             meta_init, dark_live_range, table_ids, strided_headers, parser_info)
+         // conservative settings to ensure that Redo tableplacement will produce the same result.
+         [this]() {
+             this->set_trivial_alloc(false);
+             this->set_no_code_change(true);
+             this->set_physical_liverange_overlay(false);
+         },
+         new IncrementalPHVAllocation(temp_vars, utils, phv_i)
         });
 }

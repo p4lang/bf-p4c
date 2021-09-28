@@ -4,9 +4,19 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c-options.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
+
+namespace {
+
+int deparser_stage() {
+    return BFNContext::get().options().alt_phv_alloc ? Device::numStages()
+                                                     : PhvInfo::getDeparserStage();
+}
+
+}  // namespace
 
 PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse,
                            const TableSummary& tbl_summary,
@@ -14,6 +24,7 @@ PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse,
     : phv(p), defuse(defuse), tbl_summary(tbl_summary),
       live_range_report(live_range_report), have_ghost(have_ghost) {
 }
+
 
 void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
     const auto &livemap = live_range_report->get_livemap();
@@ -34,7 +45,7 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
                     mutex_fields.insert(mfname);
                 }
             }
-            int last_stage = PhvInfo::getDeparserStage();
+            int last_stage = deparser_stage();
 
             int alloc_min = (alloc.getEarliestLiveness().second.isWrite()) ?
                         alloc.getEarliestLiveness().first + 1 : alloc.getEarliestLiveness().first;
@@ -63,6 +74,13 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
                     if (alloc_min > min) newMin = alloc_min;
                     if (alloc_max < max && alloc_max != last_stage) newMax = alloc_max;
                 }
+            }
+
+            // alt-phv-alloc mode does not have any bug of deparser stage like ^. Just use
+            // slice live range is correct.
+            if (BFNContext::get().options().alt_phv_alloc) {
+                newMin = alloc_min;
+                newMax = alloc_max;
             }
 
             FieldUse fuse = { fname, f->gress, newMin, newMax, mutex_fields };
@@ -171,11 +189,11 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
             else
                 min_stage = alloc.getEarliestLiveness().first;
             if (alloc.getLatestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
-                alloc.getLatestLiveness().first != PhvInfo::getDeparserStage())
+                alloc.getLatestLiveness().first != deparser_stage())
                 max_stage = alloc.getLatestLiveness().first + 1;
             else
                 max_stage = alloc.getLatestLiveness().first;
-            if (min_stage != 0 || max_stage != PhvInfo::getDeparserStage()) {
+            if (min_stage != 0 || max_stage != deparser_stage()) {
                 stageAllocReqd = true;
                 if (alloc_num == 1) out << "{ ";
                 if (min_stage != max_stage)
@@ -202,7 +220,7 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
 void emit_phv_field(
         std::ostream& out,
         PHV::Field* field) {
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::currentDevice() == Device::JBAY || BFNContext::get().options().alt_phv_alloc) {
         emit_stage_phv_field(out, field);
 #if HAVE_CLOUDBREAK
     } else if (Device::currentDevice() == Device::CLOUDBREAK) {

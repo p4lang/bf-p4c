@@ -1,6 +1,11 @@
 #ifndef BF_P4C_PHV_COLLECT_STRIDED_HEADERS_H_
 #define BF_P4C_PHV_COLLECT_STRIDED_HEADERS_H_
 
+#include <map>
+
+#include "bf-p4c/phv/phv_fields.h"
+#include "lib/cstring.h"
+
 /// Collects header stacks that require strided allocation (in a parser loop).
 struct CollectStridedHeaders : public Inspector {
     PhvInfo& phv;

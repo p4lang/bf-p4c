@@ -206,7 +206,7 @@ class GenerateOutputs : public PassManager {
                                        b.get_tbl_summary(), b.get_live_range_report(), o, success),
                     o.debugInfo ? new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                                  *b.get_phv_logging(), b.get_defuse(),
-                                                 b.get_table_alloc())
+                                                 b.get_table_alloc(), b.get_tbl_summary())
                                                  : nullptr,
                     o.debugInfo ? new BFN::ResourcesLogging(b.get_clot(), resourcesLogFile,
                                                 o.outputDir.c_str()) : nullptr

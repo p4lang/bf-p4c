@@ -15,6 +15,7 @@
 #include "bf-p4c/parde/lower_parser.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
+#include "lib/exceptions.h"
 #include "lib/log.h"
 
 // Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
@@ -54,6 +55,17 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // Collect information about which fields are referenced in the program.
     Phv_Parde_Mau_Use uses(phv);
     pipe->apply(uses);
+
+    // check all AllocSlices are either all min-stage-based or physical-stage-based.
+    // depending on whether physical live range overlay is enabled.
+    for (auto& field : phv) {
+        field.foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            BUG_CHECK(alloc.isPhysicalStageBased() == physical_liverange_overlay,
+                      "AllocSlice with invalid live range type. Expected physical live range: %1%"
+                      ", but the slice.isPhysicalStageBased() is %2%, alloc: %3%",
+                      physical_liverange_overlay, alloc.isPhysicalStageBased(), alloc);
+        });
+    }
 
     // Check that every bit in each field is allocated without overlap, and
     // collect information that we'll use to check container properties.
@@ -181,9 +193,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Verify that we didn't overflow the PHV space which is actually
         // available on the hardware.
-        for (auto id : assignedContainers - phvSpec.physicalContainers())
-            ERROR_WARN_(false, "Allocated overflow (non-physical) container %1% to field %2%",
-                        phvSpec.idToContainer(id), cstring::to_cstring(field));
+        if (!phv.trivial_alloc()) {
+            for (auto id : assignedContainers - phvSpec.physicalContainers())
+                ERROR_WARN_(false, "Allocated overflow (non-physical) container %1% to field %2%",
+                            phvSpec.idToContainer(id), cstring::to_cstring(field));
+        }
 
         // Verify that all bits in the field are allocated.
         // XXX(seth): Long term it would be ideal to only allocate the bits we
@@ -194,68 +208,79 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     cstring::to_cstring(field));
     }
 
-    // Check that no container is assigned to both threads.
-    for (auto id : threadAssignments[INGRESS] & threadAssignments[EGRESS]) {
-        auto container = phvSpec.idToContainer(id);
+    if (!phv.trivial_alloc()) {
+        // Check that no container is assigned to both threads.
+        for (auto id : threadAssignments[INGRESS] & threadAssignments[EGRESS]) {
+            auto container = phvSpec.idToContainer(id);
 
-        std::set<const PHV::Field*> fields[2];
-        if (allocations.count(container))
-            for (auto& slice : allocations[container])
-                fields[slice.field()->gress].insert(slice.field());
+            std::set<const PHV::Field*> fields[2];
+            if (allocations.count(container))
+                for (auto& slice : allocations[container])
+                    fields[slice.field()->gress].insert(slice.field());
 
-        std::stringstream message;
-        for (gress_t gress : { INGRESS, EGRESS }) {
-            if (!fields[gress].empty())
-                message << gress << " fields: " << fields[gress] << ". ";
-            else if (phvSpec.ingressOnly()[id] && gress == EGRESS)
-                message << "Container is hard-wired to INGRESS. ";
-            else if (phvSpec.egressOnly()[id] && gress == INGRESS)
-                message << "Container is hard-wired to EGRESS. ";
-            else
-                BUG("Inconsistent thread count?"); }
+            std::stringstream message;
+            for (gress_t gress : {INGRESS, EGRESS}) {
+                if (!fields[gress].empty())
+                    message << gress << " fields: " << fields[gress] << ". ";
+                else if (phvSpec.ingressOnly()[id] && gress == EGRESS)
+                    message << "Container is hard-wired to INGRESS. ";
+                else if (phvSpec.egressOnly()[id] && gress == INGRESS)
+                    message << "Container is hard-wired to EGRESS. ";
+                else
+                    BUG("Inconsistent thread count?");
+            }
 
-        ::error("Container %1% is assigned to both INGRESS and EGRESS. %2%",
-                container, message.str()); }
+            ::error("Container %1% is assigned to both INGRESS and EGRESS. %2%", container,
+                    message.str());
+        }
 
-    // Check for consistent container thread assignment within deparser groups.
-    std::set<unsigned> visitedCIDs;
-    for (auto& field : phv) {
-        if (!uses.is_referenced(&field) || clot.whole_field_clot(&field)) continue;
-        if (!field.deparsed()) continue;
-        for (auto& slice : field.get_alloc()) {
-            auto this_cid = phvSpec.containerToId(slice.container());
-            if (visitedCIDs.count(this_cid)) continue;
+        // Check for consistent container thread assignment within deparser groups.
+        std::set<unsigned> visitedCIDs;
+        for (auto& field : phv) {
+            if (!uses.is_referenced(&field) || clot.whole_field_clot(&field)) continue;
+            if (!field.deparsed()) continue;
+            for (auto& slice : field.get_alloc()) {
+                auto this_cid = phvSpec.containerToId(slice.container());
+                if (visitedCIDs.count(this_cid)) continue;
 
-            auto deparserGroup = phvSpec.deparserGroup(this_cid);
-            auto writtenDeparserGroup = deparserGroup;
+                auto deparserGroup = phvSpec.deparserGroup(this_cid);
+                auto writtenDeparserGroup = deparserGroup;
 
-            // Find the containers in this deparser group with deparsed fields.
-            bool hasGress[2] = { false, false };
-            for (auto cid : deparserGroup) {
-                visitedCIDs.insert(cid);
-                auto container = phvSpec.idToContainer(cid);
-
-                bool hasDeparsed = false;
-                for (auto slice : allocations[container]) {
-                    if (!slice.field()->deparsed()) continue;
-                    hasDeparsed = true;
-                    hasGress[slice.field()->gress] = true; }
-                if (!hasDeparsed)
-                    writtenDeparserGroup.clrbit(cid); }
-
-            if (hasGress[INGRESS] && hasGress[EGRESS]) {
-                std::stringstream message;
-                for (auto cid : writtenDeparserGroup) {
+                // Find the containers in this deparser group with deparsed fields.
+                bool hasGress[2] = {false, false};
+                for (auto cid : deparserGroup) {
+                    visitedCIDs.insert(cid);
                     auto container = phvSpec.idToContainer(cid);
-                    message << "    Container " << container
-                            << (phvSpec.ingressOnly()[cid] ? "(hardwired INGRESS)" : "")
-                            << (phvSpec.egressOnly()[cid] ? "(hardwired EGRESS)" : "")
-                            << " with field slices" << std::endl;
-                    for (auto slice : allocations[container])
-                        message << "        " << slice.field() << " " << slice.field_slice()
-                                << std::endl; }
-                ::error("Containers are in the same deparser group but assigned fields of "
-                        "both INGRESS and EGRESS:\n%1%", message.str()); } } }
+
+                    bool hasDeparsed = false;
+                    for (auto slice : allocations[container]) {
+                        if (!slice.field()->deparsed()) continue;
+                        hasDeparsed = true;
+                        hasGress[slice.field()->gress] = true;
+                    }
+                    if (!hasDeparsed) writtenDeparserGroup.clrbit(cid);
+                }
+
+                if (hasGress[INGRESS] && hasGress[EGRESS]) {
+                    std::stringstream message;
+                    for (auto cid : writtenDeparserGroup) {
+                        auto container = phvSpec.idToContainer(cid);
+                        message << "    Container " << container
+                                << (phvSpec.ingressOnly()[cid] ? "(hardwired INGRESS)" : "")
+                                << (phvSpec.egressOnly()[cid] ? "(hardwired EGRESS)" : "")
+                                << " with field slices" << std::endl;
+                        for (auto slice : allocations[container])
+                            message << "        " << slice.field() << " " << slice.field_slice()
+                                    << std::endl;
+                    }
+                    ::error(
+                        "Containers are in the same deparser group but assigned fields of "
+                        "both INGRESS and EGRESS:\n%1%",
+                        message.str());
+                }
+            }
+        }
+    }
 
     std::vector<const PHV::Field*> deparseSequence;
     std::map<const PHV::Field*, std::vector<size_t>> deparseOccurrences;
@@ -400,6 +425,21 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 if (!phv.isDarkMutex(f1, f2)) return false; } }
         return true;
     };
+    auto allPhysicalLiverangeDisjoint = [&] (const ordered_set<const PHV::Field*> left,
+                                             const ordered_set<const PHV::Field*> right) {
+        for (auto* f1 : left) {
+            for (auto* f2 : right) {
+                if (f1 == f2) continue;
+                const auto* lr1 = physical_liverange.get_liverange(PHV::FieldSlice(f1));
+                const auto* lr2 = physical_liverange.get_liverange(PHV::FieldSlice(f2));
+                BUG_CHECK(lr1 != nullptr, "missing liverange of %1%", f1);
+                BUG_CHECK(lr2 != nullptr, "missing liverange of %1%", f2);
+                return lr1->can_overlay(*lr2);
+            }
+        }
+        return true;
+    };
+
 
     // Check that we've marked a field as deparsed if and only if it's actually
     // emitted in the deparser.
@@ -514,7 +554,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         for (auto& kv : bits_to_fields) {
             ERROR_CHECK(allMutex(kv.second, kv.second) || allDeparsedZero(kv.second) ||
                         atMostOneNonePadding(kv.second) ||
-                        allDarkOverlayMutex(kv.second, kv.second),
+                        allDarkOverlayMutex(kv.second, kv.second) ||
+                        (physical_liverange_overlay
+                         && allPhysicalLiverangeDisjoint(kv.second, kv.second)),
                         "Container %1% contains fields which overlap:\n%2%",
                         container, cstring::to_cstring(kv.second));
         }
@@ -690,6 +732,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
+    // POV bits limitation check.
     for (gress_t gress : { INGRESS, EGRESS }) {
         size_t povBits = getPOVContainerBytes(gress);
         size_t povLimit = Device::phvSpec().getNumPovBits();
@@ -698,7 +741,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     "allowed limit of %3%b.", gress, povBits, povLimit);
     }
     return true;
-}
+}  // NOLINT
 
 bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     // Check that all learning quanta generated is less than the maximum allowed size.

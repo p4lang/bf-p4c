@@ -1419,6 +1419,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/action_constraint_solver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/symbolic_bitvec.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/fieldslice_live_range.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

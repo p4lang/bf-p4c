@@ -66,6 +66,13 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
         LOG1("    Marking pragma " << pragma_name << " for header " << header_name);
         if (!headerFields.count(header_name))
             continue;
+        // TODO(yumin): BUG HERE.
+        // This pass is simply reading from pragma annotations attached before. However,
+        // when alias is involved, the previous annotations could be wrong.
+        // For example, when a header field is marked not parsed before but its alias source is,
+        // then after IR replacing in the Alias pass, the header field will be extracted in parser.
+        // So the header field should NOT be marked as notParsedField, as it will generate wrong
+        // metadata overlay info.
         for (const auto* f : headerFields.at(header_name))
             if (pragma_name == PHV::pragma::NOT_PARSED)
                 notParsedFields.insert(f);

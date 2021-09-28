@@ -65,7 +65,8 @@ const PHV::AllocContext* PHV::AllocContext::DEPARSER =
 //
 
 int PhvInfo::deparser_stage = -1;
-ordered_map<cstring, std::set<int>> PhvInfo::table_to_min_stage;
+ordered_map<cstring, std::set<int>> PhvInfo::table_to_min_stages;
+ordered_map<cstring, std::set<int>> PhvInfo::table_to_physical_stages;
 bool PhvInfo::darkSpillARA = PhvInfo::DARK_SPILL_ARA_DEFAULT;
 
 void PhvInfo::clear() {
@@ -644,39 +645,49 @@ boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) con
     return boost::none;
 }
 
-std::set<int> PhvInfo::minStage(const IR::MAU::Table *table) {
+std::set<int> PhvInfo::minStages(const IR::MAU::Table *table) {
     if (LOGGING(6)) {
         std::stringstream ss;
         ss << " Reading stage(s) for table " << table->name << " = ";
-        for (auto stg : ::get(table_to_min_stage, TableSummary::getTableName(table)))
+        for (auto stg : ::get(table_to_min_stages, TableSummary::getTableName(table)))
             ss << stg << " ";
         LOG6(ss.str());
     }
 
-    return ::get(table_to_min_stage, TableSummary::getTableName(table));
+    return ::get(table_to_min_stages, TableSummary::getTableName(table));
 }
+
+std::set<int> PhvInfo::physicalStages(const IR::MAU::Table *table) {
+    return ::get(table_to_physical_stages, TableSummary::getTableName(table));
+}
+
 
 void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remove_prev_stages) {
     auto tableName = TableSummary::getTableName(table);
     if (remove_prev_stages)
-        table_to_min_stage[tableName].clear();
+        table_to_min_stages[tableName].clear();
 
-    table_to_min_stage[tableName].insert(stage);
+    table_to_min_stages[tableName].insert(stage);
     LOG6("Adding stage " << stage << " to table " << tableName);
     if (table->gateway_name && table->gateway_name != tableName) {
-        table_to_min_stage[table->gateway_name].insert(stage);
+        table_to_min_stages[table->gateway_name].insert(stage);
         LOG6("Adding stage " << stage << " to gateway " << table->gateway_name);
     }
 }
 
+void PhvInfo::setPhysicalStages(const IR::MAU::Table *table, const std::set<int>& stages) {
+    auto tableName = TableSummary::getTableName(table);
+    table_to_physical_stages[tableName] = stages;
+}
+
 bool PhvInfo::hasMinStageEntry(const IR::MAU::Table *table) {
-    return table_to_min_stage.count(TableSummary::getTableName(table));
+    return table_to_min_stages.count(TableSummary::getTableName(table));
 }
 
 cstring PhvInfo::reportMinStages() {
     std::stringstream ss;
     ss << "  TABLES MIN STAGES:";
-    for (auto entry : table_to_min_stage) {
+    for (auto entry : table_to_min_stages) {
         ss << "\n\t " << entry.first  << " stages: ";
         for (auto stg : entry.second) ss << " " << stg;
     }
@@ -687,7 +698,7 @@ cstring PhvInfo::reportMinStages() {
 bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const {
     BUG_CHECK(gateway->conditional_gateway_only(), "Trying to merge non gateway table %1% with "
               "table %2%", gateway->name, t->name);
-    auto t_stages = minStage(t);
+    auto t_stages = minStages(t);
     CollectGatewayFields collect_fields(*this);
     gateway->apply(collect_fields);
     static PHV::FieldUse use(PHV::FieldUse::READ);
@@ -703,7 +714,8 @@ bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Tab
 }
 
 PHV::Field* PhvInfo::create_dummy_padding(size_t sz, gress_t gress, bool overlayable) {
-    cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");
+    cstring name = cstring::make_unique(
+        dummyPaddingNames, cstring::to_cstring(gress) + "::" + "__phv_dummy_padding__");
     dummyPaddingNames.insert(name);
     add(name, gress, sz, 0, false, false, false, /* isPad = */ true, overlayable);
     return field(name);
@@ -770,65 +782,6 @@ const PHV::AllocSlice &PHV::Field::for_bit(int bit) const {
     LOG1("ERROR: No allocation for bit " << bit << " in " << name);
     static PHV::AllocSlice invalid(nullptr, PHV::Container(), 0, 0, 0);
     return invalid;
-}
-
-bool PHV::Field::checkContext(
-        const PHV::AllocSlice& slice,
-        const PHV::AllocContext* ctxt,
-        const PHV::FieldUse* use) const {
-    // If no context is provided, or if the target is Tofino, we do not have stage-based allocation,
-    // so the slice is valid across all contexts.
-    if (ctxt == nullptr || Device::currentDevice() == Device::TOFINO) return true;
-
-    LOG5("\tCheckContext for slice: " << slice);
-
-    switch (ctxt->type) {
-    case AllocContext::Type::TABLE: {
-            auto tbl = ctxt->table;
-            auto stages = PhvInfo::minStage(tbl);
-            bool inLiveRange = stages.empty();  // if no stage info, always true
-            for (auto stage : stages) {
-                LOG3("\t\tStage: " << stage);
-                LOG3("\t\tTable: " << tbl->name << ", P4 Name: " <<
-                        TableSummary::getTableName(tbl));
-                if (use) {
-                    LOG6("\t\t  " << slice.getEarliestLiveness().first << " < " << stage <<
-                         " = " << (slice.getEarliestLiveness().first < stage));
-                    LOG6("\t\t  " << (slice.getEarliestLiveness().first == stage) << " && (" <<
-                         *use << " <= " << slice.getLatestLiveness().second << ") = " <<
-                         (*use <= slice.getEarliestLiveness().second));
-                    bool greaterThanMinStage = (slice.getEarliestLiveness().first < stage) ||
-                        (slice.getEarliestLiveness().first == stage &&
-                         *use >= slice.getEarliestLiveness().second);
-                    bool lessThanMaxStage = (stage < slice.getLatestLiveness().first) ||
-                        (stage == slice.getLatestLiveness().first &&
-                         *use <= slice.getLatestLiveness().second);
-                    LOG6("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
-                            ", lessThanMaxStage: " << lessThanMaxStage);
-                    inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
-                } else {
-                    bool greaterThanMinStage = slice.getEarliestLiveness().first <= stage;
-                    bool lessThanMaxStage = stage <= slice.getLatestLiveness().first;
-                    LOG6("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
-                            ", lessThanMaxStage: " << lessThanMaxStage);
-                    inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
-                }
-            }
-            LOG5("\t\tinLiveRange: " << inLiveRange);
-            return inLiveRange;
-        }
-
-    case AllocContext::Type::PARSER:
-        return slice.getEarliestLiveness().first == -1 ||
-               (slice.getEarliestLiveness().first == 0 &&
-                slice.getEarliestLiveness().second.isRead());
-
-    case AllocContext::Type::DEPARSER:
-        return slice.getLatestLiveness().first == PhvInfo::getDeparserStage();
-
-    default:
-        BUG("Unexpected PHV context type");
-    }
 }
 
 const std::vector<PHV::AllocSlice> PHV::Field::get_combined_alloc_bytes(
@@ -950,8 +903,10 @@ void PHV::Field::foreach_byte(
         if (slice.container().is(PHV::Kind::tagalong))
             continue;
 
-        if (!checkContext(slice, ctxt, use))
+        // ignore other stage alloc slices
+        if (!slice.isReferenced(ctxt, use)) {
             continue;
+        }
 
         // The requested range may only cover part of slice, so we create a new
         // slice that intersects with the range.
@@ -978,6 +933,7 @@ void PHV::Field::foreach_byte(
                                 window->lo,
                                 window->size());
             tmp.setLiveness(slice.getEarliestLiveness(), slice.getLatestLiveness());
+            tmp.setIsPhysicalStageBased(slice.isPhysicalStageBased());
 
             // Invoke the function.
             fn(tmp);
@@ -997,7 +953,7 @@ void PHV::Field::foreach_alloc(
     // Sort from hi to lo.
     for (auto it = alloc_slice_i.rbegin(); it != alloc_slice_i.rend(); ++it) {
         // ignore other stage alloc slices
-        if (!checkContext(*it, ctxt, use))  {
+        if (!it->isReferenced(ctxt, use)) {
             continue;
         }
 
@@ -1022,8 +978,7 @@ void PHV::Field::foreach_alloc(
     }
     // candidate_slices contains all the slices that are in @range.
     for (auto& slice : candidate_slices) {
-        LOG6("\tforeach_alloc slice: " << slice << " stages: " << slice.getEarliestLiveness() <<
-             " - " << slice.getLatestLiveness());
+        LOG6("\tforeach_alloc slice: " << slice);
         fn(slice);
     }
 }

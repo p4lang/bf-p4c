@@ -1,62 +1,157 @@
 #include "fieldslice_live_range.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "lib/exceptions.h"
 
 namespace PHV {
 
+// result table
+//    D  R  W  RW L
+// D  D  R  W  RW L
+// R  R  R  RW RW L
+// W  W  RW W  RW L
+// RW RW RW RW RW L
+// L  L  L  L  L  L
 LiveRangeInfo::OpInfo
-operator||(const LiveRangeInfo::OpInfo& info1, const LiveRangeInfo::OpInfo& info2) {
-    if (info1 == LiveRangeInfo::OpInfo::DEAD) {
-        return info2;
-    } else if (info1 == LiveRangeInfo::OpInfo::LIVE) {
-        if (info2 != LiveRangeInfo::OpInfo::DEAD) {
-            return info2;
-        } else {
-            return info1;
-        }
-    } else if (info1 == LiveRangeInfo::OpInfo::READ) {
-        if (info2 == LiveRangeInfo::OpInfo::WRITE
-            || info2 == LiveRangeInfo::OpInfo::READ_WRITE) {
-                return info2;
-        } else {
-            return info1;
-        }
-    } else if (info1 == LiveRangeInfo::OpInfo::WRITE) {
-        if (info2 == LiveRangeInfo::OpInfo::READ
-            || info2 == LiveRangeInfo::OpInfo::READ_WRITE) {
-                return info2;
-        } else {
-            return info1;
-        }
+operator||(const LiveRangeInfo::OpInfo& a, const LiveRangeInfo::OpInfo& b) {
+    using OpInfo = LiveRangeInfo::OpInfo;
+    // (1) either dead, the other
+    if (a == OpInfo::DEAD) {
+        return b;
+    } else if (b == OpInfo::DEAD) {
+        return a;
+    }
+    // (2) either live, return live
+    if (a == OpInfo::LIVE || b == OpInfo::LIVE) {
+        return OpInfo::LIVE;
+    }
+    // (3) then either READ_WRITE, return READ_WRITE
+    if (a == OpInfo::READ_WRITE || b == OpInfo::READ_WRITE) {
+        return OpInfo::READ_WRITE;
+    }
+    // (4) at this point, @p a and @p b can only be read or write.
+    if (a != b) {
+        return OpInfo::READ_WRITE;
     } else {
-        return info1;
+        return a;
     }
 }
 
-bool LiveRangeInfo::is_live_at(int stage) const {
-    BUG_CHECK(live_on_stage.size() > (std::size_t)stage, "invalid stage number: %1%", stage);
-    switch (live_on_stage[stage]) {
-        case LiveRangeInfo::DEAD :
+bool LiveRangeInfo::can_overlay(const LiveRangeInfo& other) const {
+    BUG_CHECK(vec().size() == other.vec().size(),
+              "LiveRangeInfo must have the same number of stages.");
+    const int n = vec().size();
+    for (int i = 0; i < n; i++) {
+        const auto& op = vec()[i];
+        const auto& other_op = other.vec()[i];
+        // When one of the OpInfo is dead, we can overlay.
+        // Even if one op might be Write, check of the next
+        // stage will be cover this case.
+        if (op == OpInfo::DEAD || other_op == OpInfo::DEAD) {
+            continue;
+        }
+        // LIVE can only be overlaid when the other is DEAD.
+        if (op == OpInfo::LIVE || other_op == OpInfo::LIVE) {
             return false;
-        default:
+        }
+        // the only case when READ can be overlaid with non-Dead
+        // Other's write and mine will be dead next stage.
+        const auto read_ok = [&]() {
+            const bool last_read = i < n - 1 && vec()[i + 1] == OpInfo::DEAD;
+            if (!(other_op == OpInfo::WRITE && last_read)) {
+                return false;
+            }
             return true;
+        };
+        // the only case when a write can be overlaid with non-Dead
+        // others are dead next stage.
+        const auto write_ok = [&]() {
+            const bool other_last_read = i < n - 1 && other.vec()[i + 1] == OpInfo::DEAD;
+            if (!other_last_read) {
+                return false;
+            }
+            return true;
+        };
+        // Check the special case of write-after-read overlaying.
+        switch (op) {
+            case OpInfo::READ_WRITE:
+                if (!read_ok() || !write_ok()) {
+                    return false;
+                }
+                break;
+            case OpInfo::READ:
+                if (!read_ok()) {
+                    return false;
+                }
+                break;
+            case OpInfo::WRITE:
+                if (!write_ok()) {
+                    return false;
+                }
+                break;
+            default:
+                continue;  // surpass warnings.
+        }
     }
+    return true;
+}
+
+std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::disjoint_ranges()
+    const {
+    std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> rst;
+    for (int i = 0; i < int(lives_i.size()); i++) {
+        if (lives_i[i] == OpInfo::DEAD) {
+            continue;
+        }
+        BUG_CHECK(lives_i[i] != OpInfo::LIVE, "live without definition: %1%", *this);
+
+        // uninitialized read, not even caught by parser implicit init,
+        // field can be considered as not live.
+        if (lives_i[i] == OpInfo::READ) {
+            LOG3("ignoring uninitialized read: " << *this);
+            continue;
+        }
+
+        auto start = std::make_pair(i - 1, PHV::FieldUse(PHV::FieldUse::WRITE));
+        int j = i + 1;
+        while (j < int(lives_i.size()) && lives_i[j] == OpInfo::LIVE) ++j;
+        if (j == int(lives_i.size()) || lives_i[j] == OpInfo::DEAD) {
+            LOG3("ignoring tailing write: " << *this);
+            i = j;
+            continue;
+        }
+        BUG_CHECK(lives_i[j] != OpInfo::WRITE, "invalid end of live range: %1% of %2%", j, *this);
+        auto end = std::make_pair(j - 1, PHV::FieldUse(PHV::FieldUse::READ));
+        rst.emplace_back(std::make_pair(start, end));
+        i = j;
+        // when the end is read write, it is also a start of the next live range.
+        if (lives_i[j] == OpInfo::READ_WRITE) {
+            i--;
+        }
+    }
+    return rst;
 }
 
 std::ostream &operator<<(std::ostream &out, const LiveRangeInfo& info) {
-    auto opinfo_to_str = [] (const LiveRangeInfo::OpInfo &opinfo) {
-        if (opinfo == LiveRangeInfo::DEAD) return "DEAD";
-        else if (opinfo == LiveRangeInfo::READ) return "READ";
-        else if (opinfo == LiveRangeInfo::WRITE) return "WRITE";
-        else if (opinfo == LiveRangeInfo::READ_WRITE) return "READ_WRITE";
-        else if (opinfo == LiveRangeInfo::LIVE) return "LIVE";
+    auto opinfo_to_str = [](const LiveRangeInfo::OpInfo& opinfo) {
+        if (opinfo == LiveRangeInfo::OpInfo::DEAD)
+            return "DEAD";
+        else if (opinfo == LiveRangeInfo::OpInfo::READ)
+            return "READ";
+        else if (opinfo == LiveRangeInfo::OpInfo::WRITE)
+            return "WRITE";
+        else if (opinfo == LiveRangeInfo::OpInfo::READ_WRITE)
+            return "READ_WRITE";
+        else if (opinfo == LiveRangeInfo::OpInfo::LIVE)
+            return "LIVE";
         return "";
     };
 
-    out << info.fs << std::endl;
-    out << "Parser: " << opinfo_to_str(info.live_on_parser) << std::endl;
+    out << "Parser: " << opinfo_to_str(info.parser()) << std::endl;
     for (int i = 0; i < Device::numStages(); i++) {
-        out << "Stage_" << i << ": " << opinfo_to_str(info.live_on_stage[i]) << std::endl;
+        out << "Stage_" << i << ": " << opinfo_to_str(info.stage(i)) << std::endl;
     }
-    out << "Deparser: " << opinfo_to_str(info.live_on_deparser) << std::endl;
+    out << "Deparser: " << opinfo_to_str(info.deparser()) << std::endl;
     return out;
 }
 
@@ -99,175 +194,171 @@ bool FieldSliceLiveRangeDB::MapFieldSliceToAction::preorder(const IR::MAU::Actio
     return false;
 }
 
-void
-FieldSliceLiveRangeDB::DBSetter::update_live_range_info(
-    const PHV::FieldSlice& fs,
-    Location& use_loc,
-    Location& def_loc,
-    ordered_map<FieldSlice, LiveRangeInfo>& fs_info_map
-) {
-    std::pair<int, int> live_span;
-    bool invalid_live_span = false;
+boost::optional<FieldSliceLiveRangeDB::DBSetter::Location>
+FieldSliceLiveRangeDB::DBSetter::to_location(const PHV::Field* field,
+                                             const IR::BFN::Unit* unit,
+                                             bool is_read) const {
+    Location loc;
+    if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>()) {
+        if (!is_read) {
+            // Ignore implicit parser init when the field is marked as no_init.
+            if (unit->is<ImplicitParserInit>() && not_implicit_init_fields().count(field))
+                return boost::none;
+        }
+        loc.u = Location::PARSER;
+    } else if (unit->is<IR::BFN::Deparser>()) {
+        loc.u = Location::DEPARSER;
+    } else if (unit->is<IR::MAU::Table>()) {
+        const auto* t = unit->to<IR::MAU::Table>();
+        loc.u = Location::TABLE;
+        loc.stages = backtracker->stage(t);
+    } else {
+        BUG("unknown use unit: %1%, field: %2%", unit, field);
+    }
+    return loc;
+}
+
+void FieldSliceLiveRangeDB::DBSetter::update_live_range_info(const PHV::FieldSlice& fs,
+                                                             const Location& use_loc,
+                                                             const Location& def_loc,
+                                                             LiveRangeInfo& liverange) const {
+    LOG3("update_live_range_info " << fs << ": " << def_loc.u << "," << use_loc.u);
+    // -1 = parser, numStages() = deparser, mau stages are mapped by stage numbers.
     std::pair<int, int> use_range;
-    std::pair<int, int> def_range;
     using OpInfo = LiveRangeInfo::OpInfo;
     if (use_loc.u == Location::PARSER) {
-        fs_info_map[fs].live_on_parser = fs_info_map[fs].live_on_parser || OpInfo::READ;
-        BUG_CHECK(def_loc.u == Location::PARSER,
-            "use is in parser, but def is behind it");
+        liverange.parser() = liverange.parser() || OpInfo::READ;
+        BUG_CHECK(def_loc.u == Location::PARSER, "use is in parser, but def is behind it");
         use_range = std::make_pair(-1, -1);
     } else if (use_loc.u == Location::DEPARSER) {
-        fs_info_map[fs].live_on_deparser = fs_info_map[fs].live_on_parser || OpInfo::READ;
+        liverange.deparser() = liverange.deparser() || OpInfo::READ;
         use_range = std::make_pair(Device::numStages(), Device::numStages());
     } else {
-        if (use_loc.stages.size() > 0) {
-            auto min_max = std::minmax_element(use_loc.stages.begin(), use_loc.stages.end());
-            for (int i = *min_max.first; i <= *min_max.second; i++) {
-                fs_info_map[fs].live_on_stage[i] =
-                    fs_info_map[fs].live_on_stage[i] || OpInfo::READ;
-            }
-            use_range = std::make_pair(*min_max.first, *min_max.second);
-        } else {
-            invalid_live_span = true;
+        BUG_CHECK(use_loc.stages.size() > 0, "table not allocated");
+        auto min_max = std::minmax_element(use_loc.stages.begin(), use_loc.stages.end());
+        for (int i = *min_max.first; i <= *min_max.second; i++) {
+            liverange.stage(i) = liverange.stage(i) || OpInfo::READ;
         }
+        use_range = std::make_pair(*min_max.first, *min_max.second);
     }
 
+    std::pair<int, int> def_range;
     if (def_loc.u == Location::PARSER) {
-        fs_info_map[fs].live_on_parser = fs_info_map[fs].live_on_parser || OpInfo::WRITE;
+        liverange.parser() = liverange.parser() || OpInfo::WRITE;
         def_range = std::make_pair(-1, -1);
     } else if (def_loc.u == Location::DEPARSER) {
-        fs_info_map[fs].live_on_deparser = fs_info_map[fs].live_on_parser || OpInfo::WRITE;
+        liverange.deparser() = liverange.deparser() || OpInfo::WRITE;
         BUG_CHECK(use_loc.u == Location::DEPARSER,
             "def is in deparser, but use is in front of it");
         def_range = std::make_pair(Device::numStages(), Device::numStages());
     } else {
-        if (def_loc.stages.size() > 0) {
-            auto min_max = std::minmax_element(def_loc.stages.begin(), def_loc.stages.end());
-            for (int i = *min_max.first; i <= *min_max.second; i++) {
-                fs_info_map[fs].live_on_stage[i] =
-                    fs_info_map[fs].live_on_stage[i] || OpInfo::WRITE;
-            }
-            def_range = std::make_pair(*min_max.first, *min_max.second);
-        } else {
-            invalid_live_span = true;
+        BUG_CHECK(def_loc.stages.size() > 0, "table not allocated");
+        auto min_max = std::minmax_element(def_loc.stages.begin(), def_loc.stages.end());
+        for (int i = *min_max.first; i <= *min_max.second; i++) {
+            liverange.stage(i) = liverange.stage(i) || OpInfo::WRITE;
         }
+        def_range = std::make_pair(*min_max.first, *min_max.second);
     }
-    if (!invalid_live_span) {
-        if (use_range.first < def_range.second) {
-            LOG1("use in front of def detected");
-        } else if (use_range.first > def_range.second) {
-            for (int i = def_range.second + 1; i <= use_range.first - 1; i++) {
-                fs_info_map[fs].live_on_stage[i] =
-                    fs_info_map[fs].live_on_stage[i] || OpInfo::LIVE;
-            }
+
+    // mark(or) LIVE for stages in between.
+    if (def_range.second < use_range.first) {
+        // NOTE: for fieldslice the its def or use table are split across multiple stages.
+        // The live range starts at the first def table stage and end at the last read stage.
+        for (int i = def_range.first + 1; i <= use_range.second - 1; i++) {
+            liverange.stage(i) = liverange.stage(i) || OpInfo::LIVE;
+        }
+    } else {
+        // read write within parser does not matter.
+        if (use_range.first == -1 && def_range.second == -1) {
+            return;
+        }
+        // TODO(yumin): we need to handle this case more carefully. For example,
+        // There could be a table that has a dominating write of this read in control flow
+        // but because of ignore_table_dependency pragma, the write table is placed after
+        // the read table. Then we need to find write of the read earlier in the pipeline.
+        ::warning(
+            "Because of ignore_table_dependency pragma, for %1% field, the read in stage %2% "
+            "cannot source its definition of the write in stage %3%. Unexpected value might be "
+            "read and physical live range analysis will mark the parser as the first "
+            "definition of the field, regardless of actual start of definition.",
+            cstring::to_cstring(fs), use_range.first, def_range.second);
+        liverange.parser() = liverange.parser() || OpInfo::WRITE;
+        for (int i = 0; i <= use_range.second - 1; i++) {
+            liverange.stage(i) = liverange.stage(i) || OpInfo::LIVE;
         }
     }
 }
 
 void FieldSliceLiveRangeDB::DBSetter::end_apply() {
-    // collect all field slice
+    // skip this when table has not been placed or alt_phv_alloc is not enabled.
+    // because when alt_phv_alloc is not enabled, table placement might be incomplete.
+    if (!backtracker->hasTablePlacement() || !BFNContext::get().options().alt_phv_alloc) {
+        LOG1("alt-phv-alloc not enabled or no table placement found, skip FieldSliceLiveRangeDB");
+        return;
+    }
+    // collect all field slice. Note that because defuse analysis is still based on
+    // whole fields instead of slices, it is okay to use the whole field.
+    // TODO(yumin):
+    //   (1) use MakeSlices info from make_clsuters.
+    //   (2) update defuse pass to use slice-level read/write analysis.
     ordered_set<PHV::FieldSlice> fs_set;
-    for (const auto& act_to_fs :
-        {fs_action_map->action_to_writes, fs_action_map->action_to_reads}) {
-        for (const auto it : act_to_fs) {
-            auto& fieldslice_set = it.second;
-            for (const auto& fieldslice : fieldslice_set) {
-                if (fs_set.count(fieldslice) == 0) {
-                    fs_set.insert(fieldslice);
-                }
-            }
-        }
+    ordered_map<FieldSlice, LiveRangeInfo> fs_info_map;
+    for (const auto& kv : phv.get_all_fields()) {
+        const auto fs = PHV::FieldSlice(&kv.second);
+        fs_set.insert(fs);
+        fs_info_map.emplace(fs, LiveRangeInfo());
     }
 
-    ordered_map<FieldSlice, LiveRangeInfo> fs_info_map;
-    for (const auto& fs : fs_set) {
-        LiveRangeInfo info(fs);
-        fs_info_map[fs] = info;
-    }
     using OpInfo = LiveRangeInfo::OpInfo;
     for (const auto& fs : fs_set) {
-        auto uses = defuse->getAllUses(fs.field()->id);
+        LOG5("compute physical live range: " << fs);
+        const auto& uses = defuse->getAllUses(fs.field()->id);
         for (const auto& use : uses) {
-            auto use_unit = use.first;
-            Location use_loc;
-            auto field = fs.field();
-            if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>()) {
-                // Ignore parser use if field is marked as not parsed.
-                if (notParsedFields.count(field)) continue;
-                // There is no need to set the maxUse here, because maxUse is either -1 (if there is
-                // no other use) or a non-negative value (which does not need to be updated).
-                LOG4("\t  Used in parser.");
-                use_loc.u = Location::PARSER;
-            } else if (use_unit->is<IR::BFN::Deparser>()) {
-                // Ignore deparser use if field is marked as not deparsed.
-                if (notDeparsedFields.count(field)) continue;
-                // There is no need to set the minUse here, because minUse is either DEPARSER (if
-                // there is no other use) or a between [-1, dg.max_min_stage] (which does not need
-                // to be updated).
-                LOG4("\t  Used in deparser.");
-                use_loc.u = Location::DEPARSER;
-            } else if (use_unit->is<IR::MAU::Table>()) {
-                const auto* t = use_unit->to<IR::MAU::Table>();
-                use_loc.u = Location::TABLE;
-                use_loc.stages = backtracker->stage(t);
-            } else {
-                BUG("unknown use unit");
+            LOG5("found use: " << use.first);
+            const auto* unit = use.first;
+            const auto* field = fs.field();
+            const auto use_loc = to_location(field, unit, true);
+            if (!use_loc) {
+                LOG5("use ignored.");
+                continue;
             }
-            auto defs_of_use = defuse->getDefs(use);
+            const auto& defs_of_use = defuse->getDefs(use);
             // Update uses if there is no defs. It is possible that read without initialization.
+            // For example, fields added by compiler as padding for deparsed(digested) metadata.
             if (defs_of_use.size() == 0) {
-                if (use_loc.u == Location::PARSER) {
-                    fs_info_map[fs].live_on_parser = fs_info_map[fs].live_on_parser || OpInfo::READ;
-                } else if (use_loc.u == Location::DEPARSER) {
-                    fs_info_map[fs].live_on_deparser =
-                        fs_info_map[fs].live_on_deparser || OpInfo::READ;
-                } else if (use_loc.u == Location::TABLE) {
-                    auto min_max =
-                        std::minmax_element(use_loc.stages.begin(), use_loc.stages.end());
+                if (use_loc->u == Location::PARSER) {
+                    fs_info_map[fs].parser() = fs_info_map[fs].parser() || OpInfo::READ;
+                } else if (use_loc->u == Location::DEPARSER) {
+                    fs_info_map[fs].deparser() =
+                        fs_info_map[fs].deparser() || OpInfo::READ;
+                } else if (use_loc->u == Location::TABLE) {
+                    const auto min_max =
+                        std::minmax_element(use_loc->stages.begin(), use_loc->stages.end());
                     for (int i = *min_max.first; i <= *min_max.second; i++) {
-                        fs_info_map[fs].live_on_stage[i] =
-                            fs_info_map[fs].live_on_stage[i] || OpInfo::READ;
+                        fs_info_map[fs].stage(i) = fs_info_map[fs].stage(i) || OpInfo::READ;
                     }
                 } else {
                     BUG("unknown Location Type");
                 }
                 continue;
             }
-            BUG_CHECK(defs_of_use.size() != 0, "def is empty");
             for (const auto& def : defs_of_use) {
-                Location def_loc;
+                LOG5("found paired def: " << def.first);
                 const IR::BFN::Unit* def_unit = def.first;
-                auto field = fs.field();
-                // If the definition is of type ImplicitParserInit, then it was added to account for
-                // uninitialized reads, and can be safely ignored. Account for all other parser
-                // initializations, as long as the field is not marked notParsed.
-                if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>()) {
-                    // If the def is an implicit read inserted only for metadata fields to account
-                    // for uninitialized reads, then ignore that initialization.
-                    if (def.second->is<ImplicitParserInit>()) {
-                        def_loc.u = Location::PARSER;
-                        continue;
-                    }
-                    if (!notParsedFields.count(field)
-                        && !(field->bridged && field->gress == INGRESS)) {
-                        LOG4("\t  Field defined in parser.");
-                        def_loc.u = Location::PARSER;
-                    }
-                } else if (def_unit->is<IR::BFN::Deparser>()) {
-                    if (notDeparsedFields.count(field)) continue;
-                    def_loc.u = Location::DEPARSER;
-                    LOG4("\t  Defined in deparser.");
-                } else if (def_unit->is<IR::MAU::Table>()) {
-                    const auto* t = def_unit->to<IR::MAU::Table>();
-                    def_loc.stages = backtracker->stage(t);
+                const auto* field = fs.field();
+                const auto def_loc = to_location(field, def_unit, false);
+                if (def_loc) {
+                    update_live_range_info(fs, *use_loc, *def_loc, fs_info_map[fs]);
+                } else {
+                    LOG5("def ignored.");
                 }
-                update_live_range_info(fs, use_loc, def_loc, fs_info_map);
             }
         }
     }
 
     for (auto it : fs_info_map) {
         self.set_liverange(it.first, it.second);
+        LOG3("Live range of " << it.first << ": " << it.second);
     }
 }
 
@@ -276,20 +367,34 @@ FieldSliceLiveRangeDB::set_liverange(const PHV::FieldSlice& fs, const LiveRangeI
     live_range_map[fs.field()][fs] = info;
 }
 
-boost::optional<LiveRangeInfo>
+const LiveRangeInfo*
 FieldSliceLiveRangeDB::get_liverange(const PHV::FieldSlice& fieldslice) const {
     if (live_range_map.count(fieldslice.field())) {
         if (live_range_map.at(fieldslice.field()).count(fieldslice)) {
-            return live_range_map.at(fieldslice.field()).at(fieldslice);
+            return &live_range_map.at(fieldslice.field()).at(fieldslice);
         } else {
-            for (const auto pair : live_range_map.at(fieldslice.field())) {
-                auto fs = pair.first;
-                auto info = pair.second;
-                if (fs.range().contains(fieldslice.range())) return info;
+            for (const auto& pair : live_range_map.at(fieldslice.field())) {
+                const auto& fs = pair.first;
+                const auto& info = pair.second;
+                if (fs.range().contains(fieldslice.range())) return &info;
             }
         }
     }
-    return boost::none;
+    return nullptr;
+}
+
+const LiveRangeInfo* FieldSliceLiveRangeDB::default_liverange() const {
+    static LiveRangeInfo* whole_pipe = nullptr;
+    if (whole_pipe) {
+        return whole_pipe;
+    }
+    whole_pipe = new LiveRangeInfo();
+    whole_pipe->parser() = LiveRangeInfo::OpInfo::WRITE;
+    for (int i = 0; i < Device::numStages(); i++) {
+        whole_pipe->stage(i) = LiveRangeInfo::OpInfo::LIVE;
+    }
+    whole_pipe->deparser() = LiveRangeInfo::OpInfo::READ;
+    return whole_pipe;
 }
 
 }  // namespace PHV

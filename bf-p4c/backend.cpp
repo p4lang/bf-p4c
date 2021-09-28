@@ -1,6 +1,7 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+#include "ir/pass_manager.h"
 #include "lib/indent.h"
 
 #include "bf-p4c/common/alias.h"
@@ -213,21 +214,53 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 
+        // Two different allocation flow:
+        // (1) Normal allocation:
+        //                                if failed
+        //     PHV alloc => table alloc ============> PHV alloc => ....
+        // (2) Table placement first allocation:
+        //                                        with table info
+        //     Trivial PHV alloc => table alloc ==================> PHV alloc ===> redo table.
+        new DumpPipe("Before phv_analysis"),
+        new DumpTableFlowGraph(phv),
         options.alt_phv_alloc ? new PassManager({
-            new DumpPipe("Before trivial phv alloc"),
-            new PHV::TrivialAlloc(phv),
-            // FIXME -- should do ValidateActions (subset?) with TrivialAlloc?
+            // run trivial alloc for the first time
+            new PassIf(
+                [this]() {
+                    return table_summary.getActualState() == TableSummary::ALT_INITIAL;
+                },
+                {
+                    [=]() {
+                        PHV_Analysis->set_trivial_alloc(true);
+                        PHV_Analysis->set_no_code_change(true);
+                        PHV_Analysis->set_physical_liverange_overlay(false);
+                    },
+                }),
+            // run actual PHV allocation
+            new PassIf(
+                [this]() {
+                    return table_summary.getActualState() == TableSummary::ALT_FINALIZE_TABLE;
+                },
+                {
+                    [=]() {
+                        PHV_Analysis->set_trivial_alloc(false);
+                        PHV_Analysis->set_no_code_change(true);
+                        PHV_Analysis->set_physical_liverange_overlay(true);
+                    },
+                }),
+            // ^^ two PassIf are mutex.
         }) : new PassManager({
             // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
             // will clear the allocation.
-            new DumpPipe("Before phv_analysis"),
-            new DumpTableFlowGraph(phv),
-            PHV_Analysis,
-            // Validate results of PHV allocation.
-            new PHV::ValidateAllocation(phv, clot),
-            allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
-            new ValidateActions(phv, false, true, false),
+            [=](){
+                PHV_Analysis->set_trivial_alloc(false);
+                PHV_Analysis->set_no_code_change(false);
+                PHV_Analysis->set_physical_liverange_overlay(false);
+            },
         }),
+        PHV_Analysis,
+        allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
+        new ValidateActions(phv, false, true, false),
         new PHV::AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         // This pass must be called before instruction adjustment since the primitive info
@@ -237,35 +270,16 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         &table_alloc,
         new DumpPipe("After TableAlloc"),
         &table_summary,
-        options.alt_phv_alloc ? new PassIf([this]() { return phv.trivial_alloc(); }, {
-            // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
-            // will clear the allocation.
-            new Alias(phv, *pragmaAlias),
-            new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
-            new DumpPipe("Before phv_analysis"),
-            new DumpTableFlowGraph(phv),
-            PHV_Analysis,
-            // Validate results of PHV allocation.
-            new PHV::ValidateAllocation(phv, clot),
-            allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
-            new ValidateActions(phv, false, true, false),
-            new PHV::AddAliasAllocation(phv),
-            new ReinstateAliasSources(phv),  // revert AliasMembers/Slices to their original
-            [this]() {
-                // FIXME -- PHV (re)allocation may have invalidated action bus allocation (at
-                // least), due to using difference sizes/slices of PHVs for fields.  We should
-                // probably be able to just redo adb alloc and fix things up, rather than redoing
-                // all of table placement, but for now we backtrack to redo table placement
-                throw TablePlacement::RedoTablePlacement(); }
-        }) : nullptr,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,
         liveRangeReport,
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
-        options.alt_phv_alloc ? nullptr :
-            new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
+        // we need to run CheckForUnallocatedTemps even when alt-phv-alloc is on, because we
+        // have to backtrack to mau_backtracker to avoid aliasing issue, and after backtracking
+        // temp vars are lost.
+        new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
         new InstructionAdjustment(phv),
         &nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
@@ -282,7 +296,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
 
         // Call this at the end of the backend. This changes the logical stages used for PHV
         // allocation to physical stages based on actual table placement.
-        Device::currentDevice() != Device::TOFINO
+        // DO NOT NEED to do it in alternative phv allocation because AllocSlices are already
+        // physical stage based.
+        Device::currentDevice() != Device::TOFINO && !options.alt_phv_alloc
             ? new FinalizeStageAllocation(phv, defuse, deps, table_summary) : nullptr,
 
         // Must be called as last pass.  If the power budget is exceeded,

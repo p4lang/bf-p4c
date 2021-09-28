@@ -8,6 +8,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/make_clusters.h"
@@ -162,6 +163,8 @@ class PhvLogging : public MauInspector {
     const FieldDefUse   &defuse;
     /// Table allocation.
     const ordered_map<cstring, ordered_set<int>>& tableAlloc;
+    /// Table summary.
+    const TableSummary &tableSummary;
 
     /// Unallocated slices.
     ordered_set<PHV::FieldSlice> unallocatedSlices;
@@ -304,8 +307,9 @@ class PhvLogging : public MauInspector {
                         const ClotInfo &ci,
                         const CollectPhvLoggingInfo& c,
                         const FieldDefUse &du,
-                        const ordered_map<cstring, ordered_set<int>>& t)
-    : phv(p), clot(ci), info(c), defuse(du), tableAlloc(t),
+                        const ordered_map<cstring, ordered_set<int>>& t,
+                        const TableSummary &ts)
+        : phv(p), clot(ci), info(c), defuse(du), tableAlloc(t), tableSummary(ts),
       logger(filename,
              Logging::Logger::buildDate(),
              BF_P4C_VERSION,

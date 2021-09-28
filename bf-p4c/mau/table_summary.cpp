@@ -9,11 +9,15 @@
 #include "lib/safe_vector.h"
 
 const char *state_name[] = { "INITIAL", "NOCC_TRY1", "REDO_PHV1", "NOCC_TRY2", "REDO_PHV2",
-    "FINAL_PLACEMENT", "FAILURE", "SUCCESS" };
+    "FINAL_PLACEMENT", "FAILURE", "SUCCESS", "ALT_INITIAL", "ALT_FINALIZE_TABLE" };
+
+void TableSummary::FinalizePlacement() {
+    state = BFNContext::get().options().alt_phv_alloc ? ALT_FINALIZE_TABLE : FINAL_PLACEMENT;
+}
 
 TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg) : pipe_id(pipe_id), deps(dg) {
+    state = BFNContext::get().options().alt_phv_alloc ? ALT_INITIAL : INITIAL;
     static std::set<int>        ids_seen;
-
     BUG_CHECK(ids_seen.count(pipe_id) == 0, "Duplicate pipe id %d", pipe_id);
     ids_seen.insert(pipe_id);
 }
@@ -103,9 +107,17 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
     LOG7(pipe);
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
-    bool placementFailure = (tablePlacementErrors.size() > 0);
+    // TODO(yumin): this variable is misleading as warnings like `cannot satisfy stage pragma`
+    // will be stored in tablePlacementErrors. Those warnings should not stop table placement
+    // when it is the last round of table placement or maybe even for previous rounds.
+    // To avoid fitting exercises on master, we continue to use this variable for normal
+    // allocation process.
+    const bool placementFailure = (tablePlacementErrors.size() > 0);
+    const bool criticalPlacementFailure =
+        std::any_of(tablePlacementErrors.begin(), tablePlacementErrors.end(),
+                    [](const std::pair<cstring, bool> &kv) { return kv.second; });
     for (auto entry : order) {
-        int stage = static_cast<int>(entry.first/NUM_LOGICAL_TABLES_PER_STAGE);
+        int stage = static_cast<int>(entry.first / NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
         if (max_stages[entry.second->gress] < stage)
             max_stages[entry.second->gress] = stage;
@@ -136,9 +148,54 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 
+    const auto print_table_placement_errors = [&]() {
+        for (auto &msg : tablePlacementErrors) {
+            if (msg.second)
+                ::error(msg.first);
+            else
+                ::warning(msg.first);
+        }
+    };
+
     if (BFNContext::get().options().alt_phv_alloc) {
-        // with phv alloc after table placement, none of this backtracking is useful
-        return; }
+        auto prev_state = state;
+        switch (state) {
+        case ALT_INITIAL: {
+            // table placement succeeded, backtrack to run actual PHV allocation.
+            if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                state = ALT_FINALIZE_TABLE;
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+            } else {
+                // Trivial PHV alloc should yield the best possible table placement. No need to
+                // retry if we're not fitting.
+                state = FAILURE;
+            }
+            break;
+        }
+        case ALT_FINALIZE_TABLE: {
+            if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                state = SUCCESS;
+            } else {
+                state = FAILURE;
+            }
+            break;
+        }
+        default:
+            BUG("incorrect current state when alt_phv_alloc is enabled: %1%", state_name[state]);
+        }
+        if (state == FAILURE) {
+            ::error(
+                "table allocation (alt-phv-alloc enabled) failed to allocate tables "
+                "within %1% stages. Allocation state: %2%, "
+                "stage used: %3%, table placement warnings and errors seen: %4%",
+                deviceStages, state_name[prev_state], maxStage, tablePlacementErrors.size());
+            print_table_placement_errors();
+        } else if (state == SUCCESS) {
+            // only warnings will be printed.
+            print_table_placement_errors();
+        }
+        return;
+    }
 
     switch (state) {
     case INITIAL:
@@ -210,11 +267,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
             state = SUCCESS;
         else
             state = FAILURE;
-        for (auto &msg : tablePlacementErrors)
-            if (msg.second)
-                error(msg.first);
-            else
-                warning(msg.first);
+        print_table_placement_errors();
         return;
 
     default:

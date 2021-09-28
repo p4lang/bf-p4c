@@ -564,7 +564,7 @@ class JBayContainerAction : public ContainerAction {
 
     JBayContainerAction() {
         Device::init("Tofino2");
-        PhvInfo::table_to_min_stage["test"] = { 0 };
+        PhvInfo::table_to_min_stages["test"] = { 0 };
     }
 
  protected:

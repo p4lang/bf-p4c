@@ -63,6 +63,15 @@ struct NoContainerConflictTrigger {
  *    \-----------> SUCCESS <------+------------------------------/            |
  *                                  \                                          |
  *                                   FINAL_PLACEMENT---------------------------+
+ *
+ *
+ * In the alternative PHV allocation, AKA table placement first allocation, the workflow is
+ * different.
+ *
+ *  ALT_INITIAL --->  ALT_FINALIZE_TABLE--->  SUCCESS
+ *      \                     \
+ *    FAILURE               FAILURE
+ *
  ************************/
 
 class TableSummary: public MauInspector {
@@ -77,6 +86,8 @@ class TableSummary: public MauInspector {
         FINAL_PLACEMENT,
         FAILURE,
         SUCCESS,
+        ALT_INITIAL,
+        ALT_FINALIZE_TABLE,
     };
 
  private:
@@ -155,11 +166,12 @@ class TableSummary: public MauInspector {
     void addPlacementWarnError(cstring msg) { tablePlacementErrors[msg] |= false; }
     void clearPlacementErrors() { tablePlacementErrors.clear(); }
     int placementErrorCount() { return tablePlacementErrors.size(); }
-    void FinalizePlacement() { state = FINAL_PLACEMENT; }
+    /// set state to FINAL_PLACEMENT, or ALT_FINALIZE_TABLE if alt-phv-alloc is enabled.
+    void FinalizePlacement();
     void resetPlacement() { state = INITIAL; }
-    state_t getActualState() { return state; }
+    state_t getActualState() const { return state; }
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
-    StageUseEstimate getAllStagesResources() { return allStages; }
+    StageUseEstimate getAllStagesResources() const { return allStages; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

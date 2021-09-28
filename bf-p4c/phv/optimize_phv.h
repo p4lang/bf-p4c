@@ -65,7 +65,7 @@ class BruteForceOptimizationStrategy {
     // Required to call the BruteForceAllocationStrategy allocation services.
     BruteForceAllocationStrategy&          alloc_strategy_i;
     const std::list<PHV::ContainerGroup*>& container_groups_i;
-    const AllocContext&                    score_ctx_i;
+    const ScoreContext&                    score_ctx_i;
 
     // Transaction Data that is continuously updated to increase the solution score.
     TransactData                           *data;
@@ -80,7 +80,7 @@ class BruteForceOptimizationStrategy {
     explicit BruteForceOptimizationStrategy(
         BruteForceAllocationStrategy& alloc_strategy_i,
         const std::list<PHV::ContainerGroup *>& container_groups,
-        const AllocContext& score_ctx) : alloc_strategy_i(alloc_strategy_i),
+        const ScoreContext& score_ctx) : alloc_strategy_i(alloc_strategy_i),
                                          container_groups_i(container_groups),
                                          score_ctx_i(score_ctx) { data = new TransactData(); }
 

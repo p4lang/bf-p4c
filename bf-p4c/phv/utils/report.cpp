@@ -202,13 +202,18 @@ cstring
 PHV::AllocationReport::printAllocSlices() const {
     std::stringstream out;
 
-    TablePrinter tp(out, { "Field Slice", "Container", "Container Type", "Container Slice"},
-            TablePrinter::Align::LEFT);
+    TablePrinter tp(out,
+                    {"Field Slice", "Live Range", "Container", "Container Type", "Container Slice"},
+                    TablePrinter::Align::LEFT);
 
     for (auto slice = alloc_slices.sorted_begin(); slice != alloc_slices.sorted_end(); slice++) {
         auto formatted = format_alloc_slice(*slice);
+        std::stringstream lr_str;
+        lr_str << (slice->isPhysicalStageBased() ? "P" : "") << "["
+               << slice->getEarliestLiveness() << ", " << slice->getLatestLiveness() << "]";
         tp.addRow({
                 std::string(slice->field()->name) + formatted.second,
+                lr_str.str(),
                 std::string(slice->container().toString()),
                 std::string(slice->container().type().toString()),
                 formatted.first,

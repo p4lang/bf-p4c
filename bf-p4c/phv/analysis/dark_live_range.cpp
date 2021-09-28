@@ -59,8 +59,8 @@ bool DarkLiveRange::increasesDependenceCriticalPath(
     if (use_stage < init_stage) return false;
     int new_init_stage = use_stage + 1;
     LOG_DEBUG5(TAB2 "new_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
-    LOG_DEBUG5(TAB3 "MinStages: useTable(" << *(PhvInfo::minStage(use).begin()) << ")  initTable("
-               << *(PhvInfo::minStage(init).begin()) << ")");
+    LOG_DEBUG5(TAB3 "MinStages: useTable(" << *(PhvInfo::minStages(use).begin()) << ")  initTable("
+               << *(PhvInfo::minStages(init).begin()) << ")");
 
     if (new_init_stage + init_dep_tail > maxStages)
         return true;

@@ -179,6 +179,11 @@ bool Phv_Parde_Mau_Use::is_extracted_from_constant(const PHV::Field *f,
 }
 
 
+bool Phv_Parde_Mau_Use::is_allocation_required(const PHV::Field *f) const {
+    return !f->is_ignore_alloc() && (is_referenced(f) || f->isGhostField());
+}
+
+
 //***********************************************************************************
 //
 // class PhvUse

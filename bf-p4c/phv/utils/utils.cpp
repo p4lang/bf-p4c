@@ -734,15 +734,9 @@ PHV::Allocation::slices(
     auto all_slices = slices(c, range);
     ordered_set<PHV::AllocSlice> rv;
     for (auto& slice : all_slices) {
-        auto minStage = slice.getEarliestLiveness();
-        auto maxStage = slice.getLatestLiveness();
-        // Ignore if this slice is live before the (stage, access) pair.
-        if (stage < minStage.first || (stage == minStage.first && access < minStage.second))
-            continue;
-        // Ignore if this slice is live after the (stage, access) pair.
-        if (stage > maxStage.first || (stage == maxStage.first && access > maxStage.second))
-            continue;
-        rv.insert(slice);
+        if (slice.isLiveAt(stage, access)) {
+            rv.insert(slice);
+        }
     }
     return rv;
 }
@@ -793,19 +787,11 @@ PHV::Allocation::slices(
         int stage,
         PHV::FieldUse access) const {
     auto all_slices = slices(f, range);
-    for (auto& slice : all_slices) LOG5("Slice: " << slice);
     ordered_set<PHV::AllocSlice> rv;
     for (auto& slice : all_slices) {
-        auto minStage = slice.getEarliestLiveness();
-        auto maxStage = slice.getLatestLiveness();
-        // Ignore if this slice is live before the (stage, access) pair.
-        if (stage < minStage.first || (stage == minStage.first && access < minStage.second))
-            continue;
-        // Ignore if this slice is live after the (stage, access) pair.
-        if (stage > maxStage.first || (stage == maxStage.first && access > maxStage.second))
-            continue;
-        rv.insert(slice);
-        LOG5("  Found slice " << slice << " in the live range");
+        if (slice.isLiveAt(stage, access)) {
+            rv.insert(slice);
+        }
     }
     return rv;
 }

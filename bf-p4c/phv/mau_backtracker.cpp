@@ -11,6 +11,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
         metaInitDisable |= t->metaInitDisable;
         ignorePackConflicts |= t->ignorePackConflicts;
         firstRoundFit |= t->firstRoundFit;
+        has_table_placement = true;
         // If we are directed to ignore pack conflicts, then do not note down the previous table
         // placement.
         LOG4("Already existing tables size: " << tables.size());
@@ -31,8 +32,10 @@ bool MauBacktracker::backtrack(trigger &trig) {
             internalTables.clear();
             for (auto entry : t->internalTableAlloc)
                 internalTables[entry.first] = entry.second;
+            LOG4("Inserted tables size: " << tables.size());
+        } else {
+            LOG4("IgnorePackConflicts is true, no table placement inserted.");
         }
-        LOG4("Inserted tables size: " << tables.size());
         return true;
     }
     return false;
@@ -103,7 +106,7 @@ void MauBacktracker::printTableAlloc() const {
 }
 
 bool MauBacktracker::hasTablePlacement() const {
-    return (tables.size() > 0);
+    return has_table_placement;
 }
 
 ordered_set<int> MauBacktracker::stage(const IR::MAU::Table* t, bool internal) const {
