@@ -33,7 +33,38 @@ namespace std {
 
 namespace BFN {
 
-static std::string typeName(Memories::Use::type_t type) {
+static std::string getMeterTypeName(const IR::MAU::Table *table) {
+    LOG3("getMeterTypeName: table: " << dbp(table) << std::endl << table);
+
+    const IR::ID *implementation = nullptr;
+
+    forAllMatching<IR::MAU::Meter>(&table->attached, [&](const IR::MAU::Meter *meter) {
+        LOG3("meter: " << dbp(meter) << ", implementation: " << meter->implementation);
+        if (implementation == nullptr)
+            implementation = &meter->implementation;
+        else
+            BUG_CHECK(implementation->name == meter->implementation.name,
+                    "Meter implementation name (%1%) does not match expected name (%2%)!",
+                    implementation->name, meter->implementation.name);
+    });
+
+    BUG_CHECK(implementation != nullptr, "Meter implementation not found unexpectedly!");
+
+    LOG3("Found meter implementation (" << implementation->name << ")");
+
+    if (implementation->name == nullptr) {
+        return "meter_ram";
+    } else if (implementation->name == "lpf") {
+        return "meter_lpf";
+    } else if (implementation->name == "wred") {
+        return "meter_wred";
+    } else {
+        BUG("Unexpected meter implementation (%1%)!", implementation->name);
+    }
+}
+
+static std::string typeName(Memories::Use::type_t type,
+                            const IR::MAU::Table *table) {
     switch (type) {
         case Memories::Use::EXACT:      return "match_entry_ram";
         case Memories::Use::ATCAM:      return "algorithmic_tcam";
@@ -41,8 +72,7 @@ static std::string typeName(Memories::Use::type_t type) {
         case Memories::Use::GATEWAY:    return "gateway";
         case Memories::Use::TIND:       return "ternary_indirection_ram";
         case Memories::Use::COUNTER:    return "statistics_ram";
-        case Memories::Use::METER:      return "meter_ram";
-        // TODO(mvido) "meter_lpf" and "meter_wred" to be added here (see P4C-3229)
+        case Memories::Use::METER:      return getMeterTypeName(table);
         case Memories::Use::STATEFUL:   return "stateful_ram";
         case Memories::Use::SELECTOR:   return "select_ram";
         case Memories::Use::ACTIONDATA: return "action_ram";
@@ -226,7 +256,7 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
     LOG3("\tadding resource table: " << name);
 
     stageResources[stage].memories.emplace_back(
-        name.c_str(), table->build_gateway_name().c_str(), alloc);
+        table, name.c_str(), table->build_gateway_name().c_str(), alloc);
 
     collectXbarBytesUsage(stage, alloc->match_ixbar.get());
     collectXbarBytesUsage(stage, alloc->salu_ixbar.get());
@@ -436,7 +466,7 @@ void ResourcesLogging::logMemories(unsigned int stageNo, RamResourceUsage *ramsR
         for (auto &use : res.use->memuse) {
             Memories::Use memuse = use.second;
             std::string usedBy = stripLeadingDot(memuse.used_by);
-            std::string usedFor = typeName(memuse.type);
+            std::string usedFor = typeName(memuse.type, res.table);
 
             LOG3("MemUse: (" << res.tableName << ", p4name: " << usedBy
                  << " " << memuse.type << ")");
@@ -641,7 +671,7 @@ ResourcesLogging::logExactMemSearchBuses(unsigned int stageNo) const {
     for (auto &res : stageResources[stageNo].memories) {
         for (auto &use : res.use->memuse) {
             auto memuse = use.second;
-            auto usedFor = typeName(memuse.type);
+            auto usedFor = typeName(memuse.type, res.table);
 
             // While there are search buses available for selectors, these
             // are separate from exact match search buses, which is what is
@@ -690,7 +720,7 @@ ResourcesLogging::logExactMemResultBuses(unsigned int stageNo) const {
     for (auto &res : stageResources[stageNo].memories) {
         for (auto &use : res.use->memuse) {
             Memories::Use memuse = use.second;
-            std::string usedFor = typeName(memuse.type);
+            std::string usedFor = typeName(memuse.type, res.table);
 
             switch (memuse.type) {
             case Memories::Use::EXACT:
@@ -755,7 +785,7 @@ ResourcesLogging::logTindResultBuses(unsigned int stageNo) const {
     for (auto &res : stageResources[stageNo].memories) {
         for (auto &use : res.use->memuse) {
             Memories::Use memuse = use.second;
-            std::string usedFor = typeName(memuse.type);
+            std::string usedFor = typeName(memuse.type, res.table);
 
             switch (memuse.type) {
             case Memories::Use::TIND: {

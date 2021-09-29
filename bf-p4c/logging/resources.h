@@ -86,13 +86,14 @@ struct ActionBusByteResource {
 };
 
 struct MemoriesResource {
+    const IR::MAU::Table     *table;
     std::string              tableName;
     std::string              gatewayName;
     const TableResourceAlloc *use;
 
-    MemoriesResource(const std::string &name, const std::string &gwname,
-                     const TableResourceAlloc *use) :
-        tableName(name), gatewayName(gwname), use(use) {}
+    MemoriesResource(const IR::MAU::Table *table, const std::string &name,
+                     const std::string &gwname, const TableResourceAlloc *use) :
+        table(table), tableName(name), gatewayName(gwname), use(use) {}
 };
 
 struct IMemColorResource {
