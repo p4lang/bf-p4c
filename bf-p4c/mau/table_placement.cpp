@@ -1389,6 +1389,13 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                         + " entries";
         const char *sep = " along with ";
         for (auto &ae : next->attached_entries) {
+            // All selector tables need a stateful table that can be used by the driver to set and
+            // clear entries in the table. This should be abstracted from the customer when
+            // reporting an error.
+            if (auto *salu = ae.first->to<IR::MAU::StatefulAlu>())
+                if (salu->synthetic_for_selector)
+                    continue;
+
             if (ae.second.entries > 0) {
                 error_message += sep + std::to_string(ae.second.entries) + " entries of " +
                                  ae.first->toString();
