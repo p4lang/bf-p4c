@@ -395,7 +395,7 @@ bitvec FindPayloadCandidates::determine_indirect_addr_payload(const IR::MAU::Act
         PayloadArguments &payload_args, const IR::MAU::AttachedMemory *at) {
     const IR::MAU::StatefulCall *call = nullptr;
     for (auto sc : act->stateful_calls) {
-        if (sc->attached_callee != at) continue;
+        if (sc->attached_callee->clone_id != at->clone_id) continue;
         call = sc;
         break;
     }
