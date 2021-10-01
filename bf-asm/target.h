@@ -95,6 +95,7 @@
     M(int, STATEFUL_ALU_CONST_MASK) \
     M(int, STATEFUL_ALU_CONST_MIN) M(int, STATEFUL_ALU_CONST_MAX) \
     M(int, MINIMUM_INSTR_CONSTANT) \
+    M(bool, TABLES_REQUIRE_ROW) \
     M(int, NUM_PARSERS)
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
@@ -223,6 +224,7 @@ class Target::Tofino : public Target {
         MINIMUM_INSTR_CONSTANT = -8,  // TODO
         NUM_PARSERS = 18,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
+        TABLES_REQUIRE_ROW = 1,
     };
     static int encodeConst(int src) {
         return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
@@ -346,6 +348,7 @@ class Target::JBay : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 36,
+        TABLES_REQUIRE_ROW = 1,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -515,6 +518,7 @@ class Target::Cloudbreak : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 36,
+        TABLES_REQUIRE_ROW = 1,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -612,6 +616,7 @@ class Target::Flatrock : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 1,
+        TABLES_REQUIRE_ROW = 0,
     };
     static int encodeConst(int src) {
         return src;

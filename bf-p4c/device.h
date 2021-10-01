@@ -38,6 +38,8 @@ class Device {
 
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
+    struct GatewaySpec;
+    static const GatewaySpec& gatewaySpec() { return Device::get().getGatewaySpec(); }
     struct StatefulAluSpec;
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static const MauPowerSpec& mauPowerSpec() { return Device::get().getMauPowerSpec(); }
@@ -65,7 +67,6 @@ class Device {
     static int numMaxChannels() { return Device::get().getNumMaxChannels(); }
     static int numClots() { return pardeSpec().numClotsPerGress(); }
     static int isMemoryCoreSplit() { return Device::get().getIfMemoryCoreSplit(); }
-    static int uniqueGatewayShifts() { return Device::get().getUniqueGatewayShifts(); }
     static bool hasCompareInstructions() { return Device::get().getHasCompareInstructions(); }
     static int numLogTablesPerStage() { return Device::get().getNumLogTablesPerStage(); }
 
@@ -77,6 +78,7 @@ class Device {
 
     virtual const PhvSpec& getPhvSpec() const = 0;
     virtual const PardeSpec& getPardeSpec() const = 0;
+    virtual const GatewaySpec& getGatewaySpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
     virtual const MauPowerSpec& getMauPowerSpec() const = 0;
     virtual int getNumPipes() const = 0;
@@ -96,7 +98,6 @@ class Device {
     virtual int getPortBitWidth() const = 0;
     virtual int getNumMaxChannels() const = 0;
     virtual bool getIfMemoryCoreSplit() const = 0;
-    virtual int getUniqueGatewayShifts() const = 0;
     virtual bool getHasCompareInstructions() const = 0;
     virtual int getNumLogTablesPerStage() const = 0;
 
@@ -142,10 +143,10 @@ class TofinoDevice : public Device {
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
+    const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return false; }
-    int getUniqueGatewayShifts() const override { return 1; }
     bool getHasCompareInstructions() const override { return false; }
     int getNumLogTablesPerStage() const override { return 16; }
 };
@@ -186,10 +187,10 @@ class JBayDevice : public Device {
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
+    const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
-    int getUniqueGatewayShifts() const override { return 5; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
 };
@@ -260,10 +261,10 @@ class CloudbreakDevice : public Device {
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
+    const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
-    int getUniqueGatewayShifts() const override { return 5; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
 };
@@ -306,10 +307,10 @@ class FlatrockDevice : public Device {
 
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
+    const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
-    int getUniqueGatewayShifts() const override { return 5; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
 };

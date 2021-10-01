@@ -116,6 +116,7 @@ set (BFAS_COMMON_SOURCES
   depositfield.cpp
   dynhash.cpp
   exact_match.cpp
+  exename.cpp
   flexible_headers.cpp
   gateway.cpp
   hash_action.cpp
@@ -163,6 +164,7 @@ SET (BFAS_COMMON_HEADERS
   deparser.h
   depositfield.h
   escape.h
+  exename.h
   fdstream.h
   hash_dist.h
   hashexpr.h

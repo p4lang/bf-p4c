@@ -64,6 +64,15 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
     gw_hash_group = alloc.gw_hash_group;
     parity = alloc.parity;
 
+    for (auto &input : alloc.hash_table_inputs) {
+        int i = &input - &alloc.hash_table_inputs[0];
+        if (hash_table_inputs[i] != 0 && input != 0)
+            BUG("When adding allocs of ways, somehow ended up on the same hash group");
+        hash_table_inputs[i] |= input;
+        BUG_CHECK(hash_seed[i].popcount() == 0 || alloc.hash_seed[i].popcount() == 0,
+                  "Hash seed already present for group %1%", i);
+        hash_seed[i] |= alloc.hash_seed[i];
+    }
     for (auto old_way : way_use) {
         for (auto new_way : alloc.way_use) {
             if (old_way.group == new_way.group)
@@ -79,6 +88,21 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
     bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
     way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
 }
+
+/** Provides the bytes and hash group location of the partition index of an atcam table
+ */
+safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *hash_group) const {
+    safe_vector<IXBar::Use::Byte> partition = ::IXBar::Use::atcam_partition(hash_group);
+    if (hash_group) {
+        for (auto &input : hash_table_inputs) {
+            if (input) {
+                *hash_group = &input - &hash_table_inputs[0];
+                break; }
+        }
+    }
+    return partition;
+}
+
 
 void IXBar::Use::dbprint(std::ostream &out) const {
     ::IXBar::Use::dbprint(out);
@@ -101,6 +125,27 @@ int IXBar::Use::hash_groups() const {
             rv++;
             counted |= 1U << way.group;
         }
+    }
+    return rv;
+}
+
+IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) const {
+    TotalBytes rv = ::IXBar::Use::match_hash(hash_groups);
+    if (!rv.empty()) return rv;
+
+    for (auto &input : hash_table_inputs) {
+        if (input == 0) continue;
+        auto rv_index = new safe_vector<Byte>();
+        for (auto byte : use) {
+            int hash_group = byte.loc.group * 2 + byte.loc.byte / 8;
+            if ((1 << hash_group) & input) {
+                rv_index->push_back(byte);
+            }
+        }
+
+        rv.push_back(rv_index);
+        if (hash_groups)
+            hash_groups->push_back(&input - &hash_table_inputs[0]);
     }
     return rv;
 }
@@ -215,6 +260,16 @@ void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &sta
 
 constexpr int IXBar::HASH_INDEX_GROUPS;
 constexpr IXBar::HashDistDest_t IXBar::HD_STATS_ADR;
+
+unsigned IXBar::hash_table_inputs(const HashDistUse &hdu) {
+    unsigned rv = 0;
+    for (auto &ir_alloc : hdu.ir_allocations) {
+        if (auto use = dynamic_cast<const IXBar::Use *>(ir_alloc.use.get())) {
+            rv |= use->hash_table_inputs[hdu.hash_group()];
+        }
+    }
+    return rv;
+}
 
 void IXBar::clear() {
     exact_use.clear();
@@ -3447,9 +3502,9 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
     chained_hd_alloc.mask = bitvec(chained_hd_alloc.shift, HASH_DIST_EXPAND_BITS);
     chained_hd_alloc.outputs.insert("hi");
 
-    unsigned hash_table_inputs = chained_hd_alloc.hash_table_inputs();
+    unsigned ht_inputs = hash_table_inputs(chained_hd_alloc);
     for (int ht = 0; ht < HASH_TABLES; ht++) {
-        if (((1 << ht) & hash_table_inputs) == 0) continue;
+        if (((1 << ht) & ht_inputs) == 0) continue;
         hash_dist_use[ht][chained_hd_alloc.unit % HASH_DIST_SLICES] = name;
         hash_dist_inuse[ht].setbit(chained_hd_alloc.unit % HASH_DIST_SLICES);
     }
@@ -4136,7 +4191,7 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
     }
 
     for (int i = 0; i < HASH_TABLES; i++) {
-        if (((1U << i) & hash_dist_alloc.hash_table_inputs()) == 0) continue;
+        if (((1U << i) & hash_table_inputs(hash_dist_alloc)) == 0) continue;
         int slice = hash_dist_alloc.unit % HASH_DIST_SLICES;
         if (!hash_dist_use[i][slice].isNull())
             hash_dist_use[i][slice] = name;

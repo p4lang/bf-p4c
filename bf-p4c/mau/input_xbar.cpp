@@ -95,21 +95,6 @@ IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) con
         }
         return rv;
     }
-
-    for (auto &input : hash_table_inputs) {
-        if (input == 0) continue;
-        auto rv_index = new safe_vector<Byte>();
-        for (auto byte : use) {
-            int hash_group = byte.loc.group * 2 + byte.loc.byte / 8;
-            if ((1 << hash_group) & input) {
-                rv_index->push_back(byte);
-            }
-        }
-
-        rv.push_back(rv_index);
-        if (hash_groups)
-            hash_groups->push_back(&input - &hash_table_inputs[0]);
-    }
     return rv;
 }
 
@@ -133,19 +118,12 @@ IXBar::Use::TotalBytes IXBar::Use::atcam_match() const {
 
 /** Provides the bytes and hash group location of the partition index of an atcam table
  */
-safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *hash_group) const {
+safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *) const {
     safe_vector<IXBar::Use::Byte> partition;
     for (auto byte : use) {
         if (!byte.is_spec(ATCAM_INDEX))
             continue;
         partition.push_back(byte);
-    }
-    if (hash_group) {
-        for (auto &input : hash_table_inputs) {
-            if (input) {
-                *hash_group = &input - &hash_table_inputs[0];
-                break; }
-        }
     }
     return partition;
 }
@@ -249,15 +227,6 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
         }
     }
     use.insert(use.end(), alloc.use.begin(), alloc.use.end());
-    for (auto &input : alloc.hash_table_inputs) {
-        int i = &input - &alloc.hash_table_inputs[0];
-        if (hash_table_inputs[i] != 0 && input != 0)
-            BUG("When adding allocs of ways, somehow ended up on the same hash group");
-        hash_table_inputs[i] |= input;
-        BUG_CHECK(hash_seed[i].popcount() == 0 || alloc.hash_seed[i].popcount() == 0,
-                  "Hash seed already present for group %1%", i);
-        hash_seed[i] |= alloc.hash_seed[i];
-    }
 }
 
 /** Visualization Information of Bytes and their corresponding Hash Matrix Bits
@@ -726,14 +695,6 @@ int IXBar::HashDistUse::hash_group() const {
                  "are different across units");
     }
     return hash_group;
-}
-
-unsigned IXBar::HashDistUse::hash_table_inputs() const {
-    unsigned rv = 0;
-    for (auto &ir_alloc : ir_allocations) {
-        rv |= ir_alloc.use->hash_table_inputs[hash_group()];
-    }
-    return rv;
 }
 
 bitvec IXBar::HashDistUse::destinations() const {

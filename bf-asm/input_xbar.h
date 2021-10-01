@@ -34,23 +34,16 @@ class InputXbar {
  public:
     struct Group {
         unsigned short                          index;
-        enum type_t { EXACT, TERNARY, BYTE }    type;
+        enum type_t { INVALID, EXACT, TERNARY, BYTE, GATEWAY, TRIE, ACTION }
+                                                type;
         Group(Group::type_t t, unsigned i) : index(i), type(t) {}
+        explicit operator bool() const { return type != INVALID; }
         bool operator==(const Group &a) const { return type == a.type && index == a.index; }
         bool operator<(const Group &a) const {
             return (type << 16) + index < (a.type << 16) + a.index; }
-        static constexpr int max_index(Group::type_t t) {
-            return t == EXACT ? EXACT_XBAR_GROUPS :
-                   t == TERNARY ? TCAM_XBAR_GROUPS :
-                   t == BYTE ? BYTE_XBAR_GROUPS : -1; }
-        static constexpr int group_size(Group::type_t t) {
-            return t == EXACT ? EXACT_XBAR_GROUP_SIZE :
-                   t == TERNARY ? TCAM_XBAR_GROUP_SIZE :
-                   t == BYTE ? BYTE_XBAR_GROUP_SIZE : -1; }
-        static constexpr const char *group_type(Group::type_t t) {
-            return t == EXACT ? "exact" :
-                   t == TERNARY ? "ternary" :
-                   t == BYTE ? "byte" : ""; }
+        static int max_index(Group::type_t t);
+        static int group_size(Group::type_t t);
+        static const char *group_type(Group::type_t t);
     };
 
  private:
@@ -82,6 +75,10 @@ class InputXbar {
     uint64_t hash_columns_used(unsigned hash);
     bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
+    Group group_name(bool ternary, const value_t &value) const;
+    void parse_group(Table *t, Group gr, const value_t &value);
+    void parse_hash_group(HashGrp &hash_group, const value_t &value);
+    void parse_hash_table(Table *t, unsigned index, const value_t &value);
     void setup_hash(std::map<int, HashCol> &, int id, gress_t, int stage, value_t &,
                     int lineno, int lo, int hi);
     struct TcamUseCache {

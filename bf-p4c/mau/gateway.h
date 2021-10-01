@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_GATEWAY_H_
 
 #include <set>
+#include "bf-p4c/device.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -12,6 +13,16 @@ class Field;
 }  // namespace PHV
 
 class PhvInfo;
+
+struct Device::GatewaySpec {
+    int         PhvBytes;
+    int         HashBits;
+    int         PredicateBits;
+    int         MaxRows;
+    bool        SupportXor;
+    bool        SupportRange;
+    int         ExactShifts;
+};
 
 class CanonGatewayExpr : public MauTransform {
  public:

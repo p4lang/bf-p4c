@@ -1,4 +1,5 @@
 #include "table_format.h"
+#include "gateway.h"
 #include "lib/dyn_vector.h"
 #include "memories.h"
 #include "tofino/input_xbar.h"
@@ -498,7 +499,7 @@ bool TableFormat::find_format(Use *u) {
 
     if (layout_option.layout.gateway_match) {
         BUG_CHECK(layout_option.way.match_groups > 0 &&
-                  layout_option.way.match_groups <= Device::uniqueGatewayShifts(),
+                  layout_option.way.match_groups <= Device::gatewaySpec().ExactShifts,
                   "Unsupported immediate profile on a gateway payload table");
         overhead_groups_per_RAM.push_back(layout_option.way.match_groups);
         LOG3("Gateway payload table");
@@ -506,7 +507,7 @@ bool TableFormat::find_format(Use *u) {
             use->match_groups.emplace_back();
         if (!allocate_overhead())
             return false;
-        if (Device::uniqueGatewayShifts() > 1)
+        if (Device::gatewaySpec().ExactShifts > 1)
             build_payload_map();
         return true;
     } else if (layout_option.layout.no_match_miss_path()) {
@@ -518,7 +519,7 @@ bool TableFormat::find_format(Use *u) {
         return true;
     } else if (layout_option.layout.no_match_hit_path()) {
         BUG_CHECK(layout_option.way.match_groups > 0 &&
-                  layout_option.way.match_groups <= Device::uniqueGatewayShifts(),
+                  layout_option.way.match_groups <= Device::gatewaySpec().ExactShifts,
                   "Unsupported immediate profile on a hash action table");
         overhead_groups_per_RAM.push_back(layout_option.way.match_groups);
         LOG3("No match hit");

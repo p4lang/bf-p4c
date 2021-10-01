@@ -1,4 +1,5 @@
 #include "input_xbar.h"
+#include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/phv/phv.h"
@@ -22,6 +23,18 @@ const IXBar::Use &IXBar::getUse(const autoclone_ptr<::IXBar::Use> &ac) {
     return *rv;
 }
 
+IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) const {
+    TotalBytes rv = ::IXBar::Use::match_hash(hash_groups);
+    if (!rv.empty()) return rv;
+
+    // FIXME -- a hack to make something that will make TableFormat::analyze_layout_option
+    // not crash until it gets updates for flatrock
+    auto rv_index = new safe_vector<Byte>(use);
+    rv.push_back(rv_index);
+    if (hash_groups)
+        hash_groups->push_back(exact_unit);
+    return rv;
+}
 
 static PHV::Container word_base(PHV::Container c) {
     switch (c.size()) {
@@ -36,16 +49,27 @@ static PHV::Container word_base(PHV::Container c) {
     }
 }
 
+void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &stageResource) const {
+    LOG_FEATURE("resources", 2, "add_xbar_bytes_usage (stage=" << stage <<
+                                "), table: " << used_by);
+    for (auto &byte : use) {
+        bool ternary = type == IXBar::Use::TERNARY_MATCH;
+        LOG_FEATURE("resources", 3, "\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
+        stageResource.xbarBytes[byte.loc.getOrd(ternary)].emplace(used_by, used_for(), byte);
+    }
+}
+
 void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        std::multimap<PHV::Container, Loc> &fields,
-                       Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use) {
+                       Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                       bool allow_word) {
     for (auto &byte : alloc_use) {
         for (auto &l : ValuesForKey(fields, byte.container)) {
             if (l.group == 0 && byte_use[l.byte].second == byte.lo) {
                 byte.loc = Loc(0, l.byte);
                 break; }
-            if (l.group == 1) {
+            if (allow_word && l.group == 1) {
                 byte.loc = l;
                 break; } }
         if (!byte.loc)
@@ -71,8 +95,10 @@ bool IXBar::gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 }
 
 bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                             safe_vector<IXBar::Use::Byte *> &alloced) {
-    find_alloc(alloc_use, alloced, exact_fields, exact_byte_use);
+                             safe_vector<IXBar::Use::Byte *> &alloced,
+                             int exact_unit) {
+    find_alloc(alloc_use, alloced, exact_fields, exact_byte_use,
+               exact_unit < EXACT_MATCH_STM_UNITS);  // only STM can use word slots
     if (alloced.empty()) return true;
     std::map<PHV::Container, std::set<IXBar::Use::Byte *>> by_word;
     for (auto *byte : alloced) {
@@ -85,6 +111,9 @@ bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
             [](std::pair<PHV::Container, int> &a) { return !a.first; } );
     auto word = std::find_if(exact_word_use.begin(), exact_word_use.end(),
             [](std::pair<PHV::Container, int> &a) { return !a.first; } );
+    if (exact_unit >= EXACT_MATCH_STM_UNITS) {
+        // LAMB can't access word slots
+        word = exact_word_use.end(); }
     for (auto &grp : Values(by_word)) {
         if ((grp.size() > 1 && word != exact_word_use.end()) || byte == exact_byte_use.end()) {
             // needs 2+ bytes in the word, or ran out of byte slots, so use a word slot
@@ -222,18 +251,9 @@ bool IXBar::exact_find_hash(Use &alloc, const LayoutOption *lo) {
         int lamb = bitvec(exact_hash_inuse).ffz(EXACT_MATCH_STM_UNITS);
         if (lamb < EXACT_MATCH_UNITS) unit = lamb;
     }
-    if (unit < EXACT_MATCH_STM_UNITS)
-        alloc.hash_table_inputs[unit] = 7;  // FIXME -- group<->hash mapping is wrong for flatrock
-    else if (unit < EXACT_MATCH_UNITS)
-        alloc.hash_table_inputs[unit] = 3;  // FIXME -- hack some numbers that work for now
-    else
+    if (unit >= EXACT_MATCH_UNITS)
         return false;
-
-    // FIXME -- Flatrock cuckoo have exact 2 ways, and BPH do not have ways, so this is
-    // mostly irrelevant, but needs to match the layout option.  Hack to make something
-    // work until TablePlacement and Memories are updated
-    // alloc.way_use.resize(lo->way_sizes.size(), Use::Way(0, 0, 0));
-
+    alloc.exact_unit = unit;
     return true;
 }
 
@@ -248,7 +268,7 @@ bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     if (!ixbar->use.empty()) {
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
         if (!exact_find_hash(*ixbar, lo) ||
-            !exact_find_alloc(ixbar->use, xbar_alloced)) {
+            !exact_find_alloc(ixbar->use, xbar_alloced, ixbar->exact_unit)) {
             alloc.match_ixbar.reset();
             return false; }
         ixbar->type = Use::EXACT_MATCH;
@@ -410,6 +430,5 @@ void IXBar::verify_hash_matrix() const {
 
 void IXBar::dbprint(std::ostream &) const {
 }
-
 
 }  // namespace Flatrock

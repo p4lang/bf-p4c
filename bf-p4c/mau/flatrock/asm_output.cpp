@@ -44,18 +44,34 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
     std::map<int, std::map<int, Slice>> sort;
     gather_bytes(phv, sort, tbl);
     cstring group_type;
+    cstring (*index)(int i) = [](int)->cstring { return ""; };
     switch (type) {
-    case EXACT_MATCH:   group_type = "exact";           break;
-    case ATCAM_MATCH:   BUG("ATCAM not supported");
-    case TERNARY_MATCH: group_type = "ternary";         break;
-    case TRIE_MATCH:    group_type = "trie";            break;
-    case GATEWAY:       group_type = "gateway";         break;
-    case PROXY_HASH:    BUG("PROXY_HASH not supported");
-    default:            group_type = "action";          break;
+    case EXACT_MATCH:
+        group_type = "exact";
+        index = [](int i)->cstring { return i ? " word" : " byte"; };
+        break;
+    case ATCAM_MATCH:
+        BUG("ATCAM not supported");
+    case TERNARY_MATCH:
+        group_type = "ternary";
+        index = [](int i)->cstring { return " " + std::to_string(i); };
+        break;
+    case TRIE_MATCH:
+        group_type = "trie";
+        break;
+    case GATEWAY:
+        group_type = "gateway";
+        break;
+    case PROXY_HASH:
+        BUG("PROXY_HASH not supported");
+    default:
+        group_type = "action";
+        break;
     }
     for (auto &group : sort)
-        out << indent << group_type << " group " << group.first
-            << ": " << group.second << std::endl;
+        out << indent << group_type << index(group.first) << ": " << group.second << std::endl;
+    if (exact_unit >= 0)
+        out << indent << "exact unit: " << exact_unit << std::endl;
 }
 
 }  // end namespace Flatrock

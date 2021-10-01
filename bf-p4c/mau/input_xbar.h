@@ -296,15 +296,21 @@ struct IXBar {
 
         bool allocated() { return !use.empty(); }
 
+#if 0
         /* which of the 16 hash tables we are using (bitvec) */
         dyn_vector<unsigned>    hash_table_inputs;
         /* hash seed for different hash groups */
         dyn_vector<bitvec>      hash_seed;
+#endif
 
         virtual void clear() {
             type = TYPES;
             used_by.clear();
             use.clear();
+#if 0
+            hash_table_inputs.clear();
+            hash_seed.clear();
+#endif
         }
         virtual bool empty() const { return type == TYPES && use.empty(); }
         virtual void dbprint(std::ostream &) const;
@@ -408,7 +414,6 @@ struct IXBar {
 
         int hash_group() const;
         bitvec destinations() const;
-        unsigned hash_table_inputs() const;
         bitvec galois_matrix_bits() const;
 
         cstring used_by;

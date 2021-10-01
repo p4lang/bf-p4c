@@ -168,6 +168,11 @@ struct IXBar : public ::IXBar {
         std::string hash_dist_used_for() const {
             return IXBar::hash_dist_name(hash_dist_type); }
 
+        /* which of the 16 hash tables we are using (bitvec) */
+        unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
+        /* hash seed for different hash groups */
+        bitvec          hash_seed[HASH_GROUPS];
+
         /* tracking bits that are placed into the upper 12 bits of a hash group
          * (with an identity hash) for use by a gateway */
         struct Bits {
@@ -260,11 +265,11 @@ struct IXBar : public ::IXBar {
             gw_hash_group = false;
             parity = PARITY_NONE;
             hash_dist_type = HD_DESTS;
-            hash_table_inputs.clear();
+            for (auto &ht : hash_table_inputs) ht = 0;
+            for (auto &hs : hash_seed) hs.clear();
             bit_use.clear();
             way_use.clear();
             meter_alu_hash.clear();
-            hash_seed.clear();
             hash_dist_hash.clear();
             proxy_hash_key_use.clear();
             salu_input_source.clear();
@@ -278,11 +283,13 @@ struct IXBar : public ::IXBar {
         void dbprint(std::ostream &) const;
 
         void add(const Use &alloc);
+        safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const;
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                             const TableMatch *fmt, const IR::MAU::Table *) const;
         void emit_salu_bytemasks(std::ostream &out, indent_t indent) const;
         bitvec galois_matrix_bits() const { return hash_dist_hash.galois_matrix_bits; }
         int hash_groups() const;
+        virtual TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const;
         bitvec meter_bit_mask() const { return meter_alu_hash.bit_mask; }
         int total_input_bits() const {
             int rv = 0;
@@ -299,6 +306,7 @@ struct IXBar : public ::IXBar {
 
  private:
     ordered_map<const IR::MAU::Table *, const safe_vector<HashDistUse> *> tbl_hash_dists;
+    static unsigned hash_table_inputs(const HashDistUse &hdu);
 
     class XBarHashDist : public MauInspector {
         safe_vector<HashDistAllocPostExpand> alloc_reqs;

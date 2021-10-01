@@ -62,7 +62,11 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
   // chains to resolve, which may allow fewer tables to be turned on per stage.
   while (updated_deps) {
     updated_deps = false;
-    if (Device::currentDevice() != Device::TOFINO) {
+    if (Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+        || Device::currentDevice() == Device::CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
+    ) {
       clear_mpr_settings();
       compute_mpr();
       if (check_mpr_conflict()) {
@@ -400,10 +404,26 @@ double WalkPowerGraph::estimate_power() {
   gress_powers_.clear();
   on_critical_path_.clear();
   always_powered_on_.clear();
-  if (Device::currentDevice() == Device::TOFINO)
+  if (Device::currentDevice() == Device::TOFINO) {
     return estimate_power_tofino();
-  else
+#if HAVE_JBAY
+  } else if (Device::currentDevice() == Device::JBAY) {
     return estimate_power_non_tofino();
+#endif  /* HAVE_JBAY */
+#if HAVE_CLOUDBREAK
+  } else if (Device::currentDevice() == Device::CLOUDBREAK) {
+    return estimate_power_non_tofino();
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+  } else if (Device::currentDevice() == Device::FLATROCK) {
+    for (gress_t g : Device::allGresses()) {
+      gress_powers_real_.emplace(g, 0.0);
+      gress_powers_.emplace(g, 0.0); }
+    return 0.0;  // estimate_power_flatrock()?
+#endif  /* HAVE_FLATROCK */
+  } else {
+    BUG("estimate_power -- invalid device %d", Device::currentDevice());
+  }
 }
 
 /**

@@ -272,7 +272,7 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
     if (!row && this->to<AttachedTable>())
         row = get(data, "logical_row");
     if (!row) {
-        if (table_type() != TERNARY)
+        if (table_type() != TERNARY && Target::TABLES_REQUIRE_ROW())
             error(lineno, "No 'row' attribute in table %s%s", name(), subname);
         return; }
     int err = 0;

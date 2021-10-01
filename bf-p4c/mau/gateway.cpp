@@ -7,6 +7,58 @@
 #include "bf-p4c/mau/asm_output.h"
 #include "ir/pattern.h"
 
+const Device::GatewaySpec &TofinoDevice::getGatewaySpec() const {
+    static const Device::GatewaySpec spec = {
+        /* .PhvBytes = */       4,
+        /* .HashBits = */       12,
+        /* .PredicateBits = */  0,
+        /* .MaxRows = */        4,
+        /* .SupportXor = */     true,
+        /* .SupportRange = */   true,
+        /* .ExactShifts = */    1,
+    };
+    return spec; }
+#if HAVE_JBAY
+const Device::GatewaySpec &JBayDevice::getGatewaySpec() const {
+    static const Device::GatewaySpec spec = {
+        /* .PhvBytes = */       4,
+        /* .HashBits = */       12,
+        /* .PredicateBits = */  0,
+        /* .MaxRows = */        4,
+        /* .SupportXor = */     true,
+        /* .SupportRange = */   true,
+        /* .ExactShifts = */    5,
+    };
+    return spec; }
+#endif
+#if HAVE_CLOUDBREAK
+const Device::GatewaySpec &CloudbreakDevice::getGatewaySpec() const {
+    static const Device::GatewaySpec spec = {
+        /* .PhvBytes = */       4,
+        /* .HashBits = */       12,
+        /* .PredicateBits = */  0,
+        /* .MaxRows = */        4,
+        /* .SupportXor = */     true,
+        /* .SupportRange = */   true,
+        /* .ExactShifts = */    5,
+    };
+    return spec; }
+#endif
+#if HAVE_FLATROCK
+const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
+    static const Device::GatewaySpec spec = {
+        /* .PhvBytes = */       6,
+        /* .HashBits = */       0,
+        /* .PredicateBits = */  32,
+        /* .MaxRows = */        32,
+        /* .SupportXor = */     false,
+        /* .SupportRange = */   false,
+        /* .ExactShifts = */    1,
+    };
+    return spec;
+}
+#endif  /* HAVE_FLATROCK */
+
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
     bool preorder(const IR::Expression *) override { return !rv; }
@@ -652,8 +704,8 @@ bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
 bool CollectMatchFieldsAsGateway::preorder(const IR::MAU::Table *tbl) {
     LOG5("CollectMatchFieldsAsGateway for table " << tbl->name);
     if (tbl->uses_gateway() || !tbl->entries_list ||
-        tbl->entries_list->entries.size() > Device::uniqueGatewayShifts() + 0U ||
-        tbl->entries_list->entries.size() > 4) {
+        tbl->entries_list->entries.size() > Device::gatewaySpec().ExactShifts + 0U ||
+        tbl->entries_list->entries.size() > Device::gatewaySpec().MaxRows + 0U) {
         // FIXME -- could deal with more entries by splitting the gateway afterwards
         // SplitComplexGateways will do that if it is run
         fail = true;
@@ -743,7 +795,7 @@ bool CollectGatewayFields::compute_offsets() {
         if (!info.need_range && !info.const_eq) continue;
         int size = field.is_unallocated() ? (field.size() + 7)/8U : field.container_bytes();
         bitvec field_bits(field.range().lo, field.size());  // bits of the field needed
-        if (ixbar) {
+        if (ixbar && Device::gatewaySpec().HashBits > 0) {
             for (auto &f : ixbar->bit_use) {
                 if (f.field == field.field()->name && field.range().overlaps(f.lo, f.hi())) {
                     // Portions of the field could be in the hash vs in the search bus, and
@@ -759,7 +811,7 @@ bool CollectGatewayFields::compute_offsets() {
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
             if (field_bits.empty()) continue; }
-        if ((bytes+size > 4 && size == 1) || info.need_range) {
+        if ((bytes+size > Device::gatewaySpec().PhvBytes && size == 1) || info.need_range) {
             BUG_CHECK(field_bits.ffz(field.range().lo) == size_t(field.range().hi + 1),
                       "field only partly in hash needed all in hash");
             info.offsets.emplace_back(bits + 32, field.range());
@@ -781,7 +833,7 @@ bool CollectGatewayFields::compute_offsets() {
                      " " << field << ' ' << sl);
                 if (!duplicate) {
                     alloc_bytes[alloc_byte] = bytes;
-                    if (bytes == 4 && bits == 0) {
+                    if (bytes == Device::gatewaySpec().PhvBytes && bits == 0) {
                         bits += sl.width();
                     } else {
                         ++bytes; } }
@@ -793,7 +845,8 @@ bool CollectGatewayFields::compute_offsets() {
 #endif
     }
     LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
-    if (bytes > 4) return false;
+    if (bytes > Device::gatewaySpec().PhvBytes) return false;
+    if (bits > Device::gatewaySpec().HashBits) return false;
     return bits <= IXBar::get_hash_single_bits();
 }
 

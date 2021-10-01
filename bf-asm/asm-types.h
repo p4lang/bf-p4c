@@ -47,16 +47,21 @@ struct pair_t;
 #ifdef __cplusplus
 DECLARE_VECTOR3(value_t, value_t,
     value_t &operator[](int) const;
+    value_t &back() const;
     value_t *begin() const { return data; }
-    value_t *end() const; )
+    value_t *end() const;
+    value_t &front() const;
+)
 DECLARE_VECTOR3(pair_t, pair_t,
 public:
     void push_back(const char *, value_t &&);  // NOLINT(whitespace/operators)
     pair_t &operator[](int) const;
     pair_t *operator[](const char *) const;
+    pair_t &back() const;
     pair_t *begin() const { return data; }
     pair_t *end() const;
-    )
+    pair_t &front() const;
+)
 #else
 DECLARE_VECTOR(value_t)
 DECLARE_VECTOR(pair_t)
@@ -140,7 +145,6 @@ template<class A, class B> inline bool operator !=(A a, B b)
 inline value_t &VECTOR(value_t)::operator[](int i) const {
     assert(i >= 0 && i < size);
     return data[i]; }
-inline value_t *VECTOR(value_t)::end() const { return data + size; }
 inline pair_t &VECTOR(pair_t)::operator[](int i) const {
     assert(i >= 0 && i < size);
     return data[i]; }
@@ -148,7 +152,20 @@ inline pair_t *VECTOR(pair_t)::operator[](const char *k) const {
     for (int i = 0; i < size; i++)
         if (data[i].key == k) return &data[i];
     return 0; }
+inline value_t *VECTOR(value_t)::end() const { return data + size; }
+inline value_t &VECTOR(value_t)::front() const {
+    assert(0 < size);
+    return data[0]; }
+inline value_t &VECTOR(value_t)::back() const {
+    assert(0 < size);
+    return data[size-1]; }
 inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
+inline pair_t &VECTOR(pair_t)::front() const {
+    assert(0 < size);
+    return data[0]; }
+inline pair_t &VECTOR(pair_t)::back() const {
+    assert(0 < size);
+    return data[size-1]; }
 
 /* can't call VECTOR(pair_t)::push_back directly except from the compilation unit where
  * it is defined, due to gcc bug.  Workaround via global function */

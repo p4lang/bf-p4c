@@ -504,6 +504,7 @@ void ResourcesLogging::logMemories(unsigned int stageNo, RamResourceUsage *ramsR
                 LOG1("TCAMS");
                 break;
             case Memories::Use::GATEWAY: {
+                if (memuse.row.empty()) break;
                 auto row = memuse.row[0].row;
                 auto unit = memuse.gateway.unit;
                 auto gu = new GatewayUsage(row, unit);
@@ -680,6 +681,7 @@ ResourcesLogging::logExactMemSearchBuses(unsigned int stageNo) const {
             case Memories::Use::EXACT:
             case Memories::Use::ATCAM:
             case Memories::Use::GATEWAY: {
+                if (memuse.row.empty()) break;
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
                 if (bus < 0) break;
@@ -725,6 +727,7 @@ ResourcesLogging::logExactMemResultBuses(unsigned int stageNo) const {
             switch (memuse.type) {
             case Memories::Use::EXACT:
             case Memories::Use::ATCAM: {
+                if (memuse.row.empty()) break;
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].result_bus;
                 if (bus < 0) bus = memuse.row[0].bus;
@@ -742,6 +745,7 @@ ResourcesLogging::logExactMemResultBuses(unsigned int stageNo) const {
             }
             /*  // Keep this around for when figure out how to distingush bus type.
             case Memories::Use::GATEWAY: {
+                if (memuse.row.empty()) break;
                 auto row = memuse.row[0].row;
                 auto unit = memuse.gateway.unit;
                 // FIXME: How do we know if this is a tind bus or exm bus?
@@ -789,6 +793,7 @@ ResourcesLogging::logTindResultBuses(unsigned int stageNo) const {
 
             switch (memuse.type) {
             case Memories::Use::TIND: {
+                if (memuse.row.empty()) break;
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
 
@@ -803,6 +808,7 @@ ResourcesLogging::logTindResultBuses(unsigned int stageNo) const {
                 break;
             }
             case Memories::Use::GATEWAY: {
+                // if (memuse.row.empty()) break;
                 // auto row = memuse.row[0].row;
                 // auto unit = memuse.gateway.unit;
                 // FIXME: How do we know if this is a tind bus or exm bus?

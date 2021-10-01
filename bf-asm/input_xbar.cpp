@@ -10,6 +10,226 @@
 #include "stage.h"
 #include "range.h"
 
+int InputXbar::Group::max_index(Group::type_t t) {
+    switch (options.target) {
+    case TOFINO:
+    case TOFINO2: case TOFINO2H: case TOFINO2U: case TOFINO2M: case TOFINO2A0:
+#ifdef HAVE_CLOUDBREAK
+    case TOFINO3:
+#endif  /* HAVE_CLOUDBREAK */
+        switch (t) {
+        case EXACT:     return EXACT_XBAR_GROUPS;
+        case TERNARY:   return TCAM_XBAR_GROUPS;
+        case BYTE:      return BYTE_XBAR_GROUPS;
+        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+        break;
+#ifdef HAVE_FLATROCK
+    case TOFINO5:
+        switch (t) {
+        case EXACT:     return 2;
+        case TERNARY:   return 16;
+        case GATEWAY:   return 1;
+        case TRIE:      return 1;
+        case ACTION:    return 1;
+        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+        break;
+#endif  /* HAVE_FLATROCK */
+    default:
+        break; }
+    return 0;
+}
+
+int InputXbar::Group::group_size(Group::type_t t) {
+    switch (options.target) {
+    case TOFINO:
+    case TOFINO2: case TOFINO2H: case TOFINO2U: case TOFINO2M: case TOFINO2A0:
+#ifdef HAVE_CLOUDBREAK
+    case TOFINO3:
+#endif  /* HAVE_CLOUDBREAK */
+        switch (t) {
+        case EXACT:     return EXACT_XBAR_GROUP_SIZE;
+        case TERNARY:   return TCAM_XBAR_GROUP_SIZE;
+        case BYTE:      return BYTE_XBAR_GROUP_SIZE;
+        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+        break;
+#ifdef HAVE_FLATROCK
+    case TOFINO5:
+        switch (t) {
+        case EXACT:     return 20*8;
+        case TERNARY:   return 5*8;
+        case GATEWAY:   return 6*8;
+        case TRIE:      return 16*8;
+        case ACTION:    return 64*8;
+        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+        break;
+#endif  /* HAVE_FLATROCK */
+    default:
+        break; }
+    return 0;
+}
+
+const char *InputXbar::Group::group_type(Group::type_t t) {
+    switch (t) {
+    case EXACT:   return "exact";
+    case TERNARY: return "ternary";
+    case BYTE:    return "byte";
+    case GATEWAY: return "gateway";
+    case TRIE:    return "trie";
+    case ACTION:  return "action";
+    default:      return ""; }
+}
+
+InputXbar::Group InputXbar::group_name(bool tern, const value_t &key) const {
+    int index = 1;
+    switch (options.target) {
+    case TOFINO:
+    case TOFINO2: case TOFINO2H: case TOFINO2U: case TOFINO2M: case TOFINO2A0:
+#ifdef HAVE_CLOUDBREAK
+    case TOFINO3:
+#endif  /* HAVE_CLOUDBREAK */
+        if (key.type != tCMD) break;
+        if (key[0] != "group" && (key[1] == "group" || key[1] == "table"))
+            ++index;
+        if (!PCHECKTYPE(key.vec.size == index+1, key[index], tINT))
+            break;
+        index = key[index].i;
+        if (key[0] == "group")
+            return Group(tern ? Group::TERNARY : Group::EXACT, index);
+        if (key[0] == "exact" && key[1] == "group")
+            return Group(Group::EXACT, index);
+        if (key[0] == "ternary" && key[1] == "group")
+            return Group(Group::TERNARY, index);
+        if (key[0] == "byte" && key[1] == "group")
+            return Group(Group::BYTE, index);
+        break;
+#ifdef HAVE_FLATROCK
+    case TOFINO5:
+        if (key.type == tSTR) {
+            if (key == "gateway") return Group(Group::GATEWAY, 0);
+            if (key == "action") return Group(Group::ACTION, 0);
+            if (key == "trie") return Group(Group::TRIE, 0);
+        } else if (key.type == tCMD && key.vec.size == 2) {
+            if (key[0] == "exact") {
+                if (key[1] == "byte") return Group(Group::EXACT, 0);
+                if (key[1] == "word") return Group(Group::EXACT, 1);
+            } else if (key[0] == "ternary" && CHECKTYPE(key[1], tINT)) {
+                return Group(Group::TERNARY, key[1].i); } }
+        break;
+#endif  /* HAVE_FLATROCK */
+    default:
+        break; }
+    return Group(Group::INVALID, 0);
+}
+
+void InputXbar::parse_group(Table *t, Group gr, const value_t &value) {
+    auto &group = groups[gr];
+    if (value.type == tVEC) {
+        for (auto &reg : value.vec)
+            group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, reg));
+    } else if (value.type == tMAP) {
+        for (auto &reg : value.map) {
+            if (!CHECKTYPE2(reg.key, tINT, tRANGE)) continue;
+            int lo = -1, hi = -1;
+            if (reg.key.type == tINT) {
+                lo = reg.key.i;
+            } else {
+                lo = reg.key.lo;
+                hi = reg.key.hi; }
+            if (lo < 0 || lo >= Group::group_size(gr.type)) {
+                error(reg.key.lineno, "Invalid offset for %s group",
+                      Group::group_type(gr.type));
+            } else if (gr.type == Group::TERNARY && lo >= 40) {
+                if (hi >= lo) hi -= 40;
+                groups[Group(Group::BYTE, gr.index/2)].emplace_back(
+                    Phv::Ref(t->gress, t->stage->stageno, reg.value), lo-40, hi);
+            } else {
+                group.emplace_back(
+                    Phv::Ref(t->gress, t->stage->stageno, reg.value), lo, hi); } }
+    } else {
+        group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, value));
+    }
+}
+
+void InputXbar::parse_hash_group(HashGrp &hash_group, const value_t &value) {
+    if (value.type == tINT && (unsigned)value.i < HASH_TABLES) {
+        hash_group.tables |= 1U << value.i;
+        return; }
+    if (!CHECKTYPE2(value, tVEC, tMAP)) return;
+    const VECTOR(value_t) *tbl = 0;
+    if (value.type == tMAP) {
+        for (auto &el : MapIterChecked(value.map)) {
+            if (el.key == "seed") {
+                if (!CHECKTYPE2(el.value, tINT, tBIGINT)) continue;
+                if (el.value.type == tBIGINT) {
+                    int shift = 0;
+                    for (int i = 0; i < el.value.bigi.size; ++i) {
+                        if (shift >= 64) {
+                            error(el.key.lineno, "Invalid seed %s too large",
+                                  value_desc(&el.value));
+                            break; }
+                        hash_group.seed |= el.value.bigi.data[i] << shift;
+                        shift += CHAR_BIT * sizeof(el.value.bigi.data[i]); }
+                } else {
+                    hash_group.seed |= el.value.i & 0xFFFFFFFF;
+                }
+            } else if (el.key == "table") {
+                if (el.value.type == tINT) {
+                    if (el.value.i < 0 || el.value.i >= HASH_TABLES)
+                        error(el.value.lineno, "invalid hash group descriptor");
+                    else
+                        hash_group.tables |= 1U << el.value.i;
+                } else if (CHECKTYPE(el.value, tVEC)) {
+                    tbl = &el.value.vec;
+                }
+            } else if (el.key == "seed_parity") {
+                if (el.value.type == tSTR && el.value == "true")
+                        hash_group.seed_parity = true;
+            } else {
+                error(el.key.lineno, "invalid hash group descriptor");
+            }
+        }
+    } else {
+        tbl = &value.vec; }
+    if (tbl) {
+        for (auto &v : *tbl) {
+            if (!CHECKTYPE(v, tINT)) continue;
+            if (v.i < 0 || v.i >= HASH_TABLES) {
+                error(v.lineno, "invalid hash group descriptor");
+            } else {
+                hash_group.tables |= 1U << v.i;
+            }
+        }
+    }
+}
+
+void InputXbar::parse_hash_table(Table *t, unsigned index, const value_t &value) {
+    if (!CHECKTYPE(value, tMAP)) return;
+    for (auto &c : value.map) {
+        if (c.key.type == tINT) {
+            setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
+                       c.key.lineno, c.key.i, c.key.i);
+        } else if (c.key.type == tRANGE) {
+            setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
+                       c.key.lineno, c.key.lo, c.key.hi);
+        } else if (CHECKTYPEM(c.key, tCMD, "hash column decriptor")) {
+            if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT
+                    || options.target != TOFINO) {
+                error(c.key.lineno, "Invalid hash column descriptor");
+                continue; }
+            int col = c.key[1].i;
+            if (col < 0 || col >= 52) {
+                error(c.key.lineno, "Hash column out of range");
+                continue; }
+            if (!CHECKTYPE(c.value, tINT)) continue;
+            if (hash_tables[index][col].valid)
+                error(c.key.lineno, "Hash table %d column %d valid duplicated",
+                      index, col);
+            else if (c.value.i >= 0x10000)
+                error(c.value.lineno, "Hash valid value out of range");
+            else
+                hash_tables[index][col].valid = c.value.i; } }
+}
+
 void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
                            gress_t gress, int stage, value_t &what, int lineno, int lo, int hi) {
     if (lo < 0 || lo >= 52 || hi < 0 || hi >= 52) {
@@ -65,60 +285,21 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
 : table(t), lineno(data[0].key.lineno) {
     for (auto &kv : data) {
         if ((kv.key.type == tSTR) && (kv.key == "random_seed")) {
-          random_seed = kv.value.i;
-          continue;
-        }
-        Group::type_t grtype = tern ? Group::TERNARY : Group::EXACT;
-        if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
-            continue;
-        int index = 1;
-        if (kv.key[0] != "group" && (kv.key[1] == "group" || kv.key[1] == "table"))
-            ++index;
-        if (!PCHECKTYPE(kv.key.vec.size == index+1, kv.key[index], tINT))
-            continue;
-        index = kv.key[index].i;
-        bool isgroup = false;
-
-        if (kv.key[0] == "exact" && kv.key[1] == "group") {
-            grtype = Group::EXACT;
-            isgroup = true;
-        } else if (kv.key[0] == "ternary" && kv.key[1] == "group") {
-            grtype = Group::TERNARY;
-            isgroup = true;
-        } else if (kv.key[0] == "byte" && kv.key[1] == "group") {
-            grtype = Group::BYTE;
-            isgroup = true; }
-        if (isgroup || kv.key[0] == "group") {
-            if (index >= Group::max_index(grtype)) {
+            random_seed = kv.value.i;
+            continue; }
+        if (kv.key.type == tCMD && kv.key.vec.size == 2 &&
+            kv.key[0] == "exact" && kv.key[1] == "unit") {
+            // FIXME -- do something with this -- generate a hash for this unit?
+            // or maybe the compiler should be generating a random hash here?
+            continue; }
+        if (auto grp = group_name(tern, kv.key)) {
+            if (grp.index >= Group::max_index(grp.type)) {
                 error(kv.key.lineno, "invalid group descriptor");
                 continue; }
-            auto &group = groups[Group(grtype, index)];
-            if (kv.value.type == tVEC) {
-                for (auto &reg : kv.value.vec)
-                    group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, reg));
-            } else if (kv.value.type == tMAP) {
-                for (auto &reg : kv.value.map) {
-                    if (!CHECKTYPE2(reg.key, tINT, tRANGE)) continue;
-                    int lo = -1, hi = -1;
-                    if (reg.key.type == tINT) {
-                        lo = reg.key.i;
-                    } else {
-                        lo = reg.key.lo;
-                        hi = reg.key.hi; }
-                    if (lo < 0 || lo >= Group::group_size(grtype)) {
-                        error(reg.key.lineno, "Invalid offset for %s group",
-                              Group::group_type(grtype));
-                    } else if (grtype == Group::TERNARY && lo >= 40) {
-                        if (hi >= lo) hi -= 40;
-                        groups[Group(Group::BYTE, index/2)].emplace_back(
-                            Phv::Ref(t->gress, t->stage->stageno, reg.value), lo-40, hi);
-                    } else {
-                        group.emplace_back(
-                            Phv::Ref(t->gress, t->stage->stageno, reg.value), lo, hi); } }
-            } else {
-                group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, kv.value));
-            }
-        } else if (kv.key[0] == "hash") {
+            parse_group(t, grp, kv.value);
+        } else if (kv.key.type == tCMD && kv.key[0] == "hash") {
+            if (!CHECKTYPE(kv.key.vec.back(), tINT)) continue;
+            int index = kv.key.vec.back().i;
             if (kv.key[1] == "group") {
                 if (index >= EXACT_HASH_GROUPS) {
                     error(kv.key.lineno, "invalid hash group descriptor");
@@ -128,84 +309,11 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                     warning(kv.key.lineno, "duplicate hash group %d, will merge with", index);
                     warning(hash_groups[index].lineno, "previous definition here"); }
                 hash_groups[index].lineno = kv.key.lineno;
-                if (kv.value.type == tINT && (unsigned)kv.value.i < HASH_TABLES) {
-                    hash_groups[index].tables |= 1U << kv.value.i;
-                    continue; }
-                if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
-                VECTOR(value_t) *tbl = 0;
-                if (kv.value.type == tMAP) {
-                    for (auto &el : MapIterChecked(kv.value.map)) {
-                        if (el.key == "seed") {
-                            if (!CHECKTYPE2(el.value, tINT, tBIGINT)) continue;
-                            if (el.value.type == tBIGINT) {
-                                int shift = 0;
-                                for (int i = 0; i < el.value.bigi.size; ++i) {
-                                    if (shift >= 64) {
-                                        error(kv.key.lineno, "Invalid seed %s too large",
-                                              value_desc(&el.value));
-                                        break; }
-                                    hash_groups[index].seed |= el.value.bigi.data[i] << shift;
-                                    shift += CHAR_BIT * sizeof(el.value.bigi.data[i]); }
-                            } else {
-                                hash_groups[index].seed |= el.value.i & 0xFFFFFFFF;
-                            }
-                        } else if (el.key == "table") {
-                            if (el.value.type == tINT) {
-                                if (el.value.i < 0 || el.value.i >= HASH_TABLES)
-                                    error(el.value.lineno, "invalid hash group descriptor");
-                                else
-                                    hash_groups[index].tables |= 1U << el.value.i;
-                            } else if (CHECKTYPE(el.value, tVEC)) {
-                                tbl = &el.value.vec;
-                            }
-                        } else if (el.key == "seed_parity") {
-                            if (el.value.type == tSTR && el.value == "true")
-                                    hash_groups[index].seed_parity = true;
-                        } else {
-                            error(el.key.lineno, "invalid hash group descriptor");
-                        }
-                    }
-                } else {
-                    tbl = &kv.value.vec; }
-                if (tbl) {
-                    for (auto &v : *tbl) {
-                        if (!CHECKTYPE(v, tINT)) continue;
-                        if (v.i < 0 || v.i >= HASH_TABLES) {
-                            error(v.lineno, "invalid hash group descriptor");
-                        } else {
-                            hash_groups[index].tables |= 1U << v.i;
-                        }
-                    }
-                }
-                continue; }
-            if (index >= HASH_TABLES) {
+                parse_hash_group(hash_groups[index], kv.value);
+            } else if (index >= HASH_TABLES) {
                 error(kv.key.lineno, "invalid hash descriptor");
-                continue; }
-            if (!CHECKTYPE(kv.value, tMAP)) continue;
-            for (auto &c : kv.value.map) {
-                if (c.key.type == tINT) {
-                    setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
-                               c.key.lineno, c.key.i, c.key.i);
-                } else if (c.key.type == tRANGE) {
-                    setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
-                               c.key.lineno, c.key.lo, c.key.hi);
-                } else if (CHECKTYPEM(c.key, tCMD, "hash column decriptor")) {
-                    if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT
-                            || options.target != TOFINO) {
-                        error(c.key.lineno, "Invalid hash column descriptor");
-                        continue; }
-                    int col = c.key[1].i;
-                    if (col < 0 || col >= 52) {
-                        error(c.key.lineno, "Hash column out of range");
-                        continue; }
-                    if (!CHECKTYPE(c.value, tINT)) continue;
-                    if (hash_tables[index][col].valid)
-                        error(c.key.lineno, "Hash table %d column %d valid duplicated",
-                              index, col);
-                    else if (c.value.i >= 0x10000)
-                        error(c.value.lineno, "Hash valid value out of range");
-                    else
-                        hash_tables[index][col].valid = c.value.i; } }
+            } else {
+                parse_hash_table(t, index, kv.value); }
         } else {
             error(kv.key.lineno, "expecting a group or hash descriptor"); }
     }
@@ -590,14 +698,14 @@ void InputXbar::pass2() {
 }
 
 // tofino template specializations
-#include <tofino/input_xbar.cpp>        // NOLINT(build/include_order)
+#include <tofino/input_xbar.cpp>        // NOLINT(build/include)
 #if HAVE_JBAY
 //  jbay template specializations
-#include <jbay/input_xbar.cpp>          // NOLINT(build/include_order)
+#include <jbay/input_xbar.cpp>          // NOLINT(build/include)
 #endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
 // cloudbreak template specializations
-#include <cloudbreak/input_xbar.cpp>    // NOLINT(build/include_order)
+#include <cloudbreak/input_xbar.cpp>    // NOLINT(build/include)
 #endif  /* HAVE_CLOUDBREAK */
 
 template<class REGS>

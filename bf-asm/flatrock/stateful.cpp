@@ -1,7 +1,7 @@
 /* mau table template specializations for flatrock -- #included directly in stateful.cpp */
 
 int StatefulTable::parse_counter_mode(Target::Flatrock target, const value_t &v) {
-    BUG("TBD");
+    return parse_jbay_counter_mode(v);
 }
 
 void StatefulTable::set_counter_mode(Target::Flatrock target, int mode) {

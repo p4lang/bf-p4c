@@ -25,6 +25,11 @@ class IXBar : public ::IXBar {
     using HashDistUse = ::IXBar::HashDistUse;
 
     struct Use : public ::IXBar::Use {
+        int exact_unit = -1;
+
+        void clear() override {
+            ::IXBar::Use::clear();
+            exact_unit = -1; }
         Use *clone() const { return new Use(*this); }
         void emit_salu_bytemasks(std::ostream &, indent_t) const { BUG(""); }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
@@ -35,9 +40,10 @@ class IXBar : public ::IXBar {
         int hash_dist_hash_group() const { BUG(""); return 0; }
         std::string hash_dist_used_for() const { BUG(""); return ""; }
         bool is_parity_enabled() const { return false; }
+        TotalBytes match_hash(safe_vector<int> *hash_groups) const;
         bitvec meter_bit_mask() const { BUG(""); }
         int total_input_bits() const { BUG(""); }
-        void update_resources(int, BFN::Resources::StageResources &) const { BUG(""); }
+        void update_resources(int, BFN::Resources::StageResources &) const;
 
      private:
         void gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Slice>> &sort,
@@ -76,13 +82,15 @@ class IXBar : public ::IXBar {
     void find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     safe_vector<IXBar::Use::Byte *> &alloced,
                     std::multimap<PHV::Container, Loc> &fields,
-                    Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use);
+                    Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                    bool allow_word = false);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
                   Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use);
     bool gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
     bool exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                          safe_vector<IXBar::Use::Byte *> &alloced);
+                          safe_vector<IXBar::Use::Byte *> &alloced,
+                          int exact_unit);
     bool exact_find_hash(IXBar::Use &alloc, const LayoutOption *lo);
     bool ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
