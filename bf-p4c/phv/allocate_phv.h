@@ -711,6 +711,9 @@ class TrivialAllocStrategy {
               unallocated(unallocated) {}
     };
 
+    // return a list of container groups that same-size groups are merged into one group.
+    std::list<PHV::ContainerGroup*> make_container_groups_merged_by_size() const;
+
     // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
     // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
     // and phv_status will be updated.

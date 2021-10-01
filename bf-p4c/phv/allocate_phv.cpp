@@ -5096,10 +5096,26 @@ TrivialAllocStrategy::PartialAllocResult TrivialAllocStrategy::alloc_clusters(
     return PartialAllocResult(true, alloc_slices, phv_status, nullptr, {});
 }
 
+std::list<PHV::ContainerGroup*> TrivialAllocStrategy::make_container_groups_merged_by_size() const {
+    std::list<PHV::ContainerGroup*> rv;
+
+    // merge container groups of the same size to one group.
+    const PhvSpec& phvSpec = Device::phvSpec();
+    for (const PHV::Size s : phvSpec.containerSizes()) {
+        bitvec containers;
+        for (auto group : phvSpec.mauGroups(s)) {
+            containers |= group;
+        }
+        // Create group.
+        rv.emplace_back(new PHV::ContainerGroup(s, containers));
+    }
+    return rv;
+}
+
 ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
     const PHV::Allocation& alloc, const std::list<PHV::SuperCluster*>& clusters_input) {
     LOG1("Run TrivialAllocStrategy");
-    auto container_groups = PHV::AllocUtils::make_device_container_groups();
+    auto container_groups = make_container_groups_merged_by_size();
     std::list<PHV::SuperCluster*> clusters =
         remove_singleton_slicelist_metadata(clusters_input);
 
