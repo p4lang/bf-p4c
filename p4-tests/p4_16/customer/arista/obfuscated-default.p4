@@ -2408,7 +2408,7 @@ control Starkey(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         Aniak.Rendville.Cleator = Cleator;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
-    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @stage(2 , 40960) @name(".RockHill") table RockHill {
+    @idletime_precision(1) @disable_atomic_modify(1) @pack(2) @name(".RockHill") table RockHill {
         actions = {
             Swanlake();
             Clearmont();
@@ -2635,7 +2635,7 @@ control Ponder(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         default_action = Boyle(32w0);
         size = 2;
     }
-    @atcam_partition_index("Wharton.Cleator") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(5 , 16384) @name(".Kealia") table Kealia {
+    @atcam_partition_index("Wharton.Cleator") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Kealia") table Kealia {
         actions = {
             @tableonly Rixford();
             @tableonly LaPointe();
@@ -3081,7 +3081,7 @@ control Yulee(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsic
         Salitpa();
         Notus();
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(".Bodcaw") @name(".Andrade") table Andrade {
+    @disable_atomic_modify(1) @name(".Andrade") table Andrade {
         actions = {
             Dahlgren();
         }
@@ -3481,7 +3481,7 @@ control Weissert(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrin
     @name(".Wentworth") action Wentworth() {
         Aniak.Sopris.Helton = Aniak.Buckhorn.Helton;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".ElkMills") table ElkMills {
+    @disable_atomic_modify(1) @name(".ElkMills") table ElkMills {
         actions = {
             Bellmead();
             NorthRim();
@@ -4315,7 +4315,7 @@ control Durant(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
     @name(".Blanding") action Blanding() {
         Aniak.Rainelle.McCammon = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @placement_priority(".Exeter" , ".Cairo" , ".Owanka" , ".Asharoken") @name(".Oxnard") table Oxnard {
+    @disable_atomic_modify(1) @name(".Oxnard") table Oxnard {
         actions = {
             Kingsdale();
         }
@@ -5184,7 +5184,7 @@ control Upalco(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
     @name(".Corum") action Corum(bit<16> Batchelor) {
         Aniak.Lawai.Hampton = Batchelor;
     }
-    @disable_atomic_modify(1) @placement_priority(".Sespe") @name(".Nicollet") table Nicollet {
+    @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
         actions = {
             Alnwick();
             @defaultonly NoAction();
@@ -5195,7 +5195,7 @@ control Upalco(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(".Sespe") @name(".Fosston") table Fosston {
+    @disable_atomic_modify(1) @name(".Fosston") table Fosston {
         actions = {
             Osakis();
             Lemont();
@@ -5207,7 +5207,7 @@ control Upalco(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         const default_action = Lemont();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(4) @name(".Newsoms") table Newsoms {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Newsoms") table Newsoms {
         actions = {
             @tableonly Hartwell();
             @defaultonly NoAction();
@@ -5306,7 +5306,7 @@ control MoonRun(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         Aniak.McCracken.Coalwood = Aniak.Lawai.Coalwood & Coalwood;
         Aniak.McCracken.Basalt = Aniak.Lawai.Basalt & Basalt;
     }
-    @disable_atomic_modify(1) @placement_priority(".Downs") @name(".Keller") table Keller {
+    @disable_atomic_modify(1) @name(".Keller") table Keller {
         key = {
             Aniak.Lawai.Daleville: exact @name("Lawai.Daleville") ;
         }
@@ -5327,7 +5327,7 @@ control Elysburg(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrin
     }
     @name(".Caborn") action Caborn() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(5) @name(".Charters") table Charters {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Charters") table Charters {
         key = {
             Aniak.Lawai.Daleville    : exact @name("Lawai.Daleville") ;
             Aniak.McCracken.Findlay  : exact @name("McCracken.Findlay") ;
@@ -5626,7 +5626,7 @@ control Rotonda(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
         Lewellen = Macungie.get<tuple<bit<9>, bit<5>>>({ Wildorado.egress_port, Wildorado.egress_qid[4:0] });
         Newcomb.count((bit<12>)Lewellen);
     }
-    @disable_atomic_modify(1) @stage(9) @name(".DewyRose") table DewyRose {
+    @disable_atomic_modify(1) @name(".DewyRose") table DewyRose {
         actions = {
             Kiron();
         }
@@ -6001,7 +6001,7 @@ control Valier(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
         default_action = Waimalu();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".CruzBay") table CruzBay {
+    @disable_atomic_modify(1) @name(".CruzBay") table CruzBay {
         key = {
             Wildorado.egress_port & 9w0x7f: exact @name("Wildorado.Matheson") ;
             Wildorado.egress_qid & 5w0x7  : exact @name("Wildorado.egress_qid") ;
@@ -6013,7 +6013,7 @@ control Valier(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
         size = 576;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(3) @name(".Tanana") table Tanana {
+    @disable_atomic_modify(1) @name(".Tanana") table Tanana {
         key = {
             Wildorado.egress_port & 9w0x7f: exact @name("Wildorado.Matheson") ;
             Wildorado.egress_qid & 5w0x7  : exact @name("Wildorado.egress_qid") ;
@@ -6045,7 +6045,7 @@ control Kingsgate(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Goodwin.setInvalid();
         Ihlen.drop_ctl = (bit<3>)Camden.execute((bit<32>)Aniak.Gosnell.Hartwick);
     }
-    @disable_atomic_modify(1) @stage(3) @name(".Earlsboro") table Earlsboro {
+    @disable_atomic_modify(1) @name(".Earlsboro") table Earlsboro {
         actions = {
             Careywood();
         }
@@ -6325,7 +6325,7 @@ control Conejo(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         requires_versioning = false;
         const default_action = Lemont();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Clarendon") table Clarendon {
+    @ternary(1) @disable_atomic_modify(1) @name(".Clarendon") table Clarendon {
         actions = {
             Longport();
             Wrens();

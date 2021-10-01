@@ -168,6 +168,8 @@ class TableSummary: public MauInspector {
     int placementErrorCount() { return tablePlacementErrors.size(); }
     /// set state to FINAL_PLACEMENT, or ALT_FINALIZE_TABLE if alt-phv-alloc is enabled.
     void FinalizePlacement();
+    const ordered_map<cstring, bool> &getPlacementError() { return tablePlacementErrors; }
+    void setPlacementError(const ordered_map<cstring, bool> &tpe) { tablePlacementErrors = tpe; }
     void resetPlacement() { state = INITIAL; }
     state_t getActualState() const { return state; }
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }

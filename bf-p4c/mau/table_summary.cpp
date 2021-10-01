@@ -233,7 +233,14 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         // initialization enabled.
         if (maxStage <= deviceStages) {
             state = state == NOCC_TRY1 ? REDO_PHV1 : REDO_PHV2;
-            throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+            if (state == REDO_PHV2 && maxStage == deviceStages) {
+                LOG1("Invoking table placement without metadata initialization because container "
+                     "second conflict-free table placement required " << maxStage << " stages.");
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit,
+                    false /* ignorePackConflicts */, true /* metaInitDisable */);
+            } else {
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+            }
         } else {
             // If there is not table placement failure and the number of stages without container
             // conflicts are greater than the available physical stages, redo PHV allocation, while

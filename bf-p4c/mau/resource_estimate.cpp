@@ -878,15 +878,12 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
            a_mod = a.way.match_groups % a.way.width;
            b_mod = b.way.match_groups % b.way.width;
         }
-
         if (a_mod == 0 && b_mod != 0)
-            if (b.way.width > 2)
+            if (b.way.width > 3)
                 return true;
         if (b_mod == 0 && a_mod != 0)
-            if (a.way.width > 2)
+            if (a.way.width > 3)
                 return false;
-
-
         if ((t = a.srams - b.srams) != 0) return t < 0;
         // Added to keep obfuscated-nat-mpls for compiling.  In theory the match groups/width
         // should not be used for hash action tables
@@ -1357,14 +1354,12 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
            a_mod = a.way.match_groups % a.way.width;
            b_mod = b.way.match_groups % b.way.width;
         }
-
         if (a_mod == 0 && b_mod != 0)
-            if (b.way.width > 2)
+            if (b.way.width > 3)
                 return true;
         if (b_mod == 0 && a_mod != 0)
-            if (a.way.width > 2)
+            if (a.way.width > 3)
                 return false;
-
         if (a.srams > srams_left && b.srams <= srams_left)
             return false;
         if (b.srams > srams_left && a.srams <= srams_left)

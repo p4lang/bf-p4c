@@ -1573,7 +1573,7 @@ control Biggers(inout Plains Millston, inout Knoke HillTop, in ingress_intrinsic
         size = 163840;
         idle_timeout = true;
     }
-    @idletime_precision(1) @atcam_partition_index("Basalt.Lovewell") @atcam_number_partitions(1024) @force_immediate(1) @disable_atomic_modify(1) @name(".Wanamassa") table Wanamassa {
+    @idletime_precision(1) @atcam_partition_index("Basalt.Lovewell") @atcam_number_partitions(1024) @force_immediate(1) @disable_atomic_modify(1) @pack(1) @name(".Wanamassa") table Wanamassa {
         actions = {
             Yorkshire();
             Knights();

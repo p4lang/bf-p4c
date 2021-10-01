@@ -8,8 +8,6 @@
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Wagener.Flaherty.Galloway" , 16)
 @pa_container_size("ingress" , "Wagener.Milano.Allison" , 32)
-@pa_container_size("ingress" , "Wagener.Frederika.$valid" , 8)
-@pa_container_size("ingress" , "Wagener.Funston.$valid" , 8)
 @pa_mutually_exclusive("egress" , "Monrovia.Balmorhea.Weinert" , "Wagener.Milano.Weinert")
 @pa_mutually_exclusive("egress" , "Wagener.Garrison.Levittown" , "Wagener.Milano.Weinert")
 @pa_mutually_exclusive("egress" , "Wagener.Milano.Weinert" , "Monrovia.Balmorhea.Weinert")
@@ -52,8 +50,6 @@
 @pa_container_size("ingress" , "ig_intr_md_for_tm.ingress_cos" , 8)
 @pa_container_size("ingress" , "ig_intr_md_for_tm.qid" , 8)
 @pa_container_size("ingress" , "Wagener.Mayflower.Daphne" , 16)
-@pa_container_size("ingress" , "Wagener.Lemont.$valid" , 16)
-@pa_container_size("egress" , "Wagener.Wanamassa.$valid" , 16)
 @pa_atomic("ingress" , "Monrovia.Hallwood.Oriskany")
 @pa_atomic("ingress" , "Monrovia.Empire.McAllen")
 @pa_container_size("ingress" , "Monrovia.Nevis.Newfolden" , 16)

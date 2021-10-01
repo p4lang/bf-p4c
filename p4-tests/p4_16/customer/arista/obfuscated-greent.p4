@@ -3238,7 +3238,7 @@ control LaJara(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_m
         Lemont.Swisshome.McGonigle = McGonigle;
         Lemont.Swisshome.Rains = Rains;
     }
-    @disable_atomic_modify(1) @placement_priority(-1) @name(".Mendoza") table Mendoza {
+    @disable_atomic_modify(1) @name(".Mendoza") table Mendoza {
         actions = {
             Bammel();
         }
@@ -3715,7 +3715,7 @@ control Snook(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
         Lemont.Yerington.Littleton = Littleton;
         Lemont.Yerington.Oilmont = (bit<1>)1w0;
     }
-    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Haugen") table Haugen {
+    @ternary(1) @disable_atomic_modify(1) @name(".Haugen") table Haugen {
         actions = {
             OjoFeliz();
             Havertown();
@@ -3738,7 +3738,7 @@ control Goldsmith(inout Knights Almota, inout Mather Lemont, in egress_intrinsic
     @name(".Encinitas") action Encinitas(bit<10> Goodwin) {
         Lemont.Aniak.Pinole = Goodwin;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Issaquah") table Issaquah {
+    @disable_atomic_modify(1) @name(".Issaquah") table Issaquah {
         actions = {
             Encinitas();
         }
@@ -4050,7 +4050,7 @@ control Gwynn(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
     @name(".Capitola") action Capitola() {
         Lemont.Yerington.Vergennes = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Liberal") table Liberal {
+    @disable_atomic_modify(1) @name(".Liberal") table Liberal {
         actions = {
             Rolla();
         }
@@ -4916,7 +4916,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
     @name(".Almeria") action Almeria(bit<16> Kahaluu) {
         Lemont.Hallwood.Ankeny = Kahaluu;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Burgdorf") table Burgdorf {
+    @disable_atomic_modify(1) @name(".Burgdorf") table Burgdorf {
         actions = {
             August();
             @defaultonly NoAction();
@@ -4927,7 +4927,7 @@ control Minetto(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Idylside") table Idylside {
+    @disable_atomic_modify(1) @name(".Idylside") table Idylside {
         actions = {
             Kinston();
             Nason();
@@ -5666,7 +5666,7 @@ control Statham(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
     @name(".LaHoma") action LaHoma() {
         Lemont.Gambrills.Sledge = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @placement_priority(-1) @name(".Varna") table Varna {
+    @disable_atomic_modify(1) @name(".Varna") table Varna {
         key = {
             HighRock.ingress_port  : exact @name("HighRock.Toklat") ;
             Almota.Cotter.Solomon  : ternary @name("Cotter.Solomon") ;

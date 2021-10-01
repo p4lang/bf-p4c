@@ -137,7 +137,6 @@ class TablePlacement : public PassManager {
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current, GatewayMergeChoices &gmc);
 
-    bool is_better(const Placed *a, const Placed *b, choice_t& choice);
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
 
     const Placed *add_starter_pistols(const Placed *done, safe_vector<const Placed *> &trial,
@@ -167,18 +166,22 @@ class DecidePlacement : public MauInspector {
     class BacktrackPlacement;
     class PlacementScore;
     class ResourceBasedAlloc;
+    class FinalPlacement;
     explicit DecidePlacement(TablePlacement &s);
 
  private:
     struct save_placement_t;
     std::map<cstring, save_placement_t>  saved_placements;
     int backtrack_count = 0;  // number of times backtracked in this pipe
-    static constexpr int MaxBacktracksPerPipe = 32;
+    int MaxBacktracksPerPipe = 32;
+    bool resource_mode = false;
     void savePlacement(const Placed *, ordered_set<const GroupPlace *> &, bool);
     void recomputePartlyPlaced(const Placed *, ordered_set<const IR::MAU::Table *> &);
     boost::optional<BacktrackPlacement&> find_previous_placement(const Placed *best, int offset,
                                                                  bool local_bt, int process_stage);
     boost::optional<BacktrackPlacement&> find_backtrack_point(const Placed *, int, bool);
+    bool is_better(const Placed *, const Placed *, TablePlacement::choice_t &);
+    int get_control_anti_split_adj_score(const Placed *) const;
 
     void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     bool preorder(const IR::BFN::Pipe *) override;

@@ -99,7 +99,6 @@ typedef bit<12> vlan_id_t;
 
 @pa_container_size("ingress", "hdr.ethernet.src_addr", 16, 32)
 @pa_container_size("ingress", "hdr.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.ethernet.$valid", 16)
 header ethernet_h {
     mac_addr_t dst_addr;
     mac_addr_t src_addr;

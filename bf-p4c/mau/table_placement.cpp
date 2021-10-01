@@ -463,6 +463,19 @@ struct TablePlacement::Placed {
         return rv;
     }
 
+    // Find initial position of a table in case this one is split across multiple stages
+    int init_stage() const {
+        const IR::MAU::Table *search_tbl = table;
+        const Placed *prev_pl = prev;
+        int first_stage = stage;
+        while (prev_pl) {
+            if (prev_pl->table == search_tbl)
+                first_stage = prev_pl->stage;
+            prev_pl = prev_pl->prev;
+        }
+        return first_stage;
+    }
+
  private:
     Placed(Placed &&) = delete;
     void traceCreation() { }
@@ -510,18 +523,25 @@ class DecidePlacement::BacktrackPlacement {
     ordered_set<const GroupPlace*> work;
     bool is_best;  // Set to true if this placement was initially selected
     int init_cnt;  // Backtrack count value when saved
+    ordered_map<cstring, bool> tablePlacementErrors;
+    bool resource_mode;
 
  public:
     bool tried = false;  // Set to true if this placement was tried
     BacktrackPlacement(DecidePlacement &self, const Placed *p,
                        const ordered_set<const GroupPlace *> &w, bool ib) :
-        self(self), pl(p), work(w), is_best(ib) { init_cnt = self.backtrack_count; }
+        self(self), pl(p), work(w), is_best(ib) {
+        init_cnt = self.backtrack_count;
+        tablePlacementErrors = self.self.summary.getPlacementError();
+        resource_mode = self.resource_mode; }
     BacktrackPlacement &operator=(const BacktrackPlacement &a) {
         BUG_CHECK(&self == &a.self, " inconsistent backtracking assignment");
         pl = a.pl;
         work = a.work;
         is_best = a.is_best;
         init_cnt = a.init_cnt;
+        tablePlacementErrors = a.tablePlacementErrors;
+        resource_mode = a.resource_mode;
         return *this; }
     const Placed *operator->() const { return pl; }
     const Placed *get_placed() const { return pl; }
@@ -533,11 +553,15 @@ class DecidePlacement::BacktrackPlacement {
         if (bt_inc)
             ++self.backtrack_count;
         w = work;
+        self.self.summary.setPlacementError(tablePlacementErrors);
+        self.resource_mode = resource_mode;
         return self.place_table(w, pl); }
+    int get_num_placement_errors() const { return tablePlacementErrors.size(); }
 
-    bool is_best_placement() { return is_best; }
+    bool is_best_placement() const { return is_best; }
     void reset_best_placement() { is_best = false; }
-    bool is_same_backtrack_pass() { return self.backtrack_count == init_cnt; }
+    bool is_same_backtrack_pass() const { return self.backtrack_count == init_cnt; }
+    bool is_resource_mode() const { return resource_mode; }
 };
 
 /** Structure that saves various backtracking point for each table. The first index being the stage
@@ -684,9 +708,10 @@ class DecidePlacement::PlacementScore {
     //     SRAM: 80% - 5% = 75% because we were doing a bit better than required so far
     //     TCAM: 50% + 10% = 60% because we were behind in this area
     //     LogId: 25% - 6.25% = 18.75% because the delta can't cross 1/4 of the original value
-    int tcam_weight = 333;
-    int sram_weight = 333;
-    int logid_weight = 333;
+    int tcam_weight = 250;
+    int sram_weight = 250;
+    int logid_weight = 250;
+    int map_weight = 250;
 
     void fill_score() {
         const Placed *pl = bt->get_placed();
@@ -708,6 +733,8 @@ class DecidePlacement::PlacementScore {
                                      (StageUse::MAX_SRAMS * (init_stage + 1));
                 int cur_logid_usage = (current_res.logical_ids * 1000) /
                                       (StageUse::MAX_LOGICAL_IDS * (init_stage + 1));
+                int cur_map_usage = (current_res.maprams * 1000) /
+                                    (StageUse::MAX_MAPRAMS * (init_stage + 1));
 
                 int tot_tcam_usage = (total_res.tcams * 1000) /
                                      (StageUse::MAX_TCAMS * Device::numStages());
@@ -715,11 +742,13 @@ class DecidePlacement::PlacementScore {
                                      (StageUse::MAX_SRAMS * Device::numStages());
                 int tot_logid_usage = (total_res.logical_ids * 1000) /
                                       (StageUse::MAX_LOGICAL_IDS * Device::numStages());
+                int tot_map_usage = (total_res.maprams * 1000) /
+                                    (StageUse::MAX_MAPRAMS * Device::numStages());
 
                 LOG3("tot_tcam_usage:" << tot_tcam_usage << " tot_sram_usage:" << tot_sram_usage <<
-                     " tot_logid_usage:" << tot_logid_usage);
+                     " tot_logid_usage:" << tot_logid_usage << " tot_map_usage:" << tot_map_usage);
                 LOG3("cur_tcam_usage:" << cur_tcam_usage << " cur_sram_usage:" << cur_sram_usage <<
-                     " cur_logid_usage:" << cur_logid_usage);
+                     " cur_logid_usage:" << cur_logid_usage << " cur_map_usage:" << cur_map_usage);
 
                 // The delta can't exceed 1/4 of the original total usage.
                 delta = tot_tcam_usage - cur_tcam_usage;
@@ -736,17 +765,20 @@ class DecidePlacement::PlacementScore {
                 if (delta && -delta > (tot_logid_usage / 4)) delta = -(tot_logid_usage / 4);
                 logid_weight = tot_logid_usage + delta;
                 LOG3("logid_weight:" << logid_weight << " delta:" << delta);
+
+                delta = tot_map_usage - cur_map_usage;
+                if (delta && -delta > (tot_map_usage / 4)) delta = -(tot_map_usage / 4);
+                map_weight = tot_map_usage + delta;
+                LOG3("map_weight:" << map_weight << " delta:" << delta);
             }
 
             while (pl) {
                 if (pl->stage != init_stage)
                     break;
 
-                // Uses the downward dependency chain that assume every table only consume a single
-                // stage. The "dep_stages_control_anti_split" variant was added to use previous
-                // table stages usage for a more accurate compute but experiment shows worse result
-                // with it. Can be revisited in the future.
-                int dep_chain = self.self.deps.stage_info[pl->table].dep_stages_control_anti;
+                // The "dep_stages_control_anti_split" variant was added to use previous table
+                // stages usage for a more accurate compute.
+                int dep_chain = self.get_control_anti_split_adj_score(pl);
                 stage_metric_t metric = stage_metric[dep_chain];
 
                 metric.num_dep_chain++;
@@ -772,7 +804,8 @@ class DecidePlacement::PlacementScore {
     int get_score() const {
         return (((tcam_weight * stage_use.tcams * 100) / StageUse::MAX_TCAMS) +
                 ((sram_weight * stage_use.srams * 100) / StageUse::MAX_SRAMS) +
-                ((logid_weight * stage_use.logical_ids * 100) / StageUse::MAX_LOGICAL_IDS)); }
+                ((logid_weight * stage_use.logical_ids * 100) / StageUse::MAX_LOGICAL_IDS) +
+                ((map_weight * stage_use.maprams * 100) / StageUse::MAX_MAPRAMS)); }
 
     // Used to compare two placement score to find which one is the best
     bool operator>(const PlacementScore &other) const {
@@ -787,6 +820,11 @@ class DecidePlacement::PlacementScore {
 
             if (lit->first > rit->first) return true;
             else if (lit->first < rit->first) return false;
+
+            if (bt->get_num_placement_errors() > other.bt->get_num_placement_errors())
+                return false;
+            else if (bt->get_num_placement_errors() < other.bt->get_num_placement_errors())
+                return true;
 
             const stage_metric_t &lmetric = lit->second;
             const stage_metric_t &rmetric = rit->second;
@@ -831,6 +869,7 @@ class DecidePlacement::PlacementScore {
         LOG3("    num_log_id:" << stage_use.logical_ids);
         LOG3("    total_sram:" << stage_use.srams);
         LOG3("    total_tcam:" << stage_use.tcams);
+        LOG3("    total_map:" << stage_use.maprams);
         LOG3("    total_eixbar:" << stage_use.exact_ixbar_bytes);
         LOG3("    total_tixbar:" << stage_use.ternary_ixbar_groups);
         for (auto it = stage_metric.rbegin(); it != stage_metric.rend(); ++it) {
@@ -925,7 +964,7 @@ class DecidePlacement::ResourceBasedAlloc {
         if (best_score != cur_score &&
             (pl->stage < Device::numStages() ||
              (pl->stage >= Device::numStages() &&
-              (self.backtrack_count > MaxBacktracksPerPipe)))) {
+              (self.backtrack_count > self.MaxBacktracksPerPipe)))) {
             auto bt = best_score->get_backtrack();
             active_placed = bt->reset_place_table(active_work, false);
             self.recomputePartlyPlaced(active_placed, partly_placed);
@@ -955,6 +994,99 @@ class DecidePlacement::ResourceBasedAlloc {
         complete.clear();
         incomplete.clear();
         visited.clear();
+    }
+};
+
+/** Class used to select the best solution between multiple complete attempts. The best solution is
+ *  defined as the first one that meet the target stage requirement or the least number of stages in
+ *  case none of them meet it. The typical sequence being evaluated by the table placement is:
+ *
+ *  1 - Table selected by dependency only
+ *  2 - Table selected by dependency only with backtracking
+ *  3 - Table selected by a combination of resources tracking + dependency
+ *  4 - Table selected by a combination of resources tracking + dependency with backtracking
+ *
+ *  The table placement for each strategy will stop and be saved as an incomplete placement if at
+ *  some point, the algorithm detect that downward dependency requirement are impossible to reach.
+ *  When such incomplete placement is saved, the next strategy is selected. If none of these
+ *  strategy is found to produce a placement that fit the target, all of the incomplete placement
+ *  will be finalized and compared. The one that require the least stages will be selected as the
+ *  final one. The first strategy are prioritize over the last if multiple strategy require the same
+ *  number of stages.
+ */
+class DecidePlacement::FinalPlacement {
+    // These references are used to rebuild the active placed and work object when backtracking
+    DecidePlacement &self;
+    ordered_set<const GroupPlace *> &active_work;
+    ordered_set<const IR::MAU::Table *> &partly_placed;
+    const Placed *&active_placed;
+
+    ordered_set<BacktrackPlacement *> incomplete;
+    ordered_set<BacktrackPlacement *> complete;
+
+    // Simple hack to make sure the last strategy tried is evaluated with the least priority.
+    BacktrackPlacement *first_complete = nullptr;
+
+ public:
+    FinalPlacement(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
+                   ordered_set<const IR::MAU::Table *> &p, const Placed *&a) :
+        self(self), active_work(w), partly_placed(p), active_placed(a) { }
+
+    void add_incomplete_placement(BacktrackPlacement * bp) {
+        LOG3("Adding incomplete placement for resource mode:" << self.resource_mode <<
+             " and backtracking attempt:" << self.backtrack_count);
+        incomplete.insert(bp);
+    }
+
+    void add_complete_placement(BacktrackPlacement * bp) {
+        LOG3("Adding complete placement for resource mode:" << self.resource_mode);
+        // The first completed placement is in fact the last strategy tried. Just re-order them
+        // properly for final evaluation.
+        if (first_complete == nullptr)
+            first_complete = bp;
+        else
+            complete.insert(bp);
+
+        if ((bp->get_placed() == nullptr) || (bp->get_placed()->stage < Device::numStages())) {
+            LOG3("Found a complete solution that fit the number of stages required");
+            return;
+        }
+        if (!incomplete.empty()) {
+            auto bt_it = incomplete.begin();
+            auto bt = *bt_it;
+            active_placed = bt->reset_place_table(active_work, false);
+            self.recomputePartlyPlaced(active_placed, partly_placed);
+            BUG_CHECK(self.resource_mode == bt->is_resource_mode(),
+                      "Inconsistent resource mode flag");
+            incomplete.erase(bt_it);
+            LOG3("Finalizing incomplete placement for resource mode:" << self.resource_mode);
+        }
+    }
+
+    void select_best_final_placement() {
+        BUG_CHECK(first_complete != nullptr,
+                  "Analyzing best final placement with no first complete solution");
+        // Re-ordering hack
+        complete.insert(first_complete);
+        // Impossible default values
+        int best_err = 1000;
+        int best_num_stages = 1000;
+        const Placed *best_pl = nullptr;
+        for (const BacktrackPlacement *solution : complete) {
+            const Placed *pl = solution->get_placed();
+            int pl_stages = (pl ? pl->stage + 1 : 0);
+            int placement_err = solution->get_num_placement_errors();
+            LOG3("Evaluating complete solution with resource:" << solution->is_resource_mode());
+            LOG3("Placement error(s):" << placement_err << " stages required:" << pl_stages);
+
+            if (placement_err <= best_err && pl_stages < best_num_stages) {
+                LOG3("Updating best final placement with this one");
+                best_err = placement_err;
+                best_num_stages = pl_stages;
+                best_pl = pl;
+            }
+        }
+        active_placed = best_pl;
     }
 };
 
@@ -2334,9 +2466,18 @@ bool DecidePlacement::are_metadata_deps_satisfied(const Placed *placed,
     return true;
 }
 
+int DecidePlacement::get_control_anti_split_adj_score(const Placed *pl) const {
+    int init_stage = pl->init_stage();
+    int dep_s = self.deps.stage_info[pl->table].dep_stages_control_anti_split;
+    int dep_ns = self.deps.stage_info[pl->table].dep_stages_control_anti;
+    int delta_stages = pl->stage - init_stage;
+    return std::max(dep_ns, dep_s - delta_stages - 1);
+}
+
 /* compare two tables to see which one we should prefer placindg next.  Return true if
  * a is better and false if b is better */
-bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choice) {
+bool DecidePlacement::is_better(const Placed *a, const Placed *b,
+                                TablePlacement::choice_t& choice) {
     const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
     const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
 
@@ -2351,9 +2492,22 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     BUG_CHECK(a->prev == b->prev || a->prev->match_placed == b->prev->match_placed,
               "Inconsistent previously placed state in is_better");
     const Placed *done = a->prev;
-    ddm.update_placed_tables([done](const IR::MAU::Table *tbl)->bool {
+    self.ddm.update_placed_tables([done](const IR::MAU::Table *tbl)->bool {
         return done ? done->is_match_placed(tbl) : false; });
-    const auto down_score = ddm.get_downward_prop_score(a_table_to_use, b_table_to_use);
+    std::pair<int, int> down_score;
+    // dynamic downward propagation compute only make sense on Tofino1 but keep it on non resource
+    // mode to keep the same behaviour on legacy program.
+    if (Device::currentDevice() == Device::TOFINO || !resource_mode) {
+        down_score = self.ddm.get_downward_prop_score(a_table_to_use, b_table_to_use);
+        // Tofino1 under resource mode...
+        if (Device::currentDevice() == Device::TOFINO) {
+            down_score.first = std::max(down_score.first, get_control_anti_split_adj_score(a));
+            down_score.second = std::max(down_score.second, get_control_anti_split_adj_score(b));
+        }
+    } else {
+        down_score = std::make_pair(get_control_anti_split_adj_score(a),
+                                    get_control_anti_split_adj_score(b));
+    }
 
     ordered_set<const IR::MAU::Table *> already_placed_a;
     for (auto p = a->prev; p && p->stage == a->stage; p = p->prev) {
@@ -2377,26 +2531,30 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
          ", provided stage " << a->table->get_provided_stage(&a->stage) <<
          ", priority " << a->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.first);
-    LOG5("        local dep score " << deps.stage_info.at(a_table_to_use).dep_stages_control_anti);
-    LOG5("        dom frontier " << deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier);
+    LOG5("        local dep score "
+          << self.deps.stage_info.at(a_table_to_use).dep_stages_control_anti);
+    LOG5("        dom frontier "
+          << self.deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier);
     LOG5("        can place cds in stage "
-          << ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a));
+          << self.ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a));
 
     LOG5("      Stage B is " << b->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
          " with calculated stage " << b->stage <<
          ", provided stage " << b->table->get_provided_stage(&b->stage) <<
          ", priority " << b->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.second);
-    LOG5("        local dep score " << deps.stage_info.at(b_table_to_use).dep_stages_control_anti);
-    LOG5("        dom frontier " << deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier);
+    LOG5("        local dep score "
+          << self.deps.stage_info.at(b_table_to_use).dep_stages_control_anti);
+    LOG5("        dom frontier "
+          << self.deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier);
     LOG5("        can place cds in stage "
-          << ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b));
+          << self.ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b));
 
-    choice = CALC_STAGE;
+    choice = TablePlacement::CALC_STAGE;
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
 
-    choice = PROV_STAGE;
+    choice = TablePlacement::PROV_STAGE;
     bool provided_stage = false;
     int a_provided_stage = a->table->get_provided_stage(&a->stage);
     int b_provided_stage = b->table->get_provided_stage(&b->stage);
@@ -2412,7 +2570,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
         return false;
     }
 
-    choice = PRIORITY;
+    choice = TablePlacement::PRIORITY;
     auto a_priority_str = a->table->get_placement_priority_string();
     auto b_priority_str = b->table->get_placement_priority_string();
     if (a_priority_str.count(b->table->externalName()))
@@ -2429,86 +2587,86 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a_priority > b_priority) return true;
     if (a_priority < b_priority) return false;
 
-    choice = SHARED_TABLES;
+    choice = TablePlacement::SHARED_TABLES;
     if (a->complete_shared > b->complete_shared) return true;
     if (a->complete_shared < b->complete_shared) return false;
 
     ///> Downward Propagation - @seealso dynamic_dep_matrix
-    choice = DOWNWARD_PROP_DSC;
+    choice = TablePlacement::DOWNWARD_PROP_DSC;
     if (down_score.first > down_score.second) return !provided_stage;
     if (down_score.first < down_score.second) return provided_stage;
 
     ///> Downward Dominance Frontier - for definition,
     ///> see TableDependencyGraph::DepStagesThruDomFrontier
-    choice = DOWNWARD_DOM_FRONTIER;
-    if (deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier == 0 &&
-        deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier != 0)
+    choice = TablePlacement::DOWNWARD_DOM_FRONTIER;
+    if (self.deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier == 0 &&
+        self.deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier != 0)
         return true;
-    if (deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0 &&
-        deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier == 0)
+    if (self.deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0 &&
+        self.deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier == 0)
         return false;
 
     ///> Direct Dependency Chain without propagation
-    int a_local = deps.stage_info.at(a_table_to_use).dep_stages_control_anti;
-    int b_local = deps.stage_info.at(b_table_to_use).dep_stages_control_anti;
-    choice = LOCAL_DSC;
+    int a_local = self.deps.stage_info.at(a_table_to_use).dep_stages_control_anti;
+    int b_local = self.deps.stage_info.at(b_table_to_use).dep_stages_control_anti;
+    choice = TablePlacement::LOCAL_DSC;
     if (a_local > b_local) return true;
     if (a_local < b_local) return false;
 
 
     ///> If the control dominating set is completely placeable
-    choice = CDS_PLACEABLE;
-    if (ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a) &&
-        !ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b))
+    choice = TablePlacement::CDS_PLACEABLE;
+    if (self.ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a) &&
+        !self.ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b))
         return true;
 
-    if (ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b) &&
-        !ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a))
+    if (self.ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b) &&
+        !self.ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a))
         return false;
 
     ///> If the table needs more match entries.  This can help pack more logical tables earlier
     ///> that have higher stage requirements
-    choice = NEED_MORE;
+    choice = TablePlacement::NEED_MORE;
     if (b->need_more_match && !a->need_more_match) return true;
     if (a->need_more_match && !b->need_more_match) return false;
 
-    if (deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0) {
-        choice = CDS_PLACE_COUNT;
-        int comp = ddm.placeable_cds_count(a_table_to_use, already_placed_a) -
-                   ddm.placeable_cds_count(b_table_to_use, already_placed_b);
+    if (self.deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0) {
+        choice = TablePlacement::CDS_PLACE_COUNT;
+        int comp = self.ddm.placeable_cds_count(a_table_to_use, already_placed_a) -
+                   self.ddm.placeable_cds_count(b_table_to_use, already_placed_b);
         if (comp != 0)
             return comp > 0;
     }
 
     ///> Original dependency metric.  Feels like it should be deprecated
-    int a_deps_stages = deps.stage_info.at(a_table_to_use).dep_stages;
-    int b_deps_stages = deps.stage_info.at(b_table_to_use).dep_stages;
-    choice = LOCAL_DS;
+    int a_deps_stages = self.deps.stage_info.at(a_table_to_use).dep_stages;
+    int b_deps_stages = self.deps.stage_info.at(b_table_to_use).dep_stages;
+    choice = TablePlacement::LOCAL_DS;
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
     ///> Total dependencies with dominance frontier summed
-    int a_dom_frontier_deps = ddm.total_deps_of_dom_frontier(a_table_to_use);
-    int b_dom_frontier_deps = ddm.total_deps_of_dom_frontier(b_table_to_use);
-    choice = DOWNWARD_TD;
+    int a_dom_frontier_deps = self.ddm.total_deps_of_dom_frontier(a_table_to_use);
+    int b_dom_frontier_deps = self.ddm.total_deps_of_dom_frontier(b_table_to_use);
+    choice = TablePlacement::DOWNWARD_TD;
     if (a_dom_frontier_deps > b_dom_frontier_deps) return true;
     if (b_dom_frontier_deps > a_dom_frontier_deps) return false;
 
     ///> Average chain length of all tables within the dominance frontier
-    double a_average_cds_deps = ddm.average_cds_chain_length(a_table_to_use);
-    double b_average_cds_deps = ddm.average_cds_chain_length(b_table_to_use);
-    choice = AVERAGE_CDS_CHAIN;
+    double a_average_cds_deps = self.ddm.average_cds_chain_length(a_table_to_use);
+    double b_average_cds_deps = self.ddm.average_cds_chain_length(b_table_to_use);
+    choice = TablePlacement::AVERAGE_CDS_CHAIN;
     if (a_average_cds_deps > b_average_cds_deps) return true;
     if (b_average_cds_deps > a_average_cds_deps) return false;
 
 
     ///> If the entirety of the control dominating set is placed vs. not
-    choice = NEXT_TABLE_OPEN;
+    choice = TablePlacement::NEXT_TABLE_OPEN;
     int a_next_tables_in_use = a_table_to_use == a->gw ? 1 : 0;
     int b_next_tables_in_use = b_table_to_use == b->gw ? 1 : 0;
 
-    int a_dom_set_size = ntp.control_dom_set.at(a_table_to_use).size() - 1;
-    int b_dom_set_size = ntp.control_dom_set.at(b_table_to_use).size() - 1;;
+    int a_dom_set_size = self.ntp.control_dom_set.at(a_table_to_use).size() - 1;
+    int b_dom_set_size = self.ntp.control_dom_set.at(b_table_to_use).size() - 1;;
 
     if (a_dom_set_size <= a_next_tables_in_use && b_dom_set_size > b_next_tables_in_use)
         return true;
@@ -2516,13 +2674,13 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
         return false;
 
     ///> Local dependencies
-    choice = LOCAL_TD;
-    int a_total_deps = deps.happens_before_dependences(a->table).size();
-    int b_total_deps = deps.happens_before_dependences(b->table).size();
+    choice = TablePlacement::LOCAL_TD;
+    int a_total_deps = self.deps.happens_before_dependences(a->table).size();
+    int b_total_deps = self.deps.happens_before_dependences(b->table).size();
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
-    choice = DEFAULT;
+    choice = TablePlacement::DEFAULT;
     return true;
 }
 
@@ -2672,6 +2830,26 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
     self.rejected_placements.clear();
     saved_placements.clear();
     backtrack_count = 0;
+    resource_mode = false;
+
+    // This is to balance compile time with benefit from backtracking
+    switch (self.summary.getActualState()) {
+        case TableSummary::INITIAL:
+            // Disable backtracking on initial state.
+            MaxBacktracksPerPipe = -1;
+            break;
+        case TableSummary::NOCC_TRY1:
+        case TableSummary::NOCC_TRY2:
+            MaxBacktracksPerPipe = 4;
+            break;
+        case TableSummary::REDO_PHV1:
+        case TableSummary::REDO_PHV2:
+            MaxBacktracksPerPipe = 32;
+            break;
+        default:
+            MaxBacktracksPerPipe = -1;
+            break;
+    }
 }
 
 void DecidePlacement::recomputePartlyPlaced(const Placed *done,
@@ -2696,26 +2874,13 @@ void DecidePlacement::recomputePartlyPlaced(const Placed *done,
 boost::optional<DecidePlacement::BacktrackPlacement&>
 DecidePlacement::find_previous_placement(const Placed *best, int offset, bool local_bt,
                                          int process_stage) {
-    // Find initial position of a table in case this one is split across multiple stages
-    auto init_stage = [](const Placed *pl) {
-        const IR::MAU::Table *search_tbl = pl->table;
-        const Placed *prev_pl = pl->prev;
-        int first_stage = pl->stage;
-        while (prev_pl) {
-            if (prev_pl->table == search_tbl)
-                first_stage = prev_pl->stage;
-            prev_pl = prev_pl->prev;
-        }
-        return first_stage;
-    };
-
     auto &info = saved_placements.at(best->name);
     auto &bt = local_bt ? info.last_pass : info.early;
-    int best_init_stage = init_stage(best);
+    int best_init_stage = best->init_stage();
     for (auto it = bt.rbegin(); it != bt.rend(); ++it) {
         int stage = it->first;
         DecidePlacement::BacktrackPlacement& placement = it->second;
-        int plac_init_stage = init_stage(placement.get_placed());
+        int plac_init_stage = placement.get_placed()->init_stage();
         // Tried placement are not a good option
         if (placement.is_best_placement() || placement.tried) {
             continue;
@@ -2845,9 +3010,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
          TableTree("ghost", pipe->ghost_thread) );
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
-    BacktrackPlacement *original_flow = nullptr;
     BacktrackPlacement *start_flow = nullptr;
-    bool resource_mode = false;
 
     /* all the state for a partial table placement is stored in the work
      * set and placed list, which are const pointers, so we can backtrack
@@ -2858,7 +3021,17 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     ordered_set<const IR::MAU::Table *> partly_placed;
     Backfill backfill(*this);
     ResourceBasedAlloc res_based_alloc(*this, work, partly_placed, placed);
-    while (!work.empty()) {
+    FinalPlacement final_placement(*this, work, partly_placed, placed);
+    while (true) {
+        // Empty work means that all the tables are actually placed. Save it as a complete
+        // placement for future comparison.
+        if (work.empty()) {
+            BacktrackPlacement *bt = new BacktrackPlacement(*this, placed, work, true);
+            final_placement.add_complete_placement(bt);
+            // No other incomplete placement to finalize
+            if (work.empty())
+                break;
+        }
         erase_if(partly_placed, [placed](const IR::MAU::Table *t) -> bool {
                                         return placed->is_placed(t); });
         if (placed) backfill.set_stage(placed->stage);
@@ -2943,13 +3116,13 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                         done = false;
                         should_skip = true;
                         break; } }
-                // Find potential tables this table can be merged with (if it's a gateway)
 
                 if (!can_place_with_partly_placed(t, partly_placed, placed)) {
                      done = false;
                      continue;
                 }
 
+                // Find potential tables this table can be merged with (if it's a gateway)
                 auto gmc = self.gateway_merge_choices(t);
                 // Prune these choices according to happens after
                 std::vector<const IR::MAU::Table*> to_erase;
@@ -3009,7 +3182,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 it = work.erase(it);
             } else {
                 it++; } }
-        if (work.empty()) break;
+        if (work.empty()) continue;
         if (trial.empty()) {
             if (errorCount() == 0) {
                 error("Table placement cannot make any more progress.  Though some tables have "
@@ -3024,8 +3197,11 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 if (placed && placed->placed[info->uid]) continue;
                 bool pp = partly_placed.count(info->table);
                 bool mp = placed && placed->match_placed[info->uid];
-                LOG2("  " << info->table->name  << (pp ? "(pp)" : "") << (mp ? "(mp)" : "")); }
-            break; }
+                LOG2("  " << info->table->name  << (pp ? "(pp)" : "") << (mp ? "(mp)" : ""));
+            }
+            work.clear();
+            continue;
+        }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;
         placed = self.add_starter_pistols(placed, trial, current);
@@ -3037,7 +3213,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             if (!best) {
                 LOG3("Initial best is first table seen: " << t->name);
                 best = t;
-            } else if (self.is_better(t, best, choice)) {
+            } else if (is_better(t, best, choice)) {
                 LOG3("    Updating best to " << t->name << " from " << best->name <<
                      " for reason: " << choice);
                 self.reject_placement(best, choice, t);
@@ -3138,11 +3314,12 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         if (best->table) {
             int dep_chain = self.deps.stage_info[best->table].dep_stages_control_anti;
             if ((best->stage + dep_chain >= Device::numStages()) &&
-                (backtrack_count <= MaxBacktracksPerPipe) &&
-                (self.summary.getActualState() >= TableSummary::NOCC_TRY1)) {
-                // Save the original placement to return at this point if backtracking fail.
-                if (!original_flow)
-                    original_flow = new BacktrackPlacement(*this, best, work, true);
+                (backtrack_count <= MaxBacktracksPerPipe)) {
+                // Incomplete placement before trying with backtracking.
+                if (backtrack_count == 0) {
+                    BacktrackPlacement *bt = new BacktrackPlacement(*this, best, work, true);
+                    final_placement.add_incomplete_placement(bt);
+                }
 
                 LOG3("Found dependency chain of " << dep_chain << " at stage " << best->stage);
                 LOG3("Actual backtrack count:" << backtrack_count << " with max backtrack count:"
@@ -3176,28 +3353,26 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                     }
                 }
 
-                // Go back to the original flow path when backtracking was not able to find a good
-                // solution. Set the backtrack_count to the maximum value to disable any more
-                // backtracking for this table allocation pass.
-                if (original_flow) {
-                    if (start_flow && !resource_mode) {
-                        LOG3("Try with resource mode enabled");
-                        placed = start_flow->reset_place_table(work);
-                        recomputePartlyPlaced(placed, partly_placed);
-                        backfill.clear();
-                        res_based_alloc.clear_stage();
-                        backtrack_count = 0;
-                        resource_mode = true;
-                        continue;
+                if (start_flow && !resource_mode) {
+                    // Non resource mode with backtracking incomplete placement
+                    if (backtrack_count) {
+                        BacktrackPlacement *bt = new BacktrackPlacement(*this, best, work, true);
+                        final_placement.add_incomplete_placement(bt);
                     }
-                    LOG3("Reset the flow to the original one");
-                    placed = original_flow->reset_place_table(work);
+                    // Restart table placement from the beginning in resource mode
+                    LOG3("Try with resource mode enabled");
+                    placed = start_flow->reset_place_table(work);
                     recomputePartlyPlaced(placed, partly_placed);
                     backfill.clear();
                     res_based_alloc.clear_stage();
-                    backtrack_count = MaxBacktracksPerPipe + 1;
-                    resource_mode = false;
+                    saved_placements.clear();
+                    backtrack_count = 0;
+                    resource_mode = true;
                     continue;
+                } else {
+                    // Set the backtrack_count to the maximum value to disable any more
+                    // backtracking for this table allocation pass.
+                    backtrack_count = MaxBacktracksPerPipe + 1;
                 }
             }
         }
@@ -3216,7 +3391,9 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         if (placed->need_more)
             partly_placed.insert(placed->table);
         else
-            partly_placed.erase(placed->table); }
+            partly_placed.erase(placed->table);
+    }
+    final_placement.select_best_final_placement();
     LOG1("Table placement placed " << count(placed) << " tables in " <<
          (placed ? placed->stage+1 : 0) << " stages");
     if (placed) {
