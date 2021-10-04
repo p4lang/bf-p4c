@@ -3,12 +3,11 @@ import time
 from ptf import config
 from ptf.thriftutils import *
 import ptf.testutils as testutils
+from ptf.packet import *
 
 from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 
-import scapy
-from scapy.layers.inet import IPOption
 logger = logging.getLogger('checksum_if_else_cond')
 logger.addHandler(logging.StreamHandler())
 

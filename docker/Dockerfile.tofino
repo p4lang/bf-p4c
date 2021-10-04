@@ -54,8 +54,7 @@ COPY . /bfn/bf-p4c-compilers/
 RUN chmod a+x /bfn/bf-p4c-compilers/docker/docker_build.sh
 RUN /bfn/bf-p4c-compilers/docker/docker_build.sh
 
+ENV PKTPY='True'
 WORKDIR /bfn/bf-p4c-compilers
 CMD ["/bin/bash"]
-
-# setup huge pages
 ENTRYPOINT ["/bfn/docker_entry_point.sh"]

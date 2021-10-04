@@ -13,10 +13,10 @@ fi
 [ -z "$PYTHONPATH" ] && delim='' || delim=':'
 export PYTHONPATH="/usr/local/lib/python2.7/site-packages${delim}${PYTHONPATH}"
 if [ "${PKTPY,,}" = "true" ]; then
-    echo "Using bf-pktpy as a packet manipulation framework."
+    echo "PTF: Using bf-ptf with bf-pktpy"
     export PYTHONPATH="/usr/local/lib/python2.7/site-packages/bf-ptf:${PYTHONPATH}"
 else
-    echo "Using scapy as a packet manipulation framework."
+    echo "PTF: Using p4lang/ptf with scapy"
 fi
 
 # execute docker command

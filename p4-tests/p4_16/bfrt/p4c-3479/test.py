@@ -22,6 +22,8 @@ import logging
 
 from ptf import config
 import ptf.testutils as testutils
+from ptf.packet import *
+
 from bfruntime_client_base_tests import BfRuntimeTest
 import bfrt_grpc.client as gc
 

@@ -4,11 +4,11 @@ import copy
 from ptf import config
 from ptf.thriftutils import *
 import ptf.testutils as testutils
+from ptf.packet import *
 
 from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 
-import scapy
 logger = logging.getLogger('udpv4_and_v6_checksum')
 logger.addHandler(logging.StreamHandler())
 class Test_IPv6_udp(P4RuntimeTest):

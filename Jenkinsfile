@@ -230,7 +230,7 @@ node ('compiler-travis') {
 
                         echo 'Running Extreme PTF tests'
                         runInDocker(
-                            extraArgs: '--privileged',
+                            extraArgs: '--privileged -e PKTPY=False',
                             workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
                             './run_extreme_tests.sh'
                         )
@@ -292,13 +292,13 @@ node ('compiler-travis') {
                     'Switch MSDC and DC_BASIC, stful, meters, hash-driven, other customer tests': {
                         echo 'Running switch PD tests for MSDC_PROFILE_BRIG'
                         runInDocker(
-                            extraArgs: '--privileged',
+                            extraArgs: '--privileged -e PKTPY=False',
                             "ctest -R '^tofino/.*smoketest_switch_msdc' -LE 'UNSTABLE'"
                         )
 
                         echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'
                         runInDocker(
-                            extraArgs: '--privileged',
+                            extraArgs: '--privileged -e PKTPY=False',
                             "ctest -R '^tofino/.*smoketest_switch_dc_basic' -LE 'UNSTABLE'"
                         )
 
@@ -319,7 +319,7 @@ node ('compiler-travis') {
                     "switch_16 Tofino tests (part 1)": {
                         echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'
                         runInDocker(
-                            extraArgs: '--privileged -e PKTPY=True',
+                            extraArgs: '--privileged',
                             "ctest -R '^tofino/.*smoketest_switch_16_Tests_x1'"
                         )
                     },
@@ -327,7 +327,7 @@ node ('compiler-travis') {
                     "switch_16 Tofino tests (part 2)": {
                         echo 'Running bf-switch bfrt tests for Tofino for X2 Profile'
                         runInDocker(
-                            extraArgs: '--privileged -e PKTPY=True',
+                            extraArgs: '--privileged',
                             "ctest -R '^tofino/.*smoketest_switch_16_Tests_x2'"
                         )
                     },
@@ -335,7 +335,7 @@ node ('compiler-travis') {
                     "switch 16 Tofino 2 tests (part 1)": {
                         echo 'Running bf-switch bfrt tests for Tofino2 for Y1 Profile'
                         runInDocker(
-                            extraArgs: '--privileged -e PKTPY=True',
+                            extraArgs: '--privileged',
                             "ctest -R '^tofino2/.*smoketest_switch_16_Tests_y1'"
                         )
 
@@ -348,7 +348,7 @@ node ('compiler-travis') {
                     "switch_16 Tofino 2 tests (part 2) and basic_ipv4": {
                         echo 'Running bf-switch bfrt tests for Tofino2 for Y2 Profile'
                         runInDocker(
-                            extraArgs: '--privileged -e PKTPY=True',
+                            extraArgs: '--privileged',
                             "ctest -R '^tofino2/.*smoketest_switch_16_Tests_y2'"
                         )
 
@@ -368,7 +368,7 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino/' \
                                     -E 'smoketest|/programs|/internal_p4_14|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16_programs|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|ptf/digest.p4|digest-std-p4runtime' \
-                                    -LE 'GTS_WEEKLY|NON_PR_TOFINO|p414_nightly'
+                                    -LE 'GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|needs_scapy'
                             '''
                         )
                     },
@@ -381,18 +381,8 @@ node ('compiler-travis') {
                             '''
                                 ctest \
                                     -R '^tofino/(.*programs|.*internal_p4_14)' \
-                                    -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw|^(tofino/p4_16_programs_tna_checksum|tofino/p4_16_programs_tna_custom_hash|tofino/p4_16_programs_tna_dyn_hashing|tofino/p4_16_programs_tna_random|tofino/p4_16_programs_tna_symmetric_hash)\$' \
+                                    -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw' \
                                     -LE 'p414_nightly'
-                            '''
-                        )
-                    },
-                    "Travis - Tofino (part 2) - pktpy": {
-                        echo 'Running tofino part 2 tests with bf-ptf/bf-pktpy'
-                        // Only PTF tests incompatible with scapy. Excluded from the original stage.
-                        runInDocker(
-                            extraArgs: '--privileged -e PKTPY=True',
-                            '''
-                                ctest -R '^(tofino/p4_16_programs_tna_checksum|tofino/p4_16_programs_tna_custom_hash|tofino/p4_16_programs_tna_dyn_hashing|tofino/p4_16_programs_tna_random|tofino/p4_16_programs_tna_symmetric_hash)\$'
                             '''
                         )
                     },
@@ -406,7 +396,8 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino2|cpplint|gtest' \
                                     -L 'JENKINS_PART1|cpplint|gtest' \
-                                    -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|npb-master-ptf'
+                                    -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|npb-master-ptf' \
+                                    -LE 'needs_scapy'
                             '''
                         )
                     },
@@ -420,18 +411,8 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino2' \
                                     -L 'JENKINS_PART2' \
-                                    -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|3174|^(tofino2/extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_branched_end/simple_l3_checksum_branched_end.p4|tofino2/extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_single_end/simple_l3_checksum_single_end.p4|tofino2/extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_taken_default_ingress/simple_l3_checksum_taken_default_ingress.p4|tofino2/p4_16_programs_tna_custom_hash|tofino2/p4_16_programs_tna_dyn_hashing|tofino2/p4_16_programs_tna_multicast|tofino2/p4_16_programs_tna_random|tofino2/p4_16_programs_tna_symmetric_hash)\$' \
-                                    -LE 'UNSTABLE'
-                            '''
-                        )
-                    },
-                    "Travis - Tofino 2 (part 2) - pktpy": {
-                        echo 'Running tofino2 tests with bf-ptf/bf-pktpy'
-                        // Only PTF tests incompatible with scapy. Excluded from the original stage.
-                        runInDocker(
-                            extraArgs: '--privileged -e PKTPY=True',
-                            '''
-                                ctest -R '^(tofino2/extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_branched_end/simple_l3_checksum_branched_end.p4|tofino2/extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_single_end/simple_l3_checksum_single_end.p4|tofino2/extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_taken_default_ingress/simple_l3_checksum_taken_default_ingress.p4|tofino2/p4_16_programs_tna_custom_hash|tofino2/p4_16_programs_tna_dyn_hashing|tofino2/p4_16_programs_tna_multicast|tofino2/p4_16_programs_tna_random|tofino2/p4_16_programs_tna_symmetric_hash)\$'
+                                    -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|3174' \
+                                    -LE 'UNSTABLE|needs_scapy'
                             '''
                         )
                     },
@@ -442,6 +423,15 @@ node ('compiler-travis') {
                             extraArgs: '--privileged',
                             ctestParallelLevel: 4,
                             "ctest -R '^tofino3' -LE 'ptf|stf'"
+                        )
+                    },
+
+                    "Travis - Scapy": {
+                        echo 'Running tests with p4lang/ptf + scapy'
+                        runInDocker(
+                            extraArgs: '--privileged -e PKTPY=False',
+                            ctestParallelLevel: 4,
+                            "ctest -L 'needs_scapy'"
                         )
                     },
 

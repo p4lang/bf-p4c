@@ -25,10 +25,10 @@
 """
 PTF foundational class for p4c2713.p4
 
-This module contains the P4ProgramTest class specifically taylored for 
+This module contains the P4ProgramTest class specifically taylored for
 simple_l3 program (eventually this tayloring will go away).
 
-All individual tests are subclassed from the this base (P4ProgramTest) or 
+All individual tests are subclassed from the this base (P4ProgramTest) or
 its ssubclasses if necessary.
 
 The easiest way to write a test for simple_l3 is to start with a line
@@ -39,13 +39,15 @@ from simple_l3 import *
 
 ######### STANDARD MODULE IMPORTS ########
 import unittest
-import logging 
-import grpc   
+import logging
+import grpc
 import pdb
 
 ######### PTF modules for BFRuntime Client Library APIs #######
 import ptf
 from ptf.testutils import *
+from ptf.packet import *
+
 from bfruntime_client_base_tests import BfRuntimeTest
 import bfrt_grpc.bfruntime_pb2 as bfruntime_pb2
 import bfrt_grpc.client as gc
@@ -64,18 +66,18 @@ class P4ProgramTest(BfRuntimeTest):
         self.p4_name = "p4c2713"     # Specialization
         self.dev      = 0
         self.dev_tgt  = gc.Target(self.dev, pipe_id=0xFFFF)
-        
+
         print("\n")
         print("Test Setup")
         print("==========")
 
         BfRuntimeTest.setUp(self, self.client_id, self.p4_name)
-        
+
         # This is the simple case when you run only one program on the target.
         # Otherwise, you might have to retrieve multiple bfrt_info objects and
         # in that case you will need to specify program name as a parameter
         self.bfrt_info = self.interface.bfrt_info_get()
-        
+
         print("    Connected to Device: {}, Program: {}, ClientId: {}".format(
             self.dev, self.p4_name, self.client_id))
 
@@ -91,7 +93,7 @@ class P4ProgramTest(BfRuntimeTest):
         print("\n")
         print("Test TearDown:")
         print("==============")
-        
+
         # Call the Parent tearDown
         BfRuntimeTest.tearDown(self)
 
@@ -111,7 +113,7 @@ class SimpleTest(P4ProgramTest):
     def runTest(self):
         # Prepare test packets
         pkt = gen_udp_packet()
-        
+
         send_packet(self, 0, pkt)
 
         verify_packet(self, pkt, 1)

@@ -1,4 +1,5 @@
 import ptf.testutils as testutils
+from ptf.packet import *
 
 from p4.v1 import p4runtime_pb2
 

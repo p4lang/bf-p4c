@@ -152,6 +152,8 @@ set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_test_label("tofino" "needs_scapy" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
+p4c_add_test_label("tofino" "needs_scapy" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
 
 # p4_16/customer/arista/p4c-2143.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4" "-Xp4c=--disable-power-check")
@@ -327,6 +329,10 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all")
+p4c_add_test_label("tofino" "needs_scapy" "fabric")
+p4c_add_test_label("tofino" "needs_scapy" "fabric-DWITH_SPGW")
+p4c_add_test_label("tofino" "needs_scapy" "fabric-DWITH_INT_TRANSIT")
+p4c_add_test_label("tofino" "needs_scapy" "fabric-DWITH_SPGW-DWITH_INT_TRANSIT")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -719,15 +725,18 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}
 p4c_add_ptf_test_with_ptfdir ("tofino" "brig_569"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-569/brig_569.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-569/brig_569.ptf")
+p4c_add_test_label("tofino" "needs_scapy" "brig_569")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "case6684" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-847/case6684.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-847/case6684.ptf")
+p4c_add_test_label("tofino" "needs_scapy" "case6684")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4c-2229" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-2229/p4src/simple_l3_lag_ecmp.p4
     "${testExtraArgs} -pd -DRESILIENT_SELECTION" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-2229/ptf")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_checksum" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-1008/simple_l3_checksum.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-1008/simple_l3_checksum.ptf")
+p4c_add_test_label("tofino" "needs_scapy" "simple_l3_checksum")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "basic_switching" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-980/basic_switching.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-980/basic_switching.ptf")
@@ -737,6 +746,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "case6738" ${CMAKE_CURRENT_SOURCE_DIR}/p4
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_mirror" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-879/simple_l3_mirror.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-879/simple_l3_mirror.ptf")
+p4c_add_test_label("tofino" "needs_scapy" "simple_l3_mirror")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4c_737" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-737/oinked_0.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-737/oinked_0.ptf")
@@ -793,6 +803,11 @@ foreach(t IN LISTS ba102_tests)
   p4c_add_test_label("tofino" "BA-102" ba102_${testname})
   set_tests_properties("tofino/ba102_${testname}" PROPERTIES RUN_SERIAL 1)
 endforeach()
+p4c_add_test_label("tofino" "needs_scapy" "ba102_simple_l3_mirror")
+p4c_add_test_label("tofino" "needs_scapy" "ba102_simple_l3_mpls")
+p4c_add_test_label("tofino" "needs_scapy" "ba102_simple_l3_arping")
+p4c_add_test_label("tofino" "needs_scapy" "ba102_simple_wred")
+p4c_add_test_label("tofino" "needs_scapy" "ba102_simple_lpf")
 
 # p4testgen ptf tests for p4factory programs
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_emulation" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4testgen_regression/emulation.p4
@@ -1002,6 +1017,7 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2249" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249/p4c_2249.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249")
 set_tests_properties("tofino/p4c_2249" PROPERTIES TIMEOUT 2000)
+p4c_add_test_label("tofino" "needs_scapy" "p4c_2249")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3005" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3005/p4c3005.p4"
