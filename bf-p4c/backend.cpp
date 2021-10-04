@@ -15,6 +15,7 @@
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/size_of.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/mau/adjust_byte_count.h"
@@ -148,7 +149,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-        Device::currentDevice() != Device::TOFINO ? new AddJBayMetadataPOV(phv) : nullptr,
+        Device::hasImplictPHVValidBit() == false ?
+            new AddJBayMetadataPOV(phv) : nullptr,
         Device::currentDevice() == Device::TOFINO ?
             new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),

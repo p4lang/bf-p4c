@@ -1749,53 +1749,79 @@ class ExtractMetadata : public Inspector {
         setName("ExtractMetadata");
     }
 
+    const IR::Parameter* getParameterByTypeName(
+            const IR::ParameterList* params, cstring type_name) {
+        const IR::Parameter* retval = nullptr;
+        for (auto& param : *params) {
+            if (auto type = param->type->to<IR::Type_StructLike>()) {
+                if (type->name.name == type_name) {
+                    retval = param;
+                    break;
+                }
+            } else {
+                ::error("Unsupported parameter type %1%", param->type);
+            }
+        }
+        return retval;
+    }
+
     void postorder(const IR::BFN::TnaControl *mau) override {
         gress_t gress = mau->thread;
 
         if (gress == INGRESS) {
-            // XXX(hanw) index must be consistent with tofino.p4
-            int size = mau->getApplyParameters()->parameters.size();
-            auto md = mau->getApplyParameters()->parameters.at(2);
-            rv->metadata.addUnique("ingress_intrinsic_metadata",
-                                   bindings->get(md)->obj->to<IR::Header>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "ingress_intrinsic_metadata_t")) {
+                rv->metadata.addUnique("ingress_intrinsic_metadata",
+                        bindings->get(param)->obj->to<IR::Header>());
+            }
 
-            // intrinsic_metadata_from_parser
-            md = mau->getApplyParameters()->parameters.at(3);
-            rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser",
-                                   bindings->get(md)->obj->to<IR::Metadata>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "ingress_intrinsic_metadata_from_parser_t")) {
+                rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser",
+                        bindings->get(param)->obj->to<IR::Metadata>());
+            }
 
-            // intrinsic_metadata_from_deparser
-            md = mau->getApplyParameters()->parameters.at(4);
-            rv->metadata.addUnique("ingress_intrinsic_metadata_for_deparser",
-                                   bindings->get(md)->obj->to<IR::Metadata>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "ingress_intrinsic_metadata_for_deparser_t")) {
+                rv->metadata.addUnique("ingress_intrinsic_metadata_for_deparser",
+                        bindings->get(param)->obj->to<IR::Metadata>());
+            }
 
-            // intrinsic_metadata_for_tm
-            md = mau->getApplyParameters()->parameters.at(5);
-            rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
-                                   bindings->get(md)->obj->to<IR::Metadata>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "ingress_intrinsic_metadata_for_tm_t")) {
+                rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
+                        bindings->get(param)->obj->to<IR::Metadata>());
+            }
 
-            // compiler_generated_metadata
-            if (size > 6) {
-                md = mau->getApplyParameters()->parameters.at(6);
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "compiler_generated_metadata_t")) {
                 rv->metadata.addUnique(COMPILER_META,
-                                       bindings->get(md)->obj->to<IR::Metadata>());
+                        bindings->get(param)->obj->to<IR::Metadata>());
             }
         } else if (gress == EGRESS) {
-            auto md = mau->getApplyParameters()->parameters.at(2);
-            rv->metadata.addUnique("egress_intrinsic_metadata",
-                                   bindings->get(md)->obj->to<IR::Header>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "egress_intrinsic_metadata_t")) {
+                rv->metadata.addUnique("egress_intrinsic_metadata",
+                        bindings->get(param)->obj->to<IR::Header>());
+            }
 
-            md = mau->getApplyParameters()->parameters.at(3);
-            rv->metadata.addUnique("egress_intrinsic_metadata_from_parser",
-                                   bindings->get(md)->obj->to<IR::Metadata>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "egress_intrinsic_metadata_from_parser_t")) {
+                rv->metadata.addUnique("egress_intrinsic_metadata_from_parser",
+                        bindings->get(param)->obj->to<IR::Metadata>());
+            }
 
-            md = mau->getApplyParameters()->parameters.at(4);
-            rv->metadata.addUnique("egress_intrinsic_metadata_for_deparser",
-                                   bindings->get(md)->obj->to<IR::Metadata>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "egress_intrinsic_metadata_for_deparser_t")) {
+                rv->metadata.addUnique("egress_intrinsic_metadata_for_deparser",
+                        bindings->get(param)->obj->to<IR::Metadata>());
+            }
 
-            md = mau->getApplyParameters()->parameters.at(5);
-            rv->metadata.addUnique("egress_intrinsic_metadata_for_output_port",
-                                   bindings->get(md)->obj->to<IR::Metadata>());
+            if (auto param = getParameterByTypeName(mau->getApplyParameters(),
+                        "egress_intrinsic_metadata_for_output_port_t")) {
+                rv->metadata.addUnique("egress_intrinsic_metadata_for_output_port",
+                        bindings->get(param)->obj->to<IR::Metadata>());
+            }
         }
     }
 

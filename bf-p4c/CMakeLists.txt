@@ -858,6 +858,15 @@ set (p4include_HEADERS
   )
 endif (ENABLE_CLOUDBREAK)
 
+if (ENABLE_FLATROCK)
+set (p4include_HEADERS
+  ${p4include_HEADERS}
+  p4include/tofino5.p4
+  p4include/tofino5arch.p4
+  p4include/t5na.p4
+  )
+endif (ENABLE_FLATROCK)
+
 set (p4_14include_HEADERS
   p4_14include/tofino/constants.p4
   p4_14include/tofino/intrinsic_metadata.p4

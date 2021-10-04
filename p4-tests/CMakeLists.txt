@@ -55,6 +55,9 @@ if (ENABLE_TESTING)
   if (ENABLE_CLOUDBREAK)
     include(CloudbreakTests.cmake)
   endif()
+  if (ENAGBLE_FLATROCK)
+    include(FlatrockTests.cmake)
+  endif()
 
   # We have additional test inputs that are used to test the other
   # (standard) back-ends These test input programs depend on Tofino in

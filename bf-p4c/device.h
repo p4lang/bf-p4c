@@ -69,6 +69,9 @@ class Device {
     static int isMemoryCoreSplit() { return Device::get().getIfMemoryCoreSplit(); }
     static bool hasCompareInstructions() { return Device::get().getHasCompareInstructions(); }
     static int numLogTablesPerStage() { return Device::get().getNumLogTablesPerStage(); }
+    static bool hasIngressDeparser() { return Device::get().getHasIngressDeparser(); }
+    static bool hasEgressParser() { return Device::get().getHasEgressParser(); }
+    static bool hasImplictPHVValidBit() { return Device::get().getHasImplicitPHVValidBit(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -100,6 +103,9 @@ class Device {
     virtual bool getIfMemoryCoreSplit() const = 0;
     virtual bool getHasCompareInstructions() const = 0;
     virtual int getNumLogTablesPerStage() const = 0;
+    virtual bool getHasIngressDeparser() const = 0;
+    virtual bool getHasEgressParser() const = 0;
+    virtual bool getHasImplicitPHVValidBit() const = 0;
 
  private:
     static Device* instance_;
@@ -149,6 +155,9 @@ class TofinoDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return false; }
     bool getHasCompareInstructions() const override { return false; }
     int getNumLogTablesPerStage() const override { return 16; }
+    bool getHasIngressDeparser() const override { return true; }
+    bool getHasEgressParser() const override { return true; }
+    bool getHasImplicitPHVValidBit() const override { return true; }
 };
 
 class JBayDevice : public Device {
@@ -193,6 +202,9 @@ class JBayDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return true; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
+    bool getHasIngressDeparser() const override { return true; }
+    bool getHasEgressParser() const override { return true; }
+    bool getHasImplicitPHVValidBit() const override { return false; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -267,6 +279,9 @@ class CloudbreakDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return true; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
+    bool getHasIngressDeparser() const override { return true; }
+    bool getHasEgressParser() const override { return true; }
+    bool getHasImplicitPHVValidBit() const override { return false; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -313,6 +328,9 @@ class FlatrockDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return true; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
+    bool getHasIngressDeparser() const override { return false; }
+    bool getHasEgressParser() const override { return false; }
+    bool getHasImplicitPHVValidBit() const override { return false; }
 };
 #endif /* HAVE_FLATROCK */
 

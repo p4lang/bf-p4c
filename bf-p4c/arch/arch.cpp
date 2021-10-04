@@ -83,23 +83,27 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
     thread_i->mau = ingress->to<IR::ControlBlock>()->container;
     toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, ig);
 
-    auto ingress_deparser = block->getParameterValue("ingress_deparser");
-    BlockInfo id(index, pipe, INGRESS, DEPARSER);
-    thread_i->deparser = ingress_deparser->to<IR::ControlBlock>()->container;
-    toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container, id);
+    if (auto ingress_deparser = block->findParameterValue("ingress_deparser")) {
+        BlockInfo id(index, pipe, INGRESS, DEPARSER);
+        thread_i->deparser = ingress_deparser->to<IR::ControlBlock>()->container;
+        toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container, id);
+    }
 
     threads.emplace(std::make_pair(index, INGRESS), thread_i);
 
     auto thread_e = new IR::BFN::P4Thread();
     if (isMultiParserProgram) {
-        auto egress_parser = block->getParameterValue("eg_prsr");
-        auto parsers = egress_parser->to<IR::PackageBlock>();
-        parseMultipleParserInstances(parsers, pipe, thread_e, EGRESS);
+        if (auto egress_parser = block->findParameterValue("eg_prsr")) {
+            auto parsers = egress_parser->to<IR::PackageBlock>();
+            parseMultipleParserInstances(parsers, pipe, thread_e, EGRESS);
+        }
     } else {
-        auto egress_parser = block->getParameterValue("egress_parser");
-        BlockInfo ep(index, pipe, EGRESS, PARSER);
-        thread_e->parsers.push_back(egress_parser->to<IR::ParserBlock>()->container);
-        toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container, ep); }
+        if (auto egress_parser = block->findParameterValue("egress_parser")) {
+            BlockInfo ep(index, pipe, EGRESS, PARSER);
+            thread_e->parsers.push_back(egress_parser->to<IR::ParserBlock>()->container);
+            toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container, ep);
+        }
+    }
 
     auto egress = block->getParameterValue("egress");
     thread_e->mau = egress->to<IR::ControlBlock>()->container;
