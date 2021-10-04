@@ -299,6 +299,12 @@ struct AllocAlignment {
 /** A set of functions used in PHV allocation.
  */
 class CoreAllocation {
+    struct OverlayInfo {
+        bool control_flow_overlay;
+        bool physical_liverange_overlay;
+        bool metadata_overlay;
+        bool dark_overlay;
+    };
     const PHV::AllocUtils& utils_i;
 
     // Table allocation information from the previous round.
@@ -328,6 +334,75 @@ class CoreAllocation {
       const PHV::ContainerGroup& container_group,
       const PHV::SuperCluster& super_cluster,
       const PHV::SuperCluster::SliceList* slice_list) const;
+
+    bool check_metadata_and_dark_overlay(
+        const PHV::Container& c,
+        std::vector<PHV::AllocSlice> &complex_overlay_slices,
+        std::vector<PHV::AllocSlice> &candidate_slices,
+        std::vector<PHV::AllocSlice> &new_candidate_slices,
+        PHV::Transaction &perContainerAlloc,
+        ordered_map<const PHV::AllocSlice, OverlayInfo> &overlay_info,
+        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+        boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
+        ordered_set<PHV::AllocSlice> &metaInitSlices,
+        PHV::Allocation::LiveRangeShrinkingMap &initActions,
+        bool &new_overlay_container,
+        const PHV::ContainerGroup& group,
+        const bool &canDarkInitUseARA) const;
+
+    boost::optional<std::vector<PHV::AllocSlice>> prepare_candidate_slices(
+            PHV::SuperCluster::SliceList & slices,
+            const PHV::Container& c,
+            const PHV::Allocation::ConditionalConstraint& start_positions) const;
+
+    bool try_metadata_overlay(
+        const PHV::Container& c,
+        boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
+        const PHV::AllocSlice &slice,
+        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+        std::vector<PHV::AllocSlice> &new_candidate_slices,
+        ordered_set<PHV::AllocSlice> &metaInitSlices,
+        PHV::Allocation::LiveRangeShrinkingMap &initActions,
+        PHV::Transaction &perContainerAlloc,
+        const PHV::Allocation::MutuallyLiveSlices &alloced_slices,
+        PHV::Allocation::MutuallyLiveSlices &actual_cntr_state) const;
+
+    bool try_dark_overlay(
+        std::vector<PHV::AllocSlice> &dark_slices,
+        PHV::Transaction &perContainerAlloc,
+        const PHV::Container& c,
+        std::vector<PHV::AllocSlice> &candidate_slices,
+        std::vector<PHV::AllocSlice> &new_candidate_slices,
+        bool &new_overlay_container,
+        ordered_set<PHV::AllocSlice> &metaInitSlices,
+        const PHV::ContainerGroup& group,
+        const bool &canDarkInitUseARA) const;
+
+    bool try_pack_slice_list(
+        std::vector<PHV::AllocSlice> &candidate_slices,
+        PHV::Transaction &perContainerAlloc,
+        PHV::Allocation::LiveRangeShrinkingMap &initActions,
+        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+        const PHV::Container& c,
+        const PHV::SuperCluster& super_cluster,
+        boost::optional<PHV::Allocation::ConditionalConstraints> &action_constraints,
+        int &num_bitmasks) const;
+
+    bool try_place_wide_arith_hi(
+        const PHV::ContainerGroup& group,
+        const PHV::Container& c,
+        PHV::SuperCluster::SliceList *hi_slice,
+        const PHV::SuperCluster& super_cluster,
+        PHV::Transaction &this_alloc,
+        const ScoreContext& score_ctx) const;
+
+    bool find_previous_allocation(
+        PHV::Container &previous_container,
+        ordered_map<PHV::FieldSlice, PHV::AllocSlice> &previous_allocations,
+        const PHV::Allocation::ConditionalConstraint& start_positions,
+        PHV::SuperCluster::SliceList &slices,
+        const PHV::ContainerGroup& group,
+        const PHV::Allocation& alloc) const;
 
  public:
     CoreAllocation(const PHV::AllocUtils& utils, bool disable_metainit)
