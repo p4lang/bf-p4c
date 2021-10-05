@@ -136,8 +136,6 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
     // with a copy of "saved", as needed.  However, if there's a match table, we need to save
     // v to visit the match table actions with.
     Visitor* current = &v;
-    if (!self->conditional_gateway_only())
-        current = nullptr;
 
     std::set<cstring> gw_tags_seen;
     bool fallen_through = false;
@@ -181,9 +179,8 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
         if (!fallen_through) {
             if (current) {
                 // "current" hasn't been used yet, so just consume it.
-                BUG_CHECK(self->conditional_gateway_only(), "inconsistent gateway_only");
                 BUG_CHECK(!payload_info.post_payload, "inconsitent gateway post-payload");
-                BUG_CHECK(current == &v, "inconsitent gateway current");
+                BUG_CHECK(current == &v, "inconsistent gateway current");
                 payload_info.post_payload = current;
                 current = nullptr;
             } else {
@@ -195,6 +192,7 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
             fallen_through = true;
         }
     }
+    BUG_CHECK(current == nullptr, "gateway visitor state has not be consumed");
 }
 
 template<class THIS>

@@ -1,0 +1,109 @@
+#include <set>
+
+#include "gtest/gtest.h"
+#include "test/gtest/helpers.h"
+
+#include "ir/ir.h"
+#include "ir/visitor.h"
+
+namespace Test {
+
+namespace {
+
+using ActionSeq = std::vector<const IR::MAU::Action*>;
+
+// This visitor captures all possible sequences of actions that can be applied.
+struct CollectCFGPaths : public ControlFlowVisitor, public Inspector {
+    CollectCFGPaths() {
+        joinFlows = true;
+        visitDagOnce = false;
+    }
+
+    ControlFlowVisitor* clone() const override { return new CollectCFGPaths(*this); }
+
+    bool preorder(const IR::MAU::Action* act) override {
+        std::set<ActionSeq> extended_paths;
+        for (const auto& path : visited_paths) {
+            auto ex_path = path;
+            ex_path.push_back(act);
+            extended_paths.insert(ex_path);
+        }
+        visited_paths = extended_paths;
+        return true;
+    }
+
+    bool filter_join_point(const IR::Node* n) override {
+        return !n->is<IR::MAU::Table>()
+            && !n->is<IR::MAU::TableSeq>();
+    }
+
+    void flow_merge(Visitor& v) override {
+        CollectCFGPaths& o = dynamic_cast<CollectCFGPaths&>(v);
+        for (const ActionSeq& tbl : o.visited_paths) {
+            visited_paths.insert(tbl);
+        }
+    }
+
+    std::set<ActionSeq> visited_paths = {ActionSeq()};
+};
+
+}  // anon namespace
+
+TEST(MauControlFlowVisit, GatewayRunTableAndNext) {
+    auto t1 = new IR::MAU::Table("t1", INGRESS);
+    auto a1 = new IR::MAU::Action("a1");
+    t1->actions["a1"] = a1;
+
+    auto t2 = new IR::MAU::Table("t2", INGRESS);
+    auto a2 = new IR::MAU::Action("a2");
+    t2->actions["a2"] = a2;
+
+    t1->gateway_rows.emplace_back(new IR::Constant(0), /* run table */ nullptr);
+    t1->gateway_rows.emplace_back(/* miss */ nullptr, "$false");
+
+    t1->next["$false"] = new IR::MAU::TableSeq(t2);
+    t1->match_key.push_back(new IR::MAU::TableKey(
+                                new IR::Constant(0),
+                                IR::ID()));
+
+    CollectCFGPaths ccp;
+    t1->apply(ccp);
+
+    const std::set<ActionSeq> expected = {
+        {a1},
+        {a2}
+    };
+    EXPECT_EQ(ccp.visited_paths, expected);
+}
+
+TEST(MauControlFlowVisit, GatewayRunTableAndFallthrough) {
+    auto t1 = new IR::MAU::Table("t1", INGRESS);
+    auto a1 = new IR::MAU::Action("a1");
+    t1->actions["a1"] = a1;
+
+    auto t2 = new IR::MAU::Table("t2", INGRESS);
+    auto a2 = new IR::MAU::Action("a2");
+    t2->actions["a2"] = a2;
+
+    t1->gateway_rows.emplace_back(new IR::Constant(0), /* run table */ nullptr);
+    t1->gateway_rows.emplace_back(/* miss */ nullptr, "$false"); // falls through
+
+    t1->match_key.push_back(new IR::MAU::TableKey(
+                                new IR::Constant(0),
+                                IR::ID()));
+
+    auto t_seq = new IR::MAU::TableSeq(t1, t2);
+
+    CollectCFGPaths ccp;
+    t_seq->apply(ccp);
+
+    const std::set<ActionSeq> expected = {
+        {a2},
+        {a1, a2}
+    };
+    EXPECT_EQ(ccp.visited_paths, expected);
+}
+
+}  // namespace Test
+
+

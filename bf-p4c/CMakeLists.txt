@@ -1387,6 +1387,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_control_flow_visitor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/no_co_pack.cpp
