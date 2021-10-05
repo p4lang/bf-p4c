@@ -98,6 +98,11 @@ class HashExpr::PhvRef : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override;
+    void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
+        if (bit >= 0)
+            rv.emplace_back(what, bit, bit);
+        else
+            rv.emplace_back(what); }
     Phv::Ref* get_ghost_slice() override { return &what; }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: PhvRef" << std::endl;
@@ -146,6 +151,8 @@ class HashExpr::Random : HashExpr {
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override;
+    void get_sources(int, std::vector<Phv::Ref> &rv) const override {
+        rv.insert(rv.end(), what.begin(), what.end()); }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: Random" << std::endl;
         out << "hash algorithm: [ algo : " << hash_algorithm.hash_alg
@@ -214,6 +221,8 @@ class HashExpr::Crc : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override;
+    void get_sources(int, std::vector<Phv::Ref> &rv) const override {
+        rv.insert(rv.end(), vec_what.begin(), vec_what.end()); }
 };
 
 class HashExpr::Xor : HashExpr {
@@ -252,6 +261,8 @@ class HashExpr::Xor : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
+        for (auto *e : what) e->get_sources(bit, rv); }
     Phv::Ref* get_ghost_slice() override {
         for (auto *e : what) {
             auto g = e->get_ghost_slice();
@@ -286,6 +297,8 @@ class HashExpr::Mask : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
+        if (mask[bit]) what->get_sources(bit, rv); }
     Phv::Ref* get_ghost_slice() override { return what->get_ghost_slice(); }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: Mask " << mask << std::endl;
@@ -326,6 +339,19 @@ class HashExpr::Stripe : HashExpr {
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
+        for (auto *e : what) {
+            if (bit >= 0) {
+                int width = e->width();
+                if (bit < width) {
+                    e->get_sources(bit, rv);
+                    break; }
+                bit -= width;
+            } else {
+                e->get_sources(bit, rv);
+            }
+        }
+    }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: Stripe" << std::endl;
         for (auto *e : what) {
@@ -362,6 +388,11 @@ class HashExpr::Slice : HashExpr {
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
+        if (bit >= start)
+            what->get_sources(bit - start, rv);
+        else if (bit < 0)
+            what->get_sources(bit, rv); }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: Slice" << std::endl;
         if (what) out << what << std::endl;
@@ -393,6 +424,11 @@ class HashExpr::SExtend : HashExpr {
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
             int hash_table) override { }
+    void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
+        int width = what->width();
+        if (width > 0 && bit >= width)
+            bit = width - 1;
+        what->get_sources(bit, rv); }
     void dbprint(std::ostream & out) const override {
         out << "HashExpr: SExtend" << std::endl;
         if (what) out << what << std::endl;
@@ -630,3 +666,11 @@ void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
             break; }
         bit %= total_size; }
 }
+
+void dump(const HashExpr *h) {
+    if (h)
+        h->dbprint(std::cout);
+    else
+        std::cout << "(null)";
+    std::cout << std::endl; }
+void dump(const HashExpr &h) { h.dbprint(std::cout); std::cout << std::endl; }

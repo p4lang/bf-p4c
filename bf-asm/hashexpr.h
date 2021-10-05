@@ -30,6 +30,11 @@ class HashExpr {
         int hash_table);
     virtual void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
         int hash_table) = 0;
+    virtual void get_sources(int bit, std::vector<Phv::Ref> &) const = 0;
+    std::vector<Phv::Ref> get_sources(int bit) const {
+        std::vector<Phv::Ref> rv;
+        get_sources(bit, rv);
+        return rv; }
     virtual int width() = 0;
     virtual int input_size() = 0;
     virtual bool match_phvref(Phv::Ref &ref) { return false; }
@@ -41,5 +46,8 @@ class HashExpr {
     virtual Phv::Ref *get_ghost_slice() { return nullptr; }
     virtual ~HashExpr() {}
 };
+
+extern void dump(const HashExpr *);
+extern void dump(const HashExpr &);
 
 #endif /* BF_ASM_HASHEXPR_H_ */
