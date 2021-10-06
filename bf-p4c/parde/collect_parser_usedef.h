@@ -355,6 +355,9 @@ struct CollectParserUseDef : PassManager {
         Visitor::profile_t init_apply(const IR::Node* root) override {
             state_to_rvals.clear();
             rval_to_lvals.clear();
+            state_to_inp_buff_exts.clear();
+            state_to_const_exts.clear();
+            state_to_other_exts.clear();
             return ParserInspector::init_apply(root);
         }
 
