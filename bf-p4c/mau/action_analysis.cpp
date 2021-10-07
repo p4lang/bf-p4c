@@ -541,7 +541,7 @@ void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, Fie
 bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
     ordered_map<const PHV::Field *, bitvec> written_fields;
 
-    for (auto field_action_info : *field_actions_map) {
+    for (auto& field_action_info : *field_actions_map) {
         auto &field_action = field_action_info.second;
 
         if (sequential) {
@@ -554,9 +554,11 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                 BUG_CHECK(field, "Cannot convert an instruction read to a PHV field reference");
                 if (written_fields.find(field) == written_fields.end()) continue;
                 if (written_fields[field].intersects(read_bits)) {
-                    ::warning("Action %s has a read of a field %s "
-                                      "after it already has been written",
-                              action_name, cstring::to_cstring(read));
+                    if (error_verbose) {
+                        ::warning("Action %s has a read of a field %s "
+                                          "after it already has been written",
+                                  action_name, cstring::to_cstring(read));
+                    }
                     field_action.error_code |= FieldAction::READ_AFTER_WRITES;
                     warning = true;
                 }
@@ -569,7 +571,9 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         BUG_CHECK(field, "Cannot convert an instruction write to a PHV field reference");
         if (written_fields.find(field) != written_fields.end()) {
             if (written_fields[field].intersects(write_bits)) {
-                ::warning("Action %s has repeated lvalue %s", action_name, field->name);
+                if (error_verbose) {
+                    ::warning("Action %s has repeated lvalue %s", action_name, field->name);
+                }
                 field_action.error_code |= FieldAction::REPEATED_WRITES;
                 warning = true;
             }
@@ -587,8 +591,11 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                 if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
                     non_phv_count++;
                 if (non_phv_count > 1) {
-                    ::warning("In action %s, the following instruction has multiple action data "
-                              "parameters: %s", action_name, cstring::to_cstring(field_action));
+                    if (error_verbose) {
+                        ::warning("In action %s, the following instruction has multiple "
+                                  "action data parameters: %s",
+                                  action_name, cstring::to_cstring(field_action));
+                    }
                     field_action.error_code |= FieldAction::MULTIPLE_ACTION_DATA;
                     warning = true;
                 }
@@ -598,9 +605,11 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         if (!field_action.is_shift()) {
             for (auto read : field_action.reads) {
                 if (read.size() != field_action.write.size()) {
-                    ::warning("In action %s, write %s and read %s sizes do not match up",
-                              action_name, cstring::to_cstring(field_action.write),
-                              cstring::to_cstring(read));
+                    if (error_verbose) {
+                        ::warning("In action %s, write %s and read %s sizes do not match up",
+                                  action_name, cstring::to_cstring(field_action.write),
+                                  cstring::to_cstring(read));
+                    }
                     field_action.error_code |= FieldAction::DIFFERENT_OP_SIZE;
                     warning = true;
                 }
@@ -2455,6 +2464,6 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 void ActionAnalysis::postorder(const IR::MAU::Action *act) {
     if (phv_alloc)
         verify_P4_action_with_phv(act->name);
-    else if (error_verbose)
+    else
         verify_P4_action_without_phv(act->name);
 }

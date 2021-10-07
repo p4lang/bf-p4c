@@ -2878,6 +2878,130 @@ const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
     return mux;
 }
 
+/**
+ * Some instructions may be impossible to execute in one stage. This pass detects several
+ * such cases and splits the problematic instructions into two tables.
+ */
+class ExpandInstructions : public MauTransform {
+    const PhvInfo& phv_i;
+    std::vector<IR::MAU::Instruction*> m_precompute;
+    std::set<const IR::Expression*> m_preload;
+
+    /**
+     * For every instruction, Tofino can read only up to one non-PHV operand (action data,
+     * constants, hash dists etc.) This function detects these invalid instructions and splits
+     * them into two steps (tables): in first, newly created table, one of the non-PHV operands is
+     * pre-loaded into a temporary PHV container, which is then read by the original instruction.
+     *
+     * For example:
+     *
+     * tbl:
+     *      add(ingress::hdr.mul32_64.res,
+     *          hash_dist(Ingress.copy_32_0.configure($field_list_1 : {ingress::hdr.mul32_64.b})),
+     *          hash_dist(Ingress.copy_32_1.configure($field_list_1 : {ingress::hdr.mul32_64.a})));
+     *
+     * is rewritten into:
+     *
+     * tbl_preload:
+     *      set($tmp3,
+     *          hash_dist(Ingress.copy_32_0.configure($field_list_1 : {ingress::hdr.mul32_64.b})));
+     * tbl:
+     *      add(ingress::hdr.mul32_64.res,
+     *          $tmp3,
+     *          hash_dist(Ingress.copy_32_1.configure($field_list_1 : {ingress::hdr.mul32_64.a})));
+     *
+     */
+    void check_action_data_bus_params(const IR::MAU::Action* act) {
+        auto tbl = findContext<IR::MAU::Table>();
+        BUG_CHECK(tbl, "Action doesn't have any table context!");
+        ActionAnalysis::FieldActionsMap field_actions_map;
+        ActionAnalysis aa(phv_i, false, false, tbl, false, false);
+        aa.set_field_actions_map(&field_actions_map);
+        act->apply(aa);
+        // Capture action inputs which are not PHV related. Only one non-PHV action input is allowed
+        for (auto fa_element : field_actions_map) {
+            auto field_instruction = fa_element.first;
+            auto &field_action = fa_element.second;
+
+            if (!(field_action.error_code & ActionAnalysis::FieldAction::MULTIPLE_ACTION_DATA)) {
+                continue;
+            }
+
+            std::vector<ActionAnalysis::ActionParam> expression_candidates;
+            for (const auto &read : field_action.reads) {
+                if (read.type != ActionAnalysis::ActionParam::CONSTANT
+                    && read.speciality != ActionAnalysis::ActionParam::HASH_DIST)
+                {
+                    // Constants and hash_dists can be pre-loaded into a PHV container
+                    // in separate table. Action data or stateful objects on the other hand
+                    // cannot due their link to this specific table.
+                    continue;
+                }
+
+                expression_candidates.push_back(read);
+            }
+
+            if (expression_candidates.empty()) {
+                LOG1("Cannot split invalid instruction " << *field_instruction
+                     << " into two tables, because all source operands are action data "
+                     << "or stateful objects.");
+                continue;
+            }
+            BUG_CHECK(expression_candidates.size() <= 2,
+                    "More than two non-PHV element splitting is not being supported.");
+
+            // Let's take the first read expression from the action
+            auto expr_rew = expression_candidates[0];
+            LOG2("Number of required non-PHV arguments is bigger than one for action " <<
+                act->name.name << ", instruction: " << field_instruction << std::endl <<
+                " * preload operand " << expr_rew << " into PHV container in separate table.");
+            m_preload.insert(expr_rew.expr);
+        }
+    }
+
+    IR::Node* preorder(IR::MAU::Action *act) {
+        check_action_data_bus_params(act);
+        return act;
+    }
+
+    IR::Node* postorder(IR::Expression* expr) {
+        auto orig_expr = getOriginal<IR::Expression>();
+        BUG_CHECK(orig_expr, "Couldn't find original IR node");
+
+        auto it = m_preload.find(orig_expr);
+        if (it == m_preload.end()) return expr;
+        m_preload.erase(it);
+
+        auto temp_var = new IR::TempVar(orig_expr->type);
+        auto preload_inst = new IR::MAU::Instruction("set", {temp_var, orig_expr});
+        m_precompute.push_back(preload_inst);
+
+        return temp_var;
+    }
+
+    IR::Node* postorder(IR::MAU::Table* tbl) override {
+        if (m_precompute.empty()) {
+            return tbl;
+        }
+
+        auto precompute_action = new IR::MAU::Action("$precompute");
+        precompute_action->action.append(m_precompute);
+        m_precompute.clear();
+        precompute_action->default_allowed = true;
+        precompute_action->init_default = true;
+
+        auto t = new IR::MAU::Table(tbl->name + "$precompute", VisitingThread(this));
+        t->is_compiler_generated = true;
+        t->match_table = new IR::P4Table(t->name.c_str(), new IR::TableProperties());
+        t->actions[precompute_action->name] = precompute_action;
+
+        return new IR::Vector<IR::MAU::Table>({t, tbl});
+    }
+
+ public:
+    explicit ExpandInstructions(const PhvInfo& p) : phv_i(p) {}
+};
+
 /** EliminateAllButLastWrite has to follow VerifyParallelWritesAndReads.  Look at the example
  *  above EliminateAllButLastWrite
  */
@@ -2903,6 +3027,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new EliminateAllButLastWrite(phv),
     new ArithCompareAdjustment(phv),
     new RemoveUnnecessaryActionArgSlice,
+    new ExpandInstructions(phv),
     new CollectPhvInfo(phv),
     new ValidateActions(phv, false, false, false)
 } {}

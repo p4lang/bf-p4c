@@ -636,12 +636,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
 )
 
-p4c_add_xfail_reason("tofino"
-    "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
-    extensions/p4_tests/p4_14/stf/stateful5-psa.p4
-    extensions/p4_tests/p4_16/stf/stateful5-psa.p4
-)
-
 # p4smith and p4testgen regression XFAILs
 
 # real error. fails because gateway condition too complex and cannot fit in a TCAM.
