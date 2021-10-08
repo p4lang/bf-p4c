@@ -263,26 +263,19 @@ class FieldUse {
         return *this;
     }
 
-    cstring toString(unsigned dark = 0) const {
-        if (use_ == 0) return "";
-        std::stringstream ss;
-        bool checkLiveness = true;
-        if (use_ & READ) {
-            ss << (dark & READ ? "R" : "r");
-            checkLiveness = false;
-        }
-        if (use_ & WRITE) {
-            ss << (dark & WRITE ? "W" : "w");
-            checkLiveness = false;
-        }
-        if (checkLiveness && (use_ & LIVE))
-            ss << "~";
-        return ss.str();
-    }
+    cstring toString(unsigned dark = 0) const;
 };
 
 // Pair of stage number and type of access for the field.
 using StageAndAccess = std::pair<int, FieldUse>;
+
+// Pair of two accesses.
+struct LiveRange {
+    StageAndAccess start;
+    StageAndAccess end;
+    LiveRange(const StageAndAccess& start, const StageAndAccess& end): start(start), end(end) {}
+    bool is_disjoint(const LiveRange& other) const;
+};
 
 std::ostream& operator<<(std::ostream& out, const PHV::Kind k);
 std::ostream& operator<<(std::ostream& out, const PHV::Size sz);
@@ -290,7 +283,8 @@ std::ostream& operator<<(std::ostream& out, const PHV::Type t);
 std::ostream& operator<<(std::ostream& out, const PHV::Container c);
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set);
 std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u);
-std::ostream& operator<<(std::ostream& out, const StageAndAccess s);
+std::ostream& operator<<(std::ostream& out, const StageAndAccess& s);
+std::ostream& operator<<(std::ostream& out, const LiveRange& s);
 
 JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
 }  // namespace PHV

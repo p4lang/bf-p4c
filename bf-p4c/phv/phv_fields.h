@@ -115,23 +115,6 @@ struct FieldOperation {
           inst(inst), rw_type(rw_type), range(range) { }
 };
 
-inline bool isLiveRangeDisjoint(
-        const StageAndAccess& a, const StageAndAccess& b,
-        const StageAndAccess& c, const StageAndAccess& d) {
-    // If the live ranges of current slice is [aA, bB] and that of other slice is [cC, dD], where
-    // the small letters indicate stage and the capital letters indicate access type (read or
-    // write).
-    // The live ranges are disjoint only if:
-    // ((a < c || (a == c && A < C)) && (b < c || (b == c && B < C))) ||
-    // ((c < a || (c == a && C < A)) && (d < a || (d == a && D < A)))
-    if ((((a.first < c.first) || (a.first == c.first && a.second < c.second)) &&
-         ((b.first < c.first) || (b.first == c.first && b.second < c.second))) ||
-        (((c.first < a.first) || (c.first == a.first && c.second < a.second)) &&
-         ((d.first < a.first) || (d.first == a.first && d.second < a.second))))
-        return true;
-    return false;
-}
-
 class Field;
 
 class Field : public LiftLess<Field> {

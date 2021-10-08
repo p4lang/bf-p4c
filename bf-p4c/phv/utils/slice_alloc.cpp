@@ -133,10 +133,11 @@ boost::optional<PHV::AllocSlice> PHV::AllocSlice::sub_alloc_by_field(int start, 
 
 bool PHV::AllocSlice::isLiveAt(int stage, const PHV::FieldUse& use) const {
     if (is_physical_stage_based_i) {
-        // physical live range, all AllocSlice live range starts with write and end with read.
-        // and no AllocSlice will have overlapped live range.
+        // physical live range, all AllocSlice live range starts with read or write
+        // and must end with read. Also, no AllocSlice will have overlapped live range.
         const int actual_stage = use.isWrite() ? stage + 1 : stage;
-        return min_stage_i.first + 1 <= actual_stage && actual_stage <= max_stage_i.first;
+        const int start = min_stage_i.second.isWrite() ? min_stage_i.first + 1 : min_stage_i.first;
+        return start <= actual_stage && actual_stage <= max_stage_i.first;
     } else {
         // after starting write
         const bool after_start = (min_stage_i.first < stage) ||
@@ -149,7 +150,8 @@ bool PHV::AllocSlice::isLiveAt(int stage, const PHV::FieldUse& use) const {
 }
 
 bool PHV::AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
-    return PHV::isLiveRangeDisjoint(min_stage_i, max_stage_i, other.min_stage_i, other.max_stage_i);
+    return LiveRange(min_stage_i, max_stage_i)
+        .is_disjoint(LiveRange(other.min_stage_i, other.max_stage_i));
 }
 
 bool PHV::AllocSlice::hasInitPrimitive() const {

@@ -94,6 +94,50 @@ void Container::toJSON(JSONGenerator& json) const {
     return Container();
 }
 
+cstring FieldUse::toString(unsigned dark) const {
+        if (use_ == 0) return "";
+        std::stringstream ss;
+        bool checkLiveness = true;
+        if (use_ & READ) {
+            ss << (dark & READ ? "R" : "r");
+            checkLiveness = false;
+        }
+        if (use_ & WRITE) {
+            ss << (dark & WRITE ? "W" : "w");
+            checkLiveness = false;
+        }
+        if (checkLiveness && (use_ & LIVE))
+            ss << "~";
+        return ss.str();
+    }
+
+
+bool LiveRange::is_disjoint(const LiveRange& other) const {
+    const StageAndAccess& a = this->start;
+    const StageAndAccess& b = this->end;
+    const StageAndAccess& c = other.start;
+    const StageAndAccess& d = other.end;
+
+    // if any of the pairs is [xR, xR] pair, which represents an empty live range,
+    // it is considered to be disjoint to any other live range.
+    if ((a == b && a.second == PHV::FieldUse(PHV::FieldUse::READ)) ||
+        (c == d && c.second == PHV::FieldUse(PHV::FieldUse::READ))) {
+        return true;
+    }
+    // If the live ranges of current slice is [aA, bB] and that of other slice is [cC, dD], where
+    // the small letters indicate stage and the capital letters indicate access type (read or
+    // write).
+    // The live ranges are disjoint only if:
+    // ((a < c || (a == c && A < C)) && (b < c || (b == c && B < C))) ||
+    // ((c < a || (c == a && C < A)) && (d < a || (d == a && D < A)))
+    if ((((a.first < c.first) || (a.first == c.first && a.second < c.second)) &&
+         ((b.first < c.first) || (b.first == c.first && b.second < c.second))) ||
+        (((c.first < a.first) || (c.first == a.first && c.second < a.second)) &&
+         ((d.first < a.first) || (d.first == a.first && d.second < a.second))))
+        return true;
+    return false;
+}
+
 std::ostream& operator<<(std::ostream& out, const PHV::Kind k) {
     switch (k) {
         case PHV::Kind::normal:   return out << "";
@@ -138,8 +182,12 @@ std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u) {
     return out << u.toString();
 }
 
-std::ostream& operator<<(std::ostream& out, const StageAndAccess s) {
+std::ostream& operator<<(std::ostream& out, const StageAndAccess& s) {
     return out << s.first << s.second;
+}
+
+std::ostream& operator<<(std::ostream& out, const LiveRange& s) {
+    return out << "[" << s.start << ", " << s.end << "]";
 }
 
 }  // namespace PHV

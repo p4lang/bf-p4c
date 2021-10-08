@@ -425,21 +425,15 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 if (!phv.isDarkMutex(f1, f2)) return false; } }
         return true;
     };
-    auto allPhysicalLiverangeDisjoint = [&] (const ordered_set<const PHV::Field*> left,
-                                             const ordered_set<const PHV::Field*> right) {
-        for (auto* f1 : left) {
-            for (auto* f2 : right) {
-                if (f1 == f2) continue;
-                const auto* lr1 = physical_liverange.get_liverange(PHV::FieldSlice(f1));
-                const auto* lr2 = physical_liverange.get_liverange(PHV::FieldSlice(f2));
-                BUG_CHECK(lr1 != nullptr, "missing liverange of %1%", f1);
-                BUG_CHECK(lr2 != nullptr, "missing liverange of %1%", f2);
-                return lr1->can_overlay(*lr2);
+    // TODO(yumin): there should be more conditions. pa_no_overlay and aliasingHeader?
+    auto allCanBeOverlaid = [&](const ordered_set<const PHV::Field*> fields) {
+        for (const auto* f : fields) {
+            if (f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch()) {
+                return false;
             }
         }
         return true;
     };
-
 
     // Check that we've marked a field as deparsed if and only if it's actually
     // emitted in the deparser.
@@ -520,13 +514,20 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 bitvec sliceBits(slice.container_slice().lo, slice.width());
                 if (!slice.field()->is_deparser_zero_candidate() &&
                     sliceBits.intersects(allocatedBitsForField)) {
-                    // Check that the liveness is different for slices that are allocated to the
+                    // Check that liveness(es) are different for slices that are allocated to the
                     // same container bits.
                     bool foundOverlappingSlices = false;
                     for (auto& slice2 : slicesForField) {
                         if (slice == slice2) continue;
                         bitvec slice2Bits(slice2.container_slice().lo, slice2.width());
                         if (!slice2Bits.intersects(sliceBits)) continue;
+                        // TODO(yumin):
+                        // Constraints of overlay are still vague, need more thoughts.
+                        // ERROR_CHECK(
+                        //     allCanBeOverlaid({slice.field(), slice2.field()}),
+                        //     "Container %1% contains fields which should never be overlaid:\n"
+                        //     "%2% and %3%.",
+                        //     container, cstring::to_cstring(slice), cstring::to_cstring(slice2));
                         if (slice.isLiveRangeDisjoint(slice2)) continue;
                         foundOverlappingSlices = true;
                     }
@@ -551,14 +552,16 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             allocatedBitsForContainer |= allocatedBitsForField;
         }
 
-        for (auto& kv : bits_to_fields) {
-            ERROR_CHECK(allMutex(kv.second, kv.second) || allDeparsedZero(kv.second) ||
-                        atMostOneNonePadding(kv.second) ||
-                        allDarkOverlayMutex(kv.second, kv.second) ||
-                        (physical_liverange_overlay
-                         && allPhysicalLiverangeDisjoint(kv.second, kv.second)),
-                        "Container %1% contains fields which overlap:\n%2%",
-                        container, cstring::to_cstring(kv.second));
+        // physical liverange overlay has checked above.
+        if (!physical_liverange_overlay) {
+            for (auto& kv : bits_to_fields) {
+                ERROR_CHECK(allMutex(kv.second, kv.second) ||
+                            allDeparsedZero(kv.second) ||
+                            atMostOneNonePadding(kv.second) ||
+                            allDarkOverlayMutex(kv.second, kv.second),
+                            "Container %1% contains fields which overlap:\n%2%", container,
+                            cstring::to_cstring(kv.second));
+            }
         }
 
         // XXX(cole): Checking that deparsed fields adjacent in the

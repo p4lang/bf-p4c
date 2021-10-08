@@ -134,7 +134,43 @@ TEST_F(FieldSliceLiveRangeTest, disjoint_ranges) {
          }},
         {"D R D D D",
          {
-             // empty live range for uninitialized read.
+             {{0, PHV::FieldUse(PHV::FieldUse::READ)}, {0, PHV::FieldUse(PHV::FieldUse::READ)}},
+         }},
+        {"D R W L R D",
+         {
+             {{0, PHV::FieldUse(PHV::FieldUse::READ)}, {0, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
+         }},
+        {"D RW L L R D",
+         {
+             {{0, PHV::FieldUse(PHV::FieldUse::READ)}, {0, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{0, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
+         }},
+        //  0  1  2  3 4  5  6
+        {"D RW RW L R RW RW R D D",
+         {
+             {{0, PHV::FieldUse(PHV::FieldUse::READ)}, {0, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{0, PHV::FieldUse(PHV::FieldUse::WRITE)}, {1, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{4, PHV::FieldUse(PHV::FieldUse::READ)}, {4, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{4, PHV::FieldUse(PHV::FieldUse::WRITE)}, {5, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{5, PHV::FieldUse(PHV::FieldUse::WRITE)}, {6, PHV::FieldUse(PHV::FieldUse::READ)}},
+         }},
+        //  0  1  2  3 4  5  6
+        {"D RW RW RW R RW RW R D D",
+         {
+             {{0, PHV::FieldUse(PHV::FieldUse::READ)}, {0, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{0, PHV::FieldUse(PHV::FieldUse::WRITE)}, {1, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {2, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{2, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{4, PHV::FieldUse(PHV::FieldUse::READ)}, {4, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{4, PHV::FieldUse(PHV::FieldUse::WRITE)}, {5, PHV::FieldUse(PHV::FieldUse::READ)}},
+             {{5, PHV::FieldUse(PHV::FieldUse::WRITE)}, {6, PHV::FieldUse(PHV::FieldUse::READ)}},
+         }},
+        // ignore parser read.
+        {"RW L L L R D",
+         {
+             {{-1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
          }},
     };
     for (const auto& tc : cases) {

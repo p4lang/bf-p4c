@@ -1,4 +1,5 @@
 #include "fieldslice_live_range.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/exceptions.h"
@@ -99,6 +100,7 @@ bool LiveRangeInfo::can_overlay(const LiveRangeInfo& other) const {
 std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::disjoint_ranges()
     const {
     std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> rst;
+    boost::optional<int> last_defined_read;
     for (int i = 0; i < int(lives_i.size()); i++) {
         if (lives_i[i] == OpInfo::DEAD) {
             continue;
@@ -106,10 +108,24 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
         BUG_CHECK(lives_i[i] != OpInfo::LIVE, "live without definition: %1%", *this);
 
         // uninitialized read, not even caught by parser implicit init,
-        // field can be considered as not live.
-        if (lives_i[i] == OpInfo::READ) {
-            LOG3("ignoring uninitialized read: " << *this);
-            continue;
+        // field can be considered as not live, we will add a short live range of [x, x).
+        // NOTE that we ignore uninitialized reads in parser (i != 0) because parser reads
+        // values from input buffer instead of PHV containers.
+        if (i != 0 && (lives_i[i] == OpInfo::READ || lives_i[i] == OpInfo::READ_WRITE)) {
+            const auto uninit_read = std::make_pair(i - 1, PHV::FieldUse(PHV::FieldUse::READ));
+            const auto empty_liverange = std::make_pair(uninit_read, uninit_read);
+            if (lives_i[i] == OpInfo::READ) {
+                rst.emplace_back(empty_liverange);
+                LOG3("uninitialized read: " << uninit_read);
+                continue;
+            } else {
+                // The read in this READ_WRITE must be not actually initialized.
+                // DO NOT skip this WRITE of READ_WRITE starting from i.
+                if (!last_defined_read || last_defined_read != i) {
+                    rst.emplace_back(empty_liverange);
+                    LOG3("uninitialized read: " << uninit_read);
+                }
+            }
         }
 
         auto start = std::make_pair(i - 1, PHV::FieldUse(PHV::FieldUse::WRITE));
@@ -124,8 +140,9 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
         auto end = std::make_pair(j - 1, PHV::FieldUse(PHV::FieldUse::READ));
         rst.emplace_back(std::make_pair(start, end));
         i = j;
-        // when the end is read write, it is also a start of the next live range.
+        // when the end is READ_WRITE, it is also a start of the next live range.
         if (lives_i[j] == OpInfo::READ_WRITE) {
+            last_defined_read = i;
             i--;
         }
     }
@@ -196,13 +213,15 @@ bool FieldSliceLiveRangeDB::MapFieldSliceToAction::preorder(const IR::MAU::Actio
 
 boost::optional<FieldSliceLiveRangeDB::DBSetter::Location>
 FieldSliceLiveRangeDB::DBSetter::to_location(const PHV::Field* field,
-                                             const IR::BFN::Unit* unit,
+                                             const FieldDefUse::locpair& unit_expr,
                                              bool is_read) const {
+    const auto* unit = unit_expr.first;
+    const auto* expr = unit_expr.second;
     Location loc;
     if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>()) {
         if (!is_read) {
             // Ignore implicit parser init when the field is marked as no_init.
-            if (unit->is<ImplicitParserInit>() && not_implicit_init_fields().count(field))
+            if (expr->is<ImplicitParserInit>() && not_implicit_init_fields().count(field))
                 return boost::none;
         }
         loc.u = Location::PARSER;
@@ -313,15 +332,11 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
     for (const auto& fs : fs_set) {
         LOG5("compute physical live range: " << fs);
         const auto& uses = defuse->getAllUses(fs.field()->id);
-        for (const auto& use : uses) {
+        for (const FieldDefUse::locpair& use : uses) {
             LOG5("found use: " << use.first);
-            const auto* unit = use.first;
             const auto* field = fs.field();
-            const auto use_loc = to_location(field, unit, true);
-            if (!use_loc) {
-                LOG5("use ignored.");
-                continue;
-            }
+            const auto use_loc = to_location(field, use, true);
+            BUG_CHECK(use_loc, "use cannot be ignored");
             const auto& defs_of_use = defuse->getDefs(use);
             // Update uses if there is no defs. It is possible that read without initialization.
             // For example, fields added by compiler as padding for deparsed(digested) metadata.
@@ -344,9 +359,8 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
             }
             for (const auto& def : defs_of_use) {
                 LOG5("found paired def: " << def.first);
-                const IR::BFN::Unit* def_unit = def.first;
                 const auto* field = fs.field();
-                const auto def_loc = to_location(field, def_unit, false);
+                const auto def_loc = to_location(field, def, false);
                 if (def_loc) {
                     update_live_range_info(fs, *use_loc, *def_loc, fs_info_map[fs]);
                 } else {

@@ -190,10 +190,10 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             if (p->gress == INGRESS && (!f.metadata && !f.bridged)) continue;
             if (p->gress == EGRESS  && (!f.metadata || f.bridged)) continue;
         }
-        LOG1("Ignoring implicit initialization for " << f.name);
+        LOG1("Adding implicit parser initialization expr for " << f.name);
         auto* parser_begin = p->start;
         const PHV::Field* f_p = phv.field(f.id);
-        BUG_CHECK(f_p != nullptr, "Deferencing a invalidate field id");
+        BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
         IR::Expression* dummy_expr = new ImplicitParserInit(f_p);
         auto& info = field(f_p);
         parser_zero_inits.emplace(parser_begin, dummy_expr);

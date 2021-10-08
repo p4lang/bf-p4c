@@ -642,6 +642,21 @@ PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(PHV::SuperClu
                                         boost::bind(&AllocUtils::is_referenced, this, _1));
 }
 
+bool PHV::AllocUtils::can_physical_liverange_be_overlaid(
+        const PHV::AllocSlice& a, const PHV::AllocSlice& b) const {
+    BUG_CHECK(a.isPhysicalStageBased() && b.isPhysicalStageBased(),
+              "physical liverange overlay should be checked "
+              "only when both slices are physical stage based");
+    // TODO(yumin): need more thoughts on these constraints.
+    const auto never_overlay = [](const PHV::Field* f) {
+            return f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch();
+    };
+    if (never_overlay(a.field()) || never_overlay(b.field())) {
+        return false;
+    }
+    return pragmas.pa_no_overlay().can_overlay(a.field(), b.field()) && a.isLiveRangeDisjoint(b);
+}
+
 const std::vector<MetricName> AllocScore::g_general_metrics = {
     n_tphv_on_phv_bits,
     n_mocha_on_phv_bits,
@@ -1008,7 +1023,7 @@ bool CoreAllocation::can_physical_liverange_overlay(
     for (const auto& other : allocated) {
         BUG_CHECK(other.isPhysicalStageBased(),
                   "slice must be physical-stage-based in can_physical_liverange_overlay");
-        if (!slice.isLiveRangeDisjoint(other)) {
+        if (!utils_i.can_physical_liverange_be_overlaid(slice, other)) {
             return false;
         }
     }
@@ -2659,10 +2674,13 @@ bool CoreAllocation::generateNewAllocSlices(
                 // because this is the slice prior to overlay
                 if (mlsBits.intersectWith(cBits).size() > 0) continue;
 
-                bool disjoint_lr = isLiveRangeDisjoint(newSlice.getEarliestLiveness(),
-                                                       newSlice.getEarliestLiveness(),
-                                                       mls.getEarliestLiveness(),
-                                                       mls.getLatestLiveness());
+                // This is counting the number of source at the time newSlice is initialized,
+                // so we only care about the start of newSlice liverange
+                // overlapping with the liveranges of other allocated slices.
+                bool disjoint_lr =
+                    PHV::LiveRange(newSlice.getEarliestLiveness(), newSlice.getEarliestLiveness())
+                        .is_disjoint(
+                            PHV::LiveRange(mls.getEarliestLiveness(), mls.getLatestLiveness()));
                 if (disjoint_lr) continue;
 
                 PHV::Container mlsCntr = PHV::Container();
@@ -3924,10 +3942,18 @@ boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
             if (utils_i.settings.physical_liverange_overlay) {
                 candidate_slices = make_alloc_slices_with_physical_liverange(
                     utils_i.physical_liverange_db, candidate_slices);
-                if (LOGGING(5)) {
-                    for (const auto& slice : candidate_slices) {
-                        LOG5("updated deparser-zero slice with physical liverange: " << slice);
-                    }
+                // XXX(yumin): do not overlay with deparser-zero optimization slices, because
+                // they rely on parser to init the container to zero and use them in deparser
+                // for emitting zeros.
+                // TODO(yumin): we can overlay them on Tofino2+ if we support the feature:
+                // deparser output any one of 8 constant bytes in any slot of a field
+                // dictionary (the 8 constants can be programmed to any 8 8bit values).
+                const auto default_lr =
+                    utils_i.physical_liverange_db.default_liverange()->disjoint_ranges().front();
+                for (auto& slice : candidate_slices) {
+                    slice.setLiveness(default_lr.first, default_lr.second);
+                    LOG5("update deparser-zero slice physical liverange to full pipeline: "
+                         << slice);
                 }
             }
             for (auto& alloc_slice : candidate_slices)

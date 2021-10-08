@@ -81,7 +81,10 @@ class LiveRangeInfo {
     //   Foo   W R D W L L  L  R
     //   Foo.disjoint_ranges() = [(-1W, 0R), (2W, 12R)] // if tofino
     // stage of parse is -1, mau stages starts from 0 and deparser is device::max_stage().
-    // Tailing writes and uninitialized read (not caught by parser implicit init) will be ignored.
+    // Tailing writes (write without paired read) will be ignored.
+    // Uninitialized reads, that are not caught by parser implicit init or
+    // when auto-init-metadata are not enabled, will have a short live range [xR, xR].
+    // These short live ranges should be treated as overlayable to any other live ranges.
     // contract: for every paired def and use, all stages in between are marked as LIVE.
     // NOTE: Even if IDs of units seem to be using the same schema as min-stage-based
     // StageAndAccess, they are not. The previous StageAndAccess use max_min_stage + 1
@@ -147,7 +150,7 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
         // locations of parser implicit init unit will be boost::none,
         // and for fields marked as not_parsed_fields(), locations of parser unit will be none.
         boost::optional<Location> to_location(
-                const PHV::Field *field, const IR::BFN::Unit *unit, bool is_read) const;
+                const PHV::Field *field, const FieldDefUse::locpair& loc, bool is_read) const;
 
         /// update @p liverange based on paired input: @p use_loc and @p def_loc.
         /// return false if invalid live range is found.

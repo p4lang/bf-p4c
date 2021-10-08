@@ -123,6 +123,14 @@ struct AllocUtils {
     // @returns a slicing iterator.
     PHV::Slicing::IteratorInterface* make_slicing_ctx(PHV::SuperCluster* sc) const;
 
+    // @returns true if @p a and @p b can be overlaid,
+    // because of their physical live ranges are disjoint and both fieldslices are
+    // qualified to be overlaid:
+    // (1) not pov, deparsed_to_tm, nor is_invalidate_from_arch.
+    // (2) not in pa_no_overlay.
+    bool can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
+                                            const PHV::AllocSlice& b) const;
+
     /// @returns the container groups available on this Device. All fieldslices in
     /// a cluster must be allocated to the same container group.
     static std::list<PHV::ContainerGroup *> make_device_container_groups();
