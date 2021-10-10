@@ -13,6 +13,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/parde/clot/clot_info.h"
@@ -100,15 +101,21 @@ class AsmOutput : public Inspector {
                 << "  target: " << Device::name() << std::endl;
             if (::errorCount() == 0) {
                 out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
-                                    pipe->ghost_thread != nullptr)
-                    << ParserAsmOutput(pipe, phv, INGRESS);
-                if (Device::hasIngressDeparser())
-                    out << DeparserAsmOutput(pipe, phv, clot, INGRESS);
-                if (pipe->ghost_thread != nullptr)
-                    out << "parser ghost: " << ghostPhvContainer() << std::endl;
-                if (Device::hasEgressParser())
-                    out << ParserAsmOutput(pipe, phv, EGRESS);
-                out << DeparserAsmOutput(pipe, phv, clot, EGRESS)
+                        pipe->ghost_thread.ghost_parser != nullptr)
+                    << ParserAsmOutput(pipe, phv, INGRESS)
+                    << DeparserAsmOutput(pipe, phv, clot, INGRESS);
+                if (pipe->ghost_thread.ghost_parser != nullptr) {
+                    out << "parser ghost: " << std::endl;
+                    out << "  ghost_md: " << ghostPhvContainer() << std::endl;
+                    if (ghost_only_on_other_pipes(pipe->id)) {
+                        // Fix for P4C-3925. In future this may be tied to a
+                        // command line option which dictates the pipe mask
+                        // value
+                        out << "  pipe_mask: 0" << std::endl;
+                    }
+                }
+                out << ParserAsmOutput(pipe, phv, EGRESS)
+                    << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                     << mauasm << std::endl
                     << flex->asm_output() << std::endl;
             }

@@ -370,7 +370,7 @@ class Transition {
     optional inline Vector<SaveToRegister>  saves;
 
     /// registers to scratch pad on write
-    optional std::set<MatchRegister> scratches; 
+    optional std::set<MatchRegister> scratches;
 }
 
 /// A parser selection operation. These represent a load of a value from some
@@ -456,6 +456,20 @@ class Parser : AbstractParser {
     optional NullOK cstring pipeName;
     optional NullOK Phase0 phase0; // only valid for ingress
     optional inline std::vector<int> portmap;  // used for multiple parser support
+}
+
+/// Ghost Parser to account for implicit ghost MD writes. This is a fake Parser
+/// and does not have a P4 equivalent. This parser must be present on all pipes
+/// in the P4 program whenever there is atleast one Ghost Control present on a
+/// pipe. The ParserLVal consists of ghost intrinsic metadata header fields which
+/// are recognized by PHV allocation for allocation and correct live range
+/// analysis.
+class GhostParser : AbstractParser {
+    toString { return "ghost parser"; }
+    // Header ordering must be preserved
+    ParserLVal ghost_md;  // field is a ConcreteHeaderRef
+    optional IR::ID name;
+    optional NullOK cstring pipeName;
 }
 
 /// A list of fields which will be written into a buffer as part of a deparser

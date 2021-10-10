@@ -152,7 +152,7 @@ const IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(IR::BFN::Pipe* pipe) {
     std::initializer_list<std::pair<const IR::MAU::TableSeq*&, gress_t>> threads = {
         {pipe->thread[0].mau, INGRESS},
         {pipe->thread[1].mau, EGRESS},
-        {pipe->ghost_thread, GHOST},
+        {pipe->ghost_thread.ghost_mau, GHOST},
     };
     for (auto& mau_gress : threads) {
         auto*& mau = mau_gress.first;

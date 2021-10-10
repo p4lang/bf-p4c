@@ -31,5 +31,8 @@ inline void fatal_error(int kind, const char* format, T... args) {
     throw Util::CompilationError("Compilation failed!");
 }
 
+/// Check if ghost control is present on any pipes other than current pipe given
+/// by pipe_id argument
+bool ghost_only_on_other_pipes(int pipe_id);
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

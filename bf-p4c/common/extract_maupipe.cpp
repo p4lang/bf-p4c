@@ -13,6 +13,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/midend/simplify_references.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/stateful_alu.h"
@@ -1916,7 +1917,25 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     CollectGlobalPragma collect_pragma;
     new_program->apply(collect_pragma);
 
+    // Save valid pipes and valid ghost pipes on program. This info is relevant
+    // mainly for multipipe programs and to give access to each pipe compilation
+    // on how many ghost threads and pipes are in use
     auto npipe = 0;
+    auto &options = BackendOptions();
+    for (auto pkg : main->constantValue) {
+        if (!pkg.second) continue;
+        if (!pkg.second->is<IR::PackageBlock>()) continue;
+
+        options.pipes |= (0x1 << npipe);
+
+        if (arch->threads.count(std::make_pair(npipe, GHOST))) {
+            options.ghost_pipes |= (0x1 << npipe);
+        }
+
+        npipe++;
+    }
+
+    npipe = 0;
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
@@ -1946,12 +1965,30 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
                 dprsr->apply(ExtractChecksum(rv));
             }
         }
+
+        // Enable ghost parser on all pipes in program if it has at least one
+        // ghost control
+        if (options.ghost_pipes > 0) {
+            auto gh_intr_md_fields = IR::IndexedVector<IR::StructField>({
+            new IR::StructField("ping_pong", IR::Type_Bits::get(1)),
+            new IR::StructField("qlength"  , IR::Type_Bits::get(18)),
+            new IR::StructField("qid"      , IR::Type_Bits::get(11)),
+            new IR::StructField("pipe_id"  , IR::Type_Bits::get(2)) });
+            auto ghost_type = new IR::Type_Header(
+                    IR::ID("ghost_intrinsic_metadata_t"), gh_intr_md_fields);
+            auto ghost_hdr = new IR::Header(IR::ID("gh_intr_md"), ghost_type);
+            auto ghost_conc_hdr = new IR::ConcreteHeaderRef(ghost_hdr);
+            auto ghost_md = new IR::BFN::FieldLVal(ghost_conc_hdr);
+            rv->ghost_thread.ghost_parser = new IR::BFN::GhostParser(INGRESS,
+                                ghost_md, IR::ID("ghost_parser"), rv->name);
+        }
+
         if (arch->threads.count(std::make_pair(npipe, GHOST))) {
             auto thread = arch->threads.at(std::make_pair(npipe, GHOST));
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
-                mau->apply(GetBackendTables(refMap, typeMap, GHOST, rv->ghost_thread,
+                mau->apply(GetBackendTables(refMap, typeMap, GHOST, rv->ghost_thread.ghost_mau,
                                             converted, stateful_selectors, sourceInfoLogging));
             }
         }
@@ -1965,8 +2002,10 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
 
         pipe.push_back(p);
         pipes.emplace(npipe, p);
+
         npipe++;
     }
+
     return false;
 }
 

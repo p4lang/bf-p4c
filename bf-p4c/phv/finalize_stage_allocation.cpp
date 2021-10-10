@@ -53,8 +53,11 @@ void FinalizeStageAllocation::summarizeUseDefs(
                 LOG5("\tUsed in table " << t->name << " (DG Stage " << dg.min_stage(t) << ") : " <<
                      f->name << "[" << bits.hi << ":" << bits.lo << "]");
             }
+        } else if (ref.first->is<IR::BFN::GhostParser>()) {
+            continue;  // skip
         } else {
-            BUG("Found a unit that is not the parser, deparser, or table");
+            BUG("Found a reference %s in unit %s that is not the parser, deparser, or table",
+                    ref.second->toString(), ref.first->toString());
         }
     }
 }

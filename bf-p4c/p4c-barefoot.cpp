@@ -402,6 +402,7 @@ int main(int ac, char **av) {
         if (options.skipped_pipes.count(pipe->name)) continue;
 #endif
 
+        LOG3("Executing backend for pipe : " << pipe->name);
         manifest.setPipe(pipe->id, pipe->name.name);
         EventLogger::get().pipeChange(pipe->id);
 

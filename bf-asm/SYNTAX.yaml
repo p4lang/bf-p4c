@@ -6,6 +6,8 @@
 #                   end with '-' or '.' or have two consecutive '-' or '.'
 #   <thread>    ::= "ingress" | "egress" | "ghost"
 #                   ghost is only availble in jbay mau and phv sections
+#                   ghost only has 'ghost_md' and 'pipe_mask' sections used to 
+#                   configure 'tm_status_phv' register
 #   <register>  ::= <name> that matches a predefined register name
 #   <slice>     ::= <name>(<lo>..<hi>) | <name>(<bit>)
 #                   no spaces between parts of the <slice>
@@ -163,6 +165,12 @@ parser [<thread>] [<port_use>, ...]:
         dec: <int>
         max: <int>
         interval: <int>  # tofino2+ only
+    ghost_md:
+        # container(s) allocated to store ghost intrinsic metadata
+        # tofino2+ only (set tm_status_phv reg)
+    pipe_mask:
+        # pipe_mask to be set for ghost packets 
+        # (tm_status_phv.pipe_mask in tofino2)
 stage <constant> <thread>:
     # Defines a single stage of the MAU.  The order of the tables within the
     # stage is the logical table ordering, so order matters

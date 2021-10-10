@@ -240,7 +240,9 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     if (gress == GHOST) gress = INGRESS;
     for (auto &f : phv) {
         if (f.gress == gress) {
-            emit_phv_field(out, &f); } }
+            emit_phv_field(out, &f);
+        }
+    }
 
     if (BackendOptions().debugInfo) {
         out << "  " << "context_json:\n";

@@ -72,6 +72,7 @@ class Device {
     static bool hasIngressDeparser() { return Device::get().getHasIngressDeparser(); }
     static bool hasEgressParser() { return Device::get().getHasEgressParser(); }
     static bool hasImplictPHVValidBit() { return Device::get().getHasImplicitPHVValidBit(); }
+    static bool hasGhostThread() { return Device::get().getHasGhostThread(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -106,6 +107,7 @@ class Device {
     virtual bool getHasIngressDeparser() const = 0;
     virtual bool getHasEgressParser() const = 0;
     virtual bool getHasImplicitPHVValidBit() const = 0;
+    virtual bool getHasGhostThread() const = 0;
 
  private:
     static Device* instance_;
@@ -158,6 +160,7 @@ class TofinoDevice : public Device {
     bool getHasIngressDeparser() const override { return true; }
     bool getHasEgressParser() const override { return true; }
     bool getHasImplicitPHVValidBit() const override { return true; }
+    bool getHasGhostThread() const override { return false; };
 };
 
 class JBayDevice : public Device {
@@ -205,6 +208,7 @@ class JBayDevice : public Device {
     bool getHasIngressDeparser() const override { return true; }
     bool getHasEgressParser() const override { return true; }
     bool getHasImplicitPHVValidBit() const override { return false; }
+    bool getHasGhostThread() const override { return true; };
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -282,6 +286,7 @@ class CloudbreakDevice : public Device {
     bool getHasIngressDeparser() const override { return true; }
     bool getHasEgressParser() const override { return true; }
     bool getHasImplicitPHVValidBit() const override { return false; }
+    bool getHasGhostThread() const override { return true; };
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -331,6 +336,7 @@ class FlatrockDevice : public Device {
     bool getHasIngressDeparser() const override { return false; }
     bool getHasEgressParser() const override { return false; }
     bool getHasImplicitPHVValidBit() const override { return false; }
+    bool getHasGhostThread() const override { return false; /* TBD */ };
 };
 #endif /* HAVE_FLATROCK */
 

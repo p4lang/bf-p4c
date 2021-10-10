@@ -2330,7 +2330,7 @@ void FindDependencyGraph::verify_dependence_graph() {
 bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
     LOG2(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread) );
+         TableTree("ghost", pipe->ghost_thread.ghost_mau) );
     return false;
 }
 

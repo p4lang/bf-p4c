@@ -540,8 +540,20 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
 
     regs.merge.lr1.g_start_table.table = Stage::first_table(GHOST) & 0x1ff;
     if (ghost_parser.size()) {
+        // tm_status_phv sets the location for ghost intrinsic metadata in the
+        // parser
+        // The parser carves up the 4k of PHV it sees into 256 x 16b containers.
+        // (32b MAU containers map to a pair of parser 16b containers, and 2 x
+        // 8b MAU containers map to a single parser 16b container.) PHV
+        // specified here will take the two containers at address
+        // { PHV & 0xfe, PHV & 0xfe + 1 }.
+        // Hence, ghost intrinsic metadata is assumed to be allocated in a
+        // contiguous 32b location.
+        regs.merge.lr1.tm_status_phv.en = 1;
         regs.merge.lr1.tm_status_phv.phv = ghost_parser[0]->reg.parser_id();
-        regs.merge.lr1.tm_status_phv.en = 1; }
+        if (ghost_pipe_mask != 0xf)  // if not default set given value
+            regs.merge.lr1.tm_status_phv.pipe_mask = ghost_pipe_mask;
+    }
 
     if (gress == INGRESS) {
         for (auto &ref : regs.ingress.prsr)

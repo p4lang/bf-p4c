@@ -85,7 +85,8 @@ class TableTree {
                 tt.print(out, {"ingress"}, tt.pipe->thread[INGRESS].mau);
             if (tt.pipe->thread[EGRESS].mau)
                 tt.print(out, {"egress"}, tt.pipe->thread[EGRESS].mau);
-            if (tt.pipe->ghost_thread) tt.print(out, {"ghost"}, tt.pipe->ghost_thread);
+            if (tt.pipe->ghost_thread.ghost_mau)
+                tt.print(out, {"ghost mau"}, tt.pipe->ghost_thread.ghost_mau);
         } else if (tt.seq) {
             tt.print(out, tt.name, tt.seq); }
         return out; }

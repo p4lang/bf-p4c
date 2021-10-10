@@ -80,6 +80,15 @@ class BFN_Options : public CompilerOptions {
     // pragma command line will only invoke the callbacks for the
     // respective options.
     bool processed = false;
+    // FIXME: Must be eventually moved to a program specific data structure
+    // which is accessible by Backend as this is currently not set through
+    // command line option but a convenient place to store global program
+    // information
+    // Set pipe ids for program, for a multipipe program all valid pipe ids will be set
+    unsigned pipes = 0;
+    // Set ghost pipe ids for program, for a multipipe program all pipes with
+    // ghost threads will be set
+    unsigned ghost_pipes = 0;
 };
 
 // forward declarations so we do not include ir-generated.h

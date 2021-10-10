@@ -98,7 +98,8 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
                 maxUseAccess |= READ;
             }
         } else {
-            BUG("Unknown unit encountered %1%", use_unit->toString());
+            if (!use_unit->to<IR::BFN::GhostParser>())
+                BUG("Unknown unit encountered %1%", use_unit->toString());
         }
     }
 

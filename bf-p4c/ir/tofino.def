@@ -52,7 +52,18 @@ class BFN::Pipe {
         }
     }
     thread_t[2] thread = {};
-    NullOK MAU::TableSeq ghost_thread = nullptr;  // GHOST -- just mau, no parser or deparser
+
+    class ghost_thread_t {
+        NullOK MAU::TableSeq ghost_mau = nullptr;
+        BFN::GhostParser ghost_parser = nullptr;  // Fake Ghost Parser
+        operator== { return ghost_mau == a.ghost_mau
+                        && ghost_parser == a.ghost_parser; }
+        dump_fields { out << "ghost_mau=" << ghost_mau;
+                      out << "ghost_parser=" << ghost_parser; }
+        dbprint { out << "ghost_mau=" << ghost_mau;
+                      out << "ghost_parser=" << ghost_parser; }
+    }
+    ghost_thread_t ghost_thread;
 
 #emit
     /// If non-null, information about header stack usage in this pipe.
@@ -60,21 +71,25 @@ class BFN::Pipe {
 #end
 
 #apply
-    operator== { return metadata == a.metadata &&
-                        global_pragmas == a.global_pragmas &&
-                        headerStackInfo == a.headerStackInfo &&
-                        thread[0] == a.thread[0] &&
-                        thread[1] == a.thread[1] &&
-                        ghost_thread == a.ghost_thread; }
+    operator== { return metadata == a.metadata
+                        && global_pragmas == a.global_pragmas
+                        && headerStackInfo == a.headerStackInfo
+                        && thread[0] == a.thread[0]
+                        && thread[1] == a.thread[1]
+                        && ghost_thread.ghost_parser == a.ghost_thread.ghost_parser
+                        && ghost_thread.ghost_mau == a.ghost_thread.ghost_mau; }
     visit_children {
         if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
             if (th->thread == GHOST) {
-                v.visit(ghost_thread, "ghost_thread");
+                v.visit(ghost_thread.ghost_parser, "ghost_parser");
+                v.visit(ghost_thread.ghost_mau, "ghost_mau");
             } else {
                 thread[th->thread].parsers.parallel_visit_children(v);
                 ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
                 v.visit(thread[th->thread].mau, "mau");
                 v.flow_merge_global_from("-EXIT-");
+                v.visit(ghost_thread.ghost_parser, "ghost_parser");
+                v.visit(ghost_thread.ghost_mau, "ghost_mau");
                 v.visit(thread[th->thread].deparser, "deparser"); }
         } else {
             // FIXME -- doesn't do flow_clone/merge properly, but fixing will
@@ -85,7 +100,8 @@ class BFN::Pipe {
                 v.visit(th.mau, "mau");
                 v.flow_merge_global_from("-EXIT-");
                 v.visit(th.deparser, "deparser"); }
-            v.visit(ghost_thread, "ghost_thread"); } }
+            v.visit(ghost_thread.ghost_parser, "ghost_parser");
+            v.visit(ghost_thread.ghost_mau, "ghost_mau"); } }
 }
 
 // A path that may span more than two pipeline gresses, depending on how the

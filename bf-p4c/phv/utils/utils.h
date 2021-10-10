@@ -1177,5 +1177,4 @@ template <typename T>
 bool operator!=(const ordered_set<T>& left, const ordered_set<T>& right) {
     return !(left == right);
 }
-
 #endif  /* BF_P4C_PHV_UTILS_UTILS_H_ */

@@ -2825,8 +2825,8 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
         }
         gress_index++;
     }
-    if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
-        new GroupPlace(*this, work, {}, pipe->ghost_thread); }
+    if (pipe->ghost_thread.ghost_mau && pipe->ghost_thread.ghost_mau->tables.size() > 0) {
+        new GroupPlace(*this, work, {}, pipe->ghost_thread.ghost_mau); }
     self.rejected_placements.clear();
     saved_placements.clear();
     backtrack_count = 0;
@@ -3007,7 +3007,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     LOG1("table placement starting " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread) );
+         TableTree("ghost", pipe->ghost_thread.ghost_mau) );
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
     BacktrackPlacement *start_flow = nullptr;
@@ -3476,7 +3476,7 @@ IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
     LOG3("table placement completed " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread));
+         TableTree("ghost", pipe->ghost_thread.ghost_mau));
     BUG_CHECK(always_run_actions.empty(), "Inconsistent always_run list");
     return pipe;
 }

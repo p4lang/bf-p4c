@@ -453,6 +453,7 @@ void Clustering::CollectInconsistentFlexibleFieldExtract::save_header_layout(
 
 bool Clustering::CollectInconsistentFlexibleFieldExtract::preorder(
     const IR::ConcreteHeaderRef* hr) {
+    LOG3("CollectInconsistentFlexibleFieldExtract preorder ConcreteHeaderRef: " << hr);
     save_header_layout(hr);
     return true;
 }

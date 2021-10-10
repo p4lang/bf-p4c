@@ -2,6 +2,7 @@
 #define BF_P4C_COMMON_CHECK_HEADER_REFS_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/common/utils.h"
 
 /**
  * Once the CopyHeaderEliminator and HeaderPushPo passes have run, HeaderRef
@@ -12,6 +13,7 @@
 class CheckForHeaders final : public Inspector {
     bool preorder(const IR::Member *) { return false; }
     bool preorder(const IR::HeaderRef *h) {
+        if (h->toString() == "ghost::gh_intr_md") return false;
         BUG("Header present in IR not under Member: %s", h->toString());
     }
 };

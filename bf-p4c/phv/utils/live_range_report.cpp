@@ -36,7 +36,8 @@ std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
                 LOG4("\tAssign " << usedef << " to stage " << stage);
             }
         } else {
-            BUG("Unknown unit encountered %1%", use_unit->toString());
+            if (!use_unit->to<IR::BFN::GhostParser>())
+                BUG("Unknown unit encountered %1%", use_unit->toString());
         }
     }
     return fieldMap;

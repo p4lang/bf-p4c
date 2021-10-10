@@ -190,7 +190,9 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             livemap.addAccess(f, use_stage, READ, use_unit, !defuse.hasNonDarkContext(use));
             if (!defuse.hasNonDarkContext(use)) LOG_DEBUG4("\t\tCan use in a dark container.");
         } else {
-            BUG("Unknown unit encountered %1%", use_unit->toString());
+            if (!use_unit->to<IR::BFN::GhostParser>()) {
+                BUG("Unknown unit encountered %1%", use_unit->toString());
+            }
         }
     }
 

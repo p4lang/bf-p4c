@@ -400,7 +400,10 @@ void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::Pipe::dbprint(std::ostream &out) const {
-    if (ghost_thread) out << "ghost:" << indent << ghost_thread << unindent << endl;
+    if (ghost_thread.ghost_mau)
+        out << "ghost mau:" << indent << ghost_thread.ghost_mau << unindent << endl;
+    if (ghost_thread.ghost_parser)
+        out << "ghost parser:" << indent << ghost_thread.ghost_parser << unindent << endl;
     out << "ingress:" << indent << endl;
     for (auto p : thread[0].parsers)
         out << p << endl;
@@ -444,4 +447,9 @@ void IR::BFN::BridgePath::dbprint(std::ostream &out) const {
         out << th.mau << std::endl;
         out << th.deparser << std::endl;
     }
+}
+
+void IR::BFN::GhostParser::dbprint(std::ostream &out) const {
+    out << "parser ghost : " << name << " pipe : " << pipeName << indent << std::endl;
+    out << "ghost_md: " << ghost_md << unindent << std::endl;
 }

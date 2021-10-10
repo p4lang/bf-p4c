@@ -287,6 +287,7 @@ class Parser {
     // in Parser class.
     // FIXME -- should move all merge reg handling into AsmParser.
     std::vector<Phv::Ref>               ghost_parser;
+    unsigned                            ghost_pipe_mask = 0xf;  // only set for JBAY
     bitvec                              (&phv_use)[2];
     bitvec                              phv_allow_bitwise_or, phv_allow_clear_on_write;
     bitvec                              phv_init_valid;

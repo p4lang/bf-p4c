@@ -1,13 +1,13 @@
 
 #include "bf_gtest_helpers.h"
 
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/algorithm/string/trim_all.hpp>
 #include <climits>
 #include <regex>
 #include <exception>
 #include <sstream>
 #include <utility>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
 
 #include "ir/ir.h"
 #include "p4headers.h"
@@ -610,7 +610,7 @@ std::string TestCode::extract_asm(CodeBlock blk_type) const {
         case CodeBlock::PhvAsm:
             oss << PhvAsmOutput(backend->get_phv(), backend->get_defuse(),
                                 backend->get_tbl_summary(), backend->get_live_range_report(),
-                                pipe->ghost_thread);
+                                pipe->ghost_thread.ghost_mau);
             break;
         case CodeBlock::MauAsm:
             oss << *mauasm << "\n";

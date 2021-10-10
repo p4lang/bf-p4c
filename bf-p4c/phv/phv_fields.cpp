@@ -2,7 +2,6 @@
 
 #include <string>
 #include <boost/range/adaptor/reversed.hpp>
-#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
@@ -1417,6 +1416,7 @@ class CollectPhvFields : public Inspector {
             }
             if (f_name == "ingress::ig_intr_md_for_dprsr.digest_type")
                 f.set_solitary(PHV::SolitaryReason::DIGEST);
+            LOG5("CollectPHV Includes field : " << f);
         }
     }
 

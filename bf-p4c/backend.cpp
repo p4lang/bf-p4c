@@ -103,6 +103,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     decaf(phv, uses, defuse, deps),
     table_summary(pipe_id, deps),
     table_alloc(options, phv, deps, table_summary, &jsonGraph) {
+    BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
+
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,

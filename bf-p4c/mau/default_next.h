@@ -70,7 +70,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
     bool preorder(const IR::BFN::Pipe *pipe) override {
         LOG5(TableTree("ingress", pipe->thread[INGRESS].mau) <<
              TableTree("egress", pipe->thread[EGRESS].mau) <<
-             TableTree("ghost", pipe->ghost_thread) );
+             TableTree("ghost", pipe->ghost_thread.ghost_mau) );
         possible_nexts.clear();
         prev_tbls.clear();
         return true; }

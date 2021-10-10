@@ -28,6 +28,7 @@ class AsmParser : public Section {
     std::vector<Phv::Ref> ghost_parser;  // the ghost "parser" extracts 32-bit value. This 32-bit
                                          // can be from a single 32-bit container or multiple
                                          // smaller one.
+    unsigned ghost_pipe_mask = 0xf;  // only set for JBAY
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
@@ -65,12 +66,37 @@ void AsmParser::start(int lineno, VECTOR(value_t) args) {
 
 void AsmParser::input(VECTOR(value_t) args, value_t data) {
     if (args.size > 0 && args[0] == "ghost") {
+        // Backward compatibility for old ghost parser syntax
+        // ghost parser : W0
         if (data.type == tVEC) {
             for (int i = 0; i < data.vec.size; i++) {
-                ghost_parser.push_back(Phv::Ref(GHOST, 0, data[i])); }
+                ghost_parser.push_back(Phv::Ref(GHOST, 0, data[i]));
+            }
+        // New ghost parser syntax
+        // parser ghost:
+        //   ghost_md: W0
+        //   pipe_mask: 0
+        } else if (data.type == tMAP) {
+            for (auto &kv : MapIterChecked(data.map, true)) {
+                if (kv.key == "ghost_md") {
+                    if (kv.value.type == tVEC) {
+                        for (int i = 0; i < kv.value.vec.size; i++) {
+                            ghost_parser.push_back(Phv::Ref(GHOST, 0, data[i]));
+                        }
+                    } else {
+                        ghost_parser.push_back(Phv::Ref(GHOST, 0, kv.value));
+                    }
+                } else if (kv.key == "pipe_mask") {
+                    if (!CHECKTYPE(kv.value, tINT)) continue;
+                    ghost_pipe_mask = kv.value.i;
+                }
+            }
         } else {
-            ghost_parser.push_back(Phv::Ref(GHOST, 0, data)); }
-        return; }
+            ghost_parser.push_back(Phv::Ref(GHOST, 0, data));
+        }
+        return;
+    }
+
     gress_t gress = (args.size > 0 && args[0] == "egress") ? EGRESS : INGRESS;
     auto* p = new Parser(phv_use, gress, parser[gress].size());
     parser[gress].push_back(p);
@@ -85,6 +111,7 @@ void AsmParser::process() {
     for (auto gress : Range(INGRESS, EGRESS)) {
         for (auto p : parser[gress]) {
             p->ghost_parser = ghost_parser;
+            p->ghost_pipe_mask = ghost_pipe_mask;
             p->process(); } }
 
     bitvec phv_allow_bitwise_or;
