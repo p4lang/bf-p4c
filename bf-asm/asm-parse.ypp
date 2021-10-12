@@ -403,4 +403,19 @@ int asm_parse_file(const char *name, FILE *in) {
     return error_count;
 }
 
+int asm_parse_string(const char* in) {
+    YY_BUFFER_STATE buf;
+#ifdef YYDEBUG
+    if (const char *p = getenv("YYDEBUG"))
+        yydebug = atoi(p);
+#endif /* YYDEBUG */
+    // Reset state in case func is called multiple times
+    BEGIN(INITIAL);
+    buf = yy_scan_string(in);
+    if (yyparse())
+        error_count++;
+    yy_delete_buffer(buf);
+    return error_count;
+}
+
 std::map<std::string, Section *> *Section::sections = 0;

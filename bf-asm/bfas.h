@@ -51,7 +51,11 @@ struct value_t;
 extern std::string asmfile_name;
 extern std::unique_ptr<std::ostream> gfm_out;
 
+std::string toString(target_t target);
+std::ostream& operator<<(std::ostream& out, target_t target);
+
 int asm_parse_file(const char *name, FILE *in);
+int asm_parse_string(const char* in);
 
 void no_sections_error_exit();
 bool no_section_error(const char* name);

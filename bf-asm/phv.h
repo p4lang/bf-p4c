@@ -213,6 +213,9 @@ class Phv : public Section {
     static const Register *reg(int idx)
         { BUG_CHECK(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
 
+    // Return the number registers
+    static int num_regs() { return phv.regs.size(); }
+
     // Return POV name allocated in @arg reg at @arg index
     static const std::string get_pov_name(int reg, int index) {
         if (phv.phv_pov_names.count(reg) && phv.phv_pov_names.at(reg).count(index))
@@ -233,6 +236,13 @@ class Phv : public Section {
         auto it = m.upper_bound(stage);
         if (it == m.begin()) return empty;
         return (--it)->second;
+    }
+
+    // For use by gtests
+    static void test_clear() {
+        phv.target = nullptr;
+        phv.regs.clear();
+        phv.phv_pov_names.clear();
     }
 };
 

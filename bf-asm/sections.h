@@ -78,6 +78,11 @@ class Section {
     static bool section_in_assembly(const char* name) {
         return get(name)->isInput;
     }
+
+ public:  // for gtest
+    static Section *test_get(const char *name) {
+        return get(name);
+    }
 };
 
 #endif /* BF_ASM_SECTIONS_H_ */

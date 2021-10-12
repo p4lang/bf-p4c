@@ -407,6 +407,28 @@ int main(int ac, char **av) {
 }
 #endif  /* !BUILDING_FOR_GTEST */
 
+std::string toString(target_t target) {
+    switch (target) {
+        case TOFINO: return "Tofino";
+        case TOFINO2: return "Tofino2";
+        case TOFINO2H: return "Tofino2H";
+        case TOFINO2U: return "Tofino2U";
+        case TOFINO2M: return "Tofino2M";
+        case TOFINO2A0: return "Tofino2A0";
+#if HAVE_CLOUDBREAK
+        case TOFINO3: return "Tofino3";
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+        case TOFINO5: return "Tofino5";
+#endif  /* HAVE_FLATROCK */
+        default: BUG("Unexpected target value: %1%", target);
+    }
+}
+
+std::ostream& operator<<(std::ostream& out, target_t target) {
+    return out << toString(target);
+}
+
 void no_sections_error_exit() {
     if (Section::no_sections_in_assembly()) {
         std::cerr << "No valid sections found in assembly file" << std::endl; exit(1); }
