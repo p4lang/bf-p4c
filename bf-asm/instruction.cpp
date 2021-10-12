@@ -631,12 +631,13 @@ struct AluOP : VLIWInstruction {
     std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(slot/Phv::mau_groupsize());
-        src2->pass2(slot/Phv::mau_groupsize()); }
+        if (!ignoreSrc1) src1->pass2(slot/Phv::mau_groupsize());
+        if (!ignoreSrc2) src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
-        src1.phvRead(fn); src2.phvRead(fn); }
+        if (!ignoreSrc1) src1.phvRead(fn);
+        if (!ignoreSrc2) src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
 };
