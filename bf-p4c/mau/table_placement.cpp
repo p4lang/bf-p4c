@@ -276,6 +276,7 @@ struct TablePlacement::Placed {
     cstring                     name;
     int                         entries = 0;
     int                         requested_stage_entries = -1;  // pragma stage requested entries
+    int                         stage_flags = 0;  // pragma stage flags
     attached_entries_t          attached_entries;
     bitvec                      placed;  // fully placed tables after this placement
     bitvec                      match_placed;  // tables where the match table is fully placed,
@@ -1263,6 +1264,23 @@ static int count_sful_actions(const IR::MAU::Table *tbl) {
  * @{
  */
 
+/* filter out options that do not meet the given layout flags
+ */
+void TablePlacement::filter_layout_options(Placed *pl) {
+    safe_vector<LayoutOption>   ok;
+    for (auto &lo : pl->use.layout_options) {
+        if ((pl->stage_flags & StageFlag::Immediate) && lo.layout.action_data_bytes_in_table)
+            continue;
+        if ((pl->stage_flags & StageFlag::NoImmediate) && lo.layout.immediate_bits)
+            continue;
+        ok.emplace_back(std::move(lo)); }
+    if (ok.empty()) {
+        warning("No layouts for table %s match @stage %d flags (flags will be ignored)",
+                pl->table, pl->stage);
+        return; }
+    pl->use.layout_options = ok;
+}
+
 /**
  * The estimates for potential layout options are determined before all information is possibly
  * known:
@@ -1281,9 +1299,10 @@ bool TablePlacement::pick_layout_option(Placed *next) {
 
     int initial_entries = next->entries;
 
-    if (!next->use.format_type.valid())
+    if (!next->use.format_type.valid()) {
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
                                      next->stage_split > 0, next->gw != nullptr);
+        if (next->stage_flags) filter_layout_options(next); }
 
     if (next->use.format_type.anyAttachedLaterStage() && count_sful_actions(next->table) > 1) {
         // FIXME -- currently can't split a stateful table that require meter_type to select
@@ -1959,7 +1978,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             rv->attached_entries.at(at).need_more = rv->attached_entries.at(at).entries > 0;
             rv->attached_entries.at(at).entries = 0; } }
 
-    auto stage_pragma = t->get_provided_stage(&rv->stage, &rv->requested_stage_entries);
+    auto stage_pragma = t->get_provided_stage(rv->stage, &rv->requested_stage_entries,
+                                              &rv->stage_flags);
     if (rv->requested_stage_entries > 0)
         LOG5("Using " << rv->requested_stage_entries << " for stage " << rv->stage
              << " out of total " << rv->entries);
@@ -2353,9 +2373,9 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed 
         if (pl->stage + dep_chain >= Device::numStages())
             LOG1(" Dependence chain longer than available stages");
     }
-    int stage_pragma = pl->table->get_provided_stage(&pl->stage);
+    int stage_pragma = pl->table->get_provided_stage(pl->stage);
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
-        LOG1("  placing in stage " << pl->stage << " dsespite @stage(" << stage_pragma << ")");
+        LOG1("  placing in stage " << pl->stage << " despite @stage(" << stage_pragma << ")");
 
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl); }
@@ -2532,7 +2552,7 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
 
     LOG5("      Stage A is " << a->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
          " with calculated stage " << a->stage <<
-         ", provided stage " << a->table->get_provided_stage(&a->stage) <<
+         ", provided stage " << a->table->get_provided_stage(a->stage) <<
          ", priority " << a->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.first);
     LOG5("        local dep score "
@@ -2544,7 +2564,7 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
 
     LOG5("      Stage B is " << b->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
          " with calculated stage " << b->stage <<
-         ", provided stage " << b->table->get_provided_stage(&b->stage) <<
+         ", provided stage " << b->table->get_provided_stage(b->stage) <<
          ", priority " << b->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.second);
     LOG5("        local dep score "
@@ -2560,8 +2580,8 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
 
     choice = TablePlacement::PROV_STAGE;
     bool provided_stage = false;
-    int a_provided_stage = a->table->get_provided_stage(&a->stage);
-    int b_provided_stage = b->table->get_provided_stage(&b->stage);
+    int a_provided_stage = a->table->get_provided_stage(a->stage);
+    int b_provided_stage = b->table->get_provided_stage(b->stage);
 
     if (a_provided_stage >= 0 && b_provided_stage >= 0) {
         if (a_provided_stage != b_provided_stage)

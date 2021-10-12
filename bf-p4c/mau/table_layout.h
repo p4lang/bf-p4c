@@ -7,6 +7,10 @@
 #include "bf-p4c/mau/payload_gateway.h"
 #include "lib/safe_vector.h"
 
+namespace StageFlag {
+    enum StageFlag_t { Immediate=1, NoImmediate=2 };
+}
+
 class LayoutOption {
  public:
     IR::MAU::Table::Layout layout;

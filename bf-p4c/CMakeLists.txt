@@ -1365,75 +1365,76 @@ if (ENABLE_TESTING)
     #      projet in Jira P4C-2940 and target_link_test_libs.cmake for implementation.
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/test_bf_gtest_helpers.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/annotate_with_in_hash.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_analysis.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_format_helper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/add_always_run.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/annotate_with_in_hash.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/attached_info.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/clot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/constrained_field_map_builder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_size_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/copy_header.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/custom_header_stack_name.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/elim_cast.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/equiv_align_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/error_reporter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/event_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_control_flow_visitor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/no_co_pack.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/no_co_pack.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_atomic.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_size.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_container_type.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/payload_gateway.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_constant_extract.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/payload_gateway.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/fieldslice_live_range.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/action_constraint_solver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/symbolic_bitvec.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_stage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/register_read_write.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/simplify_key_elim_casts.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/slice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/static_entries_const_prop.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_mutex.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tphv_slice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/slice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/static_entries_const_prop.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_analysis.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/equiv_align_extractor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/custom_header_stack_name.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/action_constraint_solver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/symbolic_bitvec.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/fieldslice_live_range.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

@@ -15,6 +15,7 @@
 #include "lib/sourceCodeBuilder.h"
 #include "bf-p4c/arch/bridge.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/logging/source_info_logging.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "frontends/parsers/parserDriver.h"
@@ -517,7 +518,8 @@ bool TestCode::apply_pass(Pass pass) {
             mauasm = nullptr;
             auto before = ::errorCount();
             // The 'frontendPasses' are encapsulated in a run method, so we have to call that.
-            program = P4::FrontEnd().run(options, program, skip_side_effect_ordering);
+            program = P4::FrontEnd(BFN::ParseAnnotations())
+                .run(options, program, skip_side_effect_ordering);
             return ::errorCount() == before;
         }
 

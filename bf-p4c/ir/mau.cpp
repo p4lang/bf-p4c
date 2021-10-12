@@ -2,6 +2,7 @@
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/instruction_memory.h"
+#include "bf-p4c/mau/table_layout.h"
 #include "ir/ir.h"
 
 namespace IR {
@@ -709,14 +710,14 @@ std::set<cstring> IR::MAU::Table::get_placement_priority_string() const {
     return rv;
 }
 
-int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) const {
+int IR::MAU::Table::get_provided_stage(int geq_stage, int *req_entries, int *flags) const {
     if (conditional_gateway_only()) {
         int min_stage = -1;
         for (auto *seq : Values(next)) {
             int i = -1;
             for (auto *tbl : seq->tables) {
                 if (seq->deps[++i]) continue;  // ignore tables dependent on earlier tables in seq
-                int stage = tbl->get_provided_stage(nullptr, nullptr);
+                int stage = tbl->get_provided_stage();
                 if (stage < 0) return -1;  // no minimum stage
                 if (stage < min_stage || min_stage == -1)
                     min_stage = stage; } }
@@ -725,30 +726,27 @@ int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) 
 
     auto checkPragma = [](const IR::Annotation *annot) {
         bool valid_pragma = true;
-        if (annot->expr.size() == 1 || annot->expr.size() == 2) {
-            auto stage_pos = annot->expr.at(0)->to<IR::Constant>();
-            if (stage_pos == nullptr)
-                valid_pragma = false;
-            else if (stage_pos->asInt() < 0)
-                valid_pragma = false;
-
-            if (annot->expr.size() == 2) {
-                auto entries = annot->expr.at(1)->to<IR::Constant>();
-                if (entries == nullptr)
+        int intvals = 0;
+        int idx = -1;
+        for (auto *e : annot->expr) {
+            ++idx;
+            if (auto *k = e->to<IR::Constant>()) {
+                if (k->asInt() < 0)
                     valid_pragma = false;
-                else if (entries->asInt() <= 0)
+                ++intvals;
+            } else if (e->is<IR::StringLiteral>())  {
+                if (idx == 0)
                     valid_pragma = false;
-            }
-        } else {
+            } else {
+                valid_pragma = false; } }
+        if (intvals < 1 || intvals > 2)
             valid_pragma = false;
-        }
         if (!valid_pragma)
             ::error(ErrorType::ERR_INVALID, "Invalid %1%: Stage pragma provided can have only "
                     "one or two constant parameters >= 0", annot);
         return valid_pragma;
     };
 
-    int geq_stage = init_stage != nullptr ? *init_stage : -1;
     const IR::Annotation *stage_annot = nullptr;
     auto stage_annotations = match_table->annotations->where([](const IR::Annotation *annot)
                                                              { return annot->name == "stage"; });
@@ -774,10 +772,21 @@ int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) 
         return -1;
 
     if (req_entries) {
-        if (stage_annot->expr.size() == 2) {
-            *req_entries = stage_annot->expr.at(1)->to<IR::Constant>()->asInt();
-        } else {
-            *req_entries = -1;
+        *req_entries = -1;
+        for (size_t i = 1; i < stage_annot->expr.size(); ++i) {
+            if (auto *k = stage_annot->expr.at(i)->to<IR::Constant>())
+                *req_entries = k->asInt(); } }
+    if (flags) {
+        *flags = 0;
+        for (auto *e : stage_annot->expr) {
+            if (auto *l = e->to<IR::StringLiteral>()) {
+                if (l->value == "immediate")
+                    *flags |= StageFlag::Immediate;
+                else if (l->value == "noimmediate")
+                    *flags |= StageFlag::NoImmediate;
+                else
+                    error(ErrorType::ERR_INVALID, "Invalid flag %s in @stage annotation", l);
+            }
         }
     }
 

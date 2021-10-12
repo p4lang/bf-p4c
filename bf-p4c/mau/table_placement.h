@@ -26,7 +26,6 @@ class LayoutChoices;
 class SharedIndirectAttachedAnalysis;
 class FindPayloadCandidates;
 
-
 class TablePlacement : public PassManager {
  public:
     const BFN_Options &options;
@@ -134,6 +133,7 @@ class TablePlacement : public PassManager {
     bool try_alloc_format(Placed *next, bool gw_linked);
     bool try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage);
     void setup_detached_gateway(IR::MAU::Table *tbl, const Placed *placed);
+    void filter_layout_options(Placed *pl);
     bool pick_layout_option(Placed *next);
     bool shrink_estimate(Placed *next, int &srams_left, int &tcams_left, int min_entries,
                          bool &update_whole_stage);

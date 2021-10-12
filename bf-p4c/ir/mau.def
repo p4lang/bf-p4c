@@ -194,7 +194,7 @@ class Table : BFN::Unit, IAnnotated  {
     int action_next_paths() const;
     int get_placement_priority_int() const;
     std::set<cstring> get_placement_priority_string() const;
-    int get_provided_stage(const int *init_stage = nullptr, int *req_entries = nullptr) const;
+    int get_provided_stage(int geq_stage = -1, int *req_entries = 0, int *flags = 0) const;
     int hit_actions() const;
     bool has_exit_action() const;
     std::vector<Action> get_exit_actions() const;
