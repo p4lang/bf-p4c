@@ -102,7 +102,7 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
     ///
     /// Each possible gap size is mapped to the set of parser states that realize that gap. Each
     /// set member is a pair, wherein the first component is the state containing this candidate,
-    /// and the second component is the state containing @other.
+    /// and the second component is the state containing @p other.
     const std::map<unsigned, StatePairSet> byte_gaps(const CollectParserInfo& parserInfo,
                                                      const ClotCandidate* other) const;
 

@@ -351,7 +351,7 @@ bool RandomNumber::equiv_value(const Parameter *ad, bool check_cond) const {
 }
 
 /**
- * @seealso RandomNumber::overlap
+ * @sa RandomNumber::overlap
  *
  * Returns true if the set of randoms don't have any overlapping actions, or are padding
  * within that action
@@ -1616,7 +1616,7 @@ bool RamSection::is_data_subset_of(const RamSection *ad) const {
 
 /**
  * Uses shared parameters to see if the ad_small is contained within *this
- * Full Description: @seealso contains(const ALUOperation *)
+ * Full Description: @sa contains(const ALUOperation *)
  */
 bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
                           int *final_bit_pos) const {
@@ -1647,7 +1647,7 @@ bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
 
 /**
  * Uses rotations from 0 to see if ad_small is contained within *this
- * Full Description: @seealso contains(const ALUOperation *)
+ * Full Description: @sa contains(const ALUOperation *)
  */
 bool RamSection::contains_any_rotation_from_0(const RamSection *ad_small,
                                               int init_bit_pos, int *final_bit_pos) const {
@@ -2030,7 +2030,7 @@ void Format::Use::determine_immediate_mask() {
  * The key is a the name of the condition, the value is two bitvecs, one in action_data_table,
  * one in immediate, in which the bits are controlled by that condition
  *
- * @see_also asm_output::EmitAction::mod_cond_value
+ * @sa asm_output::EmitAction::mod_cond_value
  */
 void Format::Use::determine_mod_cond_maps() {
     for (auto act_alu_positions : alu_positions) {
@@ -2820,7 +2820,7 @@ bool Format::analyze_actions(FormatType_t format_type) {
 }
 
 /**
- * @see_also comments over Format::determine_bytes_per_loc
+ * @sa comments over Format::determine_bytes_per_loc
  */
 bool Format::determine_next_immediate_bytes(bool immediate_forced) {
     AllActionPositions &adt_bus_inputs = action_bus_inputs.at(ACTION_DATA_TABLE);
@@ -3027,7 +3027,7 @@ void Format::set_ram_sect_byte(SingleActionAllocation &single_action_alloc,
  * sort outside this function that the minmax object is seen lost.
  *
  * For the description this algorithm:
- * @seealso alloc_immed_bytes
+ * @sa alloc_immed_bytes
  */
 void Format::alloc_immed_slots_of_size(SlotType_t slot_type,
         SingleActionAllocation &single_action_alloc, int max_bytes_required) {
@@ -3106,7 +3106,7 @@ bitvec Format::adt_iteration(SlotType_t slot_type, int &iteration) {
  * same table.
  *
  * For the description of the algorithm:
- * @seealso alloc_adt_bytes
+ * @sa alloc_adt_bytes
  */
 void Format::alloc_adt_slots_of_size(SlotType_t slot_type,
         SingleActionAllocation &single_action_alloc, int max_bytes_required) {
@@ -3189,7 +3189,7 @@ void Format::verify_placement(SingleActionAllocation &single_action_alloc) {
 
 /**
  * Determines the allocation for a single action data table action.
- * @seealso determine_action_data_table_bytes
+ * @sa determine_action_data_table_bytes
  */
 void Format::determine_single_action_input(SingleActionAllocation &single_action_alloc,
         int max_bytes_required) {

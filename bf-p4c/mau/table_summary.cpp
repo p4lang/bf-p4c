@@ -1,3 +1,49 @@
+/**
+ * \defgroup backtracking_phv_allocation_and_table_placement \
+ *   Backtracking in PHV allocation and table placement
+ * \brief Description of %PHV allocation and table placement phases of compilation
+ *
+ * \dot
+ * digraph phv_allocation_table_placement_backtracking {
+ *   node [shape=box,style="rounded,filled",fontname="sans-serif,bold",
+ *     margin="0.22,0.11",color=dodgerblue3,fillcolor=dodgerblue3,fontcolor=white]
+ *   edge [fontname="sans-serif",color=gray40,fontcolor=gray40]
+ *   INITIAL [shape=circle,label="",xlabel="INITIAL",color=dodgerblue4,
+ *     fillcolor=dodgerblue4,fontcolor=dodgerblue4]
+ *   SUCCESS [color=springgreen3,fillcolor=springgreen3]
+ *   FAILURE [color=red,fillcolor=red]
+ *   INITIAL -> NOCC_TRY1
+ *     [label="placementFailure\nthrow NoContainerConflictTrigger::failure(true);"]
+ *   INITIAL -> NOCC_TRY1
+ *     [label="!placementFailure || (maxStage > deviceStages ||\nmaxStage > criticalPathLengt \
+ * + CRITICAL_PATH_THRESHOLD)\nthrow NoContainerConflictTrigger::failure(true);"]
+ *   INITIAL -> SUCCESS
+ *     [label="maxStage <= deviceStages &&\nmaxStage <= \
+ * criticalPathLength + CRITICAL_PATH_THRESHOLD"]
+ *   NOCC_TRY1 -> REDO_PHV1
+ *     [label="maxStage <= deviceStages\nthrow PHVTrigger::failure(tableAlloc, firstRoundFit);"]
+ *   NOCC_TRY1 -> REDO_PHV1
+ *     [label="maxStage > deviceStages\nthrow PHVTrigger::failure(tableAlloc, \
+ * firstRoundFit,\nfalse / * ignorePackConflicts * /, true / * metaInitDisable * /);"]
+ *   REDO_PHV1 -> SUCCESS
+ *     [label="!placementFailure && maxStage <= deviceStages"]
+ *   REDO_PHV1 -> NOCC_TRY2
+ *     [label="placementFailure || \
+ * maxStage > deviceStages\nthrow NoContainerConflictTrigger::failure(true);"]
+ *   NOCC_TRY2 -> REDO_PHV2
+ *     [label="maxStage <= deviceStages\nthrow PHVTrigger::failure(tableAlloc, firstRoundFit);"]
+ *   NOCC_TRY2 -> REDO_PHV2
+ *     [label="maxStage > deviceStages\nthrow PHVTrigger::failure(tableAlloc, firstRoundFit,\n\
+ * false / * ignorePackConflicts * /, true / * metaInitDisable * /);"]
+ *   REDO_PHV2 -> FAILURE [label="placementFailure || maxStage > deviceStages"]
+ *   REDO_PHV2 -> SUCCESS [label="!placementFailure && maxStage <= deviceStages"]
+ *   SUCCESS -> FINAL_PLACEMENT [label="throw TablePlacement::RedoTablePlacement()"]
+ *   FINAL_PLACEMENT -> FAILURE [label="placementFailure || maxStage > deviceStages"]
+ *   FINAL_PLACEMENT -> SUCCESS;
+ * }
+ * \enddot
+ */
+
 #include "bf-p4c/mau/table_summary.h"
 #include <numeric>
 #include "bf-p4c/bf-p4c-options.h"

@@ -1,4 +1,32 @@
-# Setup
+# Overview of bf-p4c-compilers
+
+## Documentation
+
+This Doxygen-based documentation should serve as a documentation of the bf-p4c-compilers
+code base for compiler developers. For this purpose, documentation for private members
+is also enabled (EXTRACT_PRIVATE = YES).
+
+The documentation should cover the gap between the microarchitecture documents
+and presentations (e.g. bootcamps). It should explain how the code maps to the
+hardware architecture, while it should not duplicate the contents of the
+microarchitecture documents.
+
+One of the most important contributions is to write high-level description of compiler topics.
+For this purpose, Doxygen "groups" are used. Whatever is included in a particular group,
+it appears under the corresponding "Modules" section. Put the \\defgroup command in the most
+suitable file for the description of a particular topic. Then, each class that should be
+included is marked with the \\ingroup command.
+
+### Best practices for using Doxygen
+
+- Use \@brief to introduce a brief, one-sentence description, which is used in listings.
+- Use \@p to refer to a method's parameters in running text
+  (as opposed to \@param to describe the parameter).
+- Use \@a to refer to a struct/class' member in running text.
+- To avoid automatic link generation for a particular word, prepend it with \@.
+- There is no \@seealso, use \@sa or \@see instead.
+
+## Setup
 
 This repo contains the backend for the Barefoot p4c compiler suite.
 It has the following structure:
@@ -46,7 +74,7 @@ cd build
 make -j N [check] [install]
 ```
 
-# Dependencies
+## Dependencies
 
 Each of the submodules have dependencies. Please see the
 [p4lang/p4c](p4c/README.md), [Barefoot p4c](bf-p4c/README.md), and

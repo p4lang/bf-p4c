@@ -1,3 +1,10 @@
+/**
+ * \defgroup phv_allocatioin PHV allocation
+ * \brief Content related to %PHV allocation
+ *
+ * TODO High-level description of %PHV allocation
+ */
+
 #ifndef BF_P4C_PHV_PHV_ANALYSIS_H_
 #define BF_P4C_PHV_PHV_ANALYSIS_H_
 

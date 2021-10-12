@@ -24,7 +24,7 @@ class PhvInfo;
  *
  * @pre An up-to-date PhvInfo data structure.
  *
- * @post The operations field of all Field objects in @phv_f will be populated.
+ * @post The operations field of all Field objects in @p phv_f will be populated.
  */
 class PHV_Field_Operations : public Inspector {
     static constexpr int SALU_HASH_SOURCE_LIMIT = 51;

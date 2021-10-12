@@ -126,7 +126,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return getDefs(locpair(u, e)); }
     const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
         return getDefs(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
-    /** Get all defs of the PHV::Field with ID @fid. */
+    /** Get all defs of the PHV::Field with ID @p fid. */
     const LocPairSet &getAllDefs(int fid) const {
         static const LocPairSet emptyset;
         return located_defs.count(fid) ? located_defs.at(fid) : emptyset; }
@@ -138,7 +138,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return getUses(locpair(u, e)); }
     const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
         return getUses(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
-    /** Get all uses of the PHV::Field with ID @fid. */
+    /** Get all uses of the PHV::Field with ID @p fid. */
     const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
@@ -181,7 +181,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return false;
     }
 
-    /// @returns true if the field @f is used in the parser.
+    /// @returns true if the field @p f is used in the parser.
     bool isUsedInParser(const PHV::Field* f) const;
     bool hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
     bool hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const;

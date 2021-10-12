@@ -32,7 +32,7 @@ class ReplaceAllAliases : public Transform {
  private:
     /// PhvInfo object.
     const PhvInfo& phv;
-    /// Aliasing information from the @pa_alias pragma.
+    /// Aliasing information from the \@pa_alias pragma.
     const PragmaAlias& pragmaAlias;
     /// Map of IR::Expression objects corresponding to the alias destination fields.
     const ordered_map<cstring, const IR::Member*>&    fieldExpressions;

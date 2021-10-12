@@ -174,9 +174,10 @@ struct FlowGraph {
         reachability.setSink(v_sink);
     }
 
-    /// @returns true iff there is a path in the flow graph from @t1 to @t2. Passing nullptr for
-    /// @t1 or @t2 designates the sink node (consider it the deparser). Tables are not considered
-    /// reachable from themselves unless they are part of a cycle in the graph.
+    /// @returns true iff there is a path in the flow graph from @p t1 to @p t2.
+    /// Passing nullptr for @p t1 or @p t2 designates the sink node (consider it the deparser).
+    /// Tables are not considered reachable from themselves unless they are part of a cycle
+    /// in the graph.
     bool can_reach(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (t2 == nullptr) return true;
         if (t1 == nullptr) return false;
@@ -186,7 +187,7 @@ struct FlowGraph {
     }
 
     /// @returns the dominator set of the given table. If the IR is well-formed (i.e., the flow
-    /// graph is a DAG), then passing nullptr for @table will produce the set of tables that are
+    /// graph is a DAG), then passing nullptr for @p table will produce the set of tables that are
     /// always executed.
     const std::set<const IR::MAU::Table*> get_dominators(const IR::MAU::Table* table) const;
 

@@ -1,3 +1,15 @@
+/**
+ * \defgroup backend Back-end
+ * \brief Back-end-related content
+ *
+ * The back-end performs a series of passes.
+ *
+ * The back-end starts with transforming mid-end IR into back-end IR. There is a dedicated pass
+ * for this purpose called BackendConverter.
+ *
+ * On output, a textual assembly file is generated for each pipeline.
+ */
+
 #include "backend.h"
 #include <fstream>
 #include <set>

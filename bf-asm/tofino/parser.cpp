@@ -610,9 +610,9 @@ const auto phv_16bit_extractors =  { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 
 // Declare a helping type for the count cache class
 using ExtractionCountCache = TwoLevelCache<const Parser::State::Match*, AnalysisType, int>;
 
-/// Count the number of extractions for a given \ref match.
-/// The method takes the \p elems list which holds PHV indexes to check
-// (accepted lists are \ref phv_8bit_extractors and \ref phv_16_bit_extractors).
+/// Count the number of extractions for a given @p match.
+/// The method takes the @p elems list which holds PHV indexes to check
+/// (accepted lists are @p phv_8bit_extractors and @p phv_16_bit_extractors).
 int count_number_of_extractions(Parser* parser,
                                 Target::Tofino::parser_regs &regs,
                                 Parser::State::Match* match,
@@ -755,7 +755,7 @@ class PaddingInfoCollector {
 /// Size of internal parser FIFO
 static const int parser_fifo_size = 32;
 
-/// Compute the \p val / \p div and ceil it to the nearest upper value. The result
+/// Compute the @p val / @p div and ceil it to the nearest upper value. The result
 /// will be wrapped to the FIFO size in parser.
 int ceil_and_wrap_to_fifo_size(int val, int div) {
     int fifo_items = val > parser_fifo_size ? parser_fifo_size : val;
@@ -836,7 +836,7 @@ static void print_slot_occupancy(const Parser::State::Match *match,
 }
 
 /**
- * @brief Set the \p pad_idx or \p from_idx based on the used extractor scenario
+ * @brief Set the @p pad_idx or @p from_idx based on the used extractor scenario
  *
  * @param pad_idx Input/output for padding index
  * @param from_idx Input/output for source index
@@ -1134,13 +1134,13 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
 
 /// Add padding extracts to a parser state and its children.
 ///
-/// \tparam use_8bit Apply to 8b extracts (true) or 16b extracts (false)
-/// \param parser Parser containing the state being padded
-/// \param regs
-/// \param node_count Number of states to pad, including this state. States with zero extracts are
-///        not counted in \p node_count.
-/// \param visited
-/// \param pstate
+/// @tparam use_8bit Apply to 8b extracts (true) or 16b extracts (false)
+/// @param parser Parser containing the state being padded
+/// @param regs
+/// @param node_count Number of states to pad, including this state. States with zero extracts are
+///        not counted in @p node_count.
+/// @param visited
+/// @param pstate
 template<bool use_8bit>
 void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int node_count,
                             Parser::State::Match* match, std::set<Parser::State*> &visited,

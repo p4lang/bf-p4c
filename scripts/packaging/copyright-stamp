@@ -99,6 +99,7 @@ setType c \
 
 setType sh \
   '(^|/)CMakeLists\.txt$' \
+  '(^|/)Doxyfile\.in$' \
   '(^|/)MANIFEST\.in$'  `# Python manifest file` \
   '(^|/)\.clang-format$' \
   '(^|/)\.dockerignore$' \

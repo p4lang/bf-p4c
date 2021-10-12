@@ -44,7 +44,7 @@ solver::ActionSolverBase* make_solver(const PHV::Container& c) {
 /// compute_dest_live_bv returns a bitvec represents bits are live after applying
 /// @p action of @p stage to @p container_state.
 /// @p action can be nullptr when it's an always_run_table action.
-/// \param container_state is a set of field slices that are non-mutex with some fieldslice
+/// @param container_state is a set of field slices that are non-mutex with some fieldslice
 /// in the candidate allocslice list.
 bitvec compute_dest_live_bv(const PhvUse& uses, const PHV::Allocation& alloc,
                             const PHV::Allocation::LiveRangeShrinkingMap& initActions,
@@ -2703,7 +2703,7 @@ inline int ActionPhvConstraints::getOffset(le_bitrange a, le_bitrange b, PHV::Co
 /** Steps in verifying alignment of the two PHV sources:
  *
  * 1. Divide the source AllocSlices corresponding to the packing in
- * @container_state into the respective containers (firstContainerSet and
+ * @p container_state into the respective containers (firstContainerSet and
  * secondContainerSet). All slices in each respective ContainerSet must be
  * aligned at the same offset with reference to their destination slices.
  * Also, only one container set can be unaligned with the destination for every

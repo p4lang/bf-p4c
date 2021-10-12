@@ -1,6 +1,6 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
-/// @returns true if for the associated @pragmaName, the @gress is either ingress or egress.
+/// @returns true if for the associated \@pragmaName, the @p gress is either ingress or egress.
 bool PHV::Pragmas::gressValid(cstring gress) {
     return gress == "ingress" || gress == "egress";
 }
@@ -120,7 +120,7 @@ bool PHV::Pragmas::checkPipeApplication(const IR::Annotation *annotation,
  * Report no matching PHV field.
  * @param[in] pipe Pipe IR. If null, pipe name is not shown.
  * @param[in] expr Expression IR with source info.
- * @param[in] field_name If @expr is null, use this argument as the field name.
+ * @param[in] field_name If @p expr is null, use this argument as the field name.
  */
 void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
         const IR::Expression* expr, cstring field_name) {

@@ -58,3 +58,6 @@ ENV PKTPY='True'
 WORKDIR /bfn/bf-p4c-compilers
 CMD ["/bin/bash"]
 ENTRYPOINT ["/bfn/docker_entry_point.sh"]
+
+# Expose port 80 for accessing Doxygen-generated documentation
+EXPOSE 80

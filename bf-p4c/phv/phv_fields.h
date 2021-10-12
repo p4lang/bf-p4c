@@ -132,7 +132,7 @@ class Field : public LiftLess<Field> {
     /// Whether the Field is ingress or egress.
     gress_t         gress = INGRESS;
 
-    /// returns @true if the Field is a ghost field.
+    /// @returns true if the Field is a ghost field.
     /// XXX(Deep): Right now, ghost fields are marked as ingress fields, so we use string comparison
     /// for this method. Ideally, we should use the gress member directly and not have a separate
     /// ghost field.
@@ -225,8 +225,10 @@ class Field : public LiftLess<Field> {
     /// alias sources.
     ///
     /// For example, if we have
+    /// ```
     /// @pa_alias("ingress", "h.f", "h.f1")
     /// @pa_alias("ingress", "h.f", "h.f2")
+    /// ```
     ///
     /// then h.f (the first field mentioned in each annotation) is an alias
     /// destination for h.f1 and h.f2, which are sources (the second field in each
@@ -353,7 +355,7 @@ class Field : public LiftLess<Field> {
     // Do not allocate this field in phv or clots. Use for local parser variables.
     bool            avoid_alloc_i = false;
 
-    /// Maps slices of @this field to PHV containers.  Sorted by field MSB
+    /// Maps slices of this field to PHV containers.  Sorted by field MSB
     /// first.
     safe_vector<PHV::AllocSlice> alloc_slice_i;
 
@@ -504,8 +506,8 @@ class Field : public LiftLess<Field> {
     /// @returns true if this field is a packet field.
     bool isPacketField() const { return (!metadata && !pov); }
 
-    /// @returns the PHV::AllocSlice in which field @bit is allocated.  Fails
-    /// catastrophically if @bit is not allocated or not within the range of @this
+    /// @returns the PHV::AllocSlice in which field @p bit is allocated.  Fails
+    /// catastrophically if @p bit is not allocated or not within the range of this
     /// field's size.
     /// FIXME -- should take an AllocContext and FieldUse like foreach_byte below?
     const PHV::AllocSlice &for_bit(int bit) const;
@@ -544,7 +546,7 @@ class Field : public LiftLess<Field> {
         foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn); }
 
     /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
-     * this->size), fn)` when @r is null.
+     * this->size), fn)` when @p r is null.
      *
      * @see foreach_byte(le_bitrange, std::function<void(const PHV::AllocSlice&)>).
      */
@@ -609,7 +611,7 @@ class Field : public LiftLess<Field> {
     }
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, use, fn)`, or to
-     * `foreach_alloc(ctxt, fn)` when @r is null.
+     * `foreach_alloc(ctxt, fn)` when @p r is null.
      *
      * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *,
      *                    std::function<void(const PHV::AllocSlice&)>).
@@ -627,7 +629,7 @@ class Field : public LiftLess<Field> {
     }
 
     /// @returns the number of distinct container bytes that contain slices of
-    /// the @bits of this field.
+    /// the @p bits of this field.
     int container_bytes(boost::optional<le_bitrange> bits = boost::none) const;
 
     /// Clear any PHV allocation for this field.
@@ -759,7 +761,7 @@ class Field : public LiftLess<Field> {
                                                       (s & FULLY_PHV_ALLOCATED); }
     bool hasClotAllocation(AllocState s) const { return s & HAS_CLOT_ALLOCATION; }
 
-    /// Determines whether @s has a PHV allocation or a CLOT allocation.
+    /// Determines whether @p s has a PHV allocation or a CLOT allocation.
     bool hasAllocation(AllocState s) const { return hasPhvAllocation(s) || hasClotAllocation(s); }
 
     bool fullyPhvAllocated(AllocState s) const { return s & FULLY_PHV_ALLOCATED; }
@@ -864,11 +866,11 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
 
     FieldSlice(const Field* field, le_bitrange range);
 
-    /// Create a slice that holds the entirety of @field.
+    /// Create a slice that holds the entirety of @p field.
     explicit FieldSlice(const Field* field)
     : FieldSlice(field, le_bitrange(StartLen(0, field->size))) { }
 
-    /// Creates a subslice of the field of @slice from @range.lo to @range.hi.
+    /// Creates a subslice of the field of @p slice from @p range.lo to @p range.hi.
     FieldSlice(FieldSlice slice, le_bitrange range) : FieldSlice(slice.field(), range) {
         BUG_CHECK(slice.range().contains(range),
                   "Trying to create field sub-slice larger than the original slice");
@@ -1189,14 +1191,14 @@ class PhvInfo {
         sameStateConstantExtraction.clear();
     }
 
-    /// Inserts a new field @f into the UnionFind structure that keeps track of fields written in
+    /// Inserts a new field @p f into the UnionFind structure that keeps track of fields written in
     /// the same parser state using constant extractors.
     void insertConstantExtractField(PHV::Field* f) {
         sameStateConstantExtraction.insert(f);
     }
 
-    /// Perform a union of sets for fields @f and @g in the sameStateConstantExtraction UnionFind
-    /// struct.
+    /// Perform a union of sets for fields @p f and @p g in the \a sameStateConstantExtraction
+    /// UnionFind struct.
     void mergeConstantExtracts(PHV::Field* f, PHV::Field* g) {
         sameStateConstantExtraction.makeUnion(f, g);
         constantExtractedInSameState[f->id] = true;
@@ -1431,8 +1433,8 @@ class PhvInfo {
         return struct_info(hr->toString()); }
     const std::map<cstring, PHV::Field>& get_all_fields() const { return all_fields; }
     size_t num_fields() const { return all_fields.size(); }
-    /// @returns the TempVar pointer corresponding to @f, if the underlying expression for field @f
-    /// is a TempVar. @returns nullptr otherwise.
+    /// @returns the TempVar pointer corresponding to @p f, if the underlying expression
+    /// for field @p f is a TempVar. @returns nullptr otherwise.
     const IR::TempVar* getTempVar(const PHV::Field* f) const;
 
     PHV::Field* add(cstring fieldName, gress_t gress, int size, int offset,
@@ -1481,7 +1483,7 @@ class PhvInfo {
         get_slices_in_container(const PHV::Container c) const;
 
     /** @returns a bitvec showing all potentially allocated bits within a container,
-     *  within the @ctxt context.
+     *  within the @p ctxt context.
      *  The context is one of ParserState, Table/Stage, Deparser. A null context represents the
      *  entire pipeline.
      */
@@ -1498,7 +1500,7 @@ class PhvInfo {
     }
 
     /// @returns a bitvec showing all potentially allocated bits within a container for the given
-    /// @field field, within the @ctxt context. The context is one of ParserState, Table/Stage,
+    /// @p field field, within the @p ctxt context. The context is one of ParserState, Table/Stage,
     /// Deparser. A null context represents the entire pipeline.
     bitvec bits_allocated(
             const PHV::Container,
@@ -1516,9 +1518,9 @@ class PhvInfo {
 
     /** @returns a bitvec showing the currently allocated bits in a container corresponding to
       * fields simultaneously live with the fields passed in the argument set, within the context
-      * @ctxt.
+      * @p ctxt.
       * The context is one of ParserState, Table/Stage, Deparser. A null context represents the
-      *  entire pipeline.
+      * entire pipeline.
       * Note that one common bitvec is used to represent all fields that may be in a container
       */
     bitvec bits_allocated(
@@ -1558,7 +1560,7 @@ class PhvInfo {
         return aliasMap;
     }
 
-    /// @return alias destination corresponding to @f. Return nullptr if no aliasing relationship
+    /// @return alias destination corresponding to @p f. Return nullptr if no aliasing relationship
     /// exists or if ReinstateAliasSources has not been run.
     const PHV::Field* getAliasDestination(const PHV::Field* f) const {
         if (aliasMap.count(f)) return aliasMap.at(f);
@@ -1593,7 +1595,7 @@ class PhvInfo {
         }
     }
 
-    /// @returns the set of tables which must be placed before table @t.
+    /// @returns the set of tables which must be placed before table @p t.
     const ordered_set<cstring> getReverseMetadataDeps(const IR::MAU::Table* t) const {
         static ordered_set<cstring> emptySet;
         if (!reverseMetadataDeps.count(t->name)) return emptySet;

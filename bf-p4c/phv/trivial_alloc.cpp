@@ -18,11 +18,11 @@ static ordered_set<const IR::MAU::Action*> emptyInitSet = {};
 /// A group of fields that should be allocated contiguously. Offers a
 /// std::vector-like interface.
 struct FieldGroup final {
-    /// Construct a FieldGroup which will contain fields for thread @gress.
+    /// Construct a FieldGroup which will contain fields for thread @p gress.
     explicit FieldGroup(gress_t gress) : gress(gress), size(0) { }
 
-    /// Construct a FieldGroup with @field as its first field. The thread and
-    /// other properties are derived from @field.
+    /// Construct a FieldGroup with @p field as its first field. The thread and
+    /// other properties are derived from @p field.
     explicit FieldGroup(PHV::Field& field)
         : gress(field.gress)
         , fields{&field}

@@ -39,7 +39,7 @@ class MapFieldToExpr : public Inspector {
         return fieldExpressions.at(field->id)->clone();
     }
 
-    /// @returns an instruction that initializes the field slice @f.
+    /// @returns an instruction that initializes the field slice @p slice.
     const IR::MAU::Instruction*
         generateInitInstruction(const PHV::AllocSlice& slice) const;
 

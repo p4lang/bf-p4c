@@ -49,7 +49,7 @@ class PackConflicts : public PassManager {
     /// Once the initial information is gathered, generate actual no pack constraints
     void end_apply() override;
 
-    /// Populates fieldNoPack with no pack constraints for fields written by tables @t1 and @t2
+    /// Populates fieldNoPack with no pack constraints for fields written by tables @p t1 and @p t2
     /// If tables are mutually exclusive, then do not generate any no pack constraints for fields
     /// written in actions invoked from those tables.
     /// If two actions are mutually exclusive, do not generate any no pack constraints for fields

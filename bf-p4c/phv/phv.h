@@ -178,7 +178,7 @@ class Container {
     /// Construct a container from @name - e.g., "B0" for container B0.
     Container(const char *name, bool abort_if_invalid = true);       // NOLINT(runtime/explicit)
 
-    /// Construct a container from @kind and @index - e.g., (Kind::B, 0) for
+    /// Construct a container from @p kind and @p index - e.g., (Kind::B, 0) for
     /// container B0.
     Container(PHV::Type t, unsigned index) : type_(t), index_(index) {}
 

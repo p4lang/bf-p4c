@@ -634,7 +634,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
   * of an invalidate instruction. The invalidate instruction is special in that it does not have any
   * source operands, and the alignment of the write bits must thus be set separately for this
   * particular instruction. The function will return false if the total_write_bits member of
-  * @cont_action cannot be set.
+  * @p cont_action cannot be set.
   */
 bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write,
                                                      ContainerAction &cont_action) {
@@ -1503,7 +1503,7 @@ bitvec ActionAnalysis::TotalAlignment::byte_rotate_merge_byte_mask(PHV::Containe
 }
 
 /**
- * @seealso verify_set_alignment for description of byte-rotate-merge
+ * \sa verify_set_alignment for description of byte-rotate-merge
  */
 bool ActionAnalysis::ContainerAction::is_byte_rotate_merge(PHV::Container container,
         TotalAlignment &ad_alignment) {
@@ -1655,7 +1655,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
  *     - Bitmasked-set requires both sources to be aligned
  *     - Byte-Rotate-Merge has neither alignment or contiguous constraints, but requires
  *       the shifts to be factors of 8 and each byte to be sourced by only one source
- *     - Deposit-Field explained: @seealso set_deposit_field_variant
+ *     - Deposit-Field explained: \sa set_deposit_field_variant
  *
  * The worst case is that an instruction is encoded as a bitmasked-set, as this requires
  * double the action data that would be necessary in a different instruction.  Only when

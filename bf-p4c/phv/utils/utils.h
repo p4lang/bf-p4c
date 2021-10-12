@@ -31,12 +31,12 @@ class ContainerGroup {
 
  public:
     /** Creates a container group from a vector of containers.  Fails catastrophically if
-      * @containers has containers not of size @size.
+      * @p containers has containers not of size @p size.
       */
     ContainerGroup(PHV::Size size, const std::vector<PHV::Container> containers);
 
     /** Creates a container group from a bitvec of container IDs.  Fails catastrophically if
-      * @container_group has containers not of size @size.
+      * @p container_group has containers not of size @p size.
       */
     ContainerGroup(PHV::Size size, bitvec container_group);
 
@@ -56,7 +56,7 @@ class ContainerGroup {
     /// @returns the types of PHVs in this group.
     const std::set<PHV::Type> types() const { return types_i; }
 
-    /// @returns true if the type @t is present in this group.
+    /// @returns true if the type @p t is present in this group.
     bool hasType(PHV::Type t) const { return types_i.count(t); }
 
     /// @return true if the ContainerGroup has kind k.
@@ -197,7 +197,7 @@ class Allocation {
     /// only.  @c must exist in this Allocation.
     virtual bool addStatus(PHV::Container c, const ContainerStatus& status);
 
-    /// Add the actions in @actions to the metadata initialization points for @slice.
+    /// Add the actions in @p actions to the metadata initialization points for @p slice.
     virtual void addMetaInitPoints(
             AllocSlice slice,
             ordered_set<const IR::MAU::Action*> actions);
@@ -226,7 +226,7 @@ class Allocation {
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
-    ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
+    ///          that, check its ancestors.  If @p f has no status yet, return an empty FieldStatus.
     virtual FieldStatus getStatus(const PHV::Field* f) const = 0;
 
     friend class Transaction;
@@ -235,7 +235,7 @@ class Allocation {
     virtual const_iterator begin() const = 0;
     virtual const_iterator end() const = 0;
 
-    /// @returns the set of actions where @slice must be initialized for overlay enabled by live
+    /// @returns the set of actions where @p slice must be initialized for overlay enabled by live
     /// range shrinking.
     virtual boost::optional<ordered_set<const IR::MAU::Action*>>
         getInitPoints(const AllocSlice& slice) const;
@@ -246,10 +246,10 @@ class Allocation {
     /// @returns true if this allocation owns @c.
     virtual bool contains(PHV::Container c) const = 0;
 
-    /// @returns all the fields that must be initialized in action @act.
+    /// @returns all the fields that must be initialized in action @p act.
     virtual const ordered_set<const PHV::Field*> getMetadataInits(const IR::MAU::Action* act) const;
 
-    /// @returns the set of initialization actions for the field @f.
+    /// @returns the set of initialization actions for the field @p f.
     virtual const ordered_set<const IR::MAU::Action*> getInitPointsForField(const PHV::Field* f)
         const;
 
@@ -261,13 +261,13 @@ class Allocation {
     getParserStateToContainers(const PhvInfo& phv,
                                const MapFieldToParserStates& field_to_parser_states) const;
 
-    /// @returns all the slices allocated to @c.
+    /// @returns all the slices allocated to @p c.
     ordered_set<AllocSlice> slices(PHV::Container c) const;
 
-    /// @returns all the slices allocated to @c and valid in the stage @stage.
+    /// @returns all the slices allocated to @p c and valid in the stage @p stage.
     ordered_set<AllocSlice> slices(PHV::Container c, int stage, PHV::FieldUse access) const;
 
-    /// Add @slice allocated to a dark container to the current Allocation object.
+    /// Add @p slice allocated to a dark container to the current Allocation object.
     /// @returns true if the addition was successful.
     bool addDarkAllocation(const AllocSlice& slice);
 
@@ -292,7 +292,7 @@ class Allocation {
         return true;
     }
 
-    /// @returns all the slices allocated to @c that overlap with @range.
+    /// @returns all the slices allocated to @p c that overlap with @p range.
     virtual ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const;
     virtual ordered_set<AllocSlice>
         slices(PHV::Container c, le_bitrange range, int stage, PHV::FieldUse access) const;
@@ -326,7 +326,7 @@ class Allocation {
      */
     virtual std::vector<MutuallyLiveSlices> slicesByLiveness(PHV::Container c) const;
 
-    /** @returns a set of slices allocated to @c that are all live at the same time as @sl
+    /** @returns a set of slices allocated to @p c that are all live at the same time as @p sl
       * The previous function (slicesByLiveness(c))  constructs a vector of sets of slices
       * that are live in the container at the same time; the same slice may be found in multiple
       * sets in this case.
@@ -335,8 +335,10 @@ class Allocation {
       * such slices.
       * For example, suppose the following slices are allocated to a container c:
       *
-      *   c[4:7]<--f2[0:3]
-      *   c[4:7]<--f3[0:3]
+      * ```
+      * c[4:7]<--f2[0:3]
+      * c[4:7]<--f3[0:3]
+      * ```
       *
       * where f2 and f3 are overlaid and hence mutex_i(f2, f3) = true. If slice sl is f1[0:3], such
       * that mutex_i(f1, f2) = false and mutex_i(f1, f3) = false, a call to slicesByLiveness(c,
@@ -347,17 +349,17 @@ class Allocation {
     virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
                                                 std::vector<AllocSlice>& slices) const;
 
-    /// @returns all slices allocated for @f that include any part of @range in
-    /// the field portion of the allocated slice.  May be empty (if @f is not
-    /// allocated) or contain slices that do not fully cover all bits of @f (if
-    /// @f is only partially allocated).
+    /// @returns all slices allocated for @p f that include any part of @p range in
+    /// the field portion of the allocated slice.  May be empty (if @p f is not
+    /// allocated) or contain slices that do not fully cover all bits of @p f (if
+    /// @p f is only partially allocated).
     virtual ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const;
     virtual ordered_set<PHV::AllocSlice>
         slices(const PHV::Field* f, le_bitrange range, int stage, PHV::FieldUse access) const;
 
-    /// @returns the set of slices allocated for the field @f in this
-    /// Allocation.  May be empty (if @f is not allocated) or contain slices that
-    /// do not fully cover all bits of @f (if @f is only partially allocated).
+    /// @returns the set of slices allocated for the field @p f in this
+    /// Allocation.  May be empty (if @p f is not allocated) or contain slices that
+    /// do not fully cover all bits of @p f (if @p f is only partially allocated).
     ordered_set<PHV::AllocSlice> slices(const PHV::Field* f) const {
         return slices(f, StartLen(0, f->size));
     }
@@ -382,10 +384,10 @@ class Allocation {
     /// group.
     virtual GressAssignment deparserGroupGress(PHV::Container c) const;
 
-    /// @returns the allocation status of @c and fails if @c is not present.
+    /// @returns the allocation status of @p c and fails if @p c is not present.
     virtual ContainerAllocStatus alloc_status(PHV::Container c) const;
 
-    /// @returns the number of empty containers of size @size.
+    /// @returns the number of empty containers of size @p size.
     int empty_containers(PHV::Size size) const;
 
     /** Assign @slice to @slice.container, updating the gress information of
@@ -412,7 +414,7 @@ class Allocation {
     /// Create a Transaction based on this Allocation.  @see PHV::Transaction for details.
     virtual Transaction makeTransaction() const;
 
-    /// Update this allocation with any new allocation in @view.  Note that
+    /// Update this allocation with any new allocation in @p view.  Note that
     /// this may add new slices but does not remove or overwrite existing slices.
     cstring commit(Transaction& view);
 
@@ -457,7 +459,7 @@ class ConcreteAllocation : public Allocation {
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
-    ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
+    ///          that, check its ancestors.  If @p f has no status yet, return an empty FieldStatus.
     FieldStatus getStatus(const PHV::Field* f) const override;
 
     /** @returns an allocation initialized with the containers present in
@@ -500,7 +502,7 @@ class Transaction : public Allocation {
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
-    ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
+    ///          that, check its ancestors.  If @p f has no status yet, return an empty FieldStatus.
     FieldStatus getStatus(const PHV::Field* f) const override;
 
  public:
@@ -538,7 +540,7 @@ class Transaction : public Allocation {
     /// @returns a summary of status of each container allocated in this transaction.
     cstring getTransactionSummary() const;
 
-    /// @returns the set of actions in which @slice must be initialized for live range shrinking.
+    /// @returns the set of actions in which @p slice must be initialized for live range shrinking.
     boost::optional<ordered_set<const IR::MAU::Action*>>
         getInitPoints(const AllocSlice& slice) const override;
 
@@ -564,7 +566,7 @@ class Transaction : public Allocation {
         return init_writes_i;
     }
 
-    /// @returns the set of fields that must be initialized in action @act.
+    /// @returns the set of fields that must be initialized in action @p act.
     const ordered_set<const PHV::Field*>
     getMetadataInits(const IR::MAU::Action* act) const override {
         const ordered_set<const PHV::Field*> parentInits = parent_i->getMetadataInits(act);
@@ -576,7 +578,8 @@ class Transaction : public Allocation {
         return rv;
     }
 
-    /// @returns the set of actions in which field @f is initialized to enable live range shrinking.
+    /// @returns the set of actions in which field @p f is initialized
+    /// to enable live range shrinking.
     const ordered_set<const IR::MAU::Action*> getInitPointsForField(const PHV::Field* f) const
         override {
         const auto parentInitPoints = parent_i->getInitPointsForField(f);
@@ -630,7 +633,7 @@ class ClusterStats {
  public:
     int uid = nextId++;
     /// @returns true if this cluster can be assigned to containers of kind
-    /// @kind.
+    /// @p kind.
     virtual bool okIn(PHV::Kind kind) const = 0;
 
     /// @returns the number of slices in this container with the
@@ -651,10 +654,10 @@ class ClusterStats {
     /// wire or the TM).
     virtual bool deparsed() const = 0;
 
-    /// @returns true if this cluster contains @f.
+    /// @returns true if this cluster contains @p f.
     virtual bool contains(const PHV::Field* f) const = 0;
 
-    /// @returns true if this cluster contains @slice.
+    /// @returns true if this cluster contains @p slice.
     virtual bool contains(const PHV::FieldSlice& slice) const = 0;
 
     /// @returns the gress requiremnt of this cluster.
@@ -711,9 +714,9 @@ class AlignedCluster : public ClusterStats {
     boost::optional<FieldAlignment> alignment_i;
 
     /** Computes the range of valid lo bit positions where slices of this
-     * cluster can be placed in containers of size @container_size, or
+     * cluster can be placed in containers of size @p container_size, or
      * boost::none if no valid start positions exist or if any slice is too
-     * large to fit in containers of @container_size.
+     * large to fit in containers of @p container_size.
      *
      * If any slice in this cluster has the `deparsed_bottom_bits` constraint,
      * then the bitrange will be [0, 0], or `boost::none` if any slice cannot
@@ -724,7 +727,7 @@ class AlignedCluster : public ClusterStats {
      */
     boost::optional<le_bitrange> validContainerStartRange(PHV::Size container_size) const;
 
-    /// Find valid container start range for @slice in @container_size containers.
+    /// Find valid container start range for @p slice in @p container_size containers.
     static boost::optional<le_bitrange> validContainerStartRange(
         const PHV::FieldSlice& slice,
         PHV::Size container_size);
@@ -753,7 +756,7 @@ class AlignedCluster : public ClusterStats {
     int id() const  { return id_i; }
 
     /// @returns true if this cluster can be assigned to containers of kind
-    /// @kind.
+    /// @p kind.
     bool okIn(PHV::Kind kind) const override;
 
     /** @returns the (little Endian) byte-relative alignment constraint (if
@@ -766,11 +769,11 @@ class AlignedCluster : public ClusterStats {
     }
 
     /** Combines AlignedCluster::alignment() and
-     * AlignedCluster::validContainerStartRange(@container_size) to compute the
+     * AlignedCluster::validContainerStartRange(@p container_size) to compute the
      * valid lo bit positions where slices of this cluster can be placed in
-     * containers of size @container_size, or boost::none if no valid start
+     * containers of size @p container_size, or boost::none if no valid start
      * positions exist or if any slice is too large to fit in containers of
-     * @container_size.
+     * @p container_size.
      *
      * If any slice in this cluster has the `deparsed_bottom_bits` constraint,
      * then the bitvec will be [0, 0], or empty if any slice cannot be started
@@ -781,7 +784,7 @@ class AlignedCluster : public ClusterStats {
      */
     bitvec validContainerStart(PHV::Size container_size) const;
 
-    /// Valid start positions for @slice in @container_size sized containers.
+    /// Valid start positions for @p slice in @p container_size sized containers.
     static bitvec validContainerStart(PHV::FieldSlice slice, PHV::Size container_size);
 
     /// @returns the slices in this cluster.
@@ -811,26 +814,26 @@ class AlignedCluster : public ClusterStats {
     /// wire or the TM).
     bool deparsed() const override { return hasDeparsedFields_i; }
 
-    /// @returns true if this cluster contains @f.
+    /// @returns true if this cluster contains @p f.
     bool contains(const PHV::Field* f) const override;
 
-    /// @returns true if this cluster contains @slice.
+    /// @returns true if this cluster contains @p slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 
     /// @returns the gress requirement of this cluster.
     gress_t gress() const override          { return gress_i; }
 
-    /** Slices this cluster at the relative field bit @pos.  For example, if a
+    /** Slices this cluster at the relative field bit @p pos.  For example, if a
      * cluster contains a field slice [3..7] and pos == 2, then `slice` will
      * produce two clusters, one with [3..4] and the other with [5..7].
      *
-     * If @pos is larger than the size of a field slice in this cluster, then
-     * the slice is placed entirely in the lo cluster.  If @pos is larger than
+     * If @p pos is larger than the size of a field slice in this cluster, then
+     * the slice is placed entirely in the lo cluster.  If @p pos is larger than
      * all field sizes, then the hi cluster will not contain any fields.
      *
      * @param pos the position to split, i.e. the first bit of the upper slice.
                   pos must be non-negative.
-     * @returns a pair of (lo, hi) clusters if the cluster can be split at @pos
+     * @returns a pair of (lo, hi) clusters if the cluster can be split at @p pos
      *          or boost::none otherwise.
      */
     boost::optional<SliceResult<AlignedCluster>> slice(int pos) const;
@@ -870,8 +873,8 @@ class RotationalCluster : public ClusterStats {
     /// @returns the aligned clusters in this group.
     const ordered_set<AlignedCluster*>& clusters() const { return clusters_i; }
 
-    /// @returns the cluster containing @slice.
-    /// @warning fails catastrophicaly if @slice is not in any cluster in this group.
+    /// @returns the cluster containing @p slice.
+    /// @warning fails catastrophicaly if @p slice is not in any cluster in this group.
     const AlignedCluster& cluster(const PHV::FieldSlice& slice) const {
         auto it = slices_to_clusters_i.find(slice);
         BUG_CHECK(it != slices_to_clusters_i.end(), "Field %1% not in cluster group",
@@ -880,7 +883,7 @@ class RotationalCluster : public ClusterStats {
     }
 
     /// @returns true if this cluster can be assigned to containers of kind
-    /// @kind.
+    /// @p kind.
     bool okIn(PHV::Kind kind) const override;
 
     /// @returns the number of clusters in this group with the exact_containers constraint.
@@ -899,27 +902,27 @@ class RotationalCluster : public ClusterStats {
     /// wire or the TM).
     bool deparsed() const override { return hasDeparsedFields_i; }
 
-    /// @returns true if this cluster contains @f.
+    /// @returns true if this cluster contains @p f.
     bool contains(const PHV::Field* f) const override;
 
-    /// @returns true if this cluster contains @slice.
+    /// @returns true if this cluster contains @p slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 
     /// @returns the gress requirement of this cluster.
     gress_t gress() const override          { return gress_i; }
 
     /** Slices all AlignedClusters in this cluster at the relative field bit
-     * @pos.  For example, if a cluster contains a field slice [3..7] and pos
+     * @p pos.  For example, if a cluster contains a field slice [3..7] and pos
      * == 2, then `slice` will produce two clusters, one with [3..4] and the
      * other with [5..7].
      *
-     * If @pos is larger than the size of a field slice in this cluster, then
-     * the slice is placed entirely in the lo cluster.  If @pos is larger than
+     * If @p pos is larger than the size of a field slice in this cluster, then
+     * the slice is placed entirely in the lo cluster.  If @p pos is larger than
      * all field sizes, then the hi cluster will not contain any fields.
      *
      * @param pos the position to split, i.e. the first bit of the upper slice.
      *            pos must be non-negative.
-     * @returns a pair of (lo, hi) clusters if the cluster can be split at @pos
+     * @returns a pair of (lo, hi) clusters if the cluster can be split at @p pos
      *          or boost::none otherwise.
      */
     boost::optional<SliceResult<RotationalCluster>> slice(int pos) const;
@@ -991,11 +994,11 @@ class SuperCluster : public ClusterStats {
     /// @returns the slice lists that induced this grouping.
     const ordered_set<SliceList*>& slice_lists() const { return slice_lists_i; }
 
-    /// @returns the slice lists holding @slice.
+    /// @returns the slice lists holding @p slice.
     const ordered_set<const SliceList*>& slice_list(const PHV::FieldSlice& slice) const;
 
-    /// @returns the rotational cluster containing @slice.
-    /// @warning fails catastrophicaly if @slice is not in any cluster in this group; all slices
+    /// @returns the rotational cluster containing @p slice.
+    /// @warning fails catastrophicaly if @p slice is not in any cluster in this group; all slices
     ///          in every slice list are guaranteed to be present in exactly one cluster.
     const RotationalCluster& cluster(const PHV::FieldSlice& slice) const {
         auto it = slices_to_clusters_i.find(slice);
@@ -1004,8 +1007,8 @@ class SuperCluster : public ClusterStats {
         return *it->second;
     }
 
-    /// @returns the aligned cluster containing @slice.
-    /// @warning fails catastrophicaly if @slice is not in any cluster in this group; all slices
+    /// @returns the aligned cluster containing @p slice.
+    /// @warning fails catastrophicaly if @p slice is not in any cluster in this group; all slices
     ///          in every slice list are guaranteed to be present in exactly one cluster.
     const AlignedCluster& aligned_cluster(const PHV::FieldSlice& slice) const {
         BUG_CHECK(slices_to_clusters_i.find(slice) != slices_to_clusters_i.end(),
@@ -1048,7 +1051,7 @@ class SuperCluster : public ClusterStats {
     SuperCluster::SliceList* findLinkedWideArithSliceList(const SuperCluster::SliceList* sl) const;
 
     /// @returns true if this cluster can be assigned to containers of kind
-    /// @kind.
+    /// @p kind.
     bool okIn(PHV::Kind kind) const override;
 
     /// @returns the number of clusters in this group with the exact_containers constraint.
@@ -1080,10 +1083,10 @@ class SuperCluster : public ClusterStats {
 
     void needsStridedAlloc(bool val) { needsStridedAlloc_i = val; }
 
-    /// @returns true if this cluster contains @f.
+    /// @returns true if this cluster contains @p f.
     bool contains(const PHV::Field* f) const override;
 
-    /// @returns true if this cluster contains @slice.
+    /// @returns true if this cluster contains @p slice.
     bool contains(const PHV::FieldSlice& slice) const override;
 
     /// @returns all field slices in this cluster
@@ -1116,7 +1119,7 @@ class SuperCluster : public ClusterStats {
     /// from fitting.
     static bool is_well_formed(const SuperCluster* sc, PHV::Error* err = new PHV::Error());
 
-    /// @returns the total bits in a \p list paramter
+    /// @returns the total bits in a @p list paramter
     static int slice_list_total_bits(const SliceList& list);
 
     /// @returns the vector of \ref le_bitrange instances identified for each \ref PHV::FieldSlice

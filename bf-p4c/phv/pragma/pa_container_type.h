@@ -7,7 +7,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 /** Specifies the type of container to which a field should be allocated.
-  * Syntax is: @pragma pa_container_type <gress> <fieldname> <container_type>
+  * Syntax is: \@pragma pa_container_type <gress> <fieldname> <container_type>
   * container_type can be any PHV::Kind, except tagalong containers.
   * XXX(Deep): Support specifying tagalong containers as a container kind.
  */
@@ -25,7 +25,7 @@ class PragmaContainerType : public Inspector {
         return rv;
     }
 
-    /// Adds the constraint that @field_name should be allocated to container type @kind.
+    /// Adds the constraint that @p field_name should be allocated to container type @p kind.
     bool add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
                         cstring field_name, PHV::Kind kind);
 

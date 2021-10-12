@@ -1,3 +1,76 @@
+/**
+ * \defgroup stateful_alu Stateful ALU Overview
+ * \brief Content related to stateful ALU
+ *
+ * A register is referred to as a stateful table.
+ *
+ * Note that a stateful ALU (SALU) is referred to as meter ALU
+ * in micro-architecture specificaion (MAS) documents.
+ * * Represented by IR::MAU::StatefulAlu IR node.
+ * * Contains:
+ *   * %Instruction memory:
+ *     * Four rows, each one contains a SALU VLIW instruction
+ *       represented by a register action in P4 code and IR::MAU::SaluAction IR node
+ *       * The SALU VLIW instruction contains instructions for particular units
+ *         (four sub-ALUs, two comparators, output sub-ALU) represented by primitives
+ *         (IR::MAU::Primitive) both in backend and assembler.
+ *   * Register file:
+ *     * Four rows, each one is 32b (Tofino) / 34b (Tofino 2, 3) register
+ *       represented by a register parameter in P4 code and IR::MAU::SaluRegfileRow IR node
+ *     * Shared by "large" constants and register parameters
+ * * There are four SALUs in a MAU stage.
+ *
+ * Front-end passes involved:
+ *
+ * * P4V1::StatefulAluConverter (fromv1.0 folder)
+ *   * Registered via singleton pattern
+ *   * Transforms the IR from P4-14 to P4-16
+ *   * E.g.
+ * ```
+ * blackbox stateful_alu reg_alu_4 {
+ *   reg: reg_4;
+ *   update_lo_1_value: register_lo + 1;
+ * }
+ * ```
+ * is transformed to
+ * ```
+ * RegisterAction<Picasso, bit<32>, bit<32>>(reg_4) Rembrandt = {
+ *     void apply(inout Picasso Morrow, out bit<32> Elkton) {
+ *     Morrow.lo = Morrow.lo + 1;
+ *   }
+ * }
+ * ```
+ *
+ * Mid-end passes involved:
+ *
+ * * P4::SynthesizeActions
+ *   * Moves the statements placed directly in an apply block of a control block
+ *     to newly created \@hidden actions (which are further placed into \@hidden tables
+ *     in the P4::MoveActionsToTables pass).
+ *   * BFN::ActionSynthesisPolicy checks whether successive statements in an apply block
+ *     of a control block can be combined into a single new action. This is necessary
+ *     for post-mid-end and back-end passes that process the actions independently
+ *     of each other. The policy detects Register.write()-after-read(), which can be
+ *     transformed into a single register action.
+ * * BFN::RegisterReadWrite (see the description of the sub-passes above)
+ *   1. BFN::RegisterReadWrite::MoveRegisterParameters
+ *   2. BFN::RegisterReadWrite::CollectRegisterReadsWrites
+ *   3. BFN::RegisterReadWrite::AnalyzeActionWithRegisterCalls
+ *   4. BFN::RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls
+ *
+ * Post-mid-end passes involved:
+ *
+ * * BFN::BridgedPacking and BFN::SubstitutePackedHeaders
+ *   * BFN::BackendConverter (converts mid-end IR into back-end IR)
+ *     * BFN::ProcessBackendPipe
+ *       * BFN::AttachTables (see the description of the sub-passes above)
+ *         1. BFN::AttachTables::InitializeStatefulAlus
+ *         2. BFN::AttachTables::InitializeRegisterParams
+ *         3. BFN::AttachTables::InitializeStatefulInstructions
+ *            * CreateSaluInstruction
+ *         4. BFN::AttachTables::DefineGlobalRefs
+ */
+
 #ifndef EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
 #define EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
 
@@ -27,35 +100,42 @@ struct Device::StatefulAluSpec {
 };
 
 /**
-Converts a RegisterAction into an MAU::SaluAction for an MAU::StatefulAlu,
-converting all of the properties and code into the corresponding instructions
-or whatever else is needed.
-
-The pass is designed to be applied to a subtree of IR containing a single
-Declaration_Instance object of type RegisterAction or SelectorAction,
-and creates an SaluAction for it, adding it to the StatefulAlu passed to
-the pass constructor.  We arrange for exactly one instance of this pass
-to be created for each SALU, and reuse it to create all the individual
-instructions in that SALU, so we can accumulate information about things
-that need to be shared between instructions here.
-
-This is really a kind of "reconstruction transform" rather than an
-Inspector, but the normal Transform isn't right for it, as we want to
-rebuild some things with a very different object (turning Properties into
-Instructions) which won't work 'in place'.  It also really wants to do
-pattern matching across expression trees, which our Visitor infrastructure
-does not support very well.
-
-It can be thought of as a state machine + code accumulator that is run
-over the body of the register_action.  The 'etype' state tracks what
-the currently visited expression is needed for (left or right side of
-an assignment, or condition in an 'if').  Operands of an instruction
-are accumulated, existence and uses of local variables are tracked,
-and instructions are generated and added to the body of the SaluAction
-that is being created.  Along the way and at the end, various problems
-that exceeed the capabilities of the salu are diagnosed.
-
-*/
+ * \ingroup stateful_alu
+ * \brief The pass creates SALU VLIW instructions.
+ *
+ * The pass converts a RegisterAction into an MAU::SaluAction for an MAU::StatefulAlu,
+ * converting all of the properties and code into the corresponding instructions
+ * or whatever else is needed.
+ *
+ * The pass is designed to be applied to a subtree of IR containing a single
+ * Declaration_Instance object of type RegisterAction or SelectorAction,
+ * and creates an SaluAction for it, adding it to the StatefulAlu passed to
+ * the pass constructor.  We arrange for exactly one instance of this pass
+ * to be created for each SALU, and reuse it to create all the individual
+ * instructions in that SALU, so we can accumulate information about things
+ * that need to be shared between instructions here.
+ *
+ * This is really a kind of "reconstruction transform" rather than an
+ * Inspector, but the normal Transform isn't right for it, as we want to
+ * rebuild some things with a very different object (turning Properties into
+ * Instructions) which won't work 'in place'.  It also really wants to do
+ * pattern matching across expression trees, which our Visitor infrastructure
+ * does not support very well.
+ *
+ * It can be thought of as a state machine + code accumulator that is run
+ * over the body of the register_action.  The 'etype' state tracks what
+ * the currently visited expression is needed for (left or right side of
+ * an assignment, or condition in an 'if').  Operands of an instruction
+ * are accumulated, existence and uses of local variables are tracked,
+ * and instructions are generated and added to the body of the SaluAction
+ * that is being created.  Along the way and at the end, various problems
+ * that exceeed the capabilities of the salu are diagnosed.
+ *
+ * It also checks if an instruction about to be created can be merged with
+ * another existing instruction. The instructions must have the same opcode
+ * and operands, but their predicates can differ. The predicates are merged
+ * via | operation.
+ */
 class CreateSaluInstruction : public Inspector {
     IR::MAU::StatefulAlu                *salu;
     const IR::Type                      *regtype;

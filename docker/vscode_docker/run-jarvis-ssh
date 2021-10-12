@@ -3,7 +3,7 @@
 docker run \
 	--privileged \
 	--rm --user root \
-	-p 2222:22 \
+	-p 2222:22 -p 8080:80 \
 	-v ~/reps:/mnt/reps \
 	-it jarvis-ssh \
 	/bin/bash

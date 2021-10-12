@@ -65,8 +65,8 @@ class PhvSpec {
     };
 
     /**
-     * @used to describe phv groups for mau in the device.
-     * e.g. if a device has two types of MAU groups, corresponding to 32-bit and 8-bit containers,
+     * Describes PHV groups for MAU in the device.
+     * E.g. if a device has two types of MAU groups, corresponding to 32-bit and 8-bit containers,
      * and each type of group has 16 normal PHV containers of a given size, the mauGroupSpec will
      * be:
      * { { PHV::Size::b8, MauGroupType(4, { PHV::Type::B, 16 }) },
@@ -151,7 +151,7 @@ class PhvSpec {
     bitvec filterContainerSet(const bitvec& set, PHV::Kind kind) const;
     bitvec filterContainerSet(const bitvec& set, PHV::Type type) const;
 
-    /// @return a string representation of the provided @set of containers.
+    /// @return a string representation of the provided @p set of containers.
     cstring containerSetToString(const bitvec& set) const;
 
     /** The JBay parser treats the PHV as 256 x 16b containers, where each
@@ -200,24 +200,24 @@ class PhvSpec {
     /// @return a bitvec of the containers which are hard-wired to egress.
     const bitvec& egressOnly() const;
 
-    /// @return MAU groups of a given size @sz.
+    /// @return MAU groups of a given size @p sz.
     const std::vector<bitvec>& mauGroups(PHV::Size sz) const;
 
     /// @return MAU groups of all types
     const std::map<PHV::Size, std::vector<bitvec>>& mauGroups() const;
 
-    /// @return the ids of every container in @container_id's MAU group, or
-    /// boost::none if @container_id is not part of any MAU group.
+    /// @return the ids of every container in the MAU group of @p container_id, or
+    /// boost::none if @p container_id is not part of any MAU group.
     bitvec mauGroup(unsigned container_id) const;
 
     /// @return the MAU group id for the container
     virtual unsigned mauGroupId(const PHV::Container &c) const = 0;
 
     /// @return a pair <#groups, #containers per group> corresponding to the
-    /// PHV Type @t
+    /// PHV Type @p t
     const std::pair<int, int> mauGroupNumAndSize(const PHV::Type t) const;
 
-    /// @return a pair <#groups, #containers per group> corresponding to the PHV Type @t.
+    /// @return a pair <#groups, #containers per group> corresponding to the PHV Type @p t.
     const std::pair<int, int> deparserGroupNumAndSize(const PHV::Type t) const;
 
     /// @return the ID of tagalong collection that the container belongs to
@@ -232,8 +232,8 @@ class PhvSpec {
     /// @return a bitvec of available tagalong collections.
     const std::vector<bitvec>& tagalongCollections() const;
 
-    /// @return the ids of every container in @container_id's tagalong collection, or
-    /// boost::none if @container_id is not part of any collection.
+    /// @return the ids of every container in the tagalong collection of @p container_id, or
+    /// boost::none if @p container_id is not part of any collection.
     bitvec tagalongCollection(unsigned container_id) const;
 
     /// @return the number of POV bits available
@@ -247,11 +247,11 @@ class PhvSpec {
     /// hardware - i.e., all non-overflow containers.
     const bitvec& physicalContainers() const;
 
-    /// @return the target-specific address of @container_id, for the specified interface
+    /// @return the target-specific address of @p container_id, for the specified interface
     /// in the pipeline: PARSER, MAU, DEPARSER.
     virtual unsigned physicalAddress(unsigned container_id, ArchBlockType_t interface) const = 0;
 
-    /// @return the target-specific address of @container, for the specified interface
+    /// @return the target-specific address of @p c, for the specified interface
     /// in the pipeline: PARSER, MAU, DEPARSER.
     unsigned physicalAddress(const PHV::Container &c, ArchBlockType_t interface) const;
 

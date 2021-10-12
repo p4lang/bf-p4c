@@ -59,7 +59,7 @@ class UnionFind {
     const_iterator begin() const { return sets_i.begin(); }
     const_iterator end()   const { return sets_i.end(); }
 
-    /// Creates a UnionFind initialized with @all_elements.
+    /// Creates a UnionFind initialized with \p all_elements.
     template <typename ContainerOfT>
     explicit UnionFind(ContainerOfT all_elements) {
         for (T& elt : all_elements)
@@ -72,7 +72,7 @@ class UnionFind {
         sets_i.clear();
     }
 
-    /// Adds a new element.  Has no effect if @elt is already present.
+    /// Adds a new element.  Has no effect if \p elt is already present.
     void insert(const T& elt) {
         if (element_map_i.find(elt) != element_map_i.end())
             return;
@@ -83,7 +83,7 @@ class UnionFind {
         element_map_i[elt] = set;
     }
 
-    /// Unions the sets containing @x and @y.
+    /// Unions the sets containing \p x and \p y.
     void makeUnion(const T x, const T y) {
         Set* xs = internalFind(x);
         Set* ys = internalFind(y);

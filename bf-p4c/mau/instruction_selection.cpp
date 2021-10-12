@@ -2147,8 +2147,8 @@ const IR::Node *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
         return split_set; }
     return instr;
 }
-/** Mark instr->operands[1] as the most recent replacement for instr->operands[0] when @inst
-  * is a set instruction.  Otherwise, remove instr->operands[0] from the set of copy propagation
+/** Mark @p instr->operands[1] as the most recent replacement for instr->operands[0] when @p instr
+  * is a set instruction.  Otherwise, remove @p instr->operands[0] from the set of copy propagation
   * candidates.
   */
 void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR::Expression *e) {
@@ -2216,10 +2216,10 @@ const IR::Expression *BackendCopyPropagation::FieldImpact::getSlice(bool isSalu,
     return rv;
 }
 
-/** @returns the copy propagation candidate for @e if @e can be replaced (setting
-  * @elem_copy_propagated to true), or @e if @e cannot be replaced (setting @elem_copy_propagated
-  * to false).
-  */
+/** @returns the copy propagation candidate for @p e if @p e can be replaced
+ * (setting \@elem_copy_propagated to true), or @p e if @p e cannot be replaced
+ * (setting \@elem_copy_propagated to false).
+ */
 const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instruction *instr,
     const IR::Expression *e) {
     auto act = findContext<IR::MAU::Action>();

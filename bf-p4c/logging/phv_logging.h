@@ -223,31 +223,31 @@ class PhvLogging : public MauInspector {
     ordered_map<const PHV::Field*, const PHV::Field*> getFieldAliases();
 
     /**
-     *  Transform @f to loggable field info
+     *  Transform @p f to loggable field info
      */
     FieldInfo* getFieldInfo(const PHV::Field *f) const;
 
     /**
-     *  If @f has srcInfo, return SourceLocation with fileName and sourceLine
+     *  If @p f has srcInfo, return SourceLocation with fileName and sourceLine
      *  Otherwise return DummyFile:-1
      */
     SourceLocation* getSourceLoc(const PHV::Field *f) const;
 
-    /** If @f is a field then return a logger FieldSlice object to log the field
-     * info. Substitue the field name with the one in its 'aliasSource' field if
-     * 'use_alias' is set to true
+    /** If @p f is a field then return a logger FieldSlice object to log the field
+     * info. Substitue the field name with the one in its @a aliasSource field if
+     * @p use_alias is set to true
      */
     FieldSlice* logFieldSlice(const PHV::Field* f, bool use_alias);
 
-    /** If @sl is a slice of the field's alloc slices then return a logger
+    /** If @p sl is a slice of the field's alloc slices then return a logger
      * FieldSlice object to log the field slice info. Substitue the field name
-     * with the one in its 'aliasSource' field if 'use_alias' is set to true.
+     * with the one in its @a aliasSource field if @p use_alias is set to true.
      */
     FieldSlice* logFieldSlice(const PHV::AllocSlice& sl, bool use_alias);
 
-    /** If @sl is a slice of the field's alloc slices then return a logger
+    /** If @p sl is a slice of the field's alloc slices then return a logger
      * ContainerSlice object to log the container slice info. Substitue the
-     * field name with the one in its 'aliasSource' field if 'use_alias' is set
+     * field name with the one in its @a aliasSource field if @p use_alias is set
      * to true.
      */
     ContainerSlice* logContainerSlice(const PHV::AllocSlice& sl, bool use_alias);

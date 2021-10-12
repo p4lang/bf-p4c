@@ -23,7 +23,7 @@ class DoAnnotateWithInHash : public Transform {
 };
 
 /**
- * The pass annotates specific assignment statements with the @in_hash annotation.
+ * The pass annotates specific assignment statements with the \@in_hash annotation.
  * The purpose is to eliminate some PHV and PARDE alignment issues caused by
  * statements mapped to ALU units, namely binary arithmetic operations whose
  * operands are casted or concatenated.
@@ -31,7 +31,7 @@ class DoAnnotateWithInHash : public Transform {
  * E.g.:
  *     meta.index = meta.index + (3w0 ++ hdr.vlan.pcp);
  * is converted to:
- *     @in_hash { meta.index = meta.index + (3w0 ++ hdr.vlan.pcp); }
+ *     \@in_hash { meta.index = meta.index + (3w0 ++ hdr.vlan.pcp); }
  * The first statement looked originally like:
  *     meta.index = meta.index + (bit<6>)hdr.vlan.pcp;
  * And was modified with the ElimCasts pass.
@@ -44,9 +44,9 @@ class DoAnnotateWithInHash : public Transform {
  * @pre The pass has to be preceeded with the BFN::ElimCasts pass, which replaces
  * the cast operation with zero-extension using the concatenation operator, and
  * with the P4::SynthesizeActions pass, which moves assignment statements from
- * apply blocks into actions where annotating with the @in_hash annotation happens.
+ * apply blocks into actions where annotating with the \@in_hash annotation happens.
  *
- * Also see the limitations of the @in_hash annotation.
+ * Also see the limitations of the \@in_hash annotation.
  */
 
 class AnnotateWithInHash : public PassManager {

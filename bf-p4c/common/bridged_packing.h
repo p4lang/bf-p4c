@@ -217,8 +217,8 @@ class CollectConstraints : public Inspector {
     void end_apply() override;
 
     /**
-     * Invoke an inspector @function for every node of type @NodeType in the
-     * subtree rooted at @root. The behavior is the same as a postorder
+     * Invoke an inspector @p function for every node of type @p NodeType in the
+     * subtree rooted at @p root. The behavior is the same as a postorder
      * Inspector. Extended with a lambda for preorder function.
      */
     template <typename NodeType, typename Func, typename Func2>

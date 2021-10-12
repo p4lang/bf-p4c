@@ -292,9 +292,9 @@ int PHV::Allocation::empty_containers(PHV::Size size) const {
     return count_by_status_i.at(size).at(status);
 }
 
-/** Assign @slice to @slice.container, updating the gress information of
+/** Assign @p slice to @p slice.container, updating the gress information of
  * the container and its MAU group if necessary.  Fails if the gress of
- * @slice.field does not match any gress in the MAU group.
+ * @p slice.field does not match any gress in the MAU group.
  */
 void PHV::Allocation::allocate(
         PHV::AllocSlice slice,

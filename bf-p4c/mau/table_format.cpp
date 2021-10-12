@@ -2184,7 +2184,7 @@ bool TableFormat::allocate_all_ternary_match() {
  * have been determined for each entry, the compiler reorders them so that the split entries
  * are the first entries in the vector.
  *
- * @seealso comments on no_overhead_atcam_result_bus_words
+ * @sa comments on no_overhead_atcam_result_bus_words
  */
 
 bool TableFormat::redistribute_entry_priority() {
@@ -2253,7 +2253,7 @@ bool TableFormat::redistribute_entry_priority() {
  * table mapping after this information is known so that multi-ram entries have less significant
  * bit next tables.
  *
- * @seealso comments over build_match_group_map for a full description.
+ * @sa comments over build_match_group_map for a full description.
  */
 void TableFormat::redistribute_next_table() {
     int next_index;
@@ -2631,7 +2631,7 @@ bool ByteInfo::is_better_for_overhead(const ByteInfo &bi, int overhead_bits) con
 
 /**
  * Set the information for allocating the interleaved byte.
- *    @seealso comments on ByteInfo for the definitions of these values
+ * \sa comments on ByteInfo for the definitions of these values
  */
 void ByteInfo::set_interleave_info(int overhead_bits) {
     il_info.interleaved = true;

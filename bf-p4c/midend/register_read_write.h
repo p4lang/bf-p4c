@@ -1,13 +1,3 @@
-/**
- *  Convert register.read & register.write calls to Register Actions to be
- *  processed later by the midend.
- *
- *  All P4-14 register_read() and register_write() calls are converted to p4-16
- *  register read & write calls when this pass is invoked.
- *
- *  Pass must be invoked prefereably towards the end of midend to account for
- *  any midend optimizations like constant folding/propogation etc.
- */
 #ifndef EXTENSIONS_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
 #define EXTENSIONS_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
 
@@ -40,7 +30,13 @@ typedef std::unordered_map<const IR::P4Action *,
 typedef std::unordered_map<const IR::P4Control*,
         ordered_set<IR::Declaration_Instance *>> RegisterActionsByControl;
 
-
+/**
+ * \ingroup stateful_alu
+ * \brief The pass replaces the Register.read/write() calls with register actions.
+ *
+ *  The pass must be invoked prefereably towards the end of mid-end to account for
+ *  any mid-end optimizations like constant folding, propogation, etc.
+ */
 class RegisterReadWrite : public PassManager {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
@@ -49,6 +45,13 @@ class RegisterReadWrite : public PassManager {
     RegisterExecuteCallByAction action_register_exec_calls;
     RegisterActionsByControl control_register_actions;
 
+    /**
+     * \ingroup stateful_alu
+     * \brief Using maps built in BFN::RegisterReadWrite::CollectRegisterReadsWrites
+     * and BFN::RegisterReadWrite::AnalyzeActionWithRegisterCalls passes, it adds newly
+     * created register actions to the IR and replaces Register.read/write() calls with
+     * RegisterAction.execute() calls.
+     */
     class UpdateRegisterActionsAndExecuteCalls: public Transform {
         RegisterReadWrite &self;
         std::map<const IR::P4Control*, IR::Declaration_Instance*> register_actions;
@@ -60,6 +63,18 @@ class RegisterReadWrite : public PassManager {
              self(self) {}
     };
 
+    /**
+     * \ingroup stateful_alu
+     * \brief Using the map built in the BFN::RegisterReadWrite::CollectRegisterReadsWrites
+     * pass, this pass prepares corresponding register actions and Register.execute() calls.
+     *
+     * The pass builds two maps:
+     * 1. BFN::RegisterReadWrite::control_register_actions, which contains info about
+     *    which newly created register actions will be placed in which control block.
+     * 2. BFN::RegisterReadWrite::action_register_exec_calls, which contains info about
+     *    which newly created RegisterAction.execute() calls will be placed in which
+     *    actions.
+     */
     class AnalyzeActionWithRegisterCalls: public Inspector {
         RegisterReadWrite &self;
         struct RegInfo {
@@ -80,6 +95,12 @@ class RegisterReadWrite : public PassManager {
              self(self) {}
     };
 
+    /**
+     * \ingroup stateful_alu
+     * \brief The pass builds the BFN::RegisterReadWrite::action_register_calls map that
+     * contains info about which action contains which statements with Register.read/write()
+     * calls.
+     */
     class CollectRegisterReadsWrites : public Inspector {
         RegisterReadWrite &self;
         bool preorder(const IR::MethodCallExpression*) override;
@@ -90,12 +111,16 @@ class RegisterReadWrite : public PassManager {
     };
 
     /**
-     * The pass moves the declarations of register parameters to the very beginning
-     * of a control block. It is necessary for conversion of Register.read/write
-     * to RegisterActions since they are placed right after the declaration of Registers
-     * leaving the register parameters behind causing missing Declaration_Instance.
+     * \ingroup stateful_alu
+     * \brief An auxiliary pass that moves declarations of register parameters
+     * to the very beginning of corresponding control block.
+     *
+     * If not done, the following passes would place register actions
+     * (which might use the register parameters) in front of the declarations
+     * of the register parameters, which would cause missing Declaration_Instance error.
+     *
      * @pre This sub-pass needs to be run before all other sub-passes
-     * of the RegisterReadWrite pass.
+     * of the BFN::RegisterReadWrite pass.
      */
     class MoveRegisterParameters : public Modifier {
         RegisterReadWrite &self;

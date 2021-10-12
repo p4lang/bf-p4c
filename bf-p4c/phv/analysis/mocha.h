@@ -46,7 +46,7 @@ class CollectMochaCandidates : public Inspector {
     explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u) :
       phv(p), uses(u), mochaCount(0), mochaSize(0) { }
 
-    /// @returns true when @f is a field from a packet (not metadata, pov, or bridged field).
+    /// @returns true when @p f is a field from a packet (not metadata, pov, or bridged field).
     static bool isPacketField(const PHV::Field* f) {
         return (f && !f->metadata && !f->pov && !f->bridged && !f->overlayable);
     }

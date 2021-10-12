@@ -48,7 +48,7 @@ class FieldSliceExtractInfo {
     /// @param state
     ///             the new parser state
     /// @param state_bit_offset
-    ///             the field's bit offset from the beginning of @state
+    ///             the field's bit offset from the beginning of @p state
     /// @param max_packet_bit_offset
     ///             the maximum bit offset from the beginning of the packet of the field in the
     ///             given state
@@ -68,7 +68,7 @@ class FieldSliceExtractInfo {
         return state_bit_offsets_;
     }
 
-    /// @return the bit offset of the field slice, relative to the given parser @state.
+    /// @return the bit offset of the field slice, relative to the given parser @p state.
     unsigned state_bit_offset(const IR::BFN::ParserState* state) const {
         return state_bit_offsets_.at(state);
     }
@@ -122,7 +122,7 @@ class FieldSliceExtractInfo {
     ///
     /// Each possible gap size is mapped to the set of parser states that realize that gap. Each
     /// set member is a pair, wherein the first component is the state containing this extract, and
-    /// the second component is the state containing @other.
+    /// the second component is the state containing @p other.
     const std::map<unsigned, StatePairSet> byte_gaps(const CollectParserInfo& parserInfo,
                                                      const FieldSliceExtractInfo* other) const;
 
@@ -132,7 +132,7 @@ class FieldSliceExtractInfo {
     ///
     /// Each possible gap size is mapped to the set of parser states that realize that gap. Each
     /// set member is a pair, wherein the first component is the state containing this extract, and
-    /// the second component is the state containing @other.
+    /// the second component is the state containing @p other.
     const std::map<unsigned, StatePairSet> bit_gaps(const CollectParserInfo& parserInfo,
                                                     const FieldSliceExtractInfo* other) const;
 };

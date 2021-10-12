@@ -123,8 +123,8 @@ class EventLogger {
     /**
      *  This function initializes the logger to emit messages to a file
      *
-     * \p outdir    Path to directory in which manifest.json is located
-     * \p filename  Path to logfile, relative to manifest.json
+     * @param outdir    Path to directory in which manifest.json is located
+     * @param filename  Path to logfile, relative to manifest.json
      *
      * \note Until this function is called, all events go to null sink
      */

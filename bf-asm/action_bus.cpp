@@ -676,8 +676,9 @@ static int slot_sizes[] = {
 /**
  * ActionBus::find
  * @brief find an action bus slot that contains the requested thing.
- * @usage Overloads allow looking for different kinds of things -- a Format::Field,
- *        a HashDistribution, a RandomNumberGen, or something by name (generally a table output).
+ *
+ * Overloads allow looking for different kinds of things -- a Format::Field,
+ * a HashDistribution, a RandomNumberGen, or something by name (generally a table output).
  * @param f     a Format::Field to look for
  * @param name  named slot to look for -- generally a table output, but may be a field
  * @param hd    a HashDistribution to look for

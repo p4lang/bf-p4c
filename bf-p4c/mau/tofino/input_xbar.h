@@ -365,7 +365,7 @@ struct IXBar : public ::IXBar {
          * can_use of 0x2, a 16 bit byte 0 will have an can_use of 0x5, and an 8 bit byte will
          * have a can_use of 0xf.
          *
-         * @seealso is_better_group in input_xbar.cpp
+         * @sa is_better_group in input_xbar.cpp
          */
         std::array<bitvec, REPEATING_CONSTRAINT_SECT> _free = { { bitvec() } };
         bitvec free(bitvec can_use) const {

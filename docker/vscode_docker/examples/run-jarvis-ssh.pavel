@@ -3,7 +3,7 @@
 docker run \
         --rm --user root \
         --privileged \
-        -p 2222:22 \
+        -p 2222:22 -p 8080:80 \
         -v ~/reps:/mnt/reps \
         -v ~/tasks:/mnt/tasks \
         -v ~/docker/user-home/ccache:/home/$USER/.ccache \

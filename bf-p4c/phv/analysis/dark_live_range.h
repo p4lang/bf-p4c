@@ -181,9 +181,9 @@ class DarkLiveRange : public Inspector {
     using OrderedFieldSummary = std::vector<OrderedFieldInfo>;
 
  public:
-    /// Given maximum number of MAU stages @max_num_min_stages and two fields with read/write
-    /// accesses defined by @range1 and @range2, this method @returns true if the accesses for the
-    /// field overlap.
+    /// Given maximum number of MAU stages @p num_max_min_stages and two fields with read/write
+    /// accesses defined by @p range1 and @p range2, this method @returns true if the accesses
+    /// for the field overlap.
     static bool overlaps(
             const int num_max_min_stages,
             const DarkLiveRangeEntry& range1,
@@ -230,7 +230,7 @@ class DarkLiveRange : public Inspector {
     bool preorder(const IR::MAU::Action* act) override;
     void end_apply() override;
 
-    /// Calculate and set the live range for field @f.
+    /// Calculate and set the live range for field @p f.
     void setFieldLiveMap(const PHV::Field* f);
 
     boost::optional<OrderedFieldSummary> produceFieldsInOrder(

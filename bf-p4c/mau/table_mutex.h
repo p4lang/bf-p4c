@@ -11,12 +11,12 @@
 #include "lib/symbitmatrix.h"
 
 /// Determines which of the program's table dependencies should be ignored, based on
-/// @ignore_table_dependency annotations appearing in the program.
+/// \@ignore_table_dependency annotations appearing in the program.
 class IgnoreTableDeps : public MauTableInspector {
     using TablePair = std::pair<const IR::MAU::Table *, const IR::MAU::Table *>;
 
     /// When a table A is in the set mapped by table B, the dependencies between A and B should be
-    /// ignored, based on the @ignore_table_dependency annotations appearing in the program.
+    /// ignored, based on the \@ignore_table_dependency annotations appearing in the program.
     /// Invariant: this is computed as a symmetric relation.
     ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> ignore_dep_map;
 
@@ -25,7 +25,7 @@ class IgnoreTableDeps : public MauTableInspector {
     std::map<cstring, const IR::MAU::Table *> external_name_to_table;
 
     /// Maps each table to the corresponding set of table names appearing in
-    /// @ignore_table_dependency annotations on that table.
+    /// \@ignore_table_dependency annotations on that table.
     ordered_map<const IR::MAU::Table *, std::set<cstring>> table_to_pragmas;
 
     profile_t init_apply(const IR::Node *node) override {

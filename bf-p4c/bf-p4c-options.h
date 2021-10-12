@@ -182,8 +182,8 @@ inline BFN_Options& BackendOptions() { return BFNContext::get().options(); }
  *
  * In addition to the pragmas supported by P4COptionPragmaParser,
  * BFNOptionPragmaParser recognizes:
- *  - p4-14: @pragma command_line [command line arguments]
- *  - p4-16: @command_line([command line arguments])
+ *  - p4-14: \@pragma command_line [command line arguments]
+ *  - p4-16: \@command_line([command line arguments])
  */
 class BFNOptionPragmaParser : public P4::P4COptionPragmaParser {
  public:

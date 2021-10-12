@@ -1,3 +1,10 @@
+/**
+ * \defgroup table_placement Table placement
+ * \brief Content related to table placement
+ *
+ * TODO High-level description of table placement
+ */
+
 #ifndef BF_P4C_MAU_TABLE_PLACEMENT_H_
 #define BF_P4C_MAU_TABLE_PLACEMENT_H_
 
@@ -185,9 +192,9 @@ class DecidePlacement : public MauInspector {
 
     void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     bool preorder(const IR::BFN::Pipe *) override;
-    /// @returns true if all the metadata initialization induced dependencies for table @t are
-    /// satisfied, i.e. all the tables that must be placed before table t (due to ordering imposed
-    /// by the live range shrinking pass) have been placed. @returns false otherwise.
+    /// @returns true if all the metadata initialization induced dependencies for table @p t are
+    /// satisfied, i.e. all the tables that must be placed before table @p t (due to ordering
+    /// imposed by the live range shrinking pass) have been placed. @returns false otherwise.
     bool are_metadata_deps_satisfied(const Placed *placed, const IR::MAU::Table* t) const;
     Placed *try_backfill_table(const Placed *done, const IR::MAU::Table *tbl, cstring before);
     bool can_place_with_partly_placed(const IR::MAU::Table *tbl,

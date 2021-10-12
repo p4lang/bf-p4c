@@ -37,7 +37,7 @@ struct IXBarRandom {
     static std::uniform_int_distribution<unsigned> distribution10;
     /// Uniform distribution producing either a 0 or a 1.
     static std::uniform_int_distribution<unsigned> distribution1;
-    /// @returns a new random number which can be represented by @numBits.
+    /// @returns a new random number which can be represented by @p numBits.
     /// If numBits != 10 or numBits != 12, then this function returns a random bit.
     static unsigned nextRandomNumber(unsigned numBits = 1);
 };

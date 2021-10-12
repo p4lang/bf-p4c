@@ -1,3 +1,14 @@
+/**
+ * \defgroup midend Mid-end
+ * \brief Mid-end-related content
+ *
+ * The mid-end performs a mix of passes from p4c and bf-p4c.
+ *
+ * The form of mid-end IR is the same as the form of front-end IR.
+ * The passes from p4c are enclosed in the \ref P4 namespace while the passes
+ * from bf-p4c are enclosed in the \ref BFN namespace.
+ */
+
 #include "midend.h"
 
 #include "frontends/common/constantFolding.h"

@@ -1248,14 +1248,18 @@ static int count_sful_actions(const IR::MAU::Table *tbl) {
     return rv;
 }
 
-/**  @defgroup alloc
- *  Methods for allocating resources in a single stage to meet the choices in Placed objects.
+/**
+ * @defgroup mau_resource_allocation MAU/PPU resource allocation
+ * \brief Content related to resource allocation inside MAU/PPU.
+ *
+ * Methods for allocating resources in a single stage to meet the choices in Placed objects.
  * These methods all look at the placements for the latest stage on the front of the list and
  * try to fit everything in one stage.  They return true if they succeed and update the
  * 'resources' TableResourceAlloc object(s) to match.  Those that need to reallocate things
  * for the entire stage (not just the last table placed) take a table_resource_t containing
  * the TableResourceAlloc objects for all the trailing tables in the stage (as the 'prev'
- * pointers are const and cannot be updated directly
+ * pointers are const and cannot be updated directly.
+ *
  * @{
  */
 
@@ -2591,7 +2595,7 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
     if (a->complete_shared > b->complete_shared) return true;
     if (a->complete_shared < b->complete_shared) return false;
 
-    ///> Downward Propagation - @seealso dynamic_dep_matrix
+    ///> Downward Propagation - @sa dynamic_dep_matrix
     choice = TablePlacement::DOWNWARD_PROP_DSC;
     if (down_score.first > down_score.second) return !provided_stage;
     if (down_score.first < down_score.second) return provided_stage;

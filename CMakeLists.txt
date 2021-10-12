@@ -16,6 +16,7 @@ OPTION(ENABLE_FLATROCK "Enable Flatrock" OFF)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(ENABLE_TESTING "Enable generation of ctests" ON)
 OPTION(ENABLE_GTESTS "Enable building and running GTest unit tests" ON)
+OPTION(ENABLE_DOXYGEN "Build Doxygen-based developer documentation" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 
@@ -166,6 +167,30 @@ add_custom_target(cpplint-all
   DEPENDS cpplint-asm cpplint
   COMMENT "cpplint everything"
   )
+
+if (ENABLE_DOXYGEN)
+  find_package(Doxygen REQUIRED dot)
+  if (NOT DOXYGEN_FOUND)
+    message(FATAL_ERROR "Doxygen and dot is needed to build the documentation.")
+  endif()
+
+  set (doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
+  set (doxyfile ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+  configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+
+  add_custom_target(doc
+    COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+    DEPENDS genIR  # Generate ir-generated.h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Building Doxygen documentation"
+    VERBATIM)
+
+  add_custom_target(doc-install
+    # Place a symlink to the generated documentation to the /var/www/html directory
+    COMMAND ln -fs ${CMAKE_CURRENT_BINARY_DIR}/html /var/www/html/bf-p4c-compilers
+    COMMENT "Installing Doxygen documentation"
+    VERBATIM)
+endif()
 
 # Generate the LICENSE file. Do this before generating the build system so
 # that CPack detects that the file exists.

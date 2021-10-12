@@ -1338,7 +1338,7 @@ bool AssignCounterLRTValues::FindCounterRams::preorder(const IR::MAU::Table *t) 
 }
 
 /**
- * @seealso ActionData::RandomNumber::Overlaps
+ * @sa ActionData::RandomNumber::Overlaps
  *
  * Only allows a random extern to get once per action, as currently it is too difficult to
  * tell when a random number get is using the same bits or separate bits.  This is used

@@ -44,7 +44,7 @@ class CheckPadAssignment final : public Inspector {
  *
  * By default, all fields in the headers are candidates for reordering, except
  * the 'tag' fields that are used by parser to differentiate different mirror
- * packet headers, etc. These tagged fields are marked with the '@tag' annotation.
+ * packet headers, etc. These tagged fields are marked with the \@tag annotation.
  */
 class CheckHeaderAlignment final : public Inspector {
     P4::TypeMap* typeMap;

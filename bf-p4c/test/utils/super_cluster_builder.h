@@ -1,13 +1,13 @@
 #ifndef EXTENSIONS_BF_P4C_TEST_UTILS_SUPER_CLUSTER_BUILDER_H_
 #define EXTENSIONS_BF_P4C_TEST_UTILS_SUPER_CLUSTER_BUILDER_H_
 
-#include <boost/optional.hpp>
-#include <iostream>
 #include <cctype>
+#include <iostream>
 #include <algorithm>
 #include <string>
 #include <istream>
 #include <sstream>
+#include <boost/optional.hpp>
 
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/allocate_phv.h"
@@ -52,12 +52,12 @@ class SuperClusterBuilder {
 
  private:
     /// Map of fields
-    /// @key is the name<width> of the field
-    /// @value is the pointer to the PHV::Field object
+    /// key is the name<width> of the field
+    /// value is the pointer to the PHV::Field object
     ordered_map<const std::string, PHV::Field*> str_to_field_m;
     /// Map of slices
-    /// @key is the string representation of the slice
-    /// @value is the pointer to the PHV::FieldSlice object
+    /// key is the string representation of the slice
+    /// value is the pointer to the PHV::FieldSlice object
     ordered_map<const std::string, PHV::FieldSlice*> str_to_slice_m;
 
     /// Private functions that analyze different parts of the SuperCluster

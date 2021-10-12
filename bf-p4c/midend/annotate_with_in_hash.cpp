@@ -43,9 +43,9 @@ bool DoAnnotateWithInHash::checkKeyDefaultAction(const IR::P4Control &control,
 
 /**
  * The function checks whether the structure of the assignment statement is suitable
- * for using the @in_hash annotation. The structure has to respect the fact that
+ * for using the \@in_hash annotation. The structure has to respect the fact that
  * only the first operand of an ALU unit can be sourced from the hash unit, which
- * is the case of the @in_hash unit applied to zero-extended operand.
+ * is the case of the \@in_hash unit applied to zero-extended operand.
  * The suitable structure is the following:
  *
  *   (0 ++ <op1>) <binop> <op2>
@@ -62,7 +62,7 @@ bool DoAnnotateWithInHash::checkKeyDefaultAction(const IR::P4Control &control,
  * @param[out] op         The operand that is outside of the concatenation operation
  * @param[out] opConcat   The operand that is inside of the concatenation operation
  * @return Returns true if the structure of the assignment statement is suitable
- *         for using the @in_hash annotation.
+ *         for using the \@in_hash annotation.
  */
 bool DoAnnotateWithInHash::checkAssignmentStructure(const IR::AssignmentStatement &assignment,
         const IR::Expression **op, const IR::Expression **opConcat) {
@@ -150,7 +150,7 @@ bool DoAnnotateWithInHash::checkHeaderMetadataReference(const IR::Expression &op
 }
 
 /**
- * If a block statement is already annotated with @in_hash or @in_vliw,
+ * If a block statement is already annotated with \@in_hash or \@in_vliw,
  * do not annotate it again.
  */
 const IR::Node *DoAnnotateWithInHash::preorder(IR::BlockStatement *b) {

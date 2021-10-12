@@ -1253,7 +1253,7 @@ class ClearPhvInfo : public Inspector {
  *
  * Note that this pass also collects field information for alias sources by
  * explicitly visiting the `source` children of AliasMembers and AliasSlices.
- * In this mode (i.e. when @gress is supplied to the constructor), the internal
+ * In this mode (i.e. when @p gress is supplied to the constructor), the internal
  * data structures are NOT cleared in init_apply.
  */
 class CollectPhvFields : public Inspector {

@@ -1,4 +1,6 @@
-# Setup
+# Overview of p4c-extension-tofino
+
+## Setup
 
 This repo contains the tofino backend for p4c v1.2 compiler.  It contains
 *just* the backend and can only be built within the p4c build infrastructure
@@ -12,7 +14,7 @@ This will check out the p4lang/p4c repository, move the
 p4c-extension-tofino to `p4c/extensions/bfn`, install the
 necessary dependences, and build the project.
 
-# Dependences
+## Dependencies
 
 - Tofino assembler and Harlyn model for testing the output of
   the Tofino backend.  The test scripts will look for sibling repos
@@ -44,7 +46,7 @@ make
 - The tests depend on GNU utilities. On macOS, these can be installed with
   `brew install coreutils`.
 
-# Tofino mid-end and back-end design
+## Tofino mid-end and back-end design
 
 The mid-end and back-end of the compiler are where all the Tofino-specific
 work is done.  To some extenet the boundary between mid-end and back-end
@@ -53,7 +55,7 @@ we transform the IR from frontend P4-oriented form (generally, a global scope
 containing a bunch of named symbols of various types) to Tofino-oriented
 form (a Pipe object containing ingress and egress parsers, deparsers, and tables).
 
-## Mid-end
+### Mid-end
 
 There are a variety of transformations we may want to do on the IR
 when it is still in P4 oriented form.  These could be considered
@@ -81,7 +83,7 @@ Some could also be implemented to operate on the backend IR form.
   that is deparsed from the ingress and parser in egress to carry metadat
   information between ingress and egress.
 
-## Back-end
+### Back-end
 
 The backend is where most of the resource allocation decisions take
 place.  Resource allocation passes should take extra ‘hints’ inputs to
@@ -98,13 +100,13 @@ The code here is organized into `parde` (parser-deparser), `mau`
 (match-action table), and `phv` (phv allocation and management) directories.
 To some extent these are independent, but there are interdependecies.
 
-### IR
+#### IR
 
 There are a variety of Tofino-specific IR classes used to hold information
 needed to track tofino resource use and manage the allocation of those
 resources.
 
-##### `IR::BFN::Pipe`
+###### `IR::BFN::Pipe`
 
 An abstraction of a single Tofino pipeline, this object is basically
 just a container for other (Parser, Deparser, and MAU) specific objects.
@@ -116,7 +118,7 @@ just the MAU, or just the Parser), we define special visitor bases
 `PardeModifier`, and `PardeTransform` that visit just those parts of the
 tree of interest to Mau or Parde.  Other parts of the tree are skipped.
 
-##### `IR::BFN::Unit`
+###### `IR::BFN::Unit`
 
 Abstract base class for parts of the pipe that access the PHV -- tables,
 parser states, and the deparser.  The `stage()` function returns an integer
@@ -124,10 +126,10 @@ associated with the order of the unit's execution -- the actual stage for
 tables, -1 for parser states (they come before stage 0), and a large
 number for the deparser (after all stages).
 
-##### `IR::BFN::Parser`
-##### `IR::BFN::Deparser`
+###### `IR::BFN::Parser`
+###### `IR::BFN::Deparser`
 
-##### `IR::MAU::Table`
+###### `IR::MAU::Table`
 
 The mau code is largely organized around the `IR::MAU::Table` ir class, which
 represents a Tofino-specific logical table.  Such a table has an (optional)
@@ -171,7 +173,7 @@ by various passes to get them into a form where they can be fit into the
 Tofino pipeline, then allocated to specific stages/logical ids/resources
 within the pipeline.
 
-##### `IR::MAU::TableSeq`
+###### `IR::MAU::TableSeq`
 
 A sequence of logical tables to run in order.  Each table will run,
 followed by any control dependent tables, followed by the next
@@ -181,14 +183,14 @@ contains a bit-matrix that tracks data dependencies between tables in
 the sequence including their control-depedent tables.  Tables that are
 not data dependent may be reordered.
 
-### Passes
+#### Passes
 
 The first step in the Tofino backend is converting the P4-level IR into the
 needed forms for the backend.  In most cases, this will be a fairly simple
 wrapper around some P4-level IR objects, organizing them into the rough form
 that tofino requires.
 
-#### parde
+##### parde
 
 Parser and deparser processing starts with extracting the state machine
 graph from the P4-level IR.  Since the IR (currently) does not support
@@ -221,7 +223,7 @@ parser state machine and blackboxes that do deparser-relevant processing
 best done from the P4-level parser IR, or from some later state of the
 parser IR (after some backend transformations).
 
-#### mau
+##### mau
 
 Mau processing begins by converting the P4 IR into a pair of
 `IR::MAU::TableSeq` objects (one for ingress, and one for egress --
@@ -290,7 +292,7 @@ work with the allocation.
 
 a single pass over the final IR should suffice for generating asm code.
 
-#### phv
+##### phv
 
 PHV allocation and management interacts heavily with the other parts of the
 compiler.  The basic design is to have an initial PHV pass that gathers

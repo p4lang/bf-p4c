@@ -20,6 +20,6 @@ docker run --privileged \
     -v /home/grgibb/dev:/data \
     -v /home:/home \
     -w /data/bf-p4c-compilers/build \
-    --publish 127.0.0.1:2222:22 \
+    --publish 127.0.0.1:2222:22 --publish 127.0.0.1:8080:80 \
     -it jarvis-ssh \
     /bin/bash

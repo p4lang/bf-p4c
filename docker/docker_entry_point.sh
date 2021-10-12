@@ -19,5 +19,8 @@ else
     echo "PTF: Using p4lang/ptf with scapy"
 fi
 
+# Start the web server; it is installed only in Jarvis for accessing generated documentation
+test -f /etc/init.d/apache2 && /etc/init.d/apache2 start
+
 # execute docker command
 exec "$@"

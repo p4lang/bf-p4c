@@ -14,8 +14,8 @@ class AddAliasAllocation : public Inspector {
     PhvInfo& phv;
     ordered_set<const PHV::Field*> seen;
 
-    /// Set @source allocation to that of the @range of @dest.  The size of
-    /// @range must match the size of @source.
+    /// Set @p source allocation to that of the @p range of @p dest.  The size of
+    /// @p range must match the size of @p source.
     void addAllocation(PHV::Field* source, PHV::Field* dest, le_bitrange range);
 
     profile_t init_apply(const IR::Node* root) override {

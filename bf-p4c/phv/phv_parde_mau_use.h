@@ -49,30 +49,30 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
 
     explicit Phv_Parde_Mau_Use(const PhvInfo &p) : phv(p) { }
 
-    /// @returns true if @f is read or written anywhere in the pipeline
-    /// or if @f is marked bridged.
+    /// @returns true if @p f is read or written anywhere in the pipeline
+    /// or if @p f is marked bridged.
     bool is_referenced(const PHV::Field *f) const;
 
-    /// @returns true if @f is used in the deparser.
+    /// @returns true if @p f is used in the deparser.
     bool is_deparsed(const PHV::Field *f) const;
 
-    /// @returns true if @f is used (read or written) in the MAU pipeline.
+    /// @returns true if @p f is used (read or written) in the MAU pipeline.
     bool is_used_mau(const PHV::Field *f) const;
     bool is_used_mau(const PHV::Field* f, le_bitrange range) const;
 
-    /// @returns true if @f is written in the MAU pipeline.
+    /// @returns true if @p f is written in the MAU pipeline.
     bool is_written_mau(const PHV::Field *f) const;
 
-    /// @returns true if @f is used in an ALU instruction.
+    /// @returns true if @p f is used in an ALU instruction.
     bool is_used_alu(const PHV::Field *f) const;
 
-    /// @returns true if @f is used in the parser or deparser.
+    /// @returns true if @p f is used in the parser or deparser.
     bool is_used_parde(const PHV::Field *f) const;
 
-    /// @returns true if @f is extracted in the (ingress or egress) parser.
+    /// @returns true if @p f is extracted in the (ingress or egress) parser.
     bool is_extracted(const PHV::Field *f, boost::optional<gress_t> gress = boost::none) const;
 
-    /// @returns true if @f is extracted in the (ingress or egress) parser from a constant.
+    /// @returns true if @p f is extracted in the (ingress or egress) parser from a constant.
     bool is_extracted_from_constant(const PHV::Field *f,
             boost::optional<gress_t> gress = boost::none) const;
 

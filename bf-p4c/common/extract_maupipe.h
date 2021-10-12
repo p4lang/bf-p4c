@@ -56,8 +56,19 @@ class AttachTables : public PassManager {
     StatefulSelectors   stateful_selectors;
 
     /**
-     * Create all the stateful ALUs by passing over all of the register actions.
-     * Once the pipeline is fully examined, add these to the salu_inits map.
+     * \ingroup stateful_alu
+     * \brief The pass converts declarations of register actions into IR::MAU::StatefulAlu nodes.
+     *
+     * The pass builds the BFN::AttachTables::salu_inits map, which maps declarations
+     * of register parameters to IR::MAU::StatefulAlu nodes.
+     *
+     * There are two annotation processed in this pass:
+     * 1. \@initial_register_lo_value
+     * 2. \@initial_register_hi_value
+     *
+     * Arithmetic ALUs support the following configurations:
+     * * 1/8/16/32 bits
+     * * Dual mode
      */
     class InitializeStatefulAlus : public MauInspector {
         AttachTables &self;
@@ -71,12 +82,23 @@ class AttachTables : public PassManager {
     };
 
     /**
-     * Collect all declarations of register params and check whether
+     * \ingroup stateful_alu
+     * \brief The pass converts declarations of register parameters
+     * into IR::MAU::SaluRegfileRow IR nodes.
+     *
+     * The pass collects all declarations of register params and checks whether
      * each of them is used in a single stateful ALU.
-     * Then, allocate a register file row for each RegisterParam used
-     * in a stateful ALU. It reads the salu_inits map.
-     * It must be called before InitializeStatefulInstructions, which
-     * uses the information about allocated register params.
+     * Then, it allocates a register file row for each RegisterParam used
+     * in a stateful ALU and adds this information to the corresponding
+     * IR::MAU::StatefulAlu::regfile map.
+     *
+     * Register parameters support only 8/16/32 signed and unsigned data types.
+     *
+     * @pre It uses information from the BFN::AttachTables::salu_inits map,
+     * which is populated in the BFN::AttachTables::InitializeStatefulAlus pass.
+     *
+     * @post It must be called before BFN::AttachTables::InitializeStatefulInstructions,
+     * which uses the information about allocated register params.
      */
     class InitializeRegisterParams : public MauInspector {
         AttachTables &self;
@@ -90,7 +112,15 @@ class AttachTables : public PassManager {
     };
 
     /**
-     * Creates stateful ALU instructions.  It must be called after AllocateRegisterParams,
+     * \ingroup stateful_alu
+     * \brief The pass converts register actions into IR::MAU::SaluAction nodes
+     * using the CreateSaluInstruction inspector.
+     *
+     * For each SALU, it creates a single CreateSaluInstruction inspector, which is
+     * applied to each IR::MAU::SaluAction node belonging to that SALU, so that information
+     * can be accumulated, and creates corresponding SALU instructions.
+     *
+     * @pre The pass must be called after BFN::AttachTables::InitializeRegisterParams,
      * since it uses information about allocated register params.
      */
     class InitializeStatefulInstructions : public MauInspector {
@@ -105,6 +135,13 @@ class AttachTables : public PassManager {
         explicit InitializeStatefulInstructions(AttachTables &s) : self(s) {}
     };
 
+    /**
+     * \ingroup stateful_alu
+     * \brief The pass attaches stateful ALUs to corresponding M/A tables.
+     *
+     * The attached stateful tables are stored in the IR::MAU::Table::attached vector
+     * of a M/A table.
+     */
     class DefineGlobalRefs : public MauModifier {
         AttachTables &self;
         P4::ReferenceMap *refMap;

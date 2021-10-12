@@ -248,9 +248,9 @@ class GreedyClotAllocator : public Visitor {
     }
 
     /// Helper to determine whether an adjustment is needed to create an inter-CLOT gap between two
-    /// CLOT candidates, when @c1 is parsed before @c2. If @c1 is never parsed before @c2, or if
-    /// @c1 and @c2 are always separated by at least the inter-CLOT gap requirement, then this
-    /// conservatively returns true.
+    /// CLOT candidates, when @p c1 is parsed before @p c2. If @p c1 is never parsed before @p c2,
+    /// or if @p c1 and @p c2 are always separated by at least the inter-CLOT gap requirement,
+    /// then this conservatively returns true.
     bool needInterClotGap(const ClotCandidate* c1,
                           const ClotCandidate* c2,
                           const FieldExtractInfo* fei,

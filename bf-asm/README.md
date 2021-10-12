@@ -1,12 +1,12 @@
-# **Tofino Assembler**
+# Tofino Assembler
 
-## **Documentation**
+## Documentation
 
 Documentation on using the assembler, notes on file formats, and internals are
 in [Google Drive > Barefoot shared > documents > Software > Assembler]
 (https://drive.google.com/drive/folders/0Byf8esgFy8YacmNzMmZiSkN4OFU)
 
-## **Setup**
+## Setup
 
 The repository contains code for the Barefoot assembler (bfas) and linker (walle).
 More info on walle can be found in walle/README.md.
@@ -14,7 +14,7 @@ More info on walle can be found in walle/README.md.
 Assembler takes assembly files (.bfa or .tfa) as input to generate output json which is
 then fed to walle to produce binary for tofino.
 
-## **Dependencies**
+## Dependencies
 
 - GNU make
 - A C++ compiler supporting C++11 (the Makefile uses g++ by defalt)
@@ -26,32 +26,38 @@ Running stf tests requires access to the simple test harness.  The
 `tests/runtests` script will look in various places for these tools (see the top
 of the script)
 
-## **Building Assembler**
+## Building Assembler
 
 The assenbler is built automatically as part of the full bf-p4c-tofino build; there
 is currently no supported standalone method of building the assembler by itself.
 
-## **Address Sanitizer checks**
+## Address Sanitizer checks
 
 (obsolete)
 To enable address sanitizer checks in the assembler use,
 
+```
 user@box$ ./bootstrap.sh --enable-asan-checks
+```
 
 Or alternatively,
 
+```
 user@box$ ./configure --enable-asan-checks
+```
 
 This configures the Makefile to add -fsanitizer=address & -fsanitizer=undefined.
 By default the leak sanitizer is also enabled along with the address santizier.
 You can disable it by setting environment variable ASAN\_OPTIONS with
 "detect\_leaks=0".
 
-## **Testing**
+## Testing
 
-### **Make Targets**
+### Make Targets
 
+```
 user@box$ make check
+```
 
 Runs tests/runtests script on all .p4 files in the tests and tests/mau
 directories and .bfa files in tests/asm directory. This script can run one or
@@ -59,12 +65,14 @@ more tests specified on the command line, or will run all .p4 files in the
 current directory if run with no arguments.  Stf tests can be run if specified
 explicitly on the command line; they will not run by default.
 
+```
 user@box$ make check-sanity
+```
 
 This is similar to `make check` but will only run on .p4 files in the tests
 directory which is a small subset for a quick sanity check.
 
-### **Runtests Script**
+### Runtests Script
 
 The ./tests/runtests script will first run glass compiler (p4c-tofino) on
 input .p4 file and then run the assembler (bfas) on generated assembly (.tfa)
@@ -76,7 +84,7 @@ To skip running glass use -f option on the runtests script
 Use -j <value> to run parallel threads. If invoking through Make targets set
 MAKEFLAGS to "-j <value>"
 
-### **Expected Failures**
+### Expected Failures
 
 expected\_failures.txt files are under tests & tests/mau directory which outline
 failing tests with cause (compile, bfas, mismatch). These files must be updated
@@ -88,18 +96,18 @@ to reflect any new or fixed fails.
 | bfas     |  Assembler   | Assembler error while running input assembly file (.bfa)|
 | mismatch |  Json output | Difference in json outputs for glass and assembler      |
 
-### **Context Json Ignore**
+### Context Json Ignore
 Context Json output from Glass compiler is verbose and may or may not be
 consumed entirely by the drivers unlike the assembler Json output. The
 tests/runtests script ignores the keys placed in the tests/ctxt\_json\_ignore file
 while creating json diff to only display relevant mismatches
 
-### **Json Diff**
+### Json Diff
 Each test after running will have its own <testname>.out dir with following
 items:
 E.g. TEST = exact\_match0.p4
 exact\_match0.p4.out
-##### **Glass Json output**
+##### Glass Json output
 ```
 ├── cfg
 │   ├── memories.all.parser.egress.cfg.json.gz
@@ -131,11 +139,11 @@ exact\_match0.p4.out
 │   ├── parser.context.json
 │   └── phv.context.json
 ```
-##### **Assembler Output Directory**
+##### Assembler Output Directory
 ```
 ├── exact_match0.out
 ```
-##### **Assembler Json Output**
+##### Assembler Json Output
 ```
 │   ├── memories.all.parser.egress.cfg.json.gz
 │   ├── memories.all.parser.ingress.cfg.json.gz
@@ -161,23 +169,23 @@ exact\_match0.p4.out
 │   ├── regs.pipe.cfg.json.gz
 │   ├── regs.top.cfg.json.gz
 ```
-##### **Context Json**
+##### Context Json
 ```
 │   └── context.json
 ```
-##### **Symlink to Glass Assembly File**
+##### Symlink to Glass Assembly File
 ```
 ├── exact_match0.tfa -> out.tfa
 ```
-##### **Glass Run Log**
+##### Glass Run Log
 ```
 ├── glsc.log
 ```
-##### **Json Diff File**
+##### Json Diff File
 ```
 ├── json_diff.txt
 ```
-##### **Glass Output Logs**
+##### Glass Output Logs
 ```
 ├── logs
 │   ├── asm.log
@@ -204,16 +212,16 @@ exact\_match0.p4.out
 │   └── transform.log
 ├── name_lookup.c
 ```
-##### **Glass output assembly file**
+##### Glass output assembly file
 ```
 ├── out.tfa
 ```
-##### **Assembler Run Log**
+##### Assembler Run Log
 ```
 ├── bfas.config.log
 ├── bfas.log
 ```
-##### **Test visualization htmls**
+##### Test visualization htmls
 ```
 └── visualization
     ├── deparser.html
@@ -225,7 +233,7 @@ exact\_match0.p4.out
     └── table_placement.html
 ```
 
-## **Backends (Tofino/JBay)**
+## Backends (Tofino/JBay)
 Assembler currently supports Tofino backend but code is generic enough to be
 ported to a different backend like JBay. Architecture specific constants must be
 parameterized and placed in the constants.h file
@@ -234,7 +242,7 @@ parameterized and placed in the constants.h file
 assembler. The chip schema contains register information and is a binary
 (python pickle file) generated from csv file in bfnregs repository.
 
-### **Extracting information from hardware bfnregs info**
+### Extracting information from hardware bfnregs info
 
 To the greatest extent possible, we automatically generate assembler support code
 directly from the information provided to use by the hardware team.  The main 'source'
@@ -279,7 +287,7 @@ the driver/model.  When cfg.json files are produced, walle can be used to link t
 binary file.  There are also options for generating C++ code to read .cfg.json files for
 future support of binary disassembly.
 
-### **Config JSON**
+### Config JSON
 The config json files (with .cfg.json extension) are generated by the
 assembler which are fed into walle to generate the binary
 (also called `tofino.bin`)
@@ -367,5 +375,5 @@ you can use `pp section` to list all the csr.address\_map objects that
 *are* in the chip.schema.  Generally you'll find that it is the 'ignore'
 names that have changed, so fixing them is trivial.
 
-## **Assembly Syntax**
+## Assembly Syntax
 The assembly syntax is documented in `SYNTAX.md` file

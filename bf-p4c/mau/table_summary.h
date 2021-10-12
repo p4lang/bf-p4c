@@ -151,7 +151,7 @@ class TableSummary: public MauInspector {
     /// compiler-generated name otherwise.
     static cstring getTableName(const IR::MAU::Table* tbl);
 
-    /// @return the set of stages to which table @t has been allocated. optional internal flag
+    /// @return the set of stages to which table @p t has been allocated. optional internal flag
     /// can be used to retrieve the information from the internalTableAlloc map.
     const ordered_set<int> stages(const IR::MAU::Table* tbl, bool internal = false) const;
 

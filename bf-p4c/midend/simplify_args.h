@@ -94,21 +94,29 @@ class RewriteTypeArguments : public Transform {
  * This pass manager performs the following simplification on headers
  * and emit() methods.
  *
+ * ```
  * 1. header h {
  *      struct s {
  *        bit<8> f0;
  *      }
  *    }
- *
+ * ```
  *   is converted to
- *
+ * ```
  *   header h {
  *      bit<8> _s_f0;
  *   }
+ * ```
  *
- * 2. emit(hdr) is converted to
+ * ```
+ * 2. emit(hdr)
+ * ```
+ * is converted to
+ * ```
  *    emit({hdr.f0, hdr.f1})
+ * ```
  *
+ * ```
  * 3. header h {
  *       @flexible
  *       struct s0 {
@@ -119,13 +127,14 @@ class RewriteTypeArguments : public Transform {
  *          bit<8> f0;
  *       }
  *    }
- *
+ * ```
  *    is converted to
- *
+ * ```
  *    header h {
  *       bit<8> _s0_f0 @flexible;
  *       bit<8> _s1_f0 @flexible;
  *    }
+ * ```
  */
 
 /**

@@ -11,7 +11,7 @@
 #include "bf-p4c/common/field_defuse.h"
 
 /// By default, the compiler automatically initializes metadata at the start of each gress.
-/// This pass disables this automatic initialization by adding @pa_no_init annotations to all
+/// This pass disables this automatic initialization by adding \@pa_no_init annotations to all
 /// metadata fields that might not be explicitly written by the time they are read.
 class DisableAutoInitMetadata : public Transform {
     const FieldDefUse& defuse;
@@ -29,15 +29,15 @@ class DisableAutoInitMetadata : public Transform {
 /// Removes unnecessary metadata initializations. An assignment to a metadata field is deemed an
 /// unnecessary initialization if it satisfies all of the following:
 ///
-///   - The metadata field is not annotated with @pa_no_init.
+///   - The metadata field is not annotated with \@pa_no_init.
 ///   - The metadata field is initially valid (@see PHV::Field::is_invalidate_from_arch).
 ///   - The constant 0 is assigned.
 ///   - The assignment only overwrites ImplicitParserInit, according to def-use.
 class RemoveMetadataInits : public AbstractElimUnusedInstructions {
     const PhvInfo& phv;
 
-    /// The set of fields with a @pa_no_init annotation. Each field is represented by
-    /// "gress::hdr.field".
+    /// The set of fields with a \@pa_no_init annotation. Each field is represented by
+    /// \a gress::hdr.field.
     std::set<cstring> pa_no_inits;
 
     /// Determines whether an assignment from the given right expression to the given left

@@ -56,6 +56,7 @@ export P4C_DEPS="autoconf \
                  distcc \
                  flex \
                  g++-6 \
+                 graphviz \
                  libboost1.67-dev \
                  libfl-dev \
                  libatomic-ops-dev
@@ -113,7 +114,8 @@ export DEV_PKGS="vim \
                  gdb \
                  telnet \
                  ninja \
-                 tmux"
+                 tmux \
+                 apache2"
 
 # Packages for release image
 export REL_PKGS="wget"

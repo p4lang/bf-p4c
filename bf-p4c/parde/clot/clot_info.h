@@ -171,7 +171,7 @@ class ClotInfo {
     /// Determines whether a field is extracted in multiple states that are not mutually exclusive.
     bool is_extracted_in_multiple_non_mutex_states(const PHV::Field* f) const;
 
-    /// Returns true when all paths that set @field's pov bit also extracts @field
+    /// Returns true when all paths that set the POV bit of @p field also extracts @p field.
     bool extracted_with_pov(const PHV::Field* field) const;
 
     /// Determines whether a field has the same bit-in-byte offset (i.e., the same bit offset,

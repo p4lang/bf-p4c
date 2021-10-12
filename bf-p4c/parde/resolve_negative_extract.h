@@ -143,7 +143,7 @@ struct ResolveNegativeExtract : public PassManager {
          *   (we can skip the node on the historic path because it is already analyzed)
          *
          * @param state Parser state used for the analysis
-         * @param state_child Child of the \p state
+         * @param state_child Child of the @p state
          * @param tr_shift Transition shift to set
          * @param state_shift State shift to set
          */

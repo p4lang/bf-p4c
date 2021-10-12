@@ -258,7 +258,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MA
 }
 
 /**
- * @seealso comments above pre_split_addr_instr
+ * @sa comments above pre_split_addr_instr
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *at) {
@@ -275,7 +275,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::
 }
 
 /**
- * @seealso comments above pre_split_addr_instr
+ * @sa comments above pre_split_addr_instr
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_type_instr(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *at) {
@@ -341,7 +341,7 @@ const IR::Expression *SplitAttachedInfo::split_type(const IR::MAU::AttachedMemor
  * some stateful in the current stage and some in later stages, which means tha address
  * needs to be both on the meter bus AND in phv.
  *
- * @seealso The address/pfe/type pass requirements are detailed in attached_info.h file, but
+ * @sa The address/pfe/type pass requirements are detailed in attached_info.h file, but
  * will be generated if necessary
  */
 const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Action *act,

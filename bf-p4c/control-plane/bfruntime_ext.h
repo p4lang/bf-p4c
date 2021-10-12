@@ -195,7 +195,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
     void addPortMetadataExtern(Util::JsonArray* tablesJson) const;
     void addRegisterParam(Util::JsonArray* tablesJson, const RegisterParam&) const;
     /// Add register parameter data fields to the JSON data array for a BFRT table. Field
-    /// ids are assigned incrementally starting at @idOffset, which is 1 by
+    /// ids are assigned incrementally starting at @p idOffset, which is 1 by
     /// default.
     void addRegisterParamDataFields(Util::JsonArray* dataJson,
                                     const RegisterParam& register_param_,

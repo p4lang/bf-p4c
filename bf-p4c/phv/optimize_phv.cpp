@@ -3,10 +3,10 @@
 /**
  * Insert a Transaction/SuperCluster to the optimization strategy.
  *
- * @param_in transaction : Transaction to keep track
- * @param_in sc : SuperCluster binded to this Transaction
- * @param_in tr_id : Optional Transaction ID. When unset, the Transaction ID will be the next
- *                   integer value. Removed Transaction ID are not re-used.
+ * @param[in] transaction Transaction to keep track
+ * @param[in] sc SuperCluster binded to this Transaction
+ * @param[in] tr_id Optional Transaction ID. When unset, the Transaction ID will be the next
+ *                  integer value. Removed Transaction ID are not re-used.
  */
 void BruteForceOptimizationStrategy::addTransaction(PHV::Transaction& transaction,
                                                     PHV::SuperCluster& sc, int tr_id) {
@@ -61,11 +61,11 @@ void BruteForceOptimizationStrategy::addTransaction(PHV::Transaction& transactio
 }
 
 /**
- * Build a sequence of Transaction In/Out if tr_id is removed.
+ * Build a sequence of Transaction In/Out if @p tr_id is removed.
  *
- * @param_in tr_id : Transaction ID to remove from the list.
- * @param_out tr_in : Transaction ID list that have no dependency on tr_id
- * @param_out tr_out : Transaction ID list that have dependency on tr_id
+ * @param[in] tr_id Transaction ID to remove from the list.
+ * @param[out] tr_in Transaction ID list that have no dependency on @p tr_id
+ * @param[out] tr_out Transaction ID list that have dependency on @p tr_id
  *
  * @return true if the returned sequence is valid. false otherwise.
  */
@@ -122,8 +122,8 @@ bool BruteForceOptimizationStrategy::buildSeqWithout(int tr_id, std::list<int>& 
 /**
  * Play a sequence on top of a particular Transaction.
  *
- * @param_in tr_in : Transaction ID list to play
- * @param_in partial_alloc : Re-play the Transaction on top of partial_alloc
+ * @param[in] tr_in Transaction ID list to play
+ * @param[in] partial_alloc Re-play the Transaction on top of @p partial_alloc
  *
  * @return BruteForceOptimizationStrategy object containing the re-played sequence.
  */
@@ -151,11 +151,11 @@ BruteForceOptimizationStrategy BruteForceOptimizationStrategy::playSeq(
 /**
  * Start the optimization process.
  *
- * @param_in_out unallocated_sc : Unallocated SuperClusters list to place. The list is updated
- *                                during the process and ideally is returned empty on success.
- * @param_in_out rst : Base Transaction to commit the best result on.
+ * @param[inout] unallocated_sc Unallocated SuperClusters list to place. The list is updated
+ *                              during the process and ideally is returned empty on success.
+ * @param[inout] rst Base Transaction to commit the best result on.
  *
- * @return Assigned SuperClusters list from the unallocated_sc list.
+ * @return Assigned SuperClusters list from the @p unallocated_sc list.
  */
 std::list<PHV::SuperCluster*> BruteForceOptimizationStrategy::optimize(
                             std::list<PHV::SuperCluster*>& unallocated_sc, PHV::Transaction& rst) {

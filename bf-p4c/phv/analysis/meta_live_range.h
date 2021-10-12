@@ -34,13 +34,14 @@ class MetadataLiveRange : public Inspector {
     static constexpr char const *EGRESS_PARSER_ENTRY =
         "$entry_point.$egress_tna_entry_point";
 
-    /// @returns true if the live range indicated by [@minStage1, @maxStage1] either overlaps with
-    /// or differs from [@minStage2, @maxStage2] by less than DEP_DIST stages.
+    /// @returns true if the live range indicated by [@p minStage1, @p maxStage1]
+    /// either overlaps with or differs from [@p minStage2, @p maxStage2]
+    /// by less than \a DEP_DIST stages.
     static bool overlaps(int minStage1, int maxStage1, int minStage2, int maxStage2, int depDist =
             DEP_DIST);
 
-    /// @returns true if the live range indicated by @range1 either overlaps with or differs from
-    /// @range2 by less than DEP_DIST stages.
+    /// @returns true if the live range indicated by @p range1 either overlaps with or differs from
+    /// @p range2 by less than \a DEP_DIST stages.
     static bool overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2, int depDist =
             DEP_DIST);
 
@@ -88,11 +89,11 @@ class MetadataLiveRange : public Inspector {
     /// Pretty print the live ranges of all metadata fields.
     void printLiveRanges() const;
 
-    /// Calculate and set the live range for field @f.
+    /// Calculate and set the live range for field @p f.
     void setFieldLiveMap(const PHV::Field* f);
 
     /// Padding fields have special requirements for live ranges: they are only alive at the ingress
-    /// deparser and the egress parser. This function sets the live range for a padding field @f.
+    /// deparser and the egress parser. This function sets the live range for a padding field @p f.
     void setPaddingFieldLiveMap(const PHV::Field* f);
 
  public:
@@ -113,15 +114,15 @@ class MetadataLiveRange : public Inspector {
         return minStages;
     }
 
-    /// @returns the set of tables that have min_stage equal to @stage.
+    /// @returns the set of tables that have min_stage equal to @p stage.
     const ordered_set<const IR::MAU::Table*> getTablesInStage(int stage) const {
         if (!minStages.count(stage))
             BUG("Stage %1% not in the resource-insensitive tabel dependence graph", stage);
         return minStages.at(stage);
     }
 
-    /// @returns true if fields @f1 and @f2 are found to be potentially overlayable because of their
-    /// live ranges.
+    /// @returns true if fields @p f1 and @p f2 are found to be potentially overlayable
+    /// because of their live ranges.
     bool hasPotentialLiveRangeOverlay(const PHV::Field* f1, const PHV::Field* f2) const {
         return overlay(f1->id, f2->id);
     }

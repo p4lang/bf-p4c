@@ -3103,7 +3103,7 @@ bool IXBar::allocHashDistSection(bitvec post_expand_bits, bitvec possible_shifts
 }
 
 /**
- * @seealso As mentioned in allocHashDist, a wide address is any address larger than 16 bits,
+ * @sa As mentioned in allocHashDist, a wide address is any address larger than 16 bits,
  * as this is larger than the general input for a hash distribution unit.  The expand block is
  * then used.  The expand block can do the following:
  *     the 1st 23b section = { 38..32, 15..0 } of the hash function input
@@ -3307,7 +3307,7 @@ void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_gro
  *
  * Because addresses specifically may require to be greater than 16 bits, i.e. a meter_adr
  * could be 23 bits, the expand block is used to combined two of these 16 bit sections into
- * a single 23 bit section in a very strange way.  @seealso allocHashDistWideAddress.  If a wide
+ * a single 23 bit section in a very strange way.  @sa allocHashDistWideAddress.  If a wide
  * address is not necessary, 7b0 is just append to the msb.  Thus the hash distribution unit
  * at this point can be throught of as 6x23 bits of data.
  *

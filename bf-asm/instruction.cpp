@@ -83,11 +83,11 @@ struct operand {
         virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void(const ::Phv::Slice &sl)>) {}
         /** pass1 called as part of pass1 processing of stage
-         * @tbl - table containing the action with the instruction with this operand
-         * @group - mau PHV group of the ALU (dest) for this instruction */
+         * @param tbl table containing the action with the instruction with this operand
+         * @param group mau PHV group of the ALU (dest) for this instruction */
         virtual void pass1(Table *tbl, int group) {}
         /** pass2 called as part of pass2 processing of stage
-         * @group - mau PHV group of the ALU (dest) for this instruction */
+         * @param group mau PHV group of the ALU (dest) for this instruction */
         virtual void pass2(int group) {}
     } *op;
     struct Const : Base {

@@ -59,10 +59,10 @@ class DeparseGraph {
     /// Adds an edge from src to dst. @returns true if a new edge is created as a result.
     bool addEdge(Node src, Node dst);
 
-    /// Determines whether @f1 might be deparsed before @f2.
+    /// Determines whether @p f1 might be deparsed before @p f2.
     bool canReach(const PHV::Field* f1, const PHV::Field* f2) const;
 
-    /// @returns a description of all nodes that might be deparsed between @f1 and @f2.
+    /// @returns a description of all nodes that might be deparsed between @p f1 and @p f2.
     const std::vector<NodeInfo> nodesBetween(const PHV::Field* f1, const PHV::Field* f2) const;
 
     void clear();

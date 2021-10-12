@@ -32,13 +32,13 @@ class MauBacktracker : public Backtrack {
     /// Store the number of stages required by table allocation
     int maxStage = -1;
 
-    /// @true if metadata initialization must be disabled.
+    /// True if metadata initialization must be disabled.
     bool metaInitDisable = false;
 
-    /// @true if PHV allocation must be redone while ignoring pack conflicts.
+    /// True if PHV allocation must be redone while ignoring pack conflicts.
     bool ignorePackConflicts = false;
 
-    /// @true if PHV allocation and table placement both fit in round 1.
+    /// True if PHV allocation and table placement both fit in round 1.
     bool firstRoundFit = false;
 
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override;
@@ -53,7 +53,7 @@ class MauBacktracker : public Backtrack {
             const ordered_map<cstring, ordered_set<int>>& tableMap) const;
 
  public:
-    /// @returns the stage number(s) if tables @t1 and @t2 are placed in the same stage
+    /// @returns the stage number(s) if tables @p t1 and @p t2 are placed in the same stage
     /// @returns an empty set if tables are not in the same stage
     ordered_set<int> inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
 
@@ -64,7 +64,7 @@ class MauBacktracker : public Backtrack {
     /// in the tables map
     bool hasTablePlacement() const;
 
-    /// @returns the stages in which table @t was placed. Use internalTables mapping when internal
+    /// @returns the stages in which table @p t was placed. Use internalTables mapping when internal
     /// flag is set.
     ordered_set<int> stage(const IR::MAU::Table* t, bool internal = false) const;
 

@@ -24,8 +24,8 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
                                         P4::TypeMap* typeMap,
                                         bool *isConstructedInPlace = nullptr);
 
-/// @return an extern instance defined or referenced by the value of @table's
-/// @propertyName property, or boost::none if no extern was referenced.
+/// @return an extern instance defined or referenced by the value of @p table's
+/// @p propertyName property, or boost::none if no extern was referenced.
 boost::optional<P4::ExternInstance>
 getExternInstanceFromProperty(const IR::P4Table* table,
                               cstring propertyName,

@@ -70,7 +70,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     /// the same control flow path, then f1 and f2 are mutually exclusive.
     SymBitMatrix&    mutually_exclusive;
 
-    /// @returns true if @f should be ignored in this analysis.
+    /// @returns true if @p f should be ignored in this analysis.
     FieldFilter_t IgnoreField;
 
     /// Tracks the fields encountered (and not ignored) during this analysis.

@@ -385,7 +385,7 @@ class MeterColor : public Parameter {
  * the output will be appearing.  However, because nothing besides the Meter ALU output is on
  * that particular row, and is never packed with anything else, no padding is necessary.
  *
- * @seealso attached_output.cpp and create_meter_alu_RamSection for more details
+ * @sa attached_output.cpp and create_meter_alu_RamSection for more details
  */
 class MeterALU : public Parameter {
     cstring _alu_user;
@@ -549,7 +549,7 @@ class ALUOperation {
     bitvec static_entry_of_arg(const Argument *arg, bitvec value) const;
     bitvec static_entry_of_constants() const;
 
-    ///> @seealso comments on create_meter_color_RamSection
+    ///> \sa comments on create_meter_color_RamSection
     template<typename T> bool has_param() const {
         for (auto param : _params) {
             if (param.param->is<T>())

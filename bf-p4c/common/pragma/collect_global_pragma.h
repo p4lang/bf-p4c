@@ -18,7 +18,7 @@ class CollectGlobalPragma : public Inspector {
 
     /// Preorder function that extracts pragmas associated with the StructField node but which
     /// themselves do not include identifying characteristics (such as field names).
-    /// E.g. @pragma pa_not_parsed ingress
+    /// E.g. \@pragma pa_not_parsed ingress
     ///      header header_type_t hdr1;
     /// The pragma pa_parsed is associated with the declaration for hdr1 (StructField node) but does
     /// not contain the name of the header. We need to extract the header name from the StructField

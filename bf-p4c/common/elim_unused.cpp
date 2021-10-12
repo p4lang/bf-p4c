@@ -95,11 +95,11 @@ class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
       : AbstractElimUnusedInstructions(self.defuse) {}
 };
 
-/// Removes no-op tables that have the @hidden annotation.
+/// Removes no-op tables that have the \@hidden annotation.
 class ElimUnused::Tables : public MauTransform {
  public:
     const IR::Node* postorder(IR::MAU::Table* table) override {
-        // Don't remove the table unless it has the @hidden annotation.
+        // Don't remove the table unless it has the \@hidden annotation.
         std::vector<IR::ID> val;
         if (!table->getAnnotation(IR::Annotation::hiddenAnnotation, val)) return table;
 

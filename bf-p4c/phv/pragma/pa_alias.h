@@ -63,7 +63,7 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     static const char *description;
     static const char *help;
 
-    /// Checks if alias is possible between @f1 and @f2. If not, returns boost::none.
+    /// Checks if alias is possible between @p f1 and @p f2. If not, returns boost::none.
     /// If yes, it returns a pair of fields, the first being the alias destination and the
     /// second is the alias source (field being replaced).
     boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> mayAddAlias(

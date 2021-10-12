@@ -71,8 +71,8 @@ class Clustering : public PassManager {
     /// are part of the same UnionFind set.
     UnionFind<const PHV::Field*> complex_validity_bits_i;
 
-    /// Utility method for querying fields_to_slices_i.
-    /// @returns the slices of @field in `fields_to_slices_i` overlapping with @range.
+    /// Utility method for querying \a fields_to_slices_i.
+    /// @returns the slices of @p field in \a fields_to_slices_i overlapping with @p range.
     std::vector<PHV::FieldSlice> slices(const PHV::Field* field, le_bitrange range) const;
 
     /** For backtracking, clear all the pre-existing structs in the Clustering object.
@@ -156,7 +156,7 @@ class Clustering : public PassManager {
             : self(self), phv_i(self.phv_i), pa_sizes_i(pa) { }
 
         /// Utility method for updating fields_to_slices_i.
-        /// Splits slices for @field at @range.lo and @range.hi + 1.
+        /// Splits slices for @p field at @p range.lo and @p range.hi + 1.
         /// @returns true if any new slices were created.
         bool updateSlices(const PHV::Field* field, le_bitrange range);
     };
@@ -225,9 +225,9 @@ class Clustering : public PassManager {
     /// For example,
     /// Assume we have a flexible header h1:
     /// header h1 {
-    ///   @flexible
+    ///   \@flexible
     ///   bit<9> f1;
-    ///   @flexible
+    ///   \@flexible
     ///   bit<9> f2;
     /// }, and a non-flexible header h2:
     /// header h2 {
@@ -498,7 +498,7 @@ class Clustering : public PassManager {
     const std::list<PHV::SuperCluster*>& cluster_groups() const { return super_clusters_i; }
 
     /// return true if two fields cannot be packed into one container because there
-    /// are inconsistent extraction to them from @flexible headers.
+    /// are inconsistent extraction to them from \@flexible headers.
     bool no_pack(const PHV::Field* a, const PHV::Field* b) const {
         return inconsistent_extract_no_packs_i.count(a) &&
                inconsistent_extract_no_packs_i.at(a).count(b);

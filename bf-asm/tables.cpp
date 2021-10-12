@@ -1209,7 +1209,7 @@ Table::Actions::Action::alias_t::alias_t(value_t &data) {
  * Builds a map of conditional variable to which bits in the action data format that they
  * control.  Used for JSON later.
  *
- * @see_also asm_output::EmitAction::mod_cond_value
+ * @sa asm_output::EmitAction::mod_cond_value
  */
 void Table::Actions::Action::setup_mod_cond_values(value_t &map) {
     for (auto &kv : map.map) {
@@ -1581,7 +1581,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
  *     -is_mod_field_conditionally_value
  *     -mod_field_conditionally_mask_field_name
  *
- * @see_also asm_output::EmitAction::mod_cond_value
+ * @sa asm_output::EmitAction::mod_cond_value
  */
 void Table::Actions::Action::check_conditional(Table::Format::Field &field) const {
     bool found = false;
@@ -1610,7 +1610,7 @@ void Table::Actions::Action::check_conditional(Table::Format::Field &field) cons
 }
 
 /**
- * @see_also Table::Actions::Action::check_conditional
+ * @sa Table::Actions::Action::check_conditional
  */
 bool Table::Actions::Action::immediate_conditional(int lo, int sz, std::string &condition) const {
     bool found = false;

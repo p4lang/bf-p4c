@@ -83,7 +83,8 @@ class MultipleApply : public PassManager {
     UnionFind<const IR::MAU::Table*> duplicate_tables;
 
     /// Checks the invariant that the conditional control flow that follows each table is the same
-    /// across all calls of that table. It also populates @duplicate_tables for DeduplicateTables.
+    /// across all calls of that table. It also populates \p duplicate_tables
+    /// for DeduplicateTables.
     class CheckStaticNextTable : public MauInspector {
         MultipleApply &self;
 
@@ -114,7 +115,7 @@ class MultipleApply : public PassManager {
         explicit CheckStaticNextTable(MultipleApply &s) : self(s) { }
     };
 
-    /// De-duplicates Table and TableSeq objects using @duplicate_tables.
+    /// De-duplicates Table and TableSeq objects using \p duplicate_tables.
     class DeduplicateTables : public MauTransform {
         MultipleApply &self;
 
@@ -123,7 +124,8 @@ class MultipleApply : public PassManager {
         /// context. This never changes after construction.
         boost::optional<gress_t> gress;
 
-        /// Gives the replacement Table object for each representative table in @duplicate_tables.
+        /// Gives the replacement Table object for each representative table
+        /// in \p duplicate_tables.
         std::map<gress_t, std::map<const IR::MAU::Table*, const IR::MAU::Table*>> replacements;
 
         /// The TableSeq objects we've already produced.

@@ -139,7 +139,7 @@ class BridgedPacking : public PassManager {
 };
 
 /**
- * Replace @flexible type definition with packed version
+ * Replace \@flexible type definition with packed version
  */
 class SubstitutePackedHeaders : public PassManager {
     ParamBinding* bindings;

@@ -92,7 +92,7 @@ template<> struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::TNA> > {
     static boost::optional<size_t> indexTypeParamIdx() { return 1; }
 };
 
-/// @ref CounterlikeTraits<> specialization for @ref CounterExtern for PSA
+/// CounterlikeTraits specialization for BFN::CounterExtern for PSA
 template<> struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::PSA> > {
     static const cstring name() { return "counter"; }
     static const cstring directPropertyName() {
@@ -143,7 +143,7 @@ template<> struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::TNA> > {
     static boost::optional<size_t> indexTypeParamIdx() { return 0; }
 };
 
-/// @ref CounterlikeTraits<> specialization for @ref MeterExtern for PSA
+/// CounterlikeTraits specialization for BFN::MeterExtern for PSA
 template<> struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::PSA> > {
     static const cstring name() { return "meter"; }
     static const cstring directPropertyName() {
@@ -380,7 +380,7 @@ struct Register {
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this register
                                         // declaration.
 
-    /// @return the information required to serialize an @instance of register
+    /// @return the information required to serialize an @p instance of register
     /// or boost::none in case of error.
     static boost::optional<Register>
     from(const IR::ExternBlock* instance,
@@ -408,7 +408,7 @@ struct Register {
                         declaration->to<IR::IAnnotated>()};
     }
 
-    /// @return the information required to serialize an @instance of a direct
+    /// @return the information required to serialize an @p instance of a direct
     /// register or boost::none in case of error.
     static boost::optional<Register>
     fromDirect(const P4::ExternInstance& instance,
@@ -450,7 +450,7 @@ struct RegisterParam {
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this register
                                         // declaration.
 
-    /// @return the information required to serialize an @instance of register parameter
+    /// @return the information required to serialize an @p instance of register parameter
     /// or boost::none in case of error.
     static boost::optional<RegisterParam>
     from(const IR::ExternBlock* instance,
@@ -485,12 +485,12 @@ struct RegisterParam {
 struct Lpf {
     const cstring name;       // The fully qualified external name of the filter
     int64_t size;
-    /// If not none, the instance is a direct resource associated with @table.
+    /// If not none, the instance is a direct resource associated with \p table.
     const boost::optional<cstring> table;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this Lpf
                                         // declaration.
 
-    /// @return the information required to serialize an @instance of Lpf or
+    /// @return the information required to serialize an @p instance of Lpf or
     /// boost::none in case of error.
     static boost::optional<Lpf>
     from(const IR::ExternBlock* instance) {
@@ -503,7 +503,7 @@ struct Lpf {
                    declaration->to<IR::IAnnotated>()};
     }
 
-    /// @return the information required to serialize an @instance of a direct
+    /// @return the information required to serialize an @p instance of a direct
     /// Lpf or boost::none in case of error.
     static boost::optional<Lpf>
     fromDirect(const P4::ExternInstance& instance,
@@ -521,12 +521,12 @@ struct Wred {
     uint8_t dropValue;
     uint8_t noDropValue;
     int64_t size;
-    /// If not none, the instance is a direct resource associated with @table.
+    /// If not none, the instance is a direct resource associated with \p table.
     const boost::optional<cstring> table;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this wred
                                         // declaration.
 
-    /// @return the information required to serialize an @instance of Wred or
+    /// @return the information required to serialize an @p instance of Wred or
     /// boost::none in case of error.
     static boost::optional<Wred>
     from(const IR::ExternBlock* instance) {
@@ -545,7 +545,7 @@ struct Wred {
                     declaration->to<IR::IAnnotated>()};
     }
 
-    /// @return the information required to serialize an @instance of a direct
+    /// @return the information required to serialize an @p instance of a direct
     /// Wred or boost::none in case of error.
     static boost::optional<Wred>
     fromDirect(const P4::ExternInstance& instance,
@@ -690,7 +690,7 @@ class SnapshotFieldFinder : public Inspector {
     }
 
  public:
-    /// Use @includeValid set to 'true' if you want the pass to create a
+    /// Use @p includeValid set to 'true' if you want the pass to create a
     /// validity field (POV bit) for each visited header.
     static void find(TypeMap* typeMap,
                      const IR::Type* type,
@@ -706,7 +706,7 @@ class SnapshotFieldFinder : public Inspector {
 
 /// Parent class for BFRuntimeArchHandlerV1Model and BFRuntimeArchHandlerPSA; it
 /// includes all the common code between the two architectures (which is only
-/// dependent on the @arch template parameter.
+/// dependent on the @a arch template parameter.
 template <Arch arch>
 class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandlerIface {
  protected:
@@ -960,8 +960,8 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         }
     }
 
-    /// @return true if @table's 'idle_timeout' property exists and is
-    /// true. This indicates that @table supports entry ageing.
+    /// @return true if @p table's 'idle_timeout' property exists and is
+    /// true. This indicates that @p table supports entry ageing.
     static bool getSupportsTimeout(const IR::P4Table* table) {
         auto timeout = table->properties->getProperty("idle_timeout");
         if (timeout == nullptr) return false;
@@ -981,7 +981,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         return expr->to<IR::BoolLiteral>()->value;
     }
 
-    /// @return the direct register associated with @table, if it has one, or
+    /// @return the direct register associated with @p table, if it has one, or
     /// boost::none otherwise.
     static boost::optional<Register> getDirectRegister(
         const IR::P4Table* table,
@@ -1161,8 +1161,8 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         return boost::none;
     }
 
-    /// @return the action profile referenced in @table's implementation
-    /// property, if it has one, or boost::none otherwise.
+    /// @return the action profile referenced in the implementation property of @p table,
+    /// if it has one, or @c boost::none otherwise.
     boost::optional<ActionProfile>
     getActionProfile(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
         using Helpers::getExternInstanceFromProperty;
@@ -1178,7 +1178,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
                              getTableImplementationAnnotations(table, refMap)};
     }
 
-    /// @return the action profile corresponding to @instance.
+    /// @return the action profile corresponding to @p instance.
     static boost::optional<ActionProfile>
     getActionProfile(const IR::ExternBlock* instance) {
         auto decl = instance->node->to<IR::IDeclaration>();
@@ -1189,7 +1189,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
                              decl->to<IR::IAnnotated>()};
     }
 
-    /// @return the action profile referenced in @table's implementation
+    /// @return the action profile referenced in @p table's implementation
     /// property, if it has one, or boost::none otherwise.
     boost::optional<ActionSelector>
     getActionSelector(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
@@ -1491,7 +1491,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         }
     }
 
-    /// calls @function on every extern method applied to the extern @object
+    /// calls @p function on every extern method applied to the extern @p object
     // TODO(Antonin): for some reason we sometimes get multiple calls on the
     // same extern method (but different IR node), and I haven't found out why
     // or when this happens.
@@ -1561,7 +1561,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
 };
 
 /// Implements @ref BFRuntimeArchHandlerIface for the Tofino architecture. The
-/// overridden methods will be called by the @P4RuntimeSerializer to collect and
+/// overridden methods will be called by the P4RuntimeSerializer to collect and
 /// serialize Tofino-specific symbols which are exposed to the control-plane.
 class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<Arch::TNA> {
  public:
@@ -1828,7 +1828,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     /// for snapshot - based on the snapshotInfo map populated by
     /// getSnapshotControls() - then we inspect its parameters using the @ref
     /// SnapshotFieldFinder pass to build a list of snapshot fields. The caller
-    /// is expected to pass the same @fieldIds table for every call to this
+    /// is expected to pass the same @p fieldIds table for every call to this
     /// method.
     void collectSnapshot(P4RuntimeSymbolTableIface* symbols,
                          const IR::ControlBlock* controlBlock,
@@ -2102,7 +2102,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     }
 
 
-    /// @return the direct filter instance associated with @table, if it has
+    /// @return the direct filter instance associated with @p table, if it has
     /// one, or boost::none otherwise. Used as a helper for getDirectLpf and
     /// getDirectWred.
     template <typename T>
@@ -2118,7 +2118,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         return T::fromDirect(*directFilterInstance, table);
     }
 
-    /// @return the direct Lpf instance associated with @table, if it has one,
+    /// @return the direct Lpf instance associated with @p table, if it has one,
     /// or boost::none otherwise.
     static boost::optional<Lpf> getDirectLpf(const IR::P4Table *table,
                                              ReferenceMap* refMap,
@@ -2126,7 +2126,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         return getDirectFilter<Lpf>(table, refMap, typeMap, "DirectLpf");
     }
 
-    /// @return the direct Wred instance associated with @table, if it has one,
+    /// @return the direct Wred instance associated with @p table, if it has one,
     /// or boost::none otherwise.
     static boost::optional<Wred> getDirectWred(const IR::P4Table *table,
                                                ReferenceMap* refMap,
@@ -2241,7 +2241,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     }
 
     /// @return serialization information for the port_metadata_extract() call represented by
-    /// @call, or boost::none if @call is not a port_metadata_extract() call or is invalid.
+    /// @a call, or boost::none if @a call is not a port_metadata_extract() call or is invalid.
     static boost::optional<PortMetadata>
     getPortMetadataExtract(const P4::ExternFunction* function,
                            ReferenceMap* refMap,
@@ -2436,7 +2436,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
 };
 
 /// Implements @ref BFRuntimeArchHandlerCommon interface for PSA architectures. The
-/// overridden methods will be called by the @P4RuntimeSerializer to collect and
+/// overridden methods will be called by the P4RuntimeSerializer to collect and
 /// serialize PSA-specific symbols which are exposed to the control-plane.
 class BFRuntimeArchHandlerPSA final : public BFRuntimeArchHandlerCommon<Arch::PSA> {
  public:
