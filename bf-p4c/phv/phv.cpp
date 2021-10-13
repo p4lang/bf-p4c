@@ -130,6 +130,8 @@ bool LiveRange::is_disjoint(const LiveRange& other) const {
     // The live ranges are disjoint only if:
     // ((a < c || (a == c && A < C)) && (b < c || (b == c && B < C))) ||
     // ((c < a || (c == a && C < A)) && (d < a || (d == a && D < A)))
+    // XXX(yumin): this is compatible with physical live range mode. So even if there is a
+    // much easier way to check disjoint in physical live range mode, we can keep using this.
     if ((((a.first < c.first) || (a.first == c.first && a.second < c.second)) &&
          ((b.first < c.first) || (b.first == c.first && b.second < c.second))) ||
         (((c.first < a.first) || (c.first == a.first && c.second < a.second)) &&

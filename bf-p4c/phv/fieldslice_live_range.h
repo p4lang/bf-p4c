@@ -58,7 +58,6 @@ class LiveRangeInfo {
     const safe_vector<OpInfo>& vec() const { return lives_i; }
 
     // can_overlay returns true when this and @p other can be overlaid, defined as:
-    // premise: no tailing write, i.e., any write must have at least one read later.
     // (1) For any stage *s*, at least one of OpInfo at *s* of this or @p other is dead.
     // (2) Except for the write-after-read case that:
     //     For example
@@ -81,7 +80,6 @@ class LiveRangeInfo {
     //   Foo   W R D W L L  L  R
     //   Foo.disjoint_ranges() = [(-1W, 0R), (2W, 12R)] // if tofino
     // stage of parse is -1, mau stages starts from 0 and deparser is device::max_stage().
-    // Tailing writes (write without paired read) will be ignored.
     // Uninitialized reads, that are not caught by parser implicit init or
     // when auto-init-metadata are not enabled, will have a short live range [xR, xR].
     // These short live ranges should be treated as overlayable to any other live ranges.
@@ -151,6 +149,13 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
         // and for fields marked as not_parsed_fields(), locations of parser unit will be none.
         boost::optional<Location> to_location(
                 const PHV::Field *field, const FieldDefUse::locpair& loc, bool is_read) const;
+
+        // update @p liverange based on @p loc and @p is_read.
+        // @returns the range of stages (including parde) that has been updated. Indexes of stages
+        // are following the LiveRangeInfo class:
+        // -1 = parser, numStages() = deparser, mau stages are mapped by stage numbers.
+        std::pair<int, int> update_live_status(LiveRangeInfo &liverange, const Location &loc,
+                                               bool is_read) const;
 
         /// update @p liverange based on paired input: @p use_loc and @p def_loc.
         /// return false if invalid live range is found.

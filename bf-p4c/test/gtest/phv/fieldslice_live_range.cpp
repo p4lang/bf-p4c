@@ -172,6 +172,22 @@ TEST_F(FieldSliceLiveRangeTest, disjoint_ranges) {
          {
              {{-1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
          }},
+        /// tailing writes
+        {"W D D",
+         {
+             {{-1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {-1, PHV::FieldUse(PHV::FieldUse::WRITE)}},
+         }},
+        {"W W L L R",
+         {
+             {{-1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {-1, PHV::FieldUse(PHV::FieldUse::WRITE)}},
+             {{0, PHV::FieldUse(PHV::FieldUse::WRITE)}, {3, PHV::FieldUse(PHV::FieldUse::READ)}},
+         }},
+        {"W D D W",
+         {
+             {{-1, PHV::FieldUse(PHV::FieldUse::WRITE)}, {-1, PHV::FieldUse(PHV::FieldUse::WRITE)}},
+
+             {{2, PHV::FieldUse(PHV::FieldUse::WRITE)}, {2, PHV::FieldUse(PHV::FieldUse::WRITE)}},
+         }},
     };
     for (const auto& tc : cases) {
         auto rst = make(tc.info).disjoint_ranges();

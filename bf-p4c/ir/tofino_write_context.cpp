@@ -27,10 +27,11 @@ bool TofinoWriteContext::isWrite(bool root_value) {
         return true; }
 
 
-    // Parser primitives write to l-values - for example, an Extract writes to
-    // its destination.
+    // Parser primitives write to l-values - for example,
+    // (1) an Extract writes to its destination
+    // (2) ghost parser write to ghost lvalues.
     if (ctxt->node->is<IR::BFN::ParserLVal>() &&
-        findContext<IR::BFN::ParserPrimitive>())
+        (findContext<IR::BFN::ParserPrimitive>() || findContext<IR::BFN::GhostParser>()))
         return true;
 
     // TODO: Does C++ support monads?  The following if statements are nested

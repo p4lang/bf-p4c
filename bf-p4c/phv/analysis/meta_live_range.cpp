@@ -60,7 +60,8 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
     // (12 for Tofino), and a table implies the corresponding dg.min_stage.
     for (const FieldDefUse::locpair use : defuse.getAllUses(f->id)) {
         const IR::BFN::Unit* use_unit = use.first;
-        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>()) {
+        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>() ||
+            use_unit->to<IR::BFN::GhostParser>()) {
             // Ignore parser use if field is marked as not parsed.
             if (notParsedFields.count(f)) continue;
             // There is no need to set the maxUse here, because maxUse is either -1 (if there is no
@@ -98,8 +99,7 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
                 maxUseAccess |= READ;
             }
         } else {
-            if (!use_unit->to<IR::BFN::GhostParser>())
-                BUG("Unknown unit encountered %1%", use_unit->toString());
+            BUG("Unknown unit encountered %1%", use_unit->toString());
         }
     }
 
@@ -109,7 +109,8 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
         // If the definition is of type ImplicitParserInit, then it was added to account for
         // uninitialized reads, and can be safely ignored. Account for all other parser
         // initializations, as long as the field is not marked notParsed.
-        if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>()) {
+        if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>() ||
+            def_unit->to<IR::BFN::GhostParser>()) {
             // If the def is an implicit read inserted only for metadata fields to account for
             // uninitialized reads, then ignore that initialization.
             if (def.second->is<ImplicitParserInit>()) {

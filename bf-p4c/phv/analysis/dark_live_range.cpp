@@ -170,7 +170,8 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
     // Set the min values initially to the deparser, and the max values to the parser initially.
     for (const FieldDefUse::locpair use : defuse.getAllUses(f->id)) {
         const IR::BFN::Unit* use_unit = use.first;
-        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>()) {
+        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>() ||
+            use_unit->to<IR::BFN::GhostParser>()) {
             // Ignore parser use if field is marked as not parsed.
             if (notParsedFields.count(f)) {
                 LOG_DEBUG4(TAB1 "Ignoring field " << f << " use in parser");
@@ -190,9 +191,7 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             livemap.addAccess(f, use_stage, READ, use_unit, !defuse.hasNonDarkContext(use));
             if (!defuse.hasNonDarkContext(use)) LOG_DEBUG4("\t\tCan use in a dark container.");
         } else {
-            if (!use_unit->to<IR::BFN::GhostParser>()) {
-                BUG("Unknown unit encountered %1%", use_unit->toString());
-            }
+            BUG("Unknown unit encountered %1%", use_unit->toString());
         }
     }
 
@@ -210,7 +209,8 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
         }
         // If the field is not specified as pa_no_init and has a def in the parser, check if the def
         // is of type ImplicitParserInit, and if it is, we can safely ignore this def.
-        if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>()) {
+        if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>() ||
+            def_unit->to<IR::BFN::GhostParser>()) {
             if (def.second->is<ImplicitParserInit>()) {
                 LOG_DEBUG4(TAB2 "Ignoring implicit parser init.");
                 continue;

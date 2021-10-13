@@ -24,7 +24,8 @@ void FinalizeStageAllocation::summarizeUseDefs(
         bool& usedInDeparser,
         bool usePhysicalStages) {
     for (auto& ref : refs) {
-        if (ref.first->is<IR::BFN::Parser>() || ref.first->is<IR::BFN::ParserState>()) {
+        if (ref.first->is<IR::BFN::Parser>() || ref.first->is<IR::BFN::ParserState>() ||
+            ref.first->is<IR::BFN::GhostParser>()) {
             if (!ref.second->is<ImplicitParserInit>()) {
                 usedInParser = true;
                 LOG5("\tUsed in parser");
@@ -53,8 +54,6 @@ void FinalizeStageAllocation::summarizeUseDefs(
                 LOG5("\tUsed in table " << t->name << " (DG Stage " << dg.min_stage(t) << ") : " <<
                      f->name << "[" << bits.hi << ":" << bits.lo << "]");
             }
-        } else if (ref.first->is<IR::BFN::GhostParser>()) {
-            continue;  // skip
         } else {
             BUG("Found a reference %s in unit %s that is not the parser, deparser, or table",
                     ref.second->toString(), ref.first->toString());
