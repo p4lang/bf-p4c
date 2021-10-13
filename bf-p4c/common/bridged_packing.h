@@ -178,16 +178,22 @@ using SolitaryConstraint = Constraints::SolitaryConstraint;
 class CollectConstraints : public Inspector {
     PhvInfo& phv;
 
+    struct Constraints {
+        // collected alignment constraints;
+        ordered_map<const PHV::Field*, ordered_set<AlignmentConstraint>> alignment;
+        // two field must have the same constraint, exact value to be determined by solver.
+        ordered_map<const PHV::Field*, std::vector<const PHV::Field*>> mutualAlignment;
+
+        ordered_set<std::pair<const PHV::Field*, const PHV::Field*>> mustPack;
+        ordered_set<std::pair<const PHV::Field*, SolitaryConstraint::SolitaryReason>> noPack;
+    };
+    Constraints constraints;
+
     const CollectIngressBridgedFields& ingressBridgedFields;
     const CollectEgressBridgedFields& egressBridgedFields;
     const GatherParserExtracts& parserAlignedFields;
     const GatherDigestFields& digestFields;
     const ActionPhvConstraints& actionConstraints;
-
-    // collected alignment constraints;
-    ordered_map<const PHV::Field*, ordered_set<AlignmentConstraint>> alignmentConstraints;
-    // two field must have the same constraint, exact value to be determined by solver.
-    ordered_map<const PHV::Field*, std::vector<const PHV::Field*>> mutualAlignmentConstraints;
 
     // determine alignment constraint on a single field.
     cstring getOppositeGressFieldName(cstring);
@@ -199,12 +205,10 @@ class CollectConstraints : public Inspector {
     ordered_set<const PHV::Field*> findAllRelatedFieldsOfCopackedFields(const PHV::Field* f);
     void computeAlignmentConstraint(const ordered_set<const PHV::Field*>&, bool);
 
-    ordered_set<std::pair<const PHV::Field*, const PHV::Field*>> mustPackConstraints;
     bool mustPack(const ordered_set<const PHV::Field*>& , const ordered_set<const PHV::Field*>&,
                   const ordered_set<const IR::MAU::Action*>&);
     void computeMustPackConstraints(const ordered_set<const PHV::Field*>&, bool);
 
-    ordered_set<std::pair<const PHV::Field*, SolitaryConstraint::SolitaryReason>> noPackConstraints;
     void computeNoPackIfIntrinsicMeta(const ordered_set<const PHV::Field*>&, bool);
     void computeNoPackIfActionDataWrite(const ordered_set<const PHV::Field*>&, bool);
     void computeNoPackIfSpecialityRead(const ordered_set<const PHV::Field*>&, bool);

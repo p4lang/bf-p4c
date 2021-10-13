@@ -69,33 +69,7 @@ ordered_map<cstring, std::set<int>> PhvInfo::table_to_physical_stages;
 bool PhvInfo::darkSpillARA = PhvInfo::DARK_SPILL_ARA_DEFAULT;
 
 void PhvInfo::clear() {
-    all_fields.clear();
-    by_id.clear();
-    all_structs.clear();
-    simple_headers.clear();
-    aliasMap.clear();
-    dummyPaddingNames.clear();
-    externalNameMap.clear();
-    metadata_mutex_i.clear();
-    dark_mutex_i.clear();
-    bridged_extracted_together_i.clear();
-    alloc_done_ = false;
-    trivial_alloc_ = false;
-    pov_alloc_done = false;
-    zeroContainers[0].clear();
-    zeroContainers[1].clear();
-    reverseMetadataDeps.clear();
-    metadataDeps.clear();
-    metadataDepFields.clear();
-    alwaysRunTables.clear();
-    deparser_no_pack_i.clear();
-    field_no_pack_i.clear();
-    digest_no_pack_i.clear();
-    field_mutex_i.clear();
-    constantExtractedInSameState.clear();
-    sameStateConstantExtraction.clear();
-    fields_to_tempvars_i.clear();
-    same_container_alloc_i.clear();
+    *this = PhvInfo();
     PhvInfo::clearMinStageInfo();
     PhvInfo::resetDeparserStage();
 }

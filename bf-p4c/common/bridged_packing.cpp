@@ -569,7 +569,7 @@ void CollectConstraints::computeAlignmentConstraint(const ordered_set<const PHV:
             str << f;
             if (f->is_flexible()) {
                 str << " saved as mutually aligned";
-                mutualAlignmentConstraints[field].push_back(f);
+                constraints.mutualAlignment[field].push_back(f);
                 if (debug)
                     LOG5(str.str());
                 continue; }
@@ -593,11 +593,11 @@ void CollectConstraints::computeAlignmentConstraint(const ordered_set<const PHV:
                 auto container_size = (f->alignment->align + f->size + 7) / 8 * 8;
                 constraint.setContainerSize(container_size);
 
-                alignmentConstraints[field].insert(constraint);
+                constraints.alignment[field].insert(constraint);
             }
         }
-        if (!alignmentConstraints.count(field))
-            alignmentConstraints.emplace(field);
+        if (!constraints.alignment.count(field))
+            constraints.alignment.emplace(field);
     };
 
     for (auto f : fields) {
@@ -697,7 +697,7 @@ void CollectConstraints::computeMustPackConstraints(
             if (mustPack(it->second, it2->second, common_reads)) {
                 LOG3("\t\tMust pack fields " << it->first->name <<
                         " and " << it2->first->name << " together.");
-                mustPackConstraints.insert(std::make_pair(it->first, it2->first)); } } }
+                constraints.mustPack.insert(std::make_pair(it->first, it2->first)); } } }
 }
 
 void CollectConstraints::computeNoSplitConstraints(
@@ -891,23 +891,22 @@ void CollectConstraints::computeNoPackIfDigestUse(
 }
 
 Visitor::profile_t CollectConstraints::init_apply(const IR::Node* root) {
-    alignmentConstraints.clear();
-    mutualAlignmentConstraints.clear();
+    constraints = Constraints();
     return Inspector::init_apply(root);
 }
 
 // Update alignment constraint in PhvInfo
 void CollectConstraints::end_apply() {
     if (LOGGING(4)) {
-        if (alignmentConstraints.size() > 0) {
+        if (constraints.alignment.size() > 0) {
             LOG3("\tPrinting bridged fields with alignment constraints:");
-            for (auto kv : alignmentConstraints)
+            for (auto kv : constraints.alignment)
                 for (auto c : kv.second)
                     LOG4("\t  " << kv.first << " : " << c.getAlignment());
         }
-        if (mutualAlignmentConstraints.size() > 0) {
+        if (constraints.mutualAlignment.size() > 0) {
             LOG3("\tPrinting mutually aligned fields:");
-            for (auto kv : mutualAlignmentConstraints)
+            for (auto kv : constraints.mutualAlignment)
                 for (auto f : kv.second)
                     LOG4("\t  " << kv.first << " and " << f);
         }
@@ -938,7 +937,7 @@ void CollectConstraints::end_apply() {
         return ret;
     };
 
-    for (auto align : alignmentConstraints) {
+    for (auto align : constraints.alignment) {
         // update PhvInfo& with inferred alignment constraint
         PHV::Field* f = phv.field(align.first->name);
         BUG_CHECK(f, "De-referencing invalid field %s", align.first->name);
@@ -958,19 +957,19 @@ void CollectConstraints::end_apply() {
              " to " << alignment.getAlignment());
     }
 
-    for (auto fields : mutualAlignmentConstraints) {
+    for (auto fields : constraints.mutualAlignment) {
         auto& matrix = phv.getMutuallyAligned();
         for (auto f : fields.second) {
             matrix(fields.first->id, f->id) = true;
         }
     }
 
-    for (auto pack : mustPackConstraints) {
+    for (auto pack : constraints.mustPack) {
         auto& matrix = phv.getBridgedExtractedTogether();
         matrix(std::get<0>(pack)->id, std::get<1>(pack)->id) = true;
     }
 
-    for (auto pack : noPackConstraints) {
+    for (auto pack : constraints.noPack) {
         PHV::Field* f = phv.field(pack.first->name);
         BUG_CHECK(f, "De-referencing invalid field %s", pack.first->name);
         f->set_solitary(pack.second);
