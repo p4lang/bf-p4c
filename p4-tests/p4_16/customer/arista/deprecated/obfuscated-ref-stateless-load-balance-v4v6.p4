@@ -9,6 +9,7 @@
 @pa_auto_init_metadata
 
 
+@pa_no_pack("ingress", "Millstone.Mickleton.Bufalo", "Millstone.Guion.Nenana")
 @pa_container_size("ingress" , "Jayton.Makawao.Floyd" , 8)
 @pa_container_size("ingress" , "Jayton.Sequim.Rains" , 16)
 @pa_container_size("ingress" , "Millstone.ElkNeck.Grannis" , 16)
