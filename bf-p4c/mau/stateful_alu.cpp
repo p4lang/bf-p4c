@@ -871,12 +871,17 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     } else {
         negate = false;
         keep_slice = true; }
+    auto num_ops = operands.size();
     visit(sl->e0, "e0");
     if (keep_slice) {
-        if (operands.back() == sl->e0)
+        if (num_ops + 1 != operands.size()) {
+            // slice on top of an instruction -- can't mask the output
+            error("%sexpression too complex for RegisterAction", sl->srcInfo);
+            return false;
+        } else if (operands.back() == sl->e0) {
             operands.back() = sl;
-        else
-            operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2);
+        } else {
+            operands.back() = MakeSlice(operands.back(), sl->getL(), sl->getH()); }
         if (save_negate)
             operands.back() = new IR::Neg(operands.back());
     }
