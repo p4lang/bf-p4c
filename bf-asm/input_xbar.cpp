@@ -529,6 +529,21 @@ bool InputXbar::copy_existing_hash(int group, std::pair<const int, HashCol> &col
     return false;
 }
 
+void InputXbar::gen_hash_column(
+    std::pair<const int, HashCol> &col,
+    std::pair<const unsigned int, std::map<int, HashCol>> &hash) {
+    bool non_zero = false;
+    // It is possible that a hash column can be genereated as all 0s if using RANDOM_DYN algo, so
+    // regeneration is required if a hash column is all 0s and using RANDOM_DYN.
+    while (!non_zero) {
+        col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
+        if (col.second.fn->hash_algorithm.hash_alg != RANDOM_DYN ||
+            !col.second.data.empty()) {
+            non_zero = true;
+        }
+    }
+}
+
 void InputXbar::pass1() {
     TcamUseCache tcam_use;
     tcam_use.ixbars_added.insert(this);
@@ -570,7 +585,7 @@ void InputXbar::pass1() {
             if (col.second.fn && col.second.fn != prev)
                 ok = (prev = col.second.fn)->check_ixbar(this, hash.first/2U);
             if (ok && col.second.fn && !copy_existing_hash(hash.first, col)) {
-                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
+                gen_hash_column(col, hash);
             }
         }
         bool add_to_use = true;
@@ -691,7 +706,7 @@ void InputXbar::pass2() {
     for (auto &hash : hash_tables) {
         for (auto &col : hash.second) {
             if (!col.second.data && col.second.fn) {
-                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
+                gen_hash_column(col, hash);
             }
         }
     }

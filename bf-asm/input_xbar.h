@@ -88,6 +88,8 @@ class InputXbar {
     void check_tcam_input_conflict(Group group, Input &input, TcamUseCache &tcam_use);
     int tcam_input_use(int out_byte, int phv_byte, int phv_size);
     void tcam_update_use(TcamUseCache &use);
+    void gen_hash_column(std::pair<const int, HashCol> &col,
+        std::pair<const unsigned int, std::map<int, HashCol>> &hash);
     struct GroupSet {
         Group           group;
         const std::vector<InputXbar *> &use;
