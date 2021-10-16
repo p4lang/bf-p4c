@@ -1874,13 +1874,13 @@ CoreAllocation::prepare_candidate_slices(
     std::vector<PHV::AllocSlice> candidate_slices;
     for (auto& field_slice : slices) {
         if (c.is(PHV::Kind::mocha) && !field_slice.field()->is_mocha_candidate()) {
-            LOG_DEBUG5(TAB1 "Failed: " << c << " cannot contain the non-mocha field slice "
-                        << field_slice);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: " << c <<
+                        " cannot contain the non-mocha field slice " << field_slice);
             return boost::none;
         }
         if (c.is(PHV::Kind::dark) && !field_slice.field()->is_dark_candidate()) {
-            LOG_DEBUG5(TAB1 "Failed: " << c << " cannot contain the non-dark field slice "
-                        << field_slice);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: " << c <<
+                        " cannot contain the non-dark field slice " << field_slice);
             return boost::none;
         }
         le_bitrange container_slice =
@@ -1908,10 +1908,8 @@ bool CoreAllocation::try_metadata_overlay(
             return a.field()->is_deparser_zero_candidate();
         });
     if (prevDeparserZero && !slice.field()->is_deparser_zero_candidate()) {
-        LOG_DEBUG5(TAB1
-                    "Failed: Can't do metadata overlay on deparsed zero "
-                    "container "
-                    << c);
+        LOG_FEATURE("alloc_progress", 5, TAB1
+                    "Failed: Can't do metadata overlay on deparsed zero container " << c);
         return false;
     }
 
@@ -1921,7 +1919,7 @@ bool CoreAllocation::try_metadata_overlay(
         alloced_slices, slice, perContainerAlloc, actual_cntr_state);
     bool noInitPresent = true;
     if (!initNodes) {
-        LOG_DEBUG5(TAB1 "Failed: Can't find initialization points.");
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Can't find meta initialization points.");
         return false;
     } else {
         if (!allocedSlices) {
@@ -1960,8 +1958,7 @@ bool CoreAllocation::try_metadata_overlay(
     }
 
     if (!noInitPresent && disableMetadataInit) {
-        LOG_DEBUG5(TAB1
-                    "Failed: Live range shrinking requiring metadata "
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Live range shrinking requiring metadata "
                     "initialization is disabled in this round");
         return false;
     }
@@ -1981,8 +1978,8 @@ bool CoreAllocation::try_dark_overlay(
     for (auto& slice : dark_slices) {
         const auto& alloced_slices =
             perContainerAlloc.slices(slice.container(), slice.container_slice());
-        LOG5("    Attempting to overlay " << slice.field() << " on " << alloced_slices
-                                            << " by pushing one of them into a dark container.");
+        LOG_FEATURE("alloc_progress", 5, "    Attempting to overlay " << slice.field() << " on " <<
+                    alloced_slices << " by pushing one of them into a dark container.");
 
         // Get non parser-mutually-exclusive slices allocated in container c
         PHV::Allocation::MutuallyLiveSlices container_state =
@@ -2003,19 +2000,17 @@ bool CoreAllocation::try_dark_overlay(
         auto darkInitNodes = utils_i.dark_init.findInitializationNodes(
             group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA);
         if (!darkInitNodes) {
-            LOG_DEBUG5(TAB1
-                        "Failed: Cannot find initialization points for dark "
-                        "containers.");
+            LOG_FEATURE("alloc_progress", 5, TAB1
+                        "Failed: Cannot find initialization points for dark containers.");
             return false;
         } else {
             // Create initialization points for the dark container.
             if (!generateNewAllocSlices(slice, alloced_slices, *darkInitNodes,
                                         new_candidate_slices, perContainerAlloc,
                                         actual_cntr_state)) {
-                LOG_DEBUG5(TAB1
+                LOG_FEATURE("alloc_progress", 5, TAB1
                             "Failed: New dark primitives extend previously defined "
-                            "slice live ranges; thus skipping container "
-                            << c);
+                            "slice live ranges; thus skipping container " << c);
                 return false;
             }
 
@@ -2144,10 +2139,11 @@ bool CoreAllocation::try_place_wide_arith_hi(
         break;
     }
     if (!can_alloc_hi) {
-        LOG_DEBUG5("Failed: Wide arithmetic hi slice could not be allocated.");
+        LOG_FEATURE("alloc_progress", 5,
+                    "Failed: Wide arithmetic hi slice could not be allocated.");
         return false;
     } else {
-        LOG_DEBUG5("Wide arithmetic hi slice could be allocated.");
+        LOG_FEATURE("alloc_progress", 5, "Wide arithmetic hi slice could be allocated.");
         return true;
     }
 }
@@ -2160,7 +2156,7 @@ bool CoreAllocation::find_previous_allocation(
     const PHV::ContainerGroup& group,
     const PHV::Allocation& alloc) const {
     // Set previous_container to the container provided as part of start_positions, if any.
-    LOG_DEBUG5("\nTrying to allocate slices at container indices:");
+    LOG_FEATURE("alloc_progress", 5, "\nTrying to allocate slices at container indices:");
     for (auto& slice : slices) {
         if (LOGGING(5)) {
             LOG_DEBUG5(TAB1 << start_positions.at(slice).bitPosition << ": " << slice);
@@ -2189,22 +2185,24 @@ bool CoreAllocation::find_previous_allocation(
 
         // Check if previous allocations were to a container in this group.
         if (!group.contains(alloc_slice.container())) {
-            LOG_DEBUG5(TAB1 "Failed: Slice " << slice << " has already been allocated to a "
-                       "different container group");
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Slice " << slice <<
+                        " has already been allocated to a different container group");
             return false; }
 
         // Check if all previous allocations were to the same container.
         if (previous_container != PHV::Container() &&
                 previous_container != alloc_slice.container()) {
-            LOG_DEBUG5(TAB1 "Failed: Some slices in this list have already been allocated to "
-                       "different containers");
+            LOG_FEATURE("alloc_progress", 5, TAB1
+                        "Failed: Some slices in this list have already been allocated to "
+                        "different containers");
             return false; }
         previous_container = alloc_slice.container();
 
         // Check that previous allocations match the proposed bit positions in this allocation.
         if (alloc_slice.container_slice().lo != start_positions.at(slice).bitPosition) {
-            LOG_DEBUG5(TAB1 "Failed: " << alloc_slice << " has already been allocated and does not "
-                       "start at " << start_positions.at(slice).bitPosition);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: " << alloc_slice <<
+                        " has already been allocated and does not start at " <<
+                        start_positions.at(slice).bitPosition);
             return false; }
 
         // Record previous allocations for use later.
@@ -2269,8 +2267,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     LOG_DEBUG5("Checking constraints for each field");
     for (auto& slice : slices) {
         if (!satisfies_constraints(group, slice)) {
-            LOG_DEBUG5(TAB1 "Failed: Slice " << slice << " doesn't satisfy "
-                       "slice<-->group constraints");
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Slice " << slice <<
+                        " doesn't satisfy slice<-->group constraints");
             return boost::none; } }
 
     // figure out whether we have a wide arithmetic lo operation and find the
@@ -2300,20 +2298,21 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     // Return if the slices can't fit together in a container.
 
     if (container_size < aggregate_size) {
-        LOG_DEBUG5(TAB1 "Failed: Slices are " << aggregate_size << "b in total and cannot fit in a "
-                   << container_size << "b container");
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Slices are " << aggregate_size <<
+                    "b in total and cannot fit in a " << container_size << "b container");
         return boost::none; }
 
     // Look for a container to allocate all slices in.
     AllocScore best_score = AllocScore::make_lowest();
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container& c : group) {
-        LOG_DEBUG5("Trying to allocate to " << c);
+        LOG_FEATURE("alloc_progress", 5, "Trying to allocate to " << c);
 
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
         if (previous_container != PHV::Container() && previous_container != c) {
-            LOG_DEBUG5(TAB1 "Failed: Some slices were already allocated to " << previous_container);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Some slices were already allocated to "
+                        << previous_container);
             continue;
         }
 
@@ -2382,10 +2381,11 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             const bool darkOverlay =
                 !utils_i.settings.no_code_change &&
                 can_overlay(utils_i.phv.dark_mutex(), slice.field(), alloced_slices);
-            LOG_DEBUG6(TAB1 "Testing overlay of " << slice.field() << " on " << alloced_slices);
-            LOG_DEBUG6(TAB2 "Control flow overlay: " << control_flow_overlay);
-            LOG_DEBUG6(TAB2 "Metadata overlay: " << metadataOverlay);
-            LOG_DEBUG6(TAB2 "Dark overlay: " << darkOverlay);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Testing overlay of " << slice.field() << " on "
+                        << alloced_slices);
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Control flow overlay: " << control_flow_overlay);
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Metadata overlay: " << metadataOverlay);
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Dark overlay: " << darkOverlay);
             overlay_info[slice] = {
                 control_flow_overlay, physical_liverange_overlay, metadataOverlay, darkOverlay};
             /// 1. no overlapped slice.
@@ -2515,7 +2515,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
                 auto action_alloc =
                     tryAllocSliceList(this_alloc, group, super_cluster, kv.second, score_ctx);
                 if (!action_alloc) {
-                    LOG_DEBUG5(TAB1
+                    LOG_FEATURE("alloc_progress", 5, TAB1
                                "Failed: Slice list has conditional constraints that cannot be "
                                "satisfied");
                     conditional_constraints_satisfied = false;
@@ -2554,12 +2554,12 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     }  // end of for containers
 
     if (!best_candidate) {
-        LOG_DEBUG5(TAB2 "Failed: There is no suitable candidate");
+        LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: There is no suitable candidate");
         return boost::none; }
 
     alloc_attempt.commit(*best_candidate);
     return alloc_attempt;
-}  // NOLINT(readability/fn_size)
+}
 
 // Used for dark overlays - Replaces original slice allocation with
 // new slice allocation and spilled slice allocation in dark and normal
@@ -2726,8 +2726,8 @@ bool CoreAllocation::generateNewAllocSlices(
                 }
 
                 if (perStageSources2Ranges[initStg].size() > 2) {
-                    LOG_DEBUG5(TAB2 "Failed: Too many sources: "
-                               << perStageSources2Ranges[initStg].size());
+                    LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Too many sources: "
+                                << perStageSources2Ranges[initStg].size());
                     return false;
                 }
             }
@@ -2756,8 +2756,8 @@ bool CoreAllocation::generateNewAllocSlices(
                 sources.size() + (action_sources.has_ad || action_sources.has_const ? 1 : 0);
 
             if (srcCnt > 2) {
-                LOG_DEBUG5(TAB2 "Failed: Too many sources in action " << act->name << ": "
-                                                                      << srcCnt);
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Too many sources in action " <<
+                            act->name << ": " << srcCnt);
                 return false;
             }
         }
@@ -2784,8 +2784,9 @@ bool CoreAllocation::generateNewAllocSlices(
                 else
                     cntrSS << srcEntry.first;
 
-                LOG_DEBUG5(TAB2 "Failed: Non contiguous bits from source " << cntrSS.str()
-                           << " (" << srcEntry.second << ") in stage " << stgEntry.first);
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Non contiguous bits from source " <<
+                            cntrSS.str() << " (" << srcEntry.second << ") in stage " <<
+                            stgEntry.first);
                 return false;
             }
         }
@@ -2904,7 +2905,8 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
     auto valid_list_starts = super_cluster.aligned_cluster(slice_list->front())
                                  .validContainerStart(container_group.width());
     for (const int le_offset_start : valid_list_starts) {
-        LOG_DEBUG6(TAB1 "Trying slicelist alignment at offset " << le_offset_start);
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Trying slicelist alignment at offset " <<
+                    le_offset_start);
         int le_offset = le_offset_start;
         AllocAlignment curr;
         bool success = true;
@@ -2914,7 +2916,8 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
 
             // if the slice 's cluster cannot be placed at the current offset.
             if (!valid_start_options.getbit(le_offset)) {
-                LOG_DEBUG6(TAB2 "Failed: Slice list requires slice to start at " << le_offset
+                LOG_FEATURE("alloc_progress", 5, TAB2
+                            "Failed: Slice list requires slice to start at " << le_offset
                            << " which its cluster cannot support: " << slice
                            << " with list starts with " << le_offset_start);
                 success = false;
@@ -2927,7 +2930,8 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
             // valid starting ranges for all slice lists.
             if (curr.cluster_alignment.count(&cluster) &&
                 curr.cluster_alignment.at(&cluster) != le_offset) {
-                LOG_DEBUG6(TAB2 "Failed: Two slice lists have conflicting alignment requirements "
+                LOG_FEATURE("alloc_progress", 5, TAB2
+                            "Failed: Two slice lists have conflicting alignment requirements "
                            "for field slice " << slice);
                 success = false;
                 break;
@@ -2963,7 +2967,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             alloc_attempt, container_group, super_cluster, *slice_list,
             alignment.slice_alignment, score_ctx);
         if (!partial_alloc_result) {
-            LOG_DEBUG5("Failed to allocate list ");
+            LOG_FEATURE("alloc_progress", 5, "Failed to allocate list ");
             return boost::none;
         }
         alloc_attempt.commit(*partial_alloc_result);
@@ -3119,7 +3123,8 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
         max_alignment_tries, container_group, super_cluster);
     LOG_DEBUG5("Found " << alignments.size() << " valid alignments");
     if (alignments.empty()) {
-        LOG_DEBUG5("Failed: SuperCluster is not allocable due to alignment:\n" << super_cluster);
+        LOG_FEATURE("alloc_progress", 5, "Failed: SuperCluster is not allocable due to alignment:\n"
+                    << super_cluster);
         return boost::none;
     }
 
@@ -3150,7 +3155,8 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
                 break;
             }
         } else {
-            LOG_DEBUG6(TAB1 "Failed: Cannot allocate SuperCluster with this alignment");
+            LOG_FEATURE("alloc_progress", 5, TAB1
+                        "Failed: Cannot allocate SuperCluster with this alignment");
         }
     }
     return best_alloc;
@@ -3366,13 +3372,14 @@ AllocResult AllocatePHV::brute_force_alloc(
         if (result.status == AllocResultCode::SUCCESS) {
             break;
         } else if (result.status == AllocResultCode::FAIL_UNSAT_SLICING) {
-            LOG_DEBUG1("Failed: Constraints not satisfied, stopping");
+            LOG_FEATURE("alloc_progress", 5, "Failed: Constraints not satisfied, stopping");
             break;
         } else {
-            LOG_DEBUG1("Failed: PHV allocation with " << config.name << " config");
+            LOG_FEATURE("alloc_progress", 5, "Failed: PHV allocation with " << config.name <<
+                        " config");
             if (strategy->get_unallocatable_list()) {
                 unallocatable_lists.push_back(*(strategy->get_unallocatable_list()));
-                LOG_DEBUG1(TAB1 "Possibly unallocatable slice list: "
+                LOG_FEATURE("alloc_progress", 5, TAB1 "Possibly unallocatable slice list: "
                            << unallocatable_lists.back());
             }
         }
@@ -3899,7 +3906,8 @@ BruteForceAllocationStrategy::allocDeparserZeroSuperclusters(
             LOG_DEBUG4(TAB1 "Committing allocation for deparser zero supercluster.");
             rst.commit(*partial_alloc);
         } else {
-            LOG_DEBUG4(TAB1 "Failed: Unable to allocate deparser zero supercluster."); } }
+            LOG_FEATURE("alloc_progress", 5, TAB1
+                        "Failed: Unable to allocate deparser zero supercluster."); } }
     // Remove allocated deparser zero superclusters.
     for (auto* sc : allocated_sc)
         cluster_groups.remove(sc);
@@ -4098,7 +4106,8 @@ BruteForceAllocationStrategy::preslice_clusters(
                 rst.push_back(new_sc);
             }
         } else {
-            LOG_DEBUG5("Failed: Slicing tried " << n_tried << " but still failed");
+            LOG_FEATURE("alloc_progress", 5, "Failed: Slicing tried " << n_tried <<
+                        " but still failed");
             unsliceable.push_back(sc);
             print_or_throw_slicing_error(utils_i, sc, n_tried);
             break;
@@ -4597,7 +4606,7 @@ BruteForceAllocationStrategy::tryAllocSlicing(
                    << sc->uid << " into");
 
         for (PHV::ContainerGroup* container_group : container_groups) {
-            LOG_DEBUG4("\nTrying container group: " << container_group);
+            LOG_FEATURE("alloc_progress", 5, "\nTrying container group: " << container_group);
 
             if (auto partial_alloc =
                 core_alloc_i.try_alloc(slicing_alloc, *container_group, *sc,
@@ -4615,14 +4624,15 @@ BruteForceAllocationStrategy::tryAllocSlicing(
                     }
                 }
             } else {
-                LOG_DEBUG4("Failed to allocate supercluster " << sc->uid
+                LOG_FEATURE("alloc_progress", 5, "Failed to allocate supercluster " << sc->uid
                            << " to container group " << container_group);
             }
         }
 
         // Break if this slice couldn't be placed.
         if (best_slice_alloc == boost::none) {
-            LOG_DEBUG4("Failed: Cannot find placing for slices in supercluster " << sc->uid);
+            LOG_FEATURE("alloc_progress", 5,
+                        "Failed: Cannot find placing for slices in supercluster " << sc->uid);
             return false;
         }
 
@@ -4701,7 +4711,7 @@ BruteForceAllocationStrategy::tryAllocStride(
     }
 
     if (best_alloc == boost::none) {
-        LOG_DEBUG4("Failed to allocate slicing stride");
+        LOG_FEATURE("alloc_progress", 5, "Failed to allocate slicing stride");
         return false;
     }
 
@@ -4740,7 +4750,7 @@ BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
         PHV::Container curr(prev.type(), prev.index() + 1);
 
         if (leader_alloc.getStatus(curr) == boost::none) {
-            LOG_DEBUG4(TAB1 "Failed: No allocation status for " << curr);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: No allocation status for " << curr);
             return false;
         }
 
@@ -4750,11 +4760,12 @@ BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
                                               config_i.max_sl_alignment, score_ctx);
 
         if (!sc_alloc) {
-            LOG_DEBUG4(TAB1 "Failed to allocate next stride slice in " << curr);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed to allocate next stride slice in " <<
+                        curr);
             return false;
         }
 
-        LOG_DEBUG4(TAB1 "Allocated next stride slice in " << curr);
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Allocated next stride slice in " << curr);
         leader_alloc.commit(*sc_alloc);
         prev = curr;
     }
@@ -4782,7 +4793,7 @@ BruteForceAllocationStrategy::tryAllocSlicingStrided(
             slicing_alloc.commit(stride_alloc);
             LOG_DEBUG4(TAB1 "Stride " << i << " allocation ok");
         } else {
-            LOG_DEBUG4(TAB1 "Failed to allocate stride " << i);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed to allocate stride " << i);
             return false;
         }
         i++;
@@ -4854,7 +4865,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
         }
 
         if (!succeeded) {
-            LOG_DEBUG5("Failed to allocate with this slicing");
+            LOG_FEATURE("alloc_progress", 5, "Failed to allocate with this slicing");
             if (cluster_group->slice_lists().size() > 0) {
                 LOG_DEBUG5(TAB1 "Check impossible slicelist");
                 if (auto impossible_slicelist =
@@ -4867,7 +4878,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
             }
             return true;
         } else {
-            LOG_DEBUG5("Successfully allocate @sc with this slicing");
+            LOG_FEATURE("alloc_progress", 5, "Successfully allocate @sc with this slicing");
         }
 
         // If allocation succeeded, check the score.
@@ -4877,16 +4888,17 @@ BruteForceAllocationStrategy::tryVariousSlicing(
             utils_i.field_to_parser_states,
             utils_i.parser_critical_path);
         if (LOGGING(4)) {
-            LOG_DEBUG4("Best SUPERCLUSTER score for this slicing: " << slicing_score);
-            LOG_DEBUG4("For the following SUPERCLUSTER slices: ");
+            LOG_FEATURE("alloc_progress", 4, "Best SUPERCLUSTER score for this slicing: " <<
+                        slicing_score);
+            LOG_FEATURE("alloc_progress", 4, "For the following SUPERCLUSTER slices: ");
             for (auto* sc : slicing)
-                LOG_DEBUG4(sc);
+                LOG_FEATURE("alloc_progress", 4, sc);
         }
         if (!best_alloc || score_ctx.is_better(slicing_score, best_score)) {
             best_score = slicing_score;
             best_alloc = slicing_alloc;
             best_slicing = slicing;
-            LOG_DEBUG4("...and this is the best score seen so far.");
+            LOG_FEATURE("alloc_progress", 4, "...and this is the best score seen so far.");
             if (score_ctx.stop_at_first()) {
                 return false;
             }
@@ -4896,7 +4908,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
 
     // Fill the log before the transaction is merged
     if (best_alloc) {
-        LOG_DEBUG4("SUCCESSFULLY allocated " << cluster_group);
+        LOG_FEATURE("alloc_progress", 4, "SUCCESSFULLY allocated " << cluster_group);
         alloc_history << "Successfully Allocated\n";
         alloc_history << "By slicing into the following superclusters:\n";
         for (auto* sc : *best_slicing) {
@@ -4906,7 +4918,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
         alloc_history << "Allocation Decisions:" << "\n";
         print_alloc_history(*best_alloc, *best_slicing, alloc_history);
     } else {
-        LOG_DEBUG4("FAILED to allocate " << cluster_group);
+        LOG_FEATURE("alloc_progress", 4, "FAILED to allocate " << cluster_group);
         alloc_history << "FAILED to allocate " << cluster_group << "\n";
         alloc_history << "when the things are like: " << "\n";
         alloc_history << rst.getTransactionSummary() << "\n";
@@ -4921,7 +4933,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
                                             return *sl == *(diagnosed_unallocatables.front());
                                         });
             if (all_same) {
-                LOG_DEBUG1("found possible unallocatable slice list: "
+                LOG_FEATURE("alloc_progress", 1, "found possible unallocatable slice list: "
                            << diagnosed_unallocatables.front());
                 if (!unallocatable_list_i) {
                     unallocatable_list_i = diagnosed_unallocatables.front();
@@ -4948,7 +4960,7 @@ BruteForceAllocationStrategy::allocLoop(
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
         n++;
         alloc_history << n << ": " << "TRYING to allocate " << cluster_group;
-        LOG4("TRYING to allocate " << cluster_group);
+        LOG_FEATURE("alloc_progress", 4, "TRYING to allocate " << cluster_group);
 
         boost::optional<PHV::Transaction> best_alloc = tryVariousSlicing(try_alloc,
                                                                          cluster_group,
@@ -5093,7 +5105,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
     result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
     alloc.commit(result.transaction);
     if (result.status == AllocResultCode::FAIL) {
-        LOG_DEBUG1("Failed: Cannot allocate all temp vars");
+        LOG_FEATURE("alloc_progress", 1, "Failed: Cannot allocate all temp vars");
     } else {
         PHV::AllocUtils::clear_slices(phv_i);
         PHV::AllocUtils::bind_slices(alloc, phv_i);
@@ -5177,7 +5189,7 @@ TrivialAllocStrategy::PartialAllocResult TrivialAllocStrategy::alloc_clusters(
     std::vector<PHV::AllocSlice> alloc_slices;
     auto empty_alloc = rst.makeTransaction();
     for (auto* sc : clusters) {
-        LOG5("trying to allocate sliced cluster: " << sc);
+        LOG_FEATURE("alloc_progress", 5, "trying to allocate sliced cluster: " << sc);
         // try deparser zero allocation.
         if (is_deparser_zero_sc(sc)) {
             if (auto partial_alloc = core_i.try_deparser_zero_alloc(empty_alloc, *sc, phv_i)) {
@@ -5191,26 +5203,27 @@ TrivialAllocStrategy::PartialAllocResult TrivialAllocStrategy::alloc_clusters(
         // try normal allocation.
         bool allocated = false;
         for (const auto containers : container_groups) {
-            LOG_DEBUG4("\nTrying container group: " << containers);
+            LOG_FEATURE("alloc_progress", 5, "\nTrying container group: " << containers);
             auto partial_alloc = core_i.try_alloc(empty_alloc, *containers, *sc, 5, score_ctx);
             if (partial_alloc) {
                 for (const auto& s : gen_alloc_slices_from_tx(*partial_alloc, phv_status)) {
                     alloc_slices.push_back(s);
                 }
                 allocated = true;
-                LOG5("normally allocated: " << sc);
+                LOG_FEATURE("alloc_progress", 5, "normally allocated: " << sc);
                 break;
             }
         }
         if (!allocated) {
-            LOG5("Failed to allocate sliced cluster: " << sc);
+            LOG_FEATURE("alloc_progress", 5, "Failed to allocate sliced cluster: " << sc);
             auto failing_sl = core_i.find_first_unallocated_slicelist(
                     empty_alloc, container_groups, *sc);
             if (failing_sl) {
-                LOG5("Impossible to allocate slice list found: " << *failing_sl);
+                LOG_FEATURE("alloc_progress", 5, "Impossible to allocate slice list found: " <<
+                            *failing_sl);
                 return PartialAllocResult(false, {}, PhvStatus(), *failing_sl, {sc});
             } else {
-                LOG5("Even if all slice lists can be allocated");
+                LOG_FEATURE("alloc_progress", 5, "Even if all slice lists can be allocated");
                 return PartialAllocResult(false, {}, PhvStatus(), nullptr, {sc});
             }
         }
@@ -5288,7 +5301,7 @@ ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
                 return false;
             } else {
                 unallocatable = sliced_alloc_rst.unallocated;
-                LOG4("Failed to Allocate: " << sc->uid);
+                LOG_FEATURE("alloc_progress", 4, "Failed to Allocate: " << sc->uid);
                 if (sliced_alloc_rst.cannot_allocate != nullptr) {
                     LOG3("Found cannot_allocate slice list: " <<
                          sliced_alloc_rst.cannot_allocate);
@@ -5307,7 +5320,7 @@ ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
 
     PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
     if (unallocated_clusters.empty()) {
-        LOG1("Trivial Allocation Successfully Allocated All Clusters.");
+        LOG_FEATURE("alloc_progress", 1, "Trivial Allocation Successfully Allocated All Clusters.");
         phv_i.set_done(true);
     } else {
         history << unallocated_clusters.size() << " unallocated clusters:";

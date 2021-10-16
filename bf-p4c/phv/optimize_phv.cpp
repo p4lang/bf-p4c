@@ -170,6 +170,12 @@ std::list<PHV::SuperCluster*> BruteForceOptimizationStrategy::optimize(
                    " unallocated super clusters\n";
     LOG4("Beginning of the PHV Optimization process with " << unallocated_sc.size() <<
          " unallocated super clusters");
+    int num_sc = 1;
+    for (auto *usc : unallocated_sc) {
+        LOG2("  " << num_sc << ".  " << *usc);
+        opt_history << "  " << num_sc << ".  " << *usc;
+        ++num_sc;
+    }
 
     // Do not optimize relatively small Transaction pool (typically pounder round)
     if (data->tr_id_to_tr_i.size() < BruteForceOptimizationStrategy::MIN_TR_SIZE) {
@@ -327,6 +333,28 @@ std::list<PHV::SuperCluster*> BruteForceOptimizationStrategy::optimize(
         // Stop criteria
         if (unallocated_sc.empty())
             break;
+
+        int unallocated_slices = 0;
+        int unallocated_bits = 0;
+        LOG1("Pass " << pass << " finished with " << unallocated_sc.size() <<
+             " superclusters:");
+        opt_history << "Pass " << pass << " finished with " << unallocated_sc.size() <<
+                " superclusters:\n";
+        int num = 1;
+        for (auto *usc : unallocated_sc) {
+            LOG1("  " << num << ".  " << *usc);
+            opt_history << "  " << num << ".  " << *usc;
+            ++num;
+            usc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
+                                        unallocated_slices++;
+                                        unallocated_bits += fs.size();
+                                    });
+        }
+        LOG1(" Unallocated slices: " << unallocated_slices);
+        LOG1(" Unallocated bits:   " << unallocated_bits);
+        opt_history << " Unallocated slices: " << unallocated_slices;
+        opt_history << " Unallocated bits:   " << unallocated_bits;
+
         pass++;
     }
 

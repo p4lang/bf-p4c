@@ -352,14 +352,15 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
             // stage calculated earlier.
             int realMinStage = info.minStage.first - 1;
             if (lastSlice->maxStage.second == write && lastSlice->maxStage.first >= realMinStage) {
-                LOG_DEBUG5(TAB2 "Found overlapping slices in terms of live range: ");
-                LOG_DEBUG5(TAB3 << lastSlice->field.field()->name << " ["
+                LOG_FEATURE("alloc_progress", 5, TAB2
+                            "Found overlapping slices in terms of live range: ");
+                LOG_FEATURE("alloc_progress", 5, TAB3 << lastSlice->field.field()->name << " ["
                            << lastSlice->minStage.first << lastSlice->minStage.second << ", "
                            << lastSlice->maxStage.first << lastSlice->maxStage.second << "]");
-                LOG_DEBUG5(TAB3 << info.field.field()->name << " [" << realMinStage << "W, "
-                           << info.maxStage.first << info.maxStage.second << "] (original: ["
-                           << info.minStage.first << info.minStage.second << ", "
-                           << info.maxStage.first << info.maxStage.second << "])");
+                LOG_FEATURE("alloc_progress", 5, TAB3 << info.field.field()->name << " [" <<
+                            realMinStage << "W, " << info.maxStage.first << info.maxStage.second <<
+                            "] (original: [" << info.minStage.first << info.minStage.second << ", "
+                            << info.maxStage.first << info.maxStage.second << "])");
                 return false;
             }
         }
@@ -370,8 +371,7 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
 
 boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
         const ordered_set<PHV::AllocSlice>& slices) const {
-    LOG_DEBUG1("Producing slices in order : " << slices);
-    LOG_DEBUG7(livemap.printDarkLiveRanges());
+    LOG_DEBUG5("Producing slices in order : " << slices);
     OrderedFieldSummary rv;
 
     ordered_set<PHV::AllocSlice> ParsedOnlySlices(slices);
@@ -586,9 +586,9 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
     PHV::DarkInitEntry* firstDarkInitEntry = nullptr;
     for (const auto& info : *fieldsInOrder) {
         if (LOGGING(2)) {
-            LOG_DEBUG2(TAB1 "Trying to allocate field " << idx << ": "
+            LOG_FEATURE("alloc_progress", 6, TAB1 "Trying to allocate field " << idx << ": "
                        << info.field << " in container " << c);
-            LOG_DEBUG2(TAB2 "Relevant units:");
+            LOG_DEBUG6(TAB2 "Relevant units:");
             for (const auto* u : info.units) {
                 std::stringstream ss;
                 ss << TAB2 << DBPrint::Brief << u;
@@ -633,7 +633,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             if (reach_condition.size() > 0) {
                 bool ignoreReach = ignoreReachCondition(info, g_info, reach_condition);
                 if (!ignoreReach) {
-                    LOG_DEBUG2(TAB3 "Yes. Therefore, move to dark not possible.");
+                    LOG_FEATURE("alloc_progress", 6, TAB3
+                                "Yes. Therefore, move to dark not possible.");
                     return boost::none;
                 }
             }
@@ -655,11 +656,11 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         unsigned idx_2 = 0;
         for (const auto& info_2 : *fieldsInOrder) {
             if (idx_2++ <= idx) continue;
-            LOG_DEBUG2(TAB3 "Now adding " << info_2.units.size() << " units for " << info_2.field
+            LOG_DEBUG5(TAB3 "Now adding " << info_2.units.size() << " units for " << info_2.field
                        << " : (" << info_2.minStage.first << info_2.minStage.second << ", "
                        << info_2.maxStage.first << info_2.maxStage.second << ")");
             for (auto* u : info_2.units)
-                LOG_DEBUG2(TAB3 << DBPrint::Brief << u);
+                LOG_DEBUG5(TAB3 << DBPrint::Brief << u);
             for (auto iunit2 : info_2.units) {
                 // Skip units which are in a different gress
                 if (info.field.field()->gress != iunit2->thread()) continue;
@@ -694,8 +695,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             LOG_DEBUG2(TAB2 "Trimming the list of use nodes in the set of defuses.");
             getTrimmedDominators(f_nodes, domTree);
             if (hasParserUse(f_nodes)) {
-                LOG_DEBUG2(TAB2 "Defuse units of field " << info.field << " includes the parser. "
-                           "Cannot find initialization point.");
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Defuse units of field " << info.field <<
+                            " includes the parser. Cannot find initialization point.");
                 return boost::none;
             }
             // Check if any of the units referencing the current
@@ -761,8 +762,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             continue;
         } else if (onlyDeparserUse) {
             // FIXME
-            LOG_DEBUG2(TAB2 "Currently doesn't support initialization from 0 in always init "
-                       "block.");
+            LOG_FEATURE("alloc_progress", 5, TAB2
+                        "Currently doesn't support initialization from 0 in always init block.");
             return boost::none;
         }
 
@@ -772,10 +773,9 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 info.field.field()->gress);
         int firstDarkInitMaxStage = 0;
 
-        // ALEX:
         if (!ARAspill && groupDominator == nullptr) {
-            LOG_DEBUG2(TAB2 "Cannot find group dominator to write " << lastField->field
-                       << " into a dark container.");
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot find group dominator to write " <<
+                        lastField->field << " into a dark container.");
             return boost::none;
         }
 
@@ -793,10 +793,10 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 isGroupDominatorEarlierThanFirstUseOfCurrentField(info, f_nodes, groupDominator);
 
             if (!groupDominatorAfterLastUsePrevField) {
-                LOG_DEBUG2(TAB2 "Cannot find initialization point for previous field "
-                           << lastField->field << " because group dominator's stage ("
-                           << dg.min_stage(groupDominator) << ") is before the last use "
-                           "of the previous field (" << lastField->maxStage.first
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot find initialization point for "
+                            "previous field " << lastField->field << " because group dominator's"
+                            " stage ("<< dg.min_stage(groupDominator) << ") is before the last "
+                           "use of the previous field (" << lastField->maxStage.first
                            << lastField->maxStage.second << ")");
                 return boost::none;
             }
@@ -810,9 +810,9 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 if (reach_condition.size() > 0) {
                     bool ignoreReach = ignoreReachCondition(info, *lastField, reach_condition);
                     if (!ignoreReach) {
-                        LOG_DEBUG2(TAB2 "Cannot find initialization point because group dominator "
-                                   "can reach one of the uses of the last field "
-                                   << lastField->field);
+                        LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot find initialization point"
+                                    " because group dominator can reach one of the uses of the "
+                                    "last field " << lastField->field);
                         return boost::none;
                     }
                 }
@@ -885,10 +885,12 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                     LOG_DEBUG3(TAB2 "Cannot initialize current field before its first use.");
                 } else if (!darkInitPoints) {
                     if (ARAspill) {
+                        LOG_FEATURE("alloc_progress", 5, "Did not find any initialization points"
+                            " using ARA.");
                         return boost::none;
                     } else {
-                        LOG_DEBUG3(TAB2 "Did not get any initialization points; need to move up "
-                                   "in the flow graph.");
+                        LOG_FEATURE("alloc_progress", 5, TAB2 "Did not get an initialization "
+                                    "dominator; need to move up in the flow graph.");
                     }
                 } else if (darkInitPoints) {
                     // Found initializations. Now set up the return vector accordingly.
@@ -905,12 +907,12 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             auto newGroupDominator = domTree.getNonGatewayImmediateDominator(groupDominator,
                     groupDominator->thread());
             if (!newGroupDominator) {
-                LOG_DEBUG2(TAB2 "Could not find an initialization points for previous field "
-                           << lastField->field);
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Could not find an initialization points "
+                            "for previous field " << lastField->field);
                 return boost::none;
             } else if (*newGroupDominator == groupDominator) {
-                LOG_DEBUG2(TAB2 "Reached the beginning of the flow graph. Cannot initialize "
-                           "previous field " << lastField->field);
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Reached the beginning of the flow graph."
+                            " Cannot initialize previous field " << lastField->field);
                 return boost::none;
             } else {
                 groupDominator = *newGroupDominator;
@@ -1153,8 +1155,8 @@ boost::optional<PHV::Allocation::ActionSet> DarkLiveRange::getInitActions(
             // continue;
         }
         if (cannotInitInAction(c, act, alloc)) {
-            LOG_DEBUG2(TAB3 "Cannot init " << field.field << " in do not init action "
-                       << act->name);
+            LOG_FEATURE("alloc_progress", 5, TAB3 "Cannot init " << field.field <<
+                        " in do not init action " << act->name);
             return boost::none;
         }
         if (actionConstraints.written_in(field.field, act)) {
@@ -1174,16 +1176,18 @@ boost::optional<PHV::Allocation::ActionSet> DarkLiveRange::getInitActions(
         // to be initialized, then do not initialize the field in this table.
         for (const auto& g : actionReads) {
             if (phv.isFieldMutex(f, g.field())) {
-                LOG_DEBUG5(TAB4 "Ignoring table " << t->name << " as a node for moving "
-                           << field.field << " because it is mutually exclusive with slice "
+                LOG_FEATURE("alloc_progress", 5, TAB4 "Ignoring table " << t->name <<
+                            " as a node for moving "
+                            << field.field << " because it is mutually exclusive with slice "
                            << g << " read by action " << act->name);
                 return boost::none;
             }
         }
         for (const auto& g : actionWrites) {
             if (phv.isFieldMutex(f, g.field())) {
-                LOG_DEBUG5(TAB4 "Ignoring table " << t->name << " as a node for moving "
-                           << field.field << " because it is mutually exclusive with slice "
+                LOG_FEATURE("alloc_progress", 5, TAB4 "Ignoring table " << t->name <<
+                            " as a node for moving " << field.field <<
+                            " because it is mutually exclusive with slice "
                            << g << " written by action " << act->name);
                 return boost::none;
             }
@@ -1217,8 +1221,9 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
         if ((prvField.maxStage.first >= (curField.minStage.first)) ||
             ((prvField.maxStage.first == (curField.minStage.first - 1)) &&
              prvField.maxStage.second.isWrite())) {
-            LOG_DEBUG5(TAB3 "Cannot do ARA spill due to slice liveranges: previousMax("
-                       << prvField.maxStage << ") currentMin(" << curField.minStage << ")");
+            LOG_FEATURE("alloc_progress", 5, TAB3 "Cannot do ARA spill due to slice liveranges: "
+                    "previousMax(" << prvField.maxStage << ") currentMin(" << curField.minStage
+                    << ")");
             return boost::none;
         }
     }
@@ -1231,7 +1236,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
     // Get best dark container to move the field into.
     const PHV::Container darkCandidate = getBestDarkContainer(darkCandidates, prvField, alloc);
     if (darkCandidate == PHV::Container()) {
-        LOG_DEBUG4(TAB3 "Could not find a dark container to move field "
+        LOG_FEATURE("alloc_progress", 5, TAB3 "Could not find a dark container to move field "
                    << prvField.field << " into");
         return boost::none;
     }

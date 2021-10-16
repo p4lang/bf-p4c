@@ -273,18 +273,18 @@ bool FindInitializationNode::mayViolatePackConflict(
                        << initTable->name);
             if (t == initTable) continue;
             if (tableAlloc.inSameStage(initTable, t).size() != 0 && !tableMutex(initTable, t)) {
-                LOG_DEBUG4(TAB2 "Initialization table " << initTable->name << " and def table "
-                           << t->name << " of " << slice << " are in the same stage, and "
-                           "therefore there is a pack conflict.");
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Initialization table " << initTable->name
+                            << " and def table " << t->name << " of " << slice <<
+                            " are in the same stage, and therefore there is a pack conflict.");
                 return true;
             }
             // *ALEX* Why do we need to check dependency graph when we
             // *have table placement information?
             if (dg.min_stage(initTable) == dg.min_stage(t) && !tableMutex(initTable, t)) {
-                LOG_DEBUG4(TAB2 "Initialization table " << initTable->name << " and def table "
-                           << t->name << " of " << slice << " have the same potential stage in "
-                           "the dependency graph. This would introduce a container conflict. "
-                           "Therefore, initialization at "
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Initialization table " << initTable->name
+                            << " and def table " << t->name << " of " << slice << " have the same"
+                            " potential stage in the dependency graph. This would introduce a "
+                            "container conflict. Therefore, initialization at "
                            << initTable->name << " is not possible.");
                 return true;
             }
@@ -301,14 +301,15 @@ bool FindInitializationNode::mayViolatePackConflict(
             if (!d) continue;
             if (t == d) continue;
             if (tableAlloc.inSameStage(t, d).size() != 0 && !tableMutex(t, d)) {
-                LOG_DEBUG4(TAB2 "Initialization table " << t->name << " and def table " << d->name
-                           << " of " << initField->name << " are in the same stage, and therefore "
-                           "there is a pack conflict.");
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Initialization table " << t->name <<
+                            " and def table " << d->name << " of " << initField->name <<
+                            " are in the same stage, and therefore there is a pack conflict.");
                 return true;
             }
             if (dg.min_stage(t) == dg.min_stage(d) && !tableMutex(t, d)) {
-                LOG_DEBUG4(TAB2 "Initialization table " << t->name << " and def table " << d->name
-                           << " have the same potential stage based on the dependency graph. This "
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Initialization table " << t->name <<
+                            " and def table " << d->name << " have the same potential stage based"
+                            " on the dependency graph. This "
                            "would introduce a container conflict. Therefore, initialization at "
                            << initTable->name << " is not possible.");
                 return true;
@@ -335,13 +336,14 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         prevUseUnits.insert(u);
     }
     if (!canFUsesReachInitTable(t, prevUseUnits)) {
-        LOG_DEBUG3(TAB3 "Ignoring table " << t->name << " because uses of previous "
-                   "field do not reach it.");
+        LOG_FEATURE("alloc_progress", 5, TAB3 "Ignoring table " << t->name <<
+                    " because uses of previous field do not reach it.");
         return boost::none;
     }
 
     if (mayViolatePackConflict(t, f, container_state, alloc))
         return boost::none;
+
     // Initializing at table t requires that there is a dependence now from the previous uses of
     // table to table t. Return boost::none if this initialization would result in an increase in
     // the maximum number of stages in the dependence graph.
@@ -357,8 +359,9 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         ordered_set<const IR::MAU::Table*> tableUses = getTableUsesForField(f);
         for (const auto* tbl : tableUses) {
             if (tableMutex(t, tbl)) {
-                LOG_DEBUG3(TAB3 "Ignoring table " << t->name << " because it is mutually "
-                           "exclusive with use " << tbl->name << " of field " << f->name);
+                LOG_FEATURE("alloc_progress", 5, TAB3 "Ignoring table " << t->name <<
+                            " because it is mutually exclusive with use " << tbl->name <<
+                            " of field " << f->name);
                 return boost::none;
             }
         }
@@ -366,7 +369,8 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
 
     for (const auto* act : tablesToActions.getActionsForTable(t)) {
         if (cannotInitInAction(c, act, alloc)) {
-            LOG_DEBUG3(TAB3 "Failed: Cannot init " << f->name << " in do not init " << act);
+            LOG_FEATURE("alloc_progress", 5, TAB3 "Failed: Cannot init " << f->name <<
+                        " in do not init " << act);
             return boost::none;
         }
         // If field is already written in this action, then do not initialize here.
@@ -382,7 +386,8 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         // to be initialized, then do not initialize the field in this table.
         for (const auto* g : actionReads) {
             if (phv.isFieldMutex(f, g)) {
-                LOG_DEBUG3(TAB3 "Ignoring table " << t->name << " for initialization of "
+                LOG_FEATURE("alloc_progress", 5, TAB3 "Ignoring table " << t->name <<
+                            " for initialization of "
                            << t->name << " because action " << act->name << " reads field "
                            << g->name << " which is mutually exclusive with field " << f->name);
                 return boost::none;
@@ -390,9 +395,10 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         }
         for (const auto* g : actionWrites) {
             if (phv.isFieldMutex(f, g)) {
-                LOG_DEBUG3(TAB3 "Ignoring table " << t->name << " for initialization of "
-                           << t->name << " because action " << act->name << " writes field "
-                           << g->name << " which is mutually exclusive with field " << f->name);
+                LOG_FEATURE("alloc_progress", 5, TAB3 "Ignoring table " << t->name <<
+                            " for initialization of "<< t->name << " because action " << act->name
+                            << " writes field " << g->name <<
+                            " which is mutually exclusive with field " << f->name);
                 return boost::none;
             }
         }
@@ -465,7 +471,8 @@ FindInitializationNode::getInitializationCandidates(
             return returnValue;
         });
         if (dominatorsIncreaseCriticalPath) {
-            LOG_DEBUG4(TAB2 "Failed: Initialization at one of the strict dominators would result "
+            LOG_FEATURE("alloc_progress", 5, TAB2
+                        "Failed: Initialization at one of the strict dominators would result "
                        "in the lengthening of the critical path");
             return boost::none;
         }
@@ -474,7 +481,8 @@ FindInitializationNode::getInitializationCandidates(
             auto initPoints = getInitPointsForTable(c, t, f, prevUses, container_state, alloc,
                     true);
             if (!initPoints) {
-                LOG_DEBUG4(TAB2 "Failed: Could not initialize at table " << t->name);
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Could not initialize at table " <<
+                            t->name);
                 return boost::none;
             }
             rv.insert(initPoints->begin(), initPoints->end());
@@ -688,9 +696,9 @@ FindInitializationNode::findInitializationNodes(
         // with the dominator nodes for the uses and defs of f.
         LOG_DEBUG3(TAB2 "Summarizing defuse and dominator for field " << f->name);
         if (!summarizeUseDefs(f, alreadyInitializedUnits, units, f_dominators)) {
-            LOG_DEBUG3(TAB2 "Failed: Uses of field " << f->name << " contains a unit "
-                       "(deparser/table) whose non gateway dominator is the parser. "
-                       "Therefore, cannot initialize metadata.");
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Uses of field " << f->name <<
+                        " contains a unit (deparser/table) whose non gateway dominator is the "
+                        "parser. Therefore, cannot initialize metadata.");
             return boost::none;
         }
 
@@ -744,7 +752,8 @@ FindInitializationNode::findInitializationNodes(
             // initialization is not possible. reach_condition contains all the pairs of units where
             // f_dominator can reach g_field_unit.
             if (reach_condition.size() > 0) {
-                LOG_DEBUG2(TAB2 "Yes. Therefore, metadata initialization not possible.");
+                LOG_FEATURE("alloc_progress", 5, TAB2
+                            "Yes. Therefore, metadata initialization not possible.");
                 return boost::none;
             }
             LOG_DEBUG3(TAB2 "No.");
@@ -760,8 +769,8 @@ FindInitializationNode::findInitializationNodes(
         LOG_DEBUG2(TAB2 "Trimming the list of dominators in the set of defuses.");
         getTrimmedDominators(f_dominators, domTree);
         if (hasParserUse(f_dominators)) {
-            LOG_DEBUG3(TAB2 "Failed: Defuse units of field " << f->name << " includes the parser. "
-                       "Cannot initialize metadata.");
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Defuse units of field " << f->name
+                        << " includes the parser. Cannot initialize metadata.");
             return boost::none;
         }
         if (LOGGING(3)) {
@@ -778,8 +787,8 @@ FindInitializationNode::findInitializationNodes(
         ordered_set<const IR::MAU::Table*> f_table_uses;
         for (const auto* u : f_dominators) {
             if (!u->is<IR::MAU::Table>()) {
-                LOG_DEBUG3(TAB2 "Failed: Dominators of field " << f->name << " includes the "
-                           "ingress deparser. Cannot initialize metadata.");
+                LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Dominators of field " << f->name
+                            << " includes the ingress deparser. Cannot initialize metadata.");
                 return boost::none;
             }
             f_table_uses.insert(u->to<IR::MAU::Table>());
@@ -890,7 +899,8 @@ FindInitializationNode::findInitializationNodes(
             groupDominator = domTree.getNonGatewayGroupDominator(f_table_uses);
         }
         if (groupDominator == nullptr) {
-            LOG_DEBUG3(TAB2 "Failed: Could not find group dominator to initialize at");
+            LOG_FEATURE("alloc_progress", 5, TAB2
+                        "Failed: Could not find group dominator for initialization.");
             return boost::none;
         }
         LOG_DEBUG3(TAB2 "Group dominator found: " << groupDominator->name << " (stage " <<
@@ -932,13 +942,14 @@ FindInitializationNode::findInitializationNodes(
                 if (!newDominator) {
                     LOG_DEBUG3(TAB3 "Failed: Cannot find immediate dominator for group dominator "
                                << groupDominator->name);
-                    LOG_DEBUG3(TAB3 "Choose not to initialize at " << groupDominator->name
-                               << " to avoid increasing critical path length");
+                    LOG_FEATURE("alloc_progress", 5, TAB3 "Choose not to initialize at " <<
+                               groupDominator->name << " to avoid increasing critical path length");
                     return boost::none;
                 }
 
                 if (groupDominator == *newDominator) {
-                    LOG_DEBUG3(TAB3 "Failed: Reached the source node in the table flow graph");
+                    LOG_FEATURE("alloc_progress", 5, TAB3
+                                "Failed: Reached the source node in the table flow graph");
                     return boost::none;
                 }
                 groupDominator = *newDominator;
@@ -952,8 +963,8 @@ FindInitializationNode::findInitializationNodes(
                 alloc);
 
         if (!initializationCandidates) {
-            LOG_DEBUG3(TAB2 "Failed: Could not find any actions to initialize field in the "
-                       "group dominator.");
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Could not find any actions to"
+                        " initialize field in the group dominator.");
             return boost::none;
         }
         for (const auto* act : *initializationCandidates)
