@@ -298,7 +298,6 @@ struct TablePlacement::Placed {
     int                         stage = 0, logical_id = -1;
     /// Information on which stage table this table is associated with.  If the table is
     /// never split, then the stage_split should be -1
-    int                         initial_stage_split = -1;
     int                         stage_split = -1;
     StageUseEstimate            use;
     TableResourceAlloc          resources;
@@ -454,7 +453,7 @@ struct TablePlacement::Placed {
           stage_advance_log(p.stage_advance_log),
           need_more(p.need_more), need_more_match(p.need_more_match),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
-          logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
+          logical_id(p.logical_id),
           stage_split(p.stage_split), use(p.use), resources(p.resources)
           { traceCreation(); }
 
@@ -1993,7 +1992,6 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
     }
 
     if (prev_stage_tables > 0) {
-        rv->initial_stage_split = prev_stage_tables;
         rv->stage_split = prev_stage_tables;
     }
     for (auto *ba : rv->table->attached) {
@@ -2071,6 +2069,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     int initial_entries = rv->requested_stage_entries > 0 ? rv->requested_stage_entries :
         rv->entries;
     attached_entries_t initial_attached_entries = rv->attached_entries;
+    int initial_stage_split = rv->stage_split;
 
     LOG3("  Initial stage is " << rv->stage << ", initial entries is " << rv->entries);
     BUG_CHECK(rv->stage < 100, "too many stages");
@@ -2163,7 +2162,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
             rv->update_need_more(needed_entries);
             // If the table is split for the first time, then the stage_split is set to 0
-            if (rv->need_more && rv->initial_stage_split == -1)
+            if (rv->need_more && initial_stage_split == -1)
                 rv->stage_split = 0;
 
             if (need_update_whole_stage) {
@@ -2191,9 +2190,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
         if (advance_to_next_stage) {
             rv->stage++;
-            rv->stage_split = rv->initial_stage_split;
+            rv->stage_split = initial_stage_split;
             min_placed->stage++;
-            min_placed->stage_split = min_placed->initial_stage_split;
+            min_placed->stage_split = initial_stage_split;
             if (done) {
                 rv->placed -= rv->prev->placed - done->placed;
                 min_placed->placed -= min_placed->prev->placed - done->placed; }
