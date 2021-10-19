@@ -2164,6 +2164,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             // If the table is split for the first time, then the stage_split is set to 0
             if (rv->need_more && initial_stage_split == -1)
                 rv->stage_split = 0;
+            // If the table does not need more entries and is previously marked
+            // as split for the first time, then reset the stage_split to -1
+            // Note: Stage split value is used during allocation to create
+            // unique id suffixes e.g. $st0, $st1 etc. hence if this is
+            // incorrectly set the unique ids generated in memories.cpp will not
+            // match those generated on the table (P4C-4064)
+            else if (!rv->need_more && rv->stage_split == 0)
+                rv->stage_split = -1;
 
             if (need_update_whole_stage) {
                 for (auto *p : boost::adaptors::reverse(whole_stage))
