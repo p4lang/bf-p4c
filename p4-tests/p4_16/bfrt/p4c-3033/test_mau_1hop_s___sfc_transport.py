@@ -42,7 +42,7 @@ class test(BfRuntimeTest):
 
 	def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
 		logger.info("Sending packet on port %d", ingress_port)
-		testutils.send_packet(self, ingress_port, str(pkt))
+		testutils.send_packet(self, ingress_port, pkt)
 		logger.info("Expecting packet on port %d", egress_port)
 		testutils.verify_packets(self, exp_pkt, [egress_port])
 
@@ -50,7 +50,7 @@ class test(BfRuntimeTest):
 
 	def send_and_verify_no_other_packet(self, ingress_port, pkt):
 		logger.info("Sending packet on port %d (negative test); expecting no packet", ingress_port)
-		testutils.send_packet(self, ingress_port, str(pkt))
+		testutils.send_packet(self, ingress_port, pkt)
 		testutils.verify_no_other_packets(self)
 
 	# -------------------------------------------------------------
@@ -150,7 +150,7 @@ class test(BfRuntimeTest):
 #		base_pkt_inner = testutils.simple_tcp_packet(eth_dst=dmac)
 #		base_pkt_inner = testutils.simple_udp_packet(eth_dst=dmac)
 		base_pkt_inner = testutils.simple_ip_only_packet()
-		
+
 		base_pkt = testutils.simple_gre_packet(eth_dst=dmac, inner_frame=base_pkt_inner)
 		print(type(base_pkt))
 
@@ -179,7 +179,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
+		testutils.send_packet(self, ig_port, src_pkt)
 
 		# -----------------------------------------------------------
 
@@ -203,7 +203,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
+		testutils.send_packet(self, ig_port, src_pkt)
 
 		# -----------------------------------------------------------
 

@@ -131,7 +131,7 @@ class RunTest(BfRuntimeTest):
             exp_pkt /= "dit is een test"
 
             logger.info("Sending packet on port %d", ig_port)
-            testutils.send_packet(self, ig_port, str(pkt))
+            testutils.send_packet(self, ig_port, pkt)
 
             logger.info("Expecting packet on port %d", eg_port)
             testutils.verify_packet(self, exp_pkt, eg_port)

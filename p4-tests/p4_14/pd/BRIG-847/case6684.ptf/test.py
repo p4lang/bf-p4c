@@ -73,7 +73,7 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
         # Always make sure the programming gets dow to the HW
         self.conn_mgr.complete_operations(self.sess_hdl)
         print
-        
+
     # Use tearDown() method to return the DUT to the initial state by cleaning
     # all the configuration and clearing up the connection
     def tearDown(self):
@@ -85,19 +85,19 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client" + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client" + action_profile + "del_member"
                 for member in self.members[actoin_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")
@@ -128,8 +128,8 @@ class Test1(TestGroup1):
     def runTest(self):
         # Test Parameters
         test_port = test_param_get("cpu_port", default=64)
-        
-        print "Sending TCP packet into port %d" % test_port
+
+        print("Sending TCP packet into port %d" % test_port)
         pkt = simple_tcp_packet(eth_dst="00:98:76:54:32:10",
                                 eth_src='00:55:55:55:55:55',
                                 ip_dst="192.168.10.20",
@@ -138,9 +138,9 @@ class Test1(TestGroup1):
                                 ip_ttl=64,
                                 ip_ihl=5,
                                 pktlen=100)
-        exp_pkt = Ether(str(pkt))
+        exp_pkt = pkt.copy()
         send_packet(self, test_port, pkt)
         print("Expecting the packet to be forwarded to port %d" % test_port)
-        
+
         verify_packet(self, exp_pkt, test_port)
         print("Same packet received of port %d" % test_port)

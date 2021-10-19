@@ -41,7 +41,7 @@ class InnerLayerTest_IPv4_encap_udp(P4RuntimeTest):
         # with_udp_chksum = True)
         pkt = testutils.simple_tcp_packet()
         exp_pkt = testutils.simple_tcp_packet()
-	exp_pkt[TCP].sport = 0xAB0B;
+        exp_pkt[TCP].sport = 0xAB0B
 
         vxlan_pkt = testutils.simple_vxlan_packet(
          eth_dst='00:11:11:11:11:11',

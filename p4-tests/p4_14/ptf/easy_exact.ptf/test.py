@@ -17,7 +17,7 @@ def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa):
     s = stringify(f1, 2) + stringify(f2, 1) + stringify(f3, 1)
 
     # Add fake payload.
-    s += '0' * 100
+    s += b'0' * 100
     return s
 
 class SimpleTest(P4RuntimeTest):
@@ -26,7 +26,7 @@ class SimpleTest(P4RuntimeTest):
         ig_port = self.swports(1)
         # Sending a packet when no entry is installed. Should miss.
         pkt = dumbPacket(0xdead, 0x00, 0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_no_other_packets(self)
 
         # Add a single entry: matches on the 8 bit length prefix of "0xdead",
@@ -42,11 +42,11 @@ class SimpleTest(P4RuntimeTest):
         # Send a matching packet, with the exact value matching.
         # Expect packet on port 3, with a f2 field of 0x42.
         pkt = dumbPacket(f1=f1, f2=0x00, f3=0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=f1, f2=val, f3=0x00)
         testutils.verify_packet(self, exp_pkt, eg_port)
 
         # Send a non matching packet.
         pkt = dumbPacket(f1=0x00aa, f2=0x00, f3=0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_no_other_packets(self)

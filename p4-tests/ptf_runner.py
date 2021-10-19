@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import argparse
 from collections import OrderedDict
@@ -110,7 +108,7 @@ def check_ifaces(ifaces):
     # On Debian, /sbin/ifconfig outputs a ':' at the end of the interface name,
     # we use a negative lookbehind to eliminate the optional trailing ':' (which
     # is not present on Ubuntu)
-    iface_list = re.findall(r'^(\S+)(?<!:)', ifconfig_out, re.S | re.M)
+    iface_list = re.findall(r'^(\S+)(?<!:)', ifconfig_out.decode('utf-8'), re.S | re.M)
     present_ifaces = set(iface_list)
     ifaces = set(ifaces)
     return ifaces <= present_ifaces
@@ -135,7 +133,7 @@ def findbin(cmake_dir, varname):
     except subprocess.CalledProcessError:
         error("Unable to access CMake cache")
         sys.exit(1)
-    m = re.search('^{}:FILEPATH=(.*)$'.format(varname), out, re.MULTILINE)
+    m = re.search('^{}:FILEPATH=(.*)$'.format(varname), out.decode('utf-8'), re.MULTILINE)
     if m is None:
         error("Unable to locate {} in CMake cache".format(varname))
         sys.exit(1)
@@ -149,15 +147,15 @@ def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
     request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
     request.device_id = 0
     config = request.config
-    with open(p4info_path, 'r') as p4info_f:
+    with open(p4info_path, 'rb') as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
     device_config = p4config_pb2.P4DeviceConfig()
     with open(bin_path, 'rb') as bin_f:
-        with open(cxt_json_path, 'r') as cxt_json_f:
-            device_config.device_data = ""
+        with open(cxt_json_path, 'rb') as cxt_json_f:
+            device_config.device_data = b''
             prog_name = name
             device_config.device_data += struct.pack("<i", len(prog_name))
-            device_config.device_data += prog_name
+            device_config.device_data += prog_name.encode()
             bin = bin_f.read()
             device_config.device_data += struct.pack("<i", len(bin))
             device_config.device_data += bin
@@ -186,10 +184,11 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
         os.environ['PYTHONPATH'] += ":" + pypath
     else:
         os.environ['PYTHONPATH'] = pypath
+    info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
     for iface_idx, iface_name in list(port_map.items()):
         ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
-    cmd = [PTF]
+    cmd = ['python3', '-u', PTF] # Unbuffered to make sure that whole error output is captured
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
     test_params = 'p4info=\'{}\''.format(p4info_path)
@@ -234,12 +233,13 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device)
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
     os.environ['PYTHONPATH'] += ":" + os.path.join(installdir, site_pkg, 'tofino')
+    os.environ['PYTHONPATH'] += ":" + os.path.join(installdir, site_pkg, 'tofino', 'bfrt_grpc')
     info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
     if port_map_file is None:
         for iface_idx, iface_name in list(port_map.items()):
             ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
-    cmd = [PTF]
+    cmd = ['python3', '-u', PTF] # Unbuffered to make sure that whole error output is captured
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(['--pypath', os.environ['PYTHONPATH']])
     cmd.extend(ifaces)
@@ -306,7 +306,7 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
     if '/meters/' in context_json or '/hash_driven/' in context_json:
         cmd.extend(['--time-disable'])
     if disable_logging:
-	cmd.extend(['--logs-disable'])
+	    cmd.extend(['--logs-disable'])
 
     info("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
@@ -354,9 +354,9 @@ def poll_device(status_port):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect( ('localhost', status_port) )
-        s.sendall('0')
+        s.sendall(bytes('0',"utf-8"))
         r = s.recv(1)
-        if r == '1':
+        if r.decode("utf-8") == '1':
             return True
         else:
             return False
@@ -366,7 +366,7 @@ def poll_device(status_port):
         if s is not None:
             s.close()
 
-def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=100):
+def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=30):
     @timeout(timeout_s)
     def wait():
         while True:
@@ -598,8 +598,8 @@ def main():
     def wait_for_setup(process_name, defunct_wait_time):
         processes_running = subprocess.Popen(["ps", "-ef"],stdout=subprocess.PIPE)
         for process in processes_running.stdout:
-            if re.search(process_name, process):
-                if 'defunct' not in process:
+            if re.search(process_name, process.decode('utf-8')):
+                if b'defunct' not in process:
                     pid = process.split()[1]
                     debug("{0} still running: {1}, killing pid: {2}".format(process_name, process, pid))
                     os.kill(int(pid), signal.SIGTERM)
@@ -631,7 +631,7 @@ def main():
 
         disable_model_logging = True
         if args.enable_model_logging:
-	    disable_model_logging = False
+	        disable_model_logging = False
 
         if args.pdtest is not None:
             conf_path = args.pdtest

@@ -60,7 +60,7 @@ class TestExact(BfRuntimeTest):
         p1 = testutils.simple_eth_packet(pktlen=100, eth_src='00:00:00:00:00:00')
         p1_exp = testutils.simple_eth_packet(pktlen=100, eth_src='00:00:00:00:00:01')
         logger.info("Sending packet non-IP on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p1))
+        testutils.send_packet(self, ig_port, p1)
         time.sleep(5)
         logger.info("Expecting packet non-IP on port %d", eg_port)
         testutils.verify_packets(self, p1_exp, [eg_port])
@@ -68,7 +68,7 @@ class TestExact(BfRuntimeTest):
         p2 = testutils.simple_ip_packet(eth_src='00:00:00:00:00:00')
         p2_exp = testutils.simple_ip_packet(eth_src='00:00:00:00:00:02')
         logger.info("Sending packet IPv4 on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p2))
+        testutils.send_packet(self, ig_port, p2)
         logger.info("Expecting packet IPv4 on port %d", eg_port)
         testutils.verify_packets(self, p2_exp, [eg_port])
 
@@ -76,7 +76,7 @@ class TestExact(BfRuntimeTest):
         p3 = testutils.simple_ipv6ip_packet(eth_src='00:00:00:00:00:00')
         p3_exp = testutils.simple_ipv6ip_packet(eth_src='00:00:00:00:00:03')
         logger.info("Sending packet IPv6 on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p3))
+        testutils.send_packet(self, ig_port, p3)
         logger.info("Expecting packet IPv6 on port %d", eg_port)
         testutils.verify_packets(self, p3_exp, [eg_port])
         '''
@@ -104,7 +104,7 @@ class TestTernary(BfRuntimeTest):
                                             ip_src='0.0.0.255',
                                             ip_proto=5)
         logger.info("Sending packet IPv4 on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p1))
+        testutils.send_packet(self, ig_port, p1)
         logger.info("Expecting packet IPv4 on port %d", eg_port)
         testutils.verify_packets(self, p1_exp, [eg_port])
 
@@ -117,7 +117,7 @@ class TestTernary(BfRuntimeTest):
                                             ip_src='0.0.0.10',
                                             ip_proto=7)
         logger.info("Sending packet IPv4 on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p2))
+        testutils.send_packet(self, ig_port, p2)
         logger.info("Expecting packet IPv4 on port %d", eg_port)
         testutils.verify_packets(self, p2_exp, [eg_port])
 
@@ -130,7 +130,7 @@ class TestTernary(BfRuntimeTest):
                                             ip_src='0.0.0.10',
                                             ip_proto=7)
         logger.info("Sending packet IPv4 on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p3))
+        testutils.send_packet(self, ig_port, p3)
         logger.info("Expecting packet IPv4 on port %d", eg_port)
         testutils.verify_packets(self, p3_exp, [eg_port])
 
@@ -143,6 +143,6 @@ class TestTernary(BfRuntimeTest):
                                             ip_src='0.0.0.10',
                                             ip_proto=11)
         logger.info("Sending packet IPv4 on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(p4))
+        testutils.send_packet(self, ig_port, p4)
         logger.info("Expecting packet IPv4 on port %d", eg_port)
         testutils.verify_packets(self, p4_exp, [eg_port])

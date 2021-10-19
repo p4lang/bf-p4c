@@ -8,7 +8,6 @@ import ptf.testutils as testutils
 from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 from itertools import chain
-import scapy
 
 class CloneTest(P4RuntimeTest):
     def write_session(self, session, update_type):
@@ -50,8 +49,8 @@ class CloneTest(P4RuntimeTest):
 
     def verify_packets(self, original, replicas, pkt):
         for port, rid in chain([original], replicas):
-            exp_pkt = str(pkt)
-            exp_pkt = stringify(rid, 2) + exp_pkt[2:]
+            exp_pkt = pkt
+            exp_pkt = rid.to_bytes(2, 'big') + exp_pkt[2:]
             testutils.verify_packet(self, exp_pkt, port)
 
     def runTest(self):
@@ -70,4 +69,3 @@ class CloneTest(P4RuntimeTest):
         self.create_session(session)
         testutils.send_packet(self, ig_port, pkt)
         testutils.verify_packet(self, exp_pkt, port1)
-

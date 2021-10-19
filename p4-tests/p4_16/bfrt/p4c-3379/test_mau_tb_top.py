@@ -104,8 +104,8 @@ for port in swports:
 	elif pipe == 3:
 		swports_3.append(port)
 
-print 'swports:', swports;
-print 'swports_0:', swports_0;
-print 'swports_1:', swports_1;
-print 'swports_2:', swports_2;
-print 'swports_3:', swports_3;
+print('swports:', swports)
+print('swports_0:', swports_0)
+print('swports_1:', swports_1)
+print('swports_2:', swports_2)
+print('swports_3:', swports_3)

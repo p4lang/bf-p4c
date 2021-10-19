@@ -131,11 +131,11 @@ for port in swports:
 	elif pipe == 3:
 		swports_3.append(port)
 
-print 'swports:', swports;
-print 'swports_0:', swports_0;
-print 'swports_1:', swports_1;
-print 'swports_2:', swports_2;
-print 'swports_3:', swports_3;
+print('swports:', swports)
+print('swports_0:', swports_0)
+print('swports_1:', swports_1)
+print('swports_2:', swports_2)
+print('swports_3:', swports_3)
 
 ################################################################################
 # Common Functions
@@ -320,7 +320,7 @@ def cpu_port_del(self, target):
 
 		if(CPU_ENABLE == True):
 			# todo: make these inputs instead of hard coding them
-			cpu_etype      = 0x9001 
+			cpu_etype      = 0x9001
 			cpu_etype_mask = 0xFFFF #(2**16)-1
 			cpu_port       = 2
 			cpu_port_mask  = 0x01FF #(2** 9)-1
@@ -2993,7 +2993,7 @@ def npb_npb_sfp_sel_add(self, target,
 ):
 	# ---------------------------------
 
-	# we have to modify 
+	# we have to modify
 
 	spi_new       = []
 	si_new        = []

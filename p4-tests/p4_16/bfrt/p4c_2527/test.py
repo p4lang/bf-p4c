@@ -108,7 +108,7 @@ class VxlanFailure(BfRuntimeTest):
         for pkt in pkts:
 
             # Send packet(s)
-            testutils.send_packet(self, ig_port, str(pkt))
+            testutils.send_packet(self, ig_port, pkt)
             time.sleep(2)
 
 
@@ -143,5 +143,5 @@ class VxlanFailure(BfRuntimeTest):
 #        for pkt in pkts:
 #
 #            # Send packet(s)
-#            testutils.send_packet(self, ig_port, str(pkt))
+#            testutils.send_packet(self, ig_port, pkt)
 #            time.sleep(2)

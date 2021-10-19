@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import os
 import sys
@@ -112,23 +112,23 @@ class CoreMetrics():
 
     def display(self):
         dt = PrettyTable(['Metric', 'Value'])
-        for m, m_info in self.metrics.iteritems():
+        for m, m_info in self.metrics.items():
             dt = m_info.print_data(dt)
-        print dt
+        print(dt)
 
     def process_metric(self, dump):
-        for m, m_info in self.metrics.iteritems():
+        for m, m_info in self.metrics.items():
             m_info.process(dump)
 
     def display_comparison(self, metric):
         dt = PrettyTable(['Metric', 'Master', 'Current', 'Delta'])
-        for m, m_info in self.metrics.iteritems():
+        for m, m_info in self.metrics.items():
             m_info.display_comparison(metric.metrics[m], dt)
-        print dt
+        print(dt)
 
     def analyze(self, metric):
         result = 0
-        for m, m_info in self.metrics.iteritems():
+        for m, m_info in self.metrics.items():
             result += m_info.analyze(metric.metrics[m])
         return result
 

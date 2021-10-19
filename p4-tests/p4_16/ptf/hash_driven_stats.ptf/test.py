@@ -36,12 +36,12 @@ class CounterReadTest(P4RuntimeTest):
         # self.assertEqual(ingress_count_0, 0)
         # self.assertEqual(egress_count_0, 0)
         size = 70
-        pkt = "\xab" * size
+        pkt = b"\xab" * size
         testutils.send_packet(self, ingress_port, pkt)
         testutils.verify_packet(self, pkt, egress_port)
         ingress_count, egress_count = get_counts()
-        print "Ingress Count: ", ingress_count
-        print "Egress Count: ", egress_count
+        print("Ingress Count: ", ingress_count)
+        print("Egress Count: ", egress_count)
         # FIXME: Due to the model adding 4 extra bytes, we update the counters with this value
         # Must check with Sachin to validate this behavior as a check
         # WIP: Working on bytecount adjust to account for additional 16 bytes

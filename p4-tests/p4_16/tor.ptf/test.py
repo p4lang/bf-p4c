@@ -14,11 +14,11 @@ class FullTest(P4RuntimeTest):
     def runCommonTest(self, proto_entries):
         p4runtime_request_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), proto_entries)
-        print "Loading entries from proto file", p4runtime_request_path
+        print("Loading entries from proto file", p4runtime_request_path)
         p4runtime_request = p4runtime_pb2.WriteRequest()
         with open(p4runtime_request_path, "r") as fin:
             google.protobuf.text_format.Merge(fin.read(), p4runtime_request)
-        print "Sending request to switch"
+        print("Sending request to switch")
         response = self.write_request(p4runtime_request)
 
         h1_eth  = "EE:61:23:BC:E5:00"
@@ -43,7 +43,7 @@ class FullTest(P4RuntimeTest):
         port1 = self.swports(1)
         port2 = self.swports(2)
 
-        testutils.send_packet(self, port1, str(pkt_h1_to_h2))
+        testutils.send_packet(self, port1, pkt_h1_to_h2)
         testutils.verify_packet(self, exp_pkt_h1_to_h2, port2)
 
         # test L3 connectivity h2 -> h1
@@ -58,7 +58,7 @@ class FullTest(P4RuntimeTest):
             ip_src = h2_ip, ip_dst = h1_ip,
             ip_ttl = 63)
 
-        testutils.send_packet(self, port2, str(pkt_h2_to_h1))
+        testutils.send_packet(self, port2, pkt_h2_to_h1)
         testutils.verify_packet(self, exp_pkt_h2_to_h1, port1)
 
         testutils.verify_no_other_packets(self)
@@ -81,22 +81,22 @@ class HashDistributionTest(P4RuntimeTest):
     ap_name = "l3_fwd.wcmp_action_profile"
 
     def add_member(self, mbr_id, eg_port, smac, dmac):
-        print "Creating member", mbr_id
+        print("Creating member", mbr_id)
         eg_port_str = stringify(eg_port, 2)
         self.send_request_add_member(
             self.ap_name, mbr_id, "l3_fwd.set_nexthop",
             [("port", eg_port_str), ("smac", smac), ("dmac", dmac)])
 
     def add_group(self, grp_id):
-        print "Creating group", grp_id
+        print("Creating group", grp_id)
         self.send_request_add_group(self.ap_name, grp_id)
 
     def set_group_membership(self, grp_id, mbr_ids = []):
-        print "Setting members for group", grp_id
+        print("Setting members for group", grp_id)
         self.send_request_set_group_membership(self.ap_name, grp_id, mbr_ids)
 
     def add_entry_to_group(self, mac, pref, pLen, grp_id):
-        print "Adding match entry to group", grp_id
+        print("Adding match entry to group", grp_id)
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
         self.push_update_add_entry_to_action(
@@ -112,8 +112,8 @@ class HashDistributionTest(P4RuntimeTest):
         ig_port = self.swports(3)
         mbr1, port1 = 1, self.swports(1)
         mbr2, port2 = 2, self.swports(2)
-        smac = "\xee\xcd\x00\x7e\x70\x00"
-        dmac = "\xee\x30\xca\x9d\x1e\x00"
+        smac = b"\xee\xcd\x00\x7e\x70\x00"
+        dmac = b"\xee\x30\xca\x9d\x1e\x00"
         self.add_member(mbr1, port1, smac, dmac)
         self.add_member(mbr2, port2, smac, dmac)
         grp = 3
@@ -126,7 +126,7 @@ class HashDistributionTest(P4RuntimeTest):
         npkts = 30
         counts = [0, 0]
         tcp_dport = 5001
-        for i in xrange(npkts):
+        for i in range(npkts):
             tcp_sport = 4001 + i
             pkt = testutils.simple_tcp_packet(
                 eth_dst = smac, ip_src = ip_src, ip_dst = ip_dst, ip_ttl = 64,
@@ -135,13 +135,13 @@ class HashDistributionTest(P4RuntimeTest):
                 eth_dst = dmac, eth_src = smac,
                 ip_src = ip_src, ip_dst = ip_dst, ip_ttl = 63,
                 tcp_sport = tcp_sport, tcp_dport = tcp_dport)
-            testutils.send_packet(self, ig_port, str(pkt))
+            testutils.send_packet(self, ig_port, pkt)
             port_index, _ = testutils.verify_packet_any_port(
                 self, exp_pkt, [port1, port2])
             counts[port_index] += 1
-        print "Port counts :", counts
+        print("Port counts :", counts)
         freqs = [1. * c / npkts for c in counts]
-        print "Port frequencies :", freqs
+        print("Port frequencies :", freqs)
         for c in counts:
             self.assertGreater(c, npkts / 4)
 
@@ -151,7 +151,7 @@ class PacketOutTest(P4RuntimeTest):
         # (i.e. submit_to_ingress == 0)
         port3 = self.swports(3)
         port3_hex = stringify(port3, 2)
-        payload = 'a' * 20
+        payload = b'a' * 20
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = payload
         egress_physical_port = packet_out.metadata.add()
@@ -159,7 +159,7 @@ class PacketOutTest(P4RuntimeTest):
         egress_physical_port.value = port3_hex
         submit_to_ingress = packet_out.metadata.add()
         submit_to_ingress.metadata_id = 2
-        submit_to_ingress.value = "\x00"  # false
+        submit_to_ingress.value = b"\x00"  # false
 
         self.send_packet_out(packet_out)
 
@@ -173,7 +173,7 @@ class PacketOutTestCheckSkipIngress(P4RuntimeTest):
         # (i.e. submit_to_ingress == 0)
         port3 = self.swports(3)
         port3_hex = stringify(port3, 2)
-        payload = 'a' * 20
+        payload = b'a' * 20
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = payload
         egress_physical_port = packet_out.metadata.add()
@@ -181,7 +181,7 @@ class PacketOutTestCheckSkipIngress(P4RuntimeTest):
         egress_physical_port.value = port3_hex
         submit_to_ingress = packet_out.metadata.add()
         submit_to_ingress.metadata_id = 2
-        submit_to_ingress.value = "\x00"  # false
+        submit_to_ingress.value = b"\x00"  # false
 
         # add an entry to punt the packet to CPU, in order to check that ingress
         # is actually skipped
@@ -191,7 +191,7 @@ class PacketOutTestCheckSkipIngress(P4RuntimeTest):
             [self.Ternary("standard_metadata.egress_spec", port3_hex, mask)],
             "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
-        for i in xrange(3):
+        for i in range(3):
             self.send_packet_out(packet_out)
             testutils.verify_packet(self, payload, port3)
         testutils.verify_no_other_packets(self)
@@ -209,8 +209,8 @@ class PacketInTest(P4RuntimeTest):
             [self.Ternary("standard_metadata.ingress_port", port3_hex, mask)],
             "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
-        payload = 'a' * 64
-        for i in xrange(3):
+        payload = b'a' * 64
+        for i in range(3):
             testutils.send_packet(self, port3, payload)
             packet_in = self.get_packet_in()
             self.assertEqual(packet_in.payload, payload)

@@ -2,7 +2,7 @@
 
 # Prepare new prefix to $PYTHONPATH
 # Common prefix
-pythonpath_prefix="/usr/local/lib/python2.7/site-packages"
+pythonpath_prefix="/usr/local/lib/python3.5/site-packages"
 if [[ "$PYTHONPATH:" = "$pythonpath_prefix:"* ]]; then
     # $pythonpath_prefix is already a prefix of $PYTHONPATH
     pythonpath_prefix=""
@@ -11,7 +11,7 @@ fi
 if [ "${PKTPY,,}" != "false" ]; then
     # Prepend bf-ptf-specific prefix
     [ -z "$pythonpath_prefix" ] && delim='' || delim=':'
-    pythonpath_prefix="/usr/local/lib/python2.7/site-packages/bf-ptf${delim}${pythonpath_prefix}"
+    pythonpath_prefix="/usr/local/lib/python3.5/site-packages/bf-ptf${delim}${pythonpath_prefix}"
     if [[ "$PYTHONPATH:" = "$pythonpath_prefix:"* ]]; then
         # $pythonpath_prefix is already a prefix of $PYTHONPATH
         pythonpath_prefix=""

@@ -42,7 +42,7 @@ class test(BfRuntimeTest):
 
 	def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
 		logger.info("Sending packet on port %d", ingress_port)
-		testutils.send_packet(self, ingress_port, str(pkt))
+		testutils.send_packet(self, ingress_port, pkt)
 		logger.info("Expecting packet on port %d", egress_port)
 		testutils.verify_packets(self, exp_pkt, [egress_port])
 
@@ -50,7 +50,7 @@ class test(BfRuntimeTest):
 
 	def send_and_verify_no_other_packet(self, ingress_port, pkt):
 		logger.info("Sending packet on port %d (negative test); expecting no packet", ingress_port)
-		testutils.send_packet(self, ingress_port, str(pkt))
+		testutils.send_packet(self, ingress_port, pkt)
 		testutils.verify_no_other_packets(self)
 
 	# -------------------------------------------------------------
@@ -158,16 +158,16 @@ class test(BfRuntimeTest):
 #			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
 #		)
 
-		src_pkt =           Ether('\x00\x00\x00\xf0\xc9\xb9\x00\x00\x11\xda\x4d\x72\x08\x00')
-		src_pkt = src_pkt / IP   ('\x45\x00\x00\x1c\x00\x00\x40\x00\x40\x01\x24\xdf\x01\x00\x0a\x02\x01\x00\x0a\x01')
-		src_pkt = src_pkt / TCP  ('\x08\x00\xf7\xf7\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc8\x99\x5e\x9c\x5c\xf2\x24\xf7')
+		src_pkt =           Ether(b'\x00\x00\x00\xf0\xc9\xb9\x00\x00\x11\xda\x4d\x72\x08\x00')
+		src_pkt = src_pkt / IP   (b'\x45\x00\x00\x1c\x00\x00\x40\x00\x40\x01\x24\xdf\x01\x00\x0a\x02\x01\x00\x0a\x01')
+		src_pkt = src_pkt / TCP  (b'\x08\x00\xf7\xf7\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc8\x99\x5e\x9c\x5c\xf2\x24\xf7')
 
 		exp_pkt = src_pkt
 
 		# -----------------------------------------------------------
 
 		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
+		testutils.send_packet(self, ig_port, src_pkt)
 
 		# -----------------------------------------------------------
 

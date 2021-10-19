@@ -47,5 +47,5 @@ class Test_IPv6_udp(P4RuntimeTest):
 
         exp_pkt = copy.deepcopy(udp_pkt)
         exp_pkt[UDP].sport = 0x1111;
-        testutils.send_packet(self, ingress_port, str(udp_pkt))
+        testutils.send_packet(self, ingress_port, udp_pkt)
         testutils.verify_packets(self, exp_pkt, [egress_port])

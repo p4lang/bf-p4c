@@ -81,10 +81,10 @@ for port in swports:
     elif pipe == 3:
         swports_3.append(port)
 
-print 'swports_0:', swports_0;
-print 'swports_1:', swports_1;
-print 'swports_2:', swports_2;
-print 'swports_3:', swports_3;
+print('swports_0:', swports_0)
+print('swports_1:', swports_1)
+print('swports_2:', swports_2)
+print('swports_3:', swports_3)
 
 class NpbNshDecapTest(BfRuntimeTest):
 
@@ -97,7 +97,7 @@ class NpbNshDecapTest(BfRuntimeTest):
 
     def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
         logger.info("Sending packet on port %d", ingress_port)
-        testutils.send_packet(self, ingress_port, str(pkt))
+        testutils.send_packet(self, ingress_port, pkt)
         logger.info("Expecting packet on port %d", egress_port)
         testutils.verify_packets(self, exp_pkt, [egress_port])
 
@@ -105,7 +105,7 @@ class NpbNshDecapTest(BfRuntimeTest):
 
     def send_and_verify_no_other_packet(self, ingress_port, pkt):
         logger.info("Sending packet on port %d (negative test); expecting no packet", ingress_port)
-        testutils.send_packet(self, ingress_port, str(pkt))
+        testutils.send_packet(self, ingress_port, pkt)
         testutils.verify_no_other_packets(self)
 
     # -------------------------------------------------------------
@@ -380,7 +380,7 @@ class NpbNshDecapTest(BfRuntimeTest):
         # -----------------------------------------------------------
 
         logger.info("Sending packet on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
 
         # -----------------
         # Receive the packet

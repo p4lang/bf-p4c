@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -----------------------------------------------------------------------------
 # stf2ptf_pd
 
@@ -371,7 +371,7 @@ def main():
     else:
         dirname = os.path.dirname(outFileName)
         if not os.path.exists(dirname):
-            print "Creating directory", dirname
+            print("Creating directory", dirname)
             os.makedirs(dirname)
     ptffile = open(outFileName, 'w')
 

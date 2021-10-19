@@ -22,5 +22,5 @@ class Test_IPinIP(P4RuntimeTest):
         udp_pkt = Ether()/IP(proto=4)/IP(proto=4)/IP(proto=4)/IP(proto=17)/UDP()
         exp_pkt = Ether()/IP(proto=17)/UDP()
 
-        testutils.send_packet(self, ingress_port, str(udp_pkt))
+        testutils.send_packet(self, ingress_port, udp_pkt)
         testutils.verify_packets(self, exp_pkt, [ingress_port])

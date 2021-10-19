@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import os
 import sys
@@ -22,7 +22,7 @@ def get_test_list(tests_csv, out_dir, ts):
         tests = []
         # p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
         field_names=['p4', 'p4_path', 'include_path', 'p4_opts', 'target', 'language', 'arch', 'skip_opt']
-        with open(tests_csv, 'rb') as csvfile:
+        with open(tests_csv, 'r') as csvfile:
             test_reader = csv.DictReader(csvfile, fieldnames=field_names)
             for row in test_reader:
                 if '# ' not in row['p4']:
@@ -46,7 +46,7 @@ def get_test_list(tests_csv, out_dir, ts):
             raise Exception("Fatal error(s) encountered, exiting!")
         return tests
     except Exception as e:
-        print e
+        print(e)
         sys.exit(1)
 
 def prep_test_line(mTest, p4c):
@@ -101,18 +101,18 @@ def run_test_matrix(p4c, test_cmd):
     failed = []
     rc = RunCmd(test_cmd, config.TEST_DRIVER_TIMEOUT)
     writeblock_to_file(os.path.join(config.REF_OUTPUTS_DIR, \
-        p4c + '_test_error.log'), rc.err)
+        p4c + '_test_error.log'), rc.err.decode('utf-8'))
     writeblock_to_file(os.path.join(config.REF_OUTPUTS_DIR, \
-        p4c + '_test_out.log'), rc.out)
-    print 'Test Summary:\n'
+        p4c + '_test_out.log'), rc.out.decode('utf-8'))
+    print('Test Summary:\n')
     if rc.out is not None:
-        lines = rc.out.split('\n')
+        lines = rc.out.decode('utf-8').split('\n')
         for line in lines[-10:]:
-            print line + '\n'
+            print(line + '\n')
             failed.append(line.strip())
-    print 'Test Errors:\n'
+    print('Test Errors:\n')
     if rc.err is not None:
-        print rc.err + '\n'
+        print(rc.err.decode('utf-8') + '\n')
     return rc.return_code, failed
 
 def process_metrics(tests, metrics_db, metrics_outdir, ts, update, failed):
@@ -126,13 +126,13 @@ def process_metrics(tests, metrics_db, metrics_outdir, ts, update, failed):
     else:
         print ('Analyzing metrics in the current run')
         results = database.test_and_report_metrics(db_curr, db_master)
-    for test, metrics_result in results.iteritems():
+    for test, metrics_result in results.items():
         test_result = metrics_result
         if test in failed:
             test_result = 'FAIL'
         if test_result is 'FAIL':
             final_result -= 1
-        print test, test_result
+        print(test, test_result)
     return final_result
 
 def find_file(path, filename):
@@ -153,7 +153,7 @@ def remove_empty_directories(tests):
             if os.path.isdir(out_dir):
                 is_p4i_outputs = find_file(out_dir, 'manifest.json')
                 if not is_p4i_outputs:
-                    print 'Compilation not successful, removing', out_dir
+                    print('Compilation not successful, removing', out_dir)
                     shutil.rmtree(out_dir)
 
 # Generate and run the test matrix for Glass and P4C compilation
@@ -184,18 +184,18 @@ def main():
     ts = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     tests = prep_test_matrix(args.tests_csv, args.out_dir, ts)
-    print '='*120
-    print 'Running Glass tests: '
-    print '='*120
+    print('='*120)
+    print('Running Glass tests: ')
+    print('='*120)
     glass_res, glass_failed = run_test_matrix('Glass', config.GLASS_TEST_CMD)
-    print 'Completed Glass tests: ' + str(glass_res)
-    print '='*120 + '\n\n'
-    print '='*120
-    print 'Running P4C tests: '
-    print '='*120
+    print('Completed Glass tests: ' + str(glass_res))
+    print('='*120 + '\n\n')
+    print('='*120)
+    print('Running P4C tests: ')
+    print('='*120)
     p4c_res, p4c_failed = run_test_matrix('P4C', config.P4C_TEST_CMD)
-    print 'Completed P4C tests: ' + str(p4c_res)
-    print '='*120
+    print('Completed P4C tests: ' + str(p4c_res))
+    print('='*120)
     remove_empty_directories(tests)
     if args.process_metrics:
         metrics_db = database.metricstable()

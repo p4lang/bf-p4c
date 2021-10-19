@@ -20,12 +20,13 @@ Simple PTF test for simple_l3_checksum
 import unittest           # Useful if you need unittest decorators
 import pdb                # Useful for debugging
 import copy               # Almost always needed for test packets
-from scapy.all import * # Useful if you want to create your own packets
+# from scapy.all import * # Useful if you want to create your own packets
 
 # Import PTF modules
 from ptf import config
 from ptf.testutils import *
 from ptf.thriftutils import *
+from ptf.packet import *
 
 # Import common PD and PD Fixed modules (especially types)
 import pd_base_tests
@@ -94,7 +95,7 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
         # Always make sure the programming gets dow to the HW
         self.conn_mgr.complete_operations(self.sess_hdl)
         print
-        
+
     # Use tearDown() method to return the DUT to the initial state by cleaning
     # all the configuration and clearing up the connection
     def tearDown(self):
@@ -106,19 +107,19 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client" + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client" + action_profile + "del_member"
                 for member in self.members[actoin_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")
@@ -169,17 +170,17 @@ class L2_IPv4_TCP_Good(TestGroup1):
                     hex_to_i16(dport), -1,          # l4_lookup.word_2
                     1, 1,                           # l4_lookup.first_frag
                     0, verify_checksum),            # ingress_parser_err
-                
+
                 0,                                  # Priority
-                
+
                 simple_l3_checksum_send_action_spec_t(
                     test_port)
                 ))
-                    
+
         self.conn_mgr.complete_operations(self.sess_hdl)
-        
-        print """Sending TCP Packet Good Checksum for L2 Processing
-                 Options: """, repr(ipv4_opt)
+
+        print("""Sending TCP Packet Good Checksum for L2 Processing
+                 Options: """, repr(ipv4_opt))
 
         if ipv4_opt == 0 or ipv4_opt == None:
             ip_options = False
@@ -189,7 +190,7 @@ class L2_IPv4_TCP_Good(TestGroup1):
             ip_options=ipv4_opt
         else:
             ip_options=IPOption(ipv4_opt)
-            
+
         test_pkt = simple_tcp_packet(eth_dst="00:98:76:54:32:10",
                                      eth_src='00:55:55:55:55:55',
                                      ip_src=ipv4_src,
@@ -201,7 +202,7 @@ class L2_IPv4_TCP_Good(TestGroup1):
                                      tcp_dport=dport,
                                      pktlen=pkt_len)
         exp_pkt = Ether(str(test_pkt))
-        
+
         send_packet(self, test_port, test_pkt)
         print("Expecting the packet to be forwarded to port %d" % test_port)
         verify_packet(self, exp_pkt, test_port)

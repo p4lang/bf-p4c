@@ -165,7 +165,7 @@ def cpu_port_del(self, target):
 
 		if(CPU_ENABLE == True):
 			# todo: make these inputs instead of hard coding them
-			cpu_etype      = 0x9001 
+			cpu_etype      = 0x9001
 			cpu_etype_mask = 0xFFFF #(2**16)-1
 			cpu_port       = 2
 			cpu_port_mask  = 0x01FF #(2** 9)-1
@@ -1089,7 +1089,7 @@ def npb_npb_sf0_policy_l2_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf0_policy_l2 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf0_policy_l2 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -1198,7 +1198,7 @@ def npb_npb_sf0_policy_l34_v4_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf0_policy_l34_v4 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf0_policy_l34_v4 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -1309,7 +1309,7 @@ def npb_npb_sf0_policy_l34_v6_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf0_policy_l34_v6 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf0_policy_l34_v6 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -1397,7 +1397,7 @@ def npb_npb_sf0_policy_l7_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf0_policy_l7 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf0_policy_l7 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -2464,7 +2464,7 @@ def npb_npb_sf2_policy_l2_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf2_policy_l2 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf2_policy_l2 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -2573,7 +2573,7 @@ def npb_npb_sf2_policy_l34_v4_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf2_policy_l34_v4 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf2_policy_l34_v4 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -2686,7 +2686,7 @@ def npb_npb_sf2_policy_l34_v6_del(self, target,
 		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
 		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print "Dumping npb_npb_sf2_policy_l34_v6 counters: pkts", recv_pkts, "bytes", recv_bytes 
+		print("Dumping npb_npb_sf2_policy_l34_v6 counters: pkts", recv_pkts, "bytes", recv_bytes)
 
 		# delete entry
 		table.entry_del(
@@ -3179,7 +3179,7 @@ def npb_npb_sfp_sel_add(self, target,
 ):
 	# ---------------------------------
 
-	# we have to modify 
+	# we have to modify
 
 	spi_new       = []
 	si_new        = []

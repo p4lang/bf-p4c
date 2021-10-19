@@ -19,7 +19,7 @@ def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa):
     s = stringify(f1, 2) + stringify(f2, 1) + stringify(f3, 1)
 
     # Add fake payload.
-    s += '0' * 15
+    s += b'0' * 15
     return s
 
 class BaseTest(P4RuntimeTest):
@@ -36,7 +36,7 @@ class SimpleTest(BaseTest):
 
         # Sending a packet when no entry is installed. Should miss.
         pkt = dumbPacket(0xdead, 0x00, 0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_no_other_packets(self)
 
         # Add a single entry: matches on the 8 bit length prefix of "0xdead",
@@ -47,20 +47,20 @@ class SimpleTest(BaseTest):
         # Send a matching packet, with the exact value in the ternary entry.
         # Expect packet on port 3, with a f2 field of 0x42.
         pkt = dumbPacket(f1=0xdead, f2=0x00, f3=0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=0xdead, f2=0x42, f3=0x00)
         testutils.verify_packet(self, exp_pkt, eg_port)
 
         # Send a matching packet, exercising the ternary match.
         # Expect packet on port 3, with a f2 field of 0x42.
         pkt = dumbPacket(f1=0xde00, f2=0x00, f3=0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=0xde00, f2=0x42, f3=0x00)
         testutils.verify_packet(self, exp_pkt, eg_port)
 
         # Send a non matching packet.
         pkt = dumbPacket(f1=0xaa00, f2=0x00, f3=0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_no_other_packets(self)
 
 class SmokeTest(BaseTest):
@@ -79,29 +79,29 @@ class SmokeTest(BaseTest):
         # Exercise all these LPM entries.
         for i in random.sample(range(0xb000, 0xbe00), 50):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port0, str(pkt))
+            testutils.send_packet(self, port0, pkt)
             exp_pkt = dumbPacket(f1=i, f2=0x42, f3=0x00)
             testutils.verify_packet(self, exp_pkt, port0)
 
         for i in random.sample(range(0xbe00, 0xbee0), 20):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port0, str(pkt))
+            testutils.send_packet(self, port0, pkt)
             exp_pkt = dumbPacket(f1=i, f2=0x43, f3=0x00)
             testutils.verify_packet(self, exp_pkt, port1)
 
         for i in random.sample(range(0xbee0, 0xbeef), 5):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port0, str(pkt))
+            testutils.send_packet(self, port0, pkt)
             exp_pkt = dumbPacket(f1=i, f2=0x44, f3=0x00)
             testutils.verify_packet(self, exp_pkt, port2)
 
         pkt = dumbPacket(f1=0xbeef, f2=0x00, f3=0x00)
-        testutils.send_packet(self, port0, str(pkt))
+        testutils.send_packet(self, port0, pkt)
         exp_pkt = dumbPacket(f1=0xbeef, f2=0x45, f3=0x00)
         testutils.verify_packet(self, exp_pkt, port3)
 
         # Packets that don't match any entries, just to be safe.
         for i in random.sample(range(0xc000, 0xcfff), 100):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port0, str(pkt))
+            testutils.send_packet(self, port0, pkt)
             testutils.verify_no_other_packets(self)

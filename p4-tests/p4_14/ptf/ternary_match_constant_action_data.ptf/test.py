@@ -21,7 +21,7 @@ def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa, n1=0xb, n2=0xc):
     s = stringify(f1, 2) + stringify(f2, 1) + stringify(f3, 1) + stringify((n1 << 4) | n2, 1)
 
     # Add fake payload.
-    s += '0' * 15
+    s += b'0' * 15
     return s
 
 class BaseTest(P4RuntimeTest):
@@ -37,7 +37,7 @@ class SimpleTest(BaseTest):
 
         # Sending a packet when no entry is installed. Should miss.
         pkt = dumbPacket(0xdead, 0x00, 0x00)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_no_other_packets(self)
 
         # Add a single entry: matches on the 8 bit length prefix of "0xdead",
@@ -48,13 +48,13 @@ class SimpleTest(BaseTest):
         # Send a matching packet, with the exact value in the ternary entry.
         # Expect packet on port 3, with a f2 field of 0x42.
         pkt = dumbPacket(f1=0xdead, f2=0x00, f3=0x00, n1=0x0, n2=0x0)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=0xdead, f2=0x00, f3=0x00, n1=0xa, n2=0x0)
         testutils.verify_packet(self, exp_pkt, eg_port)
 
         # Send a matching packet, exercising the ternary match.
         # Expect packet on port 3, with a f2 field of 0x42.
         pkt = dumbPacket(f1=0xde00, f2=0x00, f3=0x00, n1=0x0, n2=0x0)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=0xde00, f2=0x00, f3=0x00, n1=0xa, n2=0x0)
         testutils.verify_packet(self, exp_pkt, eg_port)

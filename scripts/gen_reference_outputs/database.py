@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import os
 import sys
@@ -37,7 +37,7 @@ def get_manifest_files(metrics_outdir, ts):
     rc = RunCmd(manifest_find_cmd, config.TEST_DRIVER_TIMEOUT)
     manifest_files = []
     if rc.out is not None and len(rc.out) > 0:
-        for line in rc.out.split('\n'):
+        for line in rc.out.decode('utf-8').split('\n'):
             if ts in line and 'manifest.json' in line:
                 manifest_files.append(metrics_outdir + line[2:])
     else:
@@ -49,7 +49,7 @@ def get_metrics(metrics_outdir, ts):
     manifest_files = get_manifest_files(metrics_outdir, ts)
     for manifest_file in manifest_files:
         output_directory = os.path.dirname(manifest_file)
-        with open(manifest_file, "rb") as json_file:
+        with open(manifest_file, "r") as json_file:
             try:
                 manifest_info = json.load(json_file)
             except:
@@ -67,7 +67,7 @@ def get_metrics(metrics_outdir, ts):
                     metrics_info = pipe["files"]["metrics"]
                     metrics_files.append([pipe_id, os.path.join(output_directory, metrics_info["path"])])
                 except:
-                    print 'metrics.json not found. Compilation might not have succeeded for', str(prog["program_name"])
+                    print('metrics.json not found. Compilation might not have succeeded for', str(prog["program_name"]))
                     continue
     return metrics_files
 
@@ -116,11 +116,11 @@ def compare_metrics(curr, master):
 
 def test_metrics(db_curr, db_master):
     results = {}
-    for curr, curr_info in db_curr.iteritems():
-        print 'Analyzing:', curr
+    for curr, curr_info in db_curr.items():
+        print('Analyzing:', curr)
         result = 0
         if not curr_info['Metrics_json']:
-            print 'Possible test failure, metrics.json not found'
+            print('Possible test failure, metrics.json not found')
             result = -1
         else:
             curr_metrics = extract_info(curr_info)
@@ -130,21 +130,21 @@ def test_metrics(db_curr, db_master):
                 for i, cmetric in enumerate(curr_metrics):
                     result += compare_metrics(cmetric, master_metrics[i])
             else:
-            	print 'Nothing to compare, possibly new test added'
+            	print('Nothing to compare, possibly new test added')
             	for i, cmetric in enumerate(curr_metrics):
-            		cmetric.display() 
+            		cmetric.display()
         if result < 0:
             results[curr] = 'FAIL'
         else:
             results[curr] = 'PASS'
-        print '='*120 + '\n'
+        print('='*120 + '\n')
     return results
 
 def test_and_report_metrics(db_curr, db_master):
     return test_metrics(db_curr, db_master)
 
 def update_metrics(metrics_db, db_curr, db_master):
-    for curr, curr_info in db_curr.iteritems():
+    for curr, curr_info in db_curr.items():
         metrics_db.update_metrics(curr, curr_info)
 
 def test_and_update_metrics(metrics_db, db_curr, db_master):
@@ -169,11 +169,11 @@ class metricstable(object):
             print('Error inserting metric into database:', err)
 
     def insert_metrics(self, metrics_info):
-        for metric, test_info in metrics_info.iteritems():
+        for metric, test_info in metrics_info.items():
             self.insert_metric(metric, test_info)
 
     def update_metrics(self, test, test_info):
-        print ('Updating database entry for', test)
+        print('Updating database entry for', test)
         self.insert_metric(test, test_info)
 
     def get_all(self):

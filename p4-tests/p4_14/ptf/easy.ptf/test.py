@@ -10,7 +10,7 @@ from p4runtime_base_tests import P4RuntimeTest
 
 class MyTest(P4RuntimeTest):
     def runTest(self):
-        print "Running test"
+        print("Running test")
 
         ig_port = self.swports(1)
         eg_port = self.swports(2)
@@ -18,19 +18,19 @@ class MyTest(P4RuntimeTest):
         pkt = testutils.simple_tcp_packet()
 
         # default action (from P4 program) sends all packets to port 2
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_packet(self, pkt, eg_port)
 
         self.send_request_add_entry_to_action("t", None, "nop", [])
 
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_no_other_packets(self)
 
         # restore default action
         # port must be 2 bytes
         self.send_request_add_entry_to_action("t", None, "do", [])
 
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         testutils.verify_packet(self, pkt, eg_port)
 
         testutils.verify_no_other_packets(self)

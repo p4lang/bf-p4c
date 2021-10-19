@@ -44,11 +44,11 @@ class IndirectCountTest(P4RuntimeTest):
         logger.info("Packet is expected to get dropped")
         testutils.verify_no_other_packets(self)
 
-        for i in xrange(2048 * 22):
+        for i in range(2048 * 22):
             if i % 1234 != 0:
                 continue
 
-            dmac = "00:11:22:33:%02x:%02x" % (i / 256, i % 256)
+            dmac = "00:11:22:33:%02x:%02x" % (i // 256, i % 256)
             cnt_index = i;
             byte_cnt = self.read_counter(cnt_index);
             self.assertEqual(byte_cnt, 0)

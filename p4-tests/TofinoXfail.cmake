@@ -1863,7 +1863,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-   "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*"
+   "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*|Internal compiler error."
    extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
 )
 
@@ -2021,4 +2021,21 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: packet.lookahead: functions or methods returning structures are not supported on this target"
   testdata/p4_16_samples/psa-example-dpdk-varbit.p4
+)
+
+# Driver update - https://github.com/intel-restricted/networking.switching.barefoot.bf-drivers/commit/5badd66ca8e3d2b84c34c2bb3257959ba2c22782 , Vlad doesn't want the test to be updated yet
+p4c_add_xfail_reason("tofino"
+  "ERROR: You requested to run the test on 'tf1'"
+  ba102_simple_l3_mirror
+)
+
+# P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received"
+  tor.p4
+)
+# P4C-3922 - Would require fixing glass (p4c-tofino)
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device"
+  COMPILER-1186
 )

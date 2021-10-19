@@ -31,6 +31,6 @@ class Test_IPv6_udp(P4RuntimeTest):
       eth_src="00:00:00:00:00:80",
       eth_type=0xFF) # Assert: 0x80 |+| 0xFF = 0xFF
 
-      testutils.send_packet(self, ingress_port, str(pkt1))
+      testutils.send_packet(self, ingress_port, pkt1)
       testutils.verify_packets(self, exp_pkt1, [egress_port])
       testutils.verify_no_other_packets(self)

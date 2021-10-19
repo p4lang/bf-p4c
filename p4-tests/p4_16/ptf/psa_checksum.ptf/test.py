@@ -21,7 +21,7 @@ class Test_checksum(P4RuntimeTest):
         self.write_request(req)
         pkt = testutils.simple_tcp_packet()
         print("Sending a good packet")
-        testutils.send_packet(self, ingress_port, str(pkt))
+        testutils.send_packet(self, ingress_port, pkt)
         testutils.verify_packets(self, pkt, [egress_port])
 
 class Test_bad_checksum(P4RuntimeTest):
@@ -36,5 +36,5 @@ class Test_bad_checksum(P4RuntimeTest):
         pkt = testutils.simple_tcp_packet()
         print("Sending packet with bad Checksum ")
         pkt[IP].chksum = 0xDEAD
-        testutils.send_packet(self, ingress_port, str(pkt))
+        testutils.send_packet(self, ingress_port, pkt)
         testutils.verify_no_other_packets(self)

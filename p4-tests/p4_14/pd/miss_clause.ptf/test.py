@@ -78,11 +78,11 @@ class Test1(pd_base_tests.ThriftInterfaceDataPlane):
         egress_port1  = 6
         real_egress_port = egress_port1 ^ 1
 
-        print "Setting default action on ipv4_host to send(%d)" % egress_port1
+        print("Setting default action on ipv4_host to send(%d)" % egress_port1)
         self.client.ipv4_host_set_default_action_send(
             self.sess_hdl, self.dev_tgt,
             miss_clause_send_action_spec_t(egress_port1))
-        print "Setting default action on ipv4_lpm to change egress port from %d to %d" % (egress_port1, real_egress_port)
+        print("Setting default action on ipv4_lpm to change egress port from %d to %d" % (egress_port1, real_egress_port))
         self.client.ipv4_lpm_set_default_action_odd_even(
             self.sess_hdl, self.dev_tgt)
 
@@ -113,19 +113,19 @@ class Test1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client" + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client" + action_profile + "del_member"
                 for member in self.members[actoin_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")

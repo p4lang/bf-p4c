@@ -15,11 +15,10 @@ class Test_ipv4_tcp(P4RuntimeTest):
     def runTest(self):
         ingress_port = self.swports(0)
         egress_port  = self.swports(1)
-        
+
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
         self.write_request(req)
         tcp_pkt = testutils.simple_tcp_packet();
-        testutils.send_packet(self, ingress_port, str(tcp_pkt))
+        testutils.send_packet(self, ingress_port, tcp_pkt)
         testutils.verify_packets(self, tcp_pkt, [egress_port])
-

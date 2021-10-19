@@ -15,7 +15,7 @@ def create_payload(length, start=0):
     return "".join([chr(x % 256) for x in range(start, start+length)])
 
 def create_ipv4_options(ipv4_opt):
-    print "Creating IPv4 Options", repr(ipv4_opt)
+    print("Creating IPv4 Options", repr(ipv4_opt))
     if ipv4_opt == 0 or ipv4_opt == None:
         return False
     else:

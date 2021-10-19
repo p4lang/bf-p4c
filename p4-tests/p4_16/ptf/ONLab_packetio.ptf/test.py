@@ -13,7 +13,7 @@ class PacketInTest(P4RuntimeTest):
         # default entry
         self.send_request_add_entry_to_action("table0", None, "send_to_cpu", [])
 
-        payload = 'a' * 64
+        payload = b'a' * 64
         ingress_port = self.swports(3)
         ingress_port_hex = stringify(ingress_port, 2)  # port is 9-bit so 2-byte
         testutils.send_packet(self, ingress_port, payload)
@@ -29,8 +29,8 @@ class PacketInTest(P4RuntimeTest):
 class PacketOutTest(P4RuntimeTest):
     def runTest(self):
         port = self.swports(3)
-        port_hex = stringify(port, 2)
-        payload = 'a' * 20
+        port_hex = port.to_bytes(2, 'big')
+        payload = b'a' * 20
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = payload
         egress_port = packet_out.metadata.add()
@@ -38,7 +38,7 @@ class PacketOutTest(P4RuntimeTest):
         egress_port.value = port_hex
         submit_to_ingress = packet_out.metadata.add()
         submit_to_ingress.metadata_id = 2
-        submit_to_ingress.value = "\x00"  # _padding0
+        submit_to_ingress.value = b"\x00"  # _padding0
 
         self.send_packet_out(packet_out)
 

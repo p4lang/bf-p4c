@@ -169,6 +169,9 @@ P4C_ARGS=("${filter_P4C_ARGS[@]}")
 if [ ! -z "${CTEST_P4C_ARGS}" ]; then
     P4C_ARGS+=($CTEST_P4C_ARGS)
 fi
+if [ ! -z "${P4FLAGS}" ]; then
+    P4C_ARGS+=($P4FLAGS)
+fi
 P4PPFLAGS=""
 out_ext=""
 
@@ -408,21 +411,7 @@ if $run_ptf || $run_stf2ptf; then
     if [ $arch = "tna" ] || [ $arch = "t2na" ] || [ $arch = "t3na" ]; then
         P4C_ARGS+=(--p4runtime-force-std)
     fi
-    if [ ${device} = "tofino2" ] || [ ${device} = "tofino3" ]; then
-        P4C_ARGS+=(-DCPU_PORT=0 -Xassembler='--pipe0')
-    else
-        P4C_ARGS+=(-DCPU_PORT=320 -Xassembler='--pipe0')
-    fi
-    BASE_IF_INDEX=0
-    NUM_IFACES=8
-    # Default ports for Tofino2/3 have offset 8
-    if [ ${device} = "tofino2" ] || [ ${device} = "tofino3" ]; then
-        BASE_IF_INDEX=8
-    fi
-    for ifaceIdx in $(seq $BASE_IF_INDEX $(($BASE_IF_INDEX+$NUM_IFACES-1))); do
-        PORT_NAME="FP_PORT_${ifaceIdx}"
-        P4C_ARGS+=(-D${PORT_NAME}=${ifaceIdx})
-    done
+    P4C_ARGS+=(-Xassembler='--pipe0')
 fi
 
 # if we don't have PTF or STF tests to run, we can skip the linking step
@@ -506,6 +495,7 @@ fi
 
 # Run P4C and extract pipes
 native_compile() {
+    echo "p4c: $P4C $@"
     run $P4C "$@" || die
     # find all pipe names from manifest.json in current compilation
     pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
@@ -604,23 +594,13 @@ fi
 PTF_EXTRA_ARGS="$keep_PTF_LOGS --default-negative-timeout=0.2 $PTF_TEST_SPECS"
 
 clean_process() {
-    process_name=$1
-    # Check if process exists
-    if $verbose ; then
-        echo "Checking if $process_name is still running:"
-    fi
-    process_running=`ps -ef | grep $process_name | grep -v grep | awk '{print $2}'`
-    if $verbose ; then
-        echo "Is $process_name running: $process_running"
-    fi
-    if [ "$process_running" != "no process found" ]; then
-        # Try to kill the process if it is not a zombie
-        if [[ $process_running == *defunct* ]]; then
-            echo "Zombie process exists. Not killing"
-        else
-            sudo -n killall $process_name
-        fi
-    fi
+    process_name="$1"
+    echo "Checking if $process_name is running (it should not)..."
+    pids=$(ps -ef | grep $process_name | grep -v grep | awk '{print $2}')
+    for pid in $pids; do
+        echo "Killing $pid..."
+        sudo -n kill -s SIGTERM $pid
+    done
 }
 
 if ${SKIP_PTFPD:=false}; then
@@ -711,9 +691,11 @@ set_env() {
 }
 
 clean_env() {
-    clean_process "ptf_runner"
-    clean_process "tofino-model"
-    clean_process "bf_switchd"
+    clean_process "$(findbin HARLYN_PTF_DRIVER_WRAPPER)"  # ptf_runner_wrapper
+    clean_process "$(findbin HARLYN_PTF_DRIVER)"          # ptf_runner.py
+    clean_process "$(findbin PTF)"                        # ptf
+    clean_process "$(findbin BF_SWITCHD)"                 # bf_switchd
+    clean_process "$(findbin HARLYN_MODEL)"               # tofino-model
 }
 
 # For p4_14 programs and switch PTF tests using PD API
@@ -785,6 +767,7 @@ if $run_pd ; then
                              $port_map_file \
                              $test_port \
                              $PTF_EXTRA_ARGS"
+        clean_env
         echo $PTF_CMD
         run $PTF_CMD
         ptf_test_status=$?
@@ -831,6 +814,7 @@ if $run_ptf && ! $run_bfrt ; then
     fi
 
     if [ -n "$PTF_CMD" ]; then
+        clean_env
         echo $PTF_CMD
         run $PTF_CMD
         ptf_test_status=$?
@@ -847,25 +831,25 @@ if $run_bfrt; then
     if [[ $name != *"switch_tofino"* ]]; then
         set_env
 
-        p4builddir="$(dirname $0)/p4_14/switch/p4-build"
-        config_args="--with-${device} --with-p4c=$P4C --enable-thrift \
-            --prefix=$testout LDFLAGS="-L${tools_dir}/lib" CPPFLAGS="-I${tools_dir}/include" \
-            --bindir=$(dirname $P4C):${tools_dir}/bin \
-            P4_ARCHITECTURE=$arch P4_VERSION=$p4_version P4_NAME=$name P4_PATH=$file"
-        manifest=$testdir/${name}${out_ext}.out/${device}/${name}/manifest.json
-        installdiropt="--installdir $testout/${device}/$name/"
-
-        pushd $testout > /dev/null
-        configure_and_build $p4builddir "$config_args" $testout $profile
-        popd > /dev/null  # $testout
-
-        manifest_realpath=$( realpath $manifest)
-        if [ -f $manifest_realpath ]; then
-            pipes=$(${MANIFEST_CONFIG} --pipe ${manifest_realpath})
+        result_file="$testout/build_result.txt"
+        if [ -d "$ptftestdir" ] && [ -r "$result_file" ] && [ "$(cat "$result_file")" = "0" ]; then
+            echo "Using existing P4 build in $testout/build/." \
+                 "Remove $result_file and rerun to recompile the program."
+        else
+            echo "Building $file in $testout/build/"
+            rm -f "$result_file"
+            P4C_ARGS+=(--bf-rt-schema "$testout/build/bf-rt.json")
+            native_compile "${P4C_ARGS[@]}" "$file" -o "$testout/build"
+            echo $? > "$result_file"
         fi
 
-        if [ $p4_version == "p4-16" ]; then
-            conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
+        manifest="$testout/build/manifest.json"
+        if [ -f "$manifest" ]; then
+            pipes=$("$MANIFEST_CONFIG" --pipe "$manifest")
+        fi
+
+        if [ "$p4_version" == "p4-16" ]; then
+            conf_args="--name $name --device $device --testdir $testout --installdir $testout/build --pipe ${pipes}"
             model_logs_option=""
             echo "gen_config_opts: ./p4c-gen-bfrt-conf $conf_args"
             run ./p4c-gen-bfrt-conf $conf_args
@@ -878,11 +862,10 @@ if $run_bfrt; then
                     --device ${device} \
                     $ports_json_file \
                     $PTF_EXTRA_ARGS"
-        else
-            native_compile "${P4C_ARGS[@]}" $file -o $testout
         fi
 
         if [ -n "$PTF_CMD" ]; then
+            clean_env
             echo $PTF_CMD
             run $PTF_CMD
             ptf_test_status=$?
@@ -902,7 +885,7 @@ if $run_bfrt; then
             mkdir -p $switchBuild
         fi
 
-        cmakeConfigure="cmake .. -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on -DPYTHON_EXECUTABLE=python"
+        cmakeConfigure="cmake .. -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on"
         echo "Configure command: $cmakeConfigure"
         pushd $switchBuild > /dev/null
         # cmake looks for ${CMAKE_INSTALL_PREFIX}/bin/bf-p4c, i.e. ${switchBuild}/bin/bf-p4c
@@ -945,6 +928,7 @@ if $run_bfrt; then
         fi
 
         if [ -n "$PTF_CMD" ]; then
+            clean_env
             run $PTF_CMD
             ptf_test_status=$?
             clean_env

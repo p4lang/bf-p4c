@@ -83,7 +83,7 @@ class IPv4ChecksumUpdateTest(P4RuntimeTest):
             eth_dst=dmac, eth_src=rmac, ip_dst=dst_ip, ip_ttl=63)
 
         logger.info("Sending packet on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
 
         logger.info("Expecting packet on port %d", eg_port)
         testutils.verify_packets(self, exp_pkt, [eg_port])
@@ -121,14 +121,14 @@ class IPv4ChecksumVerifyTest(P4RuntimeTest):
         exp_pkt = testutils.simple_tcp_packet(eth_dst=dmac)
 
         logger.info("Sending packet on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
 
         logger.info("Expecting packet on port %d", eg_ports[0])
         testutils.verify_packets(self, exp_pkt, [eg_ports[0]])
 
         pkt['IP'].chksum = 0
         logger.info("Sending packet on port %d", ig_port)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
 
         logger.info("Expecting packet on port %d", eg_ports[1])
         testutils.verify_packets(self, exp_pkt, [eg_ports[1]])

@@ -81,11 +81,11 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             egr_port=3, egr_port_v=1,
             max_pkt_len=9216)
         self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, mirror_session)
-        
+
         # Always make sure the programming gets dow to the HW
         self.conn_mgr.complete_operations(self.sess_hdl)
         print
-        
+
     # Use tearDown() method to return the DUT to the initial state by cleaning
     # all the configuration and clearing up the connection
     def tearDown(self):
@@ -97,19 +97,19 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client" + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client" + action_profile + "del_member"
                 for member in self.members[actoin_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")
@@ -144,7 +144,7 @@ class Test1(TestGroup1):
         ipv4_dst     = "192.168.1.1"
         ingress_port = 0
         egress_port  = 3
-        
+
         print("Sending packet with IPv4 DST ADDR=%s into port %d" %
               (ipv4_dst, ingress_port))
 
@@ -153,10 +153,8 @@ class Test1(TestGroup1):
                TCP(sport=1234, dport=80) /
                "My Test Payload")
         test_pkt = Ether(str(pkt))
-        
+
         send_packet(self, ingress_port, test_pkt)
         print("Expecting the packet to be forwarded to port %d" % egress_port)
         verify_packet(self, test_pkt, egress_port)
         print("Packet received of port %d" % egress_port)
-        
-

@@ -160,19 +160,19 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client" + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client" + action_profile + "del_member"
                 for member in self.members[actoin_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")

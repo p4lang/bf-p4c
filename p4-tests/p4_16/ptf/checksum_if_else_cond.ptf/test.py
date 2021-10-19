@@ -57,5 +57,5 @@ class Test_IPv4(P4RuntimeTest):
                      ip_ihl=None,
                      ip_options=create_ipv4_options(4),
                      inner_frame=None)
-        testutils.send_packet(self, ingress_port, str(ip_pkt))
+        testutils.send_packet(self, ingress_port, ip_pkt)
         testutils.verify_packets(self, ip_pkt, [egress_port])

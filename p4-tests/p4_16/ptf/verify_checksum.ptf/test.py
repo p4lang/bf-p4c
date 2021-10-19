@@ -11,5 +11,5 @@ class InvalidChecksumTest(P4RuntimeTest):
         pkt = testutils.simple_tcp_packet()
         pkt[IP].chksum = 0xffff
         port1 = self.swports(1)
-        testutils.send_packet(self, port1, str(pkt))
+        testutils.send_packet(self, port1, pkt)
         testutils.verify_no_other_packets(self)

@@ -48,8 +48,8 @@ class CloneTest(P4RuntimeTest):
 
     def verify_packets(self, original, replicas, pkt):
         for port, rid in chain([original], replicas):
-            exp_pkt = str(pkt)
-            exp_pkt = stringify(rid, 2) + exp_pkt[2:]
+            exp_pkt = pkt
+            exp_pkt = rid.to_bytes(2, 'big') + exp_pkt[2:]
             testutils.verify_packet(self, exp_pkt, port)
 
     def runTest(self):
@@ -58,7 +58,7 @@ class CloneTest(P4RuntimeTest):
         session = p4runtime_pb2.CloneSessionEntry()
         session.session_id = 10
         replicas = CloneTest.ReplicaMgr(session)
-        pkt = "\x00\x0a" + "\xab" * 70
+        pkt = b"\x00\x0a" + b"\xab" * 70
 
         replicas.append(port1, 1)
         self.create_session(session)

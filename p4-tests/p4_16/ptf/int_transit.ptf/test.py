@@ -21,7 +21,7 @@ class IntTransitTest(P4RuntimeTest):
             "int_egress.int_prep", None, "int_egress.int_transit",
             [("switch_id", stringify(1, 4))])
 
-        for i in xrange(16):
+        for i in range(16):
             base = "int_set_header_0003_i"
             mf = self.Exact("hdr.int_header.instruction_mask_0003",
                             stringify(i, 1))
@@ -29,7 +29,7 @@ class IntTransitTest(P4RuntimeTest):
             self.send_request_add_entry_to_action(
                 "int_metadata_insert.int_inst_0003", [mf],
                 action, [])
-        for i in xrange(16):
+        for i in range(16):
             base = "int_set_header_0407_i"
             mf = self.Exact("hdr.int_header.instruction_mask_0407",
                             stringify(i, 1))
@@ -46,10 +46,10 @@ class IntTransitTest(P4RuntimeTest):
         # remaining_hop_count: 3
         # instruction_mask_0003: 0xd = switch id (0), ports (1), q occupancy (3)
         # instruction_mask_0407: 0xc = ig timestamp (4), eg timestamp (5)
-        int_header = "\x00\x00\x05\x03\xdc\x00\x00\x00"
+        int_header = b"\x00\x00\x05\x03\xdc\x00\x00\x00"
         # IP proto (UDP), UDP dport (4096)
         int_tail = INT_L45_TAIL(next_proto=17, proto_param=4096)
-        payload = "\xab" * 128
+        payload = b"\xab" * 128
         pkt = Ether() /\
               IP(tos=0x04) /\
               UDP(dport=4096, chksum=0) /\
@@ -60,16 +60,16 @@ class IntTransitTest(P4RuntimeTest):
 
         exp_int_shim = INT_L45_HEAD(int_type=1, length=9)
         # remaining_hop_count: 2
-        exp_int_header = "\x00\x00\x05\x02\xdc\x00\x00\x00"
+        exp_int_header = b"\x00\x00\x05\x02\xdc\x00\x00\x00"
         # switch id: 1
-        exp_int_metadata = "\x00\x00\x00\x01"
+        exp_int_metadata = b"\x00\x00\x00\x01"
         # ig port: port2, eg port: port2
-        exp_int_metadata += stringify(port2, 2) + stringify(port2, 2)
+        exp_int_metadata += port2.to_bytes(2, 'big') + port2.to_bytes(2, 'big')
         # q id: 0, q occupancy: ?
-        exp_int_metadata += "\x00\x00\x00\x00"
+        exp_int_metadata += b"\x00\x00\x00\x00"
         # ig timestamp: ?
         # eg timestamp: ?
-        exp_int_metadata += "\x00\x00\x00\x00" * 2
+        exp_int_metadata += b"\x00\x00\x00\x00" * 2
         exp_pkt = Ether() /\
                   IP(tos=0x04) /\
                   UDP(dport=4096, chksum=0) /\
@@ -82,5 +82,5 @@ class IntTransitTest(P4RuntimeTest):
         exp_pkt = Mask(exp_pkt)
         offset_metadata = 14 + 20 + 8 + 4 + 8
         exp_pkt.set_do_not_care((offset_metadata + 9) * 8, 11 * 8)
-        testutils.send_packet(self, port2, str(pkt))
+        testutils.send_packet(self, port2, pkt)
         testutils.verify_packets(self, exp_pkt, [port2])

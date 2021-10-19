@@ -120,7 +120,7 @@ def npb_model_gre_encap_v4(
 		layer = src_pkt_inner.getlayer(counter)
 		if layer is None:
 			break
-		print layer.name,
+		print(layer.name)
 		counter += 1
 
 		if(layer.name == 'IP'):
@@ -167,7 +167,7 @@ def npb_model_gre_encap_v6(
 		layer = src_pkt_inner.getlayer(counter)
 		if layer is None:
 			break
-		print layer.name,
+		print(layer.name)
 		counter += 1
 
 		if(layer.name == 'IP'):
@@ -327,19 +327,19 @@ def cpu_model(
 #	print result
 	pkt_hex = result.packet
 
-	print "---------- CPU Pkt In ----------"
+	print("---------- CPU Pkt In ----------")
 	print(testutils.format_packet(result.packet))
-	print "---------- CPU Pkt In ----------"
+	print("---------- CPU Pkt In ----------")
 
 	# ----- extract headers -----
 
 	# extract ethernet header (14 bytes total)
 	eth_hdr_1 = unpack('!6s6sH', pkt_hex[:14]) # note, I extract the first da byte separately, so that I can increment below...
-	print eth_hdr_1
+	print(eth_hdr_1)
 
 	# extract cpu header (11 bytes total)
 	cpu_hdr_1 = unpack('!BHHHHH', pkt_hex[14:14+11])
-	print cpu_hdr_1
+	print(cpu_hdr_1)
 
 	# extract rest of packet
 	rest = pkt_hex[14+11:]
@@ -366,12 +366,12 @@ def cpu_model(
 	              rest
 
 	# reformat the packet
-	result2 = Raw(new_hex_pkt)
+	result2 = new_hex_pkt
 
 	# --------------------------
 
-	print "---------- CPU Pkt Out ----------"
+	print("---------- CPU Pkt Out ----------")
 	print(testutils.format_packet(result2))
-	print "---------- CPU Pkt Out ----------"
+	print("---------- CPU Pkt Out ----------")
 
 	return result2

@@ -46,7 +46,7 @@ class Test_IPv6_udp(P4RuntimeTest):
                         )
 
         exp_pkt = copy.deepcopy(udp_pkt)
-        testutils.send_packet(self, ingress_port, str(udp_pkt))
+        testutils.send_packet(self, ingress_port, udp_pkt)
         testutils.verify_packets(self, exp_pkt, [egress_port])
 
 class Test_IPv4_udp(P4RuntimeTest):
@@ -76,5 +76,5 @@ class Test_IPv4_udp(P4RuntimeTest):
                                               with_udp_chksum = True)
 
         exp_pkt = copy.deepcopy(udp_pkt)
-        testutils.send_packet(self, ingress_port, str(udp_pkt))
+        testutils.send_packet(self, ingress_port, udp_pkt)
         testutils.verify_packets(self, exp_pkt, [egress_port])

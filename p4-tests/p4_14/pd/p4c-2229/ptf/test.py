@@ -82,11 +82,11 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, 0, init_packet_num);
         except:
             pass
-        
+
             # Always make sure the programming gets down to the HW
         self.conn_mgr.complete_operations(self.sess_hdl)
         print
-        
+
     # Use tearDown() method to return the DUT to the initial state by cleaning
     # all the configuration and clearing up the connection
     def tearDown(self):
@@ -98,19 +98,19 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
-            
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
+
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client." + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client." + action_profile + "_del_member"
                 for member in self.members[action_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")
@@ -159,7 +159,7 @@ class LagIPv4Random(TestGroup1):
         lag = self.client.lag_ecmp_create_group(self.sess_hdl, self.dev_tgt,
                                                 len(egress_ports))
         self.groups["lag_ecmp"].append(lag)
-        
+
         for p in egress_ports:
             mbr = self.client.lag_ecmp_add_member_with_send(
                 self.sess_hdl, self.dev_tgt,
@@ -167,7 +167,7 @@ class LagIPv4Random(TestGroup1):
             self.members["lag_ecmp"].append(mbr)
             self.client.lag_ecmp_add_member_to_group(
                 self.sess_hdl, self.dev,
-                hex_to_i32(lag), hex_to_i32(mbr)) 
+                hex_to_i32(lag), hex_to_i32(mbr))
 
         self.entries["nexthop"].append(
             self.client.nexthop_add_entry_with_selector(
@@ -220,10 +220,10 @@ class LagIPv4Random(TestGroup1):
             self.assertTrue(port_idx < len(egress_ports))
             packet_counts[port_idx] += 1
 
-            print "{:s} {:>15s}.{:<5d} -> {:>15s}.{:<5d}: {:>3d} {}\r".format(
+            print("{:s} {:>15s}.{:<5d} -> {:>15s}.{:<5d}: {:>3d} {}\r".format(
                 proto, src_ip, sport, dst_ip, dport, egress_ports[port_idx],
                 packet_counts),
-            sys.stdout.flush()
+            sys.stdout.flush())
 
         print
         #
@@ -231,9 +231,9 @@ class LagIPv4Random(TestGroup1):
         #
         total_pkts = 0
         for i in range(0, len(egress_ports)):
-            print "Port %3d: %5d packets" % (egress_ports[i], packet_counts[i])
+            print("Port %3d: %5d packets" % (egress_ports[i], packet_counts[i]))
             total_pkts += packet_counts[i]
-        print "Total: %d" % total_pkts
+        print("Total: %d" % total_pkts)
 
         self.assertEqual(total_pkts, pkt_count * len(egress_ports))
 
@@ -241,12 +241,12 @@ class LagIPv4Random(TestGroup1):
         min_port_count = min(packet_counts)
         imbalance = max(pkt_count - min_port_count, max_port_count - pkt_count)
         imbalance_pct = float(imbalance)/pkt_count
-        
-        print "Max Imbalance: {}/{} packets ({:%})".format(
-            imbalance, pkt_count, imbalance_pct)
-        
+
+        print("Max Imbalance: {}/{} packets ({:%})".format(
+            imbalance, pkt_count, imbalance_pct))
+
         self.assertTrue(imbalance_pct <= max_imbalance)
-            
+
 #
 # A simple function to increment an IP address. IP address is in the string
 # x.y.z.w form
@@ -292,7 +292,7 @@ class LagIPv4Seq(TestGroup1):
         sport_inc    = test_param_get("sport_inc", 1)
         dport        = test_param_get("dport", 1)
         dport_inc    = test_param_get("dport_inc", 1)
-        
+
         seed         = test_param_get("seed", 0)
         max_imbalance  = test_param_get("max_imbalance", 10)
 
@@ -307,7 +307,7 @@ class LagIPv4Seq(TestGroup1):
         lag = self.client.lag_ecmp_create_group(self.sess_hdl, self.dev_tgt,
                                                 len(egress_ports))
         self.groups["lag_ecmp"].append(lag)
-        
+
         for p in egress_ports:
             mbr = self.client.lag_ecmp_add_member_with_send(
                 self.sess_hdl, self.dev_tgt,
@@ -315,7 +315,7 @@ class LagIPv4Seq(TestGroup1):
             self.members["lag_ecmp"].append(mbr)
             self.client.lag_ecmp_add_member_to_group(
                 self.sess_hdl, self.dev,
-                hex_to_i32(lag), hex_to_i32(mbr)) 
+                hex_to_i32(lag), hex_to_i32(mbr))
 
         self.entries["nexthop"].append(
             self.client.nexthop_add_entry_with_selector(
@@ -346,10 +346,10 @@ class LagIPv4Seq(TestGroup1):
             (port_idx, result) = verify_packet_any_port(self, pkt, egress_ports)
             self.assertTrue(port_idx < len(egress_ports))
             packet_counts[port_idx] += 1
-            print "{:>15s}.{:<5d} -> {:>15s}.{:<5d}: {:>3d} {}\r".format(
+            print("{:>15s}.{:<5d} -> {:>15s}.{:<5d}: {:>3d} {}\r".format(
                 src_ip, sport, dst_ip, dport, egress_ports[port_idx],
                 packet_counts),
-            sys.stdout.flush()
+            sys.stdout.flush())
 
 
             # Increment
@@ -359,15 +359,15 @@ class LagIPv4Seq(TestGroup1):
             sport += sport_inc; sport %= 65536
 
         print
-        
+
         #
         # Print summary results and check
         #
         total_pkts = 0
         for i in range(0, len(egress_ports)):
-            print "Port %3d: %5d packets" % (egress_ports[i], packet_counts[i])
+            print("Port %3d: %5d packets" % (egress_ports[i], packet_counts[i]))
             total_pkts += packet_counts[i]
-        print "Total: %d" % total_pkts
+        print("Total: %d" % total_pkts)
 
         self.assertEqual(total_pkts, pkt_count * len(egress_ports))
 
@@ -375,9 +375,8 @@ class LagIPv4Seq(TestGroup1):
         min_port_count = min(packet_counts)
         imbalance = max(pkt_count - min_port_count, max_port_count - pkt_count)
         imbalance_pct = float(imbalance)/pkt_count
-        
-        print "Max Imbalance: {}/{} packets ({:%})".format(
-            imbalance, pkt_count, imbalance_pct)
-        
+
+        print("Max Imbalance: {}/{} packets ({:%})".format(
+            imbalance, pkt_count, imbalance_pct))
+
         self.assertTrue(imbalance_pct <= max_imbalance)
-                

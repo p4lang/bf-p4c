@@ -10,7 +10,7 @@ class PacketUpdateTest(P4RuntimeTest):
         port1 = self.swports(1)
         inputV = 65535
         outputV = inputV - 32
-        pkt = stringify(inputV, 2) + "\xab" * 64
-        exp_pkt = stringify(outputV, 2) + "\xab" * 64
-        testutils.send_packet(self, port1, str(pkt))
+        pkt = inputV.to_bytes(2, 'big') + b"\xab" * 64
+        exp_pkt = outputV.to_bytes(2, 'big') + b"\xab" * 64
+        testutils.send_packet(self, port1, pkt)
         testutils.verify_packets(self, exp_pkt, [port1])

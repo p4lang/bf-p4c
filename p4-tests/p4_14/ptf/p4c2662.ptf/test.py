@@ -81,7 +81,7 @@ class TestBase(pd_base_tests.ThriftInterfaceDataPlane):
         # Always make sure the programming gets dow to the HW
         self.conn_mgr.complete_operations(self.sess_hdl)
         print
-        
+
     # Use cleanUp() method to return the DUT to the initial state by cleaning
     # all the configuration and clearing up the connection
     def cleanUp(self):
@@ -93,23 +93,23 @@ class TestBase(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client." + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client." + action_profile + "_del_member"
                 for member in self.members[action_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
 
             # Ideally you should add more code, to clear counters and meters,
             # reset the registers and also clear the fixed-function components
-            
+
         except:
             print("  Error while cleaning up. ")
             print("  You might need to restart the driver")
@@ -146,7 +146,7 @@ class TestBase(pd_base_tests.ThriftInterfaceDataPlane):
 #  # Hopefully this is close to 10000 :) Should be 9216, so 7.84% error
 #
 class MathUnit():
-    
+
     # Parameters (should be taken from your P4 program):
     #    shift  -- the same value  as the attribute math_unit_exponent_shift
     #    invert -- the same value  as the attribute math_unit_exponent_invert
@@ -211,7 +211,7 @@ class MathUnit():
 
         # Finally, add the scale
         new_exp += self.scale
-        
+
         new_mantissa = self.lookup[mantissa]
         if new_exp < 0:
             result = new_mantissa >> -new_exp
@@ -219,7 +219,7 @@ class MathUnit():
             result = new_mantissa << new_exp
 
         return result & self.mask
-    
+
 class Test1(TestBase):
     # This method represents the test itself. Typically you would want to
     # configure the device (e.g. by populating the tables), send some
@@ -238,7 +238,7 @@ class Test1(TestBase):
 
         reg_val      = test_param_get("reg_val", 100)
         iterations   = test_param_get("iterations", 10)
-        
+
         # The following parameters must be the same as in the program
         math_unit  = MathUnit(shift  = test_param_get("shift", 0),
                               invert = test_param_get("invert", False),
@@ -267,10 +267,9 @@ class Test1(TestBase):
 
             exp_pkt = Ether(str(pkt))
             exp_pkt[IP].dst = str(ip_address(reg_val))
-            
+
             print("Expecting the packet on port %d with value %d" %
                   (egress_port, reg_val))
             verify_packet(self, exp_pkt, egress_port)
             print("Packet received of port %d" % egress_port)
             reg_val = math_unit.compute(reg_val)
-        

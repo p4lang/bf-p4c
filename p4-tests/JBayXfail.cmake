@@ -516,3 +516,9 @@ p4c_add_xfail_reason("tofino2"
   t2na_ghost_dod
   t2na_ghost_dod_simpl
 )
+
+# P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: Expected packet was not received"
+  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
+)

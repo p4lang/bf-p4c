@@ -46,8 +46,8 @@ class MulticastTest(P4RuntimeTest):
 
     def verify_mc_packets(self, replicas, pkt):
         for port, rid in replicas:
-            exp_pkt = str(pkt)
-            exp_pkt = stringify(rid, 2) + exp_pkt[2:]
+            exp_pkt = pkt
+            exp_pkt = rid.to_bytes(2, 'big') + exp_pkt[2:]
             testutils.verify_packet(self, exp_pkt, port)
 
     def runTest(self):
@@ -57,7 +57,7 @@ class MulticastTest(P4RuntimeTest):
         group = p4runtime_pb2.MulticastGroupEntry()
         group.multicast_group_id = group_id
         replicas = MulticastTest.ReplicaMgr(group)
-        pkt = "\x00\x0a" + "\xab" * 70
+        pkt = b"\x00\x0a" + b"\xab" * 70
 
         replicas.append(port1, 1).append(port2, 2)
         self.create_group(group)

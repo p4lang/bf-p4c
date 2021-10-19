@@ -63,9 +63,6 @@ export P4C_DEPS="autoconf \
                  libgmp-dev \
                  libssl-dev \
                  libtool \
-                 python-dev \
-                 python-pip \
-                 python3-pip \
                  unzip"
 
 # P4 runtime dependencies.
@@ -79,10 +76,6 @@ export P4C_RUNTIME_DEPS="cpp \
                          libssl1.0.0 \
                          pkg-config \
                          psmisc \
-                         python-ipaddr \
-                         python-scapy \
-                         python-setuptools \
-                         python-yaml \
                          sudo \
                          tcpdump \
                          libgoogle-perftools-dev \
@@ -98,10 +91,10 @@ export PYTHON3_DEPS="Cython \
                      jsonschema \
                      packaging \
                      pexpect \
-                     ply==3.9 \
+                     ply \
                      prettytable \
                      pyinstaller \
-                     pyroute2==0.5.18 \
+                     pyroute2 \
                      pyyaml \
                      scapy \
                      texttable \
@@ -253,18 +246,10 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
 
   # Dependencies for testing.
   apt-get install -y net-tools
-  pip install --upgrade --target /usr/local/lib/python2.7/dist-packages pip==20.3.3
-  pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging \
-    prettytable pysubnettree ctypesgen
 
-  # Install ply 3.9 for compatibility with p4c-tofino
-  pip install ply==3.9
-
-  # Install jsonschema 2.6 for compatibility with pyinstaller
-  pip install jsonschema==2.6
-
+  # Upgrade to pip==20.3.4 - newer versions don't support python3.5
+  pip3 install --upgrade pip==20.3.4
   # Install python3 packages
-  pip3 install --upgrade --target /usr/local/lib/python3.5/dist-packages pip==20.3.3
   pip3 install ${PYTHON3_DEPS}
 
   # Copy scripts into ${BFN}.
@@ -360,6 +345,16 @@ esac
 # Build and install glass if desired.
 WORKDIR "${BF_P4C_COMPILERS}/glass/p4-hlir"
 if [[ "${BUILD_GLASS}" == "true" ]] ; then
+  apt-get update
+  apt-get install -y python-dev python-pip \
+                     python-ipaddr python-scapy python-setuptools python-yaml
+  apt-get autoremove --purge -y
+  rm -rf ~/.ccache/* ~/.cache/* /var/cache/apt/* /var/lib/apt/lists/*
+
+  pip2 install --upgrade pip==20.3.4
+  pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging \
+              prettytable pysubnettree ctypesgen ply==3.9 jsonschema==2.6
+
   pip install -r requirements.txt
   python setup.py install
 
@@ -370,7 +365,7 @@ fi
 # Generate reference outputs for p4i if desired.
 WORKDIR "${BF_P4C_COMPILERS}/scripts/gen_reference_outputs"
 if [[ "${GEN_REF_OUTPUTS}" = "true" ]] ; then
-  python -u gen_ref_outputs.py
+  python3 -u gen_ref_outputs.py
 fi
 
 if [[ "${BUILD_FOR}" == "jarvis" ]] ; then

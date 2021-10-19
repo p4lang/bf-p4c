@@ -7,7 +7,6 @@ import ptf.testutils as testutils
 from p4.v1 import p4runtime_pb2
 from p4runtime_base_tests import P4RuntimeTest, autocleanup, stringify, ipv4_to_binary, mac_to_binary
 
-import scapy
 logger = logging.getLogger('psa_reciculate')
 logger.addHandler(logging.StreamHandler())
 class Test_IPv6_udp(P4RuntimeTest):
@@ -22,6 +21,5 @@ class Test_IPv6_udp(P4RuntimeTest):
         pkt = testutils.simple_eth_packet()
 
         exp_pkt = testutils.simple_eth_packet(eth_type=0xffff)
-        testutils.send_packet(self, ingress_port, str(pkt))
+        testutils.send_packet(self, ingress_port, pkt)
         testutils.verify_packets(self, exp_pkt, [egress_port])
-

@@ -10,5 +10,5 @@ class IngressChecksumTest(P4RuntimeTest):
         port1 = self.swports(1)
         pkt = testutils.simple_tcp_packet(ip_ttl=64)
         exp_pkt = testutils.simple_tcp_packet(ip_ttl=63)
-        testutils.send_packet(self, port1, str(pkt))
+        testutils.send_packet(self, port1, pkt)
         testutils.verify_packets(self, exp_pkt, [port1])

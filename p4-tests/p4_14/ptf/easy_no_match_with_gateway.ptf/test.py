@@ -17,7 +17,7 @@ def dumbPacket(f1=0xab, f2=0xef, f3=0xaa):
     s = stringify(f1, 1) + stringify(f2, 1) + stringify(f3, 1)
 
     # Add fake payload.
-    s += '0' * 15
+    s += b'0' * 15
     return s
 
 class SimpleTest(P4RuntimeTest):
@@ -32,9 +32,9 @@ class SimpleTest(P4RuntimeTest):
         f1 = 0x00
         f2 = 0x00
         f3 = 0x00
-        exp_val = 0x5 
+        exp_val = 0x5
         pkt = dumbPacket(f1=f1, f2=f2, f3=f3)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=f1, f2=exp_val, f3=f3)
         testutils.verify_packet(self, exp_pkt, eg_port)
 
@@ -44,6 +44,6 @@ class SimpleTest(P4RuntimeTest):
         f3 = 0x55
         # Send another packet.
         pkt = dumbPacket(f1=f1, f2=f2, f3=f3)
-        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.send_packet(self, ig_port, pkt)
         exp_pkt = dumbPacket(f1=f1, f2=exp_val, f3=f3)
         testutils.verify_no_other_packets(self)

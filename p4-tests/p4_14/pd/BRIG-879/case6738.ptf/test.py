@@ -90,19 +90,19 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
 
             print("  Clearing Selector Groups")
             for selector in self.groups.keys():
                 delete_func="self.client" + selector + "_del_group"
                 for group in self.groups[selector]:
-                    exec delete_func + "(self.sess_hdl, self.dev, group)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, group)")
 
             print("  Clearing Action Profile Members")
             for action_profile in self.members.keys():
                 delete_func="self.client" + action_profile + "del_member"
                 for member in self.members[actoin_profile]:
-                    exec delete_func + "(self.sess_hdl, self.dev, member)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, member)")
 
             print("  Clearing Mirror Sessions")
             for mir_sess in self.mirror_sessions:
@@ -168,9 +168,9 @@ class Test1(TestGroup1):
 
         self.conn_mgr.complete_operations(self.sess_hdl)
 
-        print "Sending Untagged %d-byte L2 packet into port %d" % (pkt_len, test_port)
+        print("Sending Untagged %d-byte L2 packet into port %d" % (pkt_len, test_port))
         header  = Ether(dst="11:22:33:44:55:66", src="00:01:02:03:04:05")
-        payload = "".join([chr(x % 256) for x in xrange(pkt_len - len(header))])
+        payload = "".join([chr(x % 256) for x in range(pkt_len - len(header))])
 
         send_pkt = header/payload
         send_pkt[Ether].type = 0xABCD
@@ -180,11 +180,11 @@ class Test1(TestGroup1):
 
         send_packet(self, test_port, send_pkt)
 
-        print """Expecting the packet to be forwarded to port %d
-                 with the length %d in VLAN tag""" % (test_port, pkt_len+4)
+        print("""Expecting the packet to be forwarded to port %d
+                 with the length %d in VLAN tag""" % (test_port, pkt_len+4))
         verify_packet(self, exp_pkt_1, test_port)
 
-        print """Expecting the packet to be cloned to port %d
-                 with the length %d in Outer VLAN tag""" % (test_port, pkt_len+4)
+        print("""Expecting the packet to be cloned to port %d
+                 with the length %d in Outer VLAN tag""" % (test_port, pkt_len+4))
         verify_packet(self, exp_pkt_2, test_port)
-        print "Done"
+        print("Done")

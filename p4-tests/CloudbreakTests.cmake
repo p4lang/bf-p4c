@@ -85,19 +85,19 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 #p4c_add_ptf_test_with_ptfdir_and_spec (
 #    "tofino3" fabric ${ONOS_FABRIC_P4}
-#    "${testExtraArgs} -Xp4c=--auto-init-metadata"
+#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DCPU_PORT=0"
 #    ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 #p4c_add_ptf_test_with_ptfdir_and_spec (
 #    "tofino3" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
-#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW"
+#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DCPU_PORT=0 -DWITH_SPGW"
 #    ${ONOS_FABRIC_PTF} "all ^int")
 #p4c_add_ptf_test_with_ptfdir_and_spec (
 #    "tofino3" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_INT_TRANSIT"
+#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DCPU_PORT=0 -DWITH_INT_TRANSIT"
 #    ${ONOS_FABRIC_PTF} "all ^spgw")
 #p4c_add_ptf_test_with_ptfdir_and_spec (
 #    "tofino3" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT"
+#    "${testExtraArgs} -Xp4c=--auto-init-metadata -DCPU_PORT=0 -DWITH_SPGW -DWITH_INT_TRANSIT"
 #    ${ONOS_FABRIC_PTF} "all")
 #
 #p4c_add_ptf_test_with_ptfdir (

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import subprocess
@@ -26,8 +26,8 @@ class RunCmd(threading.Thread):
         self.join(self.timeout)
 
         if self.is_alive():
-            print '\nTerminating process for command:', self.cmd
+            print('\nTerminating process for command:', self.cmd)
             self.is_timed_out = True
             self.p.terminate()
             self.join(10)
-            print 'Process terminated'
+            print('Process terminated')

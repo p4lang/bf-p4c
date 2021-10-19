@@ -42,7 +42,7 @@ class test(BfRuntimeTest):
 
 	def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
 		logger.info("Sending packet on port %d", ingress_port)
-		testutils.send_packet(self, ingress_port, str(pkt))
+		testutils.send_packet(self, ingress_port, pkt)
 		logger.info("Expecting packet on port %d", egress_port)
 		testutils.verify_packets(self, exp_pkt, [egress_port])
 
@@ -50,7 +50,7 @@ class test(BfRuntimeTest):
 
 	def send_and_verify_no_other_packet(self, ingress_port, pkt):
 		logger.info("Sending packet on port %d (negative test); expecting no packet", ingress_port)
-		testutils.send_packet(self, ingress_port, str(pkt))
+		testutils.send_packet(self, ingress_port, pkt)
 		testutils.verify_no_other_packets(self)
 
 	# -------------------------------------------------------------
@@ -157,9 +157,9 @@ class test(BfRuntimeTest):
 #		src_pkt = src_pkt / IP   ('\x45\x00\x00\x43\x00\x05\x00\x00\x80\x11\xcf\x13\x86\x8d\xbc\x62\x86\x8d\xa2\x14')
 #		src_pkt = src_pkt / TCP  ('\xee\xd7\x00\x35\x00\x2f\x67\xc8\xf9\xf7\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x6f\x75\x74\x6c\x6f\x6f\x6b\x09\x6f\x07\x6f\x75\x74\x6c\x6f\x6f\x6b\x09\x6f')
 
-		src_pkt =           Ether('\xff\xff\xff\xff\xff\xff\x02\x42\xac\x11\x00\x02\x90\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00')
-		src_pkt = src_pkt / IP   ('\x45\x00\x00\x31\x00\x01\x00\x00\x40\x2f\x7c\x9b\x7f\x00\x00\x01\x7f\x00\x00\x01')
-		src_pkt = src_pkt / TCP  ('\x20\x00\x65\x58\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\x02\x42\xac\x11\x00\x02\x90\x00\x70\x61\x79\x6c\x6f\x61\x64')
+		src_pkt =           Ether(b'\xff\xff\xff\xff\xff\xff\x02\x42\xac\x11\x00\x02\x90\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00')
+		src_pkt = src_pkt / IP   (b'\x45\x00\x00\x31\x00\x01\x00\x00\x40\x2f\x7c\x9b\x7f\x00\x00\x01\x7f\x00\x00\x01')
+		src_pkt = src_pkt / TCP  (b'\x20\x00\x65\x58\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\x02\x42\xac\x11\x00\x02\x90\x00\x70\x61\x79\x6c\x6f\x61\x64')
 
 #		exp_pkt =           Ether('\xaa\xbb\x00\x00\x00\x02\xaa\xbb\x00\x00\x00\x01\x08\x00') # ethernet
 #		exp_pkt = exp_pkt / IP   ('\x45\x22\x00\x3c\x00\x01\x00\x00\x1f\x11\x21\x08\x09\x13\x5b\x5c\x0a\x0b\x0c\x0d') # ipv4
@@ -170,7 +170,7 @@ class test(BfRuntimeTest):
 		# -----------------------------------------------------------
 
 		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, str(src_pkt))
+		testutils.send_packet(self, ig_port, src_pkt)
 
 		# -----------------------------------------------------------
 

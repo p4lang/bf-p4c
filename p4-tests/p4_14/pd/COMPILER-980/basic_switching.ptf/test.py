@@ -191,7 +191,7 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
             for table in self.entries.keys():
                 delete_func = "self.client." + table + "_table_delete"
                 for entry in self.entries[table]:
-                    exec delete_func + "(self.sess_hdl, self.dev, entry)"
+                    exec(delete_func + "(self.sess_hdl, self.dev, entry)")
         except:
             print("Error while cleaning up. ")
             print("You might need to restart the driver")
@@ -200,4 +200,3 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
             self.conn_mgr.client_cleanup(self.sess_hdl)
             print("Closed Session %d" % self.sess_hdl)
             pd_base_tests.ThriftInterfaceDataPlane.tearDown(self)
-

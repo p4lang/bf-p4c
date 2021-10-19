@@ -24,11 +24,11 @@ class IndirectMeterBase(P4RuntimeTest):
 
     def send_and_check_cnt(self, idx):
         pkt = "\xab" * 512
-        for i in xrange(50):
+        for i in range(50):
             testutils.send_packet(self, self.port, pkt)
 
         cnt_green = 0
-        for i in xrange(50):
+        for i in range(50):
             rcv_pkt = testutils.dp_poll(self, port_number=self.port, timeout=2)
             self.assertIsInstance(rcv_pkt, self.dataplane.PollSuccess)
             rcv_pkt = rcv_pkt.packet

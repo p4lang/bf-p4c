@@ -16,7 +16,7 @@ def create_payload(length, start=0):
     return "".join([chr(x % 256) for x in range(start, start+length)])
 
 def create_ipv4_options(ipv4_opt):
-    print "Creating IPv4 Options", repr(ipv4_opt)
+    print("Creating IPv4 Options", repr(ipv4_opt))
     if ipv4_opt == 0 or ipv4_opt == None:
         return False
     else:
@@ -43,6 +43,6 @@ class Test_IPv4_udp(P4RuntimeTest):
 
             exp_pkt = copy.deepcopy(udp_pkt)
             exp_pkt[IP].src = '01.01.01.02'
-            print ("Sending UDP packet with ipv4 option : %d" % (ipv4_opt))
-            testutils.send_packet(self, ingress_port, str(udp_pkt))
+            print("Sending UDP packet with ipv4 option : %d" % (ipv4_opt))
+            testutils.send_packet(self, ingress_port, udp_pkt)
             testutils.verify_packets(self, exp_pkt, [ingress_port])

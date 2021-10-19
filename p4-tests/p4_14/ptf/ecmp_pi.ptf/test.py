@@ -11,7 +11,7 @@ from p4runtime_base_tests import P4RuntimeTest, stringify, autocleanup
 
 class EcmpPITest(P4RuntimeTest):
     def common_setup(self):
-        print "Setting default actions"
+        print("Setting default actions")
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
         # default entries
@@ -25,7 +25,7 @@ class EcmpPITest(P4RuntimeTest):
                       dmac = "\x00\x11\x11\x11\x11\x11",
                       smac = "\x00\x22\x22\x22\x22\x22",
                       eg_port = "\x00\x03"):
-        print "Configuring other match-tables"
+        print("Configuring other match-tables")
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
         self.push_update_add_entry_to_action(
@@ -37,33 +37,33 @@ class EcmpPITest(P4RuntimeTest):
         self.write_request(req)
 
     def add_mbr(self, mbr_id, nhop, eg_port):
-        print "Creating member", mbr_id
+        print("Creating member", mbr_id)
         self.send_request_add_member(
             "ecmp_action_profile", mbr_id,
             "set_nhop", [("nhop_ipv4", nhop), ("port", eg_port)])
 
     def mod_mbr(self, mbr_id, nhop, eg_port):
-        print "Modifying member", mbr_id
+        print("Modifying member", mbr_id)
         self.send_request_modify_member(
             "ecmp_action_profile", mbr_id,
             "set_nhop", [("nhop_ipv4", nhop), ("port", eg_port)])
 
     def add_mat_entry_to_mbr(self, pref, pLen, mbr_id):
-        print "Adding match entry to member", mbr_id
+        print("Adding match entry to member", mbr_id)
         self.send_request_add_entry_to_member(
             "ecmp_group", [self.Lpm("ipv4.dstAddr", pref, pLen)], mbr_id)
 
     def add_mat_entry_to_grp(self, pref, pLen, grp_id):
-        print "Adding match entry to group", grp_id
+        print("Adding match entry to group", grp_id)
         self.send_request_add_entry_to_group(
             "ecmp_group", [self.Lpm("ipv4.dstAddr", pref, pLen)], grp_id)
 
     def create_empty_grp(self, grp_id):
-        print "Creating group", grp_id
+        print("Creating group", grp_id)
         self.send_request_add_group("ecmp_action_profile", grp_id)
 
     def set_grp_members(self, grp_id, mbrs):
-        print "Setting members for group", grp_id
+        print("Setting members for group", grp_id)
         self.send_request_set_group_membership(
             "ecmp_action_profile", grp_id, mbrs)
 
@@ -92,8 +92,8 @@ class OneMemberTest(EcmpPITest):
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac1, eth_src=smac1, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, ig_port, str(pkt))
-        print "Expecting packet on port", eg_port1
+        testutils.send_packet(self, ig_port, pkt)
+        print("Expecting packet on port", eg_port1)
         testutils.verify_packets(self, exp_pkt, [eg_port1])
 
         nhop2 = "\x0a\x00\x01\x02"
@@ -108,8 +108,8 @@ class OneMemberTest(EcmpPITest):
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac2, eth_src=smac2, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, ig_port, str(pkt))
-        print "Expecting packet on port", eg_port2
+        testutils.send_packet(self, ig_port, pkt)
+        print("Expecting packet on port", eg_port2)
         testutils.verify_packets(self, exp_pkt, [eg_port2])
 
 class OneGroupTest(EcmpPITest):
@@ -145,20 +145,20 @@ class OneGroupTest(EcmpPITest):
 
         pkt = testutils.simple_tcp_packet(ip_dst='10.0.0.1', ip_ttl=64)
 
-        print "Checking with a single member"
+        print("Checking with a single member")
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac1, eth_src=smac1, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, ig_port, str(pkt))
-        print "Expecting packet on port", eg_port1
+        testutils.send_packet(self, ig_port, pkt)
+        print("Expecting packet on port", eg_port1)
         testutils.verify_packets(self, exp_pkt, [eg_port1])
 
         self.set_grp_members(grp, [mbr1, mbr2])
 
-        print "Checking load-balancing between 2 members"
+        print("Checking load-balancing between 2 members")
         npkts = 20
         counts = [0, 0]
-        for i in xrange(npkts):
+        for i in range(npkts):
             ip_src = "192.168.0.{}".format(i)
             pkt = testutils.simple_tcp_packet(
                 ip_src=ip_src, ip_dst='10.0.0.1', ip_ttl=64)
@@ -168,7 +168,7 @@ class OneGroupTest(EcmpPITest):
             exp_pkt2 = testutils.simple_tcp_packet(
                 eth_dst=dmac2, eth_src=smac2,
                 ip_src=ip_src, ip_dst='10.0.0.1', ip_ttl=63)
-            testutils.send_packet(self, ig_port, str(pkt))
+            testutils.send_packet(self, ig_port, pkt)
             eg_idx = testutils.verify_any_packet_any_port(
                 self, pkts=[exp_pkt1, exp_pkt2], ports=[eg_port1, eg_port2])
             counts[eg_idx] += 1
@@ -180,10 +180,10 @@ class OneGroupTest(EcmpPITest):
 
         pkt = testutils.simple_tcp_packet(ip_dst='10.0.0.1', ip_ttl=64)
 
-        print "Checking after removing a member"
+        print("Checking after removing a member")
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac2, eth_src=smac2, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, ig_port, str(pkt))
-        print "Expecting packet on port", eg_port2
+        testutils.send_packet(self, ig_port, pkt)
+        print("Expecting packet on port", eg_port2)
         testutils.verify_packets(self, exp_pkt, [eg_port2])

@@ -89,37 +89,37 @@ node ('compiler-travis') {
             if (image_pulled != 'true') {
 
                 stage ('Setup build') {
-                    // echo 'Checking out p4factory for reference'
-                    // sh 'git clone git@github.com:barefootnetworks/p4factory.git'
-                    // dir('p4factory') {
-                    //     def p4factory_rev = sh (
-                    //         script: 'git rev-parse HEAD',
-                    //         returnStdout: true
-                    //     ).trim()
-                    //     echo "Using p4factory:${p4factory_rev}"
-                    //     sh 'git log -1 --stat'
+                    echo 'Checking out p4factory for reference'
+                    sh 'git clone git@github.com:barefootnetworks/p4factory.git'
+                    dir('p4factory') {
+                        def p4factory_rev = sh (
+                            script: 'git rev-parse HEAD',
+                            returnStdout: true
+                        ).trim()
+                        echo "Using p4factory:${p4factory_rev}"
+                        sh 'git log -1 --stat'
 
-                    //     // Extract revision of bf-switch submodule used in p4factory
-                    //     // ! The submodule is not initialized at this point
-                    //     bf_switch_rev = sh (
-                    //         script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
-                    //         returnStdout: true
-                    //     ).trim()
-                    // }
-                    // sh 'rm -rf p4factory'
+                        // Extract revision of bf-switch submodule used in p4factory
+                        // ! The submodule is not initialized at this point
+                        bf_switch_rev = sh (
+                            script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
+                            returnStdout: true
+                        ).trim()
+                    }
+                    sh 'rm -rf p4factory'
 
                     echo "Initializing bf-p4c-compilers submodules"
                     sh "git submodule update --init --recursive"
 
-                    // echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
-                    // dir('p4-tests/p4_16/switch_16') {
-                    //     sh """
-                    //         git fetch
-                    //         git checkout ${bf_switch_rev}
-                    //         git submodule update --init --recursive
-                    //         git log -1 --stat
-                    //     """
-                    // }
+                    echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
+                    dir('p4-tests/p4_16/switch_16') {
+                        sh """
+                            git fetch
+                            git checkout ${bf_switch_rev}
+                            git submodule update --init --recursive
+                            git log -1 --stat
+                        """
+                    }
                 }
 
                 stage ('Build intermediate') {
@@ -276,7 +276,7 @@ node ('compiler-travis') {
                                 cp /mnt/compiler_metrics.sqlite \
                                 /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/database/
                             docker exec ${p4c_cid} \
-                                python -u gen_ref_outputs.py \
+                                python3 -u gen_ref_outputs.py \
                                     --tests_csv profiles.csv \
                                     --out_dir /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/metrics_outputs/ \
                                     --process_metrics \
@@ -290,16 +290,11 @@ node ('compiler-travis') {
                     },
 
                     'Switch MSDC and DC_BASIC, stful, meters, hash-driven, other customer tests': {
-                        echo 'Running switch PD tests for MSDC_PROFILE_BRIG'
+                        echo 'Running switch PD tests for MSDC_PROFILE_BRIG and DC_BASIC_PROFILE_BRIG'
                         runInDocker(
                             extraArgs: '--privileged -e PKTPY=False',
-                            "ctest -R '^tofino/.*smoketest_switch_msdc' -LE 'UNSTABLE'"
-                        )
-
-                        echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'
-                        runInDocker(
-                            extraArgs: '--privileged -e PKTPY=False',
-                            "ctest -R '^tofino/.*smoketest_switch_dc_basic' -LE 'UNSTABLE'"
+                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
+                            "./run_with_python2.sh \"ctest -R '^tofino/.*smoketest_switch_msdc|^tofino/.*smoketest_switch_dc_basic' -LE 'UNSTABLE'\""
                         )
 
                         echo 'Running stful, meters and hash_driven tests'
@@ -368,7 +363,7 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino/' \
                                     -E 'smoketest|/programs|/internal_p4_14|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16_programs|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|ptf/digest.p4|digest-std-p4runtime' \
-                                    -LE 'GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|needs_scapy'
+                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|need_scapy|need_python2'
                             '''
                         )
                     },
@@ -382,7 +377,7 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino/(.*programs|.*internal_p4_14)' \
                                     -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw' \
-                                    -LE 'p414_nightly'
+                                    -LE 'UNSTABLE|p414_nightly|need_scapy|need_python2'
                             '''
                         )
                     },
@@ -390,14 +385,22 @@ node ('compiler-travis') {
                     "Travis - Tofino 2 (part 1)": {
                         echo 'Running tofino2 tests'
                         runInDocker(
+                            '''
+                                /bin/bash -c "\
+                                    ln -s /usr/bin/python3 /usr/bin/python; \
+                                    ctest -R 'cpplint' \
+                                "
+                            '''
+                        )
+                        runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 4,
                             '''
                                 ctest \
-                                    -R '^tofino2|cpplint|gtest' \
-                                    -L 'JENKINS_PART1|cpplint|gtest' \
+                                    -R '^tofino2|gtest' \
+                                    -L 'JENKINS_PART1|gtest' \
                                     -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|npb-master-ptf' \
-                                    -LE 'needs_scapy'
+                                    -LE 'UNSTABLE|need_scapy|need_python2'
                             '''
                         )
                     },
@@ -412,7 +415,7 @@ node ('compiler-travis') {
                                     -R '^tofino2' \
                                     -L 'JENKINS_PART2' \
                                     -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|3174' \
-                                    -LE 'UNSTABLE|needs_scapy'
+                                    -LE 'UNSTABLE|need_scapy|need_python2'
                             '''
                         )
                     },
@@ -426,12 +429,11 @@ node ('compiler-travis') {
                         )
                     },
 
-                    "Travis - Scapy": {
-                        echo 'Running tests with p4lang/ptf + scapy'
+                    "Travis - python2 & scapy": {
                         runInDocker(
                             extraArgs: '--privileged -e PKTPY=False',
-                            ctestParallelLevel: 4,
-                            "ctest -L 'needs_scapy'"
+                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
+                            "./run_with_python2.sh \"ctest -L 'need_scapy|need_python2' -LE 'UNSTABLE|p414_nightly'\""
                         )
                     },
 
