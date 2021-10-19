@@ -379,7 +379,9 @@ if [[ "${BUILD_FOR}" == "jarvis" ]] ; then
   # Configure distcc hosts.
   install -D -o root -g root -m 0644 docker/distcc_hosts.conf /etc/distcc/hosts
 
-  # Set up favicon for apache
+  # Create and adjust Apache configuration files at first startup.
+  /etc/init.d/apache2 start
+  sed -i $'/Global configuration$/{n;n;a ServerName localhost\\n\n}' /etc/apache2/apache2.conf
   install -o root -g root -m 0644 docker/favicon.ico /var/www/html/favicon.ico
 fi
 
