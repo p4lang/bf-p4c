@@ -16,19 +16,41 @@ using SliceListLoc = std::pair<SuperCluster*, SuperCluster::SliceList*>;
 
 /// constraints introduced on fieldslices of container sizes after splitting a slice list.
 struct AfterSplitConstraint {
+    // all possible container sizes, used for initialization.
+    static const std::set<int> all_container_sizes;
+
+    // ConstraintType abstracts this constraint.
     enum class ConstraintType {
         EXACT = 0,  // must be placed in container of the size.
         MIN = 1,    // must be placed in container at least the size.
         NONE = 2,   // no new constraint.
     };
-    ConstraintType t;
-    int size;
+
+    // default constructor
+    AfterSplitConstraint(): sizes(all_container_sizes) {}
+    // construct from set.
+    explicit AfterSplitConstraint(const std::set<int>& sizes);
+    // construct based on type.
+    explicit AfterSplitConstraint(ConstraintType t, int v = 0);
+
+    // available container sizes for this constraint.
+    std::set<int> sizes;
+
+    // return the type of this constraint.
+    ConstraintType type() const;
+
+    // return the smallest available container size;
+    int min() const { return *sizes.begin(); }
 
     // returns the intersection of two AfterSplitConstraint.
     // e.g. MIN(8)   ^ EXACT(32) = EXACT(32)
     //      MIN(8)   ^ MIN(16)   = MIN(16)
     //      EXACT(8) ^ EXACT(16) = boost::none
     boost::optional<AfterSplitConstraint> intersect(const AfterSplitConstraint& other) const;
+
+    // return true if field with this AfterSplitConstraint can
+    // be placed in a container of size @p n bits.
+    bool ok(const int n) const;
 };
 
 std::ostream& operator<<(std::ostream& out, const AfterSplitConstraint& c);
@@ -193,7 +215,7 @@ class DfsItrContext : public IteratorInterface {
         const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
         const SuperCluster* sc) const;
 
-    /// return true if exists a medatada list that will join two
+    /// return true if exists a metadata list that will join two
     /// exact_containers lists of different sizes. For example:;
     /// sl_1: [f1<16>, f2<8>, f3<8>[0:1], f3<8>[2:7]], total 32, exact.
     /// sl_2: [f2'<8>, f4<8>[0:3], f4<8>[4:7]], total 16, exact.
@@ -209,6 +231,18 @@ class DfsItrContext : public IteratorInterface {
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
     /// of @p sc based on split_decisions_i and pa_container_size_upcastings_i.
     boost::optional<ordered_map<FieldSlice, AfterSplitConstraint>> collect_aftersplit_constraints(
+        const SuperCluster* sc) const;
+
+    /// collect additional implicit container size constraint and save them to @p decided_sz,
+    /// if it can be expressed. Otherwise, if will only check whether the implicit container
+    /// size constraint can be satisfied.
+    /// XXX(yumin): this function is created initially for the most common case of
+    /// egress::eg_intr_md.egress_port that has
+    /// (1) ^bit[0..15]; (2) no_split; (3) deparsed_bottom_bits
+    /// because of these three constraints, this field can only be allocated to 16-bit container.
+    /// There can be more special cases for these implicit (hard to be generalized).
+    bool collect_implicit_container_sz_constraint(
+        ordered_map<FieldSlice, AfterSplitConstraint>* decided_sz,
         const SuperCluster* sc) const;
 
     /// dfs_pick_next return the next slice list to be split.

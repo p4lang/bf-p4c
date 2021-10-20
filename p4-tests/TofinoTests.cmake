@@ -119,8 +119,8 @@ p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_
 p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
 p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_14/ptf/p4c2662.p4")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 1600")
-set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 1600)
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 2400")
+set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 2400)
 
 # P4C-2985
 # We need to create one more test for each ${P4TESTDATA}/p4_16_samples/parser-inline/*.p4
@@ -204,6 +204,7 @@ foreach (t IN LISTS P16_TNA_ARISTA_FILES)
   set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/${t}" PROPERTIES TIMEOUT 2400)
   p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/${t}")
 endforeach()
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-media.p4" PROPERTIES TIMEOUT 3200)
 
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")

@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/slicing/phv_slicing_dfs_iterator.h"
 
 #include <algorithm>
+#include <iterator>
 #include <numeric>
 #include <sstream>
 
@@ -201,30 +202,57 @@ boost::optional<ordered_set<SuperCluster*>> presplit_by(const ordered_set<SuperC
     return rst;
 }
 
+const std::set<int> AfterSplitConstraint::all_container_sizes = {8, 16, 32};
+
+AfterSplitConstraint::AfterSplitConstraint(const std::set<int>& sizes) : sizes(sizes) {
+    BUG_CHECK(!sizes.empty(), "empty afterSplitConstraint is not allowed");
+    for (const auto& v : sizes) {
+        BUG_CHECK(all_container_sizes.count(v), "invalid container size: %1%", v);
+    }
+}
+
+AfterSplitConstraint::AfterSplitConstraint(ConstraintType t, int v) {
+    using ctype = AfterSplitConstraint::ConstraintType;
+    if (t == ctype::NONE) {
+        sizes = all_container_sizes;
+    } else if (t == ctype::EXACT) {
+        BUG_CHECK(all_container_sizes.count(v), "invalid container size: %1%", v);
+        sizes = {v};
+    } else if (t == ctype::MIN) {
+        BUG_CHECK(all_container_sizes.count(v), "invalid container size: %1%", v);
+        for (const auto& s : boost::adaptors::reverse(all_container_sizes)) {
+            if (s < v) break;
+            sizes.insert(s);
+        }
+    } else {
+        BUG("unknown type: %1%", (int)t);
+    }
+}
+
+AfterSplitConstraint::ConstraintType AfterSplitConstraint::type() const {
+    using ctype = AfterSplitConstraint::ConstraintType;
+    if (sizes.size() == all_container_sizes.size()) {
+        return ctype::NONE;
+    } else if (sizes.size() == 1) {
+        return ctype::EXACT;
+    } else {
+        return ctype::MIN;
+    }
+}
+
 boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
     const AfterSplitConstraint& other) const {
-    const AfterSplitConstraint* left = this;
-    const AfterSplitConstraint* right = &other;
-    if (left->t == ConstraintType::NONE) {
-        return *right;
+    std::set<int> rv;
+    std::set_intersection(sizes.begin(), sizes.end(), other.sizes.begin(), other.sizes.end(),
+                          std::inserter(rv, rv.begin()));
+    if (rv.empty()) {
+        return boost::none;
     }
-    if (right->t == ConstraintType::NONE) {
-        return *left;
-    }
-    if (left->t == ConstraintType::EXACT && right->t == ConstraintType::EXACT) {
-        return left->size == right->size ? boost::make_optional(*left) : boost::none;
-    } else if (left->t == ConstraintType::MIN && right->t == ConstraintType::MIN) {
-        return AfterSplitConstraint {
-            .t = AfterSplitConstraint::ConstraintType::MIN,
-            .size = std::max(left->size, right->size),
-        };
-    } else {
-        // unify (exact, min) or (min, exact) to (exact, min).
-        if (left->t == ConstraintType::MIN) {
-            std::swap(left, right);
-        }
-        return left->size >= right->size ? boost::make_optional(*left) : boost::none;
-    }
+    return AfterSplitConstraint(rv);
+}
+
+bool AfterSplitConstraint::ok(const int n) const {
+    return sizes.count(n);
 }
 
 // NextSplitChoiceMetrics is used during DFS to sort best slicing choice
@@ -443,7 +471,7 @@ boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
             curr.has_exact_container = sl->front().field()->exact_containers();
             for (const auto& fs : *sl) {
                 if ((*after_split_constraints).count(fs) &&
-                    (*after_split_constraints).at(fs).t !=
+                    (*after_split_constraints).at(fs).type() !=
                         AfterSplitConstraint::ConstraintType::NONE) {
                     curr.n_after_split_constraints++;
                 }
@@ -459,6 +487,7 @@ boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
 
 std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
     SuperCluster* sc, SuperCluster::SliceList* target, int first_n_bits) const {
+    using ctype = AfterSplitConstraint::ConstraintType;
     SplitSchema schema;
     SplitDecision decisions;
     for (auto* sl : sc->slice_lists()) {
@@ -476,15 +505,12 @@ std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
             schema[sl].setbit(first_n_bits - pre_alignment);
         }
 
-        AfterSplitConstraint container_size_constraint = {
-            .t = AfterSplitConstraint::ConstraintType::EXACT,
-            .size = first_n_bits,
-        };
+        AfterSplitConstraint container_size_constraint(ctype::EXACT, first_n_bits);
         // If slice list does not have exact containers, then split this slicelist
         // introduce only the minimum container size constraint,
         // because they can be flexibly allocate to any larger or equal container.
         if (!SuperCluster::slice_list_has_exact_containers(*sl)) {
-            container_size_constraint.t = AfterSplitConstraint::ConstraintType::MIN;
+            container_size_constraint = AfterSplitConstraint(ctype::MIN, first_n_bits);
         }
 
         int offset = pre_alignment;
@@ -786,10 +812,8 @@ boost::optional<std::list<SuperCluster*>> DfsItrContext::split_by_pa_container_s
                 }
                 for (const auto& kv : expected_size.at(fs.field())) {
                     if (fs.range().intersectWith(kv.first).size() > 0) {
-                        split_decisions_i[fs] = AfterSplitConstraint{
-                            .t = AfterSplitConstraint::ConstraintType::EXACT,
-                            .size = kv.second,
-                        };
+                        split_decisions_i[fs] = AfterSplitConstraint(
+                            AfterSplitConstraint::ConstraintType::EXACT, kv.second);
                         LOG1("pa_container_size enforced AfterSplitConstraint: "
                              << fs << " must be " << split_decisions_i[fs]);
                     }
@@ -1043,6 +1067,7 @@ bool DfsItrContext::dfs_prune_unwell_formed(const SuperCluster* sc) const {
 
 boost::optional<ordered_map<FieldSlice, AfterSplitConstraint>>
 DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
+    using ctype = AfterSplitConstraint::ConstraintType;
     // sz decided by other fieldslice in the super cluster.
     ordered_map<FieldSlice, AfterSplitConstraint> decided_sz;
     bool has_conflicting_decisions = false;
@@ -1054,13 +1079,16 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
             int size;
             std::tie(range, size) = pa_container_size_upcastings_i.at(fs.field());
             if (range.intersectWith(fs.range()).size() > 0) {
-                decided_sz[fs] = AfterSplitConstraint{
-                    .t = AfterSplitConstraint::ConstraintType::EXACT,
-                    .size = size,
-                };
+                decided_sz[fs] =
+                    AfterSplitConstraint(ctype::EXACT, size);
             }
         }
     });
+
+    // collect implicit container sz constraints.
+    if (!collect_implicit_container_sz_constraint(&decided_sz, sc)) {
+        return boost::none;
+    }
 
     // record AfterSplitConstraint from slice list that does not need any further
     // split but the decision was not made by DFS, i.e., split_decisions_i
@@ -1068,17 +1096,12 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
     for (const auto* sl : sc->slice_lists()) {
         if (!split_decisions_i.count(sl->front()) && !need_further_split(sl)) {
             const int sl_sz = SuperCluster::slice_list_total_bits(*sl);
-            AfterSplitConstraint constraint = AfterSplitConstraint{
-                .t = AfterSplitConstraint::ConstraintType::MIN,
-                .size = ROUNDUP(sl_sz, 8) * 8,
-            };
-            // minor optimization: we don't have 24-bit container.
-            if (constraint.size == 24) {
-                constraint.size = 32;
-            }
-            if (SuperCluster::slice_list_has_exact_containers(*sl)) {
-                constraint.t = AfterSplitConstraint::ConstraintType::EXACT;
-            }
+            int constraint_sz = ROUNDUP(sl_sz, 8) * 8;
+            constraint_sz = constraint_sz == 24 ? 32 : constraint_sz;
+            const ctype constraint_t =
+                SuperCluster::slice_list_has_exact_containers(*sl) ? ctype::EXACT : ctype::MIN;
+            AfterSplitConstraint constraint =
+                AfterSplitConstraint(constraint_t, constraint_sz);
             for (const auto& fs : *sl) {
                 if (decided_sz.count(fs)) {
                     auto intersection = constraint.intersect(decided_sz.at(fs));
@@ -1110,7 +1133,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
         if (has_conflicting_decisions) {
             return;
         }
-        AfterSplitConstraint constraint{.t = AfterSplitConstraint::ConstraintType::NONE, .size = 0};
+        AfterSplitConstraint constraint;
         // propagate decision collected above, that was not made by DFS, to other fs in cluster.
         if (decided_sz.count(fs)) {
             constraint = decided_sz.at(fs);
@@ -1125,7 +1148,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
             }
             constraint = *intersection;
         }
-        if (constraint.t == AfterSplitConstraint::ConstraintType::NONE) {
+        if (constraint.type() == AfterSplitConstraint::ConstraintType::NONE) {
             return;
         }
 
@@ -1166,6 +1189,70 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
     return decided_sz;
 }
 
+bool DfsItrContext::collect_implicit_container_sz_constraint(
+    ordered_map<FieldSlice, AfterSplitConstraint>* decided_sz, const SuperCluster* sc) const {
+    const auto intersect_and_save = [&](const AfterSplitConstraint& c, const FieldSlice& fs) {
+        if (!decided_sz->count(fs)) {
+            decided_sz->emplace(fs, c);
+            return true;
+        }
+        auto intersection = decided_sz->at(fs).intersect(c);
+        if (!intersection) {
+            LOG5("DFS pruned(conflicting implict container_sz): " << fs << " was decided to "
+                 << decided_sz->at(fs) << ", but " << fs << " can only be " << c);
+            return false;
+        } else {
+            decided_sz->emplace(fs, *intersection);
+        }
+        return true;
+    };
+
+    bool sat = true;
+    sc->forall_fieldslices([&](const FieldSlice& fs) {
+        std::list<int> possible_sizes(AfterSplitConstraint::all_container_sizes.begin(),
+                                      AfterSplitConstraint::all_container_sizes.end());
+        possible_sizes.remove_if([&](const int n) {
+            // no_split field size is larger than container.
+            // NOTE: works for <= 32-bit fields only because
+            // wide_arithmetic fields might be no_split and more than 32 bits.
+            if (fs.field()->no_split() && fs.field()->size <= 32 && fs.field()->size > n) {
+                return true;
+            }
+            // deparsed_bottom_bits + valid_container_range
+            // This special case is mostly for egress::eg_intr_md.egress_port.
+            if (fs.field()->deparsed_bottom_bits() && fs.range().lo == 0) {
+                if (n > fs.validContainerRange().hi + 1) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        // when possible_sizes = 0, the field can never be allocated.
+        if (possible_sizes.empty()) {
+            LOG1("found impossible to allocate field: " << fs);
+            sat = false;
+        } else {
+            // check if exists a valid container size for fs.
+            if (decided_sz->count(fs)) {
+                auto after_split = decided_sz->at(fs);
+                if (!std::any_of(possible_sizes.begin(), possible_sizes.end(),
+                                 [&](int n) { return after_split.ok(n); })) {
+                    LOG5("DFS pruned(unsat implict container_sz): " << fs << " was decided to "
+                         << after_split << ", but " << fs << " can not satisfy.");
+                    sat = false;
+                    return;
+                }
+            }
+            AfterSplitConstraint constraint = AfterSplitConstraint(
+                    std::set<int>(possible_sizes.begin(), possible_sizes.end()));
+            if (!intersect_and_save(constraint, fs)) {
+                sat = false;
+            }
+        }
+    });
+    return sat;
+}
+
 bool DfsItrContext::dfs_prune_unsat_slicelist_max_size(
     const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
     const SuperCluster* sc) const {
@@ -1186,8 +1273,8 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_max_size(
     return sc->any_of_fieldslices([&](const FieldSlice& fs) {
         if (constraints.count(fs) && max_slicelist_bits.count(fs)) {
             const auto& constraint = constraints.at(fs);
-            if (constraint.t != AfterSplitConstraint::ConstraintType::NONE &&
-                constraint.size > max_slicelist_bits.at(fs)) {
+            if (constraint.type() != AfterSplitConstraint::ConstraintType::NONE &&
+                constraint.min() > max_slicelist_bits.at(fs)) {
                 LOG5("DFS pruned(unsat_decision_sl_sz): "
                      << fs << " must be allocated to " << constraint
                      << ", but the slicelist it resides is only " << max_slicelist_bits.at(fs));
@@ -1211,16 +1298,14 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
         // bit to fieldlist mapping.
         const std::map<int, FieldSlice> fs_bitmap = make_fs_bitmap(sl);
         int sl_sz = SuperCluster::slice_list_total_bits(*sl);
-        std::vector<AfterSplitConstraint> constraint_vec(
-            sl_sz,
-            AfterSplitConstraint{.t = AfterSplitConstraint::ConstraintType::NONE, .size = 0});
+        std::vector<AfterSplitConstraint> constraint_vec(sl_sz);
         // start_bit_left_bound is maintained during the next for loop, representing the
         // leftbound of starting bit of the fieldslice (fs) that is being iterated.
         int start_bit_left_bound = 0;
         int offset = 0;
         for (const auto& fs : *sl) {
             if (!decided_sz.count(fs) ||
-                decided_sz.at(fs).t == AfterSplitConstraint::ConstraintType::NONE) {
+                decided_sz.at(fs).type() == AfterSplitConstraint::ConstraintType::NONE) {
                 offset += fs.size();
                 continue;
             }
@@ -1250,14 +1335,14 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             }
             leftmost_start++;
             // leftmost_start plus the container size must cover the whole fieldslice.
-            if (sz_req.t == AfterSplitConstraint::ConstraintType::MIN) {
+            if (sz_req.type() == AfterSplitConstraint::ConstraintType::MIN) {
                 leftmost_start = std::max(leftmost_start, offset + fs.size() - 32);
             } else {
-                leftmost_start = std::max(leftmost_start, offset + fs.size() - sz_req.size);
+                leftmost_start = std::max(leftmost_start, offset + fs.size() - sz_req.min());
             }
 
             // check if there is enough room to satisfy se_req.
-            if (leftmost_start + sz_req.size > sl_sz) {
+            if (leftmost_start + sz_req.min() > sl_sz) {
                 if (LOGGING(5)) {
                     LOG5("DFS pruned(unsat_constraint_2): not enough room at tail. "
                          << "slice list: " << sl << "\n, fieldslice " << fs
@@ -1273,7 +1358,7 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             }
 
             // check forwarding pack_conflict.
-            for (int i = leftmost_start; i < leftmost_start + sz_req.size; i++) {
+            for (int i = leftmost_start; i < leftmost_start + sz_req.min(); i++) {
                 const auto next_fs = fs_bitmap.at(i);
                 const auto* next_field = next_fs.field();
                 if (next_field != fs.field() &&
@@ -1288,7 +1373,7 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             }
 
             // mark size constraints on the vector.
-            for (int i = leftmost_start; i < leftmost_start + sz_req.size; i++) {
+            for (int i = leftmost_start; i < leftmost_start + sz_req.min(); i++) {
                 constraint_vec[i] = *constraint_vec[i].intersect(sz_req);
             }
 
@@ -1296,8 +1381,8 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             // starting from the left most possible position.
             // We can only update this value when the container size requirement for field slice
             // is EXACT and the size of the field equals to the container size.
-            if (sz_req.t == AfterSplitConstraint::ConstraintType::EXACT &&
-                sz_req.size == fs.size()) {
+            if (sz_req.type() == AfterSplitConstraint::ConstraintType::EXACT &&
+                sz_req.min() == fs.size()) {
                 start_bit_left_bound = leftmost_start + fs.size();
             }
 
@@ -1383,10 +1468,7 @@ bool DfsItrContext::dfs_prune_unsat_exact_list_size_mismatch(
             targets = split_sl_at_byte_boundary(sl);
         }
         for (auto* target : targets) {
-            AfterSplitConstraint exact_size_req{
-                .t = AfterSplitConstraint::ConstraintType::NONE,
-                .size = 0,
-            };
+            AfterSplitConstraint exact_size_req;
             for (const auto& fs : *target) {
                 auto fs_constraint = constraints.lookup(fs);
                 if (fs_constraint) {
@@ -1583,19 +1665,13 @@ void DfsItrContext::invalidate(const SuperCluster::SliceList* sl) {
 }
 
 std::ostream& operator<<(std::ostream& out, const PHV::Slicing::AfterSplitConstraint& c) {
-    switch (c.t) {
-        case AfterSplitConstraint::ConstraintType::EXACT: {
-            out << "=";
-            break;
-        }
-        case AfterSplitConstraint::ConstraintType::MIN: {
-            out << ">=";
-            break;
-        }
-        default:
-            return out;
+    out << "{";
+    cstring sep = "";
+    for (const auto& s : c.sizes) {
+        out << sep << s;
+        sep = ",";
     }
-    out << c.size;
+    out << "}";
     return out;
 }
 

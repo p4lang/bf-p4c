@@ -2943,6 +2943,7 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
             le_offset += slice.size();
         }
         if (success) {
+            LOG_DEBUG6("found one valid slicelist alignment: " << curr.slice_alignment);
             rst.push_back(curr);
         }
     }
