@@ -1167,8 +1167,16 @@ class csr_composite_object (csr_object):
                 if args.checked_array and notclass and el.count != (1,):
                     for idx in el.count:
                         outfile.write("checked_array<%d, " % idx)
-            if not isglobal:
-                typ.gen_type(outfile, args, schema, classname, "_" + el.name, indent)
+            eltypenamestr = el.name
+            if isglobal:
+                eltypenamestr = "::" + eltypenamestr
+            else:
+                eltypenamestr = "_" + eltypenamestr
+                if el.name == self.name:
+                    # FIXME -- maybe should elide the element if it is the only one?
+                    # sort of like singleton_obj but deal with arrays too
+                    eltypenamestr = eltypenamestr + "_el"
+                typ.gen_type(outfile, args, schema, classname, eltypenamestr, indent)
             if args.gen_decl != 'defn':
                 field_name = el.name
                 if field_name in args.cpp_reserved:
@@ -1179,8 +1187,7 @@ class csr_composite_object (csr_object):
                             outfile.write(";\n%s" % indent)
                         for idx in el.count:
                             outfile.write("checked_array<%d, " % idx)
-                        outfile.write('::' if isglobal else '_')
-                        outfile.write(el.name)
+                        outfile.write(eltypenamestr)
                     if el.count != (1,):
                         for idx in el.count:
                             outfile.write(">")
@@ -1453,6 +1460,8 @@ class address_map(csr_composite_object):
 
     def children(self):
         return self.objs
+    def is_singleton(self):
+        return len(self.objs) == 1 and self.objs[0].count == (1,)
     def disabled(self):
         return self.templatization_behavior == "disabled"
     def top_level(self):
@@ -1508,6 +1517,8 @@ class address_map_instance(csr_composite_object):
 
     def children(self):
         return self.map.objs
+    def is_singleton(self):
+        return len(self.map.objs) == 1 and self.map.objs[0].count == (1,)
     def disabled(self):
         return self.map.templatization_behavior == "disabled"
     def top_level(self):

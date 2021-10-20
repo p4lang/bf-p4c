@@ -17,7 +17,7 @@
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
 
-const std::string SCHEMA_VERSION = CONTEXT_SCHEMA_VERSION;
+const std::string SCHEMA_VERSION = CONTEXT_SCHEMA_VERSION;              // NOLINT(runtime/string)
 
 option_t options = {
     .binary = PIPE0,
@@ -47,8 +47,8 @@ option_t options = {
     .num_stages_override = 0
 };
 
-std::string asmfile_name;
-std::string gfm_log_file_name = "mau.gfm.log";
+std::string asmfile_name;                                               // NOLINT(runtime/string)
+std::string gfm_log_file_name = "mau.gfm.log";                          // NOLINT(runtime/string)
 
 std::unique_ptr<std::ostream> gfm_out;
 
@@ -421,7 +421,7 @@ std::string toString(target_t target) {
 #if HAVE_FLATROCK
         case TOFINO5: return "Tofino5";
 #endif  /* HAVE_FLATROCK */
-        default: BUG("Unexpected target value: %1%", target);
+        default: BUG("Unexpected target value: 0x%x", target);
     }
 }
 
