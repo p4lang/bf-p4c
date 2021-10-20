@@ -20,7 +20,7 @@
 #include "bfas.h"
 #include "map.h"
 
-enum gress_t { INGRESS, EGRESS, GHOST, NONE };
+enum gress_t { INGRESS, EGRESS, GHOST, NUM_GRESS_T };
 
 /* All timing related uses combine the INGRESS and GHOST threads (they run in lockstep), so
  * we remap GHOST->INGRESS when dealing with timing */

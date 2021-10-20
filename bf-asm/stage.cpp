@@ -32,6 +32,7 @@ class AsmStage : public Section {
     ~AsmStage() {}
     std::vector<Stage>  stage;
     static AsmStage     singleton_object;
+    bitvec              stages_seen[NUM_GRESS_T];
  public:
     static int numstages() { return singleton_object.stage.size(); }
     static std::vector<Stage> &stages() { return singleton_object.stage; }
@@ -90,6 +91,9 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                   : args[1] == "egress" ? EGRESS
                   : args[1] == "ghost" && options.target >= JBAY ? GHOST
                   : (error(args[1].lineno, "Invalid thread %s", value_desc(args[1])), INGRESS);
+    if (stages_seen[gress][stageno])
+        error(args[0].lineno, "Duplicate stage %d %s", stageno, to_string(gress).c_str());
+    stages_seen[gress][stageno] = 1;
     for (auto &kv : MapIterChecked(data.map, true)) {
         if (kv.key == "dependency") {
             if (stageno == 0)
@@ -122,14 +126,20 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                             "mpr_stage_id value cannot be greater than current stage.");
                 stage[stageno].mpr_stage_id[gress] = kv.value.i;
 
-                /* Intermediate stage must carry the mpr glob_exec and long_branch bitmap. */
+                /* Intermediate stage must carry the mpr glob_exec and long_branch bitmap.
+                 * If they have been left off by the compiler, we need to propagate the bits;
+                 * if the compiler has provided them, we assume it did so correctly
+                 * DANGER -- this assumes the stages appear in the .bfa file in order (at
+                 * least for each gress)
+                 */
                 if (kv.value.i != stageno) {
                     for (int inter_stage = kv.value.i + 1; inter_stage < stageno; inter_stage++) {
-                        stage[inter_stage].mpr_bus_dep_glob_exec[gress] |=
-                            stage[kv.value.i].mpr_bus_dep_glob_exec[gress];
-
-                        stage[inter_stage].mpr_bus_dep_long_branch[gress] |=
-                            stage[kv.value.i].mpr_bus_dep_long_branch[gress];
+                        if (!stages_seen[gress][inter_stage]) {
+                            stage[inter_stage].mpr_bus_dep_glob_exec[gress] |=
+                                stage[kv.value.i].mpr_bus_dep_glob_exec[gress];
+                            stage[inter_stage].mpr_bus_dep_long_branch[gress] |=
+                                stage[kv.value.i].mpr_bus_dep_long_branch[gress];
+                        }
                     }
                 }
             }

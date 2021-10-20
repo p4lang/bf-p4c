@@ -347,7 +347,8 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto p : pipe->thread[INGRESS].parsers) {
         if (auto* parser = p->to<IR::BFN::LoweredParser>()) {
             if (auto p0 = parser->phase0) {
-                out << "stage 0 ingress:" << std::endl;
+                if (!phase0OutputAsm)
+                    out << "stage 0 ingress:" << std::endl;
                 mauasm.power_and_mpr->emit_stage_asm(out, INGRESS, 0);
                 out << p0;
                 phase0OutputAsm = true;
