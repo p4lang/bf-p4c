@@ -790,7 +790,8 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
 
     unsigned allowed_errors = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE
                             | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT
-                            | ActionAnalysis::ContainerAction::UNRESOLVED_REPEATED_ACTION_DATA;
+                            | ActionAnalysis::ContainerAction::UNRESOLVED_REPEATED_ACTION_DATA
+                            | ActionAnalysis::ContainerAction::IMPOSSIBLE_ALIGNMENT;
     unsigned error_mask = ~allowed_errors;
 
     for (auto &container_action : container_actions_map) {
