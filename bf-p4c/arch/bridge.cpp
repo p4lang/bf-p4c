@@ -10,6 +10,9 @@
 #include "bf-p4c/midend/simplify_args.h"
 #include "midend/local_copyprop.h"
 #include "frontends/common/constantFolding.h"
+#include "frontends/p4/strengthReduction.h"
+#include "frontends/p4/reassociation.h"
+#include "frontends/p4/uselessCasts.h"
 #include "frontends/p4/typeMap.h"
 
 namespace BFN {
@@ -238,13 +241,19 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap, false);
     extractBridgeInfo = new ExtractBridgeInfo(options, &refMap, &typeMap, conv, bindings, map);
+    auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap, true);
 
     addPasses({
         new P4::ClearTypeMap(&typeMap),
-        new BFN::TypeChecking(&refMap, &typeMap, true),
-        new BFN::ResolveSizeOfOperator(),
-        new P4::ConstantFolding(&refMap, &typeMap),
-        new BFN::TypeChecking(&refMap, &typeMap, true),
+        typeChecking,
+        new BFN::ConvertSizeOfToConstant(),
+        PassRepeated({
+            new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+            new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+            new P4::Reassociation(),
+            new P4::UselessCasts(&refMap, &typeMap)
+        }),
+        typeChecking,
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
@@ -264,13 +273,20 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedH
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap, false);
+    auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap, true);
+
     addPasses({
         new ReplaceFlexibleType(map),
         new P4::ClearTypeMap(&typeMap),
-        new BFN::TypeChecking(&refMap, &typeMap, true),
-        new BFN::ResolveSizeOfOperator(),
-        new P4::ConstantFolding(&refMap, &typeMap),
-        new BFN::TypeChecking(&refMap, &typeMap, true),
+        typeChecking,
+        new BFN::ConvertSizeOfToConstant(),
+        PassRepeated({
+            new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+            new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+            new P4::Reassociation(),
+            new P4::UselessCasts(&refMap, &typeMap)
+        }),
+        typeChecking,
         new RenameArchParams(&refMap, &typeMap),
         new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
