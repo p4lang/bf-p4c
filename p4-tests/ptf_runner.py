@@ -402,9 +402,11 @@ def sanitize_args(args):
 
 def enable_verbose_model_logging():
     child = pexpect.spawn('telnet localhost 8000')
-    child.logfile = sys.stdout
-    child.expect(">")
-    child.sendline("rmt-set-log-flags\r")
+    child.logfile = sys.stdout.buffer
+    child.expect(b'> ')
+    child.send("rmt-set-log-flags\r")
+    child.expect(b'> ')
+    child.close()
 
 def main():
     args, unknown_args = get_parser().parse_known_args()

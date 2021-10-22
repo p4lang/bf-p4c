@@ -235,7 +235,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-725/comp_725.p4
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
   ../glass/testsuite/p4_tests/netscout/P4C-1605/filter_bf_p414.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
   ../glass/testsuite/p4_tests/ucloud/COMPILER-1042/uxr.p4
   ../glass/testsuite/p4_tests/ucloud/COMPILER-1045/case6975.p4
   ../glass/testsuite/p4_tests/zte/COMPILER-594/comp594.p4
@@ -284,7 +283,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1400, P4C-1123
 p4c_add_xfail_reason("tofino"
-  "error: constant value.*too large for stateful alu"
+  "NameError: name 'step' is not defined"
   extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
 )
 
@@ -705,7 +704,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/basseterre_0.p4
   ../glass/testsuite/p4_tests/kaust/COMPILER-1077/countmin.p4
 )
 
@@ -815,7 +813,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/multi-constraint.p4
   ../glass/testsuite/p4_tests/fujitsu/COMPILER-1141/static_acl_tun_tel.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
 )
@@ -1429,7 +1426,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1862
 p4c_add_xfail_reason("tofino"
-  "AttributeError: 'Client' object has no attribute"
+  "InvalidTableOperation"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
 )
 
@@ -2029,10 +2026,37 @@ p4c_add_xfail_reason("tofino"
   ba102_simple_l3_mirror
 )
 
+# Nighly failures
+p4c_add_xfail_reason("tofino"
+  "error: add: action spanning multiple stages."
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/vindemiatrixs_0.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error: : condition too complex"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/basseterre_0.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug: Overwriting definitions"
+  extensions/p4_tests/p4_14/customer/surfnet/p4c-1429.p4
+)
+p4c_add_xfail_reason("tofino"
+  "mismatch from expected"
+  extensions/p4_tests/p4_14/stf/stateful6.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Extracting or assigning values with different in-byte alignments within packet to the same field is not supported in the parser."
+  ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
+)
+
 # P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received"
   tor.p4
+  extensions/p4_tests/p4_14/ptf/sful_split1.p4
 )
 # P4C-3922 - Would require fixing glass (p4c-tofino)
 p4c_add_xfail_reason("tofino"

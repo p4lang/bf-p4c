@@ -72,7 +72,7 @@ set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
 set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x0.p4)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile" ${switch_p4_16} "" "-I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --set-max-power 43.0\" -arch tna")
+  "smoketest_switch_16_compile" ${switch_p4_16} "" "-I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --set-max-power 44.0\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
 
 set (SWITCH_P4_16_X1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x1.p4)

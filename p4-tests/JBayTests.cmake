@@ -376,7 +376,7 @@ bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/pvs/ports.json")
 
 bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
-    "\"--gen-hitless-ha-test-pd\"")
+    "--gen-hitless-ha-test-pd")
 
 # Add some tests as compile only (if they take too long to run or cannot be run
 # in compiler docker env due to port issues or lack of pd-16 support)
@@ -512,12 +512,10 @@ p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_ghost")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod/t2na_ghost_dod.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod")
 bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod" "test.T2naGhostTestDoD")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod")
-p4c_add_test_label("tofino2" "need_scapy" "t2na_ghost_dod")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl/t2na_ghost_dod_simpl.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl")
 bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod_simpl" "test.T2naGhostSimplTestDoD")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_simpl")
-p4c_add_test_label("tofino2" "need_scapy" "t2na_ghost_dod_simpl")
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)

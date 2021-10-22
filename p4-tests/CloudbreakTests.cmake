@@ -169,7 +169,7 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/pvs/ports.json")
 #
 #bfn_set_pd_build_flag("tofino3" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
-#    "\"--gen-hitless-ha-test-pd\"")
+#    "--gen-hitless-ha-test-pd")
 #
 ## Add some tests as compile only (if they take too long to run or cannot be run
 ## in compiler docker env due to port issues or lack of pd-16 support)
