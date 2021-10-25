@@ -3003,6 +3003,10 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
                 }
             }
         }
+        // Do not analyse stage 0 since we can't move these table in a previous stage.
+        if (!process_stage)
+            return boost::none;
+
         same_stage.clear();
         while (last_stage) {
             if (last_stage->stage < process_stage) {

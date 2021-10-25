@@ -477,6 +477,20 @@ FindInitializationNode::getInitializationCandidates(
             return boost::none;
         }
         for (const auto* t : fStrictDominators) {
+            // Relying on initialization at strict dominators instead of group dominator only work
+            // if all of them are mutually exclusive to each others. Otherwise you can have one
+            // dominator that override the non initialization write of another one.
+            LOG_DEBUG4(TAB2 "Validate that all strict dominator are mutually exclusive");
+            for (const auto* t2 : fStrictDominators) {
+                if (t == t2)
+                    continue;
+                if (!tableMutex(t, t2)) {
+                    LOG_DEBUG4(TAB3 "Table:" << t->name << " and " << t2->name <<
+                               " are not mutually exclusive");
+                    return boost::none;
+                }
+            }
+
             LOG_DEBUG4(TAB2 "Trying to initialize at table " << t->name);
             auto initPoints = getInitPointsForTable(c, t, f, prevUses, container_state, alloc,
                     true);

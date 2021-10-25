@@ -2822,7 +2822,7 @@ control Leoma(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
     @name(".Anawalt") action Anawalt() {
         Lemont.Belmore.Quinault = Aiken.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Almota.Bronwood.Glendevey, Almota.Bronwood.Littleton, Almota.Bronwood.IttaBena, Almota.Bronwood.Adona, Almota.Bronwood.Cabot, Lemont.HighRock.Toklat });
     }
-    @disable_atomic_modify(1) @name(".Asharoken") table Asharoken {
+    @disable_atomic_modify(1) @stage(1) @name(".Asharoken") table Asharoken {
         actions = {
             Anawalt();
         }
@@ -3397,7 +3397,7 @@ control Farner(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_me
     @name(".Govan") action Govan(bit<6> Burrel) {
         Lemont.Swisshome.Sonoma = Burrel;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Gladys") table Gladys {
+    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Gladys") table Gladys {
         actions = {
             Govan();
             @defaultonly NoAction();
@@ -4050,7 +4050,7 @@ control Gwynn(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_met
     @name(".Capitola") action Capitola() {
         Lemont.Yerington.Vergennes = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @name(".Liberal") table Liberal {
+    @disable_atomic_modify(1) @stage(0) @name(".Liberal") table Liberal {
         actions = {
             Rolla();
         }
@@ -6159,7 +6159,7 @@ control Gonzalez(inout Knights Almota, inout Mather Lemont, in egress_intrinsic_
         Lemont.Swisshome.Petrey = Waukesha;
         Almota.Milano.Petrey = Petrey;
     }
-    @disable_atomic_modify(1) @name(".Roseville") table Roseville {
+    @disable_atomic_modify(1) @stage(1) @name(".Roseville") table Roseville {
         actions = {
             Wildell();
             @defaultonly NoAction();
