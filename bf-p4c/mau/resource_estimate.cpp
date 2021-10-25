@@ -866,24 +866,6 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        bool wide = a.way.match_groups < a.way.width && b.way.match_groups < b.way.width;
-        bool skinny = a.way.match_groups >= a.way.width && b.way.match_groups >= b.way.width;
-        skinny &= !a.layout.hash_action && !b.layout.hash_action;
-        int a_mod = 0;  int b_mod = 0;
-
-        if (wide) {
-           a_mod = a.way.width % a.way.match_groups;
-           b_mod = b.way.width % b.way.match_groups;
-        } else if (skinny) {
-           a_mod = a.way.match_groups % a.way.width;
-           b_mod = b.way.match_groups % b.way.width;
-        }
-        if (a_mod == 0 && b_mod != 0)
-            if (b.way.width > 3)
-                return true;
-        if (b_mod == 0 && a_mod != 0)
-            if (a.way.width > 3)
-                return false;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         // Added to keep obfuscated-nat-mpls for compiling.  In theory the match groups/width
         // should not be used for hash action tables
@@ -1085,7 +1067,7 @@ int StageUseEstimate::stages_required() const {
 
 /* Given a number of available srams within a stage, calculate the maximum size
    different layout options can be while still using up to the number of srams */
-bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
+bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int &srams_left,
                                         int &entries, attached_entries_t &attached_entries) {
     if (entries > 1) {
         // Can't split hash_action tables that do any actual lookup (but can duplicate
@@ -1105,6 +1087,43 @@ bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, i
     }
     srams_left_best_option(srams_left);
     fill_estimate_from_option(entries);
+
+    // An alternative layout was found previously that can potentially pack more entries than this
+    // optimized variant. For example, we might have split a table based on a layout that can pack
+    // two entries on three rows + couple of actions ram for an estimate of 40 SRAMs and 20480
+    // entries. The next best layout might only be able to insert 18432 entries on the same 40
+    // SRAMs. Because of that (and because when splitting we discard the layout that don't qualify
+    // for the number of entries we expect), this second layout will not be evaluated. We will try
+    // to optimize the first one instead if the original estimate can't be translated in a real
+    // allocation. That can happen for multiple reasons (IXBar allocation, Other table SRAM usage,
+    // bus usage, ...). By optimizing this layout we will try different ways approach but also
+    // reduce the number of SRAMs consumed by this layout (and also reduce the number of entries
+    // being carried) until we find a solution. The problem is that at some point the optimized
+    // solution might contain fewer entries than the second best layout at the beginning. This is
+    // why we always keep track of the next best option to try that one if the optimized variant
+    // now carry less entries than the second best layout.
+    if (entries < alternate_sol_entries) {
+        srams_left = alternate_sol_srams;
+        for (auto &lo : layout_options) {
+            lo.clear_mems();
+            known_srams_needed(tbl, attached_entries, &lo);
+            unknown_srams_needed(tbl, &lo, srams_left);
+        }
+        srams_left_best_option(srams_left);
+        fill_estimate_from_option(entries);
+        entries = alternate_sol_entries;
+        alternate_sol_entries = 0;
+        alternate_sol_srams = 0;
+    }
+    if (alternate_sol_entries == 0) {
+        for (auto &lo : layout_options) {
+            if (lo.entries < entries && lo.srams <= srams_left) {
+                alternate_sol_entries = lo.entries;
+                alternate_sol_srams = srams_left;
+                break;
+            }
+        }
+    }
     return true;
 }
 
@@ -1341,25 +1360,6 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-
-        bool wide = a.way.match_groups < a.way.width && b.way.match_groups < b.way.width;
-        bool skinny = a.way.match_groups >= a.way.width && b.way.match_groups >= b.way.width;
-        skinny &= !a.layout.hash_action && !b.layout.hash_action;
-        int a_mod = 0;  int b_mod = 0;
-
-        if (wide) {
-           a_mod = a.way.width % a.way.match_groups;
-           b_mod = b.way.width % b.way.match_groups;
-        } else if (skinny) {
-           a_mod = a.way.match_groups % a.way.width;
-           b_mod = b.way.match_groups % b.way.width;
-        }
-        if (a_mod == 0 && b_mod != 0)
-            if (b.way.width > 3)
-                return true;
-        if (b_mod == 0 && a_mod != 0)
-            if (a.way.width > 3)
-                return false;
         if (a.srams > srams_left && b.srams <= srams_left)
             return false;
         if (b.srams > srams_left && a.srams <= srams_left)

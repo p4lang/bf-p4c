@@ -983,7 +983,13 @@ class DecidePlacement::ResourceBasedAlloc {
     void add_placed_pos(const Placed *pl, const ordered_set<const GroupPlace *> &work,
                         bool is_best) {
         if (is_best) {
-            incomplete.erase(pl->table);
+            if (incomplete.count(pl->table)) {
+                BacktrackPlacement *bt = incomplete.at(pl->table);
+                // Keep the table in the incomplete pool if the table is split and we know we can
+                // fit more entries with a previous non best allocation
+                if (!pl->need_more || bt->get_placed()->entries <= pl->entries)
+                    incomplete.erase(pl->table);
+            }
         } else if (!visited.count(pl->table)) {
             BacktrackPlacement *bt = new BacktrackPlacement(self, pl, work, false);
             incomplete.insert({pl->table, bt});
@@ -1295,8 +1301,7 @@ void TablePlacement::filter_layout_options(Placed *pl) {
  */
 bool TablePlacement::pick_layout_option(Placed *next) {
     bool table_format = true;
-
-    int initial_entries = next->entries;
+    int req_entries = next->entries;
 
     if (!next->use.format_type.valid()) {
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
@@ -1324,7 +1329,8 @@ bool TablePlacement::pick_layout_option(Placed *next) {
         }
 
         if (!table_format) {
-            bool adjust_possible = next->use.adjust_choices(next->table, initial_entries,
+            int in_out_entries = req_entries;
+            bool adjust_possible = next->use.adjust_choices(next->table, in_out_entries,
                                                             next->attached_entries);
             if (!adjust_possible) {
                 next->stage_advance_log = "adjust_choices failed";

@@ -1386,7 +1386,7 @@ control Mather(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_m
         size = 65536;
         idle_timeout = true;
     }
-    @disable_atomic_modify(1) @ways(2) @pack(2) @name(".Hallwood") table Hallwood {
+    @disable_atomic_modify(1) @ways(2) @name(".Hallwood") table Hallwood {
         actions = {
             Westville();
             @defaultonly NoAction();
@@ -1619,7 +1619,7 @@ control Alstown(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
         Osyka.Munich.Margie = Margie;
         Osyka.Candle.Madera = (bit<16>)Madera;
     }
-    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Armagh") table Armagh {
+    @idletime_precision(1) @ways(4) @disable_atomic_modify(1) @name(".Armagh") table Armagh {
         actions = {
             Covert();
             Terral();
@@ -1754,7 +1754,7 @@ control Gamaliel(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
         size = 8192;
         idle_timeout = true;
     }
-    @idletime_precision(1) @atcam_partition_index("Munich.Margie") @atcam_number_partitions(2048) @force_immediate(1) @disable_atomic_modify(1) @pack(2) @name(".Campbell") table Campbell {
+    @idletime_precision(1) @atcam_partition_index("Munich.Margie") @atcam_number_partitions(2048) @disable_atomic_modify(1) @name(".Campbell") table Campbell {
         actions = {
             @tableonly Loyalton();
             @tableonly Lasara();
@@ -4458,7 +4458,7 @@ control Kevil(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
         default_action = Gambrills();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(2) @name(".Maury") table Maury {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @name(".Maury") table Maury {
         actions = {
             Sully();
             @defaultonly NoAction();
@@ -4505,7 +4505,7 @@ control Kevil(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
     @name(".Amsterdam") action Amsterdam(bit<32> Weinert) {
         Osyka.Dairyland.Tombstone = max<bit<32>>(Osyka.Dairyland.Tombstone, Weinert);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Gwynn") table Gwynn {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Gwynn") table Gwynn {
         key = {
             Osyka.Daleville.Gause : exact @name("Daleville.Gause") ;
             Osyka.Basalt.Hackett  : exact @name("Basalt.Hackett") ;
@@ -4561,7 +4561,7 @@ control Council(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
     @name(".Amsterdam") action Amsterdam(bit<32> Weinert) {
         Osyka.Dairyland.Tombstone = max<bit<32>>(Osyka.Dairyland.Tombstone, Weinert);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Capitola") table Capitola {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Capitola") table Capitola {
         key = {
             Osyka.Daleville.Gause : exact @name("Daleville.Gause") ;
             Osyka.Basalt.Hackett  : exact @name("Basalt.Hackett") ;
@@ -4617,7 +4617,7 @@ control Moorman(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
     @name(".Amsterdam") action Amsterdam(bit<32> Weinert) {
         Osyka.Dairyland.Tombstone = max<bit<32>>(Osyka.Dairyland.Tombstone, Weinert);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Parmelee") table Parmelee {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Parmelee") table Parmelee {
         key = {
             Osyka.Daleville.Gause : exact @name("Daleville.Gause") ;
             Osyka.Basalt.Hackett  : exact @name("Basalt.Hackett") ;
@@ -4673,7 +4673,7 @@ control Milltown(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
     @name(".Amsterdam") action Amsterdam(bit<32> Weinert) {
         Osyka.Dairyland.Tombstone = max<bit<32>>(Osyka.Dairyland.Tombstone, Weinert);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".TinCity") table TinCity {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".TinCity") table TinCity {
         key = {
             Osyka.Daleville.Gause : exact @name("Daleville.Gause") ;
             Osyka.Basalt.Hackett  : exact @name("Basalt.Hackett") ;
@@ -4729,7 +4729,7 @@ control Bluff(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
     @name(".Amsterdam") action Amsterdam(bit<32> Weinert) {
         Osyka.Dairyland.Tombstone = max<bit<32>>(Osyka.Dairyland.Tombstone, Weinert);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Bedrock") table Bedrock {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Bedrock") table Bedrock {
         key = {
             Osyka.Daleville.Gause : exact @name("Daleville.Gause") ;
             Osyka.Basalt.Hackett  : exact @name("Basalt.Hackett") ;

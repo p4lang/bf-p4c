@@ -5200,7 +5200,7 @@ control validate_outer_ipv6_header {
 
 @pragma alpm 1
 @pragma ways 6
-
+@pragma pack 1
 
 
 

@@ -4702,6 +4702,7 @@ control IngressVRouter(
      * respective routing tables.
      */
     @alpm(1)
+    @pack(1)
     table ktep_l3 {
         key = {
             ig_md.ktep_router_meta.router_id : exact;

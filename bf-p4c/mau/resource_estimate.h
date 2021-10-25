@@ -33,6 +33,12 @@ struct StageUseEstimate {
     safe_vector<ActionData::Format::Use> action_formats;
     MeterALU::Format::Use                meter_format;
     size_t                               preferred_index;  // into layout_options
+
+    // Track alternate solution when trying to find optimal layout on exact match. It is possible
+    // that after trying to optimize a layout we end up having a worst solution than a previously
+    // discarded layout. In that case, we want to evaluate such layout.
+    int alternate_sol_entries = 0;
+    int alternate_sol_srams = 0;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -103,7 +109,7 @@ struct StageUseEstimate {
                                          attached_entries_t &, bool table_placement);
     bool adjust_choices(const IR::MAU::Table *tbl, int &entries, attached_entries_t &);
 
-    bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
+    bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int &srams_left,
                                       int &entries, attached_entries_t &);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
                                       int &entries, attached_entries_t &);
