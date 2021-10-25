@@ -8,6 +8,15 @@ global:
   - widereg
   # - write_dma=galois_field_matrix
 generate:
+  memories:
+    tfc_mem:
+      memories.ftr_mem.h: [ decl, name=memories.top ]
+      memories.ftr_mem.cpp: [ defn, name=memories.top,
+          -Imemories.ftr_mem.h, -Imemories.pipe_addrmap.h ]
+    fpp_mem_rspec:  # pipes
+      memories.pipe_addrmap.h: [ decl, name=memories.pipe, widereg ]
+      memories.pipe_addrmap.cpp: [ defn, name=memories.pipe, widereg,
+          -Imemories.pipe_addrmap.h ]
   regs:
     tfc_reg:
       regs.ftr_reg.h: [ decl, name=regs.top ]
@@ -24,6 +33,15 @@ generate:
     # no parser/deparser in csr yet?
 
 ignore:
+  memories:
+    # tfc_mem
+    - tm_top_mem_rspec  # tm
+    # fpp_mem_rspec
+    # prsr_mem_rspec
+    # pprsr_mem_rspec
+    - dprsr_mem_rspec
+    - ppu_pack_mem_rspec
+    - mdp_mem_rspec
   regs:
     # tfc_reg
     - dvsl_addrmap

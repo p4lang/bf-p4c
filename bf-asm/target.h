@@ -536,6 +536,8 @@ void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::
 #endif  /* HAVE_CLOUDBREAK */
 
 #if HAVE_FLATROCK
+#include "gen/flatrock/memories.ftr_mem.h"
+#include "gen/flatrock/memories.pipe_addrmap.h"
 #include "gen/flatrock/regs.ftr_reg.h"
 #include "gen/flatrock/regs.pipe_addrmap.h"
 #include "gen/flatrock/regs.mau_addrmap.h"
@@ -552,9 +554,8 @@ class Target::Flatrock : public Target {
         typedef ::Flatrock::regs_top                    _regs_top;
         typedef ::Flatrock::regs_pipe                   _regs_pipe;
 
-        // no memories defined (yet) in CSR
-        struct _mem_top { }                             mem_top;
-        struct _mem_pipe { }                            mem_pipe;
+        ::Flatrock::memories_top                        mem_top;
+        ::Flatrock::memories_pipe                       mem_pipe;
         ::Flatrock::regs_top                            reg_top;
         ::Flatrock::regs_pipe                           reg_pipe;
     };

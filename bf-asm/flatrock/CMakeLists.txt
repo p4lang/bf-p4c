@@ -1,4 +1,6 @@
 set (GEN_FLATROCK
+  memories.ftr_mem
+  memories.pipe_addrmap
   regs.ftr_reg
   regs.mau_addrmap
   regs.pipe_addrmap
