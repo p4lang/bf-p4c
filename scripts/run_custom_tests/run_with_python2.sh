@@ -24,7 +24,7 @@ python2 /p4factory/release/target-toplevel-files/p4studio/dependencies/source/in
 sed -i 's/pip /pip2 /g' \
         /p4factory/release/target-toplevel-files/p4studio/dependencies/source/install_thrift.py
 python2 /p4factory/release/target-toplevel-files/p4studio/dependencies/source/install_thrift.py \
-            -os Ubuntu -ver 16.04 -k apt -j8
+            -os Ubuntu -ver 16.04 -si /usr/local -k apt -j8
 
 # Remove scapy for python3
 rm -rf /usr/local/lib/python3.5/site-packages/scapy*

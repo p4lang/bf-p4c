@@ -35,7 +35,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
-    testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
+    # testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -2026,7 +2026,7 @@ p4c_add_xfail_reason("tofino"
   ba102_simple_l3_mirror
 )
 
-# Nighly failures
+# p4_14_nightly_tofino
 p4c_add_xfail_reason("tofino"
   "error: add: action spanning multiple stages."
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/vindemiatrixs_0.p4
@@ -2050,6 +2050,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
+)
+
+# p4factory update
+p4c_add_xfail_reason("tofino"
+  "expected packet[s]* on port .* not seen"
+  testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
 )
 
 # P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
