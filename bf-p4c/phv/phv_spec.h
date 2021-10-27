@@ -340,7 +340,36 @@ class CloudbreakPhvSpec : public JBayPhvSpec {
 #endif /* HAVE_CLOUDBREAK */
 
 #if HAVE_FLATROCK
-class FlatrockPhvSpec : public TofinoPhvSpec {
+class FlatrockPhvSpec : public PhvSpec {
+ public:
+    FlatrockPhvSpec();
+
+    /// @see PhvSpec::parserGroup(unsigned id).
+    bitvec parserGroup(unsigned id) const override;
+
+    /// @see PhvSpec::parserGroupId(const PHV::Container &)
+    unsigned parserGroupId(const PHV::Container &c) const override;
+
+    /// @see PhvSpec::mauGroupId(const PHV::Container &)
+    unsigned mauGroupId(const PHV::Container &c) const override;
+
+    /// @see PhvSpec::deparserGroupId(const PHV::Container &)
+    unsigned deparserGroupId(const PHV::Container &c) const override;
+
+    const bitvec& individuallyAssignedContainers() const override;
+
+    /// @see PhvSpec::physicalAddress(unsigned container_id, BFN::ArchBlockType interface).
+    /// For Flatrock all interfaces are the same.
+    unsigned physicalAddress(unsigned container_id, ArchBlockType_t /*interface*/) const override;
+
+    /// @see PhvSpec::physicalAddressSpec(ArchBlockType_t)
+    /// For Flatrock all interfaces are the same
+    AddressSpec &physicalAddressSpec(ArchBlockType_t /* interface */) const override {
+        return _physicalAddresses;
+    }
+
+ private:
+    static AddressSpec _physicalAddresses;
 };
 #endif /* HAVE_FLATROCK */
 

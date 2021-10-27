@@ -226,6 +226,10 @@ void emit_phv_field(
     } else if (Device::currentDevice() == Device::CLOUDBREAK) {
         emit_stage_phv_field(out, field);
 #endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+    } else if (Device::currentDevice() == Device::FLATROCK) {
+        emit_stage_phv_field(out, field);
+#endif /* HAVE_FLATROCK */
     } else if (Device::currentDevice() == Device::TOFINO) {
         field->foreach_alloc([&](const PHV::AllocSlice& slice) {
             emit_alloc(out, slice, field);

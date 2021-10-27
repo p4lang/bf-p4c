@@ -725,6 +725,74 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
     return physicalRange.start + block * physicalRange.incr + blockOffset;
 }
 
+#if HAVE_FLATROCK
+// Static data member intializers for phv grouping on Flatrock
+PhvSpec::AddressSpec FlatrockPhvSpec::_physicalAddresses = {
+    {PHV::Type::B,  { .start = 0,   .blocks = 1, .blockSize = 128, .incr = 0 }},
+    {PHV::Type::H,  { .start = 128, .blocks = 1, .blockSize = 32,  .incr = 0 }},
+    {PHV::Type::W,  { .start = 160, .blocks = 1, .blockSize = 16,  .incr = 0 }},
+};
+
+FlatrockPhvSpec::FlatrockPhvSpec() {
+    addType(PHV::Type::B);
+    addType(PHV::Type::H);
+    addType(PHV::Type::W);
+
+    auto phv_scale_factor = BackendOptions().phv_scale_factor;
+    if (phv_scale_factor != 1.0)
+        P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for Tofino5");
+
+    // No groups on Flatrock, so we want all containers in a single "group".
+    // FIXME -- PHV alloc does not allow for different sizes in one group, so
+    // we make a group for each size with all the containers of that size.
+    sizeToTypeMap[PHV::Size::b8].insert(PHV::Type::B);
+    sizeToTypeMap[PHV::Size::b16].insert(PHV::Type::H);
+    sizeToTypeMap[PHV::Size::b32].insert(PHV::Type::W);
+    mauGroupSpec.emplace(PHV::Size::b8, MauGroupType(1, {{ PHV::Type::B, 128 }}));
+    mauGroupSpec.emplace(PHV::Size::b16, MauGroupType(1, {{ PHV::Type::H, 32 }}));
+    mauGroupSpec.emplace(PHV::Size::b32, MauGroupType(1, {{ PHV::Type::W, 16 }}));
+    containersPerGroup = 128;  // the max
+
+    ingressOnlyMauGroupIds = { };
+
+    egressOnlyMauGroupIds  = { };
+
+    tagalongCollectionSpec = { };
+
+    numTagalongCollections = 0;
+
+    deparserGroupSize = { };
+
+    deparserGroupSpec = { };
+
+    numPovBits = 128;
+}
+
+bitvec FlatrockPhvSpec::parserGroup(unsigned id) const {
+    return bitvec(id, 1);
+}
+
+unsigned FlatrockPhvSpec::parserGroupId(const PHV::Container &) const {
+    return 0;
+}
+
+unsigned FlatrockPhvSpec::mauGroupId(const PHV::Container &) const {
+    return 0;
+}
+
+unsigned FlatrockPhvSpec::deparserGroupId(const PHV::Container &) const {
+    return 0;
+}
+
+const bitvec& FlatrockPhvSpec::individuallyAssignedContainers() const {
+    return individually_assigned_containers_i;
+}
+
+unsigned FlatrockPhvSpec::physicalAddress(unsigned id, ArchBlockType_t) const {
+    return id;
+}
+#endif /* HAVE_FLATROCK */
+
 void PhvSpec::applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const {
     // clear all the cached values
     physical_containers_i.clear();
