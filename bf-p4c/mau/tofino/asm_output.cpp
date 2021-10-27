@@ -717,6 +717,7 @@ void emit_ixbar_gather_bytes(const PhvInfo &phv,
             continue;
         for (auto &fi : b.field_bytes) {
             auto field = phv.field(fi.get_use_name());
+            BUG_CHECK(field, "Field not found");
             le_bitrange field_bits = { fi.lo, fi.hi };
             // It is not a guarantee, especially in Tofino2 due to live ranges being different
             // that a FieldInfo is not corresponding to a single alloc_slice object
