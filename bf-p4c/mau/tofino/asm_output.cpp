@@ -836,3 +836,103 @@ void Tofino::IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, i
     }
 }
 
+/* FIXME -- this is really tofino-specific; we'll need a flatrock specific override, so this
+ * should become a Tofino::ActionDataBus::Use method and the base class method be abstract */
+bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
+                                      bitvec source) const {
+    auto &format = tbl->resources->action_format;
+    auto &meter_use = tbl->resources->meter_format;
+
+    bool first = true;
+    for (auto &rs : action_data_locs) {
+        if (!source.getbit(rs.source)) continue;
+        auto source_is_immed = (rs.source == ActionData::IMMEDIATE);
+        auto source_is_adt = (rs.source == ActionData::ACTION_DATA_TABLE);
+        auto source_is_meter = (rs.source == ActionData::METER_ALU);
+        BUG_CHECK(source_is_immed || source_is_adt || source_is_meter,
+                  "bad action data source %1%", rs.source);
+        if (source_is_meter &&
+            !meter_use.contains_adb_slot(rs.location.type, rs.byte_offset)) continue;
+        bitvec total_range(0, ActionData::slot_type_to_bits(rs.location.type));
+        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
+        if (!first)
+            out << ", ";
+        first = false;
+        out << rs.location.byte;
+        if (byte_sz > 1)
+            out << ".." << (rs.location.byte + byte_sz - 1);
+        out << " : ";
+
+        // For emitting hash distribution sections on the action_bus directly.  Must find
+        // which slices of hash distribution are to go to which bytes, requiring coordination
+        // from the input xbar and action format allocation
+        if (source_is_immed
+            && format.is_byte_offset<ActionData::Hash>(rs.byte_offset)) {
+            safe_vector<int> all_hash_dist_units = tbl->resources->hash_dist_immed_units();
+            bitvec slot_hash_dist_units;
+            int immed_lo = rs.byte_offset * 8;
+            int immed_hi = immed_lo + (8 << rs.location.type) - 1;
+            le_bitrange immed_range = { immed_lo, immed_hi };
+            for (int i = 0; i < 2; i++) {
+                le_bitrange immed_impact = { i * IXBar::HASH_DIST_BITS,
+                                             (i + 1) * IXBar::HASH_DIST_BITS - 1 };
+                if (!immed_impact.overlaps(immed_range))
+                    continue;
+                slot_hash_dist_units.setbit(i);
+            }
+
+            out << "hash_dist(";
+            // Find the particular hash dist units (if 32 bit, still potentially only one if)
+            // only certain bits are allocated
+            std::string sep = "";
+            for (auto bit : slot_hash_dist_units) {
+                if (all_hash_dist_units.at(bit) < 0) continue;
+                out << sep << all_hash_dist_units.at(bit);
+                sep = ", ";
+            }
+
+            // Byte slots need a particular byte range of hash dist
+            if (rs.location.type == ActionData::BYTE) {
+                int slot_range_shift = (immed_range.lo / IXBar::HASH_DIST_BITS);
+                slot_range_shift *= IXBar::HASH_DIST_BITS;
+                le_bitrange slot_range = immed_range.shiftedByBits(-1 * slot_range_shift);
+                out << ", " << slot_range.lo << ".." << slot_range.hi;
+            }
+            // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
+            // unit goes in the lo section or the hi section
+            if (slot_hash_dist_units.popcount() == 1) {
+                cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo" : "hi";
+                out << ", " << lo_hi;
+            }
+            out << ")";
+        } else if (source_is_immed
+                   && format.is_byte_offset<ActionData::RandomNumber>(rs.byte_offset)) {
+            int rng_unit = tbl->resources->rng_unit();
+            out << "rng(" << rng_unit << ", ";
+            int lo = rs.byte_offset * 8;
+            int hi = lo + byte_sz * 8 - 1;
+            out << lo << ".." << hi << ")";
+        } else if (source_is_immed
+                   && format.is_byte_offset<ActionData::MeterColor>(rs.byte_offset)) {
+            for (auto back_at : tbl->attached) {
+                auto at = back_at->attached;
+                auto *mtr = at->to<IR::MAU::Meter>();
+                if (mtr == nullptr) continue;
+                out << MauAsmOutput::find_attached_name(tbl, mtr) << " color";
+                break;
+            }
+        } else if (source_is_adt || source_is_immed) {
+            out << format.get_format_name(rs.location.type, rs.source, rs.byte_offset);
+        } else if (source_is_meter) {
+            auto *at = tbl->get_attached<IR::MAU::MeterBus2Port>();
+            BUG_CHECK(at != nullptr, "Trying to emit meter alu without meter alu user");
+            cstring ret_name = MauAsmOutput::find_attached_name(tbl, at);
+            out << ret_name;
+            out << "(" << (rs.byte_offset * 8) << ".." << ((rs.byte_offset + byte_sz) * 8 - 1)
+                << ")";
+        } else {
+            BUG("unhandled case in emit_adb_asm");
+        }
+    }
+    return !first;
+}

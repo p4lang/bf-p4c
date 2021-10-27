@@ -124,7 +124,9 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         ixbar[t->stage()]->update(t);
         if (!memory[t->stage()]) memory[t->stage()].reset(Memories::create());
         memory[t->stage()]->update(t->resources->memuse);
-        action_data_bus[t->stage()].update(t);
+        if (!action_data_bus[t->stage()])
+            action_data_bus[t->stage()].reset(ActionDataBus::create());
+        action_data_bus[t->stage()]->update(t);
         imems[t->stage()].update(t); }
     auto stage_pragma = t->get_provided_stage();
     if (t->match_table && t->stage_split <= 0 && stage_pragma >= 0 && t->stage() != stage_pragma) {

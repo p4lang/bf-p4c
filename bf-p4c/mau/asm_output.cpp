@@ -1018,138 +1018,20 @@ cstring format_name(int type) {
  */
 void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, bitvec source) const {
-    auto &action_data_xbar = tbl->resources->action_data_xbar;
-    auto &format = tbl->resources->action_format;
-    auto &meter_xbar = tbl->resources->meter_xbar;
-    auto &meter_use = tbl->resources->meter_format;
-    size_t max_total = 0;
+    bool have_ad = false, have_meter = false;
+    std::stringstream out_ad, out_meter;
 
-    for (auto &rs : action_data_xbar.action_data_locs) {
-        if (source.getbit(ActionData::IMMEDIATE) && (rs.source == ActionData::IMMEDIATE))
-            max_total++;
-        else if (source.getbit(ActionData::ACTION_DATA_TABLE) &&
-            (rs.source == ActionData::ACTION_DATA_TABLE))
-            max_total++; }
+    if (tbl->resources->action_data_xbar)
+        have_ad = tbl->resources->action_data_xbar->emit_adb_asm(out_ad, tbl, source);
+    if (tbl->resources->meter_xbar)
+        have_meter = tbl->resources->meter_xbar->emit_adb_asm(out_meter, tbl, source);
 
-    if (source.getbit(ActionData::METER_ALU)) {
-        for (auto &rs : meter_xbar.action_data_locs) {
-            if (meter_use.contains_adb_slot(rs.location.type, rs.byte_offset) &&
-                tbl->get_attached<IR::MAU::MeterBus2Port>())
-                max_total++;
-        }
-    }
-
-    if (max_total == 0)
-        return;
-
-    out << indent << "action_bus: { ";
-    size_t total_index = 0;
-    for (auto &rs : action_data_xbar.action_data_locs) {
-        auto emit_immed = source.getbit(ActionData::IMMEDIATE)
-                          && (rs.source == ActionData::IMMEDIATE);
-        auto emit_adt = source.getbit(ActionData::ACTION_DATA_TABLE)
-                        && (rs.source == ActionData::ACTION_DATA_TABLE);
-        if (!emit_immed && !emit_adt) continue;
-        auto source_is_immed = (rs.source == ActionData::IMMEDIATE);
-        bitvec total_range(0, ActionData::slot_type_to_bits(rs.location.type));
-        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
-        out << rs.location.byte;
-        if (byte_sz > 1)
-            out << ".." << (rs.location.byte + byte_sz - 1);
-        out << " : ";
-
-        // For emitting hash distribution sections on the action_bus directly.  Must find
-        // which slices of hash distribution are to go to which bytes, requiring coordination
-        // from the input xbar and action format allocation
-        if (emit_immed && source_is_immed
-            && format.is_byte_offset<ActionData::Hash>(rs.byte_offset)) {
-            safe_vector<int> all_hash_dist_units = tbl->resources->hash_dist_immed_units();
-            bitvec slot_hash_dist_units;
-            int immed_lo = rs.byte_offset * 8;
-            int immed_hi = immed_lo + (8 << rs.location.type) - 1;
-            le_bitrange immed_range = { immed_lo, immed_hi };
-            for (int i = 0; i < 2; i++) {
-                le_bitrange immed_impact = { i * IXBar::HASH_DIST_BITS,
-                                             (i + 1) * IXBar::HASH_DIST_BITS - 1 };
-                if (!immed_impact.overlaps(immed_range))
-                    continue;
-                slot_hash_dist_units.setbit(i);
-            }
-
-            out << "hash_dist(";
-            // Find the particular hash dist units (if 32 bit, still potentially only one if)
-            // only certain bits are allocated
-            std::string sep = "";
-            for (auto bit : slot_hash_dist_units) {
-                if (all_hash_dist_units.at(bit) < 0) continue;
-                out << sep << all_hash_dist_units.at(bit);
-                sep = ", ";
-            }
-
-            // Byte slots need a particular byte range of hash dist
-            if (rs.location.type == ActionData::BYTE) {
-                int slot_range_shift = (immed_range.lo / IXBar::HASH_DIST_BITS);
-                slot_range_shift *= IXBar::HASH_DIST_BITS;
-                le_bitrange slot_range = immed_range.shiftedByBits(-1 * slot_range_shift);
-                out << ", " << slot_range.lo << ".." << slot_range.hi;
-            }
-            // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
-            // unit goes in the lo section or the hi section
-            if (slot_hash_dist_units.popcount() == 1) {
-                cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo" : "hi";
-                out << ", " << lo_hi;
-            }
-            out << ")";
-        } else if (emit_immed && source_is_immed
-                   && format.is_byte_offset<ActionData::RandomNumber>(rs.byte_offset)) {
-            int rng_unit = tbl->resources->rng_unit();
-            out << "rng(" << rng_unit << ", ";
-            int lo = rs.byte_offset * 8;
-            int hi = lo + byte_sz * 8 - 1;
-            out << lo << ".." << hi << ")";
-        } else if (emit_immed && source_is_immed
-                   && format.is_byte_offset<ActionData::MeterColor>(rs.byte_offset)) {
-            for (auto back_at : tbl->attached) {
-                auto at = back_at->attached;
-                auto *mtr = at->to<IR::MAU::Meter>();
-                if (mtr == nullptr) continue;
-                out << find_attached_name(tbl, mtr) << " color";
-                break;
-            }
-        } else {
-            out << format.get_format_name(rs.location.type, rs.source, rs.byte_offset);
-        }
-        if (total_index != max_total - 1)
+    if (have_ad || have_meter) {
+        out << indent << "action_bus: { " << out_ad.str();
+        if (have_ad && have_meter)
             out << ", ";
-        else
-            out << " ";
-        total_index++;
+        out << out_meter.str() << " }" << std::endl;
     }
-
-    bool emit_meter_action_data = source.getbit(ActionData::METER_ALU);
-
-    for (auto &rs : meter_xbar.action_data_locs) {
-        if (!emit_meter_action_data) continue;
-        if (!meter_use.contains_adb_slot(rs.location.type, rs.byte_offset)) continue;
-        auto *at = tbl->get_attached<IR::MAU::MeterBus2Port>();
-        BUG_CHECK(at != nullptr, "Trying to emit meter alu without meter alu user");
-        cstring ret_name = find_attached_name(tbl, at);
-        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
-        out << rs.location.byte;
-        if (byte_sz > 1)
-            out << ".." << (rs.location.byte + byte_sz - 1);
-        out << " : ";
-        out << ret_name;
-        out << "(" << (rs.byte_offset * 8) << ".." << ((rs.byte_offset + byte_sz) * 8 - 1) << ")";
-        if (total_index != max_total - 1)
-            out << ", ";
-        else
-            out << " ";
-        total_index++;
-    }
-
-    out << "}" << std::endl;
-    BUG_CHECK(total_index == max_total, "max total mismatch");
 }
 
 /* Emits the format portion of tind tables and for exact match tables. */
@@ -3074,7 +2956,7 @@ std::string MauAsmOutput::build_sel_len_call(const IR::MAU::Selector *sel) const
 }
 
 cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
-        const IR::MAU::AttachedMemory *at) const {
+        const IR::MAU::AttachedMemory *at) {
     auto unique_id = tbl->unique_id();
     auto at_unique_id = tbl->unique_id(at);
     auto &memuse = tbl->resources->memuse.at(unique_id);
@@ -3089,7 +2971,7 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
 }
 
 ordered_set<UniqueId> MauAsmOutput::find_attached_ids(const IR::MAU::Table *tbl,
-    const IR::MAU::AttachedMemory *at) const {
+        const IR::MAU::AttachedMemory *at) {
     auto unique_id = tbl->unique_id();
     auto at_unique_id = tbl->unique_id(at);
     auto &memuse = tbl->resources->memuse.at(unique_id);

@@ -11,6 +11,14 @@ size_t slot_type_to_bits(SlotType_t slot_type) {
     return 1U << (static_cast<int>(slot_type) + 3);
 }
 
+SlotType_t bits_to_slot_type(size_t bits) {
+    BUG_CHECK(bits == 8 || bits == 16 || bits == 32,
+              "Invalid container size %zd in bits_to_slot_type", bits);
+    // SlotType_t enum: BYTE = 0, HALF = 1, FULL = 2
+    SlotType_t rv = static_cast<SlotType_t>(bits/16);
+    return rv;
+}
+
 bool Parameter::can_overlap_ranges(le_bitrange my_range, le_bitrange ad_range,
         le_bitrange &overlap, le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
@@ -945,6 +953,18 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
             rv.push_back({br.first, br.second});
         }
     }
+    return rv;
+}
+
+/**
+ * compute a byte mask for bytes that are present in the phv_bits
+ */
+bitvec ALUOperation::phv_bytes() const {
+    bitvec rv;
+    int bytes = _phv_bits.max().index()/8 + 1;
+    for (int i = 0; i < bytes; ++i)
+        if (_phv_bits.getrange(i*8, 8) != 0)
+            rv[i] = 1;
     return rv;
 }
 
@@ -3584,4 +3604,19 @@ std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use) 
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, ActionData::SlotType_t st) {
+    switch (st) {
+    case ActionData::BYTE:              out << "BYTE";          break;
+    case ActionData::HALF:              out << "HALF";          break;
+    case ActionData::FULL:              out << "FULL";          break;
+    case ActionData::DOUBLE_FULL:       out << "DOUBLE_FULL";   break;
+    default:            out << "SlotType_T(" << int(st) << ")"; }
+    return out;
+}
+
 void dump(const ActionData::Format::Use &u) { std::cout << u << std::endl; }
+void dump(const ActionData::Format::Use *u) { std::cout << *u << std::endl; }
+void dump(const ActionData::ALUPosition &pos) { std::cout << pos << std::endl; }
+void dump(const ActionData::ALUPosition *pos) { std::cout << *pos << std::endl; }
+void dump(const ActionData::ALUOperation &op) { std::cout << op << std::endl; }
+void dump(const ActionData::ALUOperation *op) { std::cout << *op << std::endl; }

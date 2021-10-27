@@ -305,20 +305,22 @@ void ResourcesLogging::collectActionBusBytesUsage(unsigned int stage,
                                                   const TableResourceAlloc *res,
                                                   cstring tableName) {
     const std::string tableNameStr = stripLeadingDot(tableName.c_str());
-    auto &action_data_xbar = res->action_data_xbar;
-    auto &meter_xbar = res->meter_xbar;
 
-    for (auto &rs : action_data_xbar.action_data_locs) {
-        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
-        for (auto i = 0; i < byte_sz; i++) {
-            stageResources[stage].actionBusBytes[rs.location.byte+i].append(tableNameStr);
+    if (auto &action_data_xbar = res->action_data_xbar) {
+        for (auto &rs : action_data_xbar->action_data_locs) {
+            int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
+            for (auto i = 0; i < byte_sz; i++) {
+                stageResources[stage].actionBusBytes[rs.location.byte+i].append(tableNameStr);
+            }
         }
     }
 
-    for (auto &rs : meter_xbar.action_data_locs) {
-        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
-        for (auto i = 0; i < byte_sz; i++) {
-            stageResources[stage].actionBusBytes[rs.location.byte+i].append(tableNameStr);
+    if (auto &meter_xbar = res->meter_xbar) {
+        for (auto &rs : meter_xbar->action_data_locs) {
+            int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
+            for (auto i = 0; i < byte_sz; i++) {
+                stageResources[stage].actionBusBytes[rs.location.byte+i].append(tableNameStr);
+            }
         }
     }
 
@@ -592,7 +594,7 @@ ResourcesLogging::ActionDataResourceUsage*
 ResourcesLogging::logActionBusBytes(unsigned int stageNo) const {
     using ActionDataByteUsage = Resources_Schema_Logger::ActionDataByteUsage;
 
-    const int size = ActionDataBus::ADB_BYTES;
+    const int size = ActionDataBus::getAdbSize();
 
     auto adru = new ActionDataResourceUsage(size);
 

@@ -380,6 +380,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
+  mau/tofino/action_data_bus.cpp
   mau/tofino/asm_output.cpp
   mau/tofino/input_xbar.cpp
   mau/tofino/memories.cpp
@@ -388,6 +389,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}
 build_unified(BF_P4C_BACKEND_MAU_TOFINO_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
+  mau/flatrock/action_data_bus.cpp
   mau/flatrock/asm_output.cpp
   mau/flatrock/input_xbar.cpp
   )
@@ -455,12 +457,14 @@ set (BF_P4C_BACKEND_MAU_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 
 set (BF_P4C_BACKEND_MAU_TOFINO_HDRS
+  mau/tofino/action_data_bus.h
   mau/tofino/input_xbar.h
   mau/tofino/memories.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_HDRS}")
 
 set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
+  mau/flatrock/action_data_bus.h
   mau/flatrock/input_xbar.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")

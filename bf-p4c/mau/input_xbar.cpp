@@ -6,7 +6,9 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/tofino/input_xbar.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/mau/flatrock/input_xbar.h"
+#endif
 #include "bf-p4c/phv/phv_fields.h"
 #include "dynamic_hash/dynamic_hash.h"
 #include "lib/algorithm.h"

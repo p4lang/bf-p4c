@@ -28,11 +28,16 @@ class Format : public MauInspector {
         ///> ADB inputs on home row for all tables that share this associated attached memory
         ActionData::BusInputs meter_alu_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
 
+        safe_vector<const ActionData::ALUPosition *> all_alu_positions() const {
+            safe_vector<const ActionData::ALUPosition *> rv;
+            for (auto &act : alu_positions)
+                for (auto &pos : act.second)
+                    rv.push_back(&pos);
+            return rv; }
         void clear() {
             alu_positions.clear();
             table_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
-            meter_alu_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
-        }
+            meter_alu_bus_inputs = {{ bitvec(), bitvec(), bitvec() }}; }
 
         bool contains_adb_slot(ActionData::SlotType_t type, int start_byte) const;
     };

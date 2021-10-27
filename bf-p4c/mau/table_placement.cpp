@@ -1615,19 +1615,19 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
     BUG_CHECK(next->use.preferred_action_format() != nullptr,
               "A non gateway table has a null action data format allocation");
 
-    ActionDataBus current_adb;
-    next->resources.action_data_xbar.clear();
-    next->resources.meter_xbar.clear();
+    std::unique_ptr<ActionDataBus> current_adb(ActionDataBus::create());
+    next->resources.action_data_xbar.reset();
+    next->resources.meter_xbar.reset();
 
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        current_adb.update(p->name, &p->resources, p->table);
+        current_adb->update(p->name, &p->resources, p->table);
     }
-    if (!current_adb.alloc_action_data_bus(next->table, next->use.preferred_action_format(),
-                                           next->resources)) {
+    if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_action_format(),
+                                            next->resources)) {
         error_message = "The table " + next->table->name + " could not fit in within the "
                         "action data bus";
         LOG3("    " << error_message);
-        next->resources.action_data_xbar.clear();
+        next->resources.action_data_xbar.reset();
         next->stage_advance_log = "ran out of action data bus space";
         return false;
     }
@@ -1635,21 +1635,21 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
     /**
      * allocate meter output on adb
      */
-    if (!current_adb.alloc_action_data_bus(next->table,
-            next->use.preferred_meter_format(), next->resources)) {
+    if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_meter_format(),
+                                            next->resources)) {
         error_message = "The table " + next->table->name + " could not fit its meter "
                         " output in within the action data bus";
         LOG3(error_message);
-        next->resources.meter_xbar.clear();
+        next->resources.meter_xbar.reset();
         next->stage_advance_log = "ran out of action data bus space for meter output";
         return false;
     }
 
-    ActionDataBus adb_update;
+    std::unique_ptr<ActionDataBus> adb_update(ActionDataBus::create());
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        adb_update.update(p->name, &p->resources, p->table);
+        adb_update->update(p->name, &p->resources, p->table);
     }
-    adb_update.update(next->name, &next->resources, next->table);
+    adb_update->update(next->name, &next->resources, next->table);
     return true;
 }
 

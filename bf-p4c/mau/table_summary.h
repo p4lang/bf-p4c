@@ -127,11 +127,11 @@ class TableSummary: public MauInspector {
     /// Map of table pointers to the names used for communicating table placement information
     ordered_map<cstring, cstring> tableNames;
 
-    std::map<int, const IR::MAU::Table *>    order;
-    std::map<int, std::unique_ptr<IXBar>>    ixbar;
-    std::map<int, std::unique_ptr<Memories>> memory;
-    std::map<int, ActionDataBus>             action_data_bus;
-    std::map<int, InstructionMemory>         imems;
+    std::map<int, const IR::MAU::Table *>               order;
+    std::map<int, std::unique_ptr<IXBar>>               ixbar;
+    std::map<int, std::unique_ptr<Memories>>            memory;
+    std::map<int, std::unique_ptr<ActionDataBus>>       action_data_bus;
+    std::map<int, InstructionMemory>                    imems;
 
     /// Sum of all resources being used for all stages on last pass
     StageUseEstimate allStages;

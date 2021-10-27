@@ -411,6 +411,10 @@ struct ALUParameter {
     const Parameter *param;
     le_bitrange phv_bits;
     // @seealso ALUOperation::read_bits
+
+    /* actually a rotate, not a shift -- the number of bits the destination PHV needs to
+     * be rotated by to match up with this source.  So it turns out to be the number of bits
+     * this parameter needs to left-rotate */
     int right_shift;
 
     safe_vector<le_bitrange> slot_bits_brs(PHV::Container cont) const;
@@ -506,8 +510,8 @@ class ALUOperation {
         return false;
     }
 
-
     bitvec phv_bits() const { return _phv_bits; }
+    bitvec phv_bytes() const;
     bitvec mask_bits() const { return _mask_bits; }
     bitvec slot_bits() const {
         BUG_CHECK(_right_shift_set, "Unsafe call of slot bits in action format");
@@ -672,6 +676,7 @@ class PackingConstraint {
 
 enum SlotType_t { BYTE, HALF, FULL, SLOT_TYPES, DOUBLE_FULL = SLOT_TYPES, SECT_TYPES = 4 };
 size_t slot_type_to_bits(SlotType_t type);
+SlotType_t bits_to_slot_type(size_t bits);
 
 using BusInputs = std::array<bitvec, SLOT_TYPES>;
 
@@ -962,6 +967,13 @@ class Format {
             return is_template;
         }
         const RamSection *build_locked_in_sect() const;
+
+        safe_vector<const ALUPosition *> all_alu_positions() const {
+            safe_vector<const ALUPosition *> rv;
+            for (auto &act : alu_positions)
+                for (auto &pos : act.second)
+                    rv.push_back(&pos);
+            return rv; }
     };
 
  private:
@@ -1062,5 +1074,6 @@ class Format {
 // the standard.
 std::ostream &operator<<(std::ostream &, ActionData::Location_t);
 std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use);
+std::ostream &operator<<(std::ostream &, ActionData::SlotType_t);
 
 #endif  /* EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_ */

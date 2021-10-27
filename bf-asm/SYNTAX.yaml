@@ -192,11 +192,14 @@ stage <constant> <thread>:
             # vpn values to use for rams
         input_xbar:
             # Input xbar config for this table
-            group <constant>: <phv-location> | '[' <phv_location>, ... ']' |
+            <group-name>: <phv-location> | '[' <phv_location>, ... ']' |
                 { <int>: <phv_location> | <int>..<int>: <phv_location>,... }
-                # One or more registers to be mapped into the specified match group
-                # in order or at the locations specified,
-            hash <constant>:
+            [<type>] group <constant>: ...  # tofino 1/2/3 group names
+            <type> [<constant>|<size>]: ...  # tofino 5 group names
+                # One or more registers to be mapped into the specified ixbar group
+                # in order or at the locations specified.  Locations are bit offsets in
+                # the group (even for groups that are not bit-addressable
+            hash [table] <constant>:
                 # hash table config
                 <int>: <hash>
                     # specify one column of the table -- hash is a 64-bit constant
@@ -256,11 +259,13 @@ stage <constant> <thread>:
                     # group.
                 <int>
                     # a single table to use for the group
-            group <constant>: '[]'
-            - group <constant>
+            <group-name>: '[]'
+            - <group-name>
                 # use an xbar group configured elsewhere
             random_seed: <constant>
                 # random seed from pragma for the table
+            <type> unit: <vector>
+                # match unit(s) to use (tofino5)
         gateway:
             # gateway table on this table -- see below
         format: { <name>: <range>, <name>: <size> ... }

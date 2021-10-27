@@ -72,12 +72,8 @@ safe_vector<int> TableResourceAlloc::hash_dist_immed_units() const {
  * Returns which rng unit has been assigned to this table
  */
 int TableResourceAlloc::rng_unit() const {
-    int rv = -1;
-    if (action_data_xbar.rng_locs.empty())
-        return rv;
-    BUG_CHECK(action_data_xbar.rng_locs.size() == 1, "Current allocation can only allocate one "
-        "rng unit per table");
-    return action_data_xbar.rng_locs.at(0).unit;
+    if (action_data_xbar) return action_data_xbar->rng_unit();
+    return -1;
 }
 
 std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
