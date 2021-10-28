@@ -5,6 +5,7 @@
 #include <iterator>
 #include <memory>
 
+#include "action_data_bus.h"
 #include "boost/range/adaptor/reversed.hpp"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/ir_utils.h"
@@ -836,10 +837,8 @@ void Tofino::IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, i
     }
 }
 
-/* FIXME -- this is really tofino-specific; we'll need a flatrock specific override, so this
- * should become a Tofino::ActionDataBus::Use method and the base class method be abstract */
-bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
-                                      bitvec source) const {
+bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
+                                              bitvec source) const {
     auto &format = tbl->resources->action_format;
     auto &meter_use = tbl->resources->meter_format;
 

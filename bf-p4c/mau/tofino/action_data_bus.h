@@ -85,6 +85,7 @@ struct ActionDataBus : public ::ActionDataBus {
             ::ActionDataBus::Use::clear();
             rng_locs.clear(); }
         Use *clone() const override { return new Use(*this); }
+        bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const override;
         bool empty() const override { return ::ActionDataBus::Use::empty() && rng_locs.empty(); }
         int rng_unit() const override;
 

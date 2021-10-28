@@ -32,6 +32,7 @@ struct ActionDataBus : public ::ActionDataBus {
 
     struct Use : public ::ActionDataBus::Use {
         Use *clone() const override { return new Use(*this); }
+        bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const override;
         int rng_unit() const override { return -1; }
 
         safe_vector<std::pair<int, int>>        action_alus;

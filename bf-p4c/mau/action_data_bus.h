@@ -90,7 +90,7 @@ struct ActionDataBus {
             action_data_locs.clear();
             clobber_locs.clear(); }
         virtual Use *clone() const = 0;
-        virtual bool emit_adb_asm(std::ostream &, const IR::MAU::Table *tbl, bitvec source) const;
+        virtual bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const = 0;
         virtual bool empty() const { return action_data_locs.empty() && clobber_locs.empty(); }
         virtual int rng_unit() const = 0;
     };
