@@ -27,7 +27,7 @@ class HashMatchSource : public MatchSource {
 
  public:
     int lineno = 0;
-    HashMatchSource(int line, int l, int h) : lineno(line), lo(l), hi(h) {}
+    HashMatchSource(int line, int l, int h) : lo(l), hi(h), lineno(line) {}
     explicit HashMatchSource(value_t value) {
         if (CHECKTYPE(value, tCMD)) {
             lineno = value.lineno;

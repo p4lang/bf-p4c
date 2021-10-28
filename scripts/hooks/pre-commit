@@ -56,7 +56,7 @@ class Linter:
         files = self.getFiles()
         if len(files) > 0:
             linter=['python3', os.path.join(p4cdir, 'tools', 'cpplint.py'),
-                    '--quiet', '--root', self._basedir ]
+                    '--quiet', '--root', repo ]
             args = linter + files
             if self._verbose:
                 print(args)

@@ -13,5 +13,5 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::Flatrock>() {
 }
 
 template<> void Deparser::write_config(Target::Flatrock::deparser_regs&) {
-    BUG("TBD");
+    error(lineno[0], "Flatrock deparser not implemented yet");
 }

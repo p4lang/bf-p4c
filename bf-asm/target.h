@@ -64,39 +64,49 @@
 #define PER_TARGET_CONSTANTS(M) \
     M(const char *, name) \
     M(target_t, register_set)  \
-    M(int, PARSER_CHECKSUM_UNITS) \
-    M(bool, PARSER_EXTRACT_BYTES) \
-    M(int, MATCH_BYTE_16BIT_PAIRS) \
-    M(int, DEPARSER_MAX_FD_ENTRIES) \
-    M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
+    M(int, DEPARSER_CHECKSUM_UNITS) \
     M(int, DEPARSER_CONSTANTS) \
+    M(int, DEPARSER_MAX_FD_ENTRIES) \
+    M(int, DEPARSER_MAX_POV_BYTES) \
+    M(int, END_OF_PIPE) \
     M(int, GATEWAY_PAYLOAD_GROUPS) \
+    M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
     M(int, LONG_BRANCH_TAGS) \
-    M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
-    M(int, NUM_MAU_STAGES_PRIVATE) M(int, END_OF_PIPE) \
-    M(bool, SUPPORT_TRUE_EOP) \
-    M(int, PHASE0_FORMAT_WIDTH) \
-    M(int, STATEFUL_CMP_UNITS) \
-    M(int, STATEFUL_CMP_ADDR_WIDTH) M(int, STATEFUL_CMP_CONST_WIDTH) \
-    M(int, STATEFUL_CMP_CONST_MASK) \
-    M(int, STATEFUL_CMP_CONST_MIN) M(int, STATEFUL_CMP_CONST_MAX) \
-    M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
-    M(int, STATEFUL_REGFILE_CONST_WIDTH) M(int, STATEFUL_REGFILE_ROWS) \
-    M(int, STATEFUL_TMATCH_UNITS) \
+    M(int, MATCH_BYTE_16BIT_PAIRS) \
+    M(int, MAU_BASE_DELAY) \
+    M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, METER_ALU_GROUP_DATA_DELAY) \
+    M(int, MINIMUM_INSTR_CONSTANT) \
+    M(int, NUM_MAU_STAGES_PRIVATE) \
+    M(int, NUM_PARSERS) \
+    M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
+    M(int, PARSER_CHECKSUM_UNITS) \
+    M(bool, PARSER_EXTRACT_BYTES) \
+    M(int, PHASE0_FORMAT_WIDTH) \
+    M(int, STATEFUL_ALU_ADDR_WIDTH) \
+    M(int, STATEFUL_ALU_CONST_MASK) \
+    M(int, STATEFUL_ALU_CONST_MAX) \
+    M(int, STATEFUL_ALU_CONST_MIN) \
+    M(int, STATEFUL_ALU_CONST_WIDTH) \
+    M(int, STATEFUL_CMP_ADDR_WIDTH) \
+    M(int, STATEFUL_CMP_CONST_MASK) \
+    M(int, STATEFUL_CMP_CONST_MAX) \
+    M(int, STATEFUL_CMP_CONST_MIN) \
+    M(int, STATEFUL_CMP_CONST_WIDTH) \
+    M(int, STATEFUL_CMP_UNITS) \
+    M(int, STATEFUL_OUTPUT_UNITS) \
+    M(int, STATEFUL_PRED_MASK) \
+    M(int, STATEFUL_REGFILE_CONST_WIDTH) \
+    M(int, STATEFUL_REGFILE_ROWS) \
+    M(int, STATEFUL_TMATCH_UNITS) \
     M(bool, SUPPORT_ALWAYS_RUN) \
-    M(bool, HAS_MPR) \
     M(bool, SUPPORT_CONCURRENT_STAGE_DEP) \
     M(bool, SUPPORT_OVERFLOW_BUS) \
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
-    M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
-    M(int, STATEFUL_ALU_ADDR_WIDTH) M(int, STATEFUL_ALU_CONST_WIDTH) \
-    M(int, STATEFUL_ALU_CONST_MASK) \
-    M(int, STATEFUL_ALU_CONST_MIN) M(int, STATEFUL_ALU_CONST_MAX) \
-    M(int, MINIMUM_INSTR_CONSTANT) \
+    M(bool, SUPPORT_TRUE_EOP) \
     M(bool, TABLES_REQUIRE_ROW) \
-    M(int, NUM_PARSERS)
+    M(bool, TABLES_REQUIRE_WAYS) \
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
 
@@ -225,6 +235,7 @@ class Target::Tofino : public Target {
         NUM_PARSERS = 18,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
         TABLES_REQUIRE_ROW = 1,
+        TABLES_REQUIRE_WAYS = true,
     };
     static int encodeConst(int src) {
         return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
@@ -349,6 +360,7 @@ class Target::JBay : public Target {
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 36,
         TABLES_REQUIRE_ROW = 1,
+        TABLES_REQUIRE_WAYS = true,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -519,6 +531,7 @@ class Target::Cloudbreak : public Target {
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 36,
         TABLES_REQUIRE_ROW = 1,
+        TABLES_REQUIRE_WAYS = true,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -577,15 +590,11 @@ class Target::Flatrock : public Target {
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
-        DEPARSER_CHECKSUM_UNITS = 0,
+        DEPARSER_CHECKSUM_UNITS = 4,
         DEPARSER_CONSTANTS = 0,
-        DEPARSER_MAX_POV_BYTES = 0,
-        DEPARSER_CHUNKS_PER_GROUP = 0,
-        DEPARSER_CHUNK_SIZE = 0,
-        DEPARSER_CHUNK_GROUPS = 0,
+        DEPARSER_MAX_POV_BYTES = 16,
         DEPARSER_CLOTS_PER_GROUP = 0,
-        DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
-        DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
+        DEPARSER_MAX_FD_ENTRIES = 256,  // actuall up to 32 "strings", each up to 16 bytes
         END_OF_PIPE = 0xfff,
         GATEWAY_PAYLOAD_GROUPS = 4,
         INSTR_SRC2_BITS = 0,
@@ -618,6 +627,7 @@ class Target::Flatrock : public Target {
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 1,
         TABLES_REQUIRE_ROW = 0,
+        TABLES_REQUIRE_WAYS = false,
     };
     static int encodeConst(int src) {
         return src;

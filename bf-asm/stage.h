@@ -94,10 +94,13 @@ class Stage : public Stage_data {
     Stage(Stage &&);
     ~Stage();
     template<class TARGET> void output(json::map &ctxt_json);
+    template<class REGS> void fixup_regs(REGS &regs);
     template<class REGS>
         void gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache);
     template<class REGS>
         void gen_configuration_cache(REGS &regs, json::vector &cfg_cache);
+    template<class REGS>
+        void gen_gfm_json_info(REGS &regs, std::ostream &out);
     template<class REGS>
         void gen_mau_stage_characteristics(REGS &regs, json::vector &stg_characteristics);
     template<class REGS>

@@ -632,6 +632,76 @@ void Stage::log_hashes(std::ofstream& out) const {
   out << std::endl;
 }
 
+template<class REGS>
+void Stage::gen_gfm_json_info(REGS &regs, std::ostream &out) {
+    auto &hash = regs.dp.xbar_hash.hash;
+    auto &gfm  = hash.galois_field_matrix;
+    out << &gfm << "\n";
+    out << "Col  :    ";
+    for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
+        out << std::setw(3) << c;
+    }
+    out << " | Row Parity \n";
+    for (auto r = 0; r < gfm.size(); r++) {
+        out << "Row " << std::dec << r << ": \n";
+        out << "  Byte 0 :";
+        unsigned byte0_parity = 0;
+        unsigned byte1_parity = 0;
+        for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
+            out << std::setw(3) << std::hex << gfm[r][c].byte0;
+            byte0_parity ^= gfm[r][c].byte0;
+        }
+        out << " | " << std::setw(3) << parity(byte0_parity) << "\n";
+        out << "  Byte 1 :";
+        for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
+            out << std::setw(3) << std::hex << gfm[r][c].byte1;
+            byte1_parity ^= gfm[r][c].byte0;
+        }
+        out << " | " << std::setw(3) << parity(byte1_parity) << "\n";
+    }
+
+    out << "\n";
+    auto &grp_enable = regs.dp.hashout_ctl.hash_parity_check_enable;
+    for (int grp = 0; grp < 8; grp++) {
+        out << "Hash Group : " << grp << "\n";
+        out << "Hash Seed : ";
+        int seed_parity = 0;
+        bitvec hash_seed;
+        for (int bit = 51; bit >= 0; bit--) {
+            auto seed_bit = (hash.hash_seed[bit] >> grp) & 0x1;
+            hash_seed[bit] = seed_bit;
+            out << seed_bit;
+            seed_parity ^= seed_bit;
+        }
+        out << " (" << hash_seed << ")";
+        out << "\n";
+        auto seed_parity_enable = ((grp_enable >> grp) & 0x1) ? "True" : "False";
+        out << "Hash Seed Parity Enable : " << seed_parity_enable;
+        out << "\n";
+        out << "Hash Seed Parity : " << (seed_parity ? "Odd" : "Even");
+        out << "\n";
+        out << "\n";
+    }
+}
+
+template<class REGS>
+void Stage::fixup_regs(REGS &regs) {
+    if (options.condense_json) {
+        // if any part of the gf matrix is enabled, we can't elide any part of it when
+        // generating .cfg.json, as otherwise walle will generate an invalid block write
+        if (options.gen_json && !regs.dp.xbar_hash.hash.galois_field_matrix.disabled())
+            regs.dp.xbar_hash.hash.galois_field_matrix.enable(); }
+    // Enable mapram_config and imem regs -
+    // These are cached by the driver, so if they are disabled they wont go
+    // into tofino.bin as dma block writes and driver will complain
+    // The driver needs the regs to do parity error correction at runtime and it
+    // checks for the base address of the register blocks to do a block DMA
+    // during tofino.bin download
+    regs.dp.imem.enable();
+    for (int row = 0; row < SRAM_ROWS; row++)
+        for (int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
+            regs.rams.map_alu.row[row].adrmux.mapram_config[col].enable();
+}
 
 template<class TARGET>
 void Stage::output(json::map &ctxt_json) {
@@ -646,73 +716,13 @@ void Stage::output(json::map &ctxt_json) {
     write_regs(*regs);
 
     // Output GFM
-    if (gfm_out) {
-        auto &hash = regs->dp.xbar_hash.hash;
-        auto &gfm  = hash.galois_field_matrix;
-        *gfm_out << &gfm << "\n";
-        *gfm_out << "Col  :    ";
-        for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
-            *gfm_out << std::setw(3) << c;
-        }
-        *gfm_out << " | Row Parity \n";
-        for (auto r = 0; r < gfm.size(); r++) {
-            *gfm_out << "Row " << std::dec << r << ": \n";
-            *gfm_out << "  Byte 0 :";
-            unsigned byte0_parity = 0;
-            unsigned byte1_parity = 0;
-            for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
-                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte0;
-                byte0_parity ^= gfm[r][c].byte0;
-            }
-            *gfm_out << " | " << std::setw(3) << parity(byte0_parity) << "\n";
-            *gfm_out << "  Byte 1 :";
-            for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
-                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte1;
-                byte1_parity ^= gfm[r][c].byte0;
-            }
-            *gfm_out << " | " << std::setw(3) << parity(byte1_parity) << "\n";
-        }
+    if (gfm_out)
+        gen_gfm_json_info(*regs, *gfm_out);
 
-        *gfm_out << "\n";
-        auto &grp_enable = regs->dp.hashout_ctl.hash_parity_check_enable;
-        for (int grp = 0; grp < 8; grp++) {
-            *gfm_out << "Hash Group : " << grp << "\n";
-            *gfm_out << "Hash Seed : ";
-            int seed_parity = 0;
-            bitvec hash_seed;
-            for (int bit = 51; bit >= 0; bit--) {
-                auto seed_bit = (hash.hash_seed[bit] >> grp) & 0x1;
-                hash_seed[bit] = seed_bit;
-                *gfm_out << seed_bit;
-                seed_parity ^= seed_bit;
-            }
-            *gfm_out << " (" << hash_seed << ")";
-            *gfm_out << "\n";
-            auto seed_parity_enable = ((grp_enable >> grp) & 0x1) ? "True" : "False";
-            *gfm_out << "Hash Seed Parity Enable : " << seed_parity_enable;
-            *gfm_out << "\n";
-            *gfm_out << "Hash Seed Parity : " << (seed_parity ? "Odd" : "Even");
-            *gfm_out << "\n";
-            *gfm_out << "\n";
-        }
-    }
-
-    if (options.condense_json) {
+    if (options.condense_json)
         regs->disable_if_reset_value();
-        // if any part of the gf matrix is enabled, we can't elide any part of it when
-        // generating .cfg.json, as otherwise walle will generate an invalid block write
-        if (options.gen_json && !regs->dp.xbar_hash.hash.galois_field_matrix.disabled())
-            regs->dp.xbar_hash.hash.galois_field_matrix.enable(); }
-    // Enable mapram_config and imem regs -
-    // These are cached by the driver, so if they are disabled they wont go
-    // into tofino.bin as dma block writes and driver will complain
-    // The driver needs the regs to do parity error correction at runtime and it
-    // checks for the base address of the register blocks to do a block DMA
-    // during tofino.bin download
-    regs->dp.imem.enable();
-    for (int row = 0; row < SRAM_ROWS; row++)
-        for (int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
-            regs->rams.map_alu.row[row].adrmux.mapram_config[col].enable();
+
+    fixup_regs(*regs);
     if (error_count == 0 && options.gen_json)
         regs->emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];

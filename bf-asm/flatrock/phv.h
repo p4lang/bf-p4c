@@ -13,7 +13,7 @@ class Target::Flatrock::Phv : public Target::Phv {
     };
     void init_regs(::Phv &phv) override;
     target_t type() const override { return FLATROCK; }
-    unsigned mau_groupsize() const override { return 1; }
+    unsigned mau_groupsize() const override { return 256; }  // all in the same group
 };
 
 #endif /* BF_ASM_FLATROCK_PHV_H_ */

@@ -641,7 +641,8 @@ void SRamMatchTable::setup_hash_function_ids() {
 void SRamMatchTable::setup_ways() {
     unsigned fmt_width = (format->size + 127)/128;
     if (ways.empty()) {
-        error(lineno, "No ways defined in table %s", name());
+        if (Target::TABLES_REQUIRE_WAYS())
+            error(lineno, "No ways defined in table %s", name());
     } else if (ways[0].rams.empty()) {
         for (auto &w : ways)
             if (!w.rams.empty()) {
