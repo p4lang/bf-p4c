@@ -494,11 +494,26 @@ PhvInfo::fields_in_container(const PHV::Container c) const {
     return empty_list;
 }
 
-const std::vector<PHV::AllocSlice>
+std::vector<PHV::AllocSlice>
 PhvInfo::get_slices_in_container(const PHV::Container c) const {
     std::vector<PHV::AllocSlice> rv;
     for (auto* field : fields_in_container(c)) {
         field->foreach_alloc([&](const PHV::AllocSlice &alloc) {
+            if (alloc.container() != c) return;
+            rv.push_back(alloc);
+        });
+    }
+    return rv;
+}
+
+std::vector<PHV::AllocSlice>
+PhvInfo::get_slices_in_container(
+        const PHV::Container c,
+        const PHV::AllocContext *ctxt,
+        const PHV::FieldUse* use) const {
+    std::vector<PHV::AllocSlice> rv;
+    for (auto* field : fields_in_container(c)) {
+        field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
             if (alloc.container() != c) return;
             rv.push_back(alloc);
         });

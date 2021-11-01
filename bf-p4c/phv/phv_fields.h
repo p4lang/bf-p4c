@@ -1479,8 +1479,18 @@ class PhvInfo {
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
     /// @returns the set of alloc slices assigned to a container @c.
-    const std::vector<PHV::AllocSlice>
+    std::vector<PHV::AllocSlice>
         get_slices_in_container(const PHV::Container c) const;
+
+    /** @returns the set of alloc slices assigned to a container @c within a context.
+     *  The context is one of ParserState, Table/Stage, Deparser. A null context represents the
+     *  entire pipeline.
+     */
+    std::vector<PHV::AllocSlice>
+        get_slices_in_container(
+            const PHV::Container c,
+            const PHV::AllocContext *ctxt,
+            const PHV::FieldUse* use) const;
 
     /** @returns a bitvec showing all potentially allocated bits within a container,
      *  within the @p ctxt context.

@@ -767,7 +767,9 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
                 phv.bits_allocated(container, field, PHV::AllocContext::DEPARSER);
 
             // Go through the analysis described above.
-            for (const auto& alloc_slice : phv.get_slices_in_container(container)) {
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            for (const auto& alloc_slice :
+                 phv.get_slices_in_container(container, PHV::AllocContext::DEPARSER, &use)) {
                 const auto* other_field = alloc_slice.field();
 
                 // Ignore if field and other_field are mutually exclusive.
