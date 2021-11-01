@@ -1472,6 +1472,7 @@ bool ActionPhvConstraints::stateful_destinations_constraints_violated(
     size_t size = static_cast<size_t>(container_state.begin()->container().size());
     LOG6("\t\t\tContainer size: " << size);
     const auto& statefulWrites = constraint_tracker.getStatefulWrites();
+    ordered_map<const PHV::Field*, ordered_map<le_bitrange, int>> field_to_rot;
     for (const auto& slice : container_state) {
         if (!statefulWrites.count(slice.field())) continue;
         for (auto kv : statefulWrites.at(slice.field())) {
@@ -1500,7 +1501,24 @@ bool ActionPhvConstraints::stateful_destinations_constraints_violated(
                     LOG7("\t\t\t\thi factor: " << (written_field_slice.hi - write_range.second));
                 }
                 LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
-                if (read_range.first / size == read_range.second / size) continue;
+                if (read_range.first / size == read_range.second / size) {
+                    // Validate that all of the slice of the same field of the same container
+                    // written by a stateful action can share the same rotation.
+                    int cur_rot = read_range.first - slice.container_slice().lo;
+                    if (field_to_rot.count(slice.field()) &&
+                        field_to_rot[slice.field()].count(kv.first)) {
+                        int prev_rot = field_to_rot[slice.field()][kv.first];
+                        if (prev_rot != cur_rot) {
+                            LOG5("\t\t\tThe rotation of " << slice << " is not equal to other "
+                                 "slice of the same field carried in the same container. "
+                                 "Thereforce, this packing is not possible.");
+                            return true;
+                        }
+                    } else {
+                        field_to_rot[slice.field()][kv.first] = cur_rot;
+                    }
+                    continue;
+                }
                 LOG5("\t\t\tThe alignment of " << slice << " would force the data for ALU operation"
                      "to go to multiple action data bus slots. Therefore, this packing "
                      "is not possible.");
