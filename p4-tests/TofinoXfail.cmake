@@ -1380,7 +1380,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/runtime-index-bmv2.p4
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
   testdata/p4_16_samples/predication_issue_2.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
   testdata/p4_16_samples/issue2726-bmv2.p4
   testdata/p4_16_samples/issue1989-bmv2.p4
 )
@@ -2068,4 +2067,17 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device"
   COMPILER-1186
+)
+# P4C update 2021-10-19
+p4c_add_xfail_reason("tofino"
+  "error: Assignment source cannot be evaluated in the parser"
+  testdata/p4_16_samples/invalid-hdr-warnings1.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Can only switch on table"
+  testdata/p4_16_samples/invalid-hdr-warnings3.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Null f"
+  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
 )

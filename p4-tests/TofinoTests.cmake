@@ -13,6 +13,7 @@ set (V1_EXCLUDE_FILES
     "issue1079-bmv2\\.p4"
     "issue2291\\.p4"
     "header-stack-ops-bmv2\\.p4"
+    "hash-extern-bmv2\\.p4"
     "gauntlet.*-bmv2\\.p4")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4" "${P4TESTDATA}/p4_16_samples/parser-inline/*.p4")
@@ -65,7 +66,9 @@ p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUD
 bfn_find_tests("${P4_16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
 
 # Checksum clear is not supported
-set (P16_PSA_EXCLUDE_FILES "psa-example-incremental-checksum\\.p4")
+set (P16_PSA_EXCLUDE_FILES
+    "psa-example-incremental-checksum\\.p4"
+    "hash-extern-bmv2\\.p4")
 set (PSA_SEARCH_PATTERNS "include.*psa.p4")
 set (PSA_EXCLUDE_PATTERNS "package" "extern")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
