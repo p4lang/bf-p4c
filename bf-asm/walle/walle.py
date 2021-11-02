@@ -127,6 +127,7 @@ def parse_template_args(args, params):
     def add_set_arg(args, attr, val): getattr(args, attr).add(val)
     def set_decl(args, attr, val): args.gen_decl = 'decl'
     def set_defn(args, attr, val): args.gen_decl = 'defn'
+    def no_arg(args, attr, val): pass
 
     options = {
         'alias_array': (True, bool_arg),
@@ -148,6 +149,7 @@ def parse_template_args(args, params):
         'name': (None, str_arg),
         'namespace': (False, str_arg),
         'reverse_write': (False, bool_arg),
+        'rewrite': ({}, no_arg),
         'unpack_json': (False, bool_arg),
         'widereg': (False, bool_arg),
         'write_dma': (set(), add_set_arg)
@@ -290,12 +292,21 @@ def generate_cpp (args, schema):
         os.makedirs(args.o)
 
     top_level_objs = read_template_file(args.generate_cpp, args, schema)
+    global_args = args
     for section_name, section in list(schema.items()):
         if section_name not in top_level_objs:
             continue;
         for top_level_obj,files in list(top_level_objs[section_name].items()):
             if files is None: continue
+            args = global_args
+            if 'args' in files:
+                args = extend_args(args, files['args'])
+            if 'rewrite' in files:
+                args = copy.copy(args)
+                args.rewrite = files['rewrite']
             for generate_file,params in list(files.items()):
+                if generate_file == 'args': continue
+                if generate_file == 'rewrite': continue
                 generate_cpp_file(open(os.path.join(args.o, generate_file), "w"),
                                   section[top_level_obj], extend_args(args, params), schema)
 

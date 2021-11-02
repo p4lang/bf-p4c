@@ -10,27 +10,34 @@ global:
 generate:
   memories:
     tfc_mem:
-      memories.ftr_mem.h: [ decl, name=memories.top ]
-      memories.ftr_mem.cpp: [ defn, name=memories.top,
-          -Imemories.ftr_mem.h, -Imemories.pipe_addrmap.h ]
+      args: [ name=memories.top ]
+      memories.ftr_mem.h: [ decl ]
+      memories.ftr_mem.cpp: [ defn, -Imemories.ftr_mem.h, -Imemories.pipe_addrmap.h ]
     fpp_mem_rspec:  # pipes
-      memories.pipe_addrmap.h: [ decl, name=memories.pipe, widereg ]
-      memories.pipe_addrmap.cpp: [ defn, name=memories.pipe, widereg,
-          -Imemories.pipe_addrmap.h ]
+      args: [ name=memories.pipe, widereg ]
+      memories.pipe_addrmap.h: [ decl ]
+      memories.pipe_addrmap.cpp: [ defn, -Imemories.pipe_addrmap.h ]
   regs:
     tfc_reg:
-      regs.ftr_reg.h: [ decl, name=regs.top ]
-      regs.ftr_reg.cpp: [ defn, name=regs.top,
-          -Iregs.ftr_reg.h, -Iregs.pipe_addrmap.h ]
+      args: [ name=regs.top ]
+      regs.ftr_reg.h: [ decl ]
+      regs.ftr_reg.cpp: [ defn, -Iregs.ftr_reg.h, -Iregs.pipe_addrmap.h ]
     fpp_rspec:  # pipe
-      regs.pipe_addrmap.h: [ decl, name=regs.pipe, widereg ]
-      regs.pipe_addrmap.cpp: [ defn, name=regs.pipe, widereg,
-          -Iregs.pipe_addrmap.h, -Iregs.mau_addrmap.h ]
+      args: [ name=regs.pipe, widereg ]
+      regs.pipe_addrmap.h: [ decl ]
+      regs.pipe_addrmap.cpp: [ defn, -Iregs.pipe_addrmap.h, -Iregs.mau_addrmap.h ]
     ppu_rspec:  # mau
-      regs.mau_addrmap.h: [ decl, name=regs.match_action_stage.%02x ]
-      regs.mau_addrmap.cpp: [ defn, name=regs.match_action_stage.%02x,
-          -Iregs.mau_addrmap.h ]
-    # no parser/deparser in csr yet?
+      args: [ name=regs.match_action_stage.%02x ]
+      regs.mau_addrmap.h: [ decl ]
+      regs.mau_addrmap.cpp: [ defn, -Iregs.mau_addrmap.h ]
+      rewrite:
+        ppu_em_hu_rspec:
+          em_bytehash_extrf: [ scan_chain, em_bytehash, [40, 12], em_bytehash_scansel ]
+          em_bytehash_scansel: [ delete ]
+        ppu_apx_rspec:
+          apx_bytehash_extrf: [ scan_chain, apx_bytehash, [64, 8], apx_bytehash_scansel ]
+          apx_bytehash_scansel: [ delete ]
+    # no parser/deparser in csr yet?  Some stuff in fpp_rspec; is it enough?
 
 ignore:
   memories:

@@ -1,28 +1,33 @@
-#include "bson.h"
-#include "fdstream.h"
-#include <fstream>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <fstream>
 #include <string>
+#include "bson.h"
+#include "fdstream.h"
 
 struct {
     bool        oneLine;
     bool        noHeader;
+    bool        noCtxtJson;
 } options;
 
-int dump_bin (std::istream &in) {
-
+int dump_bin(std::istream &in) {
     uint32_t atom_typ = 0;
     while (in.read((char *)&atom_typ, 4)) {
-
         if ((atom_typ >> 24) == 'H') {
             json::map hdr;
             if (!(in >> json::binary(hdr))) return -1;
             if (!options.noHeader)
                 for (auto &el : hdr)
                     std::cout << el.first << " = " << el.second << std::endl;
+        } else if ((atom_typ >> 24) == 'C') {
+            // future context json embedding in binary
+            std::unique_ptr<json::obj> ctxt_json;
+            if (!(in >> json::binary(ctxt_json))) return -1;
+            if (!options.noCtxtJson)
+                std::cout << ctxt_json;
         } else if ((atom_typ >> 24) == 'P') {
             uint32_t prsr_hdl = 0;
             if (!in.read((char *)&prsr_hdl, 4)) return -1;
@@ -107,17 +112,46 @@ int dump_bin (std::istream &in) {
                 if (!options.oneLine && col % 2 == 0) printf("\n   ");
                 printf(" %016" PRIx64, chunk[0]); }
             printf("\n");
+        } else if ((atom_typ >> 24) == 'S') {
+            // S block -- 'scanset' writing multiple data to a single 32-bit PCIE address
+            uint64_t sel_addr = 0, reg_addr = 0;
+            uint32_t sel_data = 0, width = 0, count = 0;
 
+            if (!in.read((char *)&sel_addr, 8)) return -1;
+            if (!in.read((char *)&sel_data, 4)) return -1;
+            if (!in.read((char *)&reg_addr, 8)) return -1;
+            if (!in.read((char *)&width, 4)) return -1;
+            if (!in.read((char *)&count, 4)) return -1;
+            printf("S%011" PRIx64 ": %x, %011" PRIx64 ": %xx%x", sel_addr, sel_data,
+                   reg_addr, width, count);
+            if (width % 32 != 0)
+                printf("  (not a multiple of 32 bits!)");
+            count = (uint64_t)count * width / 32;
+            uint32_t data, prev;
+            int repeat = 0, col = 0;
+            for (unsigned i = 0; i < count; ++i) {
+                if (!in.read((char *)&data, 4)) return -1;
+                if (i != 0 && data == prev) {
+                    repeat++;
+                    continue; }
+                if (repeat > 0) {
+                    printf(" x%-7d", repeat+1);
+                    if (++col > 8) col = 0; }
+                repeat = 0;
+                if (!options.oneLine && col++ % 8 == 0) printf("\n   ");
+                printf(" %08x", prev = data); }
+            if (repeat > 0)
+                printf(" x%d", repeat+1);
+            printf("\n");
         } else {
             fprintf(stderr, "\n");
-            fprintf(stderr, "Parse error: atom_typ=%x (%c)\n", atom_typ, atom_typ >> 24 );
+            fprintf(stderr, "Parse error: atom_typ=%x (%c)\n", atom_typ, atom_typ >> 24);
             fprintf(stderr, "fpos=%" PRIu64 " <%" PRIx64 "h>\n",
                     (uint64_t)in.tellg(), (uint64_t)in.tellg());
             fprintf(stderr, "\n");
 
             return -1;
         }
-
     }
 
     return in.eof() ? 0 : -1;
@@ -129,6 +163,9 @@ int main(int ac, char **av) {
         if (*av[i] == '-') {
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
+                case 'C':
+                    options.noCtxtJson = true;
+                    break;
                 case 'H':
                     options.noHeader = true;
                     break;
@@ -139,12 +176,12 @@ int main(int ac, char **av) {
                     fprintf(stderr, "ignoring argument -%c\n", *arg);
                     error = 1; }
         } else {
-  	    std::ifstream in(av[i], std::ios::binary);
-	    if (!in) {
-	        fprintf(stderr, "failed to open %s\n", av[i]);
-		error = 1;
-		continue;
-	    }
+            std::ifstream in(av[i], std::ios::binary);
+            if (!in) {
+                fprintf(stderr, "failed to open %s\n", av[i]);
+                error = 1;
+                continue;
+            }
             unsigned char magic[4] = {};
             in.read((char *)magic, 4);
             if (magic[0] == 0 && magic[3] && strchr("RDBH", magic[3])) {

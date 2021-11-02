@@ -133,6 +133,12 @@ def format_comment(outfile, indent, text):
                 line = ''
             outfile.write("\n")
 
+def indent_comment(indent, text):
+    if not text: return text
+    if text[-2:-1] != '\n':
+        text = text + '\n'
+    return indent + text.replace('\n', indent+'\n')
+
 ########################################################################
 ## Structures
 
@@ -263,6 +269,61 @@ class csr_composite_object (csr_object):
     def children(self):
         raise CsrException("Unimplemented abstract method for " + type(self))
 
+    def check_child_rewrite(self, child, args):
+        """
+        Check to see if the child needs to be rewritten per something in the args, and, if
+        so, rewrite it and return it.  We call this a fair amount with the same child (so
+        work is duplicated); if that is a problem we should memoize.
+        """
+        if self.name not in args.rewrite:
+            return child
+        rewrite = args.rewrite[self.name]
+        if child.name not in rewrite:
+            return child
+        rewrite = rewrite[child.name]
+        if rewrite[0] == 'delete':
+            return None
+        elif rewrite[0] == 'scan_chain':
+            description = ''
+            offset = child.offset
+            while not isinstance(child, reg):
+                if hasattr(child, 'description') and child.description:
+                    description = description + child.description
+                    if description[-2:-1] != '\n':
+                        description = description + '\n'
+                if len(child.children()) != 1 or child.count != (1,):
+                    raise CsrException("unknown rewrite '%s' for %s.%s" %
+                                       (rewrite[child.name][0], name, child.name))
+                child = child.children()[0]
+            if hasattr(child, 'description') and child.description:
+                description = description + child.description
+                if description[-2:-1] != '\n':
+                    description = description + '\n'
+            child = scanset_reg(rewrite[1], tuple(rewrite[2]), offset, child.width,
+                                                  self, child.fields)
+            child.description = description
+            if len(child.fields) == 1:
+                child.fields = copy.copy(child.fields)
+                child.fields[0].name = rewrite[1]
+            #import pdb; pdb.set_trace()
+            for ch in self.children():
+                if ch.name == rewrite[3]:
+                    child.sel_offset = ch.offset
+                    desc_hdr = ch.name + ':\n'
+                    if hasattr(ch, 'description') and ch.description:
+                        child.description = (child.description + desc_hdr +
+                                             indent_comment('  ', ch.description))
+                        desc_hdr = ''
+                    if (len(ch.fields) == 1 and hasattr(ch.fields[0], 'description') and
+                        ch.fields[0].description):
+                        child.description = (child.description + desc_hdr +
+                                             indent_comment('  ', ch.fields[0].description))
+            return child
+        else:
+            raise CsrException("unknown rewrite '%s' for %s.%s" %
+                               (rewrite[el.name][0], name, el.name))
+        return None
+
     def contains_reference(self):
         """
         return true if this object (directly or indirectly) contains a reference to
@@ -347,6 +408,8 @@ class csr_composite_object (csr_object):
                           (indent, schema["_walle_version"]))
             first = False
         for a in sorted(self.children(), key=lambda a: a.name):
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             if not first:
                 outfile.write('%sout << ", \\n";\n' % indent)
             outfile.write('%sout << indent << "\\"%s\\": ";\n' % (indent, a.name))
@@ -436,6 +499,8 @@ class csr_composite_object (csr_object):
         for a in self.children():
             addr_var = "a"
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             if root_parent=="memories":
                 indirect = True
                 width_unit = 128
@@ -451,6 +516,9 @@ class csr_composite_object (csr_object):
                 width_unit = 32
                 address_unit = 1
                 type_tag = 'R'
+            if isinstance(a, scanset_reg):
+                a.output_binary(outfile, args, indent, address_unit, width_unit)
+                continue
             if args.enable_disable:
                 outfile.write("%sif (!%s.disabled()) {\n" % (indent, child_name(a)))
                 indent += '  '
@@ -577,6 +645,8 @@ class csr_composite_object (csr_object):
         for a in sorted(self.children(), key=lambda a: a.name, reverse=True):
             if a.disabled(): continue
             if a.top_level(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -622,6 +692,8 @@ class csr_composite_object (csr_object):
         first = True
         for a in sorted(self.children(), key=lambda a: a.name, reverse=True):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -661,6 +733,8 @@ class csr_composite_object (csr_object):
         outfile.write("%sif (!m) return -1;\n" % indent)
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             index_num = 0
             if a.count != (1,):
                 for index_num, idx in enumerate(a.count):
@@ -751,6 +825,8 @@ class csr_composite_object (csr_object):
         need_lpfx = True
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -788,6 +864,8 @@ class csr_composite_object (csr_object):
         indent += "  "
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -818,6 +896,8 @@ class csr_composite_object (csr_object):
         indent += "  "
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -852,6 +932,8 @@ class csr_composite_object (csr_object):
         outfile.write("%s  return false; }\n" % indent)
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -884,6 +966,8 @@ class csr_composite_object (csr_object):
         outfile.write("%sbool rv = true;\n" % indent)
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -917,6 +1001,8 @@ class csr_composite_object (csr_object):
         outfile.write("%sbool rv = true;\n" % indent)
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -949,6 +1035,8 @@ class csr_composite_object (csr_object):
         outfile.write("%sbool rv = true;\n" % indent)
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -984,6 +1072,8 @@ class csr_composite_object (csr_object):
         indent += "  "
         for a in sorted(self.children(), key=lambda a: a.name):
             if a.disabled(): continue
+            a = self.check_child_rewrite(a, args)
+            if a is None: continue
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
@@ -1011,6 +1101,8 @@ class csr_composite_object (csr_object):
         potential_alias_arrays = {}
         array_match = re.compile('^(\w+)_(\d+)$')
         for el in self.children():
+            el = self.check_child_rewrite(el, args)
+            if el is None: continue
             m = array_match.match(el.name)
             if m:
                 base = m.group(1)
@@ -1034,6 +1126,8 @@ class csr_composite_object (csr_object):
         if self.alias_arrays:
             return True
         for el in self.children():
+            el = self.check_child_rewrite(el, args)
+            if el is None: continue
             s = el.singleton_obj()
             if s.is_field() and s.default and s.default != 0:
                 if type(s.default) is tuple:
@@ -1052,6 +1146,8 @@ class csr_composite_object (csr_object):
             first = False
         for el in sorted(self.children(), key=lambda a: a.name):
             if el.disabled(): continue
+            el = self.check_child_rewrite(el, args)
+            if el is None: continue
             s = el.singleton_obj()
             if s.is_field() and s.default and s.default != 0:
                 if type(s.default) is tuple:
@@ -1157,12 +1253,16 @@ class csr_composite_object (csr_object):
                               (indent, schema['_schema_hash']))
         for el in sorted(self.children(), key=lambda a: a.name):
             if el.disabled(): continue
+            el = self.check_child_rewrite(el, args)
+            if el is None: continue
             typ = el.singleton_obj()
             notclass = typ.is_field() or typ.top_level()
             isglobal = el.name in args.global_types
             if args.gen_decl != 'defn':
                 if hasattr(el, 'description') and el.description:
                     format_comment(outfile, indent, el.description)
+                if typ != el and hasattr(typ, 'description') and typ.description:
+                    format_comment(outfile, indent, typ.description)
                 outfile.write(indent)
                 if args.checked_array and notclass and el.count != (1,):
                     for idx in el.count:
@@ -1751,7 +1851,7 @@ class reg(csr_composite_object):
     def top_level(self):
         return False
 
-    def gen_word_expressions(self, args):
+    def gen_word_expressions(self, args, prefix):
         """
         generate expressions to calculate the value of each word of the register
         """
@@ -1763,6 +1863,11 @@ class reg(csr_composite_object):
             field_name = a.name
             if field_name in args.cpp_reserved:
                 field_name += '_'
+            if prefix:
+                if self.name == a.name and len(self.fields) == 1:
+                    field_name = prefix
+                else:
+                    field_name = prefix + "." + field_name
             context.shift = a.lsb;
             def emit_field_slice(field, word, shift):
                 if context.words[word] is None:
@@ -1816,7 +1921,7 @@ class reg(csr_composite_object):
                 [], "const"):
             return
         outfile.write("%s  return " % indent);
-        outfile.write("%s;\n" % self.gen_word_expressions(args)[0])
+        outfile.write("%s;\n" % self.gen_word_expressions(args, None)[0])
         outfile.write("%s}\n" % indent)
 
     def gen_emit_binary_method(self, outfile, args, classname, indent):
@@ -1831,7 +1936,7 @@ class reg(csr_composite_object):
         if not indirect:
             outfile.write("%sif (!disabled_) {\n" % indent);
             indent += "  "
-        pairs = enumerate(self.gen_word_expressions(args))
+        pairs = enumerate(self.gen_word_expressions(args, None))
         if not indirect and args.reverse_write:
             # DANGER -- certain registers must be written in reverse order (higher
             # address then lower), so we reverse the order of register writes here.
@@ -1871,6 +1976,61 @@ class reg(csr_composite_object):
             indent, self.name, str(self.count), self.offset, self.width))
         for ch in self.fields:
             ch.print_as_text(indent+"  ")
+
+class scanset_reg(reg):
+    """
+    A register that needs to be written multiple times (same address) to hold an array
+    @attr parent
+        Containing address_map object
+    @attr offset
+        Offset from the start of the containing address_map_instance
+    @attr sel_offset
+        offset from the start of the containing address_map_instance for the selector reg
+    @attr width
+        width in bits
+    @attr fields
+        vector of fields in the register
+    """
+    def __init__(self, name, count, offset, width, parent, fields):
+        reg.__init__(self, name, count, offset, width, parent)
+        if isinstance(fields, list):
+            self.fields = fields
+        else:
+            self.fields = [fields]
+
+    def output_binary(self, outfile, args, indent, address_unit, width_unit):
+        name = self.name
+        if name in args.cpp_reserved:
+            name += '_'
+        if self.count == (1,):
+            raise CsrException("invalid count in scanset_reg")
+        if args.enable_disable:
+            outfile.write("%sif (!%s.disabled()) {\n" % (indent, name))
+            indent += '  '
+        for idx_num, idx in enumerate(self.count):
+            outfile.write('%sfor (int j%d = 0; j%d < %d; j%d++) { \n' %
+                          (indent, idx_num, idx_num, idx, idx_num))
+            name = name + "[j%d]" % idx_num
+            if idx_num == 0:
+                if args.enable_disable:
+                    outfile.write("%sif (!%s.disabled()) {\n" % (indent, name))
+                    indent += '  '
+                outfile.write("%sout << binout::tag('S') << binout::byte8" % indent +
+                              "(a + 0x%x)" % (self.sel_offset//address_unit) +
+                              " << binout::byte4(j0)\n%s    " % indent +
+                              " << binout::byte8(a + 0x%x)" % (self.offset//address_unit) +
+                              " << binout::byte4(32) << binout::byte4(%d);\n" %
+                              (product(self.count[1:]) * self.width // width_unit))
+            indent += '  '
+        pairs = enumerate(self.gen_word_expressions(args, name))
+        for idx, val in pairs:
+            if val is None:
+                val = '0'
+            outfile.write("%sout << binout::byte4(%s);\n" % (indent, val))
+        for i in range(0, len(self.count) + (2 if args.enable_disable else 0)):
+            indent = indent[2:]
+            outfile.write("%s}\n" % indent)
+
 
 class field(csr_object):
     """
