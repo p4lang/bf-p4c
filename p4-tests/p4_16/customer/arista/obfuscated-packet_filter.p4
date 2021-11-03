@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -34,6 +34,7 @@
 @pa_alias("ingress" , "Sedan.SanRemo.Spearman" , "Almota.Swisshome.Norcatur")
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Almota.Twain.Avondale")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Almota.WebbCity.Vichy")
+@pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
 @pa_alias("ingress" , "Almota.Crannell.Chavies" , "Almota.Crannell.Heuvelton")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Almota.Covert.Clyde")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Almota.Twain.Avondale")
@@ -1384,6 +1385,8 @@ struct Funston {
 parser Halltown(packet_in Recluse, out Orting Sedan, out Martelle Almota, out ingress_intrinsic_metadata_t HighRock) {
     @name(".Arapahoe") Checksum() Arapahoe;
     @name(".Parkway") Checksum() Parkway;
+    @name(".Carrizozo") value_set<bit<12>>(1) Carrizozo;
+    @name(".Munday") value_set<bit<24>>(1) Munday;
     @name(".Palouse") value_set<bit<9>>(2) Palouse;
     @name(".Sespe") value_set<bit<19>>(4) Sespe;
     @name(".Callao") value_set<bit<19>>(4) Callao;
@@ -1443,30 +1446,60 @@ parser Halltown(packet_in Recluse, out Orting Sedan, out Martelle Almota, out in
     }
     state Baker {
         Recluse.extract<Littleton>(Sedan.Moultrie[1]);
-        transition select((Recluse.lookahead<bit<24>>())[7:0], (Recluse.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Glenoma;
-            (8w0x45 &&& 8w0xff, 16w0x800): Thurmond;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): RockHill;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Robstown;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Ponder;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Fishers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Philip;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Levasy;
+        transition select(Sedan.Moultrie[1].Riner) {
+            Carrizozo: Hecker;
+            12w0: FarrWest;
+            default: Hecker;
+        }
+    }
+    state FarrWest {
+        Almota.Gambrills.Randall = (bit<4>)4w0xf;
+        transition reject;
+    }
+    state Holcut {
+        transition select((bit<8>)(Recluse.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Recluse.lookahead<bit<16>>())) {
+            24w0x806 &&& 24w0xffff: Glenoma;
+            24w0x450800 &&& 24w0xffffff: Thurmond;
+            24w0x50800 &&& 24w0xfffff: RockHill;
+            24w0x800 &&& 24w0xffff: Robstown;
+            24w0x6086dd &&& 24w0xf0ffff: Ponder;
+            24w0x86dd &&& 24w0xffff: Fishers;
+            24w0x8808 &&& 24w0xffff: Philip;
+            24w0x88f7 &&& 24w0xffff: Levasy;
+            default: Indios;
+        }
+    }
+    state Hecker {
+        transition select((bit<8>)(Recluse.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Recluse.lookahead<bit<16>>())) {
+            Munday: Holcut;
+            24w0x9100 &&& 24w0xffff: FarrWest;
+            24w0x88a8 &&& 24w0xffff: FarrWest;
+            24w0x8100 &&& 24w0xffff: FarrWest;
+            24w0x806 &&& 24w0xffff: Glenoma;
+            24w0x450800 &&& 24w0xffffff: Thurmond;
+            24w0x50800 &&& 24w0xfffff: RockHill;
+            24w0x800 &&& 24w0xffff: Robstown;
+            24w0x6086dd &&& 24w0xf0ffff: Ponder;
+            24w0x86dd &&& 24w0xffff: Fishers;
+            24w0x8808 &&& 24w0xffff: Philip;
+            24w0x88f7 &&& 24w0xffff: Levasy;
             default: Indios;
         }
     }
     state Olmitz {
         Recluse.extract<Littleton>(Sedan.Moultrie[0]);
-        transition select((Recluse.lookahead<bit<24>>())[7:0], (Recluse.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Baker;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Glenoma;
-            (8w0x45 &&& 8w0xff, 16w0x800): Thurmond;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): RockHill;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Robstown;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Ponder;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Fishers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Philip;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Levasy;
+        transition select((bit<8>)(Recluse.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Recluse.lookahead<bit<16>>())) {
+            24w0x9100 &&& 24w0xffff: Baker;
+            24w0x88a8 &&& 24w0xffff: Baker;
+            24w0x8100 &&& 24w0xffff: Baker;
+            24w0x806 &&& 24w0xffff: Glenoma;
+            24w0x450800 &&& 24w0xffffff: Thurmond;
+            24w0x50800 &&& 24w0xfffff: RockHill;
+            24w0x800 &&& 24w0xffff: Robstown;
+            24w0x6086dd &&& 24w0xf0ffff: Ponder;
+            24w0x86dd &&& 24w0xffff: Fishers;
+            24w0x8808 &&& 24w0xffff: Philip;
+            24w0x88f7 &&& 24w0xffff: Levasy;
             default: Indios;
         }
     }
@@ -1771,7 +1804,7 @@ control Hettinger(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsi
             Almota.Masontown.Waubun         : ternary @name("Masontown.Waubun") ;
             Almota.Masontown.Eastwood       : ternary @name("Masontown.Eastwood") ;
             Almota.Masontown.Minto          : ternary @name("Masontown.Minto") ;
-            Almota.Gambrills.Randall & 4w0x8: ternary @name("Gambrills.Randall") ;
+            Almota.Gambrills.Randall        : ternary @name("Gambrills.Randall") ;
             Almota.Gambrills.Chatmoss       : ternary @name("Gambrills.Chatmoss") ;
         }
         const default_action = Moosic();
@@ -3181,7 +3214,7 @@ control Woolwine(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_
         Sedan.Moultrie.push_front(1);
         Sedan.Moultrie[0].setValid();
         Sedan.Moultrie[0].Riner = Almota.Belmore.Riner;
-        Sedan.Moultrie[0].Keyes = (bit<16>)16w0x8100;
+        Sedan.Moultrie[0].Keyes = 16w0x8100;
         Sedan.Moultrie[0].Killen = Almota.Swisshome.Plains;
         Sedan.Moultrie[0].Turkey = Almota.Swisshome.Turkey;
     }
@@ -3189,22 +3222,22 @@ control Woolwine(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_
         Berlin();
         Sedan.Hillside.setValid();
         Sedan.Hillside.Comfrey = Almota.Crump.Dozier;
-        Sedan.Hillside.Keyes = (bit<16>)16w0x8100;
+        Sedan.Hillside.Keyes = 16w0x8100;
     }
     @name(".Astatula") action Astatula() {
         Berlin();
         Sedan.Kinde.setValid();
         Sedan.Kinde.Comfrey = Almota.Crump.Ocracoke;
-        Sedan.Kinde.Keyes = (bit<16>)16w0x8100;
+        Sedan.Kinde.Keyes = 16w0x8100;
     }
     @name(".Brinson") action Brinson() {
         Berlin();
         Sedan.Hillside.setValid();
         Sedan.Hillside.Comfrey = Almota.Crump.Dozier;
-        Sedan.Hillside.Keyes = (bit<16>)16w0x8100;
+        Sedan.Hillside.Keyes = 16w0x8100;
         Sedan.Kinde.setValid();
         Sedan.Kinde.Comfrey = Almota.Crump.Ocracoke;
-        Sedan.Kinde.Keyes = (bit<16>)16w0x8100;
+        Sedan.Kinde.Keyes = 16w0x8100;
     }
     @ways(2) @disable_atomic_modify(1) @name(".Westend") table Westend {
         actions = {
@@ -3337,7 +3370,7 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
         Sedan.Harriet.Findlay = Almota.Belmore.Findlay;
         Sedan.Harriet.Adona = Clermont;
         Sedan.Harriet.Connell = Blanding;
-        Sedan.Dushore.Keyes = (bit<16>)16w0x800;
+        Sedan.Dushore.Keyes = 16w0x800;
     }
     @name(".Protivin") action Protivin() {
         Weissert.drop_ctl = (bit<3>)3w7;
@@ -3352,10 +3385,10 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            Almota.Belmore.Lugert               : ternary @name("Belmore.Lugert") ;
-            Almota.Belmore.Gause                : exact @name("Belmore.Gause") ;
-            Almota.Belmore.Pajaros              : ternary @name("Belmore.Pajaros") ;
-            Almota.Belmore.McGrady & 32w0xfe0000: ternary @name("Belmore.McGrady") ;
+            Almota.Belmore.Lugert                 : ternary @name("Belmore.Lugert") ;
+            Almota.Belmore.Gause                  : exact @name("Belmore.Gause") ;
+            Almota.Belmore.Pajaros                : ternary @name("Belmore.Pajaros") ;
+            Almota.Belmore.McGrady & 32w0xfffe0000: ternary @name("Belmore.McGrady") ;
         }
         size = 16;
         requires_versioning = false;
@@ -3625,9 +3658,12 @@ control Romeo(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
 }
 
 control Wauregan(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_metadata_t HighRock, in ingress_intrinsic_metadata_from_parser_t Lemont, inout ingress_intrinsic_metadata_for_deparser_t Hookdale, inout ingress_intrinsic_metadata_for_tm_t WebbCity) {
+    @name(".Dante") action Dante() {
+        WebbCity.rid = WebbCity.mcast_grp_a;
+    }
     @name(".CassCity") action CassCity(bit<16> Sanborn) {
         WebbCity.level1_exclusion_id = Sanborn;
-        WebbCity.rid = WebbCity.mcast_grp_a;
+        WebbCity.rid = (bit<16>)16w4096;
     }
     @name(".Kerby") action Kerby(bit<16> Sanborn) {
         CassCity(Sanborn);
@@ -3647,6 +3683,7 @@ control Wauregan(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic
             Kerby();
             Saxis();
             Cowley();
+            Dante();
         }
         key = {
             Almota.Belmore.Lugert                : ternary @name("Belmore.Lugert") ;

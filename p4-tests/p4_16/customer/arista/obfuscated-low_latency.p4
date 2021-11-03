@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -1252,7 +1252,7 @@ control Geistown(inout Udall Jayton, inout Wildorado Millstone, in egress_intrin
     @name(".Olcott") action Olcott() {
         Jayton.Lindsborg[0].setValid();
         Jayton.Lindsborg[0].Findlay = Millstone.BealCity.Findlay;
-        Jayton.Lindsborg[0].Basic = (bit<16>)16w0x8100;
+        Jayton.Lindsborg[0].Basic = 16w0x8100;
         Jayton.Lindsborg[0].Steger = Millstone.Readsboro.Wisdom;
         Jayton.Lindsborg[0].Quogue = Millstone.Readsboro.Quogue;
     }
@@ -1470,7 +1470,7 @@ control Rhinebeck(inout Udall Jayton, inout Wildorado Millstone, in ingress_intr
             Millstone.Ocracoke.Sheldahl         : ternary @name("Ocracoke.Sheldahl") ;
             Millstone.Ocracoke.Gasport          : ternary @name("Ocracoke.Gasport") ;
             Millstone.Ocracoke.Soledad          : ternary @name("Ocracoke.Soledad") ;
-            Millstone.Dozier.Hulbert & 4w0x8    : ternary @name("Dozier.Hulbert") ;
+            Millstone.Dozier.Hulbert            : ternary @name("Dozier.Hulbert") ;
             Millstone.Dozier.Wakita             : ternary @name("Dozier.Wakita") ;
         }
         const default_action = Oneonta();

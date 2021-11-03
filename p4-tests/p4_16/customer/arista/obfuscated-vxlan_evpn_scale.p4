@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_VXLAN_EVPN_SCALE=1 -Ibf_arista_switch_vxlan_evpn_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_vxlan_evpn_scale --bf-rt-schema bf_arista_switch_vxlan_evpn_scale/context/bf-rt.json
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -8,6 +8,8 @@
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Wagener.Flaherty.Galloway" , 16)
 @pa_container_size("ingress" , "Wagener.Milano.Allison" , 32)
+@pa_container_size("ingress" , "Wagener.Frederika.$valid" , 8)
+@pa_container_size("ingress" , "Wagener.Funston.$valid" , 8)
 @pa_mutually_exclusive("egress" , "Monrovia.Balmorhea.Weinert" , "Wagener.Milano.Weinert")
 @pa_mutually_exclusive("egress" , "Wagener.Garrison.Levittown" , "Wagener.Milano.Weinert")
 @pa_mutually_exclusive("egress" , "Wagener.Milano.Weinert" , "Monrovia.Balmorhea.Weinert")
@@ -50,6 +52,8 @@
 @pa_container_size("ingress" , "ig_intr_md_for_tm.ingress_cos" , 8)
 @pa_container_size("ingress" , "ig_intr_md_for_tm.qid" , 8)
 @pa_container_size("ingress" , "Wagener.Mayflower.Daphne" , 16)
+@pa_container_size("ingress" , "Wagener.Lemont.$valid" , 16)
+@pa_container_size("egress" , "Wagener.Wanamassa.$valid" , 16)
 @pa_atomic("ingress" , "Monrovia.Hallwood.Oriskany")
 @pa_atomic("ingress" , "Monrovia.Empire.McAllen")
 @pa_container_size("ingress" , "Monrovia.Nevis.Newfolden" , 16)
@@ -78,6 +82,7 @@
 @pa_alias("ingress" , "Wagener.Garrison.Buckeye" , "Monrovia.Magasco.LasVegas")
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Monrovia.Jayton.Matheson")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Monrovia.Yorkshire.Bledsoe")
+@pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
 @pa_alias("ingress" , "Monrovia.Boonsboro.Whitten" , "Monrovia.Hallwood.Bufalo")
 @pa_alias("ingress" , "Monrovia.Boonsboro.ElVerano" , "Monrovia.Hallwood.Madawaska")
 @pa_alias("ingress" , "Monrovia.Boonsboro.Wallula" , "Monrovia.Hallwood.Wallula")
@@ -1750,11 +1755,6 @@ struct Parkway {
     bit<32> Sespe;
 }
 
-control Shivwits(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intrinsic_metadata_t Longwood, in ingress_intrinsic_metadata_from_parser_t Rienzi, inout ingress_intrinsic_metadata_for_deparser_t Ambler, inout ingress_intrinsic_metadata_for_tm_t Yorkshire) {
-    apply {
-    }
-}
-
 control Callao(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intrinsic_metadata_t Longwood, in ingress_intrinsic_metadata_from_parser_t Rienzi, inout ingress_intrinsic_metadata_for_deparser_t Ambler, inout ingress_intrinsic_metadata_for_tm_t Yorkshire) {
     apply {
     }
@@ -1770,6 +1770,8 @@ struct Olmitz {
 parser Glenoma(packet_in Thurmond, out Pinetop Wagener, out Swisshome Monrovia, out ingress_intrinsic_metadata_t Longwood) {
     @name(".Lauada") Checksum() Lauada;
     @name(".RichBar") Checksum() RichBar;
+    @name(".Duncombe") value_set<bit<12>>(1) Duncombe;
+    @name(".Noonan") value_set<bit<24>>(1) Noonan;
     @name(".Harding") value_set<bit<9>>(2) Harding;
     @name(".Nephi") value_set<bit<19>>(4) Nephi;
     @name(".Tofte") value_set<bit<19>>(4) Tofte;
@@ -1829,35 +1831,65 @@ parser Glenoma(packet_in Thurmond, out Pinetop Wagener, out Swisshome Monrovia, 
     }
     state Swanlake {
         Thurmond.extract<Glendevey>(Wagener.Cotter[1]);
-        transition select((Thurmond.lookahead<bit<24>>())[7:0], (Thurmond.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Geistown;
-            (8w0x45 &&& 8w0xff, 16w0x800): Lindy;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Bellamy;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Tularosa;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Uniopolis;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Ossining;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Nason;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Marquand;
+        transition select(Wagener.Cotter[1].Turkey) {
+            Duncombe: Tanner;
+            12w0: Valier;
+            default: Tanner;
+        }
+    }
+    state Valier {
+        Monrovia.Sequim.Moquah = (bit<4>)4w0xf;
+        transition reject;
+    }
+    state Spindale {
+        transition select((bit<8>)(Thurmond.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Thurmond.lookahead<bit<16>>())) {
+            24w0x806 &&& 24w0xffff: Geistown;
+            24w0x450800 &&& 24w0xffffff: Lindy;
+            24w0x50800 &&& 24w0xfffff: Bellamy;
+            24w0x800 &&& 24w0xffff: Tularosa;
+            24w0x6086dd &&& 24w0xf0ffff: Uniopolis;
+            24w0x86dd &&& 24w0xffff: Ossining;
+            24w0x8808 &&& 24w0xffff: Nason;
+            24w0x88f7 &&& 24w0xffff: Marquand;
+            default: Kempton;
+        }
+    }
+    state Tanner {
+        transition select((bit<8>)(Thurmond.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Thurmond.lookahead<bit<16>>())) {
+            Noonan: Spindale;
+            24w0x9100 &&& 24w0xffff: Valier;
+            24w0x88a8 &&& 24w0xffff: Valier;
+            24w0x8100 &&& 24w0xffff: Valier;
+            24w0x806 &&& 24w0xffff: Geistown;
+            24w0x450800 &&& 24w0xffffff: Lindy;
+            24w0x50800 &&& 24w0xfffff: Bellamy;
+            24w0x800 &&& 24w0xffff: Tularosa;
+            24w0x6086dd &&& 24w0xf0ffff: Uniopolis;
+            24w0x86dd &&& 24w0xffff: Ossining;
+            24w0x8808 &&& 24w0xffff: Nason;
+            24w0x88f7 &&& 24w0xffff: Marquand;
             default: Kempton;
         }
     }
     state Rochert {
         Thurmond.extract<Glendevey>(Wagener.Cotter[0]);
-        transition select((Thurmond.lookahead<bit<24>>())[7:0], (Thurmond.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Swanlake;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Geistown;
-            (8w0x45 &&& 8w0xff, 16w0x800): Lindy;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Bellamy;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Tularosa;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Uniopolis;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Ossining;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Nason;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Marquand;
+        transition select((bit<8>)(Thurmond.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Thurmond.lookahead<bit<16>>())) {
+            24w0x9100 &&& 24w0xffff: Swanlake;
+            24w0x88a8 &&& 24w0xffff: Swanlake;
+            24w0x8100 &&& 24w0xffff: Swanlake;
+            24w0x806 &&& 24w0xffff: Geistown;
+            24w0x450800 &&& 24w0xffffff: Lindy;
+            24w0x50800 &&& 24w0xfffff: Bellamy;
+            24w0x800 &&& 24w0xffff: Tularosa;
+            24w0x6086dd &&& 24w0xf0ffff: Uniopolis;
+            24w0x86dd &&& 24w0xffff: Ossining;
+            24w0x8808 &&& 24w0xffff: Nason;
+            24w0x88f7 &&& 24w0xffff: Marquand;
             default: Kempton;
         }
     }
     state Brady {
-        Monrovia.Hallwood.Oriskany = (bit<16>)16w0x800;
+        Monrovia.Hallwood.Oriskany = 16w0x800;
         Monrovia.Hallwood.Westhoff = (bit<3>)3w4;
         transition select((Thurmond.lookahead<bit<8>>())[7:0]) {
             8w0x45 &&& 8w0xff: Emden;
@@ -1865,12 +1897,12 @@ parser Glenoma(packet_in Thurmond, out Pinetop Wagener, out Swisshome Monrovia, 
         }
     }
     state Ravinia {
-        Monrovia.Hallwood.Oriskany = (bit<16>)16w0x86dd;
+        Monrovia.Hallwood.Oriskany = 16w0x86dd;
         Monrovia.Hallwood.Westhoff = (bit<3>)3w4;
         transition Virgilina;
     }
     state Moosic {
-        Monrovia.Hallwood.Oriskany = (bit<16>)16w0x86dd;
+        Monrovia.Hallwood.Oriskany = 16w0x86dd;
         Monrovia.Hallwood.Westhoff = (bit<3>)3w5;
         transition accept;
     }
@@ -2203,7 +2235,7 @@ control Tenstrike(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
             Monrovia.Hallwood.Nenana          : ternary @name("Hallwood.Nenana") ;
             Monrovia.Hallwood.Waubun          : ternary @name("Hallwood.Waubun") ;
             Monrovia.Hallwood.Morstein        : ternary @name("Hallwood.Morstein") ;
-            Monrovia.Sequim.Moquah & 4w0x8    : ternary @name("Sequim.Moquah") ;
+            Monrovia.Sequim.Moquah            : ternary @name("Sequim.Moquah") ;
             Monrovia.Sequim.Sheldahl          : ternary @name("Sequim.Sheldahl") ;
         }
         const default_action = Kapowsin();
@@ -3870,7 +3902,7 @@ control Addicks(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
         requires_versioning = false;
     }
     apply {
-        if (Wagener.Milano.isValid() == false && Monrovia.Balmorhea.Satolah == 3w1 && Monrovia.Nevis.Ackley == 1w1) {
+        if (Wagener.Milano.isValid() == false && Monrovia.Balmorhea.Satolah == 3w1 && Monrovia.Nevis.Ackley == 1w1 && Wagener.Mayflower.isValid() == false) {
             Vananda.apply();
         }
     }
@@ -4760,9 +4792,7 @@ control Dundee(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrin
         } else {
             Tulalip.apply();
         }
-        if (Monrovia.Balmorhea.Wauconda != 32w0) {
-            Olivet.apply();
-        }
+        Olivet.apply();
     }
 }
 
@@ -4784,7 +4814,7 @@ control Nordland(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         size = 256;
     }
     apply {
-        if (Monrovia.Balmorhea.Wauconda != 32w0) {
+        if (Monrovia.Balmorhea.Wauconda & 32w0xff000000 != 32w0) {
             Hartwell.apply();
         }
     }
@@ -4818,7 +4848,7 @@ control Corum(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrins
         size = 256;
     }
     apply {
-        if (Monrovia.Balmorhea.Wauconda != 32w0 && Monrovia.Balmorhea.Wauconda & 32w0x800000 == 32w0x0) {
+        if (Monrovia.Balmorhea.Wauconda & 32w0xff000000 != 32w0 && Monrovia.Balmorhea.Wauconda & 32w0x800000 == 32w0x0) {
             TenSleep.apply();
         }
     }
@@ -4846,7 +4876,7 @@ control GlenDean(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
     @name(".Calimesa") action Calimesa() {
         Wagener.Cotter[0].setValid();
         Wagener.Cotter[0].Turkey = Monrovia.Balmorhea.Turkey;
-        Wagener.Cotter[0].Oriskany = (bit<16>)16w0x8100;
+        Wagener.Cotter[0].Oriskany = 16w0x8100;
         Wagener.Cotter[0].Littleton = Monrovia.Magasco.Osyka;
         Wagener.Cotter[0].Killen = Monrovia.Magasco.Killen;
     }
@@ -4918,6 +4948,7 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Wagener.Dacono.Harbor = Ceiba;
         Wagener.Dacono.setValid();
         Wagener.Bronwood.setInvalid();
+        Monrovia.Balmorhea.Miranda = (bit<1>)1w0;
     }
     @name(".Dresden") action Dresden() {
         Wagener.Dacono.Ledoux = Wagener.Bronwood.Ledoux;
@@ -4926,6 +4957,7 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Wagener.Dacono.Harbor = Wagener.Bronwood.Harbor;
         Wagener.Dacono.setValid();
         Wagener.Bronwood.setInvalid();
+        Monrovia.Balmorhea.Miranda = (bit<1>)1w0;
     }
     @name(".Lorane") action Lorane(bit<24> Brush, bit<24> Ceiba) {
         Aguada(Brush, Ceiba);
@@ -4961,7 +4993,7 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Wagener.Dacono.Steger = Monrovia.Balmorhea.Steger;
         Wagener.Dacono.Aguilita = Brush;
         Wagener.Dacono.Harbor = Ceiba;
-        Wagener.Biggers.Oriskany = (bit<16>)16w0x800;
+        Wagener.Biggers.Oriskany = 16w0x800;
     }
     @name(".Selvin") Random<bit<16>>() Selvin;
     @name(".Terry") action Terry(bit<16> Nipton, bit<16> Kinard, bit<32> Belcourt) {
@@ -4980,7 +5012,7 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Wagener.Pineville.Madawaska = (bit<8>)8w17;
         Wagener.Pineville.Tallassee = Belcourt;
         Wagener.Pineville.Irvine = Monrovia.Balmorhea.Monahans;
-        Wagener.Biggers.Oriskany = (bit<16>)16w0x800;
+        Wagener.Biggers.Oriskany = 16w0x800;
     }
     @name(".Kahaluu") action Kahaluu(bit<8> Wallula) {
         Wagener.Wanamassa.Coalwood = Wagener.Wanamassa.Coalwood + Wallula;
@@ -5053,7 +5085,7 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Wagener.Nooksack.Loris = Loris;
         Wagener.Nooksack.Vinemont[31:4] = (bit<28>)28w0;
         Wagener.Nooksack.Coalwood = (bit<8>)8w64;
-        Wagener.Biggers.Oriskany = (bit<16>)16w0x86dd;
+        Wagener.Biggers.Oriskany = 16w0x86dd;
     }
     @name(".Kinston") action Kinston(bit<16> Powderly, bit<16> Macungie, bit<16> Chandalar, bit<24> Aguilita, bit<24> Harbor, bit<24> Brush, bit<24> Ceiba, bit<32> Commack, bit<32> Bonney, bit<32> Pilar, bit<32> Loris, bit<16> Fittstown) {
         Newcomb(Powderly, Macungie, Aguilita, Harbor, Brush, Ceiba, Fittstown);
@@ -5085,10 +5117,10 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
             @defaultonly NoAction();
         }
         key = {
-            Monrovia.Balmorhea.Satolah               : ternary @name("Balmorhea.Satolah") ;
-            Monrovia.Balmorhea.Pittsboro             : exact @name("Balmorhea.Pittsboro") ;
-            Monrovia.Balmorhea.LaLuz                 : ternary @name("Balmorhea.LaLuz") ;
-            Monrovia.Balmorhea.Wauconda & 32w0xfe0000: ternary @name("Balmorhea.Wauconda") ;
+            Monrovia.Balmorhea.Satolah                 : ternary @name("Balmorhea.Satolah") ;
+            Monrovia.Balmorhea.Pittsboro               : exact @name("Balmorhea.Pittsboro") ;
+            Monrovia.Balmorhea.LaLuz                   : ternary @name("Balmorhea.LaLuz") ;
+            Monrovia.Balmorhea.Wauconda & 32w0xfffe0000: ternary @name("Balmorhea.Wauconda") ;
         }
         size = 16;
         requires_versioning = false;
@@ -5443,9 +5475,12 @@ control Sultana(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
 }
 
 control Stamford(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intrinsic_metadata_t Longwood, in ingress_intrinsic_metadata_from_parser_t Rienzi, inout ingress_intrinsic_metadata_for_deparser_t Ambler, inout ingress_intrinsic_metadata_for_tm_t Yorkshire) {
+    @name(".Waimalu") action Waimalu() {
+        Yorkshire.rid = Yorkshire.mcast_grp_a;
+    }
     @name(".Tampa") action Tampa(bit<16> Pierson) {
         Yorkshire.level1_exclusion_id = Pierson;
-        Yorkshire.rid = Yorkshire.mcast_grp_a;
+        Yorkshire.rid = (bit<16>)16w4096;
     }
     @name(".Piedmont") action Piedmont(bit<16> Pierson) {
         Tampa(Pierson);
@@ -5465,6 +5500,7 @@ control Stamford(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_int
             Piedmont();
             Camino();
             Flomaton();
+            Waimalu();
         }
         key = {
             Monrovia.Balmorhea.Satolah            : ternary @name("Balmorhea.Satolah") ;
@@ -5506,6 +5542,16 @@ control Marvin(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrin
         RedBay(Conejo, Conejo);
         Upalco(Ledoux, Steger, Ranier);
         Monrovia.Balmorhea.Pittsboro = Pittsboro;
+        Monrovia.Balmorhea.Wauconda = (bit<32>)32w0x800000;
+    }
+    @name(".Quamba") action Quamba(bit<32> Kenbridge, bit<32> Vinemont, bit<32> McBride, bit<32> Mackville, bit<24> Ledoux, bit<24> Steger, bit<12> Ranier, bit<3> Pittsboro) {
+        Wagener.Nooksack.Kenbridge = Kenbridge;
+        Wagener.Nooksack.Vinemont = Vinemont;
+        Wagener.Nooksack.McBride = McBride;
+        Wagener.Nooksack.Mackville = Mackville;
+        Upalco(Ledoux, Steger, Ranier);
+        Monrovia.Balmorhea.Pittsboro = Pittsboro;
+        Monrovia.Balmorhea.Wauconda = (bit<32>)32w0x0;
     }
     @disable_atomic_modify(1) @name(".Nordheim") table Nordheim {
         actions = {
@@ -5521,6 +5567,7 @@ control Marvin(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrin
     @disable_atomic_modify(1) @name(".Canton") table Canton {
         actions = {
             Ripley();
+            Quamba();
             Aguila();
         }
         key = {
@@ -6763,7 +6810,6 @@ control Blakeslee(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
     @name(".FordCity") Ardsley() FordCity;
     @name(".Husum") Estero() Husum;
     @name(".Almond") Snook() Almond;
-    @name(".Caguas") Shivwits() Caguas;
     @name(".Schroeder") Ammon() Schroeder;
     @name(".Chubbuck") Sanborn() Chubbuck;
     @name(".Hagerman") Sturgeon() Hagerman;
@@ -6842,7 +6888,6 @@ control Blakeslee(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
         {
             Lilydale.apply(Wagener, Monrovia, Longwood, Rienzi, Ambler, Yorkshire);
             Ellicott.apply(Wagener, Monrovia, Longwood, Rienzi, Ambler, Yorkshire);
-            Caguas.apply(Wagener, Monrovia, Longwood, Rienzi, Ambler, Yorkshire);
             Navarro.apply(Wagener, Monrovia, Longwood, Rienzi, Ambler, Yorkshire);
             Wharton.apply(Wagener, Monrovia, Longwood, Rienzi, Ambler, Yorkshire);
             Perma.apply(Wagener, Monrovia, Longwood, Rienzi, Ambler, Yorkshire);

@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -73,6 +73,7 @@
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Aniak.Belmont.Selawik")
 @pa_alias("ingress" , "ig_intr_md_for_tm.copy_to_cpu" , "Aniak.Bonner.Ashley")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Aniak.NantyGlo.Florien")
+@pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
 @pa_alias("ingress" , "ig_intr_md_for_tm.qid" , "Aniak.NantyGlo.Chatom")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ucast_egress_port" , "Aniak.Bonner.Grottoes")
 @pa_alias("ingress" , "Aniak.Lawai.Coalwood" , "Aniak.Cassa.Soledad")
@@ -1678,6 +1679,8 @@ struct Magasco {
 parser Boonsboro(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out ingress_intrinsic_metadata_t Barnhill) {
     @name(".Terral") Checksum() Terral;
     @name(".HighRock") Checksum() HighRock;
+    @name(".Geeville") value_set<bit<12>>(1) Geeville;
+    @name(".Fowlkes") value_set<bit<24>>(1) Fowlkes;
     @name(".Covert") value_set<bit<9>>(2) Covert;
     @name(".Columbus") value_set<bit<19>>(4) Columbus;
     @name(".Elmsford") value_set<bit<19>>(4) Elmsford;
@@ -1745,30 +1748,60 @@ parser Boonsboro(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
     }
     state Millstone {
         Talco.extract<Buckeye>(Crannell.Hillsview[1]);
-        transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Lookeba;
-            (8w0x45 &&& 8w0xff, 16w0x800): Alstown;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Swifton;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): PeaRidge;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Cranbury;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Neponset;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Bronwood;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): LoneJack;
+        transition select(Crannell.Hillsview[1].Spearman) {
+            Geeville: Seguin;
+            12w0: Palmdale;
+            default: Seguin;
+        }
+    }
+    state Palmdale {
+        Aniak.Bergton.Altus = (bit<4>)4w0xf;
+        transition reject;
+    }
+    state Cloverly {
+        transition select((bit<8>)(Talco.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Talco.lookahead<bit<16>>())) {
+            24w0x806 &&& 24w0xffff: Lookeba;
+            24w0x450800 &&& 24w0xffffff: Alstown;
+            24w0x50800 &&& 24w0xfffff: Swifton;
+            24w0x800 &&& 24w0xffff: PeaRidge;
+            24w0x6086dd &&& 24w0xf0ffff: Cranbury;
+            24w0x86dd &&& 24w0xffff: Neponset;
+            24w0x8808 &&& 24w0xffff: Bronwood;
+            24w0x88f7 &&& 24w0xffff: LoneJack;
+            default: Cotter;
+        }
+    }
+    state Seguin {
+        transition select((bit<8>)(Talco.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Talco.lookahead<bit<16>>())) {
+            Fowlkes: Cloverly;
+            24w0x9100 &&& 24w0xffff: Palmdale;
+            24w0x88a8 &&& 24w0xffff: Palmdale;
+            24w0x8100 &&& 24w0xffff: Palmdale;
+            24w0x806 &&& 24w0xffff: Lookeba;
+            24w0x450800 &&& 24w0xffffff: Alstown;
+            24w0x50800 &&& 24w0xfffff: Swifton;
+            24w0x800 &&& 24w0xffff: PeaRidge;
+            24w0x6086dd &&& 24w0xf0ffff: Cranbury;
+            24w0x86dd &&& 24w0xffff: Neponset;
+            24w0x8808 &&& 24w0xffff: Bronwood;
+            24w0x88f7 &&& 24w0xffff: LoneJack;
             default: Cotter;
         }
     }
     state Jayton {
         Talco.extract<Buckeye>(Crannell.Hillsview[0]);
-        transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Millstone;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Lookeba;
-            (8w0x45 &&& 8w0xff, 16w0x800): Alstown;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Swifton;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): PeaRidge;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Cranbury;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Neponset;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Bronwood;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): LoneJack;
+        transition select((bit<8>)(Talco.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Talco.lookahead<bit<16>>())) {
+            24w0x9100 &&& 24w0xffff: Millstone;
+            24w0x88a8 &&& 24w0xffff: Millstone;
+            24w0x8100 &&& 24w0xffff: Millstone;
+            24w0x806 &&& 24w0xffff: Lookeba;
+            24w0x450800 &&& 24w0xffffff: Alstown;
+            24w0x50800 &&& 24w0xfffff: Swifton;
+            24w0x800 &&& 24w0xffff: PeaRidge;
+            24w0x6086dd &&& 24w0xf0ffff: Cranbury;
+            24w0x86dd &&& 24w0xffff: Neponset;
+            24w0x8808 &&& 24w0xffff: Bronwood;
+            24w0x88f7 &&& 24w0xffff: LoneJack;
             default: Cotter;
         }
     }
@@ -2124,7 +2157,7 @@ control Sedan(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsic
             Aniak.Cassa.Brinklow           : ternary @name("Cassa.Brinklow") ;
             Aniak.Cassa.TroutRun           : ternary @name("Cassa.TroutRun") ;
             Aniak.Cassa.Kremlin            : ternary @name("Cassa.Kremlin") ;
-            Aniak.Bergton.Altus & 4w0x8    : ternary @name("Bergton.Altus") ;
+            Aniak.Bergton.Altus            : ternary @name("Bergton.Altus") ;
             Aniak.Bergton.Sewaren          : ternary @name("Bergton.Sewaren") ;
         }
         const default_action = Mayflower();
@@ -3409,7 +3442,7 @@ control Timnath(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         requires_versioning = false;
     }
     apply {
-        if (Crannell.Livonia.isValid() == false && Aniak.Rainelle.Madera == 3w1 && Aniak.Doddridge.Kaaawa == 1w1) {
+        if (Crannell.Livonia.isValid() == false && Aniak.Rainelle.Madera == 3w1 && Aniak.Doddridge.Kaaawa == 1w1 && Crannell.Swisshome.isValid() == false) {
             Amherst.apply();
         }
     }
@@ -4338,9 +4371,7 @@ control Durant(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
     }
     apply {
         Oxnard.apply();
-        if (Aniak.Rainelle.LakeLure != 32w0) {
-            McKibben.apply();
-        }
+        McKibben.apply();
     }
 }
 
@@ -4362,7 +4393,7 @@ control Chambers(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
         size = 256;
     }
     apply {
-        if (Aniak.Rainelle.LakeLure != 32w0) {
+        if (Aniak.Rainelle.LakeLure & 32w0xff000000 != 32w0) {
             Havertown.apply();
         }
     }
@@ -4391,7 +4422,7 @@ control Protivin(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
         Crannell.Hillsview.push_front(1);
         Crannell.Hillsview[0].setValid();
         Crannell.Hillsview[0].Spearman = Aniak.Rainelle.Spearman;
-        Crannell.Hillsview[0].Lathrop = (bit<16>)16w0x8100;
+        Crannell.Hillsview[0].Lathrop = 16w0x8100;
         Crannell.Hillsview[0].Topanga = Aniak.Sopris.Kenney;
         Crannell.Hillsview[0].Allison = Aniak.Sopris.Allison;
     }
@@ -4463,6 +4494,7 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Readsboro.Moorcroft = Brunson;
         Crannell.Readsboro.setValid();
         Crannell.Gastonia.setInvalid();
+        Aniak.Rainelle.McCammon = (bit<1>)1w0;
     }
     @name(".Catlin") action Catlin() {
         Crannell.Readsboro.Horton = Crannell.Gastonia.Horton;
@@ -4471,6 +4503,7 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Readsboro.Moorcroft = Crannell.Gastonia.Moorcroft;
         Crannell.Readsboro.setValid();
         Crannell.Gastonia.setInvalid();
+        Aniak.Rainelle.McCammon = (bit<1>)1w0;
     }
     @name(".Antoine") action Antoine(bit<24> Talbert, bit<24> Brunson) {
         Clarkdale(Talbert, Brunson);
@@ -4506,7 +4539,7 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Readsboro.Lacona = Aniak.Rainelle.Lacona;
         Crannell.Readsboro.Grabill = Talbert;
         Crannell.Readsboro.Moorcroft = Brunson;
-        Crannell.Astor.Lathrop = (bit<16>)16w0x800;
+        Crannell.Astor.Lathrop = 16w0x800;
     }
     @name(".Cowley") Random<bit<16>>() Cowley;
     @name(".Lackey") action Lackey(bit<16> Trion, bit<16> Baldridge, bit<32> Hagewood) {
@@ -4525,7 +4558,7 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Crannell.Hohenwald.Steger = (bit<8>)8w17;
         Crannell.Hohenwald.Findlay = Hagewood;
         Crannell.Hohenwald.Dowell = Aniak.Rainelle.Hiland;
-        Crannell.Astor.Lathrop = (bit<16>)16w0x800;
+        Crannell.Astor.Lathrop = 16w0x800;
     }
     @name(".Kevil") action Kevil(bit<8> Bushland) {
         Wauregan(Bushland);
@@ -4594,10 +4627,10 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
             @defaultonly NoAction();
         }
         key = {
-            Aniak.Rainelle.Madera                : ternary @name("Rainelle.Madera") ;
-            Aniak.Rainelle.Quinhagak             : exact @name("Rainelle.Quinhagak") ;
-            Aniak.Rainelle.Bufalo                : ternary @name("Rainelle.Bufalo") ;
-            Aniak.Rainelle.LakeLure & 32w0xfe0000: ternary @name("Rainelle.LakeLure") ;
+            Aniak.Rainelle.Madera                  : ternary @name("Rainelle.Madera") ;
+            Aniak.Rainelle.Quinhagak               : exact @name("Rainelle.Quinhagak") ;
+            Aniak.Rainelle.Bufalo                  : ternary @name("Rainelle.Bufalo") ;
+            Aniak.Rainelle.LakeLure & 32w0xfffe0000: ternary @name("Rainelle.LakeLure") ;
         }
         size = 16;
         requires_versioning = false;
@@ -4970,9 +5003,12 @@ control Shevlin(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
 }
 
 control Walland(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsic_metadata_t Barnhill, in ingress_intrinsic_metadata_from_parser_t Nevis, inout ingress_intrinsic_metadata_for_deparser_t Lindsborg, inout ingress_intrinsic_metadata_for_tm_t NantyGlo) {
+    @name(".Calumet") action Calumet() {
+        NantyGlo.rid = NantyGlo.mcast_grp_a;
+    }
     @name(".Melrose") action Melrose(bit<16> Angeles) {
         NantyGlo.level1_exclusion_id = Angeles;
-        NantyGlo.rid = NantyGlo.mcast_grp_a;
+        NantyGlo.rid = (bit<16>)16w4096;
     }
     @name(".Ammon") action Ammon(bit<16> Angeles) {
         Melrose(Angeles);
@@ -4992,6 +5028,7 @@ control Walland(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
             Ammon();
             Wells();
             Chalco();
+            Calumet();
         }
         key = {
             Aniak.Rainelle.Madera               : ternary @name("Rainelle.Madera") ;
@@ -5033,6 +5070,7 @@ control Ferndale(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
         Kingsdale(Ocilla, Ocilla);
         Ardenvoir(Horton, Lacona, OjoFeliz);
         Aniak.Rainelle.Quinhagak = Quinhagak;
+        Aniak.Rainelle.LakeLure = (bit<32>)32w0x800000;
     }
     @disable_atomic_modify(1) @name(".Konnarock") table Konnarock {
         actions = {
@@ -5782,6 +5820,11 @@ control Picacho(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
     }
 }
 
+control Speedway(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic_metadata_t Wildorado, in egress_intrinsic_metadata_from_parser_t Maxwelton, inout egress_intrinsic_metadata_for_deparser_t Ihlen, inout egress_intrinsic_metadata_for_output_port_t Faulkton) {
+    apply {
+    }
+}
+
 control Yemassee(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic_metadata_t Wildorado, in egress_intrinsic_metadata_from_parser_t Maxwelton, inout egress_intrinsic_metadata_for_deparser_t Ihlen, inout egress_intrinsic_metadata_for_output_port_t Faulkton) {
     apply {
     }
@@ -5926,7 +5969,7 @@ control Petroleum(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         }
         actions = {
             Wahoo();
-            @defaultony NoAction();
+            @defaultonly NoAction();
         }
         requires_versioning = false;
         size = 512;
@@ -6008,7 +6051,7 @@ control Valier(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
         }
         actions = {
             Hartford();
-            @defaultony NoAction();
+            @defaultonly NoAction();
         }
         size = 576;
         const default_action = NoAction();
@@ -6021,7 +6064,7 @@ control Valier(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsic
         }
         actions = {
             Alderson();
-            @defaultony NoAction();
+            @defaultonly NoAction();
         }
         size = 576;
         const default_action = NoAction();
@@ -6581,6 +6624,7 @@ control WestLine(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
     @name(".Blackwood") Parole() Blackwood;
     @name(".Padroni") Yemassee() Padroni;
     @name(".Parmele") Lovelady() Parmele;
+    @name(".Hotevilla") Speedway() Hotevilla;
     @name(".Easley") Redvale() Easley;
     @name(".Rawson") Goldsmith() Rawson;
     @name(".Oakford") Rotonda() Oakford;
@@ -6636,6 +6680,7 @@ control WestLine(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
                 }
             }
             Rawson.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
+            Hotevilla.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
             if (Crannell.Goodwin.isValid() == true && !Crannell.Livonia.isValid()) {
                 Nashua.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);
                 Lakefield.apply(Crannell, Aniak, Wildorado, Maxwelton, Ihlen, Faulkton);

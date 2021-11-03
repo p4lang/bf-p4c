@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2SUBINTF=1 -Ibf_arista_switch_l2subintf/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_l2subintf --bf-rt-schema bf_arista_switch_l2subintf/context/bf-rt.json
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -38,6 +38,7 @@
 @pa_alias("ingress" , "Daisytown.Toluca.Hoagland" , "Balmorhea.Sopris.Helton")
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Balmorhea.Bridger.Selawik")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Balmorhea.Barnhill.Florien")
+@pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
 @pa_alias("ingress" , "Balmorhea.Mickleton.Whitefish" , "Balmorhea.Mickleton.Pachuta")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Balmorhea.NantyGlo.Matheson")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Balmorhea.Bridger.Selawik")
@@ -1447,11 +1448,6 @@ struct Swisshome {
     bit<32> Hallwood;
 }
 
-control Overton(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_intrinsic_metadata_t Hapeville, in ingress_intrinsic_metadata_from_parser_t Earling, inout ingress_intrinsic_metadata_for_deparser_t Udall, inout ingress_intrinsic_metadata_for_tm_t Barnhill) {
-    apply {
-    }
-}
-
 control Empire(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_intrinsic_metadata_t Hapeville, in ingress_intrinsic_metadata_from_parser_t Earling, inout ingress_intrinsic_metadata_for_deparser_t Udall, inout ingress_intrinsic_metadata_for_tm_t Barnhill) {
     apply {
     }
@@ -1467,6 +1463,8 @@ struct Crannell {
 parser Nevis(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorhea, out ingress_intrinsic_metadata_t Hapeville) {
     @name(".Magasco") Checksum() Magasco;
     @name(".Twain") Checksum() Twain;
+    @name(".Kealia") value_set<bit<12>>(1) Kealia;
+    @name(".BelAir") value_set<bit<24>>(1) BelAir;
     @name(".Boonsboro") value_set<bit<9>>(2) Boonsboro;
     @name(".Wegdahl") value_set<bit<19>>(4) Wegdahl;
     @name(".Denning") value_set<bit<19>>(4) Denning;
@@ -1534,30 +1532,60 @@ parser Nevis(packet_in Lindsborg, out BealCity Daisytown, out Provencal Balmorhe
     }
     state Ekwok {
         Lindsborg.extract<Buckeye>(Daisytown.Greenland[1]);
-        transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Crump;
-            (8w0x45 &&& 8w0xff, 16w0x800): Wyndmoor;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Garrison;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Milano;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Dacono;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Biggers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Pineville;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Snowflake;
+        transition select(Daisytown.Greenland[1].Spearman) {
+            Kealia: Newberg;
+            12w0: Amboy;
+            default: Newberg;
+        }
+    }
+    state Amboy {
+        Balmorhea.Bergton.Altus = (bit<4>)4w0xf;
+        transition reject;
+    }
+    state ElMirage {
+        transition select((bit<8>)(Lindsborg.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Lindsborg.lookahead<bit<16>>())) {
+            24w0x806 &&& 24w0xffff: Crump;
+            24w0x450800 &&& 24w0xffffff: Wyndmoor;
+            24w0x50800 &&& 24w0xfffff: Garrison;
+            24w0x800 &&& 24w0xffff: Milano;
+            24w0x6086dd &&& 24w0xf0ffff: Dacono;
+            24w0x86dd &&& 24w0xffff: Biggers;
+            24w0x8808 &&& 24w0xffff: Pineville;
+            24w0x88f7 &&& 24w0xffff: Snowflake;
+            default: Nooksack;
+        }
+    }
+    state Newberg {
+        transition select((bit<8>)(Lindsborg.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Lindsborg.lookahead<bit<16>>())) {
+            BelAir: ElMirage;
+            24w0x9100 &&& 24w0xffff: Amboy;
+            24w0x88a8 &&& 24w0xffff: Amboy;
+            24w0x8100 &&& 24w0xffff: Amboy;
+            24w0x806 &&& 24w0xffff: Crump;
+            24w0x450800 &&& 24w0xffffff: Wyndmoor;
+            24w0x50800 &&& 24w0xfffff: Garrison;
+            24w0x800 &&& 24w0xffff: Milano;
+            24w0x6086dd &&& 24w0xf0ffff: Dacono;
+            24w0x86dd &&& 24w0xffff: Biggers;
+            24w0x8808 &&& 24w0xffff: Pineville;
+            24w0x88f7 &&& 24w0xffff: Snowflake;
             default: Nooksack;
         }
     }
     state Covert {
         Lindsborg.extract<Buckeye>(Daisytown.Greenland[0]);
-        transition select((Lindsborg.lookahead<bit<24>>())[7:0], (Lindsborg.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Ekwok;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Crump;
-            (8w0x45 &&& 8w0xff, 16w0x800): Wyndmoor;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Garrison;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Milano;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Dacono;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Biggers;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Pineville;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Snowflake;
+        transition select((bit<8>)(Lindsborg.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Lindsborg.lookahead<bit<16>>())) {
+            24w0x9100 &&& 24w0xffff: Ekwok;
+            24w0x88a8 &&& 24w0xffff: Ekwok;
+            24w0x8100 &&& 24w0xffff: Ekwok;
+            24w0x806 &&& 24w0xffff: Crump;
+            24w0x450800 &&& 24w0xffffff: Wyndmoor;
+            24w0x50800 &&& 24w0xfffff: Garrison;
+            24w0x800 &&& 24w0xffff: Milano;
+            24w0x6086dd &&& 24w0xf0ffff: Dacono;
+            24w0x86dd &&& 24w0xffff: Biggers;
+            24w0x8808 &&& 24w0xffff: Pineville;
+            24w0x88f7 &&& 24w0xffff: Snowflake;
             default: Nooksack;
         }
     }
@@ -1894,7 +1922,7 @@ control Kinde(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
             Balmorhea.Cassa.Brinklow            : ternary @name("Cassa.Brinklow") ;
             Balmorhea.Cassa.TroutRun            : ternary @name("Cassa.TroutRun") ;
             Balmorhea.Cassa.Kremlin             : ternary @name("Cassa.Kremlin") ;
-            Balmorhea.Bergton.Altus & 4w0x8     : ternary @name("Bergton.Altus") ;
+            Balmorhea.Bergton.Altus             : ternary @name("Bergton.Altus") ;
             Balmorhea.Bergton.Sewaren           : ternary @name("Bergton.Sewaren") ;
         }
         const default_action = Saugatuck();
@@ -3231,7 +3259,7 @@ control BigRock(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_
         requires_versioning = false;
     }
     apply {
-        if (Daisytown.Goodwin.isValid() == false && Balmorhea.Rainelle.Madera == 3w1 && Balmorhea.Doddridge.Kaaawa == 1w1) {
+        if (Daisytown.Goodwin.isValid() == false && Balmorhea.Rainelle.Madera == 3w1 && Balmorhea.Doddridge.Kaaawa == 1w1 && Daisytown.Newhalem.isValid() == false) {
             Woodsboro.apply();
         }
     }
@@ -4099,9 +4127,7 @@ control Brule(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
     }
     apply {
         Bridgton.apply();
-        if (Balmorhea.Rainelle.LakeLure != 32w0) {
-            Torrance.apply();
-        }
+        Torrance.apply();
     }
 }
 
@@ -4123,7 +4149,7 @@ control Shelby(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         size = 256;
     }
     apply {
-        if (Balmorhea.Rainelle.LakeLure != 32w0) {
+        if (Balmorhea.Rainelle.LakeLure & 32w0xff000000 != 32w0) {
             OjoFeliz.apply();
         }
     }
@@ -4151,7 +4177,7 @@ control Ghent(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
     @name(".Medart") action Medart() {
         Daisytown.Greenland[0].setValid();
         Daisytown.Greenland[0].Spearman = Balmorhea.Rainelle.Spearman;
-        Daisytown.Greenland[0].Lathrop = (bit<16>)16w0x8100;
+        Daisytown.Greenland[0].Lathrop = 16w0x8100;
         Daisytown.Greenland[0].Topanga = Balmorhea.Sopris.Kenney;
         Daisytown.Greenland[0].Allison = Balmorhea.Sopris.Allison;
     }
@@ -4223,6 +4249,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         Daisytown.Livonia.Moorcroft = Talbert;
         Daisytown.Livonia.setValid();
         Daisytown.Kamrar.setInvalid();
+        Balmorhea.Rainelle.McCammon = (bit<1>)1w0;
     }
     @name(".Brunson") action Brunson() {
         Daisytown.Livonia.Horton = Daisytown.Kamrar.Horton;
@@ -4231,6 +4258,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         Daisytown.Livonia.Moorcroft = Daisytown.Kamrar.Moorcroft;
         Daisytown.Livonia.setValid();
         Daisytown.Kamrar.setInvalid();
+        Balmorhea.Rainelle.McCammon = (bit<1>)1w0;
     }
     @name(".Catlin") action Catlin(bit<24> Clarkdale, bit<24> Talbert) {
         Lignite(Clarkdale, Talbert);
@@ -4266,7 +4294,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         Daisytown.Livonia.Lacona = Balmorhea.Rainelle.Lacona;
         Daisytown.Livonia.Grabill = Clarkdale;
         Daisytown.Livonia.Moorcroft = Talbert;
-        Daisytown.Bernice.Lathrop = (bit<16>)16w0x800;
+        Daisytown.Bernice.Lathrop = 16w0x800;
     }
     @name(".Langford") Random<bit<16>>() Langford;
     @name(".Cowley") action Cowley(bit<16> Lackey, bit<16> Trion, bit<32> Ozark) {
@@ -4285,7 +4313,7 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
         Daisytown.Greenwood.Steger = (bit<8>)8w17;
         Daisytown.Greenwood.Findlay = Ozark;
         Daisytown.Greenwood.Dowell = Balmorhea.Rainelle.Hiland;
-        Daisytown.Bernice.Lathrop = (bit<16>)16w0x800;
+        Daisytown.Bernice.Lathrop = 16w0x800;
     }
     @name(".Ivanpah") action Ivanpah(bit<8> Bushland) {
         Lowemont(Bushland);
@@ -4354,10 +4382,10 @@ control Haugen(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_in
             @defaultonly NoAction();
         }
         key = {
-            Balmorhea.Rainelle.Madera                : ternary @name("Rainelle.Madera") ;
-            Balmorhea.Rainelle.Quinhagak             : exact @name("Rainelle.Quinhagak") ;
-            Balmorhea.Rainelle.Bufalo                : ternary @name("Rainelle.Bufalo") ;
-            Balmorhea.Rainelle.LakeLure & 32w0xfe0000: ternary @name("Rainelle.LakeLure") ;
+            Balmorhea.Rainelle.Madera                  : ternary @name("Rainelle.Madera") ;
+            Balmorhea.Rainelle.Quinhagak               : exact @name("Rainelle.Quinhagak") ;
+            Balmorhea.Rainelle.Bufalo                  : ternary @name("Rainelle.Bufalo") ;
+            Balmorhea.Rainelle.LakeLure & 32w0xfffe0000: ternary @name("Rainelle.LakeLure") ;
         }
         size = 16;
         requires_versioning = false;
@@ -4708,9 +4736,12 @@ control Devola(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_i
 }
 
 control Mantee(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_intrinsic_metadata_t Hapeville, in ingress_intrinsic_metadata_from_parser_t Earling, inout ingress_intrinsic_metadata_for_deparser_t Udall, inout ingress_intrinsic_metadata_for_tm_t Barnhill) {
+    @name(".Wiota") action Wiota() {
+        Barnhill.rid = Barnhill.mcast_grp_a;
+    }
     @name(".Walland") action Walland(bit<16> Melrose) {
         Barnhill.level1_exclusion_id = Melrose;
-        Barnhill.rid = Barnhill.mcast_grp_a;
+        Barnhill.rid = (bit<16>)16w4096;
     }
     @name(".Angeles") action Angeles(bit<16> Melrose) {
         Walland(Melrose);
@@ -4730,6 +4761,7 @@ control Mantee(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_i
             Angeles();
             Ammon();
             Edinburgh();
+            Wiota();
         }
         key = {
             Balmorhea.Rainelle.Madera               : ternary @name("Rainelle.Madera") ;
@@ -4771,6 +4803,7 @@ control Twichell(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_
         Durant(Blanding, Blanding);
         Chambers(Horton, Lacona, Snook);
         Balmorhea.Rainelle.Quinhagak = Quinhagak;
+        Balmorhea.Rainelle.LakeLure = (bit<32>)32w0x800000;
     }
     @disable_atomic_modify(1) @name(".Nerstrand") table Nerstrand {
         actions = {
@@ -5551,6 +5584,11 @@ control Morgana(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_i
     }
 }
 
+control Minneota(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_intrinsic_metadata_t NantyGlo, in egress_intrinsic_metadata_from_parser_t Yatesboro, inout egress_intrinsic_metadata_for_deparser_t Maxwelton, inout egress_intrinsic_metadata_for_output_port_t Ihlen) {
+    apply {
+    }
+}
+
 control Cortland(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_intrinsic_metadata_t NantyGlo, in egress_intrinsic_metadata_from_parser_t Yatesboro, inout egress_intrinsic_metadata_for_deparser_t Maxwelton, inout egress_intrinsic_metadata_for_output_port_t Ihlen) {
     apply {
     }
@@ -5948,7 +5986,6 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
     @name(".Separ") WestPark() Separ;
     @name(".Ahmeek") Leoma() Ahmeek;
     @name(".Elbing") Ravenwood() Elbing;
-    @name(".Bothwell") Overton() Bothwell;
     @name(".Waxhaw") Scotland() Waxhaw;
     @name(".Gerster") Trevorton() Gerster;
     @name(".Rodessa") Engle() Rodessa;
@@ -6020,7 +6057,6 @@ control Hooks(inout BealCity Daisytown, inout Provencal Balmorhea, in ingress_in
         {
             Cruso.apply();
             Edmeston.apply(Daisytown, Balmorhea, Hapeville, Earling, Udall, Barnhill);
-            Bothwell.apply(Daisytown, Balmorhea, Hapeville, Earling, Udall, Barnhill);
             Folcroft.apply(Daisytown, Balmorhea, Hapeville, Earling, Udall, Barnhill);
             Downs.apply(Daisytown, Balmorhea, Hapeville, Earling, Udall, Barnhill);
             Separ.apply(Daisytown, Balmorhea, Hapeville, Earling, Udall, Barnhill);
@@ -6069,6 +6105,7 @@ control Dante(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
     @name(".SandCity") Veradale() SandCity;
     @name(".Tahuya") Cortland() Tahuya;
     @name(".Newburgh") Slinger() Newburgh;
+    @name(".Whitetail") Minneota() Whitetail;
     @name(".Baroda") Twinsburg() Baroda;
     @name(".Bairoil") Haugen() Bairoil;
     @name(".NewRoads") English() NewRoads;
@@ -6108,6 +6145,7 @@ control Dante(inout BealCity Daisytown, inout Provencal Balmorhea, in egress_int
                 Newburgh.apply(Daisytown, Balmorhea, NantyGlo, Yatesboro, Maxwelton, Ihlen);
             }
             Bairoil.apply(Daisytown, Balmorhea, NantyGlo, Yatesboro, Maxwelton, Ihlen);
+            Whitetail.apply(Daisytown, Balmorhea, NantyGlo, Yatesboro, Maxwelton, Ihlen);
             if (Daisytown.Toluca.isValid() == true && !Daisytown.Goodwin.isValid()) {
                 ElJebel.apply(Daisytown, Balmorhea, NantyGlo, Yatesboro, Maxwelton, Ihlen);
                 Tusculum.apply(Daisytown, Balmorhea, NantyGlo, Yatesboro, Maxwelton, Ihlen);

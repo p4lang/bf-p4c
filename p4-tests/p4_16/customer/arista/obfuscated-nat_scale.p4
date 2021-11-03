@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino.p4>
@@ -117,6 +117,7 @@
 @pa_alias("ingress" , "Fishers.Baker.Grannis" , "Philip.Moultrie.Juneau")
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Philip.Saugatuck.Matheson")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Philip.Almota.Bledsoe")
+@pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
 @pa_alias("ingress" , "Philip.Kinde.Salix" , "Philip.Kinde.Komatke")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Philip.Lemont.AquaPark")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Philip.Saugatuck.Matheson")
@@ -1447,12 +1448,12 @@ control Chatanika(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrins
             Coryville();
         }
         key = {
-            Philip.Sedan.Grabill & 9w0x7f  : exact @name("Sedan.Grabill") ;
-            Philip.Bratt.Lovewell          : ternary @name("Bratt.Lovewell") ;
-            Philip.Bratt.Atoka             : ternary @name("Bratt.Atoka") ;
-            Philip.Bratt.Dolores           : ternary @name("Bratt.Dolores") ;
-            Philip.Dushore.Morstein & 4w0x8: ternary @name("Dushore.Morstein") ;
-            Philip.Dushore.Placedo         : ternary @name("Dushore.Placedo") ;
+            Philip.Sedan.Grabill & 9w0x7f: exact @name("Sedan.Grabill") ;
+            Philip.Bratt.Lovewell        : ternary @name("Bratt.Lovewell") ;
+            Philip.Bratt.Atoka           : ternary @name("Bratt.Atoka") ;
+            Philip.Bratt.Dolores         : ternary @name("Bratt.Dolores") ;
+            Philip.Dushore.Morstein      : ternary @name("Dushore.Morstein") ;
+            Philip.Dushore.Placedo       : ternary @name("Dushore.Placedo") ;
         }
         const default_action = Coryville();
         size = 512;
@@ -3366,7 +3367,7 @@ control Kerby(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_me
     @name(".Langford") action Langford() {
         Fishers.Jerico[0].setValid();
         Fishers.Jerico[0].Kendrick = Philip.Moultrie.Kendrick;
-        Fishers.Jerico[0].Oriskany = (bit<16>)16w0x8100;
+        Fishers.Jerico[0].Oriskany = 16w0x8100;
         Fishers.Jerico[0].Irvine = Philip.Nooksack.Ocracoke;
         Fishers.Jerico[0].Antlers = Philip.Nooksack.Antlers;
     }
@@ -3481,7 +3482,7 @@ control Lackey(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_m
         Fishers.Lauada.Petrey = Philip.Moultrie.Petrey;
         Fishers.Lauada.Aguilita = Luverne;
         Fishers.Lauada.Harbor = Amsterdam;
-        Fishers.RichBar.Oriskany = (bit<16>)16w0x800;
+        Fishers.RichBar.Oriskany = 16w0x800;
     }
     @name(".Moorman") action Moorman() {
         Natalia.drop_ctl = (bit<3>)3w7;
@@ -3496,10 +3497,10 @@ control Lackey(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            Philip.Moultrie.Knoke               : ternary @name("Moultrie.Knoke") ;
-            Philip.Moultrie.LaUnion             : exact @name("Moultrie.LaUnion") ;
-            Philip.Moultrie.Sublett             : ternary @name("Moultrie.Sublett") ;
-            Philip.Moultrie.Juneau & 32w0xfe0000: ternary @name("Moultrie.Juneau") ;
+            Philip.Moultrie.Knoke                 : ternary @name("Moultrie.Knoke") ;
+            Philip.Moultrie.LaUnion               : exact @name("Moultrie.LaUnion") ;
+            Philip.Moultrie.Sublett               : ternary @name("Moultrie.Sublett") ;
+            Philip.Moultrie.Juneau & 32w0xfffe0000: ternary @name("Moultrie.Juneau") ;
         }
         size = 16;
         requires_versioning = false;
@@ -3842,9 +3843,12 @@ control Walland(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic
 }
 
 control Wells(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_metadata_t Sedan, in ingress_intrinsic_metadata_from_parser_t Levasy, inout ingress_intrinsic_metadata_for_deparser_t Indios, inout ingress_intrinsic_metadata_for_tm_t Almota) {
+    @name(".Tanana") action Tanana() {
+        Almota.rid = Almota.mcast_grp_a;
+    }
     @name(".Edinburgh") action Edinburgh(bit<16> Chalco) {
         Almota.level1_exclusion_id = Chalco;
-        Almota.rid = Almota.mcast_grp_a;
+        Almota.rid = (bit<16>)16w4096;
     }
     @name(".Twichell") action Twichell(bit<16> Chalco) {
         Edinburgh(Chalco);
@@ -3864,6 +3868,7 @@ control Wells(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_m
             Twichell();
             Ferndale();
             Nerstrand();
+            Tanana();
         }
         key = {
             Philip.Moultrie.Knoke              : ternary @name("Moultrie.Knoke") ;
@@ -4611,6 +4616,11 @@ control Sanatoga(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic
     }
 }
 
+control Kingsgate(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Owanka, inout egress_intrinsic_metadata_for_deparser_t Natalia, inout egress_intrinsic_metadata_for_output_port_t Sunman) {
+    apply {
+    }
+}
+
 control Tocito(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Owanka, inout egress_intrinsic_metadata_for_deparser_t Natalia, inout egress_intrinsic_metadata_for_output_port_t Sunman) {
     apply {
     }
@@ -5203,6 +5213,8 @@ control Leetsdale(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrins
 parser Blunt(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out ingress_intrinsic_metadata_t Sedan) {
     @name(".Forbes") Checksum() Forbes;
     @name(".Calverton") Checksum() Calverton;
+    @name(".Hillister") value_set<bit<12>>(1) Hillister;
+    @name(".Camden") value_set<bit<24>>(1) Camden;
     @name(".Longport") value_set<bit<9>>(2) Longport;
     @name(".Deferiet") value_set<bit<19>>(4) Deferiet;
     @name(".Wrens") value_set<bit<19>>(4) Wrens;
@@ -5270,35 +5282,65 @@ parser Blunt(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out ing
     }
     state Brockton {
         Ludowici.extract<Tallassee>(Fishers.Jerico[1]);
-        transition select((Ludowici.lookahead<bit<24>>())[7:0], (Ludowici.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Wibaux;
-            (8w0x45 &&& 8w0xff, 16w0x800): Downs;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Elbing;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Waxhaw;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Gerster;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Hookstown;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Unity;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): LaFayette;
+        transition select(Fishers.Jerico[1].Kendrick) {
+            Hillister: Careywood;
+            12w0: Seabrook;
+            default: Careywood;
+        }
+    }
+    state Seabrook {
+        Philip.Dushore.Morstein = (bit<4>)4w0xf;
+        transition reject;
+    }
+    state Earlsboro {
+        transition select((bit<8>)(Ludowici.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Ludowici.lookahead<bit<16>>())) {
+            24w0x806 &&& 24w0xffff: Wibaux;
+            24w0x450800 &&& 24w0xffffff: Downs;
+            24w0x50800 &&& 24w0xfffff: Elbing;
+            24w0x800 &&& 24w0xffff: Waxhaw;
+            24w0x6086dd &&& 24w0xf0ffff: Gerster;
+            24w0x86dd &&& 24w0xffff: Hookstown;
+            24w0x8808 &&& 24w0xffff: Unity;
+            24w0x88f7 &&& 24w0xffff: LaFayette;
+            default: Carrizozo;
+        }
+    }
+    state Careywood {
+        transition select((bit<8>)(Ludowici.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Ludowici.lookahead<bit<16>>())) {
+            Camden: Earlsboro;
+            24w0x9100 &&& 24w0xffff: Seabrook;
+            24w0x88a8 &&& 24w0xffff: Seabrook;
+            24w0x8100 &&& 24w0xffff: Seabrook;
+            24w0x806 &&& 24w0xffff: Wibaux;
+            24w0x450800 &&& 24w0xffffff: Downs;
+            24w0x50800 &&& 24w0xfffff: Elbing;
+            24w0x800 &&& 24w0xffff: Waxhaw;
+            24w0x6086dd &&& 24w0xf0ffff: Gerster;
+            24w0x86dd &&& 24w0xffff: Hookstown;
+            24w0x8808 &&& 24w0xffff: Unity;
+            24w0x88f7 &&& 24w0xffff: LaFayette;
             default: Carrizozo;
         }
     }
     state Sargent {
         Ludowici.extract<Tallassee>(Fishers.Jerico[0]);
-        transition select((Ludowici.lookahead<bit<24>>())[7:0], (Ludowici.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Brockton;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Wibaux;
-            (8w0x45 &&& 8w0xff, 16w0x800): Downs;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Elbing;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Waxhaw;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Gerster;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Hookstown;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Unity;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): LaFayette;
+        transition select((bit<8>)(Ludowici.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Ludowici.lookahead<bit<16>>())) {
+            24w0x9100 &&& 24w0xffff: Brockton;
+            24w0x88a8 &&& 24w0xffff: Brockton;
+            24w0x8100 &&& 24w0xffff: Brockton;
+            24w0x806 &&& 24w0xffff: Wibaux;
+            24w0x450800 &&& 24w0xffffff: Downs;
+            24w0x50800 &&& 24w0xfffff: Elbing;
+            24w0x800 &&& 24w0xffff: Waxhaw;
+            24w0x6086dd &&& 24w0xf0ffff: Gerster;
+            24w0x86dd &&& 24w0xffff: Hookstown;
+            24w0x8808 &&& 24w0xffff: Unity;
+            24w0x88f7 &&& 24w0xffff: LaFayette;
             default: Carrizozo;
         }
     }
     state Emigrant {
-        Philip.Bratt.Oriskany = (bit<16>)16w0x800;
+        Philip.Bratt.Oriskany = 16w0x800;
         Philip.Bratt.Ivyland = (bit<3>)3w4;
         transition select((Ludowici.lookahead<bit<8>>())[7:0]) {
             8w0x45 &&& 8w0xff: Ancho;
@@ -5306,12 +5348,12 @@ parser Blunt(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out ing
         }
     }
     state Doral {
-        Philip.Bratt.Oriskany = (bit<16>)16w0x86dd;
+        Philip.Bratt.Oriskany = 16w0x86dd;
         Philip.Bratt.Ivyland = (bit<3>)3w4;
         transition Statham;
     }
     state Rodessa {
-        Philip.Bratt.Oriskany = (bit<16>)16w0x86dd;
+        Philip.Bratt.Oriskany = 16w0x86dd;
         Philip.Bratt.Ivyland = (bit<3>)3w4;
         transition Statham;
     }
@@ -6364,6 +6406,7 @@ control Schofield(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsi
     @name(".Lasara") Aquilla() Lasara;
     @name(".Perma") Tocito() Perma;
     @name(".Campbell") Vananda() Campbell;
+    @name(".Devore") Kingsgate() Devore;
     @name(".Navarro") Paragonah() Navarro;
     @name(".Edgemont") Lackey() Edgemont;
     @name(".Woodston") DewyRose() Woodston;
@@ -6407,6 +6450,7 @@ control Schofield(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsi
                 Campbell.apply(Fishers, Philip, Lemont, Owanka, Natalia, Sunman);
             }
             Edgemont.apply(Fishers, Philip, Lemont, Owanka, Natalia, Sunman);
+            Devore.apply(Fishers, Philip, Lemont, Owanka, Natalia, Sunman);
             if (Fishers.Olmitz.isValid() == true && !Fishers.Thurmond.isValid()) {
                 Torrance.apply(Fishers, Philip, Lemont, Owanka, Natalia, Sunman);
                 Parmalee.apply(Fishers, Philip, Lemont, Owanka, Natalia, Sunman);

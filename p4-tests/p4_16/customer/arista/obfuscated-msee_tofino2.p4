@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.7.0-pr.1.5 (SHA: a4ac45da2)
+// p4c 9.7.0 (SHA: da5115f)
 
 #include <core.p4>
 #include <tofino2.p4>
@@ -137,6 +137,7 @@
 @pa_alias("ingress" , "Wanamassa.Alstown.Wallula" , "Peoria.Belmore.SomesBar")
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Peoria.Talco.Shabbona")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Peoria.Ekwok.Matheson")
+@pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
 @pa_alias("ingress" , "Peoria.Empire.Sewaren" , "Peoria.Masontown.McCammon")
 @pa_alias("ingress" , "Peoria.Empire.Colona" , "Peoria.Masontown.Lowes")
 @pa_alias("ingress" , "Peoria.Empire.Naruna" , "Peoria.Masontown.Naruna")
@@ -1922,7 +1923,7 @@ control Almota(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
             Peoria.Masontown.DeGraff       : ternary @name("Masontown.DeGraff") ;
             Peoria.Masontown.Scarville     : ternary @name("Masontown.Scarville") ;
             Peoria.Masontown.Quinhagak     : ternary @name("Masontown.Quinhagak") ;
-            Peoria.Gambrills.Waubun & 4w0x8: ternary @name("Gambrills.Waubun") ;
+            Peoria.Gambrills.Waubun        : ternary @name("Gambrills.Waubun") ;
             Peoria.Gambrills.Onycha        : ternary @name("Gambrills.Onycha") ;
         }
         const default_action = Halltown();
@@ -2849,7 +2850,7 @@ control Wentworth(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
         requires_versioning = false;
     }
     apply {
-        if (Wanamassa.Knights.isValid() == false && Peoria.Belmore.Wauconda == 3w1 && Peoria.Ekron.McAllen == 1w1) {
+        if (Wanamassa.Knights.isValid() == false && Peoria.Belmore.Wauconda == 3w1 && Peoria.Ekron.McAllen == 1w1 && Wanamassa.Neponset.isValid() == false) {
             Bostic.apply();
         }
     }
@@ -3480,7 +3481,7 @@ control Yorklyn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         ;
         Tullytown.mirror_io_select = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(19) @name(".Chappell") table Chappell {
+    @disable_atomic_modify(1) @name(".Chappell") table Chappell {
         actions = {
             Botna();
             Kinards();
@@ -3506,7 +3507,7 @@ control Palco(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
     @name(".Hookdale") action FourTown() {
         Peoria.Masontown.Stratford = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @stage(18) @name(".Hyrum") table Hyrum {
+    @disable_atomic_modify(1) @name(".Hyrum") table Hyrum {
         actions = {
             Melder();
             FourTown();
@@ -3540,7 +3541,7 @@ control Palco(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
     @name(".Wheeling") action Wheeling() {
         Reubens.count();
     }
-    @disable_atomic_modify(1) @stage(18) @name(".Harmony") table Harmony {
+    @disable_atomic_modify(1) @name(".Harmony") table Harmony {
         actions = {
             Wheeling();
             @defaultonly NoAction();
@@ -3561,7 +3562,7 @@ control Palco(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
     @name(".Gaston") action Gaston() {
         Boistfort.count();
     }
-    @disable_atomic_modify(1) @stage(18) @name(".Enderlin") table Enderlin {
+    @disable_atomic_modify(1) @name(".Enderlin") table Enderlin {
         actions = {
             Gaston();
             @defaultonly NoAction();
@@ -4095,9 +4096,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
             }
         }
 
-        if (Peoria.Belmore.SomesBar != 32w0) {
-            Zeeland.apply();
-        }
+        Zeeland.apply();
     }
 }
 
@@ -4119,7 +4118,7 @@ control PawCreek(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
         size = 256;
     }
     apply {
-        if (Peoria.Belmore.SomesBar != 32w0) {
+        if (Peoria.Belmore.SomesBar & 32w0xff000000 != 32w0) {
             Natalbany.apply();
         }
     }
@@ -4153,7 +4152,7 @@ control Lignite(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         size = 256;
     }
     apply {
-        if (Peoria.Belmore.SomesBar != 32w0 && Peoria.Belmore.SomesBar & 32w0x800000 == 32w0x0) {
+        if (Peoria.Belmore.SomesBar & 32w0xff000000 != 32w0 && Peoria.Belmore.SomesBar & 32w0x800000 == 32w0x0) {
             Catlin.apply();
         }
     }
@@ -4183,7 +4182,7 @@ control Norridge(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     @name(".Wauregan") action Wauregan() {
         Wanamassa.Tabler[0].setValid();
         Wanamassa.Tabler[0].Malinta = Peoria.Belmore.Malinta;
-        Wanamassa.Tabler[0].Clarion = (bit<16>)16w0x8100;
+        Wanamassa.Tabler[0].Clarion = 16w0x8100;
         Wanamassa.Tabler[0].Mystic = Peoria.Sequim.Burwell;
         Wanamassa.Tabler[0].Kearns = Peoria.Sequim.Kearns;
     }
@@ -4250,6 +4249,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Wanamassa.Humeston.Bledsoe = Gunder;
         Wanamassa.Humeston.setValid();
         Wanamassa.Bratt.setInvalid();
+        Peoria.Belmore.Kenney = (bit<1>)1w0;
     }
     @name(".Maury") action Maury() {
         Wanamassa.Humeston.Mackville = Wanamassa.Bratt.Mackville;
@@ -4258,6 +4258,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Wanamassa.Humeston.Bledsoe = Wanamassa.Bratt.Bledsoe;
         Wanamassa.Humeston.setValid();
         Wanamassa.Bratt.setInvalid();
+        Peoria.Belmore.Kenney = (bit<1>)1w0;
     }
     @name(".Ashburn") action Ashburn(bit<24> Dunkerton, bit<24> Gunder) {
         Ragley(Dunkerton, Gunder);
@@ -4293,7 +4294,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Wanamassa.Humeston.McBride = Peoria.Belmore.McBride;
         Wanamassa.Humeston.Toklat = Dunkerton;
         Wanamassa.Humeston.Bledsoe = Gunder;
-        Wanamassa.Armagh.Clarion = (bit<16>)16w0x800;
+        Wanamassa.Armagh.Clarion = 16w0x800;
     }
     @name(".Calamine") Random<bit<16>>() Calamine;
     @name(".Doyline") action Doyline(bit<16> Belcourt, bit<16> Moorman, bit<32> Bernstein) {
@@ -4312,7 +4313,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Wanamassa.Basco.Lowes = (bit<8>)8w17;
         Wanamassa.Basco.Chugwater = Bernstein;
         Wanamassa.Basco.Charco = Peoria.Belmore.Corydon;
-        Wanamassa.Armagh.Clarion = (bit<16>)16w0x800;
+        Wanamassa.Armagh.Clarion = 16w0x800;
     }
     @name(".Parmelee") action Parmelee(bit<8> Naruna) {
         Wanamassa.Pinetop.Thayne = Wanamassa.Pinetop.Thayne + Naruna;
@@ -4385,7 +4386,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Wanamassa.Gamaliel.Uvalde = Uvalde;
         Wanamassa.Gamaliel.Fairland[31:4] = (bit<28>)28w0;
         Wanamassa.Gamaliel.Thayne = (bit<8>)8w64;
-        Wanamassa.Armagh.Clarion = (bit<16>)16w0x86dd;
+        Wanamassa.Armagh.Clarion = 16w0x86dd;
     }
     @name(".Wakenda") action Wakenda(bit<16> Lordstown, bit<16> Hatchel, bit<16> Mynard, bit<24> Toklat, bit<24> Bledsoe, bit<24> Dunkerton, bit<24> Gunder, bit<32> Coulter, bit<32> Kapalua, bit<32> Halaula, bit<32> Uvalde, bit<16> Thatcher) {
         Cornish(Lordstown, Hatchel, Toklat, Bledsoe, Dunkerton, Gunder, Thatcher);
@@ -4420,10 +4421,10 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
             @defaultonly NoAction();
         }
         key = {
-            Peoria.Belmore.Wauconda              : ternary @name("Belmore.Wauconda") ;
-            Peoria.Belmore.LaConner              : exact @name("Belmore.LaConner") ;
-            Peoria.Belmore.Pinole                : ternary @name("Belmore.Pinole") ;
-            Peoria.Belmore.SomesBar & 32w0xfe0000: ternary @name("Belmore.SomesBar") ;
+            Peoria.Belmore.Wauconda                : ternary @name("Belmore.Wauconda") ;
+            Peoria.Belmore.LaConner                : exact @name("Belmore.LaConner") ;
+            Peoria.Belmore.Pinole                  : ternary @name("Belmore.Pinole") ;
+            Peoria.Belmore.SomesBar & 32w0xfffe0000: ternary @name("Belmore.SomesBar") ;
         }
         size = 16;
         requires_versioning = false;
@@ -4775,9 +4776,12 @@ control Fosston(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intri
 }
 
 control Harrison(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrinsic_metadata_t Covert, in ingress_intrinsic_metadata_from_parser_t Frederika, inout ingress_intrinsic_metadata_for_deparser_t Saugatuck, inout ingress_intrinsic_metadata_for_tm_t Ekwok) {
+    @name(".Ivydale") action Ivydale() {
+        Ekwok.rid = Ekwok.mcast_grp_a;
+    }
     @name(".Cidra") action Cidra(bit<16> GlenDean) {
         Ekwok.level1_exclusion_id = GlenDean;
-        Ekwok.rid = Ekwok.mcast_grp_a;
+        Ekwok.rid = (bit<16>)16w4096;
     }
     @name(".MoonRun") action MoonRun(bit<16> GlenDean) {
         Cidra(GlenDean);
@@ -4797,6 +4801,7 @@ control Harrison(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             MoonRun();
             Calimesa();
             Elysburg();
+            Ivydale();
         }
         key = {
             Peoria.Belmore.Wauconda             : ternary @name("Belmore.Wauconda") ;
@@ -4838,6 +4843,16 @@ control LaMarque(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
         Issaquah(Truro, Truro);
         Cornwall(Mackville, McBride, Bovina);
         Peoria.Belmore.LaConner = LaConner;
+        Peoria.Belmore.SomesBar = (bit<32>)32w0x800000;
+    }
+    @name(".Titonka") action Titonka(bit<32> Juniata, bit<32> Fairland, bit<32> Pridgen, bit<32> Tenino, bit<24> Mackville, bit<24> McBride, bit<13> Bovina, bit<3> LaConner) {
+        Wanamassa.Gamaliel.Juniata = Juniata;
+        Wanamassa.Gamaliel.Fairland = Fairland;
+        Wanamassa.Gamaliel.Pridgen = Pridgen;
+        Wanamassa.Gamaliel.Tenino = Tenino;
+        Cornwall(Mackville, McBride, Bovina);
+        Peoria.Belmore.LaConner = LaConner;
+        Peoria.Belmore.SomesBar = (bit<32>)32w0x0;
     }
     @disable_atomic_modify(1) @name(".Maupin") table Maupin {
         actions = {
@@ -4853,6 +4868,7 @@ control LaMarque(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     @disable_atomic_modify(1) @name(".Claypool") table Claypool {
         actions = {
             Keltys();
+            Titonka();
             Hookdale();
         }
         key = {
@@ -5456,7 +5472,7 @@ control Engle(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsi
         BigBow(Malinta);
         Wanamassa.Tabler[1].setValid();
         Wanamassa.Tabler[1].Malinta = Caguas;
-        Wanamassa.Tabler[1].Clarion = (bit<16>)16w0x8100;
+        Wanamassa.Tabler[1].Clarion = 16w0x8100;
         Wanamassa.Tabler[1].Mystic = Peoria.Sequim.Burwell;
         Wanamassa.Tabler[1].Kearns = Peoria.Sequim.Kearns;
     }
@@ -5583,6 +5599,11 @@ control Nordheim(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
 }
 
 control Northboro(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
+    apply {
+    }
+}
+
+control Escondido(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
     apply {
     }
 }
@@ -6031,7 +6052,7 @@ control Devore(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
 }
 
 control McFaddin(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
-    @name(".Jigger") Meter<bit<32>>(32w8192, MeterType_t.BYTES, 8w1, 8w1, 8w0, true) Jigger;
+    @name(".Jigger") Meter<bit<32>>(32w8192, MeterType_t.BYTES, 8w1, 8w1, 8w0) Jigger;
     @name(".Villanova") action Villanova(bit<32> Maybee) {
         Peoria.Belmore.Ardara = (bit<1>)Jigger.execute(Maybee);
     }
@@ -6046,7 +6067,7 @@ control McFaddin(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
         const default_action = NoAction();
         size = 8192;
     }
-    @name(".Oskawalik") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES, true) Oskawalik;
+    @name(".Oskawalik") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Oskawalik;
     @name(".Pelland") action Pelland() {
         Oskawalik.count();
     }
@@ -6436,9 +6457,8 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 12288;
-        idle_timeout = true;
     }
-    @idletime_precision(1) @atcam_partition_index("Yerington.Darien") @atcam_number_partitions(( 12 * 1024 )) @force_immediate(1) @disable_atomic_modify(1) @name(".Tularosa") table Tularosa {
+    @atcam_partition_index("Yerington.Darien") @atcam_number_partitions(( 12 * 1024 )) @force_immediate(1) @disable_atomic_modify(1) @name(".Tularosa") table Tularosa {
         actions = {
             Geistown();
             Ruffin();
@@ -6456,9 +6476,8 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 196608;
-        idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Moosic") table Moosic {
+    @force_immediate(1) @disable_atomic_modify(1) @name(".Moosic") table Moosic {
         actions = {
             Geistown();
             Ruffin();
@@ -6476,7 +6495,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Boyle();
         size = 10240;
-        idle_timeout = true;
     }
     apply {
         if (Hettinger.apply().hit) {
@@ -6652,7 +6670,7 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
     @name(".Chatanika") action Chatanika() {
         Ruffin(32w1);
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Lefor") table Lefor {
+    @force_immediate(1) @disable_atomic_modify(1) @name(".Lefor") table Lefor {
         actions = {
             Geistown();
             Ruffin();
@@ -6670,9 +6688,8 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 471040;
-        idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Uniopolis") table Uniopolis {
+    @force_immediate(1) @disable_atomic_modify(1) @name(".Uniopolis") table Uniopolis {
         actions = {
             Geistown();
             Ruffin();
@@ -6690,7 +6707,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Chatanika();
         size = 20480;
-        idle_timeout = true;
     }
     @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Sandpoint") table Sandpoint {
         actions = {
@@ -6703,19 +6719,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("ElMirage.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Bassett") table Bassett {
         actions = {
             @tableonly Shanghai();
             @tableonly Milnor();
             @tableonly Ogunquit();
+            @tableonly Iroquois();
+            @defaultonly Rhinebeck();
             @tableonly Newkirk();
             @tableonly Vinita();
             @tableonly Humarock();
             @tableonly Eunice();
-            @tableonly Iroquois();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.ElMirage.Thistle          : exact @name("ElMirage.Thistle") ;
@@ -6723,7 +6738,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @name(".Perkasie") action Perkasie() {
         Peoria.Baudette.Murphy = Peoria.ElMirage.Murphy;
@@ -6746,19 +6760,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("Amboy.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Caborn") table Caborn {
         actions = {
             @tableonly Contact();
             @tableonly Kamas();
             @tableonly Norco();
+            @tableonly Needham();
+            @defaultonly Rhinebeck();
             @tableonly Dilia();
             @tableonly Richlawn();
             @tableonly Dunnegan();
             @tableonly Farson();
-            @tableonly Needham();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.Amboy.Thistle             : exact @name("Amboy.Thistle") ;
@@ -6766,7 +6779,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Goodrich") table Goodrich {
         actions = {
@@ -7786,19 +7798,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("ElMirage.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Pinebluff") table Pinebluff {
         actions = {
             @tableonly Wahoo();
             @tableonly Brazil();
             @tableonly Cistern();
+            @tableonly Tennessee();
+            @defaultonly Rhinebeck();
             @tableonly Faith();
             @tableonly NewCity();
             @tableonly LakeHart();
             @tableonly Volcano();
-            @tableonly Tennessee();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.ElMirage.Thistle          : exact @name("ElMirage.Thistle") ;
@@ -7806,7 +7817,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Fentress") table Fentress {
         actions = {
@@ -8826,19 +8836,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("Amboy.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Ossineke") table Ossineke {
         actions = {
             @tableonly Contact();
             @tableonly Kamas();
             @tableonly Norco();
+            @tableonly Needham();
+            @defaultonly Rhinebeck();
             @tableonly Dilia();
             @tableonly Richlawn();
             @tableonly Dunnegan();
             @tableonly Farson();
-            @tableonly Needham();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.Amboy.Thistle             : exact @name("Amboy.Thistle") ;
@@ -8846,7 +8855,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Meridean") table Meridean {
         actions = {
@@ -9866,19 +9874,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("ElMirage.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Dovray") table Dovray {
         actions = {
             @tableonly Wahoo();
             @tableonly Brazil();
             @tableonly Cistern();
+            @tableonly Tennessee();
+            @defaultonly Rhinebeck();
             @tableonly Faith();
             @tableonly NewCity();
             @tableonly LakeHart();
             @tableonly Volcano();
-            @tableonly Tennessee();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.ElMirage.Thistle          : exact @name("ElMirage.Thistle") ;
@@ -9886,7 +9893,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Ellinger") table Ellinger {
         actions = {
@@ -10906,19 +10912,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("Amboy.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Waukegan") table Waukegan {
         actions = {
             @tableonly Contact();
             @tableonly Kamas();
             @tableonly Norco();
+            @tableonly Needham();
+            @defaultonly Rhinebeck();
             @tableonly Dilia();
             @tableonly Richlawn();
             @tableonly Dunnegan();
             @tableonly Farson();
-            @tableonly Needham();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.Amboy.Thistle             : exact @name("Amboy.Thistle") ;
@@ -10926,7 +10931,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Clintwood") table Clintwood {
         actions = {
@@ -11946,19 +11950,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("ElMirage.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Trammel") table Trammel {
         actions = {
             @tableonly Wahoo();
             @tableonly Brazil();
             @tableonly Cistern();
+            @tableonly Tennessee();
+            @defaultonly Rhinebeck();
             @tableonly Faith();
             @tableonly NewCity();
             @tableonly LakeHart();
             @tableonly Volcano();
-            @tableonly Tennessee();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.ElMirage.Thistle          : exact @name("ElMirage.Thistle") ;
@@ -11966,7 +11969,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Caldwell") table Caldwell {
         actions = {
@@ -12986,19 +12988,18 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Hookdale();
         size = 9216;
-        idle_timeout = true;
     }
     @atcam_partition_index("Amboy.Thistle") @atcam_number_partitions(( 9 * 1024 )) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Melrude") table Melrude {
         actions = {
             @tableonly Contact();
             @tableonly Kamas();
             @tableonly Norco();
+            @tableonly Needham();
+            @defaultonly Rhinebeck();
             @tableonly Dilia();
             @tableonly Richlawn();
             @tableonly Dunnegan();
             @tableonly Farson();
-            @tableonly Needham();
-            @defaultonly Rhinebeck();
         }
         key = {
             Peoria.Amboy.Thistle             : exact @name("Amboy.Thistle") ;
@@ -13006,7 +13007,6 @@ control BigRun(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         }
         const default_action = Rhinebeck();
         size = 147456;
-        idle_timeout = true;
     }
     @hidden @disable_atomic_modify(1) @name(".Ikatan") table Ikatan {
         actions = {
@@ -14307,6 +14307,8 @@ control Ashley(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
 parser Lamar(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out ingress_intrinsic_metadata_t Covert) {
     @name(".Statham") Checksum() Statham;
     @name(".Corder") Checksum() Corder;
+    @name(".Slocum") value_set<bit<12>>(1) Slocum;
+    @name(".Kooskia") value_set<bit<24>>(1) Kooskia;
     @name(".LaHoma") value_set<bit<9>>(2) LaHoma;
     @name(".Timken") value_set<bit<19>>(8) Timken;
     @name(".Lamboglia") value_set<bit<19>>(8) Lamboglia;
@@ -14366,35 +14368,65 @@ parser Lamar(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out in
     }
     state Moapa {
         Doral.extract<Parkville>(Wanamassa.Tabler[1]);
-        transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Manakin;
-            (8w0x45 &&& 8w0xff, 16w0x800): Tontogany;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): McCartys;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Glouster;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Penrose;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Almont;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): SandCity;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Paicines;
+        transition select(Wanamassa.Tabler[1].Malinta) {
+            Slocum: Elmore;
+            12w0: Proctor;
+            default: Elmore;
+        }
+    }
+    state Proctor {
+        Peoria.Gambrills.Waubun = (bit<4>)4w0xf;
+        transition reject;
+    }
+    state Colmar {
+        transition select((bit<8>)(Doral.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Doral.lookahead<bit<16>>())) {
+            24w0x806 &&& 24w0xffff: Manakin;
+            24w0x450800 &&& 24w0xffffff: Tontogany;
+            24w0x50800 &&& 24w0xfffff: McCartys;
+            24w0x800 &&& 24w0xffff: Glouster;
+            24w0x6086dd &&& 24w0xf0ffff: Penrose;
+            24w0x86dd &&& 24w0xffff: Almont;
+            24w0x8808 &&& 24w0xffff: SandCity;
+            24w0x88f7 &&& 24w0xffff: Paicines;
+            default: Newburgh;
+        }
+    }
+    state Elmore {
+        transition select((bit<8>)(Doral.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Doral.lookahead<bit<16>>())) {
+            Kooskia: Colmar;
+            24w0x9100 &&& 24w0xffff: Proctor;
+            24w0x88a8 &&& 24w0xffff: Proctor;
+            24w0x8100 &&& 24w0xffff: Proctor;
+            24w0x806 &&& 24w0xffff: Manakin;
+            24w0x450800 &&& 24w0xffffff: Tontogany;
+            24w0x50800 &&& 24w0xfffff: McCartys;
+            24w0x800 &&& 24w0xffff: Glouster;
+            24w0x6086dd &&& 24w0xf0ffff: Penrose;
+            24w0x86dd &&& 24w0xffff: Almont;
+            24w0x8808 &&& 24w0xffff: SandCity;
+            24w0x88f7 &&& 24w0xffff: Paicines;
             default: Newburgh;
         }
     }
     state Elliston {
         Doral.extract<Parkville>(Wanamassa.Tabler[0]);
-        transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Moapa;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Manakin;
-            (8w0x45 &&& 8w0xff, 16w0x800): Tontogany;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): McCartys;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Glouster;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Penrose;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Almont;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): SandCity;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Paicines;
+        transition select((bit<8>)(Doral.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Doral.lookahead<bit<16>>())) {
+            24w0x9100 &&& 24w0xffff: Moapa;
+            24w0x88a8 &&& 24w0xffff: Moapa;
+            24w0x8100 &&& 24w0xffff: Moapa;
+            24w0x806 &&& 24w0xffff: Manakin;
+            24w0x450800 &&& 24w0xffffff: Tontogany;
+            24w0x50800 &&& 24w0xfffff: McCartys;
+            24w0x800 &&& 24w0xffff: Glouster;
+            24w0x6086dd &&& 24w0xf0ffff: Penrose;
+            24w0x86dd &&& 24w0xffff: Almont;
+            24w0x8808 &&& 24w0xffff: SandCity;
+            24w0x88f7 &&& 24w0xffff: Paicines;
             default: Newburgh;
         }
     }
     state Neuse {
-        Peoria.Masontown.Clarion = (bit<16>)16w0x800;
+        Peoria.Masontown.Clarion = 16w0x800;
         Peoria.Masontown.RioPecos = (bit<3>)3w4;
         transition select((Doral.lookahead<bit<8>>())[7:0]) {
             8w0x45 &&& 8w0xff: Fairchild;
@@ -14402,12 +14434,12 @@ parser Lamar(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out in
         }
     }
     state Waxhaw {
-        Peoria.Masontown.Clarion = (bit<16>)16w0x86dd;
+        Peoria.Masontown.Clarion = 16w0x86dd;
         Peoria.Masontown.RioPecos = (bit<3>)3w4;
         transition Gerster;
     }
     state Eustis {
-        Peoria.Masontown.Clarion = (bit<16>)16w0x86dd;
+        Peoria.Masontown.Clarion = 16w0x86dd;
         Peoria.Masontown.RioPecos = (bit<3>)3w5;
         transition accept;
     }
@@ -14918,7 +14950,7 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Peoria.Baudette.Murphy = Peoria.Minneota.Murphy;
         Peoria.Baudette.Ovett = Peoria.Minneota.Ovett;
     }
-    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Robstown") table Robstown {
+    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Robstown") table Robstown {
         actions = {
             Geistown();
             Ruffin();
@@ -14936,9 +14968,8 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         }
         const default_action = Hookdale();
         size = 157696;
-        idle_timeout = true;
     }
-    @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @placement_priority(".Macungie") @name(".Eastover") table Eastover {
+    @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Eastover") table Eastover {
         actions = {
             @tableonly Geeville();
             @defaultonly Hookdale();
@@ -14948,27 +14979,25 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             Peoria.Yerington.Charco: lpm @name("Yerington.Charco") ;
         }
         size = 2048;
-        idle_timeout = true;
         const default_action = Hookdale();
     }
-    @idletime_precision(1) @atcam_partition_index("Wiota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Iraan") table Iraan {
+    @atcam_partition_index("Wiota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Iraan") table Iraan {
         actions = {
             @tableonly Fowlkes();
             @tableonly Cloverly();
             @tableonly Palmdale();
+            @tableonly Seguin();
+            @defaultonly Monico();
             @tableonly Wimbledon();
             @tableonly Sagamore();
             @tableonly Falmouth();
             @tableonly Viroqua();
-            @tableonly Seguin();
-            @defaultonly Monico();
         }
         key = {
             Peoria.Wiota.Thistle                            : exact @name("Wiota.Thistle") ;
             Peoria.Yerington.Charco & 128w0xffffffffffffffff: lpm @name("Yerington.Charco") ;
         }
         size = 32768;
-        idle_timeout = true;
         const default_action = Monico();
     }
     @disable_atomic_modify(1) @name(".Rudolph") table Rudolph {
@@ -15116,7 +15145,6 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             Peoria.Yerington.Charco: lpm @name("Yerington.Charco") ;
         }
         size = 2048;
-        idle_timeout = true;
         const default_action = Hookdale();
     }
     @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Elihu") table Elihu {
@@ -15129,7 +15157,6 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             Peoria.Yerington.Charco: lpm @name("Yerington.Charco") ;
         }
         size = 2048;
-        idle_timeout = true;
         const default_action = Hookdale();
     }
     @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Cypress") table Cypress {
@@ -15142,7 +15169,6 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             Peoria.Yerington.Charco: lpm @name("Yerington.Charco") ;
         }
         size = 2048;
-        idle_timeout = true;
         const default_action = Hookdale();
     }
     @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Telocaset") table Telocaset {
@@ -15155,87 +15181,82 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             Peoria.Yerington.Charco: lpm @name("Yerington.Charco") ;
         }
         size = 2048;
-        idle_timeout = true;
         const default_action = Hookdale();
     }
-    @idletime_precision(1) @atcam_partition_index("Minneota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Sabana") table Sabana {
+    @atcam_partition_index("Minneota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Sabana") table Sabana {
         actions = {
             @tableonly Needles();
             @tableonly Quealy();
             @tableonly Huffman();
+            @tableonly Boquet();
+            @defaultonly Indrio();
             @tableonly Powelton();
             @tableonly Wainaku();
             @tableonly Kempner();
             @tableonly KawCity();
-            @tableonly Boquet();
-            @defaultonly Indrio();
         }
         key = {
             Peoria.Minneota.Thistle                         : exact @name("Minneota.Thistle") ;
             Peoria.Yerington.Charco & 128w0xffffffffffffffff: lpm @name("Yerington.Charco") ;
         }
         size = 32768;
-        idle_timeout = true;
         const default_action = Indrio();
     }
-    @idletime_precision(1) @atcam_partition_index("Wiota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Trego") table Trego {
+    @atcam_partition_index("Wiota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Trego") table Trego {
         actions = {
             @tableonly Calumet();
             @tableonly Hotevilla();
             @tableonly Tolono();
+            @tableonly Speedway();
+            @defaultonly Lantana();
             @tableonly Ocheyedan();
             @tableonly Annette();
             @tableonly Edinburg();
             @tableonly Romero();
-            @tableonly Speedway();
-            @defaultonly Lantana();
         }
         key = {
             Peoria.Wiota.Thistle                            : exact @name("Wiota.Thistle") ;
             Peoria.Yerington.Charco & 128w0xffffffffffffffff: lpm @name("Yerington.Charco") ;
         }
         size = 32768;
-        idle_timeout = true;
         const default_action = Lantana();
     }
-    @idletime_precision(1) @atcam_partition_index("Minneota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Manistee") table Manistee {
+    @atcam_partition_index("Minneota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Manistee") table Manistee {
         actions = {
             @tableonly Needles();
             @tableonly Quealy();
             @tableonly Huffman();
+            @tableonly Boquet();
+            @defaultonly Indrio();
             @tableonly Powelton();
             @tableonly Wainaku();
             @tableonly Kempner();
             @tableonly KawCity();
-            @tableonly Boquet();
-            @defaultonly Indrio();
         }
         key = {
             Peoria.Minneota.Thistle                         : exact @name("Minneota.Thistle") ;
             Peoria.Yerington.Charco & 128w0xffffffffffffffff: lpm @name("Yerington.Charco") ;
         }
         size = 32768;
-        idle_timeout = true;
         const default_action = Indrio();
     }
-    @idletime_precision(1) @atcam_partition_index("Wiota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Penitas") table Penitas {
+    @atcam_partition_index("Wiota.Thistle") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Penitas") table Penitas {
         actions = {
             @tableonly Calumet();
             @tableonly Hotevilla();
             @tableonly Tolono();
+            @tableonly Speedway();
+            @defaultonly Lantana();
             @tableonly Ocheyedan();
             @tableonly Annette();
             @tableonly Edinburg();
             @tableonly Romero();
-            @tableonly Speedway();
-            @defaultonly Lantana();
         }
         key = {
             Peoria.Wiota.Thistle                            : exact @name("Wiota.Thistle") ;
             Peoria.Yerington.Charco & 128w0xffffffffffffffff: lpm @name("Yerington.Charco") ;
         }
         size = 32768;
-        idle_timeout = true;
         const default_action = Lantana();
     }
     @hidden @disable_atomic_modify(1) @name(".Otsego") table Otsego {
@@ -15736,6 +15757,7 @@ control Stratton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     @name(".Gracewood") Nordheim() Gracewood;
     @name(".VanHorn") Chualar() VanHorn;
     @name(".Beaman") Brownson() Beaman;
+    @name(".Brave") Escondido() Brave;
     @name(".Challenge") Clifton() Challenge;
     @name(".Seaford") Sanborn() Seaford;
     @name(".Craigtown") DelRey() Craigtown;
@@ -15779,6 +15801,7 @@ control Stratton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
                 Beaman.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             }
             Seaford.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Brave.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             if (Wanamassa.Longwood.isValid() == true && !Wanamassa.Knights.isValid()) {
                 Snowflake.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
                 Donna.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
@@ -16101,7 +16124,9 @@ control Lilydale(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Sidnaw.apply();
         Ironside.apply(Wanamassa, Peoria, Covert, Frederika, Saugatuck, Ekwok);
         if (Wanamassa.Tabler[0].isValid() && Peoria.Belmore.Wauconda != 3w2) {
-            Husum.apply(Wanamassa, Peoria, Covert, Frederika, Saugatuck, Ekwok);
+            {
+                Husum.apply(Wanamassa, Peoria, Covert, Frederika, Saugatuck, Ekwok);
+            }
         }
         Colson.apply(Wanamassa, Peoria, Covert, Frederika, Saugatuck, Ekwok);
         FordCity.apply(Wanamassa, Peoria, Covert, Frederika, Saugatuck, Ekwok);
