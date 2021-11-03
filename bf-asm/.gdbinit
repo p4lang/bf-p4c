@@ -230,12 +230,10 @@ class InputXbar_Group_Printer:
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        if self.val['type'] == 0:
-            rv = 'exact'
-        elif self.val['type'] == 1:
-            rv = 'ternary'
-        elif self.val['type'] == 2:
-            rv = 'byte'
+        types = [ 'invalid', 'exact', 'ternary', 'byte', 'gateway', 'trie', 'action' ]
+        t = int(self.val['type'])
+        if t >= 0 and t < len(types):
+            rv = types[t]
         else:
             rv = '<bad type 0x%x>' % int(self.val['type'])
         rv += ' group ' + str(self.val['index'])
@@ -246,26 +244,12 @@ class ActionBus_Source_Printer:
         self.val = val
     def to_string(self):
         try:
-            if self.val['type'] == 0:
-                rv = "None"
-            elif self.val['type'] == 1:
-                rv = "Field"
-            elif self.val['type'] == 2:
-                rv = "HashDist"
-            elif self.val['type'] == 3:
-                rv = "RandomGen"
-            elif self.val['type'] == 4:
-                rv = "TableOutput"
-            elif self.val['type'] == 5:
-                rv = "TableColor"
-            elif self.val['type'] == 6:
-                rv = "TableAddress"
-            elif self.val['type'] == 7:
-                rv = "NameRef"
-            elif self.val['type'] == 8:
-                rv = "ColorRef"
-            elif self.val['type'] == 9:
-                rv = "AddressRef"
+            types = [ "None", "Field", "HashDist", "HashDistPair", "RandomGen",
+                      "TableOutput", "TableColor", "TableAddress", "NameRef",
+                      "ColorRef", "AddressRef" ]
+            t = int(self.val['type'])
+            if t >= 0 and t < len(types):
+                rv = types[t]
             else:
                 rv = '<bad type 0x%x>' % int(self.val['type'])
         except Exception as e:
@@ -275,22 +259,28 @@ class ActionBus_Source_Printer:
         def __init__(self, val, type):
             self.val = val
             self.type = type
-            self.done = type < 1 or type > 6
+            self.count = 0
         def __iter__(self):
             return self
         def __next__(self):
-            if self.done:
-                raise StopIteration
-            self.done = True
+            self.count = self.count + 1
+            if self.type != 3 and self.count > 1: raise StopIteration
             if self.type == 1:
                 return ("field", self.val['field'])
             elif self.type == 2:
                 return ("hd", self.val['hd'])
             elif self.type == 3:
+                if self.count == 1:
+                    return ("hd1", self.val['hd1'])
+                elif self.count == 2:
+                    return ("hd2", self.val['hd2'])
+                else:
+                    raise StopIteration
+            elif self.type == 4:
                 return ("rng", self.val['rng'])
-            elif self.type == 4 or self.type == 5 or self.type == 6:
+            elif self.type == 5 or self.type == 6 or self.type == 7:
                 return ("table", self.val['table'])
-            elif self.type == 7 or self.type == 8 or self.type == 9:
+            elif self.type == 8 or self.type == 9 or self.type == 10:
                 return ("name_ref", self.val['name_ref'])
             else:
                 raise StopIteration

@@ -270,10 +270,10 @@ void ExactMatchTable::generate_stash_overhead_rows() {
 }
 
 #if HAVE_FLATROCK
-template<> void ExactMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
-}
+// flatrock-specific template specializations
+#include "flatrock/exact_match.cpp"                             // NOLINT(build/include)
 #endif  /* HAVE_FLATROCK */
+
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
  * from write_regs? */
 template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {

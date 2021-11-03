@@ -722,6 +722,10 @@ void InputXbar::pass2() {
 // cloudbreak template specializations
 #include <cloudbreak/input_xbar.cpp>    // NOLINT(build/include)
 #endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+// flatrock template specializations
+#include <flatrock/input_xbar.cpp>    // NOLINT(build/include)
+#endif  /* HAVE_FLATROCK */
 
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {

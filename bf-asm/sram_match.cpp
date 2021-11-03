@@ -499,11 +499,10 @@ void SRamMatchTable::setup_word_ixbar_group() {
 }
 
 #if HAVE_FLATROCK
-template<> void SRamMatchTable::write_attached_merge_regs(Target::Flatrock::mau_regs &regs,
-            int bus, int word, int word_group) {
-    BUG("TBD");
-}
+// flatrock-specific template specializations
+#include "flatrock/sram_match.cpp"                              // NOLINT(build/include)
 #endif  /* HAVE_FLATROCK */
+
 template<class REGS>
 void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, int word_group) {
     int group = word_info[word][word_group];
@@ -798,11 +797,6 @@ int SRamMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int h
     return find_on_ixbar(sl, word_ixbar_group[word]);
 }
 
-#if HAVE_FLATROCK
-template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### SRam match table " << name() << " write_regs " << loc());
     MatchTable::write_regs(regs, 0, this);

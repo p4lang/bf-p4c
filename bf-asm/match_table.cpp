@@ -204,6 +204,9 @@ void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/match_table.cpp"                   // NOLINT(build/include)
 #endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+#include "flatrock/match_table.cpp"                     // NOLINT(build/include)
+#endif  /* HAVE_FLATROCK */
 
 template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_regs &regs,
                                                           int type, Table *result) {
