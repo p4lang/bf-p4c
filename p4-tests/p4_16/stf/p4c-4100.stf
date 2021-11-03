@@ -1,0 +1,10 @@
+# Send one packet.
+# A pair of dummy VXLAN headers will be inserted, but the Ethertype is _not_ updated.
+
+#        | ethernet header            | | IPv4 header                                  | | UDP header      | | payload ...
+#        dstAddr      srcAddr      type VL   len  id       ttl    csum                 |  sp   dp  len     | |
+packet 1 001122334455 00aabbccddee 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+
+#        | ethernet header            | | VLAN x 2      | | IPv4 header                                  | | UDP header      | | payload ...
+#        dstAddr      srcAddr      type vlan1    vlan2    VL   len  id       ttl    csum                 |  sp   dp  len     | |
+expect 1 001122334455 00aabbccddee 0800 00000000 00000000 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f

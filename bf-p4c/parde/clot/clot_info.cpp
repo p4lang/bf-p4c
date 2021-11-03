@@ -1288,7 +1288,26 @@ bool CollectClotInfo::preorder(const IR::MAU::Instruction* instruction) {
         if (constant->value == 0) return true;
     }
 
-    clotInfo.headers_added_by_mau_.insert(dst_field->header());
+    // If we have a header stack then mark elements of the stack as added
+    auto *stacks = findContext<IR::BFN::Pipe>()->headerStackInfo;
+    if (dst_field->name.endsWith("$stkvalid") && stacks->count(dst_field->header())) {
+        // Can we grab the element name from an AliasSource?
+        const IR::BFN::AliasSlice* as = dst->to<IR::BFN::AliasSlice>();
+        const PHV::Field* alias_field;
+        if (as && (alias_field = phv.field(as->source, &bitrange))) {
+            clotInfo.headers_added_by_mau_.insert(alias_field->header());
+        } else {
+            // Couldn't identify the true source, so mark all elems in the hdr stack as added
+            auto& stack = stacks->at(dst_field->header());
+            for (int i = 0; i < stack.size; ++i) {
+                cstring elem = dst_field->header() + '[' + std::to_string(i).c_str() + ']';
+                clotInfo.headers_added_by_mau_.insert(elem);
+            }
+        }
+    } else {
+        clotInfo.headers_added_by_mau_.insert(dst_field->header());
+    }
+
     return true;
 }
 
