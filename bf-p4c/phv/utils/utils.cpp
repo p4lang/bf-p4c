@@ -2,6 +2,7 @@
 #include <numeric>
 #include <boost/optional/optional_io.hpp>
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/algorithm.h"
 #include "bf-p4c/device.h"
@@ -719,8 +720,9 @@ ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c, le_bitran
 
     if (auto status = this->getStatus(c))
         for (auto& slice : status->slices)
-            if (slice.container_slice().intersectWith(range).size() > 0)
+            if (slice.container_slice().overlaps(range)) {
                 rv.insert(slice);
+            }
 
     return rv;
 }
@@ -757,15 +759,25 @@ PHV::Transaction::getStatus(const PHV::Container& c) const {
 
 PHV::Allocation::FieldStatus
 PHV::Transaction::getStatus(const PHV::Field* f) const {
-    // If a status exists in the transaction, then it includes info from the
-    // parent.
-    if (field_status_i.find(f) != field_status_i.end())
-        return field_status_i.at(f);
-
-    // Otherwise, retrieve and cache parent info.
-    auto parentStatus = parent_i->getStatus(f);
-    field_status_i[f] = parentStatus;
-    return parentStatus;
+    // DO NOT cache field_status_i like container_status_i because
+    // container_status_i are always modified-by-copy, while this
+    // field_status_i are not. This leads to a bug that when field_status_i
+    // is modified in a parent transaction, children transactions can
+    // only see part of the actual alloc slices of @p field.
+    // Also, the performance improvement of caching is open to doubt.
+    PHV::Allocation::FieldStatus rst;
+    ordered_set<le_bitrange> range_seen;
+    if (field_status_i.count(f)) {
+        for (const auto& slice : field_status_i.at(f)) {
+            range_seen.insert(slice.field_slice());
+            rst.insert(slice);
+        }
+    }
+    for (const auto& slice : parent_i->getStatus(f)) {
+        if (range_seen.count(slice.field_slice())) continue;
+        rst.insert(slice);
+    }
+    return rst;
 }
 
 ordered_set<PHV::AllocSlice>
