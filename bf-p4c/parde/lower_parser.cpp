@@ -867,7 +867,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 BUG_CHECK(!stopper,
                           "more than one hdr_len_inc_stop in %1%?", state->name);
                 stopper = stop;
-            } else {
+            } else if (!prim->is<IR::BFN::ParserZeroInit>()){
                 P4C_UNIMPLEMENTED("unhandled parser primitive %1%", prim);
             }
         }

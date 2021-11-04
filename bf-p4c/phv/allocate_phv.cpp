@@ -3222,63 +3222,84 @@ void PHV::AllocUtils::bind_slices(const PHV::ConcreteAllocation& alloc, PhvInfo&
     }
 }
 
+void merge_slices(
+    safe_vector<PHV::AllocSlice> &slices, safe_vector<PHV::AllocSlice> &merged_alloc) {
+    boost::optional<PHV::AllocSlice> last = boost::none;
+    for (auto& slice : slices) {
+        if (last == boost::none) {
+            last = slice;
+            continue;
+        }
+        if (last->container() == slice.container() &&
+            last->field_slice().lo == slice.field_slice().hi + 1 &&
+            last->container_slice().lo == slice.container_slice().hi + 1 &&
+            last->getEarliestLiveness() == slice.getEarliestLiveness() &&
+            last->getLatestLiveness() == slice.getLatestLiveness() &&
+            *last->getInitPrimitive() == *slice.getInitPrimitive()) {
+            int new_width = last->width() + slice.width();
+            ordered_set<const IR::MAU::Action*> new_init_points;
+            if (last->hasMetaInit())
+                new_init_points.insert(last->getInitPoints().begin(),
+                                        last->getInitPoints().end());
+            if (slice.hasMetaInit())
+                new_init_points.insert(slice.getInitPoints().begin(),
+                                        slice.getInitPoints().end());
+            if (new_init_points.size() > 0)
+                LOG_DEBUG5("Merged slice contains " << new_init_points.size()
+                                                    << " initialization points.");
+            PHV::AllocSlice new_slice(slice.field(), slice.container(),
+                                        slice.field_slice().lo, slice.container_slice().lo,
+                                        new_width, new_init_points);
+            new_slice.setLiveness(slice.getEarliestLiveness(), slice.getLatestLiveness());
+            new_slice.setIsPhysicalStageBased(slice.isPhysicalStageBased());
+            if (last->hasMetaInit() || slice.hasMetaInit()) new_slice.setMetaInit();
+            new_slice.setInitPrimitive(slice.getInitPrimitive());
+            BUG_CHECK(new_slice.field_slice().contains(last->field_slice()),
+                        "Merged alloc slice %1% does not contain hi slice %2%",
+                        cstring::to_cstring(new_slice), cstring::to_cstring(*last));
+            BUG_CHECK(new_slice.field_slice().contains(slice.field_slice()),
+                        "Merged alloc slice %1% does not contain lo slice %2%",
+                        cstring::to_cstring(new_slice), cstring::to_cstring(slice));
+            LOG_DEBUG4("Merging " << last->field() << ": " << *last << " and " << slice
+                                    << " into " << new_slice);
+            last = new_slice;
+        } else {
+            merged_alloc.push_back(*last);
+            last = slice;
+        }
+    }
+    if (last) merged_alloc.push_back(*last);
+}
+
 void PHV::AllocUtils::sort_and_merge_alloc_slices(PhvInfo& phv) {
     // later passes assume that phv alloc info is sorted in field bit order,
     // msb first
-    for (auto& f : phv) f.sort_alloc();
 
+    for (auto& f : phv) f.sort_alloc();
     // Merge adjacent field slices that have been allocated adjacently in the
     // same container.  This can happen when the field is involved in a set
     // instruction with another field that has been split---it needs to be
     // "split" to match the invariants on rotational clusters, but in practice
     // to the two slices remain adjacent.
     for (auto& f : phv) {
-        boost::optional<PHV::AllocSlice> last = boost::none;
         safe_vector<PHV::AllocSlice> merged_alloc;
-        for (auto& slice : f.get_alloc()) {
-            if (last == boost::none) {
-                last = slice;
-                continue;
+        // In table first phv allocation, field slice live range should be taken into consideration.
+        // Therefore, after allocslice is sorted, all alloc slices need to be clustered by live
+        // range. And then merge allocslices based on each cluster.
+        ordered_map<PHV::LiveRange, safe_vector<PHV::AllocSlice>> liverange_classified;
+        if (BFNContext::get().options().alt_phv_alloc == true) {
+            for (auto& slice : f.get_alloc()) {
+                liverange_classified[{slice.getEarliestLiveness(), slice.getLatestLiveness()}]
+                    .push_back(slice);
             }
-            if (last->container() == slice.container() &&
-                last->field_slice().lo == slice.field_slice().hi + 1 &&
-                last->container_slice().lo == slice.container_slice().hi + 1 &&
-                last->getEarliestLiveness() == slice.getEarliestLiveness() &&
-                last->getLatestLiveness() == slice.getLatestLiveness() &&
-                *last->getInitPrimitive() == *slice.getInitPrimitive()) {
-                int new_width = last->width() + slice.width();
-                ordered_set<const IR::MAU::Action*> new_init_points;
-                if (last->hasMetaInit())
-                    new_init_points.insert(last->getInitPoints().begin(),
-                                           last->getInitPoints().end());
-                if (slice.hasMetaInit())
-                    new_init_points.insert(slice.getInitPoints().begin(),
-                                           slice.getInitPoints().end());
-                if (new_init_points.size() > 0)
-                    LOG_DEBUG5("Merged slice contains " << new_init_points.size()
-                                                        << " initialization points.");
-                PHV::AllocSlice new_slice(slice.field(), slice.container(), slice.field_slice().lo,
-                                          slice.container_slice().lo, new_width, new_init_points);
-                new_slice.setLiveness(slice.getEarliestLiveness(), slice.getLatestLiveness());
-                new_slice.setIsPhysicalStageBased(slice.isPhysicalStageBased());
-                if (last->hasMetaInit() || slice.hasMetaInit()) new_slice.setMetaInit();
-                new_slice.setInitPrimitive(slice.getInitPrimitive());
-                BUG_CHECK(new_slice.field_slice().contains(last->field_slice()),
-                          "Merged alloc slice %1% does not contain hi slice %2%",
-                          cstring::to_cstring(new_slice), cstring::to_cstring(*last));
-                BUG_CHECK(new_slice.field_slice().contains(slice.field_slice()),
-                          "Merged alloc slice %1% does not contain lo slice %2%",
-                          cstring::to_cstring(new_slice), cstring::to_cstring(slice));
-                LOG_DEBUG4("Merging " << last->field() << ": " << *last << " and " << slice
-                                      << " into " << new_slice);
-                last = new_slice;
-            } else {
-                merged_alloc.push_back(*last);
-                last = slice;
+            for (auto& slices : Values(liverange_classified)) {
+                merge_slices(slices, merged_alloc);
             }
+        } else {
+            merge_slices(f.get_alloc(), merged_alloc);
         }
-        if (last) merged_alloc.push_back(*last);
         f.set_alloc(merged_alloc);
+        f.sort_alloc();
     }
 }
 

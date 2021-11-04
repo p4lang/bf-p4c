@@ -111,17 +111,28 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
 
     // Find the earliest alive slice per field bitrange and store it in minStageAccount
     ordered_map<le_bitrange, PHV::StageAndAccess> minStageAccount;
-    for (auto& alloc : f->get_alloc()) {
+    ordered_set<le_bitrange> all_alloc_ranges;
+    for (const auto& alloc : f->get_alloc()) {
         le_bitrange range = alloc.field_slice();
-        if (!minStageAccount.count(range)) {
-            minStageAccount[range] = alloc.getEarliestLiveness();
-            continue;
+        if (!all_alloc_ranges.count(range)) {
+            all_alloc_ranges.push_back(range);
         }
-        auto candidate = minStageAccount.at(range);
-        if (candidate.first > alloc.getEarliestLiveness().first ||
-            (candidate.first == alloc.getEarliestLiveness().first &&
-             candidate.second > alloc.getEarliestLiveness().second))
-            minStageAccount[range] = alloc.getEarliestLiveness();
+    }
+    for (auto& alloc : f->get_alloc()) {
+        le_bitrange alloc_range = alloc.field_slice();
+        for (const auto& range : all_alloc_ranges) {
+            if (alloc_range.contains(range)) {
+                if (!minStageAccount.count(range)) {
+                    minStageAccount[range] = alloc.getEarliestLiveness();
+                } else {
+                    auto candidate = minStageAccount.at(range);
+                    if (candidate.first > alloc.getEarliestLiveness().first ||
+                        (candidate.first == alloc.getEarliestLiveness().first &&
+                        candidate.second > alloc.getEarliestLiveness().second))
+                        minStageAccount[range] = alloc.getEarliestLiveness();
+                }
+            }
+        }
     }
 
     // Map minStage liverange to physical liverange and update each AllocSlice

@@ -1571,12 +1571,17 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             if (salu->selector && salu->selector->mode == IR::MAU::SelectorMode::FAIR)
                 opcode += "_at";
             rv = onebit = new IR::MAU::SaluInstruction(opcode);
-            break; }
-        if (predicate)
-            operands.insert(operands.begin(), predicate);
-        insert_instruction(rv = new IR::MAU::SaluInstruction(opcode, predicate ? 1 : 0,
-                                                                   &operands));
-        LOG3("  add " << *action->action.back());
+        } else {
+            int out_idx = 0;
+            if (predicate) {
+                operands.insert(operands.begin(), predicate);
+                ++out_idx; }
+
+            // mark divmod's output index, so that defuse analysis is correct
+            if (opcode == "divmod")
+                out_idx = -1;
+            insert_instruction(rv = new IR::MAU::SaluInstruction(opcode, out_idx, &operands));
+            LOG3("  add " << *action->action.back()); }
         break;
     case OUTPUT:
         checkWriteAfterWrite();

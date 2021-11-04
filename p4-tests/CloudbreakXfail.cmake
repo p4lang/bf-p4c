@@ -459,7 +459,7 @@ p4c_add_xfail_reason("tofino3"
 
 # P4C-2141
 p4c_add_xfail_reason("tofino3"
-  "error: Can't access DW0 in parser"
+  "mismatch from expected"
   extensions/p4_tests/p4_14/stf/parser_error.p4
 )
 

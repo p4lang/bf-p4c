@@ -192,6 +192,11 @@ abstract ParserCounterPrimitive : ParserPrimitive {
     cstring declName;
 }
 
+class ParserZeroInit : ParserPrimitive {
+    IR::Expression field;
+    dbprint { out << "Parser zero init: " << field; }
+}
+
 class ParserCounterLoadImm : ParserCounterPrimitive {
     dbprint { out << "parser counter load imm " << imm; }
     int imm = 0;

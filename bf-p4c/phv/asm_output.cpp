@@ -160,8 +160,44 @@ void emit_stage_alloc(
 
 void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
     ordered_map<le_bitrange, std::vector<PHV::AllocSlice>> fieldRangeToAllocMap;
+    ordered_set<le_bitrange> minimum_alloc_ranges;
+
+    // this foreach_alloc collects all base alloc slice field ranges. The definition of base field
+    // ranges is that in a set of base field ranges S, every live range does not contain other field
+    // ranges. And for every field range in a field F, there is a set of fields, which is a subset
+    // of S, that can cover field F. For example, a field contains three field ranges [0-8], [0-6]
+    // [7-8]. The base field ranges are [0-6], [7-8]
     field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
-        fieldRangeToAllocMap[alloc.field_slice()].push_back(alloc);
+        auto alloc_range = alloc.field_slice();
+        ordered_set<le_bitrange> to_remove;
+        for (const auto& range : minimum_alloc_ranges) {
+            if (range.contains(alloc_range)) {
+                to_remove.push_back(range);
+            }
+        }
+        for (const auto& range : to_remove) {
+            minimum_alloc_ranges.erase(range);
+        }
+        minimum_alloc_ranges.push_back(alloc_range);
+    });
+
+    // this foreach_alloc tries to deal with cases like this:
+    // field [0-8] from stage 0 to stage 3, field [0-6] from stage 4 to stage 11, field [7-8] from
+    // stage 4 to stage 13. In bfa, `field [0-8] from stage 0 to stage 3` needs to be splitted to
+    // field [0-6] from stage 0 to stage 3 and field [7-8] from stage 0 to stage 3.
+    field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+        for (const auto& range : minimum_alloc_ranges) {
+            if (alloc.field_slice() == range) {
+                fieldRangeToAllocMap[range].push_back(alloc);
+            } else if (alloc.field_slice().contains(range)) {
+                le_bitrange container_range(
+                    alloc.container_slice().lo + range.lo, alloc.container_slice().lo + range.hi);
+                auto new_alloc = new PHV::AllocSlice(
+                    field, alloc.container(), range, container_range);
+                new_alloc->setLiveness(alloc.getEarliestLiveness(), alloc.getLatestLiveness());
+                fieldRangeToAllocMap[range].push_back(*new_alloc);
+            }
+        }
     });
     // No allocation for the field.
     if (fieldRangeToAllocMap.size() == 0) return;

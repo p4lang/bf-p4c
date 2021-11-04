@@ -325,7 +325,19 @@ struct InferWriteMode : public ParserTransform {
 
         if (zero_inits.count(orig)) {
             LOG3("removed zero init " << extract);
-            return nullptr;
+            // return a new ParserZeroInit IR node instead of removing it. And also mark
+            // ParserZeroInit as write in TofinoContextWrite, so that extract->dest->field will be
+            // recognized as write in field_defuse. The reason to do this is because if this
+            // instruction is removed here, then in field_defuse, all of uses whose def is parser
+            // zero initialization will disappear and result in incorrection defuse generation.
+            // In addition, in lower_parser.cpp, ParserZeroInit IR node will be ignored, so that
+            // this node is removed in this way.
+            if (auto member = extract->dest->field->to<IR::Member>()) {
+                if (member->member.name.endsWith("$valid")) {
+                    return nullptr;
+                }
+            }
+            return new IR::BFN::ParserZeroInit(extract->dest->field);
         }
 
         if (dead_extracts.count(orig)) {

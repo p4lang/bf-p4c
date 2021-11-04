@@ -275,6 +275,12 @@ struct LiveRange {
     StageAndAccess end;
     LiveRange(const StageAndAccess& start, const StageAndAccess& end): start(start), end(end) {}
     bool is_disjoint(const LiveRange& other) const;
+    bool operator<(const LiveRange &other) const {
+        if (start.first != other.start.first)
+            return start.first < other.start.first;
+        else
+            return end.first < other.end.first;
+    }
 };
 
 std::ostream& operator<<(std::ostream& out, const PHV::Kind k);
