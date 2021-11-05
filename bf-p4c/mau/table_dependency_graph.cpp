@@ -1136,6 +1136,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
 };
 
 bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * seq ) {
+    visitAgain();
     const Context *ctxt = getContext();
     LOG5("\t TableSeq (" << seq->size() << ")   front: " <<
          (seq->front() ? seq->front()->name : "null") << " back: " <<
@@ -1984,12 +1985,6 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
             auto& out = out_edge_itr_pair.first;
             auto& out_end = out_edge_itr_pair.second;
             for (; out != out_end; ++out) {
-                auto source = boost::source(*out, dg.g);
-                auto target = boost::target(*out, dg.g);
-                const IR::MAU::Table* tsource = dg.get_vertex(source);
-                const IR::MAU::Table* ttarget = dg.get_vertex(target);
-                std::string src_name = std::string(tsource ? tsource->name : "SINK");
-                std::string dst_name = std::string(ttarget ? ttarget->name : "SINK");
                 if (dg.is_ctrl_edge(dg.g[*out])) continue;
                 auto vertex_later = boost::target(*out, dg.g);
                 const auto* table_later = dg.get_vertex(vertex_later);
@@ -2016,9 +2011,15 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
         // auto e = boost::lookup_edge(src_v, dst_v, dg.g);
         // auto dep = e.second ? DependencyGraph::ANTI : DependencyGraph::ANTI_NEXT_TABLE_DATA;
         auto dep = DependencyGraph::ANTI_NEXT_TABLE_DATA;
-        LOG4("\t\tadd_dependency " << dep_types(dep) << pair.first.first->name << "-"
-                << pair.first.second->name << " due to original dependency on "
-                << pair.second << " of type " << dep_types(dg.g[pair.second]));
+        auto source = boost::source(pair.second, dg.g);
+        auto target = boost::target(pair.second, dg.g);
+        const IR::MAU::Table* tsource = dg.get_vertex(source);
+        const IR::MAU::Table* ttarget = dg.get_vertex(target);
+        std::string src_name = std::string(tsource ? tsource->name : "SINK");
+        std::string dst_name = std::string(ttarget ? ttarget->name : "SINK");
+        LOG4("\t\tadd_dependency " << dep_types(dep) << " " << pair.first.first->name << "-"
+             << pair.first.second->name << " due to original dependency on "
+             << src_name << "->" << dst_name << " of type " << dep_types(dg.g[pair.second]));
 
         auto edge_pair = dg.add_edge(pair.first.first, pair.first.second, dep);
         if (!edge_pair.first) continue;

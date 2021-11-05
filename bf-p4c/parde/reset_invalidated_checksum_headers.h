@@ -32,6 +32,13 @@ struct CollectPovBitToFields : public DeparserInspector {
         pov_bit_to_fields[pov_bit].insert(source);
         return false;
     }
+
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        pov_bit_to_fields.clear();
+        phv_field_to_expr.clear();
+        return rv;
+    }
 };
 
 struct CollectInvalidatedHeaders : public Inspector {
@@ -157,6 +164,12 @@ class InsertParsedValidBits : public ParserModifier {
 
         return true;
     }
+
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = ParserModifier::init_apply(root);
+        pov_bit_to_parsed_valid_bit.clear();
+        return rv;
+    }
 };
 
 class InsertTableToResetInvalidatedHeaders : public MauTransform {
@@ -263,6 +276,12 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
             }
         }
         return pipe;
+    }
+
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = MauTransform::init_apply(root);
+        tables_to_insert.clear();
+        return rv;
     }
 
  public:

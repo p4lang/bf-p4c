@@ -901,6 +901,8 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
     std::set<cstring> getFieldNameSlice(const PHV::Field *field, le_bitrange range) const;
     void flow_merge(Visitor &v) override;
+    // Filter out the table sequence and revisit them again.
+    bool filter_join_point(const IR::Node *n) override { return !n->is<IR::BFN::ParserState>(); }
 
     // void all_bfs(boost::default_bfs_visitor* vis);
     FindDataDependencyGraph *clone() const override { return new FindDataDependencyGraph(*this); }
