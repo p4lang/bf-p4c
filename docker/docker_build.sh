@@ -34,6 +34,7 @@ IMAGE_TYPES=(
   "non-unified"
   "release"
   "test"
+  "doc"
 )
 
 # List of environment variables expected to contain either "true" or "false".
@@ -289,7 +290,7 @@ fi
 # Build and install bf-p4c-compilers.
 WORKDIR "${BF_P4C_COMPILERS}"
 if [[ "${BUILD_FOR}" == "jenkins-final" || "${BUILD_FOR}" == "tofino" ]] ; then
-  if [[ "${IMAGE_TYPE}" == "non-unified" ]] ; then
+  if [[ "${IMAGE_TYPE}" == "non-unified" || "${IMAGE_TYPE}" == "doc" ]] ; then
     disable_unified="--disable-unified"
   else
     disable_unified=
@@ -308,8 +309,12 @@ if [[ "${BUILD_FOR}" == "jenkins-final" || "${BUILD_FOR}" == "tofino" ]] ; then
     ${disable_unified}
 
   cd build
-  make
-  make install
+  if [[ "${IMAGE_TYPE}" == "doc" ]] ; then
+    make doc
+  else
+    make
+    make install
+  fi
 elif [[ "${BUILD_FOR}" == "release" ]] ; then
   ccache --zero-stats
   ./scripts/package_p4c_for_tofino.sh --build-dir build

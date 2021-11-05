@@ -83,7 +83,7 @@ ignoreFilePatterns=(
 # will always add an Intel copyright notice to these files. Use
 # `ignoreFilePatterns` to disable this behaviour for specific files.
 noCopyrightCheckPatterns=(
-  '^Jenkinsfile$'
+  '^[a-zA-Z\.-_]*Jenkinsfile$'
   '^scripts/package_p4c_for_tofino\.sh$'
   '^scripts/packaging/copyright-stamp$'
 )
@@ -92,7 +92,7 @@ noCopyrightCheckPatterns=(
 # below, the file will be assumed to have the corresponding file type. When
 # multiple regexes match, earlier regexes have precedence over later ones.
 setType c \
-  '(^|/)Jenkinsfile$' \
+  '(^|/)[a-zA-Z\.-_]*Jenkinsfile$' \
   '.*/proto/.*\.proto$' `# Protobuf` \
   '/ir/.*\.def$' `# IR definitions` \
   '\.(c|cpp|h|h\.in|hpp|l|p4|ypp)$' \

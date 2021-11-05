@@ -504,6 +504,13 @@ node ('compiler-travis') {
                         )
                     },
 
+                    "Documentation": {
+                        echo 'Testing Doxygen documentation build'
+                        runInDocker(
+                            'make doc'
+                        )
+                    },
+
                     "Check submodule refpoints": {
                         dir('checkRefpoints') {
                             checkout scm

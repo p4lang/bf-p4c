@@ -20,6 +20,7 @@ ARG BFN_P4C_GIT_SHA="UNKNOWN"
 ARG BUILD_FOR="tofino"
 
 # Use 'release' if you don't wish to keep the build artifacts
+# Use 'doc' to build only documentation
 ARG IMAGE_TYPE=test
 # Use 'true' if you wish to build glass for p4v or p4i
 ARG BUILD_GLASS=false
