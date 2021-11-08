@@ -117,7 +117,8 @@ class ActionPhvConstraints : public Inspector {
             WHOLE_CONTAINER = (1 << 2),
             ANOTHER_OPERAND = (1 << 3),
             MIXED = (1 << 4),
-            WHOLE_CONTAINER_SAME_FIELD = (1 << 5)
+            WHOLE_CONTAINER_SAME_FIELD = (1 << 5),
+            PART_OF_CONTAINER = (1 << 6),
         };
         uint8_t flags = 0;
 

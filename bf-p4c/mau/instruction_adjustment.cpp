@@ -1285,7 +1285,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         // Constant merged into a single constant over the entire container
         unsigned constant_value = cont_action.ci.valid_instruction_constant(container.size());
         int width_bits;
-        if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0)
+        if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0
+          && (cont_action.error_code & ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) == 0)
             width_bits = cont_action.ci.alignment.bitrange_size();
         else
             width_bits = container.size();

@@ -356,9 +356,38 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         // fields in the same container if enough padding is left between them.
 
         if (dst == field) {
-            LOG3("Marking " << field->name << " as 'no pack' because it is written in "
-                 "non-MOVE instruction " << inst->name << ".");
-            field->set_solitary(PHV::SolitaryReason::ALU); }
+            if (inst->name == "add") {
+                auto src1 = inst->operands.at(1);
+                auto src2 = inst->operands.at(2);
+                if (*src2 == *inst->operands.at(0)) {
+                    std::swap(src1, src2);
+                }
+
+                if (
+                    // TODO(vhavel): Fields fitting perfectly into a container could also be
+                    // aligned into msb part of a larger container. Unfortunately, that
+                    // introduces new packing possibilities which currently lead to
+                    // regressions in a few profiles, while the benefit isn't significant.
+                    Device::phvSpec().containerSizes().count((PHV::Size)field->size) == 0
+                    // TODO(vhavel): fallback to solitary constrain until we implement mechanism
+                    // to set per-fieldslice valid container range.
+                    && field_bits.hi == field->size - 1
+                    && inst->operands.at(0)->equiv(*src1)
+                    && src2->is<IR::Constant>())
+                {
+                    field->updateValidContainerRange(nw_bitrange(0, field->size-1));
+                    LOG3("Setting " << field->name << " to MSB part of container");
+                } else {
+                    field->set_solitary(PHV::SolitaryReason::ALU);
+                    LOG3("Marking " << field->name << " as 'no pack' because it is written in "
+                         "non-MOVE instruction " << inst->name << ".");
+                }
+            } else {
+                field->set_solitary(PHV::SolitaryReason::ALU);
+                LOG3("Marking " << field->name << " as 'no pack' because it is written in "
+                     "non-MOVE instruction " << inst->name << ".");
+            }
+        }
 
         // For non-move operations, if the source field is smaller in size than the
         // destination field, we need to set the solitary property for the source field

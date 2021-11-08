@@ -135,6 +135,8 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
         fw.operation = field_action.name;
         if (field_action.name == "set") {
             fw.flags |= OperandInfo::MOVE;
+        } else if (field_action.container_write_type() != ActionAnalysis::FieldAction::ALL_BITS) {
+            fw.flags |= OperandInfo::PART_OF_CONTAINER;
         } else if (PHV_Field_Operations::BITWISE_OPS.count(field_action.name)) {
             fw.flags |= OperandInfo::BITWISE;
         } else {
@@ -1143,6 +1145,9 @@ ActionPhvConstraints::container_operation_type(
             type_of_operation |= OperandInfo::WHOLE_CONTAINER;
             // Check if it a whole container operation on adjacent slices of the same field
             observed_fields.insert(slice.field());
+        } else if (fw->flags & OperandInfo::PART_OF_CONTAINER) {
+            type_of_operation |= OperandInfo::PART_OF_CONTAINER;
+            observed_fields.insert(slice.field());
         } else {
             ::warning("Detected a write that is neither move nor whole container "
                     "operation.");
@@ -1158,21 +1163,38 @@ ActionPhvConstraints::container_operation_type(
     // in the action and we find that there is a slice not written in the same action
     // (num_fields_not_written > 0), then the proposed packing is not valid, which is indicated
     // by returning OperandInfo::MIXED (mix of not written and whole container write).
-    if (type_of_operation & OperandInfo::WHOLE_CONTAINER) {
-        if (num_fields_not_written) {
-            LOG5("\t\t\t\tAction " << action->name << " uses a whole container operation but "
-                    << num_fields_not_written << " slices are not written in this action.");
-            return OperandInfo::MIXED; }
+    // If there is a PART_OF_CONTAINER operation present, the checks are the same as in case
+    // of WHOLE_CONTAINER. However, the returned operation type is PART_OF_CONTAINER to indicate
+    // that the debugging check in valid_container_operation_type shouldn't apply, because
+    // only a part of container is supposed to be overwritten. We then rely on
+    // ContainerAction::verify_overwritten to catch packing that lead to incorrectly overwritten
+    // fields.
+    if (type_of_operation & (OperandInfo::WHOLE_CONTAINER | OperandInfo::PART_OF_CONTAINER)) {
+        if (type_of_operation & OperandInfo::WHOLE_CONTAINER) {
+            if (num_fields_not_written) {
+                LOG5("\t\t\t\tAction " << action->name << " uses a whole container operation but "
+                        << num_fields_not_written << " slices are not written in this action.");
+                return OperandInfo::MIXED; }
+        }
 
         if (type_of_operation & OperandInfo::MOVE) {
             LOG5("\t\t\t\tAction " << action->name << " uses both whole container and move "
                     "operations for slices in the proposed packing.");
             return OperandInfo::MIXED; }
 
+        if (type_of_operation == (OperandInfo::WHOLE_CONTAINER | OperandInfo::PART_OF_CONTAINER)) {
+            LOG5("\t\t\t\tAction " << action->name << " uses multiple whole container "
+                   "operations for slices in the proposed packing.");
+            return OperandInfo::MIXED;
+        }
+
         LOG5("\t\t\t\tNumber of fields written to by this whole container operation: " <<
                 observed_fields.size());
-        if (observed_fields.size() == 1)
-            return OperandInfo::WHOLE_CONTAINER_SAME_FIELD;
+        if (observed_fields.size() == 1) {
+            return (type_of_operation & OperandInfo::WHOLE_CONTAINER) ?
+                          OperandInfo::WHOLE_CONTAINER_SAME_FIELD
+                        : OperandInfo::PART_OF_CONTAINER;
+        }
 
         return OperandInfo::WHOLE_CONTAINER; }
 
@@ -2042,7 +2064,8 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_constraints_for_bitwis
             if (!check_and_generate_constraints_for_bitwise_op_with_unallocated_sources(
                     action, container_state, prop.sources, copack_constraints))
                 return CanPackErrorCode::BITWISE_AND_UNALLOCATED_SOURCE;
-        } else if (op_type != OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
+        } else if (op_type != OperandInfo::WHOLE_CONTAINER_SAME_FIELD
+                   && op_type != OperandInfo::PART_OF_CONTAINER) {
             BUG("Operation type other than BITWISE and MOVE encountered.");
         }
     }
@@ -3097,7 +3120,8 @@ ActionPhvConstraints::ConstraintTracker::is_written(
         ActionPhvConstraints::OperandInfo rv = op;
         rv.phv_used = slice;
         cstring operation = rv.flags & OperandInfo::WHOLE_CONTAINER ? "WHOLE_CONTAINER" :
-                            rv.flags & OperandInfo::BITWISE ? "BITWISE" : "MOVE";
+                            rv.flags & OperandInfo::BITWISE ? "BITWISE" :
+                            rv.flags & OperandInfo::PART_OF_CONTAINER ? "PART_CONTAINER" : "MOVE";
         LOG5("\t\t\t\tSlice " << slice << " is written in action " << act->name << " by a " <<
              operation << " operation.");
         return rv; }
@@ -4015,6 +4039,8 @@ std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandI
         out << " BITWISE ";
     if (info.flags & ActionPhvConstraints::OperandInfo::WHOLE_CONTAINER)
         out << " WHOLE ";
+    if (info.flags & ActionPhvConstraints::OperandInfo::PART_OF_CONTAINER)
+        out << " PART ";
     if (info.flags & ActionPhvConstraints::OperandInfo::ANOTHER_OPERAND)
         out << " ANOTHER ";
     if (info.flags & ActionPhvConstraints::OperandInfo::MIXED)

@@ -106,6 +106,17 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return is_single_shift() || is_funnel_shift();
         }
 
+        enum container_overwrite_t {
+            // only bits in dst field slice are overwritten
+            DST_ONLY,
+            // only bits above dst field slice might get overwritten
+            HIGHER_BITS,
+            // operation might overwrite all bits in the dst container
+            ALL_BITS
+        };
+
+        container_overwrite_t container_write_type() const;
+
         enum error_code_t {
             NO_PROBLEM = 0,
             READ_AFTER_WRITES = 1 << 0,

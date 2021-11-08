@@ -118,6 +118,34 @@ std::string ActionAnalysis::FieldAction::to_string() const {
     return str.str();
 }
 
+auto ActionAnalysis::FieldAction::container_write_type() const -> container_overwrite_t {
+    auto is_expr_const = [] (const IR::Expression* expr) {
+        return expr->is<IR::MAU::ActionDataConstant>()
+            || expr->is<IR::Constant>();
+    };
+
+    if (name == "add") {
+        auto src1 = reads.at(0).expr;
+        auto src2 = reads.at(1).expr;
+
+        if (src2 == write.expr) {
+            std::swap(src1, src2);
+        }
+
+        if (src1->equiv(*write.expr) && is_expr_const(src2)) {
+            // Instruction in form `x=x+const` overwrites only field slices that are packed
+            // with destination into more significant bits of a container.
+            return container_overwrite_t::HIGHER_BITS;
+        }
+    }
+
+    // TODO: support other cases, e.g. `x=x|const` or `x=x^const` as DST_ONLY.
+    // note: some instructions may require additional logic implemented into InstructionAdjustment
+    // to be supported here. For example, `x = x & 0x1` could be DST_ONLY, but the constant
+    // src argument needs to be extended by ones instead of zeroes.
+    return container_overwrite_t::ALL_BITS;
+}
+
 std::string ActionAnalysis::ContainerAction::to_string() const {
     std::stringstream str;
     str << *this;
@@ -1972,8 +2000,27 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
     if (name == "invalidate")
         total_write_bits |= invalidate_write_bits;
 
-    if (total_write_bits != container_occupancy)
+    bitvec preserved_bits = container_occupancy;
+    for (const FieldAction& fa : field_actions) {
+        le_bitrange dst_bits;
+        auto dst_f = phv.field(fa.write.expr, &dst_bits);
+        switch (fa.container_write_type()) {
+            case ActionAnalysis::FieldAction::ALL_BITS:
+                preserved_bits.clear();
+                break;
+            case ActionAnalysis::FieldAction::HIGHER_BITS: {
+                bitvec container_w = phv.bits_allocated(
+                        container, dst_f, table_context, &use);
+                preserved_bits &= bitvec(0, container_w.ffs() + dst_bits.lo);
+                break;
+           } case ActionAnalysis::FieldAction::DST_ONLY:
+                break;
+        }
+    }
+
+    if ((total_write_bits | preserved_bits) != container_occupancy) {
         return false;
+    }
 
     if (static_cast<size_t>(total_write_bits.popcount()) != container.size()) {
         error_code |= PARTIAL_OVERWRITE;
