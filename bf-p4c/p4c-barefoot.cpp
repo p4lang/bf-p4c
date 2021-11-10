@@ -60,21 +60,6 @@ static void log_dump(const IR::Node *node, const char *head) {
         std::cout << *node << std::endl;
 }
 
-static std::string getSanitizedExceptionMsg(std::string str) {
-    const bool isCerrRedirected = ttyname(fileno(stderr)) == nullptr;  // NOLINT: runtime/threadsafe_fn
-
-    if (!isCerrRedirected) return str;
-
-    for (std::string from : { Util::ANSI_RED, Util::ANSI_BLUE, Util::ANSI_CLR }) {
-        size_t start_pos = 0;
-        while((start_pos = str.find(from, start_pos)) != std::string::npos ) {  // NOLINT: whitespace/parens
-            str.replace(start_pos, from.length(), "");
-        }
-    }
-
-    return str;
-}
-
 // This structure is sensitive to whether the pass is called for a successful
 // compilation or a failed compilation. A successful compilation will output the .bfa
 // file and a json file for resources. It is unlikely that the ASM output will generate
@@ -445,19 +430,19 @@ int main(int ac, char **av) {
 #endif
 
         if (std::string(e.what()).find(".p4(") != std::string::npos || barefootInternal)
-            std::cerr << getSanitizedExceptionMsg(e.what()) << std::endl;
+            std::cerr << e.what() << std::endl;
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
               << std::endl;
         return INTERNAL_COMPILER_ERROR;
     } catch (const Util::CompilerUnimplemented &e) {
-        std::cerr << getSanitizedExceptionMsg(e.what()) << std::endl;
+        std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
     } catch (const Util::CompilationError &e) {
-        std::cerr << getSanitizedExceptionMsg(e.what()) << std::endl;
+        std::cerr << e.what() << std::endl;
         return PROGRAM_ERROR;
 #if BAREFOOT_INTERNAL
     } catch (const std::exception &e) {
-        std::cerr << "Internal compiler error: " << getSanitizedExceptionMsg(e.what()) << std::endl;
+        std::cerr << "Internal compiler error: " << e.what() << std::endl;
         return INTERNAL_COMPILER_ERROR;
 #endif
     } catch (...) {
