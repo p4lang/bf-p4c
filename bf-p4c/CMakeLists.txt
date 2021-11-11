@@ -557,6 +557,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
   phv/optimize_phv.cpp
+  phv/packing_validator.cpp
   phv/parde_phv_constraints.cpp
   phv/add_alias_allocation.cpp
   phv/phv_analysis.cpp
@@ -587,6 +588,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/pragma/pa_no_overlay.cpp
   phv/pragma/pa_no_pack.cpp
   phv/pragma/pa_solitary.cpp
+  phv/action_source_tracker.cpp
   phv/slicing/phv_slicing_split.cpp
   phv/slicing/phv_slicing_iterator.cpp
   phv/slicing/phv_slicing_dfs_iterator.cpp
@@ -629,6 +631,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/make_clusters.h
   phv/mau_backtracker.h
   phv/optimize_phv.h
+  phv/packing_validator.h
   phv/parde_phv_constraints.h
   phv/add_alias_allocation.h
   phv/phv_analysis.h
@@ -660,6 +663,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/pragma/pa_solitary.h
   phv/pragma/phv_pragmas.h
   phv/pragma/pretty_print.h
+  phv/action_source_tracker.h
   phv/slicing/types.h
   phv/slicing/phv_slicing_split.h
   phv/slicing/phv_slicing_iterator.h
@@ -1418,12 +1422,13 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/payload_gateway.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/action_source_tracker.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/fieldslice_live_range.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/action_constraint_solver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/symbolic_bitvec.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_field.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/post_midend_constant_folding.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp

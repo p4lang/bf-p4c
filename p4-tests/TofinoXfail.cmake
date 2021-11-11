@@ -820,6 +820,7 @@ p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
   extensions/p4_tests/p4_16/ptf/int_transit.p4
+  testdata/p4_16_samples/strength3.p4
   testdata/p4_16_samples/strength6.p4
   testdata/p4_16_samples/issue1713-bmv2.p4
 )
@@ -827,11 +828,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The table .* with no key cannot have the action .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Tofino does not support action data/constant with rotated PHV source at the same time"
-  testdata/p4_16_samples/strength3.p4
 )
 
 p4c_add_xfail_reason("tofino"

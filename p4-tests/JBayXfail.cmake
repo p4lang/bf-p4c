@@ -424,7 +424,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Could not place table .* table .* could not fit"
+  "Could not place table .* table .* could not fit|The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported"
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
 )
 
@@ -521,4 +521,10 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
+)
+
+# P4C-4123
+p4c_add_xfail_reason("tofino2"
+  "address too large for table .*"
+  extensions/p4_tests/p4_16/jbay/p4c-4072.p4
 )

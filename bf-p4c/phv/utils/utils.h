@@ -1127,6 +1127,10 @@ class SuperCluster : public ClusterStats {
 
     /// @returns true iff the slice list has any exact container inside
     static bool slice_list_has_exact_containers(const SliceList& list);
+
+    /// @returns a vector of slice list split by bytes with prepending alignment considered.
+    static std::vector<SuperCluster::SliceList*> slice_list_split_by_byte(
+        const SuperCluster::SliceList& sl);
 };
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);

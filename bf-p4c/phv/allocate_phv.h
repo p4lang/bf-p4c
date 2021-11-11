@@ -9,6 +9,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
@@ -16,6 +17,7 @@
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/packing_validator.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -53,7 +55,14 @@ struct AllocUtils {
     // defuses and action constraints.
     const PhvUse& uses;
     const FieldDefUse& defuse;
+
+    // action-related constraints
     const ActionPhvConstraints& actions;
+    const ActionSourceTracker& source_tracker;
+
+    // packing validator that checks whether a set of packing is valid
+    // in terms of action phv constraints.
+    PackingValidator* packing_validator;
 
     // Metadata initialization possibilities.
     const LiveRangeShrinking& meta_init;
@@ -83,6 +92,7 @@ struct AllocUtils {
                const CalcParserCriticalPath& parser_critical_path,
                const CollectParserInfo& parser_info, const CollectStridedHeaders& strided_headers,
                const PHV::FieldSliceLiveRangeDB& physical_liverange_db,
+               const ActionSourceTracker& source_tracker,
                const PHV::Pragmas& pragmas,
                const AllocSetting& settings)
         : phv(phv),
@@ -91,6 +101,8 @@ struct AllocUtils {
           uses(uses),
           defuse(defuse),
           actions(actions),
+          source_tracker(source_tracker),
+          packing_validator(new ActionPackingValidator(source_tracker)),
           meta_init(meta_init),
           dark_init(dark_init),
           field_to_parser_states(field_to_parser_states),

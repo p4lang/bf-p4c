@@ -7,6 +7,7 @@
 
 @pa_auto_init_metadata
 @pa_parser_group_monogress
+@pa_atomic("ingress", "Peoria.Yerington.Denhoff")  // table fitting hack.
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Kendrick" , "Wanamassa.Knights.Kendrick")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights.Kendrick" , "Peoria.Belmore.Kendrick")
 @pa_container_size("ingress" , "Peoria.Masontown.Lapoint" , 32)

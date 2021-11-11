@@ -3,12 +3,15 @@
 #include <algorithm>
 #include <iterator>
 #include <numeric>
+#include <queue>
 #include <sstream>
 
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/logging/logging.h"
 #include "bf-p4c/phv/error.h"
+#include "bf-p4c/phv/packing_validator.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
@@ -326,6 +329,11 @@ std::ostream& operator<<(std::ostream& out, const NextSplitChoiceMetrics& c) {
 }
 
 std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target) const {
+    static const std::vector<SplitChoice> all_choices = {
+        SplitChoice::B,
+        SplitChoice::H,
+        SplitChoice::W,
+    };
     const bool has_exact_containers =
         SuperCluster::slice_list_has_exact_containers(*target.second);
     const int pre_alignment = compute_pre_alignment(*target.second);
@@ -358,33 +366,33 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
     }
 
     // the number of pairs of fieldslices that are not necessarily to be packed.
-    std::unordered_map<int, int> n_avoidable_packings;
+    std::unordered_map<SplitChoice, int> n_avoidable_packings;
+    const auto update_n_avoidable_packings = [&](int lo, int hi, int v) {
+        if (lo > hi) return;
+        for (const auto& c : all_choices) {
+            if (int(c) >= lo && int(c) <= hi) {
+                n_avoidable_packings[c] = v;
+            }
+        }
+    };
     // not necessary to set indexes before pre_alignment
     // because max alignment is 7, while smallest split is 8.
     offset = pre_alignment;
+    int total_avoidable = 0;
     for (auto fs = target.second->begin(); fs != target.second->end(); fs++) {
-        int n = 0;
         for (auto prev_fs = target.second->begin(); prev_fs != fs; prev_fs++) {
-            n += int(is_used_i(fs->field()) && is_used_i(prev_fs->field()) &&
-                     !phv_i.must_alloc_same_container(*fs, *prev_fs));
+            total_avoidable += int(is_used_i(fs->field()) && is_used_i(prev_fs->field()) &&
+                                   !phv_i.must_alloc_same_container(*fs, *prev_fs));
         }
-        for (int i = offset + 1; i <= offset + fs->size(); i++) {
-            n_avoidable_packings[i] = n;
-        }
+        update_n_avoidable_packings(offset + 1, offset + fs->size(), total_avoidable);
         offset += fs->size();
         if (offset > 32) break;
     }
-    for (int i = offset + 1; i <= 32; i++) {
-        n_avoidable_packings[i] = n_avoidable_packings[offset];
-    }
+    update_n_avoidable_packings(offset + 1, 32, total_avoidable);
 
     bool has_tried_larger_sz = false;
     std::vector<NextSplitChoiceMetrics> choices;
-    for (const auto& c : {
-             SplitChoice::B,
-             SplitChoice::H,
-             SplitChoice::W,
-         }) {
+    for (const auto& c : all_choices) {
         // exact container slice list cannot be allocated to larger containers.
         if (int(c) > sl_sz && has_exact_containers) {
             continue;
@@ -401,7 +409,7 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
         choices.push_back({
             bool(middle_of_fieldslices[int(c)]),
             bool(unreferenced_boundary[int(c)]),
-            n_avoidable_packings.at(int(c)),
+            n_avoidable_packings.at(c),
             c,
         });
     }
@@ -485,19 +493,125 @@ boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
     return rst;
 }
 
+void DfsItrContext::propagate_8bit_exact_container_split(SuperCluster* sc,
+                                                         SuperCluster::SliceList* target,
+                                                         SplitSchema* schema,
+                                                         SplitDecision* decisions) const {
+    if (!SuperCluster::slice_list_has_exact_containers(*target)) {
+        return;
+    }
+    // helpers for fast query of field slices stored in @p sc.
+    ordered_map<const Field*, ordered_set<FieldSlice>> field_slices;
+    sc->forall_fieldslices([&](const FieldSlice& fs) { field_slices[fs.field()].insert(fs); });
+    const auto get_enclosing_fs = [&](const FieldSlice& fs) -> boost::optional<FieldSlice> {
+        for (const auto& enclosing_fs : field_slices.at(fs.field())) {
+            if (enclosing_fs.range().contains(fs.range())) {
+                return enclosing_fs;
+            }
+        }
+        return boost::none;
+    };
+    // helper for getting slice of fieldslices in a rotational clusters.
+    const auto get_rotational_slices = [&](const FieldSlice& fs) {
+        std::vector<FieldSlice> rst;
+        auto enclosing = get_enclosing_fs(fs);
+        if (!enclosing) return rst;
+        const int offset = fs.range().lo - enclosing->range().lo;
+        for (const auto& other : sc->cluster(*enclosing).slices()) {
+            rst.push_back(PHV::FieldSlice(other.field(),
+                                          StartLen(other.range().lo + offset, fs.range().size())));
+        }
+        return rst;
+    };
+
+    ordered_map<SuperCluster::SliceList*, std::vector<SuperCluster::SliceList*>> sl_to_byte_lists;
+    ordered_map<const Field*, ordered_map<FieldSlice, SuperCluster::SliceList*>>
+        field_to_byte_lists;
+    for (auto* sl : sc->slice_lists()) {
+        if (!need_further_split(sl)) continue;
+        sl_to_byte_lists[sl] = SuperCluster::slice_list_split_by_byte(*sl);
+        for (auto* byte_sl : sl_to_byte_lists[sl]) {
+            for (const auto& fs : *byte_sl) {
+                field_to_byte_lists[fs.field()][fs] = byte_sl;
+            }
+        }
+    }
+    const auto get_byte_lists = [&](const FieldSlice& fs) {
+        std::vector<SuperCluster::SliceList*> rst;
+        if (!field_to_byte_lists.count(fs.field())) return rst;
+        for (const auto& fs_list : field_to_byte_lists.at(fs.field())) {
+            if (fs_list.first.range().overlaps(fs.range())) {
+                rst.push_back(fs_list.second);
+            }
+        }
+        return rst;
+    };
+
+    // propagate 8bit slice to all other byte slices.
+    std::queue<SuperCluster::SliceList*> queue;
+    ordered_set<SuperCluster::SliceList*> visited;
+    const auto push_new_byte_list = [&](SuperCluster::SliceList* sl) {
+        if (visited.count(sl)) {
+            return;
+        }
+        visited.insert(sl);
+        queue.push(sl);
+    };
+    push_new_byte_list(sl_to_byte_lists.at(target).front());
+    while (!queue.empty()) {
+        const auto* byte_list = queue.front();
+        queue.pop();
+        for (const auto& fs : *byte_list) {
+            auto rot_slices = get_rotational_slices(fs);
+            for (const auto& rot_fs : rot_slices) {
+                auto rot_byte_lists = get_byte_lists(rot_fs);
+                for (auto* rot_byte_list : rot_byte_lists) {
+                    push_new_byte_list(rot_byte_list);
+                }
+            }
+        }
+    }
+
+    // mark split and add additional decisions.
+    for (const auto& sl_byte_lists : sl_to_byte_lists) {
+        auto* sl = sl_byte_lists.first;
+        const auto& byte_lists = sl_byte_lists.second;
+        const int pre_alignment = compute_pre_alignment(*sl);
+        const int sl_sz = SuperCluster::slice_list_total_bits(*sl);
+        int byte_idx = 0;
+        for (auto* byte_list : byte_lists) {
+            if (visited.count(byte_list)) {
+                if (8 * byte_idx - pre_alignment > 0) {
+                    schema->at(sl).setbit(8 * byte_idx - pre_alignment);
+                }
+                if (8 * (byte_idx + 1) - pre_alignment < sl_sz) {
+                    schema->at(sl).setbit(8 * (byte_idx + 1) - pre_alignment);
+                }
+                for (const auto& fs : *byte_list) {
+                    decisions->emplace(
+                        fs, AfterSplitConstraint(AfterSplitConstraint::ConstraintType::EXACT, 8));
+                }
+            }
+            byte_idx++;
+        }
+    }
+}
+
 std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
     SuperCluster* sc, SuperCluster::SliceList* target, int first_n_bits) const {
     using ctype = AfterSplitConstraint::ConstraintType;
     SplitSchema schema;
     SplitDecision decisions;
+    const bool has_exact_conts = SuperCluster::slice_list_has_exact_containers(*target);
     for (auto* sl : sc->slice_lists()) {
         schema[sl] = bitvec();
         if (sl != target) {
             continue;
         }
+
         const int sz = SuperCluster::slice_list_total_bits(*sl);
-        // For metadata fields with alignment, we should treat pre_aligment as virtual padding
-        // before the field by setting the initial offset to the aligment, e.g.
+        // For metadata fields with alignment, we should treat pre_alignment as virtual padding
+        // before the field by setting the initial offset to the alignment, e.g.
         // meta<8> with alignment 3 cannot be allocated to 8-bit container, and the initial
         // offset will be 3.
         const int pre_alignment = compute_pre_alignment(*sl);
@@ -505,11 +619,12 @@ std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
             schema[sl].setbit(first_n_bits - pre_alignment);
         }
 
+
         AfterSplitConstraint container_size_constraint(ctype::EXACT, first_n_bits);
         // If slice list does not have exact containers, then split this slicelist
         // introduce only the minimum container size constraint,
         // because they can be flexibly allocate to any larger or equal container.
-        if (!SuperCluster::slice_list_has_exact_containers(*sl)) {
+        if (!has_exact_conts) {
             container_size_constraint = AfterSplitConstraint(ctype::MIN, first_n_bits);
         }
 
@@ -540,6 +655,9 @@ std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
             }
             offset += fs.size();
         }
+    }
+    if (first_n_bits == 8) {
+        propagate_8bit_exact_container_split(sc, target, &schema, &decisions);
     }
     return {schema, decisions};
 }
@@ -1393,40 +1511,6 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
     return false;
 }
 
-// split_by_bytes split @p by each byte.
-std::vector<SuperCluster::SliceList*> split_sl_at_byte_boundary(const SuperCluster::SliceList* sl) {
-    int offset = 0;
-    auto curr = new SuperCluster::SliceList();
-    std::vector<SuperCluster::SliceList*> rst;
-    for (auto itr = sl->begin(); itr != sl->end(); itr++) {
-        const auto& fs = *itr;
-        if (offset + fs.size() >= 8) {
-            const int head_length = 8 - offset;
-            auto head = FieldSlice(fs, StartLen(fs.range().lo, head_length));
-            curr->push_back(head);
-            auto remainder = new SuperCluster::SliceList();
-            remainder->assign(std::next(itr), sl->end());
-            if (fs.size() - head_length > 0) {
-                auto tail =
-                    FieldSlice(fs, StartLen(fs.range().lo + head_length, fs.size() - head_length));
-                remainder->push_front(tail);
-            }
-            if (remainder->size() > 0) {
-                rst = split_sl_at_byte_boundary(remainder);
-            }
-            rst.push_back(curr);
-            return rst;
-        } else {
-            offset += fs.size();
-            curr->push_back(fs);
-        }
-    }
-    if (curr->size() > 0) {
-        rst.push_back(curr);
-    }
-    return rst;
-}
-
 // RangeLookupableConstraints supports range lookup on field slices.
 struct RangeLookupableConstraints {
     ordered_map<const Field*, std::map<le_bitrange, AfterSplitConstraint>> constraints;
@@ -1465,7 +1549,7 @@ bool DfsItrContext::dfs_prune_unsat_exact_list_size_mismatch(
         if (!need_further_split(sl)) {
             targets.push_back(sl);
         } else {
-            targets = split_sl_at_byte_boundary(sl);
+            targets = SuperCluster::slice_list_split_by_byte(*sl);
         }
         for (auto* target : targets) {
             AfterSplitConstraint exact_size_req;
@@ -1486,6 +1570,34 @@ bool DfsItrContext::dfs_prune_unsat_exact_list_size_mismatch(
         }
     }
     return false;
+}
+
+bool DfsItrContext::dfs_prune_invalid_packing(const SuperCluster* sc) const {
+    ordered_set<const SuperCluster::SliceList*> decided_packings;
+    ordered_set<const SuperCluster::SliceList*> undecided_lists;
+    for (auto* sl : sc->slice_lists()) {
+        if (!need_further_split(sl)) {
+            decided_packings.insert(sl);
+        } else {
+            // if the size of list has not been decided yet, we can still
+            // check for fieldslices within one byte because they will be
+            // packed in one container no matter how we slice the cluster.
+            undecided_lists.insert(sl);
+        }
+    }
+    auto rst = packing_validator_i.can_pack(decided_packings, undecided_lists);
+    switch (rst.code) {
+        case PackingValidator::Result::Code::OK: {
+            return false;
+        }
+        case PackingValidator::Result::Code::BAD: {
+            LOG5("DFS pruned(invalid packing): " << rst.err);
+            return true;
+        }
+        default:
+            LOG6("skip invalid packing prune, because cannot check packing: " << rst.err);
+            return false;
+    }
 }
 
 bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) const {
@@ -1513,6 +1625,11 @@ bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) const
 
         // prune when metadata list joins two size-mismatched exact lists.
         if (dfs_prune_unsat_exact_list_size_mismatch(*after_split_constraints, sc)) {
+            return true;
+        }
+
+        // prune invalid packing
+        if (dfs_prune_invalid_packing(sc)) {
             return true;
         }
     }

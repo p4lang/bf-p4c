@@ -3,6 +3,7 @@
 
 #include <utility>
 
+#include "bf-p4c/phv/packing_validator.h"
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -74,6 +75,7 @@ class DfsItrContext : public IteratorInterface {
     const PhvInfo& phv_i;
     const SuperCluster* sc_i;
     const PHVContainerSizeLayout pa_i;
+    const PackingValidator& packing_validator_i;
     const PackConflictChecker has_pack_conflict_i;
     const IsReferencedChecker is_used_i;
     bool minimal_packing_mode_i = false;
@@ -125,6 +127,7 @@ class DfsItrContext : public IteratorInterface {
 
  public:
     DfsItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
+                  const PackingValidator& packing_validator,
                   const PackConflictChecker& pack_conflict,
                   const IsReferencedChecker is_used,
                   int max_search_steps = (1 << 25),
@@ -132,6 +135,7 @@ class DfsItrContext : public IteratorInterface {
         : phv_i(phv),
           sc_i(sc),
           pa_i(pa),
+          packing_validator_i(packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
           n_step_limit_i(max_search_steps),
@@ -228,6 +232,10 @@ class DfsItrContext : public IteratorInterface {
         const ordered_map<FieldSlice, AfterSplitConstraint>& decided_sz,
         const SuperCluster* sc) const;
 
+    /// return true if there exists packing that make it impossible to
+    /// to synthesize actions.
+    bool dfs_prune_invalid_packing(const SuperCluster* sc) const;
+
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
     /// of @p sc based on split_decisions_i and pa_container_size_upcastings_i.
     boost::optional<ordered_map<FieldSlice, AfterSplitConstraint>> collect_aftersplit_constraints(
@@ -248,6 +256,16 @@ class DfsItrContext : public IteratorInterface {
     /// dfs_pick_next return the next slice list to be split.
     /// There are some heuristics for returning the slicelist that has most constraints.
     boost::optional<SliceListLoc> dfs_pick_next() const;
+
+    /// propagate_8bit_exact_container_split propagates the 8bit split decision on @p target
+    /// to other slice lists in @p sc, as long as there is one exact_containers field slices
+    /// in rotational clusters of splitted slices of list.
+    /// If we are splitting out an 8-bit slice list with
+    /// exact_containers constraint, then we can infer that all other slices in the
+    /// the same rotational cluster with slices that were just split out, need to
+    /// be split by the bytes (counting from the beginning of lists) that contains them.
+    void propagate_8bit_exact_container_split(SuperCluster* sc, SuperCluster::SliceList* target,
+                                              SplitSchema* schema, SplitDecision* decisions) const;
 
     /// make_split_meta will generate schema and decision to split out first @p first_n_bits
     /// of @p sl under @p sc.

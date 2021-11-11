@@ -19,7 +19,9 @@ parser NpbEgressParser(
         pkt.extract(eg_intr_md);
         eg_md.pkt_length = eg_intr_md.pkt_length;
         eg_md.port = eg_intr_md.egress_port;
-
+        // if auto-init-metadata is not enabled, we need to set eg_md.bypass to 0
+        // in parser, otherwise, this test profile is incorrect.
+        eg_md.bypass = 0;
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         // initialize lookup struct to zeros
         eg_md.lkp_1.mac_src_addr = 0;

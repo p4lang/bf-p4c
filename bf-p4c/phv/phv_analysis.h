@@ -23,6 +23,7 @@
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/phv/analysis/dominator_tree.h"
@@ -88,6 +89,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     CollectParserInfo  parser_info;
     // physical live ranges of field slices.
     PHV::FieldSliceLiveRangeDB physical_liverange_db;
+    // sources of any field slices classified by actions.
+    PHV::ActionSourceTracker source_tracker;
 
     // allocation settings.
     PHV::AllocSetting settings;

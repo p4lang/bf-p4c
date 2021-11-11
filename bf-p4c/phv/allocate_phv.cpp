@@ -509,6 +509,40 @@ std::list<PHV::SuperCluster*> create_strided_clusters(
     return rst;
 }
 
+// SuperClusterDiagnoseInfo is ported from AllocatePHV::diagnoseSuperCluster.
+// This struct and related analysis are not precise (high false positive rate).
+// We should deprecate them once the table first alloc mode is ready for production.
+struct SuperClusterActionDiagnoseInfo {
+    // Identify if this is the minimal slice for this supercluster.
+    // Conditions:
+    // 1. The width of deparsed exact_containers slice lists in the supercluster is already 8b; or
+    // 2. At least one deparsed exact_containers slice list is made up of no_split fields.
+    bool scCannotBeSplitFurther = false;
+    // Note down the offsets of the field slices within the slice list; the offset represents the
+    // slices' alignments within their respective containers.
+    ordered_map<PHV::FieldSlice, unsigned> fieldAlignments;
+    // Only slice lists of interest are the ones with exact containers requirements
+    ordered_set<const PHV::SuperCluster::SliceList*> sliceListsOfInterest;
+
+    explicit SuperClusterActionDiagnoseInfo(const PHV::SuperCluster* sc) {
+        auto& slice_lists = sc->slice_lists();
+        for (const auto* list : slice_lists) {
+            bool sliceListExact = false;
+            int sliceListSize = 0;
+            for (auto& slice : *list) {
+                if (slice.field()->no_split()) scCannotBeSplitFurther = true;
+                if (slice.field()->exact_containers()) sliceListExact = true;
+                fieldAlignments[slice] = sliceListSize;
+                sliceListSize += slice.size();
+            }
+            if (sliceListExact) {
+                scCannotBeSplitFurther = true;
+                sliceListsOfInterest.insert(list);
+            }
+        }
+    }
+};
+
 void print_alloc_history(const PHV::Transaction& tx,
                          const std::list<PHV::SuperCluster*>& clusters,
                          std::ostream& out) {
@@ -586,6 +620,13 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
             ss << "\n" << sc;
             ::error("%1%", ss.str());
         } else if (n_slicing_tried == 0) {
+            auto diagnose_info = SuperClusterActionDiagnoseInfo(sc);
+            if (diagnose_info.scCannotBeSplitFurther) {
+                std::stringstream ss;
+                bool diagnosed = utils.actions.diagnoseSuperCluster(
+                    diagnose_info.sliceListsOfInterest, diagnose_info.fieldAlignments, ss);
+                if (diagnosed) ::error("%1%", ss.str());
+            }
             BUG("invalid SuperCluster was formed");
         }
     };
@@ -638,6 +679,7 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
 
 PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(PHV::SuperCluster* sc) const {
     return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
+                                        *packing_validator,
                                         boost::bind(&AllocUtils::has_pack_conflict, this, _1, _2),
                                         boost::bind(&AllocUtils::is_referenced, this, _1));
 }
@@ -2165,9 +2207,16 @@ bool CoreAllocation::find_previous_allocation(
                            << *(start_positions.at(slice).container) << ")");
         }
         if (start_positions.at(slice).container) {
-            PHV::Container tmpContainer = *(start_positions.at(slice).container);
-            if (previous_container == PHV::Container())
-                previous_container = tmpContainer; } }
+            PHV::Container slice_prev_cont = *(start_positions.at(slice).container);
+            if (previous_container == PHV::Container()) {
+                previous_container = slice_prev_cont;
+            } else if (previous_container != slice_prev_cont) {
+                LOG5("mixed previous containers for one slice list: "
+                     << previous_container << " and " << slice_prev_cont);
+                return false;
+            }
+        }
+    }
 
     // Check if any of these slices have already been allocated.  If so, record
     // where.  Because we have already finely sliced each field, we can check
@@ -2511,18 +2560,19 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         // finitely many fields.
         bool conditional_constraints_satisfied = true;
         for (auto kv : *action_constraints) {
-            if (kv.second.size() > 0) {
-                auto action_alloc =
-                    tryAllocSliceList(this_alloc, group, super_cluster, kv.second, score_ctx);
-                if (!action_alloc) {
-                    LOG_FEATURE("alloc_progress", 5, TAB1
-                               "Failed: Slice list has conditional constraints that cannot be "
-                               "satisfied");
-                    conditional_constraints_satisfied = false;
-                    break;
-                }
-                LOG_DEBUG5(TAB1 "Conditional constraints are satisfied");
-                this_alloc.commit(*action_alloc); } }
+            if (kv.second.empty()) continue;
+            auto action_alloc =
+                tryAllocSliceList(this_alloc, group, super_cluster, kv.second, score_ctx);
+            if (!action_alloc) {
+                LOG_FEATURE("alloc_progress", 5, TAB1
+                           "Failed: Slice list has conditional constraints that cannot be "
+                           "satisfied");
+                conditional_constraints_satisfied = false;
+                break;
+            }
+            LOG_DEBUG5(TAB1 "Conditional constraints are satisfied");
+            this_alloc.commit(*action_alloc);
+        }
 
         if (!conditional_constraints_satisfied)
             continue;
@@ -3567,43 +3617,17 @@ bool AllocatePHV::diagnoseFailures(const std::list<const PHV::SuperCluster*>& un
 }
 
 bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
-    auto& slice_lists = sc->slice_lists();
-    // Cannot diagnose superclusters without slice lists yet.
-    if (slice_lists.size() == 0) return false;
-    // Identify if this is the minimal slice for this supercluster.
-    // Conditions:
-    // 1. The width of deparsed exact_containers slice lists in the supercluster is already 8b; or
-    // 2. At least one deparsed exact_containers slice list is made up of no_split fields.
-    bool scCannotBeSplitFurther = false;
-    // Note down the offsets of the field slices within the slice list; the offset represents the
-    // slices' alignments within their respective containers.
-    ordered_map<PHV::FieldSlice, unsigned> fieldAlignments;
-    // Only slice lists of interest are the ones with exact containers requirements
-    ordered_set<const PHV::SuperCluster::SliceList*> sliceListsOfInterest;
-
-    for (const auto* list : slice_lists) {
-        bool sliceListExact = false;
-        int sliceListSize = 0;
-        for (auto& slice : *list) {
-            if (slice.field()->no_split()) scCannotBeSplitFurther = true;
-            if (slice.field()->exact_containers()) sliceListExact = true;
-            fieldAlignments[slice] = sliceListSize;
-            sliceListSize += slice.size();
-        }
-        if (sliceListExact) {
-            scCannotBeSplitFurther = true;
-            sliceListsOfInterest.insert(list);
-        }
+    auto info = SuperClusterActionDiagnoseInfo(sc);
+    if (!info.scCannotBeSplitFurther) {
+        return false;
     }
-    if (!scCannotBeSplitFurther) return false;
-
     LOG_DEBUG3("The following supercluster fails allocation and cannot be split further:\n" << sc);
     LOG_DEBUG3("Printing alignments of slice list fields within their containers:");
-    for (auto kv : fieldAlignments)
+    for (auto kv : info.fieldAlignments)
         LOG_DEBUG3(TAB1 << kv.second << " : " << kv.first);
     std::stringstream ss;
-    bool diagnosed = utils_i.actions.diagnoseSuperCluster(sliceListsOfInterest,
-            fieldAlignments, ss);
+    bool diagnosed =
+        utils_i.actions.diagnoseSuperCluster(info.sliceListsOfInterest, info.fieldAlignments, ss);
     if (diagnosed) ::error("%1%", ss.str());
     return diagnosed;
 }

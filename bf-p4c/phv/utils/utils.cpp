@@ -1,3 +1,4 @@
+#include <deque>
 #include <iostream>
 #include <numeric>
 #include <boost/optional/optional_io.hpp>
@@ -1546,6 +1547,41 @@ std::vector<le_bitrange> PHV::SuperCluster::slice_list_exact_containers(const Sl
 
 bool PHV::SuperCluster::slice_list_has_exact_containers(const SliceList& list) {
     return slice_list_exact_containers(list).size() > 0;
+}
+
+std::vector<PHV::SuperCluster::SliceList*> PHV::SuperCluster::slice_list_split_by_byte(
+    const SuperCluster::SliceList& sl) {
+    if (sl.empty()) return {};
+    const auto& head = sl.front();
+    int offset = head.alignment() ? head.alignment()->align : 0;
+    auto curr = new SuperCluster::SliceList();
+
+    std::vector<SuperCluster::SliceList*> rst;
+    std::deque<PHV::FieldSlice> slices(sl.begin(), sl.end());
+    while (!slices.empty()) {
+        auto fs = slices.front();
+        slices.pop_front();
+        if (offset + fs.size() >= 8) {
+            const int head_length = 8 - offset;
+            auto head = FieldSlice(fs, StartLen(fs.range().lo, head_length));
+            curr->push_back(head);
+            rst.push_back(curr);
+            offset = 0;
+            curr = new SuperCluster::SliceList();
+            if (fs.size() - head_length > 0) {
+                auto tail =
+                    FieldSlice(fs, StartLen(fs.range().lo + head_length, fs.size() - head_length));
+                slices.push_front(tail);
+            }
+        } else {
+            offset += fs.size();
+            curr->push_back(fs);
+        }
+    }
+    if (curr->size() > 0) {
+        rst.push_back(curr);
+    }
+    return rst;
 }
 
 namespace PHV {

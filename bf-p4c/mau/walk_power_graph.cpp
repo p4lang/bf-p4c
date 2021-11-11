@@ -384,7 +384,7 @@ bool WalkPowerGraph::check_mpr_conflict() {
           BUG("impossible gress dep combo ig=%d eg=%d", ig_dep, eg_dep);
         }
       }
-    } else {
+    } else if (!change) {
       BUG_CHECK((ig_mpr->glob_exec_use[stage-1] & eg_mpr->glob_exec_use[stage-1]) == 0,
                 "inconsistent ingress/egress mpr_glob_exec use into stage %d", stage);
       BUG_CHECK((ig_mpr->long_branch_use[stage-1] & eg_mpr->long_branch_use[stage-1]) == 0,

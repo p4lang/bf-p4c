@@ -56,9 +56,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), action_constraints),
       strided_headers(phv),
       physical_liverange_db(&alloc, &defuse, phv, pragmas),
+      source_tracker(phv),
       utils(phv, clot, clustering, uses, defuse, action_constraints, meta_init, dark_live_range,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
-            physical_liverange_db, pragmas, settings) {
+            physical_liverange_db, source_tracker, pragmas, settings) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
         addPasses({
             // Identify uses of fields in MAU, PARDE
@@ -131,6 +132,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &parser_info,
             phvLoggingInfo,
             &physical_liverange_db,
+            &source_tracker,
             new AllocatePHV(utils, alloc, phv),
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,

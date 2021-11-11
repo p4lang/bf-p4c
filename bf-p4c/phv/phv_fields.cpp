@@ -1082,7 +1082,7 @@ PHV::FieldSlice::FieldSlice(
     BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start in range %1%",
               range);
     BUG_CHECK(range.size() <= field->size,
-            "Trying to create field slice larger than field");
+              "Trying to create field slice larger than field: %1%.size() > %2%", range, field);
 
     // Calculate relative alignment for this field slice.
     if (field->alignment) {
