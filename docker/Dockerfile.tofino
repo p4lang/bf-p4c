@@ -1,10 +1,10 @@
 # Intel CaaS (AMR)
 ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 
-# p4factory docker image tag to use (usually p4c-dev_stable or p4c-dev_master)
-ARG P4FACTORY_TAG=p4c-dev_stable
+# p4factory docker image to use (p4factory:<tag> or p4factory@sha256:<hash>)
+ARG P4FACTORY_IMAGE=p4factory@sha256:a04765e127d889be947277bc93f3d0fa99c61796896a23c0dd1eddda49107f82
 
-FROM ${DOCKER_PROJECT}/p4factory:${P4FACTORY_TAG}
+FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE}
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 
