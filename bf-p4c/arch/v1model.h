@@ -1,3 +1,8 @@
+/**
+ * \defgroup SimpleSwitchTranslation BFN::SimpleSwitchTranslation
+ * \ingroup ArchTranslation
+ * \brief Set of passes that translate v1model architecture.
+ */
 #ifndef BF_P4C_ARCH_V1MODEL_H_
 #define BF_P4C_ARCH_V1MODEL_H_
 
@@ -22,6 +27,7 @@
 
 namespace BFN {
 
+/** \ingroup SimpleSwitchTranslation */
 class AddAdjustByteCount : public Modifier {
     V1::ProgramStructure *structure;
     P4::ReferenceMap *refMap;
@@ -33,6 +39,10 @@ class AddAdjustByteCount : public Modifier {
          : structure(structure), refMap(refMap), typeMap(typeMap) {}
 };
 
+/**
+ * \ingroup SimpleSwitchTranslation
+ * \brief PassManager that governs normalization of v1model architecture.
+ */
 class SimpleSwitchTranslation : public PassManager {
  public:
     V1::ProgramStructure structure;

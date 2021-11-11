@@ -1,3 +1,8 @@
+/**
+ * \defgroup ArchTranslation BFN::ArchTranslation
+ * \ingroup midend
+ * \brief Set of passes that normalize variations in the architectures.
+ */
 #ifndef BF_P4C_ARCH_ARCH_H_
 #define BF_P4C_ARCH_ARCH_H_
 
@@ -24,13 +29,17 @@
 
 namespace BFN {
 
+/** \ingroup ArchTranslation */
 enum class ARCH { TNA, T2NA, PSA, V1MODEL };
 
-/// Find and remove extern method calls that the P4 programmer has requested by
-/// excluded from translation using the `@dont_translate_extern_method` pragma.
-/// Currently this pragma is only supported on actions; it takes as an argument
-/// a list of strings that identify extern method calls to remove from the action
-/// body.
+/**
+ * \ingroup ArchTranslation
+ * Find and remove extern method calls that the P4 programmer has requested by
+ * excluded from translation using the `@dont_translate_extern_method` pragma.
+ * Currently this pragma is only supported on actions; it takes as an argument
+ * a list of strings that identify extern method calls to remove from the action
+ * body.
+ */
 struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
     const IR::MethodCallStatement*
     preorder(IR::MethodCallStatement* call) override {
@@ -61,6 +70,7 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
     }
 };
 
+/** \ingroup ArchTranslation */
 class GenerateTofinoProgram : public Transform {
     ProgramStructure* structure;
  public:
@@ -73,21 +83,34 @@ class GenerateTofinoProgram : public Transform {
     }
 };
 
+/** \ingroup ArchTranslation */
 class TranslationFirst : public PassManager {
  public:
     TranslationFirst() { setName("TranslationFirst"); }
 };
 
+/** \ingroup ArchTranslation */
 class TranslationLast : public PassManager {
  public:
     TranslationLast() { setName("TranslationLast"); }
 };
 
+/**
+ * \class ArchTranslation
+ * \ingroup ArchTranslation
+ * \brief PassManager that governs the normalization of variations in the architectures.
+ * @sa BFN::SimpleSwitchTranslation
+ * @sa BFN::TnaArchTranslation
+ * @sa BFN::T2naArchTranslation
+ * @sa BFN::T5naArchTranslation
+ * @sa BFN::PortableSwitchTranslation
+ */
 class ArchTranslation : public PassManager {
  public:
     ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options);
 };
 
+/** \ingroup ArchTranslation */
 enum ArchBlock_t {
     PARSER = 0,
     MAU,
@@ -95,6 +118,7 @@ enum ArchBlock_t {
     BLOCK_TYPE
 };
 
+/** \ingroup ArchTranslation */
 struct BlockInfo {
     int index;
     // XXX(amresh); In addition to the index, we need the pipe name to generate
@@ -121,10 +145,14 @@ struct BlockInfo {
     }
 };
 
+/** \ingroup ArchTranslation */
 using ProgramThreads = std::map<std::pair<int, gress_t>, const IR::BFN::P4Thread*>;
+/** \ingroup ArchTranslation */
 using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
+/** \ingroup ArchTranslation */
 using DefaultPortMap = std::map<int, std::vector<int>>;
 
+/** \ingroup ArchTranslation */
 class ParseTna : public Inspector {
     const IR::PackageBlock*   mainBlock = nullptr;
  public:
@@ -148,6 +176,7 @@ class ParseTna : public Inspector {
     bool hasMultipleParsers = false;
 };
 
+/** \ingroup ArchTranslation */
 struct DoRewriteControlAndParserBlocks : Transform {
  public:
     explicit DoRewriteControlAndParserBlocks(BlockInfoMapping* block_info) :
@@ -161,12 +190,15 @@ struct DoRewriteControlAndParserBlocks : Transform {
     // bool *hasMultipleParsers = nullptr;
 };
 
-// This pass rewrites the IR::P4Parser and IR::P4Control node to
-// IR::BFN::TnaParser, IR::BFN::TnaControl
-// IR::BFN::TnaDeparser.
-// The latter three classes are used in the midend till extract_maupipe,
-// which is then converted to IR::BFN::Parser, IR::BFN::Pipe and
-// IR::BFN::Deparser.
+/**
+ * \ingroup ArchTranslation
+ * This pass rewrites the IR::P4Parser and IR::P4Control node to
+ * IR::BFN::TnaParser, IR::BFN::TnaControl
+ * IR::BFN::TnaDeparser.
+ * The latter three classes are used in the midend till extract_maupipe,
+ * which is then converted to IR::BFN::Parser, IR::BFN::Pipe and
+ * IR::BFN::Deparser.
+ */
 struct RewriteControlAndParserBlocks : public PassManager {
  public:
     RewriteControlAndParserBlocks(P4::ReferenceMap* refMap,
@@ -186,8 +218,11 @@ struct RewriteControlAndParserBlocks : public PassManager {
     }
 };
 
-/// Restore all parameters to the controls and parsers as specified by the /
-/// architecture.
+/**
+ * \ingroup ArchTranslation
+ * Restore all parameters to the controls and parsers as specified by the /
+ * architecture.
+ */
 struct RestoreParams: public Transform {
     explicit RestoreParams(BFN_Options &options) : options(options) { }
     IR::BFN::TnaControl* preorder(IR::BFN::TnaControl* control);
@@ -197,7 +232,10 @@ struct RestoreParams: public Transform {
     BFN_Options &options;
 };
 
-/// XXX(hanw): probably should be done before translation
+/**
+ * \ingroup ArchTranslation
+ * XXX(hanw): probably should be done before translation
+ */
 class LoweringType : public Transform {
     std::map<cstring, unsigned> enum_encoding;
 
@@ -221,6 +259,7 @@ class LoweringType : public Transform {
     }
 };
 
+/** \ingroup ArchTranslation */
 class ApplyEvaluator : public PassManager {
  public:
     P4::ReferenceMap        *refMap;

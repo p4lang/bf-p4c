@@ -1,3 +1,54 @@
+/**
+ * \defgroup SimplifyEmitArgs BFN::SimplifyEmitArgs
+ * \ingroup midend
+ * \brief Set of passes that simplify headers and emits.
+ *  
+ * This pass manager performs the following simplification on headers
+ * and emit() methods.
+ *
+ * 1. The following:
+ *  
+ *        header h {
+ *            struct s {
+ *                bit<8> f0;
+ *            }
+ *        }
+ * 
+ *    is converted to
+ *
+ *        header h {
+ *            bit<8> _s_f0;
+ *        }
+ *
+ * 2. The following:
+ *
+ *        emit(hdr)
+ *
+ *    is converted to
+ *
+ *        emit({hdr.f0, hdr.f1})
+ *
+ * 3. The following:
+ * 
+ *        header h {
+ *            @flexible
+ *            struct s0 {
+ *                bit<8> f0;
+ *            }
+ *            @flexible
+ *            struct s1 {
+ *                bit<8> f0;
+ *            }
+ *        }
+ *
+ *    is converted to
+ *
+ *        header h {
+ *            bit<8> _s0_f0 @flexible;
+ *            bit<8> _s1_f0 @flexible;
+ *        }
+ *
+ */
 #ifndef EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
 #define EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
 
@@ -12,7 +63,11 @@
 namespace BFN {
 
 /**
- * This passes flattened nested struct within a struct, as well as
+ * \class FlattenHeader
+ * \ingroup SimplifyEmitArgs
+ * \brief Pass that flattened nested struct within a struct.
+ * 
+ * This pass flattened nested struct within a struct, as well as
  * nested struct within a header.
  *
  * The corresponding pass in p4lang/p4c FlattenInterfaceStruct and
@@ -65,6 +120,9 @@ class FlattenHeader : public Modifier {
 };
 
 /**
+ * \class EliminateHeaders
+ * \ingroup SimplifyEmitArgs
+ * 
  * Assume header type are flattend, no nested struct.
  */
 class EliminateHeaders : public Transform {
@@ -82,6 +140,10 @@ class EliminateHeaders : public Transform {
     void elimConcat(IR::IndexedVector<IR::NamedExpression>& output, const IR::Concat* expr);
 };
 
+/**
+ * \class RewriteTypeArguments
+ * \ingroup SimplifyEmitArgs
+ */
 class RewriteTypeArguments : public Transform {
      const EliminateHeaders* eeh;
  public:
@@ -91,53 +153,10 @@ class RewriteTypeArguments : public Transform {
 };
 
 /**
- * This pass manager performs the following simplification on headers
- * and emit() methods.
- *
- * ```
- * 1. header h {
- *      struct s {
- *        bit<8> f0;
- *      }
- *    }
- * ```
- *   is converted to
- * ```
- *   header h {
- *      bit<8> _s_f0;
- *   }
- * ```
- *
- * ```
- * 2. emit(hdr)
- * ```
- * is converted to
- * ```
- *    emit({hdr.f0, hdr.f1})
- * ```
- *
- * ```
- * 3. header h {
- *       @flexible
- *       struct s0 {
- *          bit<8> f0;
- *       }
- *       @flexible
- *       struct s1 {
- *          bit<8> f0;
- *       }
- *    }
- * ```
- *    is converted to
- * ```
- *    header h {
- *       bit<8> _s0_f0 @flexible;
- *       bit<8> _s1_f0 @flexible;
- *    }
- * ```
- */
-
-/**
+ * \class SimplifyEmitArgs
+ * \ingroup SimplifyEmitArgs
+ * \brief Top level PassManager that governs simplification of headers and emits.
+ * 
  * XXX(hanw): We can probably simplify this pass manager by combining
  * the following four passes into fewer passes.
  */

@@ -40,9 +40,11 @@ cstring FlattenHeader::makeName(cstring sep) const {
     return name;
 }
 
-/// Merge all the annotation vectors in allAnnotations into a single
-/// one. Duplicates are resolved, with preference given to the ones towards the
-/// end of allAnnotations, which correspond to the most "nested" ones.
+/** 
+ * Merge all the annotation vectors in allAnnotations into a single
+ * one. Duplicates are resolved, with preference given to the ones towards the
+ * end of allAnnotations, which correspond to the most "nested" ones.
+ */
 const IR::Annotations* FlattenHeader::mergeAnnotations() const {
     auto mergedAnnotations = new IR::Annotations();
     for (auto annosIt = allAnnotations.rbegin(); annosIt != allAnnotations.rend(); annosIt++) {
@@ -76,17 +78,22 @@ cstring FlattenHeader::makeMember(cstring sep) const {
     return name;
 }
 
-// The IR for member is structured as
-// IR::Member
-//   IR::Member
-//     IR::Member
-//       IR::PathExpression
-// Suppose we would like to transform a path from hdr.meta.nested.field to
-// hdr.meta.nested_field.
-// The IR tree should be transformed to
-// IR::Member
-//   IR::Member
-//     IR::PathExpression
+/**
+ * The IR for member is structured as:
+ * 
+ *     IR::Member
+ *         IR::Member
+ *             IR::Member
+ *                 IR::PathExpression
+ * 
+ * Suppose we would like to transform a path from hdr.meta.nested.field to
+ * hdr.meta.nested_field.
+ * The IR tree should be transformed to:
+ * 
+ *      IR::Member
+ *          IR::Member
+ *              IR::PathExpression
+ */
 void FlattenHeader::flattenMember(const IR::Member* member) {
     if (memberSegments.size() == 0) {
         flattenedMember = member;

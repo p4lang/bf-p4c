@@ -1,3 +1,8 @@
+/**
+ * \defgroup RewriteFlexibleStruct BFN::RewriteFlexibleStruct
+ * \ingroup midend
+ * \brief Set of passes that moves flexible annotation from structure to its fields.
+ */
 #ifndef BF_P4C_MIDEND_REWRITE_FLEXIBLE_HEADER_H_
 #define BF_P4C_MIDEND_REWRITE_FLEXIBLE_HEADER_H_
 
@@ -10,6 +15,11 @@ class ReferenceMap;
 }
 
 namespace BFN {
+
+/**
+ * \class RewriteHeader
+ * \ingroup RewriteFlexibleStruct
+ */
 struct RewriteHeader : public Transform {
  public:
     RewriteHeader() {}
@@ -29,6 +39,12 @@ struct RewriteHeader : public Transform {
     }
 };
 
+/**
+ * \class RewriteFlexibleStruct
+ * \ingroup RewriteFlexibleStruct
+ * \brief Top level PassManager that governs moving of flexible annotation
+ *        from structure to its fields.
+ */
 class RewriteFlexibleStruct : public PassManager {
  public:
     explicit RewriteFlexibleStruct(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

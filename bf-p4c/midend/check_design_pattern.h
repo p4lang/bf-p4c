@@ -1,4 +1,8 @@
 /**
+ * \defgroup CheckDesignPattern BFN::CheckDesignPattern
+ * \ingroup midend
+ * \brief Set of passes that check for design patterns.
+ * 
  * Sometimes, we would like to guide user to write P4 program in certain ways
  * that can be supported by our backend. This might be desirable for a couple
  * reasons:
@@ -9,8 +13,8 @@
  * To give an example for the second case. P4 frontend allows user to write
  * code for Mirror extern as follows:
  *
- * Mirror() mirror;
- * mirror.emit(session_id, { ... });
+ *     Mirror() mirror;
+ *     mirror.emit(session_id, { ... });
  *
  * Compiler frontend will infer type tuple for the field list, however, a list/tuple
  * does not provide enough information to the backend to optimize the layout,
@@ -33,6 +37,10 @@
 
 namespace BFN {
 /**
+ * \class CheckExternValidity
+ * \ingroup CheckDesignPattern
+ * \brief Checks if the emit function call is valid with the TNA constraints.
+ * 
  * As the name suggested, TNA requires the emit() function call
  * to provide the type of the field list. There are a few rules:
  *
@@ -53,7 +61,15 @@ class CheckExternValidity : public Inspector {
      bool preorder(const IR::MethodCallExpression*) override;
 };
 
+/**
+ * \typedef ActionExterns
+ * \ingroup CheckDesignPattern
+ */
 typedef std::map<const IR::P4Action*, std::vector<const P4::ExternMethod*>> ActionExterns;
+/**
+ * \class FindDirectExterns
+ * \ingroup CheckDesignPattern
+ */
 class FindDirectExterns : public Inspector {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
@@ -67,6 +83,10 @@ class FindDirectExterns : public Inspector {
     profile_t init_apply(const IR::Node* root) override;
 };
 
+/**
+ * \class CheckDirectExternsOnTables
+ * \ingroup CheckDesignPattern
+ */
 class CheckDirectExternsOnTables: public Modifier {
     P4::ReferenceMap* refMap;
     ActionExterns &directExterns;
@@ -79,6 +99,9 @@ class CheckDirectExternsOnTables: public Modifier {
 };
 
 /**
+ * \class CheckDirectResourceInvocation
+ * \ingroup CheckDesignPattern
+ * 
  * Direct resources declared in the program and used in an action need to be
  * also specified on the table. Throw a compile time error if resources are
  * missing on the table. As otherwise, the appropriate control plane api's do
@@ -96,6 +119,12 @@ class CheckDirectResourceInvocation: public PassManager {
     }
 };
 
+
+/**
+ * \class CheckDesignPattern
+ * \ingroup CheckDesignPattern
+ * \brief Top level PassManager that governs checking for design patterns.
+ */
 class CheckDesignPattern : public PassManager {
  public:
      CheckDesignPattern(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

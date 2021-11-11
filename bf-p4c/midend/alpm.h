@@ -1,3 +1,8 @@
+/**
+ * \defgroup alpm BFN::AlpmImplementation
+ * \ingroup midend
+ * \brief Set of passes that implement ALPM.
+ */
 #ifndef BF_P4C_MIDEND_ALPM_H_
 #define BF_P4C_MIDEND_ALPM_H_
 
@@ -10,6 +15,10 @@
 
 namespace BFN {
 
+/**
+ * \class CollectAlpmInfo
+ * \ingroup alpm
+ */
 class CollectAlpmInfo : public Inspector {
  public:
     std::set<cstring> alpm_actions;
@@ -25,7 +34,8 @@ class CollectAlpmInfo : public Inspector {
 };
 
 /**
- *
+ * \class HasTableApply
+ * \ingroup alpm
  */
 class HasTableApply : public Inspector {
     P4::ReferenceMap* refMap;
@@ -55,49 +65,62 @@ class HasTableApply : public Inspector {
     }
 };
 
-// This class implements ALPM as a pair of pre-classifer tcam table and an
-// algorithmic tcam table. Currently, this class supports two different
-// implementations selected based on the constructor parameters to the Alpm
-// extern.
-//
-// 1). Alpm(number_partitions = 4095, subtrees_per_partition=2) alpm;
-//     table alpm {
-//        key = { f0 : exact; f1 : lpm }
-//        actions = { ... }
-//        alpm = alpm;
-//     }
-//
-// is translated to
-//     table alpm_preclassifier {
-//         key = { f0 : exact; f1 : lpm }
-//         actions = { set_partition_index; }
-//     }
-//     table alpm {
-//          key = { f0 : exact; f1 : lpm; partition_index : atcam_partition_index; }
-//          actions = { ... }
-//     }
-//
-// 2). Alpm(number_partitions = 4095, subtrees_per_partition=2,
-//          atcam_subset_width = 12, shift_granularity=1) alpm;
-//
-// is translated to
-//     action set_partition_index_0 ( bit<..> pidx, bit<..> pkey ) {
-//         partition_index = pidx;
-//         partition_key = pkey;
-//     }
-//
-//     ...
-//
-//     table alpm_preclassifier {
-//         key = { f0 : exact; f1 : lpm {
-//         actions = { set_partition_index_0; set_partition_index_1; ... }
-//     }
-//
-//     table alpm {
-//         key = { partition_key : lpm; partition_index : atcam_partition_index; }
-//         actions = { ... }
-//     }
-//
+/**
+ * \class SplitAlpm
+ * \ingroup alpm
+ * \brief Pass that splits ALPM table into pre-classifier TCAM and TCAM.
+ * 
+ * This class implements ALPM as a pair of pre-classifer tcam table and an
+ * algorithmic tcam table. Currently, this class supports two different
+ * implementations selected based on the constructor parameters to the Alpm
+ * extern.
+ *
+ * 1. The following:
+ * 
+ *        Alpm(number_partitions = 4095, subtrees_per_partition=2) alpm;
+ *        table alpm {
+ *            key = { f0 : exact; f1 : lpm }
+ *            actions = { ... }
+ *            alpm = alpm;
+ *        }
+ *
+ *    is translated to:
+ * 
+ *        table alpm_preclassifier {
+ *            key = { f0 : exact; f1 : lpm }
+ *            actions = { set_partition_index; }
+ *         }
+ *         table alpm {
+ *             key = { f0 : exact; f1 : lpm; partition_index : atcam_partition_index; }
+ *             actions = { ... }
+ *         }
+ *
+ * 
+ * 2. The following:
+ *        
+ *        Alpm(number_partitions = 4095, subtrees_per_partition=2,
+ *             atcam_subset_width = 12, shift_granularity=1) alpm;
+ *
+ *    is translated to:
+ * 
+ *        action set_partition_index_0 ( bit<..> pidx, bit<..> pkey ) {
+ *            partition_index = pidx;
+ *            partition_key = pkey;
+ *        }
+ *
+ *        ...
+ *
+ *        table alpm_preclassifier {
+ *            key = { f0 : exact; f1 : lpm {
+ *            actions = { set_partition_index_0; set_partition_index_1; ... }
+ *        }
+ *
+ *        table alpm {
+ *            key = { partition_key : lpm; partition_index : atcam_partition_index; }
+ *            actions = { ... }
+ *        }
+ *
+ */
 class SplitAlpm : public Transform {
     CollectAlpmInfo* alpm_info;
     P4::ReferenceMap* refMap;
@@ -151,6 +174,11 @@ class SplitAlpm : public Transform {
         alpm_info(info), refMap(refMap), typeMap(typeMap) {}
 };
 
+/**
+ * \class AlpmImplementation
+ * \ingroup alpm
+ * \brief Top level PassManager that governs the ALPM implementation.
+ */
 class AlpmImplementation : public PassManager {
  public:
     AlpmImplementation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);

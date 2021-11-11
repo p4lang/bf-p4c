@@ -1,3 +1,8 @@
+/**
+ * \defgroup TnaArchTranslation BFN::TnaArchTranslation
+ * \ingroup ArchTranslation
+ * \brief Set of passes that translate TNA architecture.
+ */
 #ifndef BF_P4C_ARCH_TNA_H_
 #define BF_P4C_ARCH_TNA_H_
 
@@ -13,10 +18,13 @@ class BFN_Options;
 
 namespace BFN {
 
+/** \ingroup TnaArchTranslation */
 const cstring ExternPortMetadataUnpackString    = "port_metadata_unpack";
+/** \ingroup TnaArchTranslation */
 const cstring ExternDynamicHashString           = "hash";
 
 /**
+ * \ingroup TnaArchTranslation
  * Normalize a TNA program's control and package instantiations so that later
  * passes don't need to account for minor variations in the architecture.
  *
@@ -40,6 +48,10 @@ struct NormalizeNativeProgram : public PassManager {
                            BFN_Options& options);
 };
 
+/**
+ * \ingroup TnaSwitchTranslation
+ * \brief PassManager that governs normalization of TNA architecture.
+ */
 struct TnaArchTranslation : public PassManager {
     TnaArchTranslation(P4::ReferenceMap* refMap,
                        P4::TypeMap* typeMap,

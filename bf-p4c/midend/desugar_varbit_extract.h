@@ -1,3 +1,83 @@
+/**
+ * \defgroup DesugarVarbitExtract DesugarVarbitExtract
+ * \ingroup midend
+ * \brief Set of passes that rewrite usage of varbit.
+ *
+ * Header field may have variable size (varbit), which can be encoded
+ * by another header field, e.g. IPv4 options length is encoded by ihl
+ * (see below).
+ *
+ * Tofino's parser does not have an ALU and cannot evaluate such complex
+ * expression. To support extraction of varbit field, we must
+ * decompose the length expression into a set of constructs that is
+ * implementable using the parser features, i.e. match and state transition.
+ *
+ * To implement this, we enumerate all possible compile time values
+ * of the length expression, and assign a parser state to each length
+ * where the varbit field is extracted.
+ *
+ *
+ *     header ipv4_t {
+ *         bit<4>  version;
+ *         bit<4>  ihl;
+ *         bit<8>  diffserv;
+ *         bit<16> totalLen;
+ *         bit<16> identification;
+ *         bit<3>  flags;
+ *         bit<13> fragOffset;
+ *         bit<8>  ttl;
+ *         bit<8>  protocol;
+ *         bit<16> hdrChecksum;
+ *         bit<32> srcAddr;
+ *         bit<32> dstAddr;
+ *         varbit<320> options;
+ *     }
+ *
+ *     state start {
+ *         verify(p.ipv4.ihl >= 5, error.NoMatch);
+ *         b.extract(p.ipv4, (bit<32>)(((bit<16>)p.ipv4.ihl - 5) * 32));
+ *         transition accept;
+ *     }
+ *
+ *
+ * After rewrite:
+ *
+ *     state start {
+ *         b.extract<ipv4_t>(p.ipv4);
+ *         transition select(p.ipv4.ihl) {
+ *             4w5 &&& 4w15: parse_options_no_option;
+ *             4w6 &&& 4w15: parse_options_32b;
+ *             4w7 &&& 4w15: parse_options_64b;
+ *             4w8 &&& 4w15: parse_options_96b;
+ *             4w9 &&& 4w15: parse_options_128b;
+ *             4w10 &&& 4w15: parse_options_160b;
+ *             4w11 &&& 4w15: parse_options_192b;
+ *             4w12 &&& 4w15: parse_options_224b;
+ *             4w13 &&& 4w15: parse_options_256b;
+ *             4w14 &&& 4w15: parse_options_288b;
+ *             4w15 &&& 4w15: parse_options_320b;
+ *             4w0 &&& 4w15: reject;
+ *             4w1 &&& 4w15: reject;
+ *             4w2 &&& 4w15: reject;
+ *             4w3 &&& 4w15: reject;
+ *             4w4 &&& 4w15: reject;
+ *         }
+ *     }
+ *
+ *
+ *
+ * Each compiler-added varbit state extracts multiple small size headers. The total number of
+ * header extracted in that state will be propotional to length calculated in
+ * compile time for state.  The sizes of the small headers can differ with the pattern of
+ * varbit lengths:
+ *
+ *     state parse_32b {
+ *         extract<bit<32>>(); }
+ *     state parse_48b {
+ *         extract<bit<32>>();
+ *         extract<bit<16>>(); }
+ * 
+ */
 #ifndef BF_P4C_MIDEND_DESUGAR_VARBIT_EXTRACT_H_
 #define BF_P4C_MIDEND_DESUGAR_VARBIT_EXTRACT_H_
 
@@ -6,81 +86,10 @@
 #include "bf-p4c/midend/type_checker.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 
-// Header field may have variable size (varbit), which can be encoded
-// by another header field, e.g. IPv4 options length is encoded by ihl
-// (see below).
-//
-// Tofino's parser does not have an ALU and cannot evaluate such complex
-// expression. To support extraction of varbit field, we must
-// decompose the length expression into a set of constructs that is
-// implementable using the parser features, i.e. match and state transition.
-//
-// To implement this, we enumerate all possible compile time values
-// of the length expression, and assign a parser state to each length
-// where the varbit field is extracted.
-//
-//
-//     header ipv4_t {
-//         bit<4>  version;
-//         bit<4>  ihl;
-//         bit<8>  diffserv;
-//         bit<16> totalLen;
-//         bit<16> identification;
-//         bit<3>  flags;
-//         bit<13> fragOffset;
-//         bit<8>  ttl;
-//         bit<8>  protocol;
-//         bit<16> hdrChecksum;
-//         bit<32> srcAddr;
-//         bit<32> dstAddr;
-//         varbit<320> options;
-//     }
-//
-//     state start {
-//         verify(p.ipv4.ihl >= 5, error.NoMatch);
-//         b.extract(p.ipv4, (bit<32>)(((bit<16>)p.ipv4.ihl - 5) * 32));
-//         transition accept;
-//     }
-//
-//
-//  After rewrite:
-//
-//     state start {
-//         b.extract<ipv4_t>(p.ipv4);
-//         transition select(p.ipv4.ihl) {
-//             4w5 &&& 4w15: parse_options_no_option;
-//             4w6 &&& 4w15: parse_options_32b;
-//             4w7 &&& 4w15: parse_options_64b;
-//             4w8 &&& 4w15: parse_options_96b;
-//             4w9 &&& 4w15: parse_options_128b;
-//             4w10 &&& 4w15: parse_options_160b;
-//             4w11 &&& 4w15: parse_options_192b;
-//             4w12 &&& 4w15: parse_options_224b;
-//             4w13 &&& 4w15: parse_options_256b;
-//             4w14 &&& 4w15: parse_options_288b;
-//             4w15 &&& 4w15: parse_options_320b;
-//             4w0 &&& 4w15: reject;
-//             4w1 &&& 4w15: reject;
-//             4w2 &&& 4w15: reject;
-//             4w3 &&& 4w15: reject;
-//             4w4 &&& 4w15: reject;
-//         }
-//     }
-//
-
-//
-// Each compiler-added varbit state extracts multiple small size headers. The total number of
-// header extracted in that state will be propotional to length calculated in
-// compile time for state.  The sizes of the small headers can differ with the pattern of
-// varbit lengths
-//...................................................................
-//  state parse_32b {
-//      extract<bit<32>>(); }
-//  state parse_48b {
-//      extract<bit<32>>();
-//      extract<bit<16>>(); }
-//
-//................................................
+/**
+ * \struct CheckMauUse
+ * \ingroup DesugarVarbitExtract
+ */
 struct CheckMauUse : public Inspector {
     // We limit the use of varbit field to parser and deparser, which is
     // sufficient for skipping through header options.
@@ -100,6 +109,10 @@ struct CheckMauUse : public Inspector {
     }
 };
 
+/**
+ * \class CollectVarbitExtract
+ * \ingroup DesugarVarbitExtract
+ */
 class CollectVarbitExtract : public Inspector {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
@@ -176,6 +189,10 @@ class CollectVarbitExtract : public Inspector {
         refMap(refMap), typeMap(typeMap) { }
 };
 
+/**
+ * \class RewriteVarbitUses
+ * \ingroup DesugarVarbitExtract
+ */
 class RewriteVarbitUses : public Modifier {
     const CollectVarbitExtract& cve;
 
@@ -231,6 +248,10 @@ class RewriteVarbitUses : public Modifier {
     explicit RewriteVarbitUses(const CollectVarbitExtract& cve) : cve(cve) {}
 };
 
+/**
+ * \class RemoveZeroVarbitExtract
+ * \ingroup DesugarVarbitExtract
+ */
 struct RemoveZeroVarbitExtract : public Modifier {
     bool preorder(IR::ParserState* state) override {
         IR::IndexedVector<IR::StatOrDecl> rv;
@@ -259,6 +280,10 @@ struct RemoveZeroVarbitExtract : public Modifier {
     }
 };
 
+/**
+ * \class RewriteVarbitTypes
+ * \ingroup DesugarVarbitExtract
+ */
 class RewriteVarbitTypes : public Modifier {
     const CollectVarbitExtract& cve;
     const RewriteVarbitUses& rvu;
@@ -274,6 +299,10 @@ class RewriteVarbitTypes : public Modifier {
                        const RewriteVarbitUses& r) : cve(c), rvu(r) { }
 };
 
+/**
+ * \class RewriteParserVerify
+ * \ingroup DesugarVarbitExtract
+ */
 class RewriteParserVerify : public Transform {
     const CollectVarbitExtract& cve;
 
@@ -283,6 +312,11 @@ class RewriteParserVerify : public Transform {
     explicit RewriteParserVerify(const CollectVarbitExtract& cve) : cve(cve) {}
 };
 
+/**
+ * \class DesugarVarbitExtract
+ * \ingroup DesugarVarbitExtract
+ * \brief Top level PassManager that governs the rewrite of varbit usage.
+ */
 class DesugarVarbitExtract : public PassManager {
  public:
     explicit DesugarVarbitExtract(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

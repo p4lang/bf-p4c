@@ -1,3 +1,10 @@
+/**
+ * \defgroup RemoveActionParameters BFN::RemoveActionParameters
+ * \ingroup midend
+ * \brief Set of passes that specialize the p4c/frontends/RemoveActionParameters class.
+ * 
+ * This moves action parameters out of the actions.
+ */
 #ifndef BF_P4C_MIDEND_REMOVE_ACTION_PARAMS_H_
 #define BF_P4C_MIDEND_REMOVE_ACTION_PARAMS_H_
 
@@ -5,12 +12,18 @@
 
 namespace BFN {
 
+/**
+ * \class DoRemoveActionParametersTofino
+ * \ingroup RemoveActionParameters
+ */
 class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
  public:
     explicit DoRemoveActionParametersTofino(P4::ActionInvocation* inv)
         : P4::DoRemoveActionParameters(inv) {}
 
-    // Check if there is a mark_to_drop action and don't replace parameters
+    /**
+     * Check if there is a mark_to_drop action and don't replace parameters.
+     */
     bool DoCheckReplaceParam(IR::P4Action* action, const IR::Parameter* p) {
         int paramUses = 0;
         int num_mark_to_drop = 0;
@@ -134,7 +147,12 @@ class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
     }
 };
 
-/// This is a specialized version of the p4c/midend/RemoveActionParameters class
+/**
+ * \class RemoveActionParameters
+ * \ingroup RemoveActionParameters
+ * \brief Top level PassManager that governs moving of action parameters out of the actions
+ *        (specialized for BFN).
+ */
 class RemoveActionParameters : public PassManager {
  public:
     RemoveActionParameters(P4::ReferenceMap *refMap,

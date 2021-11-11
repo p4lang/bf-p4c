@@ -1,3 +1,8 @@
+/**
+ * \defgroup T5naArchTranslation BFN::T5naArchTranslation
+ * \ingroup ArchTranslation
+ * \brief Set of passes that translate T5NA architecture.
+ */
 #ifndef BF_P4C_ARCH_T5NA_H_
 #define BF_P4C_ARCH_T5NA_H_
 
@@ -13,6 +18,10 @@ class BFN_Options;
 
 namespace BFN {
 
+/**
+ * \ingroup T5naSwitchTranslation
+ * \brief PassManager that governs normalization of T5NA architecture.
+ */
 struct T5naArchTranslation : public PassManager {
     T5naArchTranslation(P4::ReferenceMap* refMap,
                         P4::TypeMap* typeMap,

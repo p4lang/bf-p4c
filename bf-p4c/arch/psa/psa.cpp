@@ -21,6 +21,7 @@ namespace BFN {
 namespace PSA {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+/** \ingroup PortableSwitchTranslation */
 class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
     bool convert(const IR::Type_Enum *type) const override {
         if (type->name != "PSA_PacketPath_t") {
@@ -33,23 +34,29 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
     unsigned enumSize(unsigned /* size */) const override { return 8; }
 };
 
-// L-value of MeterColor_t is not deduced during an assignment
-// E.g.
-// struct metadata_t {
-//    PSA_MeterColor_t color_value;
-// }
-// gets converted to,
-// struct metadata_t {
-//    MeterColor_t color_value;
-// }
-//
-// Usage is an assignment,
-//
-// user_meta.color_value = meter0.execute(idx);
-//
-// Output of meter is bit<8> which cannot be unified to MeterColor_t
-// To overcome this issue, 'MeterColor_t' assignments occurring in Structs and
-// Headers must be explicitly converted to an 8 bit value
+/**
+ * \ingroup PortableSwitchTranslation
+ * L-value of MeterColor_t is not deduced during an assignment
+ * E.g.:
+ * 
+ *     struct metadata_t {
+ *         PSA_MeterColor_t color_value;
+ *     }
+ * 
+ * gets converted to:
+ * 
+ *     struct metadata_t {
+ *         MeterColor_t color_value;
+ *     }
+ *
+ * Usage is an assignment:
+ *
+ *     user_meta.color_value = meter0.execute(idx);
+ *
+ * Output of meter is bit<8> which cannot be unified to MeterColor_t
+ * To overcome this issue, 'MeterColor_t' assignments occurring in Structs and
+ * Headers must be explicitly converted to an 8 bit value
+ */
 class MeterColorTypeTo8Bits: public Transform {
     IR::Node* postorder(IR::Type_Name *t) override {
         auto path = t->path->to<IR::Path>();
@@ -65,6 +72,7 @@ class MeterColorTypeTo8Bits: public Transform {
     }
 };
 
+/** \ingroup PortableSwitchTranslation */
 class AnalyzeProgram : public Inspector {
     template<class P4Type, class BlockType>
     void analyzeArchBlock(cstring gressName, cstring blockName, cstring type) {
@@ -325,6 +333,7 @@ class AnalyzeProgram : public Inspector {
     P4::TypeMap *typeMap;
 };
 
+/** \ingroup PortableSwitchTranslation */
 class TranslateProgram : public Inspector {
     PSA::ProgramStructure* structure;
     P4::ReferenceMap *refMap;
@@ -822,6 +831,7 @@ class TranslateProgram : public Inspector {
     }
 };
 
+/** \ingroup PortableSwitchTranslation */
 class LoadTargetArchitecture : public Inspector {
     PSA::ProgramStructure* structure;
 
@@ -952,8 +962,11 @@ class LoadTargetArchitecture : public Inspector {
     }
 };
 
-/// Remap paths, member expressions, and type names according to the mappings
-/// specified in the given ProgramStructure.
+/**
+ * \ingroup PortableSwitchTranslation
+ * Remap paths, member expressions, and type names according to the mappings
+ * specified in the given ProgramStructure.
+ */
 struct ConvertNames : public PassManager {
     explicit ConvertNames(ProgramStructure *structure, P4::ReferenceMap *refMap,
             P4::TypeMap *typeMap) {
@@ -967,6 +980,7 @@ struct ConvertNames : public PassManager {
     }
 };
 
+/** \ingroup PortableSwitchTranslation */
 struct CreateErrorStates : public Transform {
     PSA::ProgramStructure* structure;
     std::map<gress_t, std::set<const IR::ParserState*>> newStates;
@@ -1037,6 +1051,7 @@ struct CreateErrorStates : public Transform {
     }
 };
 
+/** \ingroup PortableSwitchTranslation */
 struct AddParserStates : public Transform {
     const CreateErrorStates* createErrorStates;
  public:
@@ -1051,6 +1066,7 @@ struct AddParserStates : public Transform {
     }
 };
 
+/** \ingroup PortableSwitchTranslation */
 struct RewriteParserVerify : public PassManager {
     explicit RewriteParserVerify(PSA::ProgramStructure* structure) {
         auto createErrorStates = new BFN::PSA::CreateErrorStates(structure);

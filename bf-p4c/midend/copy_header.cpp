@@ -6,6 +6,9 @@
 namespace {
 
 /**
+ * \ingroup midend
+ * \brief Pass that converts header assignmnets into field assignmnets.
+ * 
  * This class converts header assignment into assignment of individual
  * fields of the header and the validity bits. The purpose is to enable
  * local copy prop on the header fields which was not possible until

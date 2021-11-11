@@ -1,3 +1,8 @@
+/**
+ * \defgroup PortableSwitchTranslation BFN::PortableSwitchTranslation
+ * \ingroup ArchTranslation
+ * \brief Set of passes that translate PSA architecture.
+ */
 #ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
 #define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
 
@@ -20,6 +25,10 @@
 
 namespace BFN {
 
+/**
+ * \ingroup PortableSwitchTranslation
+ * \brief PassManager that governs normalization of PSA architecture.
+ */
 class PortableSwitchTranslation : public PassManager {
  public:
     const IR::ToplevelBlock   *toplevel = nullptr;

@@ -4,6 +4,7 @@ namespace BFN {
 
 /**
  * Auxiliary function to get a declaration instance based on a path expression from a reference map.
+ * @param[in] refMap Reference map
  * @param[in] path The path expression
  * @return Returns the declaration if exists, nullptr otherwise.
  */

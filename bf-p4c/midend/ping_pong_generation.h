@@ -1,13 +1,3 @@
-/**
- *  Detects registers that are used by ingress and ghost, creates
- *  a duplicate tables and registers if needed and attaches
- *  a ping-pong mechanism onto them.  
- *  Main passes are in the "MAIN PASSES" section
- *  Other than that there are some helpful visitors (that find/modify something specific
- *  within a given sub-tree of the IR) and functions
- *  Passes work with member variables of the main PassManager (PingPongGeneration) - these
- *  variables serve as a storage for saving registers/actions/tables identified for duplication.
- */
 #ifndef EXTENSIONS_BF_P4C_MIDEND_PING_PONG_GENERATION_H_
 #define EXTENSIONS_BF_P4C_MIDEND_PING_PONG_GENERATION_H_
 
@@ -21,25 +11,48 @@
 
 namespace BFN {
 
-// This is the main PassManager class that encompasses everything
-// ping-pong generation related
+/**
+ * \class PingPongGeneration
+ * \ingroup midend
+ * \brief PassManager that adds the ping pong mechanism for ghost thread.
+ * 
+ * Detects registers that are used by ingress and ghost, creates
+ * a duplicate tables and registers if needed and attaches
+ * a ping-pong mechanism onto them.  
+ *
+ * There are some helpful visitors (that find/modify something specific
+ * within a given sub-tree of the IR) and functions.
+ * 
+ * Passes work with member variables of the main PassManager (PingPongGeneration) - these
+ * variables serve as a storage for saving registers/actions/tables identified for duplication.
+ */
 class PingPongGeneration : public PassManager {
     // CONSTANTS ----------------------------------------------------------------------------------
-    // Constant suffix added to identifiers
+    /**
+     * Constant suffix added to identifiers.
+     */
     static const cstring ID_PING_PONG_SUFFIX;
-    // Constant name of the ghost metadata structure
+    /**
+     * Constant name of the ghost metadata structure.
+     */
     static const cstring GMD_STRUCTURE_NAME;
-    // Constant name of the ping_pong field
+    /**
+     * Constant name of the ping_pong field.
+     */
     static const cstring PING_PONG_FIELD_NAME;
 
     // VARIABLES ----------------------------------------------------------------------------------
     // These variables serve as a state/storage between different passes
-    // Array of ghost metadata names for different gresses
+    /**
+     * Array of ghost metadata names for different gresses
+     */
     cstring ghost_meta_name[GRESS_T_COUNT] = { "", "", "" };
-    // Declaration of ghost_intrinsic_metadata struct
+    /**
+     * Declaration of ghost_intrinsic_metadata struct
+     */
     const IR::Type_Header* ghost_meta_struct = nullptr;
 
-    // Basic Maps
+    // Basic maps
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
 
@@ -92,7 +105,10 @@ class PingPongGeneration : public PassManager {
     class ApplyMCSChanger;
 
     // MAIN VISITORS ------------------------------------------------------------------------------
-    // Gets all of the registers used and their actions
+    /**
+     * \class GetAllRegisters
+     * \brief Gets all of the registers used and their actions.
+     */
     class GetAllRegisters: public Inspector {
         PingPongGeneration &self;
 
@@ -102,7 +118,10 @@ class PingPongGeneration : public PassManager {
              self(self) {}
     };
 
-    // Finds and adds all of the corresponding tables
+    /**
+     * \class AddAllTables
+     * \brief Finds and adds all of the corresponding tables.
+     */
     class AddAllTables: public Inspector {
         PingPongGeneration &self;
 
@@ -112,9 +131,12 @@ class PingPongGeneration : public PassManager {
              self(self) {}
     };
 
-    // Checks for tables that are already applied under ping_pong condition
-    // Also checks if ghost_metadata are even present or if there are
-    // multiple pipelines
+    /**
+     * \class CheckPingPongTables
+     * \brief Checks for tables that are already applied under ping_pong condition.
+     * 
+     * Also checks if ghost_metadata are even present or if there are multiple pipelines
+     */
     class CheckPingPongTables: public Inspector {
         PingPongGeneration &self;
         unsigned pipes = 0;
@@ -130,7 +152,10 @@ class PingPongGeneration : public PassManager {
              self(self) {}
     };
 
-    // Duplicates all of the required tables, registers, actions
+    /**
+     * \class GeneratePingPongMechanismDeclarations
+     * \brief Duplicates all of the required tables, registers, actions.
+     */
     class GeneratePingPongMechanismDeclarations: public Transform {
         PingPongGeneration &self;
 
@@ -141,7 +166,10 @@ class PingPongGeneration : public PassManager {
              self(self) {}
     };
 
-    // Adds PingPong mechanism/if statement
+    /**
+     * \class GeneratePingPongMechanism.
+     * \brief Adds PingPong mechanism/if statement.
+     */
     class GeneratePingPongMechanism: public Transform {
         PingPongGeneration &self;
 
@@ -152,7 +180,9 @@ class PingPongGeneration : public PassManager {
     };
 
  public:
-    // Constructor that adds all of the passes
+    /**
+     * Constructor that adds all of the passes.
+     */
     PingPongGeneration(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
          refMap(refMap), typeMap(typeMap) {
         setName("Automatic ping-pong generation");

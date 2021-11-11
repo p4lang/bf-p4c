@@ -2,11 +2,75 @@
  * \defgroup midend Mid-end
  * \brief Mid-end-related content
  *
- * The mid-end performs a mix of passes from p4c and bf-p4c.
+ * The mid-end performs a mix of passes from p4c and bf-p4c. These passes
+ * modify the IR, usually making transformations that keep the functionality
+ * of the code, but changes it to be more optimal (removing unnecesarry code,
+ * moving stuff around, ...). The goal of midend is mostly to transform the IR into
+ * a shape that is easily translatable for the backend.
  *
  * The form of mid-end IR is the same as the form of front-end IR.
  * The passes from p4c are enclosed in the \ref P4 namespace while the passes
  * from bf-p4c are enclosed in the \ref BFN namespace.
+ * 
+ * There are two main structures used across most of the passes:
+ * * P4::ReferenceMap maps paths found within the IR to a declaration node for
+ *   the entity the path refers to.
+ * * P4::TypeMap maps nodes of the IR to their respective types.
+ * 
+ * Tied to those structures there are also some general passes that fill them out
+ * (that are invoked repeatedly, usually after/before each IR modification) or clear them:
+ * * BFN::TypeInference
+ * * BFN::TypeChecking
+ * * P4::ClearTypeMap - clears the P4::TypeMap if the program has changed or the 'force' flag is set.
+ * 
+ * There are also some best practices that are tied to using BFN::TypeChecking and P4::ReferenceMap/P4::TypeMap:
+ * * Each top level PassManager (that will in any way use P4::ReferenceMap or P4::TypeMap) should start by invoking 
+ *   BFN::TypeChecking to ensure that it is working with the up-to-date data.
+ * * BFN::TypeChecking should be also invoked in the middle of a PassManager anytime the IR changes in a way that might
+ *   change P4::ReferenceMap or P4::TypeMap (changing indentificators, changing types, ...) and some of the
+ *   subsequent passes need those structures to be up-to-date. There might be some
+ *   exceptions to this - for example if some of the subsequent passes still require the old maps to update different
+ *   parts of the IR correctly. In those cases it should still be invoked after the last such pass is completed.
+ * * P4::ClearTypeMap should be used as the last pass of each PassManager (or even before every BFN::TypeChecking
+ *   invocation) to force the need to use BFN::TypeChecking in case anything changed.
+ * 
+ * There are also some other helpful passes that are used repeatedly:
+ * * BFN::EvaluatorPass evaluates the program and creates blocks for all high-level constucts.
+ * * P4::MethodInstance and P4::ExternInstance extract information about different instances
+ *   from expressions.
+ * 
+ * Details on some of the passes can be found in the modules and classes sections of this page.
+ * The following P4 (parts) passes are used as they are and have no further
+ * description yet:
+ * * P4::RemoveMiss - replaces miss with not hit.
+ * * P4::EliminateNewtype - changes new types into their actual definitions.
+ * * P4::EliminateSerEnums - replaces serializable enum constants to the values.
+ * * P4::OrderArguments - arguments of a call put into an order in which the parameters appear.
+ * * P4::ConvertEnums - converts Type_Enum to Type_Bits.
+ * * P4::ConstantFolding - statically evaluates constant expressions.
+ * * P4::EliminateTypedef - converts typedef to the actual type it represents.
+ * * P4::SimplifyControlFlow - removes empty statements, simplifies if/switch statements.
+ * * P4::SimplifyKey - simplifies expressions in keys.
+ * * P4::RemoveExits - removes exit statement calls.
+ * * P4::StrengthReduction – simplifies expensive arithmetic and boolean operations (determines if
+ *   expression is 0/1/true/false/power of 2).
+ * * P4::SimplifySelectCases – removes unreachable select cases, removes select with only 1 case.
+ * * P4::ExpandLookahead – converts lookahead<T> into lookahead<bit<sizeof(T)>>.
+ * * P4::ExpandEmit – converts emit of a header into emits of the header fields.
+ * * P4::SimplifyParsers – removes unreachable parser states, collapses simple chains of states.
+ * * P4::ReplaceSelectRange – replaces types for select ranges.
+ * * P4::EliminateTuples – converts tuples into structures.
+ * * P4::SimplifyComparisons – converts comparisons of structures into comparisons of their fields.
+ * * P4::NestedStructs – removes nested structures.
+ * * P4::SimplifySelectList – removes tuples from select statements.
+ * * P4::RemoveSelectBooleans – converts booleans in select statements into 1 bit variables.
+ * * P4::Predication – converts if-else statements into "condition ? true : false".
+ * * P4::MoveDeclarations – moves local declarations from control or parser to the top.
+ * * P4::SimplifyBitwise - converts modify_field with mask into an bitwise operations.
+ * * P4::LocalCopyPropagation – local copy propagation and dead code elimination.
+ * * P4::TableHit – converts assignment of hit into if statement.
+ * * P4::SynthesizeActions – creates new actions for control assignment statements.
+ * * P4::MoveActionsToTables – creates table invocations for direct action calls.
  */
 
 #include "midend.h"
@@ -83,11 +147,15 @@
 namespace BFN {
 
 /**
+ * \class OptionalToTernaryMatchTypeConverter
+ * \ingroup midend
+ * \brief Pass that converts optional match type to ternary.
+ * 
  * This class implements a pass to convert optional match type to ternary.
  * Optional is a special case of ternary which allows for 2 cases
  *
- * 1) Is Valid = true , mask = all 1's (Exact Match)
- * 2) Is Valid = false, mask = dont care (Any value)
+ * 1. Is Valid = true , mask = all 1's (Exact Match)
+ * 2. Is Valid = false, mask = dont care (Any value)
  *
  * The control plane API does the necessary checks for valid use cases and
  * programs the ternary accordingly.
@@ -112,12 +180,16 @@ class OptionalToTernaryMatchTypeConverter: public Transform {
 
 
 /**
-This class implements a policy suitable for the ConvertEnums pass.
-The policy is: convert all enums that are not part of the architecture files, and
-are not used as the output type from a RegisterAction.  These latter enums will get
-a special encoding later to be compatible with the stateful alu predicate output.
-Use 32-bit values for all enums.
-*/
+ * \class EnumOn32Bits
+ * \ingroup midend
+ * \brief Class that implements a policy suitable for the ConvertEnums pass.
+ * 
+ * This class implements a policy suitable for the ConvertEnums pass.
+ * The policy is: convert all enums that are not part of the architecture files, and
+ * are not used as the output type from a RegisterAction.  These latter enums will get
+ * a special encoding later to be compatible with the stateful alu predicate output.
+ * Use 32-bit values for all enums.
+ */
 class EnumOn32Bits : public P4::ChooseEnumRepresentation {
     std::set<cstring> reserved_enums = {
             "MeterType_t", "MeterColor_t", "CounterType_t", "SelectorMode_t", "HashAlgorithm_t",
@@ -132,6 +204,10 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
     unsigned enumSize(unsigned) const override { return 32; }
 
  public:
+    /**
+     * \class FindStatefulEnumOutputs
+     * \brief Pass that creates a policy for ConvertEnums.
+     */
     class FindStatefulEnumOutputs : public Inspector {
         EnumOn32Bits &self;
         void postorder(const IR::Declaration_Instance *di) {
@@ -162,6 +238,8 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
 };
 
 /**
+ * \ingroup midend
+ * 
  * This function implements a policy suitable for the LocalCopyPropagation pass.
  * The policy is: do not local copy propagate for assignment statement
  * setting the output param of a register action.
@@ -173,6 +251,9 @@ template <class T> inline const T *findContext(const Visitor::Context *c) {
         if (auto *rv = dynamic_cast<const T *>(c->node)) return rv;
     return nullptr; }
 
+/**
+ * \ingroup midend
+ */
 bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression *) {
     auto c = findContext<IR::Declaration_Instance>(ctxt);
     if (!c) return true;
@@ -207,14 +288,23 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     return true;
 }
 
+/**
+ * \ingroup midend
+ */
 bool skipFlexibleHeader(const Visitor::Context *, const IR::Type_StructLike* e) {
     if (e->getAnnotation("flexible"))
         return false;
     return true;
 }
 
-// FIXME -- perhaps just remove this pass altogether and check for unsupported
-// div/mod in instruction selection.
+/**
+ * \class CompileTimeOperations
+ * \ingroup midend
+ * \brief Pass that checks for operations that are defined at compile time (Div, Mod).
+ *
+ * FIXME -- perhaps just remove this pass altogether and check for unsupported
+ * div/mod in instruction selection.
+ */
 class CompileTimeOperations : public P4::CompileTimeOperations {
     bool preorder(const IR::Declaration_Instance *di) {
 #ifdef HAVE_JBAY
@@ -232,6 +322,11 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
     }
 };
 
+/**
+ * \class MidEndLast
+ * \ingroup midend
+ * \brief Final midend pass.
+ */
 class MidEndLast : public PassManager {
  public:
     MidEndLast() { setName("MidEndLast"); }

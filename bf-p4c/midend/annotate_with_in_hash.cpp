@@ -133,12 +133,12 @@ bool DoAnnotateWithInHash::checkAluSuitability(const IR::Expression &op) const {
 }
 
 /**
- * The function checks whether the operand is suitable for being put into a PHV container.
+ * The function checks whether the operand is suitable for being put into a %PHV container.
  * This is done by checking whether it is contained in a header or is metadata or intrinsic
  * metadata.
  *
  * @param[in] op  The operand being checked.
- * @return Return true if the operand is suitable for being put into a PHV container;
+ * @return Return true if the operand is suitable for being put into a %PHV container;
  *         false otherwise.
  */
 bool DoAnnotateWithInHash::checkHeaderMetadataReference(const IR::Expression &op) const {
@@ -217,7 +217,7 @@ const IR::Node *DoAnnotateWithInHash::preorder(IR::AssignmentStatement *assignme
     }
 
     /*
-     * Checks whether the operands will be stored in a PHV container and thus will not be sent
+     * Checks whether the operands will be stored in a %PHV container and thus will not be sent
      * via action bus, which is to be used for carrying data from the hash unit.
      */
     if (!checkHeaderMetadataReference(*opConcat)) {

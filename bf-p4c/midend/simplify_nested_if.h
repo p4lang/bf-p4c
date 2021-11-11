@@ -1,3 +1,9 @@
+/**
+ * \defgroup SimplifyNestedIf P4::SimplifyNestedIf
+ * \ingroup midend
+ * \brief Set of passes that simplify nested if statements in the
+ *        deparser control block.
+ */
 #include <stack>
 #include "ir/ir.h"
 #include "ir/pattern.h"
@@ -16,6 +22,10 @@
 
 namespace P4 {
 
+/**
+ * \class SkipControlPolicy
+ * \ingroup SimplifyNestedIf
+ */
 class SkipControlPolicy {
  public:
     virtual ~SkipControlPolicy() {}
@@ -26,6 +36,10 @@ class SkipControlPolicy {
     virtual bool convert(const IR::P4Control* control) const = 0;
 };
 
+/**
+ * \class ProcessDeparser
+ * \ingroup SimplifyNestedIf
+ */
 class ProcessDeparser : public SkipControlPolicy {
  public:
     ProcessDeparser() {}
@@ -34,6 +48,10 @@ class ProcessDeparser : public SkipControlPolicy {
     }
 };
 
+/**
+ * \class DoSimplifyNestedIf
+ * \ingroup SimplifyNestedIf
+ */
 class DoSimplifyNestedIf : public Transform {
     SkipControlPolicy *policy;
     ordered_map<const IR::Statement*, std::vector<const IR::Expression*>> predicates;
@@ -62,6 +80,10 @@ class DoSimplifyNestedIf : public Transform {
                                                const IR::IfStatement* ifstmt);
 };
 
+/**
+ * \class SimplifyComplexConditionPolicy
+ * \ingroup SimplifyNestedIf
+ */
 class SimplifyComplexConditionPolicy {
  public:
     virtual ~SimplifyComplexConditionPolicy() {}
@@ -69,6 +91,10 @@ class SimplifyComplexConditionPolicy {
     virtual bool check(const IR::Expression*) = 0;
 };
 
+/**
+ * \class UniqueAndValidDest
+ * \ingroup SimplifyNestedIf
+ */
 class UniqueAndValidDest : public SimplifyComplexConditionPolicy {
     ReferenceMap *refMap;
     TypeMap *typeMap;
@@ -114,10 +140,17 @@ class UniqueAndValidDest : public SimplifyComplexConditionPolicy {
 };
 
 /**
+ * \class DoSimplifyComplexCondition
+ * \ingroup SimplifyNestedIf
+ * \brief Pass that tries to simplify the conditions to a simple comparison
+ *        of constants.
+ * 
  * Tofino does not support complex condition on if statements in
  * deparser. This pass tries to simplify the conditions to a
  * simple comparison to constant, e.g.:
- * if (intrinsic_md.mirror_type == 1) {}
+ * 
+ *     if (intrinsic_md.mirror_type == 1) {}
+ * 
  */
 class DoSimplifyComplexCondition : public Transform {
     SimplifyComplexConditionPolicy* policy;
@@ -140,7 +173,10 @@ class DoSimplifyComplexCondition : public Transform {
 };
 
 /**
- * Only simplify nested if statements in the deparser control block
+ * \class SimplifyNestedIf
+ * \ingroup SimplifyNestedIf
+ * \brief Top level PassManager that governs simplification of
+ *        nested if statements in the deparser control block.
  */
 class SimplifyNestedIf : public PassManager {
  public:

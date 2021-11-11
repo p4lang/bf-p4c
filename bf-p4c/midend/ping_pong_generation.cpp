@@ -16,13 +16,18 @@ const cstring PingPongGeneration::GMD_STRUCTURE_NAME = "ghost_intrinsic_metadata
 const cstring PingPongGeneration::PING_PONG_FIELD_NAME = "ping_pong";
 
 // HELPER VISITORS --------------------------------------------------------------------------------
-// This visitor class is a base for other classes that change declarations
+/**
+ * \class PingPongGeneration::DeclarationChanger
+ * \brief Base visitor class for other classes that change declarations.
+ */
 class PingPongGeneration::DeclarationChanger: public Transform {
  public:
     PingPongGeneration &self;
     std::set<cstring> names_to_change;
 
-    // Update StringLiteral
+    /**
+     * Update StringLiteral
+     */
     IR::Node *postorder(IR::StringLiteral* sl) {
         // Check if this is within "name" Annotation
         auto annot = findContext<IR::Annotation>();
@@ -47,10 +52,15 @@ class PingPongGeneration::DeclarationChanger: public Transform {
 };
 
 
-// This visitor changes specific references in new cloned register action
+/**
+ * \class PingPongGeneration::RegActionChanger
+ * \brief This visitor changes specific references in new cloned register action.
+ */
 class PingPongGeneration::RegActionChanger: public PingPongGeneration::DeclarationChanger {
     // Variables and updating of proper StringLiteral are inherited from DeclarationChanger
-    // Update path to register
+    /**
+     * Update path to register
+     */
     IR::Node *postorder(IR::Path* path) {
         // Check if we are in an argument
         auto arg = findContext<IR::Argument>();
@@ -66,10 +76,15 @@ class PingPongGeneration::RegActionChanger: public PingPongGeneration::Declarati
          DeclarationChanger(self, names_to_change) {}
 };
 
-// This visitor changes specific references in new cloned P4 action
+/**
+ * \class PingPongGeneration::P4ActionChanger
+ * \brief This visitor changes specific references in new cloned P4 action.
+ */
 class PingPongGeneration::P4ActionChanger: public PingPongGeneration::DeclarationChanger {
     // Variables and updating of proper StringLiteral are inherited from DeclarationChanger
-    // Update path to register action
+    /** 
+     * Update path to register action
+     */
     IR::Node *postorder(IR::Path* path) {
         // Check for "execute" member
         auto member = findContext<IR::Member>();
@@ -84,10 +99,15 @@ class PingPongGeneration::P4ActionChanger: public PingPongGeneration::Declaratio
         DeclarationChanger(self, names_to_change) {}
 };
 
-// This visitor changes specific references in new cloned P4 table
+/**
+ * \class PingPongGeneration::P4TableChanger
+ * \brief This visitor changes specific references in new cloned P4 table.
+ */
 class PingPongGeneration::P4TableChanger: public PingPongGeneration::DeclarationChanger {
     // Variables and updating of proper StringLiteral are inherited from DeclarationChanger
-    // Update path to p4 action
+    /**
+     * Update path to p4 action
+     */
     IR::Node *postorder(IR::Path* path) {
         // Check for "default_action" property
         auto prop = findContext<IR::Property>();
@@ -106,14 +126,19 @@ class PingPongGeneration::P4TableChanger: public PingPongGeneration::Declaration
          DeclarationChanger(self, names_to_change) {}
 };
 
-// This visitor changes P4 table references in cloned MethodCallStatement
+/**
+ * \class PingPongGeneration::ApplyMCSChanger
+ * \brief This visitor changes P4 table references in cloned MethodCallStatement.
+ */
 class PingPongGeneration::ApplyMCSChanger: public Transform {
     PingPongGeneration &self;
     const cstring orig_table_name;
     const IR::P4Table* dupl_table;
     const cstring orig_action_name;
 
-    // Explicit visits to "type" member variables
+    /**
+     * Explicit visits to "type" member variables
+     */
     IR::Node *preorder(IR::Expression* exp) {
         visit(exp->type, "type");
         return exp;
@@ -122,7 +147,9 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
         visit(member->type, "type");
         return member;
     }
-    // Swap p4 table for duplicate table
+    /**
+     * Swap p4 table for duplicate table
+     */
     IR::Node *preorder(IR::P4Table* tab) {
         // Check if this is the worked on table
         if (tab->name != orig_table_name)
@@ -130,7 +157,9 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
         // Return the duplicate table
         return dupl_table->clone();
     }
-    // Update name of p4 table
+    /**
+     * Update name of p4 table
+     */
     IR::Node *postorder(IR::Type_Struct* ts) {
         // Check if this is one of the identifiers that are being worked on
         if (ts->name != orig_table_name)
@@ -139,7 +168,9 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
         return new IR::Type_Struct(IR::ID(ts->name + ID_PING_PONG_SUFFIX),
                                    ts->annotations, ts->fields);
     }
-    // Update path to p4 table
+    /**
+     * Update path to p4 table
+     */
     IR::Node *postorder(IR::Path* path) {
         std::set<cstring> names_to_change = { orig_table_name, orig_action_name };
         // Clone and update new path
@@ -155,7 +186,10 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
          dupl_table(dupl_table), orig_action_name(orig_action_name) {}
 };
 
-// Finds a ghost_metadata.ping_pong field reference in a subtree
+/**
+ * \class PingPongGeneration::PingPongFieldFinder
+ * \brief Finds a ghost_metadata.ping_pong field reference in a subtree.
+ */
 class PingPongGeneration::PingPongFieldFinder: public Inspector {
     bool preorder(const IR::Member* member) override {
         // We only care about ping_pong
@@ -180,7 +214,14 @@ class PingPongGeneration::PingPongFieldFinder: public Inspector {
 };
 
 // HELPER FUNCTIONS -------------------------------------------------------------------------------
-// Creates and updates duplicate of a Path
+/**
+ * \brief Creates and updates duplicate of a path.
+ * 
+ * @param[in] path Path that should be duplicated and updated.
+ * @param[in] names_to_change Set of names that were identified to be changed.
+ * @return Returns the original path (in case it is not supposed to be updated)
+ *         or a duplicate of the path that was updated to include the ID_PING_PONG_SUFFIX.
+ */
 inline IR::Path* PingPongGeneration::appendPingPongSuffix(IR::Path* path,
                                                           std::set<cstring>& names_to_change) {
     // Check if this is one of the identifiers that are being worked on
@@ -191,8 +232,18 @@ inline IR::Path* PingPongGeneration::appendPingPongSuffix(IR::Path* path,
     return path;
 }
 
-// Creates and updates a duplicate of given declaration (reg action,
-// p4 action or p4 table) and then places it into gress objects
+/**
+ * \brief Creates and updates a duplicate of given declaration and places
+ *        it into the gress object.
+ * 
+ * @param[in] node Node that should be duplicated and updated.
+ * @param[inout] gress Gress of the node (that will be changed within it).
+ * @param[in] names_to_change Set of names that were identified to be changed.
+ * 
+ * @sa RegActionChanger
+ * @sa P4ActionChanger
+ * @sa P4TableChanger
+ */
 inline void PingPongGeneration::duplicateNodeDeclaration(
                                         const IR::Declaration* node,
                                         IR::BFN::TnaControl* gress,
@@ -237,7 +288,9 @@ inline void PingPongGeneration::duplicateNodeDeclaration(
 }
 
 // MAIN VISITORS ----------------------------------------------------------------------------------
-// Gets all of the registers used and their actions
+/**
+ * Gets all of the registers used and their actions.
+ */
 bool PingPongGeneration::GetAllRegisters::preorder(const IR::MethodCallExpression* mce) {
     // Find the instance method of RegisterAction
     auto mi = P4::MethodInstance::resolve(mce, self.refMap, self.typeMap);
@@ -284,9 +337,10 @@ bool PingPongGeneration::GetAllRegisters::preorder(const IR::MethodCallExpressio
     return false;
 }
 
-// Finds and adds all of the corresponding tables
-// Works on call expression of the P4 action within a P4 table's
-// action list
+/**
+ * Finds and adds all of the corresponding tables.
+ * Works on call expression of the P4 action within a P4 table's action list.
+ */
 bool PingPongGeneration::AddAllTables::preorder(const IR::ActionListElement* ale) {
     // If we are not within a Table we can ignore this
     auto p4_table = findContext<IR::P4Table>();
@@ -352,8 +406,10 @@ bool PingPongGeneration::AddAllTables::preorder(const IR::ActionListElement* ale
     return false;
 }
 
-// Gets the identifier of ghost metadata
-// This visits the parameter and checks if it is an identifier for ghost metadata
+/**
+ * Gets the identifier of ghost metadata.
+ * This visits the parameter and checks if it is an identifier for ghost metadata.
+ */
 bool PingPongGeneration::CheckPingPongTables::preorder(const IR::Parameter* param) {
     // We are interested in ghost metadata paths only
     if (!param->type->is<IR::Type_Name>() ||
@@ -377,10 +433,12 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::Type_Header* th
     return false;
 }
 
-// Checks for tables that are already applied under ping_pong condition
-// We are working on table.apply() and looking at the context it is called
-// from - more specifically if it is called from within IF statement
-// that looks something like "if (ghost_meta.ping_pong == ...)"
+/**
+ * Checks for tables that are already applied under ping_pong condition.
+ * We are working on table.apply() and looking at the context it is called
+ * from - more specifically if it is called from within IF statement
+ * that looks something like "if (ghost_meta.ping_pong == ...)".
+ */
 bool PingPongGeneration::CheckPingPongTables::preorder(const IR::PathExpression* path_exp) {
     // We are looking for Type_Table
     if (!path_exp->type->is<IR::Type_Table>())
@@ -429,7 +487,9 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::PathExpression*
     return false;
 }
 
-// Duplicates all of the required tables, registers, actions
+/**
+ * Duplicates all of the required registers.
+ */
 IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(IR::P4Program* prog) {
     // For every register
     for (auto const & r : self.registerToValid) {
@@ -452,6 +512,9 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(IR
 
     return prog;
 }
+/**
+ * Duplicates all of the required tables, actions.
+ */
 IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(
                                                         IR::BFN::TnaControl* gress) {
     auto gress_index = gress->thread;
@@ -486,7 +549,9 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(
     return gress;
 }
 
-// Adds PingPong mechanism/if statement
+/**
+ * Adds PingPong mechanism/if statement.
+ */
 IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCallStatement* mcs) {
     // Check gress
     auto gress = findContext<IR::BFN::TnaControl>();

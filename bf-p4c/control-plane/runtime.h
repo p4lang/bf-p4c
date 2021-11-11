@@ -11,6 +11,11 @@ class BFN_Options;
 
 namespace BFN {
 
+
+/**
+ * \ingroup midend
+ * \brief Pass that sets default table size to 512 entries.
+ */
 class SetDefaultSize : public Modifier {
     bool warn = false;
     bool preorder(IR::P4Table *table) override;

@@ -58,7 +58,7 @@ bool FoldConstantHashes::DoFoldConstantHashes::checkConstantInput(const IR::Expr
  * The elements that overflow are ignored.
  * @param[in,out] value The result
  * @param[in,out] shift The bit position to put the value at
- * @param[in] hash_list The list of expressions used as an input for the hash function
+ * @param[in] list The list of expressions used as an input for the hash function
  */
 void FoldConstantHashes::DoFoldConstantHashes::foldListToConstant(
         uint64_t &value, size_t &shift,
@@ -76,6 +76,14 @@ void FoldConstantHashes::DoFoldConstantHashes::foldListToConstant(
         }
     }
 }
+/**
+ * Recursively folds a list of constants into a single constant of the maximum width of 64 bits.
+ * The first element is placed on the highest bits of the result.
+ * The elements that overflow are ignored.
+ * @param[in,out] value The result
+ * @param[in,out] shift The bit position to put the value at
+ * @param[in] list The list of struct expressions used as an input for the hash function
+ */
 void FoldConstantHashes::DoFoldConstantHashes::foldListToConstant(
         uint64_t &value, size_t &shift,
         const IR::StructExpression *list) {
@@ -124,7 +132,7 @@ const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteIdenti
  * @param[in] hash_type The type of the newly created constant expression
  * @return Returns calculated hash value.
  */
-hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::computeHash(
+hash_seed_t FoldConstantHashes::DoFoldConstantHashes::computeHash(
         IR::MAU::HashFunction &hash_function,
         const IR::ListExpression *hash_list,
         const IR::Type *hash_type) {
@@ -165,7 +173,14 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::comp
 
     return hash_seed;
 }
-hash_seed_t FoldConstantHashes::DoFoldConstantHashes::DoFoldConstantHashes::computeHash(
+/**
+ * Computes hash value based on the provided hash fnaction and a list of expressions.
+ * @param[in] hash_function The hash function to be used for the computation of the hash value
+ * @param[in] hash_list The list of struct expressions used as an input for the hash function
+ * @param[in] hash_type The type of the newly created constant expression
+ * @return Returns calculated hash value.
+ */
+hash_seed_t FoldConstantHashes::DoFoldConstantHashes::computeHash(
         IR::MAU::HashFunction &hash_function,
         const IR::StructExpression *hash_list,
         const IR::Type *hash_type) {
@@ -234,6 +249,14 @@ const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteCustom
 
     return new IR::Constant(hash_type->clone(), hash_seed.hash_seed_value);
 }
+/**
+ * Creates a constant expression whose value is computed by a hash function
+ * defined with a CRC polynomial.
+ * @param[in] crc_poly_path The path expression representing the CRC polynomial
+ * @param[in] hash_list The list of struct expressions used as an input for the hash function
+ * @param[in] hash_type The type of the newly created constant expression
+ * @return Returns newly created constant expression.
+ */
 const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteCustomHash(
         const IR::PathExpression *crc_poly_path,
         const IR::StructExpression *hash_list,
@@ -276,6 +299,14 @@ const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteOtherH
 
     return new IR::Constant(hash_type->clone(), hash_seed.hash_seed_value);
 }
+/**
+ * Creates a constant expression whose value is computed by a pre-defined hash function
+ * (e.g. CRCn).
+ * @param[in] hash_algo_expr The expression including the type of the hash function to be used
+ * @param[in] hash_list The list of struct expressions used as an input for the hash function
+ * @param[in] hash_type The type of the newly created constant expression
+ * @return Returns newly created constant expression.
+ */
 const IR::Expression *FoldConstantHashes::DoFoldConstantHashes::substituteOtherHash(
         const IR::Expression *hash_algo_expr,
         const IR::StructExpression *hash_list,

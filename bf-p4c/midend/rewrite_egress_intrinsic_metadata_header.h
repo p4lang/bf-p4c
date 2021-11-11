@@ -10,6 +10,11 @@ class ReferenceMap;
 
 namespace BFN {
 
+/**
+ * \class RewriteEgressIntrinsicMetadataHeader
+ * \ingroup midend
+ * \brief Pass that updates egress intrinsic metadata.
+ */
 class RewriteEgressIntrinsicMetadataHeader : public PassManager {
     struct CollectUsedFields : public Inspector {
         std::set<cstring> used_fields;

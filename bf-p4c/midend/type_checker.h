@@ -8,7 +8,10 @@
 namespace BFN {
 
 /**
- * extended type inference pass used in barefoot's midend.
+ * \class TypeInference
+ * \ingroup midend
+ * \brief Extended type inference pass from p4c used in barefoot's midend.
+ * @sa P4::TypeInference
  */
 class TypeInference : public P4::TypeInference {
     P4::ReferenceMap *refMap;
@@ -30,8 +33,11 @@ class TypeInference : public P4::TypeInference {
 };
 
 /**
- * A TypeChecking pass in BFN namespace that uses the extended
- * TypeInference pass. This should be used in our midend.
+ * \class TypeChecking
+ * \ingroup midend
+ * \brief A TypeChecking pass in BFN namespace that uses the extended
+ *        TypeInference pass. This should be used in our midend.
+ * @sa P4::TypeChecking
  */
 class TypeChecking : public P4::TypeChecking {
  public:
@@ -39,8 +45,13 @@ class TypeChecking : public P4::TypeChecking {
                  bool updateExpressions = false);
 };
 
-// A modified version of P4::EvaluatorPass that uses
-// BFN::TypeChecking.
+/**
+ * \class EvaluatorPass
+ * \ingroup midend
+ * \brief A modified version of P4::EvaluatorPass that uses BFN::TypeChecking.
+ * @sa P4::EvaluatorPass
+ * @sa P4::Evaluator
+ */
 class EvaluatorPass final : public PassManager, public P4::IHasBlock {
     P4::Evaluator* evaluator;
 

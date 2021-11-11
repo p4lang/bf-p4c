@@ -4,6 +4,11 @@
 #include "ir/ir.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 
+/**
+ * \class CopyBlockPragmas
+ * \ingroup midend
+ * \brief Pass that copies block annotations to the block's tables.
+ */
 class CopyBlockPragmas : public PassManager {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;

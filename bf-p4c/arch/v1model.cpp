@@ -21,6 +21,7 @@ namespace BFN {
 //////////////////////////////////////////////////////////////////////////////////////////////
 namespace V1 {
 
+/** \ingroup SimpleSwitchTranslation */
 class FixupBackwardCompatibility : public Transform {
  public:
     FixupBackwardCompatibility() {}
@@ -38,6 +39,7 @@ class FixupBackwardCompatibility : public Transform {
     }
 };
 
+/** \ingroup SimpleSwitchTranslation */
 class LoadTargetArchitecture : public Inspector {
     ProgramStructure *structure;
 
@@ -364,6 +366,7 @@ class LoadTargetArchitecture : public Inspector {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+/** \ingroup SimpleSwitchTranslation */
 class RemoveNodesWithNoMapping : public Transform {
     // following fields are showing up in struct H, because in P4-14
     // these structs are declared as header type.
@@ -462,10 +465,13 @@ class RemoveNodesWithNoMapping : public Transform {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-/// @pre: assume no nested control block or parser block,
-///       as a result, all declarations within a control block have different names.
-/// @post: all user provided names for metadata are converted to standard names
-///       assumed by the translation map in latter pass.
+/** 
+ * \ingroup SimpleSwitchTranslation
+ * @pre: assume no nested control block or parser block,
+ *       as a result, all declarations within a control block have different names.
+ * @post: all user provided names for metadata are converted to standard names
+ *       assumed by the translation map in latter pass.
+ */
 class NormalizeProgram : public Transform {
     ordered_map<cstring, std::vector<const IR::Node *> *> namescopes;
     ordered_map<cstring, cstring> renameMap;
@@ -600,7 +606,9 @@ class NormalizeProgram : public Transform {
         return node;
     }
 
-    /// recursively check if a fromName is aliased to toName
+    /**
+     * recursively check if a fromName is aliased to toName
+     */
     bool isStandardMetadata(cstring fromName) {
         auto it = aliasMap.find(fromName);
         if (it != aliasMap.end()) {
@@ -640,7 +648,9 @@ class NormalizeProgram : public Transform {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-/// This pass collects all top level p4program declarations.
+/** \ingroup SimpleSwitchTranslation
+ * This pass collects all top level p4program declarations.
+ */
 class AnalyzeProgram : public Inspector {
     ProgramStructure *structure;
 
@@ -810,25 +820,30 @@ class AnalyzeProgram : public Inspector {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+/** \ingroup SimpleSwitchTranslation */
 class ConstructSymbolTable : public Inspector {
     ProgramStructure *structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
     const V1::TranslateParserChecksums* parserChecksums;
-    // cloneIndex assignment algorithm:
-    // - we assign a unique index per field list per gress
-    // - there could be multiple actions calling clone within a table
-    // - for a gress, a map of hashes is generated for a field list string
-    // - the clone index is the value stored for hash key of element within the
-    // map
+    /**
+     * cloneIndex assignment algorithm:
+     * - we assign a unique index per field list per gress
+     * - there could be multiple actions calling clone within a table
+     * - for a gress, a map of hashes is generated for a field list string
+     * - the clone index is the value stored for hash key of element within the
+     * map
+     */
     std::map<unsigned long, unsigned> cloneIndexHashes[2];
-    // resubmitIndex assignment algorithm:
-    // - we assign a unique index per resubmit field list
-    // - there could be multiple actions calling resubmit within a table
-    // - can only be called in one gress
-    // - a map of hashes is generated for a field list string
-    // - the resubmit index is the value stored for hash key of element within
-    // the map
+    /** 
+     * resubmitIndex assignment algorithm:
+     * - we assign a unique index per resubmit field list
+     * - there could be multiple actions calling resubmit within a table
+     * - can only be called in one gress
+     * - a map of hashes is generated for a field list string
+     * - the resubmit index is the value stored for hash key of element within
+     * the map
+     */
     std::map<unsigned long, unsigned> resubmitIndexHashes;
     std::set<unsigned> resubmitIndexSet;
     // digestIndex is similar to resubmitIndex and generate_digest() can only be called in ingress
@@ -2238,8 +2253,10 @@ class ConstructSymbolTable : public Inspector {
         return nullptr;
     }
 
-    // Concatenate a field string with list of fields within a method call
-    // argument. The field list is specified as a ListExpression
+    /**
+     * Concatenate a field string with list of fields within a method call
+     * argument. The field list is specified as a ListExpression
+     */
     void generate_fields_string(const IR::MethodCallStatement *node,
                                                 std::string& fieldString) {
         std::ostringstream fieldListString;
@@ -2257,10 +2274,11 @@ class ConstructSymbolTable : public Inspector {
             fieldString += fieldListString.str();
         }
     }
-
-    // Generate a 64-bit hash for input field string, lookup hash vector for
-    // presence of hash, add new entry if not found. This function is common to
-    // resubmit, digest and clone indexing
+    /**
+     * Generate a 64-bit hash for input field string, lookup hash vector for
+     * presence of hash, add new entry if not found. This function is common to
+     * resubmit, digest and clone indexing
+     */
     unsigned getIndex(const IR::MethodCallStatement *node,
             std::map<unsigned long, unsigned>& hashIndexMap) {
         std::string fieldsString;
@@ -2275,12 +2293,15 @@ class ConstructSymbolTable : public Inspector {
     }
 };
 
-// In P4-14, struct field can only be Type_Bits, therefore, when translating to
-// P4-16, all the corresponding struct field should also be Type_Bits.
-// However, target architectures such as jbay.p4 or tofino.p4 have Type_Boolean
-// in some of the struct fields, this pass will convert these fields to
-// Type_Bits.  The conversion only apply to struct fields that are defined in
-// the target architecture file and are annotated with "__intrinsic_metadata".
+/**
+ * \ingroup SimpleSwitchTranslation
+ * In P4-14, struct field can only be Type_Bits, therefore, when translating to
+ * P4-16, all the corresponding struct field should also be Type_Bits.
+ * However, target architectures such as jbay.p4 or tofino.p4 have Type_Boolean
+ * in some of the struct fields, this pass will convert these fields to
+ * Type_Bits.  The conversion only apply to struct fields that are defined in
+ * the target architecture file and are annotated with "__intrinsic_metadata".
+ */
 class LoweringType : public Transform {
     std::map<cstring, unsigned> enum_encoding;
 
@@ -2320,14 +2341,17 @@ template <class T> inline const T *findContext(const Visitor::Context *c) {
         if (auto *rv = dynamic_cast<const T *>(c->node)) return rv;
     return nullptr; }
 
-// Run copy propagation before translate v1model program to tna to eliminate
-// the following code pattern
-// standard_metadata_1 = standard_metadata;
-// ....
-// standard_metadata = standard_metadata_1;
-// However, we do not wish to copy propagate field reference in the clone3(),
-// recirculate(), etc, as the translation will need to convert them to
-// appropriate metadata in tna.
+/**
+ * \ingroup SimpleSwitchTranslation
+ * Run copy propagation before translate v1model program to tna to eliminate
+ * the following code pattern
+ * standard_metadata_1 = standard_metadata;
+ * ....
+ * standard_metadata = standard_metadata_1;
+ * However, we do not wish to copy propagate field reference in the clone3(),
+ * recirculate(), etc, as the translation will need to convert them to
+ * appropriate metadata in tna.
+ */
 bool skipMethodCallStatement(const Visitor::Context *ctxt, const IR::Expression *) {
     auto c = findContext<IR::MethodCallStatement>(ctxt);
     if (!c) return true;
@@ -2343,6 +2367,7 @@ bool skipMethodCallStatement(const Visitor::Context *ctxt, const IR::Expression 
     return true;
 }
 
+/** \ingroup SimpleSwitchTranslation */
 bool skipCond(const Visitor::Context *ctxt, const IR::Expression *expr) {
     return skipMethodCallStatement(ctxt, expr) && BFN::skipRegisterActionOutput(ctxt, expr);
 }
@@ -2380,12 +2405,14 @@ bool AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
     return true;
 }
 
-/// The general work flow of architecture translation consists of the following steps:
-/// * analyze original source program to build a programStructure that represent original program.
-/// * construct symbol tables of each IR type.
-/// * iterate through the symbol tables, and perform transformation on each entry.
-/// * update program structure with transform IR node from symbol table.
-/// * reprint a valid P16 program to program structure.
+/**
+ * The general work flow of architecture translation consists of the following steps:
+ * - analyze original source program to build a programStructure that represent original program.
+ * - construct symbol tables of each IR type.
+ * - iterate through the symbol tables, and perform transformation on each entry.
+ * - update program structure with transform IR node from symbol table.
+ * - reprint a valid P16 program to program structure.
+ */
 SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");

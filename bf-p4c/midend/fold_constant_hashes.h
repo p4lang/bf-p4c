@@ -9,16 +9,23 @@
 namespace BFN {
 
 /**
- * The pass substitutes the calls of the get methods of the Hash externs
- * whose inputs are constants with the resulting hash value.
+ * \class FoldConstantHashes
+ * \ingroup midend
+ * \brief PassManager that substitutes the calls of the get methods of the Hash externs
+ *        whose inputs are constants with the resulting hash value.
+ * 
  * The input can be a constant value or a list of constant values.
  * The width of the resulting value is determined by the Hash extern.
  *
  * E.g.:
+ * 
  *     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) hash;
  *     value = hash.get<tuple<bit<8>, bit<8>, bit<8>, bit<8>>>({ 1, 2, 3, 4 });
+ * 
  * is replaced with:
+ * 
  *     value = 772;  // which is 0x0304
+ * 
  * The original object of the Hash extern is removed.
  *
  * In the case of the identity hash, if a list of constant values is used,
@@ -30,7 +37,6 @@ namespace BFN {
  * The same applies to the CRCPolynomial extern objects used in the
  * Hash extern objects of the custom type.
  */
-
 class FoldConstantHashes : public PassManager {
     P4::ReferenceMap* refMap = nullptr;
     P4::TypeMap* typeMap = nullptr;

@@ -12,7 +12,9 @@ class TypeMap;
 namespace BFN {
 
 /**
- * Check for unsupported features in the backend compiler
+ * \class CheckUnsupported
+ * \ingroup midend
+ * \brief Check for unsupported features in the backend compiler.
  */
 class CheckUnsupported final : public Inspector {
     void postorder(const IR::P4Table *) override;

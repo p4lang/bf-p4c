@@ -1,3 +1,29 @@
+/**
+ * \defgroup ElimCasts BFN::ElimCasts
+ * \ingroup midend
+ * \brief Set of passes that simplify the complex expressions with
+ *        multiple casts into simpler expressions.
+ * 
+ * Open issues, the following expressions are not yet handled.
+ *  1. (bit<64>)(h.h.a << h.h.b)
+ *  2. cast in register action apply functions
+ *  3. ++ operator in method call.
+ * 
+ * This pass will simplify the complex expression with multiple casts
+ * into simpler expression with at most one cast, e.g.:
+ *
+ *     int<8> i8 = 8s1;
+ *     bit<16> h1 = (bit<16>)(bit<8>)i8;
+ *
+ * will be translated to:
+ *
+ *     int<8> i8 = 8s1;
+ *     bit<8> b8 = (bit<8>)i8;  // RHS is represented with IR::BFN::ReinterpretCast
+ *     bit<16> h1 = 8w0++b8;
+ *
+ * This pass does not simplify key elements. These are processed in the P4::SimplifyKey
+ * pass, which transforms them in order to be simplified in the BFN::ElimCasts pass.
+ */
 #ifndef BF_P4C_MIDEND_ELIM_CAST_H_
 #define BF_P4C_MIDEND_ELIM_CAST_H_
 
@@ -9,32 +35,11 @@
 
 namespace BFN {
 
-/**
- * Open issues, the following expressions are not yet handled.
- *  1. (bit<64>)(h.h.a << h.h.b)
- *  2. cast in register action apply functions
- *  3. ++ operator in method call.
- */
-
-/**
- * This pass will simplify the complex expression with multiple casts
- * into simpler expression with at most one cast, e.g.:
- *
- * int<8> i8 = 8s1;
- * bit<16> h1 = (bit<16>)(bit<8>)i8;
- *
- * will be translated to:
- *
- * int<8> i8 = 8s1;
- * bit<8> b8 = (bit<8>)i8;  // RHS is represented with IR::BFN::ReinterpretCast
- * bit<16> h1 = 8w0++b8;
- *
- * This pass does not simplify key elements. These are processed in the P4::SimplifyKey
- * pass, which transforms them in order to be simplified in the BFN::ElimCasts pass.
- */
-
-/**
- * Auxiliary transformer to avoid processing IR::KeyElement nodes.
+/** 
+ * \class IgnoreKeyElementTransform
+ * \ingroup ElimCasts
+ * \brief Auxiliary transformer to avoid processing IR::KeyElement nodes.
+ * 
  * When this should become too complex, use a custom policy instead,
  * the same way it is used in P4::KeyIsSimple.
  */
@@ -43,6 +48,10 @@ class IgnoreKeyElementTransform : public Transform {
     const IR::Node *preorder(IR::KeyElement *n) final override { prune(); return n; }
 };
 
+/** 
+ * \class EliminateWidthCasts
+ * \ingroup ElimCasts
+ */
 class EliminateWidthCasts : public IgnoreKeyElementTransform {
  public:
     static constexpr int MAX_CONTAINER_SIZE = 32;
@@ -70,7 +79,11 @@ class EliminateWidthCasts : public IgnoreKeyElementTransform {
     }
 };
 
-/**
+/** 
+ * \class RewriteCastToReinterpretCast
+ * \ingroup ElimCasts
+ * \brief Pass that converts some of the IR::Casts to ReinterpretCasts.
+ * 
  * This pass converts IR::Cast to IR::BFN::ReinterpretCast for the following
  * cases:
  *   - cast from bit<W> to int<W>
@@ -89,12 +102,16 @@ class RewriteCastToReinterpretCast : public IgnoreKeyElementTransform {
 };
 
 /**
+ * \class SimplifyRedundantCasts
+ * \ingroup ElimCasts
+ * \brief Pass that removes some of the redundant casts.
+ * 
  * This pass removes redundant casts in the following cases:
  *
- * int<w> val = (int<w>)(bit<w>)(v); where the type of v is int<w>
- * bit<w> val = (bit<w>)(int<w>)(v); where the type of v is bit<w>
- * int<w> val = (int<w>)(v); where the type of v is int<w>
- * bit<w> val = (bit<w>)(v); where the type of v is bit<w>
+ * - int<w> val = (int<w>)(bit<w>)(v); where the type of v is int<w>
+ * - bit<w> val = (bit<w>)(int<w>)(v); where the type of v is bit<w>
+ * - int<w> val = (int<w>)(v); where the type of v is int<w>
+ * - bit<w> val = (bit<w>)(v); where the type of v is bit<w>
  *
  * This usually happens as the result of a copy-propagation.
  */
@@ -105,14 +122,18 @@ class SimplifyRedundantCasts : public IgnoreKeyElementTransform {
 };
 
 /**
+ * \class SimplifyNestedCasts
+ * \ingroup ElimCasts
+ * \brief Pass that removes nested casts when applicable.
+ * 
  * This pass removes nested casts with the same signs, e.g.:
  *
- * bit<10> md;
- * bit<10> b = (bit<10>)(bit<32>)(md);
+ *     bit<10> md;
+ *     bit<10> b = (bit<10>)(bit<32>)(md);
  *
  * which should be simplified to
  *
- * bit<10> b = md;
+ *     bit<10> b = md;
  *
  * Caveat: we currently do not support more than two levels of casting.
  */
@@ -123,7 +144,10 @@ class SimplifyNestedCasts : public IgnoreKeyElementTransform {
 };
 
 /**
- * This pass moves the cast on a binary operation to each operand.
+ * \class SimplifyOperationBinary
+ * \ingroup ElimCasts
+ * \brief Pass that moves the cast on binary operation to each operand.
+ * 
  * This transformation does not apply to all binary operations,
  * and it is not sound if the operands are int type. So it is a best effort.
  * It also does not handle (bool)(expr binop expr), where binop is bitwise operation.
@@ -137,7 +161,13 @@ class SimplifyOperationBinary : public IgnoreKeyElementTransform {
     const IR::Node* preorder(IR::Cast *expression) override;
 };
 
-/// replace concat ++ operations with multiple operations on slices in the contexts.
+
+/**
+ * \class RewriteConcatToSlices
+ * \ingroup ElimCasts
+ * \brief Pass that replaces concat ++ operations with multiple operations
+ *        on slices in the contexts.
+ */
 class RewriteConcatToSlices : public IgnoreKeyElementTransform {
  public:
     // do not simplify '++' in apply functions.
@@ -161,6 +191,10 @@ class RewriteConcatToSlices : public IgnoreKeyElementTransform {
     const IR::Node* preorder(IR::Neq *ne) override;
 };
 
+/**
+ * \class StrengthReduction
+ * \ingroup ElimCasts
+ */
 class StrengthReduction : public PassManager {
  public:
     StrengthReduction(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
@@ -169,6 +203,12 @@ class StrengthReduction : public PassManager {
     }
 };
 
+/**
+ * \class ElimCasts
+ * \ingroup ElimCasts
+ * \brief Top level PassManager that simplifies complex expression with multiple casts
+ *        into simpler expression with at most one cast.
+ */
 class ElimCasts : public PassManager {
  public:
     ElimCasts(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

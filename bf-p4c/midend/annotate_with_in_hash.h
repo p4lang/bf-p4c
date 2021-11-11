@@ -1,3 +1,38 @@
+/**
+ * \defgroup AnnotateWithInHash BFN::AnnotateWithInHash
+ * \ingroup midend
+ * \brief Set of passes that annotate specific assignment statements with the \@in_hash annotation.
+ *
+ * The purpose is to eliminate some %PHV and PARDE alignment issues caused by
+ * statements mapped to ALU units, namely binary arithmetic operations whose
+ * operands are casted or concatenated.
+ *
+ * E.g.:
+ * 
+ *     meta.index = meta.index + (3w0 ++ hdr.vlan.pcp);
+ * 
+ * is converted to:
+ * 
+ *     \@in_hash { meta.index = meta.index + (3w0 ++ hdr.vlan.pcp); }
+ * 
+ * The first statement looked originally like:
+ * 
+ *     meta.index = meta.index + (bit<6>)hdr.vlan.pcp;
+ * 
+ * And was modified with the ElimCasts pass.
+ *
+ * The pass performs several checks to be sure that annotating is added
+ * only if it can help with dealing an issue. Namely, it checks whether
+ * the operands of the arithmetic operation do not have appropriate width
+ * for ALU units (i.e. 8, 16, or 32 bits).
+ *
+ * @pre The pass has to be preceeded with the BFN::ElimCasts pass, which replaces
+ * the cast operation with zero-extension using the concatenation operator, and
+ * with the P4::SynthesizeActions pass, which moves assignment statements from
+ * apply blocks into actions where annotating with the \@in_hash annotation happens.
+ *
+ * Also see the limitations of the \@in_hash annotation.
+ */
 #ifndef EXTENSIONS_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
 #define EXTENSIONS_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
 
@@ -6,6 +41,10 @@
 
 namespace BFN {
 
+/**
+ * \class DoAnnotateWithInHash
+ * \ingroup AnnotateWithInHash
+ */
 class DoAnnotateWithInHash : public Transform {
     P4::TypeMap *typeMap;
 
@@ -23,30 +62,10 @@ class DoAnnotateWithInHash : public Transform {
 };
 
 /**
- * The pass annotates specific assignment statements with the \@in_hash annotation.
- * The purpose is to eliminate some PHV and PARDE alignment issues caused by
- * statements mapped to ALU units, namely binary arithmetic operations whose
- * operands are casted or concatenated.
- *
- * E.g.:
- *     meta.index = meta.index + (3w0 ++ hdr.vlan.pcp);
- * is converted to:
- *     \@in_hash { meta.index = meta.index + (3w0 ++ hdr.vlan.pcp); }
- * The first statement looked originally like:
- *     meta.index = meta.index + (bit<6>)hdr.vlan.pcp;
- * And was modified with the ElimCasts pass.
- *
- * The pass performs several checks to be sure that annotating is added
- * only if it can help with dealing an issue. Namely, it checks whether
- * the operands of the arithmetic operation do not have appropriate width
- * for ALU units (i.e. 8, 16, or 32 bits).
- *
- * @pre The pass has to be preceeded with the BFN::ElimCasts pass, which replaces
- * the cast operation with zero-extension using the concatenation operator, and
- * with the P4::SynthesizeActions pass, which moves assignment statements from
- * apply blocks into actions where annotating with the \@in_hash annotation happens.
- *
- * Also see the limitations of the \@in_hash annotation.
+ * \class AnnotateWithInHash
+ * \ingroup AnnotateWithInHash
+ * \brief Top level PassManager that governs annotation of specific assignment
+ *        statements with the \@in_hash annotation.
  */
 
 class AnnotateWithInHash : public PassManager {
