@@ -196,11 +196,17 @@ class GenerateOutputs : public PassManager {
                 manifest.addGraph(_pipeId, "table", depFileName, INGRESS, ".json");
             }
         }
+
+        // We produce the skeleton of context.json regardless the compilation succeeds or fails.
+        // It is needed by visualization tool which can visualize some results even from failed
+        // compilation.
+        // If the compilation succeeds, then either assembler rewrites the skeleton
+        // of context.json with real data or if assembler fails or crashes, skeleton
+        // of context.json produced here is preserved and can be used by visualization tools.
+        outputContext();
+
         if (!_success) {
-            // \TODO: how much info do we need from context.json in
-            // the case of a failed compilation?
-            outputContext();
-            // and output the manifest if it failed, since we're not going to have the chance
+            // Output the manifest if it failed, since we're not going to have the chance
             // again. However, for successful compilation, GenerateOutputs gets called for every
             // pipe, and thus we don't want to output the manifest here.
             manifest.setSuccess(_success);
