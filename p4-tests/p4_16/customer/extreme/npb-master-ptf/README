@@ -5,15 +5,22 @@ Some pseudo-documentation on how to update this directory.
 
   A: this is what I did - cd nbp-master-ptf/tests && rm -rf *.py
 
-     and updated their sanity_barefoot/symlinks.sh to copy python files rather
-     than symlink to this folder
+     and updated their p4_pipelines/pipeline_npb/tst/regr/sanity_vcpFw_intel/symlinks.sh
+     to copy python files in tests folder rather than symlink to this folder,
+     also copy the python files in p4_pipelines/tst/basic/mau to tests folder
 
      note that whatever commented is left out..
 
      and cd scripts/run_custom_tests/patches/scapy and update if there are any
      new files/changes in the corresponding scapy directory in their package
 
-     for p4, what you do is right
+     for p4, copy the entire p4_pipelines and p4_programs to src folder
+
+     for ports.json, copy the entire cfg folder
+
+     for test.json copy p4_pipelines/pipeline_npb/tst/cfg/test.json to tests folder
+
+     and update test_mau_tb file references of test.json to the appropriate absolute path
 
      only for python -> we need to do this, as I had some old tests from the
      previous instance not in the newer version - which caused interface errors

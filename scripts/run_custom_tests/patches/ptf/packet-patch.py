@@ -44,7 +44,20 @@ if not config.get("disable_gtp_v2", False):
     except:
         logging.warn("GTP_V2 support not found in Scapy")
         pass
-        
+
+
+
+DTEL = None
+if not config.get("disable_dtel", False):
+    try:
+        scapy.main.load_contrib("dtel")
+        DTEL = scapy.contrib.dtel.DTEL
+        logging.info("DTEL support found in Scapy")
+    except:
+        logging.warn("DTEL support not found in Scapy")
+        pass
+
+
 NSH = None
 NSHTLV = None
 Metadata = None
@@ -120,15 +133,15 @@ if not config.get("disable_geneve", False):
         logging.warn("GENEVE support not found in Scapy")
         pass
 
-VXLAN = None
-if not config.get("disable_vxlan", False):
-    try:
-        scapy.main.load_contrib("vxlan")
-        VXLAN = scapy.contrib.vxlan.VXLAN
-        logging.info("VXLAN support found in Scapy")
-    except:
-        logging.warn("VXLAN support not found in Scapy")
-        pass
+# VXLAN = None
+# if not config.get("disable_vxlan", False):
+#     try:
+#         scapy.main.load_contrib("vxlan")
+#         VXLAN = scapy.contrib.vxlan.VXLAN
+#         logging.info("VXLAN support found in Scapy")
+#     except:
+#         logging.warn("VXLAN support not found in Scapy")
+#         pass
 
 # VXLAN = None
 # if not config.get("disable_vxlan", False):

@@ -260,10 +260,11 @@ p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3479")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-master-ptf"
-    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/angel-eyes/npb.p4"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/p4_programs/pgm_sp_npb_vcpFw/src/pgm_sp_npb_vcpFw_top.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 3000"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/tests")
-bfn_set_p4_build_flag("tofino2" "npb-master-ptf" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/angel-eyes -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/shared")
+bfn_set_p4_build_flag("tofino2" "npb-master-ptf" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/p4_pipelines/src -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/p4_pipelines/pipeline_npb/src/")
+bfn_set_ptf_ports_json_file("tofino2" "npb-master-ptf" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/cfg/pltfm_ports/model/tofino2/ports.json")
 set_tests_properties("tofino2/npb-master-ptf" PROPERTIES TIMEOUT 3000)
 
 p4c_add_ptf_test_with_ptfdir (
