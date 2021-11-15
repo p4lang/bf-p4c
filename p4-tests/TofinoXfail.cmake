@@ -357,6 +357,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/union2-bmv2.p4
   testdata/p4_16_samples/union3-bmv2.p4
   testdata/p4_16_samples/union4-bmv2.p4
+  # p4c update 2021-11-08
+  testdata/p4_16_samples/invalid-hdr-warnings5.p4
+  testdata/p4_16_samples/invalid-hdr-warnings6.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1306,6 +1309,8 @@ p4c_add_xfail_reason("tofino"
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
   testdata/p4_14_samples/issue2196.p4
+  # p4c update 2021-11-08
+  testdata/p4_16_samples/parser-unroll-test6.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1377,6 +1382,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/predication_issue_2.p4
   testdata/p4_16_samples/issue2726-bmv2.p4
   testdata/p4_16_samples/issue1989-bmv2.p4
+  # p4c update 2021-11-08
+  testdata/p4_16_samples/invalid-hdr-warnings4.p4
 )
 
 # select ranges not supported
@@ -2076,3 +2083,4 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Null f"
   extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
 )
+
