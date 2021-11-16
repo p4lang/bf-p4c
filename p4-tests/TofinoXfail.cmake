@@ -499,9 +499,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
 
-  # Expected to fail, which means that action analysis is working correctly.
-  extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
-
   # p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
 
@@ -528,8 +525,6 @@ p4c_add_xfail_reason("tofino"
 
   ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
   ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
-
-  extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1288,7 +1283,6 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
-  ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
 )
 
 # negative test.
@@ -1903,7 +1897,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-3698
 p4c_add_xfail_reason("tofino"
-  "error: PHV allocation produced following overlapping slices of field .* that are simultaneously live in the MAU pipeline"
+  "error: PHV allocation produced following overlapping slices of field .* that are simultaneously live in the MAU pipeline|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
@@ -2052,6 +2046,18 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
 )
+# P4C-4140
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug: invalid SuperCluster was formed"
+  ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
+  extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
+  extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
+)
+# P4C-4140
+p4c_add_xfail_reason("tofino"
+  "Error producing mau.resources.log"
+  ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+)
 
 # p4factory update
 p4c_add_xfail_reason("tofino"
@@ -2070,6 +2076,7 @@ p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device"
   COMPILER-1186
 )
+
 # P4C update 2021-10-19
 p4c_add_xfail_reason("tofino"
   "error: Assignment source cannot be evaluated in the parser"
@@ -2083,4 +2090,3 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Null f"
   extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
 )
-
