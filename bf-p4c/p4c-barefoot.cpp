@@ -166,7 +166,7 @@ class GenerateOutputs : public PassManager {
             // Always output primitives json file (info used by model for logging actions)
             cstring primitivesFile = _outputDir + "/" + _options.programName + ".prim.json";
             LOG2("ASM generation for primitives: " << primitivesFile);
-            ctxt_stream << "primitives: \"" << primitivesFile << "\"" << std::endl << std::flush;
+            ctxt_stream << "primitives: \"" << _options.programName << ".prim.json\"" << std::endl;
             std::ofstream prim(primitivesFile);
             _primitives.serialize(prim);
             prim << std::endl << std::flush;
@@ -174,7 +174,7 @@ class GenerateOutputs : public PassManager {
             // Output dynamic hash json file
             cstring dynHashFile = _outputDir + "/" + _options.programName + ".dynhash.json";
             LOG2("ASM generation for dynamic hash: " << dynHashFile);
-            ctxt_stream << "dynhash: \"" << dynHashFile << "\"" << std::endl << std::flush;
+            ctxt_stream << "dynhash: \"" << _options.programName << ".dynhash.json\"" << std::endl;
             std::ofstream dynhash(dynHashFile);
             dynhash << _dynhash << std::endl << std::flush;
         }

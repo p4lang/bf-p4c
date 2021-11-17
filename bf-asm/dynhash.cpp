@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 
+#include "bfas.h"
 #include "json.h"
 #include "sections.h"
 
@@ -21,6 +22,8 @@ class DynHash : public Section {
     void process() {
         if (_dynhashFileName.empty()) return;
         std::ifstream inputFile(_dynhashFileName);
+        if (!inputFile && _dynhashFileName[0] != '/')
+            inputFile.open(asmfile_dir + "/" + _dynhashFileName);
         if (!inputFile) {
             warning(lineno, "%s: can't read file", _dynhashFileName.c_str());
         } else {

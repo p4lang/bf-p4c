@@ -45,6 +45,16 @@ std::string get_filename(const char* s) {
     return fname;
 }
 
+std::string get_directory(const char* s) {
+    std::string fname = s;
+    auto tail = fname.find_last_of("/");
+    if (tail == std::string::npos)
+        fname = ".";
+    else
+        fname = fname.substr(0, tail);
+    return fname;
+}
+
 /* Given a p4 name, split into instance and field names if possible
  *  - else return a copy of the original name */
 void gen_instfield_name(const std::string &fullname, std::string &instname,

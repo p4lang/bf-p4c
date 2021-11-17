@@ -49,6 +49,7 @@ extern unsigned unique_action_handle;
 struct value_t;
 
 extern std::string asmfile_name;
+extern std::string asmfile_dir;
 extern std::unique_ptr<std::ostream> gfm_out;
 
 std::string toString(target_t target);

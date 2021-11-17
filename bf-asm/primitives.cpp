@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 
+#include "bfas.h"
 #include "json.h"
 #include "log.h"
 #include "sections.h"
@@ -22,6 +23,8 @@ class Primitives : public Section {
     void process() {
         if (_primitivesFileName.empty()) return;
         std::ifstream inputFile(_primitivesFileName);
+        if (!inputFile && _primitivesFileName[0] != '/')
+            inputFile.open(asmfile_dir + "/" + _primitivesFileName);
         if (!inputFile) {
             warning(lineno, "%s: can't read file", _primitivesFileName.c_str());
         } else {

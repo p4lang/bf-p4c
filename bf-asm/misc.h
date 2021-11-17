@@ -58,6 +58,7 @@ bool check_zero_string(const std::string& s);
 
 // Get filename
 std::string get_filename(const char *s);
+std::string get_directory(const char *s);
 
 /** Given a p4 name, eg. "inst.field", write "inst" to @instname and "field" to
  * @fieldname.  If @fullname cannot be split, writes @fullname to @instname and

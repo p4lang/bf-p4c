@@ -48,6 +48,7 @@ option_t options = {
 };
 
 std::string asmfile_name;                                               // NOLINT(runtime/string)
+std::string asmfile_dir;                                                // NOLINT(runtime/string)
 std::string gfm_log_file_name = "mau.gfm.log";                          // NOLINT(runtime/string)
 
 std::unique_ptr<std::ostream> gfm_out;
@@ -358,6 +359,7 @@ int main(int ac, char **av) {
             fclose(fp);
             asmfile = true;
             asmfile_name = get_filename(av[i]);
+            asmfile_dir = get_directory(av[i]);
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }
