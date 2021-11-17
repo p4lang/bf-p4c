@@ -105,6 +105,7 @@ set (BF_P4C_IR_SRCS
   ir/dbprint-tofino.cpp
   ir/bitrange.cpp
   ir/ir_enums.cpp
+  ir/gateway_control_flow.cpp
   ir/gress.cpp
   ir/mau.cpp
   ir/thread_visitor.cpp
@@ -127,6 +128,7 @@ set (BF_P4C_IR_HDRS
   midend/path_linearizer.h
   ir/bitrange.h
   ir/control_flow_visitor.h
+  ir/gateway_control_flow.h
   ir/gress.h
   ir/ir_enums.h
   ir/thread_visitor.h
@@ -1401,6 +1403,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp

@@ -1,8 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 #define EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 
-#include <boost/optional.hpp>
 #include <string>
+#include <boost/optional.hpp>
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
@@ -17,6 +17,9 @@ class P4Program;
 }  // namespace IR
 
 namespace Test {
+
+const char *tna_header();
+const char *t2na_header();
 
 struct MidendTestCase {
     /// Create a test case that requires the frontend and the midend to run.

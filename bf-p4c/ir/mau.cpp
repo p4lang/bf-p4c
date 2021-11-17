@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "ir/ir.h"
+#include "gateway_control_flow.h"
 
 namespace IR {
 namespace MAU {
@@ -165,6 +166,8 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
 
         if (self->next.count(tag)) {
             if (!current) current = &saved->flow_clone();
+            if (auto *gwcf = dynamic_cast<::BFN::GatewayControlFlow *>(current))
+                gwcf->pre_visit_table_next(self, tag);
             current->visit(self->next.at(tag), tag);
             if (payload_info.post_payload) {
                 if (current != payload_info.post_payload)

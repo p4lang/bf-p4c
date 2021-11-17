@@ -16,6 +16,18 @@
 
 namespace Test {
 
+const char *tna_header() {
+    static std::string tna = P4CTestEnvironment::readHeader("p4include/tna.p4", true,
+                                                            "__TARGET_TOFINO__", 1);
+    return tna.c_str();
+}
+
+const char *t2na_header() {
+    static std::string t2na = P4CTestEnvironment::readHeader("p4include/t2na.p4", true,
+                                                             "__TARGET_TOFINO__", 2);
+    return t2na.c_str();
+}
+
 /* static */ boost::optional<MidendTestCase>
 MidendTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
