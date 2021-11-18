@@ -81,13 +81,14 @@ struct Memories {
             int      payload_row = -1;
             int      payload_unit = -1;
             int      unit = -1;
-            type_t bus_type;
+            type_t   bus_type = EXACT;
             void clear() {
                 payload_value = 0ULL;
                 payload_match_address = -1;
                 payload_row = -1;
                 payload_unit = -1;
                 unit = -1;
+                bus_type = EXACT;
             }
         };
 

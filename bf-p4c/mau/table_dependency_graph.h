@@ -598,8 +598,8 @@ class TableGraphField {
  public:
     cstring gress;
     cstring name;
-    int lo;
-    int hi;
+    int lo = -1;
+    int hi = -1;
 };
 
 class TableGraphEdge {
