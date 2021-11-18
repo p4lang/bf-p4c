@@ -871,7 +871,6 @@ set (P4FACTORY_REGRESSION_TESTS_INTERNAL
   ecc
   emulation
   entry_read_from_hw
-  fr_test
   # hash_test                                 # PTF failure
   # incremental_checksum                      # PTF failure
   # mau_mem_test                              # PTF failure
@@ -937,7 +936,6 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_dyn_hashing
   tna_exact_match
   tna_field_slice
-  tna_idletimeout
   tna_lpm_match
   tna_meter_bytecount_adjust
   tna_meter_lpf_wred
@@ -957,11 +955,19 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_ternary_match
   tna_timestamp
   )
+## P4-16 Programs - compile-only
+set (P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY
+  tna_idletimeout
+  )
 
 ## Internal P4-16 Programs
 set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
   tna_pvs_multi_states
   tna_multi_prsr_programs_multi_pipes
+  )
+## Internal P4-16 Programs - compile-only
+set (P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY
+  fr_test
   )
 
 # TODO: How to enable these tests?
@@ -994,6 +1000,14 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   endif()
 endforeach()
 
+# Compile-only P4-16 Programs
+foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY)
+  file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4")
+  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+    "p4_16_programs_${t}" "${testfile}" ""
+    "${testExtraArgs} -target tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
+endforeach()
+
 # Internal P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_internal_${t}"
@@ -1008,6 +1022,14 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   endif()
 endforeach()
 p4c_add_test_label("tofino" "need_python2" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes")
+
+# Compile-only internal P4-16 Programs
+foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY)
+  file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/${t}.p4")
+  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+    "p4_16_programs_internal_${t}" "${testfile}" ""
+    "${testExtraArgs} -target tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16")
+endforeach()
 
 # Disable failing tests
  bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen"
