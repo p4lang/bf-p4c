@@ -66,6 +66,7 @@ PHV::AllocSlice& PHV::AllocSlice::operator=(const AllocSlice& other) {
     shadow_always_run_i = other.getShadowAlwaysRun();
     has_meta_init_i = other.hasMetaInit();
     is_physical_stage_based_i = other.is_physical_stage_based_i;
+    physical_deparser_stage_i = other.physical_deparser_stage_i;
     init_i.reset(new DarkInitPrimitive(*(other.getInitPrimitive())));
     this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
     return *this;
@@ -83,7 +84,8 @@ bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
         && width_i                   == other.width_i
         && min_stage_i               == other.min_stage_i
         && max_stage_i               == other.max_stage_i
-        && is_physical_stage_based_i == other.is_physical_stage_based_i;
+        && is_physical_stage_based_i == other.is_physical_stage_based_i
+        && physical_deparser_stage_i == other.physical_deparser_stage_i;
 }
 
 bool PHV::AllocSlice::operator!=(const PHV::AllocSlice& other) const {
@@ -111,6 +113,8 @@ bool PHV::AllocSlice::operator<(const PHV::AllocSlice& other) const {
         return max_stage_i.second < other.max_stage_i.second;
     if (is_physical_stage_based_i != other.is_physical_stage_based_i)
         return is_physical_stage_based_i < other.is_physical_stage_based_i;
+    if (physical_deparser_stage_i != other.physical_deparser_stage_i)
+        return physical_deparser_stage_i < other.physical_deparser_stage_i;
     return false;
 }
 
@@ -221,7 +225,8 @@ int PHV::AllocSlice::parser_stage_idx() const {
 }
 
 int PHV::AllocSlice::deparser_stage_idx() const {
-    return is_physical_stage_based_i ? Device::numStages() : PhvInfo::getDeparserStage();
+    return (is_physical_stage_based_i || physical_deparser_stage_i) ? Device::numStages()
+        : PhvInfo::getDeparserStage();
 }
 
 

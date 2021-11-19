@@ -199,6 +199,7 @@ if (PTF_REQUIREMENTS_MET)
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+  p4c_3043
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
 )

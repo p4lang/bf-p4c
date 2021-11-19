@@ -10,7 +10,8 @@ std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
     std::map<int, PHV::FieldUse> fieldMap;
     for (const FieldDefUse::locpair use : defuseSet) {
         const IR::BFN::Unit* use_unit = use.first;
-        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>()) {
+        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>() ||
+            use_unit->is<IR::BFN::GhostParser>()) {
             auto* ps = use_unit->to<IR::BFN::ParserState>();
             cstring use_location;
             if (!ps) {
@@ -30,10 +31,15 @@ std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
             LOG4("\tAssign " << usedef << " to deparser");
         } else if (use_unit->is<IR::MAU::Table>()) {
             const auto* t = use_unit->to<IR::MAU::Table>();
+            LOG4("\tTable " << t->name);
             auto stages = alloc.stages(t);
             for (auto stage : stages) {
                 fieldMap[stage] |= usedef;
                 LOG4("\tAssign " << usedef << " to stage " << stage);
+            }
+            if (t->is_always_run_action()) {
+                fieldMap[t->stage()] |= usedef;
+                LOG4("\tAssign " << usedef << " to stage " << t->stage());
             }
         } else {
             if (!use_unit->to<IR::BFN::GhostParser>())

@@ -1703,6 +1703,7 @@ class CollectPardeConstraints : public Inspector {
     PhvInfo& phv;
 
     bool preorder(const IR::BFN::Extract* extract) override {
+        LOG4("\t CollectPardeConstraints: Extract " << *extract);
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();
         if (lval) {
             auto f = phv.field(lval->field);

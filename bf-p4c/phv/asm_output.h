@@ -22,19 +22,22 @@ class PhvAsmOutput {
         gress_t gress;
         int live_start;
         int live_end;
+        bool parsed;
+        bool deparsed;
         ordered_set<cstring> mutex_fields;
-        FieldUse(cstring n, gress_t g, int s, int e, ordered_set<cstring> m)
-            : name(n), gress(g), live_start(s), live_end(e), mutex_fields(m) {}
+        FieldUse(cstring n, gress_t g, int s, int e, bool p, bool d, ordered_set<cstring> m)
+            : name(n), gress(g), live_start(s), live_end(e), parsed(p), deparsed(d),
+              mutex_fields(m) {}
         std::string get_live_stage(int stage, int maxStages) {
             if (stage == -1) return "parser";
-            if (stage == maxStages) return "deparser";
+            if (stage >= maxStages) return "deparser";
             return std::to_string(stage);
         }
         std::string get_live_start(int maxStages) {
-            return get_live_stage(live_start, maxStages);
+            return (parsed ? "parser" : get_live_stage(live_start, maxStages));
         }
         std::string get_live_end(int maxStages) {
-            return get_live_stage(live_end, maxStages);
+            return (deparsed ? "deparser" : get_live_stage(live_end, maxStages));
         }
     };
 

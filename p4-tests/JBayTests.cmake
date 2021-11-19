@@ -197,6 +197,12 @@ p4c_add_ptf_test_with_ptfdir (
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_1585")
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c_3043" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043/p4c_3043.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000 -Xp4c=\"--disable-power-check\"" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_3043")
+set_tests_properties("tofino2/p4c_3043" PROPERTIES TIMEOUT 2000)
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585_a" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a/p4c_1585_a.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_1585_a")

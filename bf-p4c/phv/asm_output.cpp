@@ -26,14 +26,18 @@ PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse,
 }
 
 
+
 void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
     const auto &livemap = live_range_report->get_livemap();
     for (const auto &kv : livemap) {
         auto f = kv.first;
         int min = live_range_report->get_max_stages(), max = -1;
         for (const auto &stg : kv.second) {
-            if (stg.first < min) min = stg.first;
-            if (stg.first > max) max = stg.first;
+            if (stg.first < min) min = ((stg.second.isWrite() && !stg.second.isRead() &&
+                                         (stg.first != -1)) ?
+                                        (stg.first + 1) : stg.first);
+            if (stg.first >= max) max = (stg.second.isWrite() ?
+                                        (stg.first + 1) : stg.first);
         }
         f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
             auto c = alloc.container();
@@ -45,11 +49,12 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
                     mutex_fields.insert(mfname);
                 }
             }
-            int last_stage = deparser_stage();
 
-            int alloc_min = (alloc.getEarliestLiveness().second.isWrite()) ?
+            auto fldUse = alloc.getEarliestLiveness().second;
+            int alloc_min = (fldUse.isWrite() && !fldUse.isRead()) ?
                         alloc.getEarliestLiveness().first + 1 : alloc.getEarliestLiveness().first;
-            int alloc_max = (alloc.getLatestLiveness().second.isWrite()) ?
+            fldUse = alloc.getLatestLiveness().second;
+            int alloc_max = fldUse.isWrite() ?
                         alloc.getLatestLiveness().first + 1 : alloc.getLatestLiveness().first;
 
             int newMin = min, newMax = max;
@@ -72,7 +77,7 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
                     // min/max stage values in field slices. Here, we adjust the
                     // live range based on slice info
                     if (alloc_min > min) newMin = alloc_min;
-                    if (alloc_max < max && alloc_max != last_stage) newMax = alloc_max;
+                    if (alloc_max < max) newMax = alloc_max;
                 }
             }
 
@@ -83,14 +88,16 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
                 newMax = alloc_max;
             }
 
-            FieldUse fuse = { fname, f->gress, newMin, newMax, mutex_fields };
+            FieldUse fuse = { fname, f->gress, newMin, newMax, (f->parsed() && (newMin == -1)),
+                              ((f->deparsed() || f->deparsed_to_tm()) &&
+                               (newMax == Device::numStages())), mutex_fields };
             auto &fieldsInContainer = lr[f->gress][c];
             fieldsInContainer[fname].push_back(fuse);
             LOG5(" Slice : " << alloc
-                      << ", Slice min stage : " << alloc.getEarliestLiveness()
-                      << ", Slice max stage : " << alloc.getLatestLiveness()
                       << ", Parsed : " << f->parsed()
                       << ", Deparsed : " << f->deparsed()
+                      << ", Deparsed to tm: " << f->deparsed_to_tm()
+                      << ", Deparsed bottom bits: " << f->deparsed_bottom_bits()
                       << ", New min stage : " << newMin
                       << ", New max stage : " << newMax);
         });
@@ -158,7 +165,7 @@ void emit_stage_alloc(
     out << std::endl;
 }
 
-void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
+void emit_stage_phv_field(std::ostream& out, PHV::Field* field, const LiveRangeReport* lr_report) {
     ordered_map<le_bitrange, std::vector<PHV::AllocSlice>> fieldRangeToAllocMap;
     ordered_set<le_bitrange> minimum_alloc_ranges;
 
@@ -169,6 +176,7 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
     // [7-8]. The base field ranges are [0-6], [7-8]
     field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
         auto alloc_range = alloc.field_slice();
+        LOG3("\tAlloSlice: " << alloc);
         ordered_set<le_bitrange> to_remove;
         for (const auto& range : minimum_alloc_ranges) {
             if (range.contains(alloc_range)) {
@@ -176,6 +184,7 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
             }
         }
         for (const auto& range : to_remove) {
+            LOG3("\t Remove from minimum_alloc_ranges: " << range);
             minimum_alloc_ranges.erase(range);
         }
         minimum_alloc_ranges.push_back(alloc_range);
@@ -195,12 +204,31 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
                 auto new_alloc = new PHV::AllocSlice(
                     field, alloc.container(), range, container_range);
                 new_alloc->setLiveness(alloc.getEarliestLiveness(), alloc.getLatestLiveness());
+                LOG3("\t  Creating new AllocSlice " << *new_alloc);
                 fieldRangeToAllocMap[range].push_back(*new_alloc);
             }
         }
     });
     // No allocation for the field.
     if (fieldRangeToAllocMap.size() == 0) return;
+
+    const auto &livemap = lr_report->get_livemap();
+    int lr_min = lr_report->get_max_stages(), lr_max = -1;
+    if (livemap.find(field) != livemap.end()) {
+        for (const auto &stg : livemap.at(field)) {
+            if (stg.first < lr_min) lr_min = ((stg.second.isWrite() && !stg.second.isRead()) ?
+                                              (stg.first + 1) : stg.first);
+            if (stg.first > lr_max) lr_max = (field->deparsed() || field->deparsed_to_tm()) ?
+                                        lr_report->get_max_stages() :
+                                        (stg.second.isWrite() ?
+                                         (stg.first + 1) : stg.first);
+        }
+    } else {
+        LOG5("WARNING: No livemap found for field " << field->name);
+        lr_min = -1;
+        lr_max = lr_report->get_max_stages();
+    }
+
     for (auto kv : fieldRangeToAllocMap) {
         unsigned numAllocSlices = kv.second.size();
         unsigned alloc_num = 0;
@@ -224,12 +252,17 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
                 min_stage = alloc.getEarliestLiveness().first + 1;
             else
                 min_stage = alloc.getEarliestLiveness().first;
+
             if (alloc.getLatestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
-                alloc.getLatestLiveness().first != deparser_stage())
+                alloc.getLatestLiveness().first != lr_report->get_max_stages())
                 max_stage = alloc.getLatestLiveness().first + 1;
             else
                 max_stage = alloc.getLatestLiveness().first;
-            if (min_stage != 0 || max_stage != deparser_stage()) {
+            if (min_stage < lr_min) min_stage = lr_min;
+            if (max_stage > lr_max) max_stage = ((lr_max == -1) ? 0 :
+                                                 ((lr_max < lr_min) ? lr_min : lr_max));
+
+            if (min_stage != 0 || max_stage != lr_report->get_max_stages()) {
                 stageAllocReqd = true;
                 if (alloc_num == 1) out << "{ ";
                 if (min_stage != max_stage)
@@ -255,12 +288,13 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
 
 void emit_phv_field(
         std::ostream& out,
-        PHV::Field* field) {
+        PHV::Field* field,
+        const LiveRangeReport* lrr) {
     if (Device::currentDevice() == Device::JBAY || BFNContext::get().options().alt_phv_alloc) {
-        emit_stage_phv_field(out, field);
+        emit_stage_phv_field(out, field, lrr);
 #if HAVE_CLOUDBREAK
     } else if (Device::currentDevice() == Device::CLOUDBREAK) {
-        emit_stage_phv_field(out, field);
+        emit_stage_phv_field(out, field, lrr);
 #endif /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
     } else if (Device::currentDevice() == Device::FLATROCK) {
@@ -280,7 +314,7 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     if (gress == GHOST) gress = INGRESS;
     for (auto &f : phv) {
         if (f.gress == gress) {
-            emit_phv_field(out, &f);
+            emit_phv_field(out, &f, live_range_report);
         }
     }
 

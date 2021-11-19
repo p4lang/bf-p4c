@@ -139,11 +139,12 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     for (auto& alloc : f->get_alloc()) {
         if (parserMin == alloc.getEarliestLiveness() && deparserMax == alloc.getLatestLiveness()) {
             // Change max stage to deparser in the physical stage list.
-            int physDeparser = depStages.getDeparserStage();
+            int physDeparser = std::max(depStages.getDeparserStage(), Device::numStages());
             BUG_CHECK(physDeparser >= 0, "No tables detected while finalizing allocation of %1%",
                     alloc);
             PHV::StageAndAccess max = std::make_pair(physDeparser, write);
             alloc.setLatestLiveness(max);
+            alloc.setPhysicalDeparserStage(true);
             LOG5(ss.str() << "\tIgnoring field slice: " << alloc);
             continue;
         } else {
@@ -260,6 +261,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             PHV::StageAndAccess min = std::make_pair(new_min_stage, new_min_use);
             PHV::StageAndAccess max = std::make_pair(new_max_stage, new_max_use);
             alloc.setLiveness(min, max);
+            alloc.setPhysicalDeparserStage(true);
             LOG3("\t  New min stage: " << alloc.getEarliestLiveness().first <<
                  alloc.getEarliestLiveness().second << ", New max stage: " <<
                  alloc.getLatestLiveness().first << alloc.getLatestLiveness().second);
@@ -315,6 +317,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         PHV::StageAndAccess min = std::make_pair(new_min_stage, new_min_use);
         PHV::StageAndAccess max = std::make_pair(new_max_stage, new_max_use);
         alloc.setLiveness(min, max);
+        alloc.setPhysicalDeparserStage(true);
         LOG3("\t  New min stage: " << alloc.getEarliestLiveness().first <<
              alloc.getEarliestLiveness().second << ", New max stage: " <<
              alloc.getLatestLiveness().first << alloc.getLatestLiveness().second);

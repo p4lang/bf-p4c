@@ -38,6 +38,9 @@ class AllocSlice {
     // min_stage_i and max_stage_i are based on physical stage info instead of min_stages.
     bool is_physical_stage_based_i = false;
 
+    // After FinalizeStageAllocation set to true for assembly generation
+    bool physical_deparser_stage_i = false;
+
  public:
     AllocSlice(const PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo,
                int width);
@@ -126,6 +129,9 @@ class AllocSlice {
 
     bool isPhysicalStageBased() const { return is_physical_stage_based_i; }
     void setIsPhysicalStageBased(bool v) { is_physical_stage_based_i = v; }
+
+    bool isPhysicalDeparserStage() const { return physical_deparser_stage_i; }
+    void setPhysicalDeparserStage(bool v) { physical_deparser_stage_i = v; }
 
     // @returns true if this alloc slice is referenced within @p ctxt for @p use.
     bool isReferenced(const PHV::AllocContext* ctxt, const PHV::FieldUse* use) const;
