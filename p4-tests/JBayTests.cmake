@@ -130,8 +130,8 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4" PROPERTIES TIMEOUT 4800)
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2740.p4" "-to 2400")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4" PROPERTIES TIMEOUT 2400)
-p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2490.p4" "-to 1200")
-set_tests_properties("tofino2/extensions/p4_tests/p4_16/compile_only/p4c-2490.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2490.p4" "-to 3600")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/compile_only/p4c-2490.p4" PROPERTIES TIMEOUT 3600)
 
 #override just created test above adding an extra argument -- remove when P4C-3070 done
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE ignore_test_1 extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4 "-tofino2 -arch t2na -Xp4c=--disable_split_attached" "")

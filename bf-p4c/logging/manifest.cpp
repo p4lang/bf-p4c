@@ -122,6 +122,10 @@ void Manifest::serialize() {
         writer.Key("event_log_file");
         writer.String(_eventLogPath.c_str());
     }
+    if (_frontendIrLogPath.size() > 0) {
+        writer.Key("frontend_ir_log_file");
+        writer.String(_frontendIrLogPath.c_str());
+    }
 
     _programInputs.serialize(writer);
     serializePipes(writer);

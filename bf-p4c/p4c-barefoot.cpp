@@ -346,6 +346,22 @@ int main(int ac, char **av) {
 
     log_dump(program, "Initial program");
 
+    // Dump frontend IR for p4i if debug (-g) was selected
+    // Or if the --toJson was used
+    cstring irFilePath = nullptr;
+    if (BackendOptions().debugInfo || options.dumpJsonFile) {
+        // Dump file is either whatever --toJson specifies or a default one for p4i
+        cstring irFilePath = options.dumpJsonFile ?
+                            options.dumpJsonFile :
+                            BFNContext::get().getOutputDirectory() + "/frontend-ir.json";
+        // Print out the IR for p4i after frontend (--toJson "-" signifies stdout)
+        auto &irFile = irFilePath != "-" ?
+                        *openFile(irFilePath, false) :
+                        std::cout;
+        LOG3("IR dump after frontend to " << irFilePath);
+        JSONGenerator(irFile, true) << program << std::endl;
+    }
+
     BFN::generateRuntime(program, options);
     if (::errorCount() > 0)
         return PROGRAM_ERROR;
@@ -403,8 +419,10 @@ int main(int ac, char **av) {
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
 
     // Register event logger in manifest
+    // Also register frontend IR dump
     if (BackendOptions().debugInfo) {
         manifest.setEventLog("events.json");
+        manifest.setFrontendIrLog("frontend-ir.json");
     }
 
     // setup the pipes and the architecture config early, so that the manifest is
@@ -412,17 +430,6 @@ int main(int ac, char **av) {
     for (auto& pipe : substitute.pipe)
         manifest.setPipe(pipe->id, pipe->name.name);
     manifest.addArchitecture(substitute.getThreads());
-
-    if (options.dumpJsonFile) {
-        // We just want to produce an IR for mutine (p4v & friends), so running
-        // the midend is sufficient. Dump the IR to stdout and exit.
-        auto &fileStr = options.dumpJsonFile != "-" ?
-            *openFile(options.dumpJsonFile, false) : std::cout;
-        LOG3("Output to " << options.dumpJsonFile);
-        for (auto& pipe : substitute.pipe)
-             JSONGenerator(fileStr, true) << pipe << std::endl;
-        return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
-    }
 
     for (auto& kv : substitute.pipes) {
         auto pipe = kv.second;
