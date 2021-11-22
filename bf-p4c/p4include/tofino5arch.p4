@@ -15,7 +15,7 @@ parser IngressParserT<H, M>(
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
 
 control IngressT<H, M>(
-    inout H hdr,
+    in H hdr,
     inout M ig_md,
     @optional in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
