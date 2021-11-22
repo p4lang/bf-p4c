@@ -3396,8 +3396,8 @@ control DMAC(
         ig_md.nexthop = nexthop_index;
     }
 
-    /* CODE_HACK: P4C-3103 */
-    @pack(2)
+    /* CODE_HACK: P4C-3103 and P4C-4123 */
+    @pack(2) @ways(4) @stage(6, 8192) @stage(7, 8192)
     table dmac {
         key = {
             ig_md.bd : exact;

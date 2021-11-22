@@ -523,9 +523,3 @@ p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
 )
-
-# P4C-4123
-p4c_add_xfail_reason("tofino2"
-  "address too large for table .*"
-  extensions/p4_tests/p4_16/jbay/p4c-4072.p4
-)
