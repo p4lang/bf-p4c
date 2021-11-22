@@ -873,7 +873,7 @@ void PHV::Field::foreach_byte(
         std::function<void(const PHV::AllocSlice &)> fn) const {
     // Iterate in reverse order, because alloc_i slices are ordered from field
     // MSB to LSB, but foreach_byte iterates from LSB to MSB.
-    for (auto slice : boost::adaptors::reverse(alloc_slice_i)) {
+    for (const auto& slice : boost::adaptors::reverse(alloc_slice_i)) {
         // Break after we've processed the last element.
         if (range.hi < slice.field_slice().lo)
             break;
@@ -1096,23 +1096,6 @@ PHV::FieldSlice::FieldSlice(
                     " for slice " << range);
     }
 
-    // The valid starting bits (by container size C) for a slice s[Y:X]
-    // equal the valid bits for the field shifted by X mod C.  For example,
-    // if a 12b field f can start at bits 0 and 8 in a 16b container, then
-    // f[11:8] can start at bits 0 and 8.
-    const int checksum_bit_in_byte = range.lo % 8;
-    for (auto size : Device::phvSpec().containerSizes()) {
-        for (auto idx : field->getStartBits(size)) {
-            int bit_idx = (idx + range.lo) % int(size);
-            // XXX(yumin): checksummed metadata can only start at byte boundary.
-            if (field->is_checksummed() && field->metadata && !field->alignment &&
-                bit_idx % 8 != checksum_bit_in_byte) {
-                continue;
-            }
-            startBitsByContainerSize_i[size].setbit(bit_idx);
-        }
-    }
-
     // Calculate valid container range for this slice by shrinking
     // the valid range of the field by the size of the "tail"
     // (i.e. the least significant bits) not in this slice.
@@ -1157,17 +1140,23 @@ PHV::FieldSlice::FieldSlice(
     }
 }
 
-void PHV::FieldSlice::setStartBits(PHV::Size size, bitvec startPositions) {
-    if (field_i->metadata && field_i->is_checksummed() && !field_i->alignment) {
-        startPositions = remove_non_byte_boundary_starts(field_i, startPositions);
-    }
-    startBitsByContainerSize_i[size] = startPositions;
-}
-
 bitvec PHV::FieldSlice::getStartBits(PHV::Size size) const {
-    if (!startBitsByContainerSize_i.count(size))
-        return bitvec(0, int(size));
-    return startBitsByContainerSize_i.at(size);
+    // The valid starting bits (by container size C) for a slice s[Y:X]
+    // equal the valid bits for the field shifted by X mod C.  For example,
+    // if a 12b field f can start at bits 0 and 8 in a 16b container, then
+    // f[11:8] can start at bits 0 and 8.
+    bitvec ret;
+    const int checksum_bit_in_byte = range_i.lo % 8;
+    for (auto idx : field_i->getStartBits(size)) {
+        int bit_idx = (idx + range_i.lo) % int(size);
+        // XXX(yumin): checksummed metadata can only start at byte boundary.
+        if (field_i->is_checksummed() && field_i->metadata && !field_i->alignment &&
+            bit_idx % 8 != checksum_bit_in_byte) {
+            continue;
+        }
+        ret.setbit(bit_idx);
+    }
+    return ret;
 }
 
 void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
@@ -2437,7 +2426,7 @@ bool PhvInfo::SameContainerAllocConstraint::same_container(const PHV::FieldSlice
     const FieldBit a_hi{a.field(), a.range().hi};
     const FieldBit b_lo{b.field(), b.range().lo};
     const FieldBit b_hi{b.field(), b.range().hi};
-    std::vector<const FieldBit*> bits{&a_lo, &a_hi, &b_lo, &b_hi};
+    std::initializer_list<const FieldBit*> bits{&a_lo, &a_hi, &b_lo, &b_hi};
     for (const auto* b : bits) {
         if (!same_byte_bits.contains(*b)) {
             return false;

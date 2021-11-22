@@ -748,8 +748,9 @@ boost::optional<PHV::Allocation::ContainerStatus>
 PHV::Transaction::getStatus(const PHV::Container& c) const {
     // If a status exists in the transaction, then it includes info from the
     // parent.
-    if (container_status_i.find(c) != container_status_i.end())
-        return container_status_i.at(c);
+    auto it = container_status_i.find(c);
+    if (it != container_status_i.end())
+        return it->second;
 
     // Otherwise, retrieve and cache parent info.
     auto parentStatus = parent_i->getStatus(c);
@@ -1066,7 +1067,7 @@ bitvec PHV::AlignedCluster::validContainerStart(PHV::Size container_size) const 
     auto valid_start_range = *opt_valid_start_range;
     bitvec rv = bitvec(valid_start_range.lo, valid_start_range.size());
 
-    for (auto slice : *this)
+    for (const auto& slice : *this)
         rv &= slice.getStartBits(container_size);
 
     // Account for relative alignment.
@@ -1231,15 +1232,15 @@ PHV::RotationalCluster::slice(int pos) const {
 PHV::SuperCluster::SuperCluster(
         ordered_set<const PHV::RotationalCluster*> clusters,
         ordered_set<SliceList*> slice_lists)
-        : clusters_i(clusters), slice_lists_i(slice_lists) {
+        : clusters_i(std::move(clusters)), slice_lists_i(std::move(slice_lists)) {
     // Populate the field slice-->cluster map (slices_to_clusters_i)
-    for (auto* rotational_cluster : clusters)
+    for (auto* rotational_cluster : clusters_i)
         for (auto* aligned_cluster : rotational_cluster->clusters())
             for (auto& slice : *aligned_cluster)
                 slices_to_clusters_i[slice] = rotational_cluster;
 
     // Check that every field is present in some cluster.
-    for (auto* slice_list : slice_lists) {
+    for (auto* slice_list : slice_lists_i) {
         for (auto& slice : *slice_list) {
             BUG_CHECK(slices_to_clusters_i.find(slice) != slices_to_clusters_i.end(),
                       "Trying to form cluster group with a slice list containing %1%, "

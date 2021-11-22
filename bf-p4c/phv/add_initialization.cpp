@@ -161,17 +161,17 @@ void ComputeDarkInitialization::computeInitInstruction(
         const PHV::AllocSlice& slice,
         const IR::MAU::Action* action) {
     const IR::MAU::Primitive* prim;
-    if (slice.getInitPrimitive()->destAssignedToZero()) {
+    if (slice.getInitPrimitive().destAssignedToZero()) {
         LOG4("\tAdd initialization from zero in action " << action->name << " for: " << slice);
         prim = fieldToExpr.generateInitInstruction(slice);
         LOG4("\t\tAdded initialization: " << prim);
     } else {
-        BUG_CHECK(slice.getInitPrimitive()->getSourceSlice(),
+        BUG_CHECK(slice.getInitPrimitive().getSourceSlice(),
                 "No source slice defined for allocated slice %1%", slice);
         LOG4("\tAdd initialization in action " << action->name << " for: " << slice);
-        LOG4("\t  Initialize from: " << *(slice.getInitPrimitive()->getSourceSlice()));
+        LOG4("\t  Initialize from: " << *(slice.getInitPrimitive().getSourceSlice()));
         prim = fieldToExpr.generateInitInstruction(slice,
-                                                   *(slice.getInitPrimitive()->getSourceSlice()));
+                                                   *(slice.getInitPrimitive().getSourceSlice()));
         LOG4("\t\tAdded initialization: " << prim);
     }
     auto tbl = tableActionsMap.getTableForAction(action);
@@ -210,9 +210,9 @@ bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
 
     bool share_both_containers = false;
     auto dst_cntr = alloc_sl.container();
-    bool has_src = !(!alloc_sl.getInitPrimitive()->getSourceSlice());
+    bool has_src = !(!alloc_sl.getInitPrimitive().getSourceSlice());
     auto src_cntr = (has_src ?
-                     alloc_sl.getInitPrimitive()->getSourceSlice()->container() : PHV::Container());
+                     alloc_sl.getInitPrimitive().getSourceSlice()->container() : PHV::Container());
     if (dst_cntr != PHV::Container()) LOG4("\tCurrent AllocSlice dest container: " << dst_cntr);
     if (has_src)
         LOG4("\tCurrent AllocSlice source container: " << src_cntr);
@@ -223,9 +223,9 @@ bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
         // Handle dependences between spills/writebacks of different
         // fields to/from the same containers
         if (has_src && (src_cntr == drkInit.first.getDestinationSlice().container()) &&
-            alloc_sl.getInitPrimitive()->getSourceSlice()->container_slice().
+            alloc_sl.getInitPrimitive().getSourceSlice()->container_slice().
             overlaps(drkInit.first.getDestinationSlice().container_slice())) {
-            LOG4("\t\tOverlapping source " << alloc_sl.getInitPrimitive()->getSourceSlice() <<
+            LOG4("\t\tOverlapping source " << alloc_sl.getInitPrimitive().getSourceSlice() <<
                  "\n\t\t to destination " << drkInit.first.getDestinationSlice().container_slice());
         }
 
@@ -267,7 +267,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     IR::MAU::Action *act = nullptr;
     cstring act_name;
     gress_t ara_gress = alloc_sl.field()->gress;
-    auto prev_sl = alloc_sl.getInitPrimitive()->getSourceSlice();
+    auto prev_sl = alloc_sl.getInitPrimitive().getSourceSlice();
     std::pair<std::set<UniqueId>, std::set<UniqueId>> constraints;
 
     // 1A. Check if multiple primitives need to be added into the same ARA table
@@ -276,11 +276,11 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     // ---
     LOG4("\t ARA for slice: " <<  alloc_sl);
 
-    LOG4("\tPrior ARAs:" << alloc_sl.getInitPrimitive()->getARApriorPrims().size());
-    BUG_CHECK(alloc_sl.getInitPrimitive()->getARApriorPrims().size() < 2,
+    LOG4("\tPrior ARAs:" << alloc_sl.getInitPrimitive().getARApriorPrims().size());
+    BUG_CHECK(alloc_sl.getInitPrimitive().getARApriorPrims().size() < 2,
               "More than one prior prims?");
 
-    for (auto *priorARA : alloc_sl.getInitPrimitive()->getARApriorPrims()) {
+    for (auto *priorARA : alloc_sl.getInitPrimitive().getARApriorPrims()) {
         LOG4("\t\t " << *priorARA);
 
         if (darkInitToARA.count(*priorARA)) {
@@ -292,11 +292,11 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
         }
     }
 
-    LOG4("\tPost ARAs:" << alloc_sl.getInitPrimitive()->getARApostPrims().size());
-    BUG_CHECK(alloc_sl.getInitPrimitive()->getARApostPrims().size() < 2,
+    LOG4("\tPost ARAs:" << alloc_sl.getInitPrimitive().getARApostPrims().size());
+    BUG_CHECK(alloc_sl.getInitPrimitive().getARApostPrims().size() < 2,
               "More than one post prims?");
 
-    for (auto *postARA : alloc_sl.getInitPrimitive()->getARApostPrims()) {
+    for (auto *postARA : alloc_sl.getInitPrimitive().getARApostPrims()) {
         LOG4("\t\t " << *postARA);
 
         if (darkInitToARA.count(*postARA)) {
@@ -315,7 +315,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     int post_min_stage = PhvInfo::deparser_stage;
 
     LOG4("\tPrior Tables: ");
-    for (auto node : alloc_sl.getInitPrimitive()->getARApriorUnits()) {
+    for (auto node : alloc_sl.getInitPrimitive().getARApriorUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         prior_tables.insert(tbl->get_uid());
@@ -328,7 +328,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     }
 
     LOG4("\tPost Tables: ");
-    for (auto node : alloc_sl.getInitPrimitive()->getARApostUnits()) {
+    for (auto node : alloc_sl.getInitPrimitive().getARApostUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         post_tables.insert(tbl->get_uid());
@@ -352,7 +352,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
 
         if (stg == alloc_sl.getEarliestLiveness().first) {
             use_existing_ara = true;
-        } else if (alloc_sl.getInitPrimitive()->getSourceSlice() &&
+        } else if (alloc_sl.getInitPrimitive().getSourceSlice() &&
                    (prior_max_stage <= stg) && (stg <= post_min_stage)) {
             // Need to update the liveranges of the affected slices
             LOG4("\t AllocSlice " << alloc_sl << " will  have its liverange updated ...");
@@ -364,7 +364,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
 
             use_existing_ara = true;
             BUG_CHECK(0, "Need to update liveranges");
-        } else if (!alloc_sl.getInitPrimitive()->getSourceSlice()) {
+        } else if (!alloc_sl.getInitPrimitive().getSourceSlice()) {
             // Zero-inits shouldn't always be combined since they may occur at different stages
             LOG4("\tRestoring previous ARA table");
             ara_tbl = prev_ara_tbl;
@@ -429,7 +429,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     }
 
     // 4. Create mapping from DarkInitEntry to ARA table
-    auto *drkinit = new PHV::DarkInitEntry(alloc_sl, *(alloc_sl.getInitPrimitive()));
+    auto *drkinit = new PHV::DarkInitEntry(alloc_sl, alloc_sl.getInitPrimitive());
     darkInitToARA[*drkinit] = ara_tbl;
     LOG4("\t Added darkEntry" << *drkinit << " to " << ara_tbl->name);
 }
@@ -447,22 +447,22 @@ void ComputeDarkInitialization::end_apply() {
     for (const auto& f : phv) {
         for (const auto& slice : f.get_alloc()) {
             // Ignore NOP initializations
-            if (slice.getInitPrimitive()->isNOP()) continue;
+            if (slice.getInitPrimitive().isNOP()) continue;
 
             // Initialization in last MAU stage will be handled directly by another pass.
             // Here we create AlwaysRunAction tables with related placement constraints
-            if (slice.getInitPrimitive()->mustInitInLastMAUStage()) {
-                if (slice.getInitPrimitive()->getARApriorUnits().size() ||
-                    slice.getInitPrimitive()->getARApostUnits().size()) {
+            if (slice.getInitPrimitive().mustInitInLastMAUStage()) {
+                if (slice.getInitPrimitive().getARApriorUnits().size() ||
+                    slice.getInitPrimitive().getARApostUnits().size()) {
                     createAlwaysRunTable(slice);
                 }
-            } else if (!forcedPlacement && slice.getInitPrimitive()->isAlwaysRunActionPrim()) {
-                if (slice.getInitPrimitive()->getARApriorUnits().size() ||
-                    slice.getInitPrimitive()->getARApostUnits().size()) {
+            } else if (!forcedPlacement && slice.getInitPrimitive().isAlwaysRunActionPrim()) {
+                if (slice.getInitPrimitive().getARApriorUnits().size() ||
+                    slice.getInitPrimitive().getARApostUnits().size()) {
                     createAlwaysRunTable(slice);
                 }
             } else {
-                for (const IR::MAU::Action* initAction : slice.getInitPrimitive()->getInitPoints())
+                for (const IR::MAU::Action* initAction : slice.getInitPrimitive().getInitPoints())
                     computeInitInstruction(slice, initAction);
             }
         }
@@ -668,26 +668,26 @@ void ComputeDependencies::summarizeDarkInits(
     // fieldReads maps.
     for (auto& f : phv) {
         f.foreach_alloc([&](const PHV::AllocSlice& alloc) {
-            if (alloc.getInitPrimitive()->getInitPoints().size() == 0) return;
-            if (alloc.getInitPrimitive()->isNOP()) return;
-            // if (alloc.getInitPrimitive()->mustInitInLastMAUStage()) return;
+            if (alloc.getInitPrimitive().getInitPoints().size() == 0) return;
+            if (alloc.getInitPrimitive().isNOP()) return;
+            // if (alloc.getInitPrimitive().mustInitInLastMAUStage()) return;
             ordered_set<const IR::MAU::Table*> initTables;
             LOG5("DarkInits for slice " << alloc << " in tables:");
-            for (const auto* action : alloc.getInitPrimitive()->getInitPoints()) {
+            for (const auto* action : alloc.getInitPrimitive().getInitPoints()) {
                 auto t = actionsMap.getTableForAction(action);
                 BUG_CHECK(t, "No table corresponding to action %1%", action->name);
                 initTables.insert(*t);
                 initTableNames.insert((*t)->name);
                 LOG5("\t" << (*t)->name);
             }
-            if (alloc.getInitPrimitive()->destAssignedToZero()) {
+            if (alloc.getInitPrimitive().destAssignedToZero()) {
                 for (const auto* t : initTables) {
                     fieldWrites[&f][dg.min_stage(t)][t].insert(alloc.field_slice());
                     LOG5("\t\t inserting zero write for table " << t->name);
                 }
             }
-            if (alloc.getInitPrimitive()->getSourceSlice()) {
-                const PHV::Field* src = alloc.getInitPrimitive()->getSourceSlice()->field();
+            if (alloc.getInitPrimitive().getSourceSlice()) {
+                const PHV::Field* src = alloc.getInitPrimitive().getSourceSlice()->field();
                 for (const auto* t : initTables) {
                     fieldReads[src][dg.min_stage(t)][t].insert(alloc.field_slice());
                     LOG5("\t\t inserting read for table " << t->name << " of " << *src);
@@ -837,7 +837,7 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
                      " to a different slice of the field.");
                 continue;
             }
-            if (nextAlloc.getInitPrimitive()->isNOP()) {
+            if (nextAlloc.getInitPrimitive().isNOP()) {
                 // Add all the uses of the field to the set of fields to which the dependencies
                 // must be inserted.
                 LOG5("\t\tAdd dependencies to all usedefs of " << nextAlloc);
@@ -859,12 +859,12 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
                 }
                 for (const auto* t : nextAllocUses)
                     LOG5("\t\t\t" << t->name << " (Stage " << dg.min_stage(t) << ")");
-            } else if (nextAlloc.getInitPrimitive()->mustInitInLastMAUStage()) {
+            } else if (nextAlloc.getInitPrimitive().mustInitInLastMAUStage()) {
                 // No need for any dependencies here.
                 LOG5("\t\tNo need to insert dependencies to the last always_init block.");
-            } else if (nextAlloc.getInitPrimitive()->getInitPoints().size() > 0) {
+            } else if (nextAlloc.getInitPrimitive().getInitPoints().size() > 0) {
                 const IR::MAU::Table* initTable = nullptr;
-                for (const auto* action : nextAlloc.getInitPrimitive()->getInitPoints()) {
+                for (const auto* action : nextAlloc.getInitPrimitive().getInitPoints()) {
                     auto tbl = actionsMap.getTableForAction(action);
                     BUG_CHECK(tbl, "No table corresponding to action %1%", action->name);
                     if (initTable)

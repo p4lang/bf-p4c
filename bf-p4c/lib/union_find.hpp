@@ -11,7 +11,7 @@
  * Construction: O(n), where n is the number of elements.
  * Union(a, b):  O(m * log(n)), where m is the size of the smaller set, n the
  *               larger.
- * Find(x):      O(1)
+ * Find(x):      O(log(n))
  *
  * XXX(cole): there are more sophisticated implementations that are more
  *            efficient.
@@ -25,29 +25,20 @@ template <typename T, typename Set = ordered_set<T>>
 class UnionFind {
     // Map elements to the set that contains them.  Each element is in exactly
     // one set, and set pointers are never null.
-    ordered_map<T, Set*> element_map_i;
+    std::map<T, Set*> element_map_i;
 
     // All the sets.
     ordered_set<Set*> sets_i;
 
     // Used internally for finding and mutating sets; clients cannot mutate
     // sets.
-    Set* internalFind(const T x) {
-        BUG_CHECK(element_map_i.find(x) != element_map_i.end(),
-                  "UnionFind: looking for element not in data structure: %1%\n"
-                  "UnionFind: data structure is\n%2%",
-                  cstring::to_cstring(x), cstring::to_cstring(this));
-        return element_map_i.at(x);
-    }
-
-    // Used internally for finding and mutating sets; clients cannot mutate
-    // sets.
     Set* internalFind(const T x) const {
-        BUG_CHECK(element_map_i.find(x) != element_map_i.end(),
+        auto it = element_map_i.find(x);
+        BUG_CHECK(it != element_map_i.end(),
                   "UnionFind: looking for element not in data structure: %1%\n"
                   "UnionFind: data structure is\n%2%",
                   cstring::to_cstring(x), cstring::to_cstring(this));
-        return element_map_i.at(x);
+        return it->second;
     }
 
  public:

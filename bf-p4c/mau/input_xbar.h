@@ -253,7 +253,6 @@ struct IXBar {
             // Byte(cstring n, int l, int g, int gb) : container(n), lo(l), loc(g, gb) {}
             Byte(PHV::Container c, int l) : container(c), lo(l) {}
             Byte(PHV::Container c, int l, int g, int gb) : container(c), lo(l), loc(g, gb) {}
-            Byte(const Byte &) = default;
             operator std::pair<PHV::Container, int>() const {
                 return std::make_pair(container, lo); }
             operator std::pair<cstring, int>() const {

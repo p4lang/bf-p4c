@@ -344,17 +344,19 @@ ordered_set<PHV::FieldSlice> ActionPhvConstraints::ConstraintTracker::destinatio
 const ordered_set<ActionPhvConstraints::OperandInfo>&
 ActionPhvConstraints::ConstraintTracker::writes(const IR::MAU::Action* act) const {
     static ordered_set<OperandInfo> empty;
-    if (action_to_writes.find(act) == action_to_writes.end())
+    auto it = action_to_writes.find(act);
+    if (it == action_to_writes.end())
         return empty;
-    return action_to_writes.at(act);
+    return it->second;
 }
 
 const ordered_set<PHV::FieldSlice>&
 ActionPhvConstraints::ConstraintTracker::reads(const IR::MAU::Action* act) const {
     static ordered_set<PHV::FieldSlice> empty;
-    if (action_to_reads.find(act) == action_to_reads.end())
+    auto it = action_to_reads.find(act);
+    if (it == action_to_reads.end())
         return empty;
-    return action_to_reads.at(act);
+    return it->second;
 }
 
 ordered_set<const IR::MAU::Action*>
@@ -362,8 +364,8 @@ ActionPhvConstraints::ConstraintTracker::read_in(PHV::FieldSlice src) const {
     ordered_set<const IR::MAU::Action*> rv;
     if (read_to_writes_per_action.find(src.field()) == read_to_writes_per_action.end())
         return rv;
-    for (auto by_action : read_to_writes_per_action.at(src.field())) {
-        for (auto by_range : by_action.second)
+    for (const auto& by_action : read_to_writes_per_action.at(src.field())) {
+        for (const auto& by_range : by_action.second)
             if (by_range.first.contains(src.range()))
                 rv.insert(by_action.first); }
     return rv;
@@ -1865,9 +1867,9 @@ ordered_set<const IR::MAU::Action*> ActionPhvConstraints::make_writing_action_se
             }
         }
         // add darkInit actions of this candidate set and previously allocated slices.
-        const auto* dark_prim = slice.getInitPrimitive();
-        if (dark_prim && !dark_prim->isAlwaysRunActionPrim()) {
-            for (const auto* action : dark_prim->getInitPoints()) {
+        const auto& dark_prim = slice.getInitPrimitive();
+        if (!dark_prim.isAlwaysRunActionPrim()) {
+            for (const auto* action : dark_prim.getInitPoints()) {
                 set_of_actions.insert(action);
             }
         }
@@ -3785,10 +3787,10 @@ CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
     // So, we need to filter out all ara actions and check fields that lives.
     ordered_set<const PHV::AllocSlice*> ara_slices;
     for (const auto& slice : container_state) {
-        const auto* prim = slice.getInitPrimitive();
+        const auto& prim = slice.getInitPrimitive();
         // alloc slice without source slices are slices that was swapped out, e.g.,
         // DH9 bit[15..0] <-- f1 live at [5w, 9r] = MH10 f2 live at [-1w, 5r].
-        if (prim && prim->isAlwaysRunActionPrim() && prim->getSourceSlice()) {
+        if (prim.isAlwaysRunActionPrim() && prim.getSourceSlice()) {
             ara_slices.insert(&slice);
         }
     }
@@ -3812,13 +3814,10 @@ CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
             if (slice.getEarliestLiveness() != ara_slice->getEarliestLiveness()) {
                 continue;
             }
-            const auto* prim = slice.getInitPrimitive();
-            if (!prim) {
-                continue;
-            }
+            const auto& prim = slice.getInitPrimitive();
             const auto dest = make_container_operand(c.toString(), slice.container_slice());
-            if (prim->isAlwaysRunActionPrim()) {
-                if (auto src_slice = prim->getSourceSlice()) {
+            if (prim.isAlwaysRunActionPrim()) {
+                if (auto src_slice = prim.getSourceSlice()) {
                     const auto src_container = src_slice->container();
                     const auto src = make_container_operand(src_container.toString(),
                                                             src_slice->container_slice());
@@ -3828,7 +3827,7 @@ CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
                     }
                     LOG5("add ARA dark container move to " << c << " from " << src);
                     solver->add_assign(dest, src);
-                } else if (prim->destAssignedToZero()) {
+                } else if (prim.destAssignedToZero()) {
                     LOG5("add dark container init from zero");
                     solver->add_assign(dest, make_ad_or_const_operand());
                 }
@@ -3883,9 +3882,9 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints(
                                           const PHV::AllocSlice& slice,
                                           const Operand& dest) {
         const auto& dark_prim = slice.getInitPrimitive();
-        if (dark_prim && !dark_prim->isAlwaysRunActionPrim()) {
-            if (dark_prim->getInitPoints().count(action)) {
-                auto src_slice = dark_prim->getSourceSlice();
+        if (!dark_prim.isAlwaysRunActionPrim()) {
+            if (dark_prim.getInitPoints().count(action)) {
+                auto src_slice = dark_prim.getSourceSlice();
                 if (src_slice) {
                     const auto src_container = src_slice->container();
                     const auto src = make_container_operand(
@@ -3896,7 +3895,7 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints(
                     }
                     LOG5("add dark container move to " << dest << " from " << src);
                     solver->add_assign(dest, src);
-                } else if (dark_prim->destAssignedToZero()) {
+                } else if (dark_prim.destAssignedToZero()) {
                     LOG5("add dark container init from zero");
                     solver->add_assign(dest, make_ad_or_const_operand());
                 }

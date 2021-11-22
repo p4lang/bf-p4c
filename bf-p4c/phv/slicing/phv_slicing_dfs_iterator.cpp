@@ -136,7 +136,7 @@ int compute_pre_alignment(const PHV::SuperCluster::SliceList& sl) {
 }
 
 // return a std::map<int, FieldSlice> that maps i to the fieldslice on the i-th bit of @p sl.
-const std::map<int, FieldSlice> make_fs_bitmap(const SuperCluster::SliceList* sl) {
+std::map<int, FieldSlice> make_fs_bitmap(const SuperCluster::SliceList* sl) {
     std::map<int, FieldSlice> rst;
     int offset = 0;
     for (const auto& fs : *sl) {

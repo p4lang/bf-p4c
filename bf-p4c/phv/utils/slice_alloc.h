@@ -16,6 +16,89 @@ class DarkInitPrimitive;
 class DarkInitEntry;
 class Field;
 class AllocContext;
+class AllocSlice;
+
+class DarkInitPrimitive {
+ private:
+     bool assignZeroToDestination;
+     bool nop;
+     std::unique_ptr<AllocSlice> sourceSlice;
+     bool alwaysInitInLastMAUStage;
+     bool alwaysRunActionPrim;
+     ActionSet actions;
+     ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
+     ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
+     std::vector<PHV::DarkInitEntry*> priorPrims;  // Hold prior ARA prims
+     std::vector<PHV::DarkInitEntry*> postPrims;  // Hold post ARA prims
+
+ public:
+     DarkInitPrimitive(void)
+         : assignZeroToDestination(false), nop(false), sourceSlice(),
+         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
+
+    explicit DarkInitPrimitive(ActionSet initPoints);
+    explicit DarkInitPrimitive(PHV::AllocSlice& src);
+    explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints);
+    explicit DarkInitPrimitive(const DarkInitPrimitive& other);
+    DarkInitPrimitive& operator=(const DarkInitPrimitive& other);
+
+    bool operator==(const PHV::DarkInitPrimitive& other) const;
+
+     bool isEmpty() const {
+         if (!nop && !sourceSlice && !assignZeroToDestination)
+             return true;
+         return false;
+     }
+
+     void addSource(const AllocSlice& sl);
+
+     void setNop() {
+         nop = true;
+         sourceSlice.reset();
+         assignZeroToDestination = false;
+     }
+
+     void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true)  {
+         if (!append) {
+             priorUnits.clear();
+         }
+         priorUnits.insert(units.begin(), units.end());
+     }
+     void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+         if (!append) {
+             postUnits.clear();
+         }
+         postUnits.insert(units.begin(), units.end());
+     }
+
+     void addPriorPrims(PHV::DarkInitEntry* prims, bool append = true) {
+         if (!append) {
+             priorPrims.clear();
+         }
+         priorPrims.push_back(prims);
+     }
+     void addPostPrims(PHV::DarkInitEntry* prims, bool append = true) {
+         if (!append) {
+             postPrims.clear();
+         }
+         postPrims.push_back(prims);
+     }
+
+     void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = alwaysRunActionPrim = true; }
+     void setAlwaysRunActionPrim() { alwaysRunActionPrim = true; }
+     bool isNOP() const { return nop; }
+     bool destAssignedToZero() const { return assignZeroToDestination; }
+     bool mustInitInLastMAUStage() const { return alwaysInitInLastMAUStage; }
+     bool isAlwaysRunActionPrim() const { return alwaysRunActionPrim; }
+     AllocSlice* getSourceSlice() const {
+         return sourceSlice.get();
+     }
+     const ActionSet& getInitPoints() const { return actions; }
+     const ordered_set<const IR::BFN::Unit*>& getARApriorUnits() const { return priorUnits; }
+     const ordered_set<const IR::BFN::Unit*>& getARApostUnits() const { return postUnits; }
+     const std::vector<PHV::DarkInitEntry*> getARApriorPrims() const { return priorPrims; }
+     const std::vector<PHV::DarkInitEntry*> getARApostPrims() const { return postPrims; }
+};
 
 class AllocSlice {
     const PHV::Field* field_i;
@@ -26,7 +109,7 @@ class AllocSlice {
     ActionSet init_points_i;
     PHV::StageAndAccess min_stage_i;
     PHV::StageAndAccess max_stage_i;
-    std::unique_ptr<DarkInitPrimitive> init_i;
+    DarkInitPrimitive init_i;
 
     // true if the alloc is copied from an alias destination alloc that requires an always run
     // in the final stage.
@@ -71,8 +154,8 @@ class AllocSlice {
     le_bitrange field_slice() const         { return StartLen(field_bit_lo_i, width_i); }
     le_bitrange container_slice() const     { return StartLen(container_bit_lo_i, width_i); }
     int width() const                       { return width_i; }
-    const DarkInitPrimitive* getInitPrimitive() const { return init_i.get(); }
-    DarkInitPrimitive* getInitPrimitive() { return init_i.get(); }
+    const DarkInitPrimitive& getInitPrimitive() const { return init_i; }
+    DarkInitPrimitive& getInitPrimitive() { return init_i; }
     const PHV::StageAndAccess& getEarliestLiveness() const { return min_stage_i; }
     const PHV::StageAndAccess& getLatestLiveness() const { return max_stage_i; }
 
@@ -143,124 +226,6 @@ class AllocSlice {
     int deparser_stage_idx() const;
 };
 
-class DarkInitPrimitive {
- private:
-     bool assignZeroToDestination;
-     bool nop;
-     boost::optional<AllocSlice> sourceSlice;
-     bool alwaysInitInLastMAUStage;
-     bool alwaysRunActionPrim;
-     ActionSet actions;
-     ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
-     ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
-     std::vector<PHV::DarkInitEntry*> priorPrims;  // Hold prior ARA prims
-     std::vector<PHV::DarkInitEntry*> postPrims;  // Hold post ARA prims
-
- public:
-     DarkInitPrimitive(void)
-         : assignZeroToDestination(false), nop(false), sourceSlice(boost::none),
-         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
-
-     explicit DarkInitPrimitive(ActionSet initPoints)
-         : assignZeroToDestination(true), nop(false), sourceSlice(boost::none),
-         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
-
-     explicit DarkInitPrimitive(PHV::AllocSlice& src)
-         : assignZeroToDestination(false), nop(false), sourceSlice(src),
-         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
-
-    explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
-         : assignZeroToDestination(false), nop(false), sourceSlice(src),
-         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
-
-     explicit DarkInitPrimitive(const DarkInitPrimitive& other)
-         : assignZeroToDestination(other.assignZeroToDestination),
-         nop(other.nop),
-         sourceSlice(other.getSourceSlice()),
-         alwaysInitInLastMAUStage(other.alwaysInitInLastMAUStage),
-         alwaysRunActionPrim(other.alwaysRunActionPrim),
-         actions(other.actions),
-         priorUnits(other.priorUnits),
-         postUnits(other.postUnits),
-         priorPrims(other.priorPrims),
-         postPrims(other.postPrims) { }
-
-    bool operator==(const PHV::DarkInitPrimitive& other) const {
-        bool zero2dest = (assignZeroToDestination == other.assignZeroToDestination);
-        bool isNop = (nop == other.nop);
-        bool srcSlc = false;
-        if (!sourceSlice && !other.sourceSlice)
-            srcSlc = true;
-        if (sourceSlice && other.sourceSlice)
-            srcSlc = (sourceSlice == other.sourceSlice);
-        bool initLstStg  = (alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage);
-        bool araPrim = (alwaysRunActionPrim == other.alwaysRunActionPrim);
-        bool acts = (actions == other.actions);
-        bool rslt = zero2dest && isNop && srcSlc && initLstStg && araPrim && acts;
-
-        LOG7("\t op==" << rslt << " <-- " << zero2dest << " " << isNop << " " << srcSlc <<
-             " " << initLstStg << " " << araPrim << " " << acts);
-
-        return rslt;
-     }
-
-     bool isEmpty() const {
-         if (!nop && sourceSlice == boost::none && !assignZeroToDestination)
-             return true;
-         return false;
-     }
-
-     void addSource(AllocSlice sl) {
-         assignZeroToDestination = false;
-         sourceSlice = sl;
-     }
-
-     void setNop() {
-         nop = true;
-         sourceSlice = boost::none;
-         assignZeroToDestination = false;
-     }
-
-     void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true)  {
-         if (!append) {
-             priorUnits.clear();
-         }
-         priorUnits.insert(units.begin(), units.end());
-     }
-     void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
-         if (!append) {
-             postUnits.clear();
-         }
-         postUnits.insert(units.begin(), units.end());
-     }
-
-     void addPriorPrims(PHV::DarkInitEntry* prims, bool append = true) {
-         if (!append) {
-             priorPrims.clear();
-         }
-         priorPrims.push_back(prims);
-     }
-     void addPostPrims(PHV::DarkInitEntry* prims, bool append = true) {
-         if (!append) {
-             postPrims.clear();
-         }
-         postPrims.push_back(prims);
-     }
-
-     void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = alwaysRunActionPrim = true; }
-     void setAlwaysRunActionPrim() { alwaysRunActionPrim = true; }
-     bool isNOP() const { return nop; }
-     bool destAssignedToZero() const { return assignZeroToDestination; }
-     bool mustInitInLastMAUStage() const { return alwaysInitInLastMAUStage; }
-     bool isAlwaysRunActionPrim() const { return alwaysRunActionPrim; }
-     boost::optional<AllocSlice> getSourceSlice() const { return sourceSlice; }
-     const ActionSet& getInitPoints() const { return actions; }
-     const ordered_set<const IR::BFN::Unit*>& getARApriorUnits() const { return priorUnits; }
-     const ordered_set<const IR::BFN::Unit*>& getARApostUnits() const { return postUnits; }
-     const std::vector<PHV::DarkInitEntry*> getARApriorPrims() const { return priorPrims; }
-     const std::vector<PHV::DarkInitEntry*> getARApostPrims() const { return postPrims; }
-};
-
 class DarkInitEntry {
  private:
      AllocSlice destinationSlice;
@@ -284,7 +249,7 @@ class DarkInitEntry {
      bool isNOP() const { return initInfo.isNOP(); }
      bool destAssignedToZero() const { return initInfo.destAssignedToZero(); }
      bool mustInitInLastMAUStage() const { return initInfo.mustInitInLastMAUStage(); }
-     boost::optional<AllocSlice> getSourceSlice() const { return initInfo.getSourceSlice(); }
+     AllocSlice* getSourceSlice() const { return initInfo.getSourceSlice(); }
 
      void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
          initInfo.addPriorUnits(units, append);

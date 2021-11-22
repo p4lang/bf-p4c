@@ -2630,7 +2630,7 @@ bool CoreAllocation::generateNewAllocSlices(
         dest.setInitPrimitive(&(entry.getInitPrimitive()));
 
         // Also update the lifetime of prior/post prims related to the source slice
-        for (auto *prim : dest.getInitPrimitive()->getARApostPrims()) {
+        for (auto *prim : dest.getInitPrimitive().getARApostPrims()) {
             bool sameEarly = (dest.getEarliestLiveness() ==
                               prim->getDestinationSlice().getEarliestLiveness());
             bool sameLate  = (dest.getLatestLiveness() ==
@@ -2651,7 +2651,7 @@ bool CoreAllocation::generateNewAllocSlices(
             }
         }
 
-        for (auto *prim : dest.getInitPrimitive()->getARApriorPrims()) {
+        for (auto *prim : dest.getInitPrimitive().getARApriorPrims()) {
             bool sameEarly = (dest.getEarliestLiveness() ==
                               prim->getDestinationSlice().getEarliestLiveness());
             bool sameLate  = (dest.getLatestLiveness() ==
@@ -2691,14 +2691,12 @@ bool CoreAllocation::generateNewAllocSlices(
         // srcCntr is not set for zeroInits and NOPs
         PHV::Container srcCntr = PHV::Container();
 
-        BUG_CHECK(newSlice.getInitPrimitive(), "DarkInitPrimitive does not exist?");
-
-        if (newSlice.getInitPrimitive()->getSourceSlice())
-            srcCntr = newSlice.getInitPrimitive()->getSourceSlice()->container();
+        if (newSlice.getInitPrimitive().getSourceSlice())
+            srcCntr = newSlice.getInitPrimitive().getSourceSlice()->container();
 
         le_bitrange cBits = newSlice.container_slice();
 
-        if (newSlice.container() == dstCntr && !newSlice.getInitPrimitive()->isNOP()) {
+        if (newSlice.container() == dstCntr && !newSlice.getInitPrimitive().isNOP()) {
             perStageSources2Ranges[initStg][srcCntr].setrange(cBits.lo, cBits.size());
 
             if (srcCntr == PHV::Container()) {
@@ -2737,13 +2735,13 @@ bool CoreAllocation::generateNewAllocSlices(
                 bool hasPrim = mls.hasInitPrimitive();
                 LOG_DEBUG5(TAB2 "Checking slice " << mls << " for common init stages (has dark "
                            "primitive :" << hasPrim << ")");
-                if (hasPrim && mls.getInitPrimitive()->getSourceSlice()) {
-                    LOG_DEBUG6(TAB3 "with source " << mls.getInitPrimitive()->getSourceSlice());
+                if (hasPrim && mls.getInitPrimitive().getSourceSlice()) {
+                    LOG_DEBUG6(TAB3 "with source " << mls.getInitPrimitive().getSourceSlice());
                 } else if (hasPrim) {
-                    LOG_DEBUG6(TAB3 "isNop: " << mls.getInitPrimitive()->isNOP() <<
-                               " zeroInit: " << mls.getInitPrimitive()->destAssignedToZero());
+                    LOG_DEBUG6(TAB3 "isNop: " << mls.getInitPrimitive().isNOP() <<
+                               " zeroInit: " << mls.getInitPrimitive().destAssignedToZero());
                 } else {
-                    LOG_DEBUG6(TAB3 "empty: " << mls.getInitPrimitive()->isEmpty());
+                    LOG_DEBUG6(TAB3 "empty: " << mls.getInitPrimitive().isEmpty());
                 }
 
                 // Account for bits from source container
@@ -2751,8 +2749,8 @@ bool CoreAllocation::generateNewAllocSlices(
                     mls.getEarliestLiveness().second.isWrite() &&
                     newSlice.getEarliestLiveness().second.isWrite() &&
                     (mls.getEarliestLiveness().first == initStg)) {
-                    if (mls.getInitPrimitive()->getSourceSlice()) {
-                        mlsCntr = mls.getInitPrimitive()->getSourceSlice()->container();
+                    if (mls.getInitPrimitive().getSourceSlice()) {
+                        mlsCntr = mls.getInitPrimitive().getSourceSlice()->container();
                         LOG_DEBUG6(TAB2 "A. mls container: " << mlsCntr);
                         LOG_DEBUG6(TAB3 "Primitive: " << mls.getInitPrimitive());
                     }
@@ -2762,7 +2760,7 @@ bool CoreAllocation::generateNewAllocSlices(
                     LOG_DEBUG6(TAB2 "B. mls container: " << mlsCntr);
                 }
 
-                if (!(hasPrim && mls.getInitPrimitive()->isNOP())) {
+                if (!(hasPrim && mls.getInitPrimitive().isNOP())) {
                     // Update per stage sources unless dark prim is NOP
                     perStageSources2Ranges[initStg][mlsCntr].setrange(mlsBits.lo,
                                                                   mlsBits.size());
@@ -2786,8 +2784,8 @@ bool CoreAllocation::generateNewAllocSlices(
         // Verify the number of sources in initialization actions
         ordered_set<const IR::MAU::Action*> initActions;
         initActions.insert(newSlice.getInitPoints().begin(), newSlice.getInitPoints().end());
-        initActions.insert(newSlice.getInitPrimitive()->getInitPoints().begin(),
-                           newSlice.getInitPrimitive()->getInitPoints().end());
+        initActions.insert(newSlice.getInitPrimitive().getInitPoints().begin(),
+                           newSlice.getInitPrimitive().getInitPoints().end());
 
         for (auto* act : initActions) {
             auto action_sources =
@@ -3285,7 +3283,7 @@ void merge_slices(
             last->container_slice().lo == slice.container_slice().hi + 1 &&
             last->getEarliestLiveness() == slice.getEarliestLiveness() &&
             last->getLatestLiveness() == slice.getLatestLiveness() &&
-            *last->getInitPrimitive() == *slice.getInitPrimitive()) {
+            last->getInitPrimitive() == slice.getInitPrimitive()) {
             int new_width = last->width() + slice.width();
             ordered_set<const IR::MAU::Action*> new_init_points;
             if (last->hasMetaInit())
@@ -3303,7 +3301,7 @@ void merge_slices(
             new_slice.setLiveness(slice.getEarliestLiveness(), slice.getLatestLiveness());
             new_slice.setIsPhysicalStageBased(slice.isPhysicalStageBased());
             if (last->hasMetaInit() || slice.hasMetaInit()) new_slice.setMetaInit();
-            new_slice.setInitPrimitive(slice.getInitPrimitive());
+            new_slice.setInitPrimitive(&slice.getInitPrimitive());
             BUG_CHECK(new_slice.field_slice().contains(last->field_slice()),
                         "Merged alloc slice %1% does not contain hi slice %2%",
                         cstring::to_cstring(new_slice), cstring::to_cstring(*last));

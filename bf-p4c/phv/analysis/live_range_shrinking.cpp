@@ -680,10 +680,10 @@ FindInitializationNode::findInitializationNodes(
             PHV::Allocation::ActionSet darkInitPoints;
             if (slice.hasInitPrimitive()) {
                 LOG_DEBUG5(TAB2 "Slice " << slice << " has darkInitPrim with "
-                           << slice.getInitPrimitive()->getInitPoints().size() << " actions");
+                           << slice.getInitPrimitive().getInitPoints().size() << " actions");
 
-                darkInitPoints.insert(slice.getInitPrimitive()->getInitPoints().begin(),
-                                      slice.getInitPrimitive()->getInitPoints().end());
+                darkInitPoints.insert(slice.getInitPrimitive().getInitPoints().begin(),
+                                      slice.getInitPrimitive().getInitPoints().end());
             }
 
             if (!metaInitPoints && !darkInitPoints.size()) continue;

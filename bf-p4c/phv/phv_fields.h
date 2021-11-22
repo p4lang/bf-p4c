@@ -853,14 +853,6 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     boost::optional<FieldAlignment> alignment_i = boost::none;
     nw_bitrange validContainerRange_i = ZeroToMax();
 
-    /// Marks the valid starting bit positions (little Endian) for this field.
-    /// Valid bit positions may vary depending on container size.
-
-    // TODO(cole): This is currently only used for SALU operands.  However,
-    // it's general enough to support bit-in-byte alignment requirements
-    // (alignment_i), valid container range requirements, and deparsed_to_tm.
-    std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
-
  public:
     FieldSlice() : field_i(nullptr), range_i(StartLen(0, 0)) { }
 
@@ -941,11 +933,6 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
 
     /// @returns true if this field slice contains the entirety of its field.
     bool is_whole_field() const { return range_i == StartLen(0, field_i->size); }
-
-    /// Sets the valid starting bit positions (little Endian) for this field.
-    /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
-    /// significant bit of this field must start at bit 0 in 8b containers.
-    void setStartBits(PHV::Size size, bitvec startPositions);
 
     /// @returns the bit positions (little Endian) at which the least significant
     /// bit of this field may be placed.

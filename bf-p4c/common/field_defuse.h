@@ -51,7 +51,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// Maps uses to defs and vice versa.
     ordered_map<locpair, LocPairSet>  &uses, &defs;
-    ordered_map<locpair, bool> ixbar_refs;
+    ordered_map<locpair, bool> &ixbar_refs;
 
     /// All uses and all defs for each field.
     ordered_map<int, LocPairSet>      &located_uses, &located_defs;
@@ -109,6 +109,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     : phv(p), conflict(*new SymBitMatrix),
       uses(*new std::remove_reference<decltype(uses)>::type),
       defs(*new std::remove_reference<decltype(defs)>::type),
+      ixbar_refs(*new std::remove_reference<decltype(ixbar_refs)>::type),
       located_uses(*new std::remove_reference<decltype(located_uses)>::type),
       located_defs(*new std::remove_reference<decltype(located_defs)>::type),
       output_deps(*new std::remove_reference<decltype(output_deps)>::type),

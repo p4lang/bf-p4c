@@ -129,8 +129,7 @@ BitVec BitVec::bin_op(const BitVec& other) const {
     size_check(other);
     std::vector<const Expr*> rst(bits.size());
     for (size_t i = 0; i < bits.size(); i++) {
-        const Expr* new_bit = new T(bits[i], other.bits[i]);
-        rst[i] = new_bit->eval();
+        rst[i] = T(bits[i], other.bits[i]).eval();
     }
     return BitVec{rst};
 }
@@ -172,8 +171,7 @@ BitVec BitVec::bv_or(const BitVec& other) const { return bin_op<Or>(other); }
 BitVec BitVec::bv_neg() const {
     std::vector<const Expr*> rst(bits.size());
     for (size_t i = 0; i < bits.size(); i++) {
-        const Expr* new_bit = new Neg(bits[i]);
-        rst[i] = new_bit->eval();
+        rst[i] = Neg(bits[i]).eval();
     }
     return BitVec{rst};
 }

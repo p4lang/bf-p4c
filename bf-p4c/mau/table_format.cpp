@@ -92,7 +92,7 @@ bitvec TableFormat::Use::no_overhead_atcam_result_bus_words() const {
 bitvec TableFormat::Use::result_bus_words() const {
     bitvec rv;
     bitvec overhead_mask;
-    for (auto match_group : match_groups) {
+    for (const auto& match_group : match_groups) {
         overhead_mask |= match_group.overhead_mask();
     }
 

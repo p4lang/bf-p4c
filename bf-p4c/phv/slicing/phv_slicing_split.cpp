@@ -401,7 +401,7 @@ boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
             if (pair.first->size()) slice_lists.insert(pair.first);
             clusters.insert(pair.second);
         }
-        rv.push_back(new PHV::SuperCluster(clusters, slice_lists));
+        rv.push_back(new PHV::SuperCluster(std::move(clusters), std::move(slice_lists)));
     }
 
     // 4. merge clusters by constraints.

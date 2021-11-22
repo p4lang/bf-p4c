@@ -158,9 +158,9 @@ Operand make_container_operand(ContainerID c, le_bitrange r) {
 
 Result ActionSolverBase::try_container_set(const ContainerID dest,
                                            const RotateClassifiedAssigns& offset_assigns) const {
-    std::stringstream ss;
     // source must be aligned.
     if (offset_assigns.size() != 1 || !offset_assigns.count(0)) {
+        std::stringstream ss;
         ss << "destination " << dest
            << " has too many unaligned sources: " << offset_assigns.size();
         return Result(Error(ErrorCode::too_many_unaligned_sources, ss.str()));
@@ -168,6 +168,7 @@ Result ActionSolverBase::try_container_set(const ContainerID dest,
     // only one source.
     const auto& source_classified = classify_by_sources(offset_assigns.at(0));
     if (source_classified.n_sources() > 1) {
+        std::stringstream ss;
         ss << "destination " << dest << " has too many sources: " << source_classified.n_sources();
         return Result(Error(ErrorCode::too_many_container_sources, ss.str()));
     }
@@ -176,6 +177,7 @@ Result ActionSolverBase::try_container_set(const ContainerID dest,
     auto invalid_write_bit =
         invalid_whole_container_set(assigns, specs_i.at(dest).live, specs_i.at(dest).size);
     if (invalid_write_bit) {
+        std::stringstream ss;
         ss << "whole container write on destination " << dest
            << " will corrupt bit : " << *invalid_write_bit;
         return Result(Error(ErrorCode::invalid_whole_container_write, ss.str()));

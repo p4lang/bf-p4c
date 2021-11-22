@@ -24,7 +24,7 @@ void AddAliasAllocation::addAllocation(
         new_slice.setIsPhysicalStageBased(alloc.isPhysicalStageBased());
         // Workaround to ensure only one of the aliased fields has an always run instruction in the
         // last stage.
-        new_slice.setShadowAlwaysRun(alloc.getInitPrimitive()->mustInitInLastMAUStage());
+        new_slice.setShadowAlwaysRun(alloc.getInitPrimitive().mustInitInLastMAUStage());
         LOG5("Adding allocation slice for aliased field: " << aliasSource << " " << new_slice);
         aliasSource->add_alloc(new_slice);
         phv.add_container_to_field_entry(alloc.container(), aliasSource);

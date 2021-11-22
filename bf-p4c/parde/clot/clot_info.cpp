@@ -811,7 +811,7 @@ ClotInfo::slice_clots(const PHV::FieldSlice* slice) const {
     auto result = new std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>();
     auto field = slice->field();
     for (auto c : clots_) {
-        auto fields_to_slices = c->fields_to_slices();
+        const auto& fields_to_slices = c->fields_to_slices();
         if (!fields_to_slices.count(field)) continue;
 
         auto clot_slice = fields_to_slices.at(field);
@@ -830,7 +830,7 @@ Clot* ClotInfo::whole_field_clot(const PHV::Field* field) const {
 }
 
 bool ClotInfo::clot_covers_slice(const Clot* clot, const PHV::FieldSlice* slice) const {
-    auto fields_to_slices = clot->fields_to_slices();
+    const auto& fields_to_slices = clot->fields_to_slices();
     auto field = slice->field();
     if (!fields_to_slices.count(field)) return false;
 

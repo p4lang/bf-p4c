@@ -167,11 +167,11 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         if (usedInDeparser) {
             LOG5("\t\t  used in deparser");
             LOG5("\t\t  Alloc: " << alloc);
-            LOG5("\t\t  empty: " << alloc.getInitPrimitive()->isEmpty() << ", always init: " <<
-                 alloc.getInitPrimitive()->mustInitInLastMAUStage() << ", shadow always init: " <<
+            LOG5("\t\t  empty: " << alloc.getInitPrimitive().isEmpty() << ", always init: " <<
+                 alloc.getInitPrimitive().mustInitInLastMAUStage() << ", shadow always init: " <<
                  alloc.getShadowAlwaysRun());
-            if ((!alloc.getInitPrimitive()->isEmpty() &&
-                 (alloc.getInitPrimitive()->mustInitInLastMAUStage())) ||
+            if ((!alloc.getInitPrimitive().isEmpty() &&
+                 (alloc.getInitPrimitive().mustInitInLastMAUStage())) ||
                 alloc.getShadowAlwaysRun()) {
                 alwaysRunLastStageSlice = true;
                 LOG4("\t\tDetected slice for always run write-back from dark prior to deparsing");

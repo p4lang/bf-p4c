@@ -25,7 +25,6 @@ PHV::AllocSlice::AllocSlice(
               cstring::to_cstring(f), slice_range.lo, slice_range.hi, f->size);
     min_stage_i = std::make_pair(-1, PHV::FieldUse(PHV::FieldUse::READ));
     max_stage_i = std::make_pair(PhvInfo::getDeparserStage(), PHV::FieldUse(PHV::FieldUse::WRITE));
-    init_i.reset(new DarkInitPrimitive());
 }
 
 PHV::AllocSlice::AllocSlice(
@@ -67,13 +66,13 @@ PHV::AllocSlice& PHV::AllocSlice::operator=(const AllocSlice& other) {
     has_meta_init_i = other.hasMetaInit();
     is_physical_stage_based_i = other.is_physical_stage_based_i;
     physical_deparser_stage_i = other.physical_deparser_stage_i;
-    init_i.reset(new DarkInitPrimitive(*(other.getInitPrimitive())));
+    init_i = other.init_i;
     this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
     return *this;
 }
 
 void PHV::AllocSlice::setInitPrimitive(DarkInitPrimitive* prim) {
-    init_i.reset(new DarkInitPrimitive(*prim));
+    init_i = *prim;
 }
 
 bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
@@ -159,8 +158,7 @@ bool PHV::AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
 }
 
 bool PHV::AllocSlice::hasInitPrimitive() const {
-    if (!init_i) return false;
-    if (init_i->isEmpty()) return false;
+    if (init_i.isEmpty()) return false;
     return true;
 }
 
@@ -229,20 +227,91 @@ int PHV::AllocSlice::deparser_stage_idx() const {
         : PhvInfo::getDeparserStage();
 }
 
+DarkInitPrimitive::DarkInitPrimitive(ActionSet initPoints)
+    : assignZeroToDestination(true), nop(false),
+    alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) {}
+
+DarkInitPrimitive::DarkInitPrimitive(PHV::AllocSlice& src)
+     : assignZeroToDestination(false), nop(false), sourceSlice(new PHV::AllocSlice(src)),
+     alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
+
+DarkInitPrimitive::DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
+     : assignZeroToDestination(false), nop(false), sourceSlice(new PHV::AllocSlice(src)),
+     alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
+
+DarkInitPrimitive::DarkInitPrimitive(const DarkInitPrimitive& other)
+     : assignZeroToDestination(other.assignZeroToDestination),
+     nop(other.nop),
+     alwaysInitInLastMAUStage(other.alwaysInitInLastMAUStage),
+     alwaysRunActionPrim(other.alwaysRunActionPrim),
+     actions(other.actions),
+     priorUnits(other.priorUnits),
+     postUnits(other.postUnits),
+     priorPrims(other.priorPrims),
+     postPrims(other.postPrims)
+{
+     if (other.getSourceSlice()) {
+        sourceSlice.reset(new PHV::AllocSlice(*other.getSourceSlice()));
+     }
+}
+
+void DarkInitPrimitive::addSource(const AllocSlice& sl) {
+    assignZeroToDestination = false;
+    sourceSlice.reset(new PHV::AllocSlice(sl));
+}
+
+bool DarkInitPrimitive::operator==(const PHV::DarkInitPrimitive& other) const {
+    bool zero2dest = (assignZeroToDestination == other.assignZeroToDestination);
+    bool isNop = (nop == other.nop);
+    bool srcSlc = false;
+    if (!sourceSlice && !other.sourceSlice)
+        srcSlc = true;
+    if (sourceSlice && other.sourceSlice)
+        srcSlc = (*sourceSlice == *other.sourceSlice);
+    bool initLstStg  = (alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage);
+    bool araPrim = (alwaysRunActionPrim == other.alwaysRunActionPrim);
+    bool acts = (actions == other.actions);
+    bool rslt = zero2dest && isNop && srcSlc && initLstStg && araPrim && acts;
+
+    LOG7("\t op==" << rslt << " <-- " << zero2dest << " " << isNop << " " << srcSlc <<
+         " " << initLstStg << " " << araPrim << " " << acts);
+
+    return rslt;
+}
+
+DarkInitPrimitive& DarkInitPrimitive::operator=(const DarkInitPrimitive& other) {
+    if (this != &other) {
+        assignZeroToDestination = other.assignZeroToDestination;
+        nop = other.nop;
+        if (other.sourceSlice) {
+            sourceSlice.reset(new AllocSlice(*other.sourceSlice));
+        } else {
+            sourceSlice.reset();
+        }
+        alwaysInitInLastMAUStage = other.alwaysInitInLastMAUStage;
+        alwaysRunActionPrim = other.alwaysRunActionPrim;
+        actions = other.actions;
+        priorUnits = other.priorUnits;
+        postUnits = other.postUnits;
+        priorPrims = other.priorPrims;
+        postPrims = other.postPrims;
+    }
+    return *this;
+}
 
 std::ostream& operator<<(std::ostream& out, const PHV::AllocSlice& slice) {
     out << slice.container() << " " << slice.container_slice() << " <-- "
         << PHV::FieldSlice(slice.field(), slice.field_slice());
     out << " live at " << (slice.isPhysicalStageBased() ? "P" : "") << "[";
     out << slice.getEarliestLiveness() << ", " << slice.getLatestLiveness() << "]";
-    if (!slice.getInitPrimitive()->isEmpty()) {
-        if (slice.getInitPrimitive()->isNOP())
+    if (!slice.getInitPrimitive().isEmpty()) {
+        if (slice.getInitPrimitive().isNOP())
             out << " { NOP }";
-        else if (slice.getInitPrimitive()->mustInitInLastMAUStage())
-            out << " { always_run; " << slice.getInitPrimitive()->getInitPoints().size()
+        else if (slice.getInitPrimitive().mustInitInLastMAUStage())
+            out << " { always_run; " << slice.getInitPrimitive().getInitPoints().size()
                 << " actions }";
-        else if (slice.getInitPrimitive()->getInitPoints().size() > 0)
-            out << " { " << slice.getInitPrimitive()->getInitPoints().size() << " actions }";
+        else if (slice.getInitPrimitive().getInitPoints().size() > 0)
+            out << " { " << slice.getInitPrimitive().getInitPoints().size() << " actions }";
     }
 
     return out;
