@@ -346,6 +346,8 @@ const IR::Expression *SplitAttachedInfo::split_type(const IR::MAU::AttachedMemor
  */
 const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, FormatType_t format_type) {
+    LOG1("Creating split action on table : " << tbl->name
+        << " for action : " << act->name << " and format type : " << format_type);
     BUG_CHECK(format_type.valid(), "invalid format_type in create_split_action");
     if (format_type.normal()) return act;
     auto att = format_type.tracking(tbl);
@@ -463,7 +465,12 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
     if (!format_type.matchThisStage())
         rv->args.clear();
 
-    // Add instructions if necessary
+    // If table match is on current stage and an attached stage is
+    // present in a later stage this means we may have to add pre-split
+    // instrucitons in addition to the attached table execution on current
+    // action
+    // E.g. for a stateful call we have to set a $index and $ena to be
+    // used in the next stage checks
     if (format_type.matchThisStage()) {
         for (unsigned i = 0U; i < att.size(); ++i) {
             if (format_type.attachedLaterStage(i)) {
@@ -472,16 +479,27 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
                 if (auto instr2 = pre_split_enable_instr(act, tbl, att.at(i)))
                     rv->action.push_back(instr2);
                 if (auto instr3 = pre_split_type_instr(act, tbl, att.at(i)))
-                    rv->action.push_back(instr3);
-            }
-        }
+                    rv->action.push_back(instr3); } }
+    } else {
+        // If a table match was in a previous stage and we have attached split
+        // across current and next stages, we need to split index and set it for
+        // the next stage.
+        for (unsigned i = 0U; i < att.size(); ++i) {
+            if (format_type.attachedThisStage(i) && format_type.attachedLaterStage(i)) {
+                auto *idx = split_index(att.at(i), tbl);
+                auto *adj_idx = new IR::MAU::StatefulCounter(idx->type, att.at(i));
+                auto *set = new IR::MAU::Instruction("set", idx, adj_idx);
+                rv->action.push_back(set); } }
     }
 
+    LOG3("Created action : " << rv);
     return rv;
 }
 
 const IR::MAU::Action *SplitAttachedInfo::get_split_action(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, FormatType_t format_type) {
+    LOG2("Getting split action on table : " << tbl->name
+        << " for action : " << act->name << " and format type : " << format_type);
     auto key = std::make_tuple(tbl->name, act->name, format_type);
     if (!cache.count(key))
         cache[key] = create_split_action(act, tbl, format_type);

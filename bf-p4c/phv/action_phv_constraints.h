@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include "ir/ir.h"
+#include "lib/safe_vector.h"
 #include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/bitrange.h"
@@ -167,6 +168,12 @@ class ActionPhvConstraints : public Inspector {
             return phv_used && phv_used->field()->id == field->id;
         }
 
+        std::string toString() const {
+            std::stringstream ss;
+            ss << *this;
+            return ss.str();
+        }
+
         explicit OperandInfo(PHV::FieldSlice slice, int id = -1)
         : unique_action_id(id), phv_used(slice) { }
 
@@ -175,6 +182,9 @@ class ActionPhvConstraints : public Inspector {
 
     friend std::ostream
     &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
+
+    friend std::ostream
+    &operator<<(std::ostream &out, const safe_vector<ActionPhvConstraints::OperandInfo>& info);
 
     class ConstraintTracker {
         const PhvInfo& phv;
@@ -1114,7 +1124,11 @@ class ActionPhvConstraints : public Inspector {
     const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 };
 
-std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
-std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src);
+std::ostream &
+operator<<(std::ostream &out, const ActionPhvConstraints::OperandInfo& info);
+std::ostream &
+operator<<(std::ostream &out, const safe_vector<ActionPhvConstraints::OperandInfo>& info);
+std::ostream &
+operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src);
 
 #endif  /* BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_ */

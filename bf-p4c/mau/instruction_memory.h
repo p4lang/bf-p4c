@@ -19,11 +19,16 @@ class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::Instruction *) override { return true; }
     bool preorder(const IR::Expression *) override;
     bitvec current_vliw;
+    bool current_has_unalloc_tempvar;
     ordered_map<const IR::MAU::Action *, bitvec> table_instrs;
+    ordered_map<const IR::MAU::Action *, bool> table_instrs_has_unalloc_tempvar;
 
  public:
     bitvec get_instr(const IR::MAU::Action *act) {
         return table_instrs[act];
+    }
+    bool instr_has_unalloc_tempvar(const IR::MAU::Action *act) {
+        return table_instrs_has_unalloc_tempvar[act];
     }
     GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
             SplitAttachedInfo &sai)
@@ -127,8 +132,8 @@ struct InstructionMemory {
         return egress_imem_slot_inuse;
     }
     bool is_noop_slot(int row, int color);
-    bool find_row_and_color(bitvec current_bv, gress_t gress,
-                                int &row, int &color, bool &first_noop);
+    bool find_row_and_color(bitvec current_bv, gress_t gress, int &row, int &color,
+                            bool &first_noop, bool has_unalloc_temp = false);
     bool shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
     bool alloc_always_run_instr(const IR::MAU::Table *tbl, Use &alloc, bitvec current_bv);
 

@@ -218,6 +218,7 @@ class AllocSlice {
 
     // @returns true if this alloc slice is referenced within @p ctxt for @p use.
     bool isReferenced(const PHV::AllocContext* ctxt, const PHV::FieldUse* use) const;
+    std::string toString() const;
 
  private:
     // helpers to get id of parde units for StageAndAccess. Depending on is_physical_live_i,

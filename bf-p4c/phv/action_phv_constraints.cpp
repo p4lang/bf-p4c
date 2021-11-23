@@ -3919,8 +3919,8 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints(
             return;
         }
         BUG_CHECK(sources.size() == 1,
-                  "slice is not fine-sliced. Multiple sources found for one fieldslice: %1%",
-                  sources.size());
+            "slice %1% is not fine-sliced. Multiple sources found for one fieldslice: %2%\n%3%",
+             slice.toString(), sources.size(), sources);
         const auto& operand = sources.front();
         LOG5("has op: " << operand);
         if (operand.ad || operand.constant) {
@@ -4018,6 +4018,14 @@ std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandI
     if (info.flags & ActionPhvConstraints::OperandInfo::WHOLE_CONTAINER_SAME_FIELD)
         out << " SAME ";
     out << "]";
+    return out;
+}
+
+std::ostream &
+operator<<(std::ostream &out, const safe_vector<ActionPhvConstraints::OperandInfo>& info) {
+    for (auto i : info) {
+        out << i << "\n";
+    }
     return out;
 }
 

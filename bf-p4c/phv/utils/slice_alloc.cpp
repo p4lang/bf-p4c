@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <boost/optional/optional_io.hpp>
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -297,6 +298,12 @@ DarkInitPrimitive& DarkInitPrimitive::operator=(const DarkInitPrimitive& other) 
         postPrims = other.postPrims;
     }
     return *this;
+}
+
+std::string PHV::AllocSlice::toString() const {
+    std::stringstream ss;
+    ss << this;
+    return ss.str();
 }
 
 std::ostream& operator<<(std::ostream& out, const PHV::AllocSlice& slice) {

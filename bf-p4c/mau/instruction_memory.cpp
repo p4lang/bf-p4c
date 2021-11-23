@@ -5,25 +5,39 @@
 #include "bf-p4c/device.h"
 
 bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *act) {
+    LOG3("GenerateVLIWInstructions for action " << act->name);
     const IR::MAU::Table *tbl = findContext<IR::MAU::Table>();
     current_vliw.clear();
+    current_has_unalloc_tempvar = false;
     // Need to capture the instructions that will be created during the splitting of the tables
     auto *act_to_visit = split_attached.get_split_action(act, tbl, format_type);
     if (act_to_visit == nullptr)
         return false;
     BUG_CHECK(act_to_visit, "Somehow have a nullptr action for %1%", format_type);
 
+    LOG4("\tSplit action found " << act_to_visit);
     for (auto instr : act_to_visit->action)
         visit(instr);
     table_instrs[act] = current_vliw;
+    table_instrs_has_unalloc_tempvar[act] = current_has_unalloc_tempvar;
+    LOG4("\t Action vliw bits :" << current_vliw);
     return false;
 }
 
 bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
+    LOG3("\tGenerateVLIWInstructions for expression " << expr);
+    if (!findContext<IR::MAU::Action>()) return false;
     if (isWrite()) {
         le_bitrange bits;
         auto field = phv.field(expr, &bits);
         BUG_CHECK(field != nullptr, "Instruction writing to a non-phv allocated object");
+        auto isTempVar = phv.isTempVar(field);
+        LOG2("\t\tExpression is write for field " << field << " tempvar "
+                << isTempVar << " alloc size " << field->alloc_size());
+        if (field->alloc_size() == 0 && isTempVar) {
+            current_has_unalloc_tempvar = true;
+            return false;
+        }
         // Mark which containers are to have non noop instructions
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
@@ -58,7 +72,11 @@ bool InstructionMemory::is_noop_slot(int row, int color) {
 }
 
 bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
-                                                int &row, int &color, bool &first_noop) {
+                                            int &row, int &color, bool &first_noop,
+                                            bool has_unalloc_temp) {
+    LOG3("Finding row and color for " << current_bv
+        << " in gress " << gress << " first noop " << first_noop
+        << " has unallocated tempvar " << has_unalloc_temp);
     auto &use = imem_use(gress);
     auto &slot_in_use = imem_slot_inuse(gress);
 
@@ -66,10 +84,20 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
     // reserved on different lines to allow driver to associate each with a
     // different action handle during entry reads from hardware.
     if (current_bv.empty() && first_noop) {
-        row = NOOP_ROW;
-        color = NOOP_COLOR;
-        first_noop = false;
-        return true;
+        // If an action has an instruction which writes to a temp variable it
+        // cannot be a noop. This condition needs to be checked since tempvars
+        // do not have a phv allocation until after table placement. Thus we
+        // have a current_bv which is empty but will eventually have a container
+        // being used to write to.
+        if (!has_unalloc_temp) {
+            row = NOOP_ROW;
+            color = NOOP_COLOR;
+            int addr = (row << ROW_ADDR_SHIFT) | (color << COLOR_ADDR_SHIFT);
+            LOG2("\tFixing row " << row << ", color " << color
+                    << ", addr " << addr << " for first noop");
+            first_noop = false;
+            return true;
+        }
     }
 
     for (int i = 0; i < IMEM_ROWS; i++) {
@@ -99,6 +127,7 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
             row = i;
             color = j;
             int addr = (row << ROW_ADDR_SHIFT) | (color << COLOR_ADDR_SHIFT);
+            LOG2("\tFixing row " << i << ", color " << j << ", addr " << addr);
             if (Device::hasAlwaysRunInstr() && Device::alwaysRunIMemAddr() == addr)
                 continue;
             return true;
@@ -196,13 +225,11 @@ bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &a
 bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
         bool gw_linked, ActionData::FormatType_t format_type, SplitAttachedInfo &sai) {
     BUG_CHECK(format_type.valid(), "invalid format type in InstructionMemory::allocate_imem");
-    // Action Profiles always have the same instructions for every table
     LOG1("Allocating instruction memory for " << tbl->name << " " << format_type);
 
-
-    if (shared_instr(tbl, alloc, gw_linked)) {
+    // Action Profiles always have the same instructions for every table
+    if (shared_instr(tbl, alloc, gw_linked))
         return true;
-    }
     gw_linked |= !format_type.matchThisStage();
 
     GenerateVLIWInstructions gen_vliw(phv, format_type, sai);
@@ -225,32 +252,33 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
     int hit_action_index = gw_linked ? 1 : 0;
     bool first_noop = true;
     for (auto action : Values(tbl->actions)) {
-        LOG2("Allocating action " << action->name);
-
         if (sai.get_split_action(action, tbl, format_type) == nullptr) {
-            LOG2("    Not generating instruction for " << action->name << " as it is not necessary "
-                 "post attached split");
+            LOG2("  Not generating instruction for " << action->name
+                    << " as it is not necessary post attached split");
             continue;
         }
 
         auto current_bv = gen_vliw.get_instr(action);
+        bool action_has_unalloc_tempvar = gen_vliw.instr_has_unalloc_tempvar(action);
         int row = -1;
         int color = -1;
-        if (!find_row_and_color(current_bv, tbl->gress, row, color, first_noop))
+        if (!find_row_and_color(current_bv, tbl->gress, row, color,
+                                first_noop, action_has_unalloc_tempvar))
             return false;
-        LOG2("Row and color " << row << " " << color);
         Use::VLIW_Instruction single_instr(current_bv, row, color);
         if (!action->miss_only()) {
             if (can_use_hitmap)
                 single_instr.mem_code = hit_action_index;
             else
                 single_instr.mem_code = single_instr.gen_addr();
-            LOG2("Mem code " << single_instr.mem_code);
             hit_action_index++;
         }
         alloc.all_instrs.emplace(action->name, single_instr);
         use[row][color] = tbl->name + "$" + action->name.originalName;
         slot_in_use[row][color] = current_bv;
+        LOG2("\tAllocated Row " << row << " color " << color
+                << " mem code " << single_instr.mem_code
+                << " for action " << use[row][color]);
     }
     return true;
 }

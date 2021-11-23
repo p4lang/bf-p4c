@@ -1654,6 +1654,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
 }
 
 bool TablePlacement::try_alloc_imem(Placed *next) {
+    LOG3("Trying to allocate imem for " << next->name);
     if (next->table->conditional_gateway_only())
         return true;
 
@@ -4200,12 +4201,6 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                 if (Device::currentDevice() == Device::TOFINO) {
                     error("splitting %s across stages not supported on Tofino", att);
                 } else {
-                    for (auto &act : Values(table_part->actions)) {
-                        if (act->stateful_call(att->name)) {
-                            if (auto *idx = self.att_info.split_index(att, tbl)) {
-                                auto *adj_idx = new IR::MAU::StatefulCounter(idx->type, att);
-                                auto *set = new IR::MAU::Instruction("set", idx, adj_idx);
-                                clone_update(act)->action.push_back(set); } } }
                     if (!ba->chain_vpn) {
                         // Need to chain the vpn to the next stage, which means we need to do
                         // the subword shift with meter_adr_shift and NOT with the hash_dist
