@@ -334,7 +334,8 @@ set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/atomic_mo
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/chksum/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/default_entry/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/deparse_zero/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/ha/*.p4"
+               # Hitless doesn't work with tofino2 (it timeouts)
+               # "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/ha/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/mirror_test/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/multicast_test/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/parse_error/*.p4"
@@ -377,13 +378,17 @@ bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/fast_reconfig/ports.json")
 bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4"
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/mirror_test/ports.json")
-bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/ha/ports.json")
+# bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
+#                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/ha/ports.json")
 bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/pvs/pvs.p4"
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/pvs/ports.json")
 
-bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
-    "--gen-hitless-ha-test-pd")
+# bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
+#     "--gen-hitless-ha-test-pd")
+file(RELATIVE_PATH ha_ha_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/ha/ha.p4)
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "extensions/p4_tests/p4-programs/programs/ha/ha.p4" ${ha_ha_path} "${testExtraArgs} -tofino2 -arch ${JBAY_P414_TEST_ARCH}" "")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4")
 
 # Add some tests as compile only (if they take too long to run or cannot be run
 # in compiler docker env due to port issues or lack of pd-16 support)
