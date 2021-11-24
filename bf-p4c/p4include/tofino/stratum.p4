@@ -33,7 +33,8 @@ parser EgressParserT<H, M, CG>(
     /// following two arguments are bridged metadata
     inout ingress_intrinsic_metadata_t ig_intr_md,
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    inout CG aux);
+    inout CG aux,
+    @optional out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
 
 control IngressT<H, M, CG>(
     inout H hdr,

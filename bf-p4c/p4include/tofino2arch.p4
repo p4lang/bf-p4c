@@ -20,7 +20,8 @@ parser EgressParserT<H, M>(
     out H hdr,
     out M eg_md,
     out egress_intrinsic_metadata_t eg_intr_md,
-    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
+    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    @optional out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
 
 control IngressT<H, M>(
     inout H hdr,

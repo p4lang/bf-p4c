@@ -2883,7 +2883,7 @@ control Ravenwood(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_int
         Peoria.Sequim.Plains = Plains;
         Peoria.Sequim.Solomon = Solomon;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Lurton") table Lurton {
+    @disable_atomic_modify(1) @name(".Lurton") table Lurton {
         actions = {
             Poneto();
         }
@@ -3694,7 +3694,7 @@ control Onamia(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         size = 512;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @name(".Slade") table Slade {
+    @disable_atomic_modify(1) @stage(17) @name(".Slade") table Slade {
         actions = {
             Stewart();
         }
@@ -3772,7 +3772,7 @@ control Chambers(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Protivin(Napanoch);
         Peoria.Masontown.Blencoe = (bit<13>)Wanamassa.Tabler[0].Malinta;
     }
-    @disable_atomic_modify(1) @name(".Haugen") table Haugen {
+    @disable_atomic_modify(1) @stage(17) @name(".Haugen") table Haugen {
         actions = {
             OjoFeliz();
             Pearcy();
@@ -4796,7 +4796,7 @@ control Harrison(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Calimesa(16w0);
         Ekwok.mcast_grp_a = Keller.get<tuple<bit<4>, bit<21>>>({ 4w0, Peoria.Belmore.Tornillo });
     }
-    @disable_atomic_modify(1) @name(".Charters") table Charters {
+    @disable_atomic_modify(1) @stage(17) @name(".Charters") table Charters {
         actions = {
             Cidra();
             MoonRun();
@@ -6339,7 +6339,7 @@ control Toano(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
     @name(".Grovetown") action Grovetown() {
         Peoria.Wesson.Daleville = Kekoskee.get<tuple<bit<2>, bit<30>>>({ Peoria.Ekron.Ackley[9:8], Peoria.Wesson.Charco[31:2] });
     }
-    @hidden @stage(0) @disable_atomic_modify(1) @name(".Suwanee") table Suwanee {
+    @hidden @disable_atomic_modify(1) @name(".Suwanee") table Suwanee {
         actions = {
             Grovetown();
         }
@@ -16072,7 +16072,7 @@ control Lilydale(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Saugatuck.drop_ctl = (bit<3>)3w3;
         Simla.count();
     }
-    @disable_atomic_modify(1) @name(".Sidnaw") table Sidnaw {
+    @disable_atomic_modify(1) @stage(19) @name(".Sidnaw") table Sidnaw {
         actions = {
             LaCenter();
             Maryville();

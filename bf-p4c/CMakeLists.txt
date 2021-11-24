@@ -154,6 +154,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/eliminate_tuples.cpp
   midend/fold_constant_hashes.cpp
   midend/desugar_varbit_extract.cpp
+  midend/initialize_mirror_io_select.cpp
   midend/move_to_egress.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
@@ -186,6 +187,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/eliminate_tuples.h
   midend/fold_constant_hashes.h
   midend/desugar_varbit_extract.h
+  midend/initialize_mirror_io_select.h
   midend/move_to_egress.h
   midend/normalize_params.h
   midend/param_binding.h
@@ -1409,6 +1411,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/initialize_mirror_io_select.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_control_flow_visitor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp

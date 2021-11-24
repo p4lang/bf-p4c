@@ -292,6 +292,7 @@ IR::BFN::TnaParser* RestoreParams::preorder(IR::BFN::TnaParser* parser) {
         add_param(tnaParams, params, "eg_md", 2);
         add_param(tnaParams, params, "eg_intr_md", 3);
         add_param(tnaParams, params, "eg_intr_md_from_prsr", 4);
+        add_param(tnaParams, params, "eg_intr_md_for_dprsr", 5);
     }
 
     return new IR::BFN::TnaParser(parser->srcInfo, parser->name,

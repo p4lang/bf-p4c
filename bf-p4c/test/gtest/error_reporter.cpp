@@ -29,15 +29,15 @@ TEST_F(ErrorReporterTest, ErrorHelperPlainFormatsCorrectly) {
 TEST_F(ErrorReporterTest, WarnigsConformToExpectedFormat) {
     // NOTE: Warnings are formatted exactly the same as errors
 
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(137): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
+    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(138): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
         tmp = tmp * (make_zero ? 16w0 : 16w1);
               ^^^
 )";
 
-    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(135): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
+    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(136): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
-)" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(135)
+)" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(136)
     action do_global_action(in bool make_zero, out bool val_undefined) {
            ^^^^^^^^^^^^^^^^
 )";
@@ -109,25 +109,25 @@ TEST_F(ErrorReporterTest, WarnigsConformToExpectedFormat) {
 }
 
 TEST_F(ErrorReporterTest, WarnigWithSuffixConformToExpectedFormat) {
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(134): [--Werror=type-error] error: return +
+    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(135): [--Werror=type-error] error: return +
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
   Cannot unify type 'bit<16>' with type 'bool'
   ---- Originating from:
-  )" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(134): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
+  )" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(135): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
                   return (ix + 1);
                           ^^^^^^
-)" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(132): [--Werror=type-error] error: cntr
+)" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(133): [--Werror=type-error] error: cntr
         Virtual() cntr = {
                   ^^^^
   ---- Actual error:
   Cannot unify type 'bool' with type 'bit<16>'
   ---- Originating from:
-  )" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(133): Method 'f' does not have the expected type 'f'
+  )" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(134): Method 'f' does not have the expected type 'f'
               bool f(in bit<16> ix) {
                    ^
-  )" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(128)
+  )" + ROOT_DIR + R"(/bf-p4c/p4include/tofino1arch.p4(129)
       abstract bit<16> f(in bit<16> ix);
                        ^
 )";

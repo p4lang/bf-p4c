@@ -2,10 +2,10 @@
 
 @pa_auto_init_metadata
 #if __TARGET_TOFINO__ > 1
-@phv_limit(B0-11, H0-3, W0-3, -D, -M, -T)
+@phv_limit(B0-12, H0-3, W0-3, -D, -M, -T)
 #endif
 
-struct metadata { 
+struct metadata {
     bit<8>      a;
     bit<8>      b;
     bit<8>      c;

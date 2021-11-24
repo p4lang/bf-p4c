@@ -517,3 +517,9 @@ p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
 )
+
+# P4C-3876 / P4C-3999
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: Expected packet was not received"
+  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+)
