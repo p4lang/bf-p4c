@@ -801,9 +801,9 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                         logical_bus.push_back('X');
                         break;
                 }
-                // Only provide VPN for the Counter and ActionData case until validated on
+                // Only provide VPN for the Counter/Meter and ActionData case until validated on
                 // the other type of logical memory type.
-                if (mem.type == Memories::Use::COUNTER)
+                if (mem.type == Memories::Use::COUNTER || mem.type == Memories::Use::METER)
                     have_vpn = true;
             }
         } else {

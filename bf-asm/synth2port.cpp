@@ -111,3 +111,16 @@ void Synth2Port::add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) 
 
     stage_tbl[alu_indexes] = home_alu.clone();
 }
+
+int Synth2Port::get_home_row_for_row(int row) const {
+    for (int home_row : home_rows) {
+        // Tofino1 have an overflow bus in the middle of the SRAM array
+        if (options.target == TOFINO)
+            return home_row;
+        else if (row / 8 == home_row / 8)
+            return home_row;
+    }
+    BUG();
+    return -1;
+}
+

@@ -4,14 +4,17 @@ template<typename REGS> void MeterTable::setup_teop_regs_2(REGS &regs, int meter
     BUG_CHECK(gress == EGRESS);
 
     auto &adrdist = regs.rams.match.adrdist;
-    // assume this stage driving teop
-    auto delay = stage->pipelength(gress) - stage->pred_cycle(gress) - 7;
-    adrdist.teop_bus_ctl[teop].teop_bus_ctl_delay = delay;
-    adrdist.teop_bus_ctl[teop].teop_bus_ctl_delay_en = 1;
-    adrdist.teop_bus_ctl[teop].teop_bus_ctl_meter_en = 1;
+    if (!teop_initialized) {
+        // assume this stage driving teop
+        auto delay = stage->pipelength(gress) - stage->pred_cycle(gress) - 7;
+        adrdist.teop_bus_ctl[teop].teop_bus_ctl_delay = delay;
+        adrdist.teop_bus_ctl[teop].teop_bus_ctl_delay_en = 1;
+        adrdist.teop_bus_ctl[teop].teop_bus_ctl_meter_en = 1;
 
-    adrdist.meter_to_teop_adr_oxbar_ctl[teop].enabled_2bit_muxctl_select = meter_group_index;
-    adrdist.meter_to_teop_adr_oxbar_ctl[teop].enabled_2bit_muxctl_enable = 1;
+        adrdist.meter_to_teop_adr_oxbar_ctl[teop].enabled_2bit_muxctl_select = meter_group_index;
+        adrdist.meter_to_teop_adr_oxbar_ctl[teop].enabled_2bit_muxctl_enable = 1;
+        teop_initialized = true;
+    }
 
     adrdist.teop_to_meter_adr_oxbar_ctl[meter_group_index].enabled_2bit_muxctl_select = teop;
     adrdist.teop_to_meter_adr_oxbar_ctl[meter_group_index].enabled_2bit_muxctl_enable = 1;
@@ -43,6 +46,68 @@ template<typename REGS> void MeterTable::setup_teop_regs_2(REGS &regs, int meter
     meter.meter_ctl_teop_en = 1;
 }
 
+template<typename REGS> void MeterTable::write_alu_vpn_range_2(REGS &regs) {
+    auto &adrdist = regs.rams.match.adrdist;
+    int minvpn, sparevpn;
+
+    // Used to validate the BFA VPN configuration
+    std::set<int> vpn_processed;
+    bitvec vpn_range;
+
+    // Get Spare VPN
+    layout_vpn_bounds(minvpn, sparevpn, false);
+
+    for (int home_row : home_rows) {
+        bool block_start = false;
+        bool block_end = false;
+        int min = 1000000;
+        int max = -1;
+        for (Layout &logical_row : layout) {
+            // Block Start with the home row and End with the Spare VPN
+            if (logical_row.row == home_row)
+                block_start = true;
+
+            if (block_start) {
+                for (auto v : logical_row.vpns) {
+                    if (v == sparevpn) {
+                        block_end = true;
+                        break;
+                    }
+                    if (vpn_processed.count(v))
+                        error(home_lineno, "Multiple instance of the VPN %d detected", v);
+                    else
+                        vpn_processed.insert(v);
+
+                    if (v < min) min = v;
+                    if (v > max) max = v;
+                }
+            }
+            if (block_end) {
+                BUG_CHECK(min != 1000000 && max != -1);
+
+                bitvec block_range(min, max - min + 1);
+                if (vpn_range.intersects(block_range))
+                    error(home_lineno, "Overlapping of VPN range detected");
+                else
+                    vpn_range |= block_range;
+
+                adrdist.mau_meter_alu_vpn_range[home_row/4].meter_vpn_base = min;
+                adrdist.mau_meter_alu_vpn_range[home_row/4].meter_vpn_limit = max;
+                adrdist.mau_meter_alu_vpn_range[home_row/4].meter_vpn_range_check_enable = 1;
+                break;
+            }
+        }
+        BUG_CHECK(block_start && block_end);
+    }
+
+    if (vpn_range != bitvec(minvpn, sparevpn - minvpn))
+        error(home_lineno, "VPN range not entirely covered");
+}
+
 template<> void MeterTable::setup_teop_regs(Target::JBay::mau_regs &regs, int meter_group_index) {
     setup_teop_regs_2(regs, meter_group_index);
+}
+
+template<> void MeterTable::write_alu_vpn_range(Target::JBay::mau_regs &regs) {
+    write_alu_vpn_range_2(regs);
 }

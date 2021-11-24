@@ -51,6 +51,9 @@ struct Memories : public ::Memories {
     static constexpr int MATCH_CENTRAL_ROW = 4;
     static constexpr int MAX_STATS_ROW_PER_ALU = 3;
     static constexpr int MAX_STATS_RAM_PER_ALU = MAPRAM_COLUMNS * MAX_STATS_ROW_PER_ALU;
+    static constexpr int MAX_METERS_ROW_PER_ALU = 4;
+    static constexpr int MAX_METERS_RAM_PER_ALU = MAPRAM_COLUMNS * MAX_METERS_ROW_PER_ALU;
+    static constexpr int MAX_METERS_COLOR_MAPRAM_PER_ALU = 5;  // round up of 18 / 4
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 

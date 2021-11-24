@@ -1655,6 +1655,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     std::set<int, std::greater<int>> home_rows;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const override;
 public:
+    int get_home_row_for_row(int row) const;
     void add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) const;
     template<class REGS> void write_regs_vt(REGS &regs);
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
@@ -1718,6 +1719,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     int red_value = 3;
     int profile = 0;
     int teop = -1;
+    bool teop_initialized = false;
     int bytecount_adjust = 0;
     enum { NONE = 0, STANDARD = 1, LPF = 2, RED = 3 } type = NONE;
     enum { NONE_ = 0, PACKETS = 1, BYTES = 2 }        count = NONE_;
@@ -1731,9 +1733,13 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
                                 int bus, const std::vector<Call::Arg> &args), override; )
 
     template<class REGS> void setup_teop_regs(REGS &regs, int meter_group_index);
+    template<class REGS> void write_alu_vpn_range(REGS &regs);
+    template<class REGS> void write_regs_home_row(REGS &regs, unsigned row);
+    template<class REGS> void write_mapram_color_regs(REGS &regs, bool &push_on_overflow);
 
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     template<class REGS> void setup_teop_regs_2(REGS &regs, int stats_group_index);
+    template<class REGS> void write_alu_vpn_range_2(REGS &regs);
 #endif  /* HAVE_JBAY || HAVE_CLOUDBREAK */
 
     int                 sweep_interval = 2;

@@ -2076,8 +2076,6 @@ void Memories::swbox_bus_stateful_alus() {
 /* Calculates the necessary size and requirements for any meter and counter tables within
    the stage */
 void Memories::swbox_bus_meters_counters() {
-    int vpn_spare = 0;
-
     for (auto *ta : stats_tables) {
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
@@ -2086,6 +2084,7 @@ void Memories::swbox_bus_meters_counters() {
                 continue;
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(stats)) {
+                int vpn_spare = 0;
                 int per_row = CounterPerWord(stats);
                 int entries = stats->direct ? ta->calc_entries_per_uid[lt_entry]
                                             : ta->attached_entries.at(stats).entries;
@@ -2128,10 +2127,44 @@ void Memories::swbox_bus_meters_counters() {
                 continue;
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(meter)) {
+                int vpn_spare = 0;
                 int entries = meter->direct ? ta->calc_entries_per_uid[lt_entry]
                                             : ta->attached_entries.at(meter).entries;
                 if (entries == 0) continue;
                 int depth = mems_needed(entries, SRAM_DEPTH, 1, true);
+                int max_half_ram_depth = MAX_METERS_RAM_PER_ALU;
+                if (meter->color_output())
+                    max_half_ram_depth = MAX_METERS_RAM_PER_ALU - MAX_METERS_COLOR_MAPRAM_PER_ALU;
+                // JBay has no way to support a single meter SRAM group larger than 4 rows.
+                // Splitting it in 2 SRAM Group using one ALU each can provide up to 8 rows
+                // of indirect meter to match Tofino capability. The Map RAMs is the gating factor
+                // if the meter have to output color.
+                if ((Device::isMemoryCoreSplit()) && (depth > max_half_ram_depth) &&
+                    !meter->direct) {
+                    auto *meter_group = new SRAM_group(ta, max_half_ram_depth, 0,
+                                                       SRAM_group::METER);
+                    meter_group->attached = meter;
+                    meter_group->logical_table = u_id.logical_table;
+                    meter_group->vpn_offset = depth - max_half_ram_depth;
+
+                    if (meter->color_output()) {
+                        meter_group->cm.needed = MAX_METERS_COLOR_MAPRAM_PER_ALU;
+                        if (meter->mapram_possible(IR::MAU::ColorMapramAddress::IDLETIME))
+                            meter_group->cm.cma = IR::MAU::ColorMapramAddress::IDLETIME;
+                        else if (meter->mapram_possible(IR::MAU::ColorMapramAddress::STATS))
+                            meter_group->cm.cma = IR::MAU::ColorMapramAddress::STATS;
+                        else
+                            BUG("The color mapram address scheme does not make sense");
+                    } else {
+                        meter_group->requires_ab = true;
+                    }
+
+                    // The same spare VPN value would be used for both spare bank.
+                    vpn_spare = meter_group->vpn_spare = depth - 1;
+                    synth_bus_users.insert(meter_group);
+                    depth -= ((max_half_ram_depth) - 1);
+                    entries -= (max_half_ram_depth * SRAM_DEPTH);
+                }
 
                 auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
                 meter_group->attached = meter;
@@ -2148,6 +2181,9 @@ void Memories::swbox_bus_meters_counters() {
                 } else {
                     meter_group->requires_ab = true;
                 }
+                if (vpn_spare)
+                    meter_group->vpn_spare = vpn_spare;
+
                 synth_bus_users.insert(meter_group);
             }
         }

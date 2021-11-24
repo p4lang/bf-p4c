@@ -314,6 +314,7 @@ template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {
         write_alu_vpn_range(regs);
 
     BUG_CHECK(stats_groups.size() == home_rows.size());
+    bool first_stats_group = true;
     for (int &idx : stats_groups) {
         auto &movereg_stats_ctl = adrdist.movereg_stats_ctl[idx];
         for (MatchTable *m : match_tables) {
@@ -332,8 +333,11 @@ template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {
                 if (m->is_ternary())
                     movereg_stats_ctl.movereg_stats_ctl_tcam = 1; }
             movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
-            adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
-                .set_subfield(4+idx, 3*(m->logical_id%8U), 3);
+            // The first ALU will drive this xbar register
+            if (first_stats_group) {
+                adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
+                    .set_subfield(4+idx, 3*(m->logical_id%8U), 3);
+            }
             adrdist.mau_ad_stats_virt_lt[idx] |= 1U << m->logical_id; }
         movereg_stats_ctl.movereg_stats_ctl_size = counter_size[format->groups()];
         movereg_stats_ctl.movereg_stats_ctl_direct = direct;
@@ -356,6 +360,7 @@ template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {
         if (push_on_overflow) {
             adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
             adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }
+        first_stats_group = false;
     }
 }
 
