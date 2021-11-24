@@ -167,7 +167,13 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
                     out << MauAsmOutput::find_attached_name(tbl, mtr) << " color";
                     break;
                 }
-            } else if (source_is_adt || source_is_immed) {
+            } else if (source_is_immed) {
+                // FIXME -- need to know where in the immediate to source value is, but]
+                // that information does not appear to be stored anywhere?
+                out << "immediate(0.." << ((hi-lo)*8 + 7) << ")";
+
+            } else if (source_is_adt) {
+                // FIXME -- this is probably wrong for flatrock
                 out << format.get_format_name(rs.location.type, rs.source, rs.byte_offset,
                                               &slot_bits);
             } else if (source_is_meter) {

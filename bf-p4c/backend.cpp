@@ -172,6 +172,12 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
         new AdjustByteCountSetup,
+#if HAVE_FLATROCK
+        // FIXME -- Flatrock *could* have separate allocations for ingress and egress, but
+        // the same containers can be used across both too.  Since there's no ingress deparser
+        // or egress parser, DefUse needs a single name for fields across both ingress and egress
+        Device::currentDevice() == Device::FLATROCK ? nullptr :
+#endif
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
@@ -194,8 +200,11 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-        Device::hasImplictPHVValidBit() == false ?
-            new AddJBayMetadataPOV(phv) : nullptr,
+#if HAVE_FLATROCK
+        // FIXME -- Flatrock will need somethimg here, but the JBay code won't work
+        Device::currentDevice() != Device::FLATROCK &&
+#endif
+        Device::hasImplictPHVValidBit() == false ?  new AddJBayMetadataPOV(phv) : nullptr,
         Device::currentDevice() == Device::TOFINO ?
             new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),

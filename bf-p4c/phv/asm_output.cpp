@@ -305,6 +305,13 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     // FIXME -- duplicate the ingress phv
     if (gress == GHOST) gress = INGRESS;
     for (auto &f : phv) {
+#ifdef HAVE_FLATROCK
+        // FIXME -- flatrock will likely want some (most?) fields allocated across both
+        // ingress and egress.  For now we just print all fields in both
+        if (Device::currentDevice() == Device::FLATROCK) {
+            emit_phv_field(out, &f, live_range_report);
+        } else
+#endif
         if (f.gress == gress) {
             emit_phv_field(out, &f, live_range_report);
         }

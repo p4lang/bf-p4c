@@ -131,6 +131,8 @@ class Field : public LiftLess<Field> {
     int             id = 0;
 
     /// Whether the Field is ingress or egress.
+    // FIXME -- for FLATROCK will probably have fields that are both ingress+egress, with
+    // the same allocation for both pipes
     gress_t         gress = INGRESS;
 
     /// @returns true if the Field is a ghost field.

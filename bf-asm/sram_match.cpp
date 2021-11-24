@@ -264,8 +264,7 @@ bool SRamMatchTable::verify_match_key() {
             continue;
         }
         auto phv_ref = *phv_p;
-        phv_ref.check();
-        if (phv_ref->reg.mau_id() < 0)
+        if (phv_ref.check() && phv_ref->reg.mau_id() < 0)
             error(phv_ref.lineno, "%s not accessable in mau", phv_ref->reg.name); }
     auto match_format = format->field("match");
     if (match_format && match.empty()) {

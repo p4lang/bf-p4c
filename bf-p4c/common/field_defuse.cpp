@@ -49,6 +49,7 @@ class FieldDefUse::CollectAliasDestinations : public Inspector {
 
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
+    LOG2("FieldDefUse starting");
     conflict.clear();
     defs.clear();
     uses.clear();
@@ -166,6 +167,7 @@ bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
 }
 
 bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
+    LOG6("FieldDefUse preorder " << p->gress << " Parser");
     if (p->gress == EGRESS) {
         /* after processing the ingress pipe, before proceeding to the egress pipe, we
          * clear everything mentioned in the egress parser.  We want to ensure that nothing
@@ -190,7 +192,7 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             if (p->gress == INGRESS && (!f.metadata && !f.bridged)) continue;
             if (p->gress == EGRESS  && (!f.metadata || f.bridged)) continue;
         }
-        LOG1("Adding implicit parser initialization expr for " << f.name);
+        LOG2("Adding implicit parser initialization expr for " << f.name);
         auto* parser_begin = p->start;
         const PHV::Field* f_p = phv.field(f.id);
         BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
@@ -215,7 +217,7 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
     // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
     // not all of them.
     // Only multistage_fifo.p4 needs visit stateful call before the action code runs.
-    LOG1("FieldDefUse preorder Action : " << act);
+    LOG6("FieldDefUse preorder Action : " << act);
     visit(act->stateful_calls, "stateful");
     if (act->parallel) {
         mode = VisitJustReads;
@@ -236,7 +238,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
     // TODO(yumin): The long-term fix for this is to change the order of visiting when
     // visiting IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
-    LOG1("FieldDefUse preorder Primitive : " << prim);
+    LOG6("FieldDefUse preorder Primitive : " << prim);
     if (prim->operands.size() > 0) {
         if (mode != VisitJustWrites) {
             for (size_t i = 1; i < prim->operands.size(); ++i) {
@@ -258,7 +260,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
  * This ensures only the actions relevant to the current thread are visited.
  */
 bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
-    LOG1("FieldDefUse preorder Stateful : " << salu);
+    LOG6("FieldDefUse preorder Stateful : " << salu);
     visitAgain();
     std::set<cstring> salu_actions_to_visit;
     if (auto tbl = findContext<IR::MAU::Table>()) {
@@ -277,7 +279,6 @@ bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
 }
 
 bool FieldDefUse::preorder(const IR::Expression *e) {
-    LOG1("FieldDefUse preorder : " << e);
     le_bitrange bits;
     auto *f = phv.field(e, &bits);
     auto *hr = e->to<IR::HeaderRef>();
@@ -286,6 +287,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     // $valid fields before allocatePOV.
     if (!f && e->is<IR::Member>()) return false;
     if (!f && !hr) return true;
+    LOG6("FieldDefUse preorder : " << e);
 
     if (auto unit = findContext<IR::BFN::Unit>()) {
         bool needsIXBar = true;
@@ -307,11 +309,11 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
             bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
             write(f, unit, e, needsIXBar, partial);
             write(hr, unit, e, needsIXBar);
-            LOG3(" write at unit : " << unit);
+            LOG3("  write at unit : " << unit);
         } else {
             read(f, unit, e, needsIXBar);
             read(hr, unit, e, needsIXBar);
-            LOG3(" read at unit : " << unit);
+            LOG3("  read at unit : " << unit);
         }
     } else {
         assert(0); }

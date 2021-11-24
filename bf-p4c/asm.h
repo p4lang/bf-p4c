@@ -102,8 +102,11 @@ class AsmOutput : public Inspector {
             if (::errorCount() == 0) {
                 out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
                         pipe->ghost_thread.ghost_parser != nullptr)
-                    << ParserAsmOutput(pipe, phv, INGRESS)
-                    << DeparserAsmOutput(pipe, phv, clot, INGRESS);
+                    << ParserAsmOutput(pipe, phv, INGRESS);
+#if HAVE_FLATROCK
+                if (Device::currentDevice() != Device::FLATROCK)
+#endif
+                    out << DeparserAsmOutput(pipe, phv, clot, INGRESS);
                 if (pipe->ghost_thread.ghost_parser != nullptr) {
                     out << "parser ghost: " << std::endl;
                     out << "  ghost_md: " << ghostPhvContainer() << std::endl;
@@ -114,8 +117,11 @@ class AsmOutput : public Inspector {
                         out << "  pipe_mask: 0" << std::endl;
                     }
                 }
-                out << ParserAsmOutput(pipe, phv, EGRESS)
-                    << DeparserAsmOutput(pipe, phv, clot, EGRESS)
+#if HAVE_FLATROCK
+                if (Device::currentDevice() != Device::FLATROCK)
+#endif
+                    out << ParserAsmOutput(pipe, phv, EGRESS);
+                out << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                     << mauasm << std::endl
                     << flex->asm_output() << std::endl;
             }
