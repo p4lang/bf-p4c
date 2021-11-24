@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_atomic("ingress" , "Balmorhea.Millston.Madera")
@@ -69,7 +68,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
@@ -170,31 +169,31 @@ struct Blitchton {
 struct Harbor {
     bit<32>  IttaBena;
     bit<32>  Adona;
-    @flexible 
+    @flexible
     bit<8>   Connell;
-    @flexible 
+    @flexible
     bit<8>   Cisco;
-    @flexible 
+    @flexible
     bit<32>  Higginson;
-    @flexible 
+    @flexible
     bit<32>  Oriskany;
-    @flexible 
+    @flexible
     bit<16>  Bowden;
-    @flexible 
+    @flexible
     bit<16>  Cabot;
-    @flexible 
+    @flexible
     bit<8>   Keyes;
-    @flexible 
+    @flexible
     PortId_t Corinth;
-    @flexible 
+    @flexible
     bit<1>   Basic;
-    @flexible 
+    @flexible
     bit<32>  Freeman;
-    @flexible 
+    @flexible
     bit<1>   Exton;
-    @flexible 
+    @flexible
     bit<1>   Floyd;
-    @flexible 
+    @flexible
     bit<48>  Fayette;
 }
 
@@ -204,23 +203,23 @@ struct Harbor {
 }
 
 header Osterdock {
-    @flexible 
+    @flexible
     bit<1>  Unity;
-    @flexible 
+    @flexible
     bit<16> LaFayette;
-    @flexible 
+    @flexible
     bit<9>  Munday;
-    @flexible 
+    @flexible
     bit<13> Holcut;
-    @flexible 
+    @flexible
     bit<16> FarrWest;
-    @flexible 
+    @flexible
     bit<16> Dante;
-    @flexible 
+    @flexible
     bit<5>  Wyanet;
-    @flexible 
+    @flexible
     bit<16> Chunchula;
-    @flexible 
+    @flexible
     bit<9>  ElJebel;
 }
 
@@ -232,43 +231,43 @@ header Alameda {
     bit<3>  Rexville;
     bit<1>  Quinwood;
     bit<4>  Marfa;
-    @flexible 
+    @flexible
     bit<8>  Palatine;
-    @flexible 
+    @flexible
     bit<3>  Mabelle;
-    @flexible 
+    @flexible
     bit<24> Hoagland;
-    @flexible 
+    @flexible
     bit<24> Ocoee;
-    @flexible 
+    @flexible
     bit<12> Hackett;
-    @flexible 
+    @flexible
     bit<3>  Kaluaaha;
-    @flexible 
+    @flexible
     bit<9>  Calcasieu;
-    @flexible 
+    @flexible
     bit<2>  Levittown;
-    @flexible 
+    @flexible
     bit<1>  Maryhill;
-    @flexible 
+    @flexible
     bit<1>  Norwood;
-    @flexible 
+    @flexible
     bit<32> Dassel;
-    @flexible 
+    @flexible
     bit<32> Bushland;
-    @flexible 
+    @flexible
     bit<32> Loring;
-    @flexible 
+    @flexible
     bit<16> Suwannee;
-    @flexible 
+    @flexible
     bit<3>  Dugger;
-    @flexible 
+    @flexible
     bit<12> Laurelton;
-    @flexible 
+    @flexible
     bit<12> Ronda;
-    @flexible 
+    @flexible
     bit<1>  LaPalma;
-    @flexible 
+    @flexible
     bit<6>  Idalia;
 }
 

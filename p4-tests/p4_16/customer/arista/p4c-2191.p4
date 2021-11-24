@@ -1,12 +1,10 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 
 @pa_alias("ingress" , "Cassa.SourLake.Hammond" , "Cassa.Juneau.Hammond") @pa_alias("ingress" , "Cassa.Sublett.Barrow" , "Cassa.Sublett.Clover") @pa_container_size("ingress" , "Cassa.Sunflower.Waubun" , 32) @pa_atomic("ingress" , "Cassa.Norma.Beaverdam") @pa_no_overlay("ingress" , "Cassa.Sunflower.Delavan") @pa_no_overlay("ingress" , "Bergton.Plains.Selawik") @pa_solitary("ingress" , "Cassa.Murphy.Ralls") @pa_atomic("ingress" , "Cassa.Norma.Alamosa") @pa_container_size("egress" , "Bergton.Amenia.Blitchton" , 16) header Sagerton {
     bit<8> Exell;
-    @flexible 
+    @flexible
     bit<9> Toccopola;
 }
 
@@ -57,43 +55,43 @@ header Roosville {
     bit<3>  Dixboro;
     bit<1>  Rayville;
     bit<4>  Rugby;
-    @flexible 
+    @flexible
     bit<8>  Davie;
-    @flexible 
+    @flexible
     bit<1>  Cacao;
-    @flexible 
+    @flexible
     bit<3>  Mankato;
-    @flexible 
+    @flexible
     bit<24> Rockport;
-    @flexible 
+    @flexible
     bit<24> Union;
-    @flexible 
+    @flexible
     bit<12> Virgil;
-    @flexible 
+    @flexible
     bit<20> Florin;
-    @flexible 
+    @flexible
     bit<3>  Requa;
-    @flexible 
+    @flexible
     bit<9>  Sudbury;
-    @flexible 
+    @flexible
     bit<2>  Allgood;
-    @flexible 
+    @flexible
     bit<1>  Chaska;
-    @flexible 
+    @flexible
     bit<1>  Selawik;
-    @flexible 
+    @flexible
     bit<32> Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<16> Ronan;
-    @flexible 
+    @flexible
     bit<12> Anacortes;
-    @flexible 
+    @flexible
     bit<12> Corinth;
-    @flexible 
+    @flexible
     bit<1>  Willard;
-    @flexible 
+    @flexible
     bit<6>  Bayshore;
 }
 
@@ -1034,7 +1032,7 @@ control Makawao(packet_out HillTop, inout Sherack Bergton, in Basalt Cassa, in i
             if (Buckhorn.digest_type == 3w1) {
                 Martelle.pack({ Cassa.Norma.Iberia, Cassa.Norma.Skime, Cassa.Norma.Goldsboro, Cassa.Norma.Fabens });
             }
-            else 
+            else
                 if (Buckhorn.digest_type == 3w2) {
                     Gambrills.pack({ Cassa.Norma.Goldsboro, Bergton.Grays.Iberia, Bergton.Grays.Skime, Bergton.Burwell.Hoagland, Bergton.Belgrade.Hoagland, Bergton.Tiburon.Paisano, Cassa.Norma.Boquillas, Cassa.Norma.McCaulley, Bergton.Broadwell.Everton });
                 }
@@ -2141,11 +2139,11 @@ control Virgilina(inout Sherack Bergton, inout Basalt Cassa, in ingress_intrinsi
             if (Cassa.Wisdom.Rudolph & 4w0x2 == 4w0x2 && Cassa.Norma.Malinta == 3w0x2) {
                 Ponder.apply();
             }
-            else 
+            else
                 if (Cassa.Wisdom.Rudolph & 4w0x1 == 4w0x1 && Cassa.Norma.Malinta == 3w0x1) {
                     Philip.apply(Bergton, Cassa, McCaskill, Pawtucket, Buckhorn, Stennett);
                 }
-                else 
+                else
                     if (Cassa.Sunflower.Sledge == 1w0 && (Cassa.Norma.Chugwater == 1w1 || Cassa.Wisdom.Rudolph & 4w0x1 == 4w0x1 && Cassa.Norma.Malinta == 3w0x3)) {
                         Fishers.apply();
                     }
@@ -2840,7 +2838,7 @@ control Coupland(inout Sherack Bergton, inout Basalt Cassa, in ingress_intrinsic
             if (Cassa.Norma.Fabens == Cassa.Sunflower.Billings || Cassa.Sunflower.Morstein == 3w1 && Cassa.Sunflower.Lakehills == 3w5) {
                 LaPlant.apply();
             }
-            else 
+            else
                 if (Cassa.Maddock.Wamego == 2w2 && Cassa.Sunflower.Billings & 20w0xff800 == 20w0x3800) {
                     Ruston.apply();
                 }
@@ -4258,7 +4256,7 @@ control Ragley(inout Sherack Bergton, inout Basalt Cassa, in ingress_intrinsic_m
             Rolla.apply();
             Gwynn.apply();
         }
-        else 
+        else
             if (Cassa.Norma.Malinta == 3w0x2) {
                 DeKalb.apply();
                 Sultana.apply();
@@ -5493,4 +5491,3 @@ control Engle(packet_out HillTop, inout Sherack Bergton, in Basalt Cassa, in egr
 Pipeline<Sherack, Basalt, Sherack, Basalt>(Millston(), McDougal(), Makawao(), Robinette(), Stovall(), Engle()) pipe;
 
 Switch<Sherack, Basalt, Sherack, Basalt, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

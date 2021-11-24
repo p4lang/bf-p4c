@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 header data_t {
@@ -132,22 +130,22 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     apply {
         if (hdr.data.b1 == 8w0) {
             tmp_0 = t1_0.apply().hit;
-            if (!tmp_0) 
+            if (!tmp_0)
                 if (hdr.data.b2 == 8w0) {
                     inner_multiple_tmp = inner_multiple_t2.apply().hit;
-                    if (!inner_multiple_tmp) 
+                    if (!inner_multiple_tmp)
                         inner_multiple_t3.apply();
                 }
-                else 
+                else
                     inner_multiple_t3.apply();
         }
-        else 
+        else
             if (hdr.data.b2 == 8w0) {
                 inner_multiple_tmp_0 = inner_multiple_t2_0.apply().hit;
-                if (!inner_multiple_tmp_0) 
+                if (!inner_multiple_tmp_0)
                     inner_multiple_t3_0.apply();
             }
-            else 
+            else
                 inner_multiple_t3_0.apply();
         port_setter_0.apply();
     }
@@ -181,4 +179,3 @@ control DeparserE(packet_out b, inout headers hdr, in metadata meta, in egress_i
 Pipeline<headers, metadata, headers, metadata>(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
-

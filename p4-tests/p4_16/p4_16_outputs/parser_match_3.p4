@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 enum bit<8> MemcachedOpcode {
@@ -137,4 +135,3 @@ control MemcachedEgressDeparser(packet_out pkt, inout headers_t hdr, in metadata
 Pipeline(MemcachedIngressParser(), MemcachedIngress(), MemcachedIngressDeparser(), MemcachedEgressParser(), MemcachedEgress(), MemcachedEgressDeparser()) pipe0;
 
 Switch(pipe0) main;
-

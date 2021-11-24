@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -126,4 +125,3 @@ control deparserE(packet_out b, inout packet_t hdrs, in metadata meta, in egress
 Pipeline<packet_t, metadata, packet_t, metadata>(parserI(), ingress(), deparserI(), parserE(), egress(), deparserE()) pipe0;
 
 Switch<packet_t, metadata, packet_t, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
-

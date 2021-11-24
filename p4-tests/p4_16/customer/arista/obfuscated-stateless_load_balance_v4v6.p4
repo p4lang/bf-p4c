@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Jayton.Makawao.Floyd" , 8)
@@ -112,7 +111,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
@@ -215,23 +214,23 @@ struct Blitchton {
 }
 
 header Harbor {
-    @flexible 
+    @flexible
     bit<1>  Powhatan;
-    @flexible 
+    @flexible
     bit<1>  Netarts;
-    @flexible 
+    @flexible
     bit<16> Hartwick;
-    @flexible 
+    @flexible
     bit<9>  Cataract;
-    @flexible 
+    @flexible
     bit<13> Glenpool;
-    @flexible 
+    @flexible
     bit<16> Burtrum;
-    @flexible 
+    @flexible
     bit<5>  Gonzalez;
-    @flexible 
+    @flexible
     bit<16> Motley;
-    @flexible 
+    @flexible
     bit<9>  Wildell;
 }
 
@@ -243,47 +242,47 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible 
+    @flexible
     bit<8>  Oriskany;
-    @flexible 
+    @flexible
     bit<3>  Bowden;
-    @flexible 
+    @flexible
     bit<24> Cabot;
-    @flexible 
+    @flexible
     bit<24> Keyes;
-    @flexible 
+    @flexible
     bit<12> Basic;
-    @flexible 
+    @flexible
     bit<3>  Freeman;
-    @flexible 
+    @flexible
     bit<9>  Exton;
-    @flexible 
+    @flexible
     bit<2>  Floyd;
-    @flexible 
+    @flexible
     bit<1>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<32> PineCity;
-    @flexible 
+    @flexible
     bit<16> Alameda;
-    @flexible 
+    @flexible
     bit<3>  Rexville;
-    @flexible 
+    @flexible
     bit<12> Quinwood;
-    @flexible 
+    @flexible
     bit<12> Marfa;
-    @flexible 
+    @flexible
     bit<16> Palatine;
-    @flexible 
+    @flexible
     bit<1>  Conda;
-    @flexible 
+    @flexible
     bit<1>  Mabelle;
-    @flexible 
+    @flexible
     bit<1>  Hoagland;
-    @flexible 
+    @flexible
     bit<1>  Jigger;
-    @flexible 
+    @flexible
     bit<6>  Ocoee;
 }
 
@@ -6164,7 +6163,7 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
             Rodessa.apply(Jayton, Millstone, Astor, Lookeba, Alstown, Hohenwald);
             if (Millstone.Bridger.RedElm == 1w1 && Jayton.Mather.isValid() == false && (Millstone.Bridger.Satolah & 4w0x2 == 4w0x2 && Millstone.Guion.Colona == 3w0x2 || Millstone.Bridger.Satolah & 4w0x1 == 4w0x1 && Millstone.Guion.Colona == 3w0x1)) {
                 switch (McKibben.apply().action_run) {
-                    Lindy: 
+                    Lindy:
                     Oxnard: {
                         if (Millstone.Bridger.Satolah & 4w0x2 == 4w0x2 && Millstone.Guion.Colona == 3w0x2) {
                             Tontogany.apply(Jayton, Millstone, Astor, Lookeba, Alstown, Hohenwald);

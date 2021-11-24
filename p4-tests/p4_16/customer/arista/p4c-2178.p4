@@ -1,12 +1,10 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 
 @pa_alias("ingress" , "Provencal.Darien.Hiland" , "Provencal.Norma.Hiland") @pa_alias("ingress" , "Provencal.RossFork.Blairsden" , "Provencal.RossFork.Standish") @pa_container_size("ingress" , "Provencal.SourLake.Nenana" , 32) @pa_atomic("ingress" , "Provencal.Basalt.Beaverdam") @pa_no_overlay("ingress" , "Provencal.SourLake.Placedo") @pa_no_overlay("ingress" , "Ramos.McGonigle.Selawik") header Sagerton {
     bit<8> Exell;
-    @flexible 
+    @flexible
     bit<9> Toccopola;
 }
 
@@ -57,43 +55,43 @@ header Roosville {
     bit<3>  Dixboro;
     bit<1>  Rayville;
     bit<4>  Rugby;
-    @flexible 
+    @flexible
     bit<8>  Davie;
-    @flexible 
+    @flexible
     bit<1>  Cacao;
-    @flexible 
+    @flexible
     bit<3>  Mankato;
-    @flexible 
+    @flexible
     bit<24> Rockport;
-    @flexible 
+    @flexible
     bit<24> Union;
-    @flexible 
+    @flexible
     bit<12> Virgil;
-    @flexible 
+    @flexible
     bit<20> Florin;
-    @flexible 
+    @flexible
     bit<3>  Requa;
-    @flexible 
+    @flexible
     bit<9>  Sudbury;
-    @flexible 
+    @flexible
     bit<2>  Allgood;
-    @flexible 
+    @flexible
     bit<1>  Chaska;
-    @flexible 
+    @flexible
     bit<1>  Selawik;
-    @flexible 
+    @flexible
     bit<32> Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<16> Ronan;
-    @flexible 
+    @flexible
     bit<12> Anacortes;
-    @flexible 
+    @flexible
     bit<12> Corinth;
-    @flexible 
+    @flexible
     bit<1>  Willard;
-    @flexible 
+    @flexible
     bit<6>  Bayshore;
 }
 
@@ -1022,7 +1020,7 @@ control Shingler(packet_out Paulding, inout Stennett Ramos, in Dairyland Provenc
             if (Cassa.digest_type == 3w1) {
                 Hillsview.pack({ Provencal.Basalt.Iberia, Provencal.Basalt.Skime, Provencal.Basalt.Goldsboro, Provencal.Basalt.Fabens });
             }
-            else 
+            else
                 if (Cassa.digest_type == 3w2) {
                     Westbury.pack({ Provencal.Basalt.Goldsboro, Ramos.Maumee.Iberia, Ramos.Maumee.Skime, Ramos.Freeny.Hoagland, Ramos.Sonoma.Hoagland, Ramos.Plains.Paisano, Provencal.Basalt.Boquillas, Provencal.Basalt.McCaulley, Ramos.GlenAvon.Everton });
                 }
@@ -2149,11 +2147,11 @@ control Westoak(inout Stennett Ramos, inout Dairyland Provencal, in ingress_intr
             if (Provencal.Maddock.Lecompte & 4w0x2 == 4w0x2 && Provencal.Basalt.Malinta == 3w0x2) {
                 Ravinia.apply();
             }
-            else 
+            else
                 if (Provencal.Maddock.Lecompte & 4w0x1 == 4w0x1 && Provencal.Basalt.Malinta == 3w0x1) {
                     Dwight.apply(Ramos, Provencal, Moose, Bergton, Cassa, Minturn);
                 }
-                else 
+                else
                     if (Provencal.SourLake.Wartburg == 1w0 && (Provencal.Basalt.Chugwater == 1w1 || Provencal.Maddock.Lecompte & 4w0x1 == 4w0x1 && Provencal.Basalt.Malinta == 3w0x3)) {
                         Virgilina.apply();
                     }
@@ -2866,7 +2864,7 @@ control Morrow(inout Stennett Ramos, inout Dairyland Provencal, in ingress_intri
             if (Provencal.Basalt.Fabens == Provencal.SourLake.Sledge || Provencal.SourLake.Havana == 3w1 && Provencal.SourLake.Heppner == 3w5) {
                 Weathers.apply();
             }
-            else 
+            else
                 if (Provencal.Aldan.McCammon == 2w2 && Provencal.SourLake.Sledge & 20w0xff800 == 20w0x3800) {
                     Shasta.apply();
                 }
@@ -4270,7 +4268,7 @@ control Kevil(inout Stennett Ramos, inout Dairyland Provencal, in ingress_intrin
             Ashburn.apply();
             Maury.apply();
         }
-        else 
+        else
             if (Provencal.Basalt.Malinta == 3w0x2) {
             }
     }
@@ -5444,4 +5442,3 @@ control DelRey(packet_out Paulding, inout Stennett Ramos, in Dairyland Provencal
 Pipeline<Stennett, Dairyland, Stennett, Dairyland>(Rainelle(), Nerstrand(), Shingler(), Sanatoga(), Chandalar(), DelRey()) pipe;
 
 Switch<Stennett, Dairyland, Stennett, Dairyland, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

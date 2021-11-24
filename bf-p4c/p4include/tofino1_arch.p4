@@ -1,8 +1,19 @@
-#ifndef _TOFINO_NATIVE_ARCHITECTURE_P4_
-#define _TOFINO_NATIVE_ARCHITECTURE_P4_
+#ifndef _TOFINO1_P4_ARCH_
+#define _TOFINO1_P4_ARCH_
 
-#include "core.p4"
-#include "tofino.p4"
+/**
+ Version Notes:
+
+ 2.0.1:
+ - Restructuralize P4 header files (tna.p4 -> tofino1_specs.p4 + tofino1_base.p4 + tofino1_arch.p4)
+   - tna.p4                : Top-level header file to be included by P4 programs, includes the below
+     -> tofino1_specs.p4   : Target-device-specific types, constants and macros
+     -> tofino1_arch.p4    : Portable parsers, controls and packages (originally tofino1arch.p4)
+        -> tofino1_base.p4 : Portable constants, headers, externs etc. (originally tofino.p4)
+
+*/
+
+#include "tofino1_base.p4"
 
 // The following declarations provide a template for the programmable blocks in
 // Tofino.
@@ -62,7 +73,7 @@ package Pipeline<IH, IM, EH, EM>(
     EgressT<EH, EM> egress,
     EgressDeparserT<EH, EM> egress_deparser);
 
-@pkginfo(arch="TNA", version="1.0.3")
+@pkginfo(arch="TNA", version="2.0.1")
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
                IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
     Pipeline<IH0, IM0, EH0, EM0> pipe0,
@@ -125,4 +136,4 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
     @optional MultiParserPipeline<IH2, IM2, EH2, EM2> pipe2,
     @optional MultiParserPipeline<IH3, IM3, EH3, EM3> pipe3);
 
-#endif  /* _TOFINO_NATIVE_ARCHITECTURE_P4_ */
+#endif  /* _TOFINO1_P4_ARCH_ */

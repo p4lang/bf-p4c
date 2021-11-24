@@ -2,8 +2,7 @@
 // p4c 9.2.0-pr.10 (SHA: 6dedad4)
 
 #include <core.p4>
-#include <tofino2.p4>
-#include <tofino2arch.p4>
+#include <t2na.p4>
 
 @pa_auto_init_metadata
 @pa_mutually_exclusive("ingress" , "Hallwood.Paulding.Bells" , "Hallwood.Paulding.Pinole") @pa_mutually_exclusive("ingress" , "Hallwood.Paulding.Bells" , "Sequim.Toluca.Osterdock") @pa_mutually_exclusive("egress" , "Hallwood.Buckhorn.Norwood" , "Sequim.Goodwin.Norwood") @pa_mutually_exclusive("egress" , "Sequim.Toluca.Cisco" , "Sequim.Goodwin.Norwood") @pa_mutually_exclusive("egress" , "Sequim.Goodwin.Norwood" , "Hallwood.Buckhorn.Norwood") @pa_mutually_exclusive("egress" , "Sequim.Goodwin.Norwood" , "Sequim.Toluca.Cisco") @pa_container_size("ingress" , "Hallwood.Bergton.Soledad" , 32) @pa_container_size("ingress" , "Hallwood.Buckhorn.Edgemoor" , 32) @pa_container_size("ingress" , "Hallwood.Buckhorn.Panaca" , 32) @pa_container_size("egress" , "Sequim.Belmore.Steger" , 32) @pa_container_size("egress" , "Sequim.Belmore.Quogue" , 32) @pa_container_size("ingress" , "Sequim.Belmore.Steger" , 32) @pa_container_size("ingress" , "Sequim.Belmore.Quogue" , 32) @pa_alias("ingress" , "Hallwood.Paulding.Bells" , "Hallwood.Paulding.Pinole" , "Sequim.Toluca.Osterdock") @pa_container_size("ingress" , "Hallwood.Bergton.Eldred" , 8) @pa_mutually_exclusive("egress" , "Sequim.Goodwin.Ronda" , "Sequim.Toluca.Rexville") @pa_mutually_exclusive("egress" , "Sequim.Goodwin.Maryhill" , "Sequim.Toluca.Alameda") @pa_container_size("ingress" , "Hallwood.Elkville.SourLake" , 8) @pa_container_size("ingress" , "ig_intr_md_for_tm.copy_to_cpu" , 8) @pa_container_size("ingress" , "Sequim.Newhalem.Kenbridge" , 8) @pa_container_size("ingress" , "Hallwood.Thaxton.Dairyland" , 32) @pa_container_size("ingress" , "Hallwood.Emida.Buncombe" , 8) @pa_atomic("ingress" , "Hallwood.Bergton.DonaAna") @pa_atomic("ingress" , "Hallwood.Provencal.Brinkman") @pa_mutually_exclusive("ingress" , "Hallwood.Bergton.Altus" , "Hallwood.Provencal.Boerne") @pa_mutually_exclusive("ingress" , "Hallwood.Bergton.Conner" , "Hallwood.Provencal.Juniata") @pa_mutually_exclusive("ingress" , "Hallwood.Bergton.DonaAna" , "Hallwood.Provencal.Brinkman") @pa_no_init("ingress" , "Hallwood.Buckhorn.Madera") @pa_no_init("ingress" , "Hallwood.Bergton.Altus") @pa_no_init("ingress" , "Hallwood.Bergton.Conner") @pa_no_init("ingress" , "Hallwood.Bergton.DonaAna") @pa_no_init("ingress" , "Hallwood.Bergton.Colona") @pa_no_init("ingress" , "Hallwood.Emida.Buckeye") @pa_mutually_exclusive("ingress" , "Hallwood.Elkville.Steger" , "Hallwood.Pawtucket.Steger") @pa_mutually_exclusive("ingress" , "Hallwood.Elkville.Quogue" , "Hallwood.Pawtucket.Quogue") @pa_mutually_exclusive("ingress" , "Hallwood.Elkville.Steger" , "Hallwood.Pawtucket.Quogue") @pa_mutually_exclusive("ingress" , "Hallwood.Elkville.Quogue" , "Hallwood.Pawtucket.Steger") @pa_no_init("ingress" , "Hallwood.Elkville.Steger") @pa_no_init("ingress" , "Hallwood.Elkville.Quogue") @pa_atomic("ingress" , "Hallwood.Elkville.Steger") @pa_atomic("ingress" , "Hallwood.Elkville.Quogue") @pa_atomic("ingress" , "Hallwood.Cassa.Tombstone") @pa_atomic("ingress" , "Hallwood.Pawtucket.Tombstone") @pa_atomic("ingress" , "Hallwood.Bergton.Merrill") @pa_atomic("ingress" , "Hallwood.Bergton.Moorcroft") @pa_no_init("ingress" , "Hallwood.Thaxton.Dunstable") @pa_no_init("ingress" , "Hallwood.Thaxton.Daleville") @pa_no_init("ingress" , "Hallwood.Thaxton.Steger") @pa_no_init("ingress" , "Hallwood.Thaxton.Quogue") @pa_alias("ingress" , "Hallwood.Thaxton.Eldred" , "Hallwood.Bergton.Eldred") @pa_atomic("ingress" , "Hallwood.Lawai.Provo") @pa_alias("ingress" , "Hallwood.Thaxton.Provo" , "Hallwood.Bergton.Conner") @pa_alias("ingress" , "Hallwood.Thaxton.Solomon" , "Hallwood.Bergton.Sheldahl") @pa_atomic("ingress" , "Hallwood.Bergton.AquaPark") @pa_atomic("ingress" , "Hallwood.Cassa.Norland") @pa_container_size("egress" , "Hallwood.Dozier.Shirley" , 32) @pa_mutually_exclusive("egress" , "Sequim.Greenwood.Quogue" , "Hallwood.Buckhorn.Hiland") @pa_mutually_exclusive("egress" , "Sequim.Readsboro.Wallula" , "Hallwood.Buckhorn.Hiland") @pa_mutually_exclusive("egress" , "Sequim.Readsboro.Dennison" , "Hallwood.Buckhorn.Manilla") @pa_mutually_exclusive("egress" , "Sequim.Livonia.Cecilton" , "Hallwood.Buckhorn.Orrick") @pa_mutually_exclusive("egress" , "Sequim.Livonia.Idalia" , "Hallwood.Buckhorn.Hematite") @pa_atomic("ingress" , "Hallwood.Buckhorn.Edgemoor") @pa_container_size("ingress" , "Hallwood.Bergton.DonaAna" , 32) @pa_atomic("ingress" , "ig_intr_md_for_dprsr.drop_ctl") @pa_container_size("egress" , "Sequim.Greenwood.Ledoux" , 16) @pa_container_size("ingress" , "Sequim.Goodwin.Hoagland" , 32) @pa_mutually_exclusive("egress" , "Hallwood.Buckhorn.Atoka" , "Sequim.Astor.Madawaska") @pa_alias("egress" , "Sequim.Goodwin.Calcasieu" , "Hallwood.Buckhorn.Wetonka") @pa_alias("egress" , "Sequim.Goodwin.Levittown" , "Hallwood.Buckhorn.Levittown") @pa_no_init("ingress" , "Hallwood.Dozier.Broadwell") @pa_no_init("ingress" , "Hallwood.Dozier.Grays") @pa_mutually_exclusive("egress" , "Sequim.Greenwood.Steger" , "Hallwood.Buckhorn.Lecompte") @pa_container_size("ingress" , "Hallwood.Thaxton.Steger" , 32) @pa_container_size("ingress" , "Hallwood.Thaxton.Quogue" , 32) @pa_no_overlay("ingress" , "Hallwood.Bergton.Rocklin") @pa_no_overlay("ingress" , "Hallwood.Bergton.Luzerne") @pa_no_overlay("ingress" , "Hallwood.Bergton.Devers") @pa_no_overlay("ingress" , "Hallwood.Emida.Wellton") @pa_no_overlay("ingress" , "Hallwood.LaMoille.Kalkaska") @pa_no_overlay("ingress" , "Hallwood.ElkNeck.Kalkaska") @pa_container_size("ingress" , "Hallwood.Bergton.Chatmoss" , 32) @pa_container_size("ingress" , "Hallwood.Bergton.Brinklow" , 32) @pa_container_size("ingress" , "Hallwood.Bergton.Ravena" , 32) @pa_container_size("ingress" , "Hallwood.Bergton.Gasport" , 32) @pa_container_size("ingress" , "Hallwood.Dateland.Bonduel" , 8) @pa_mutually_exclusive("ingress" , "Hallwood.Bergton.Merrill" , "Hallwood.Bergton.Hickox") @pa_no_init("ingress" , "Hallwood.Bergton.Merrill") @pa_no_init("ingress" , "Hallwood.Bergton.Hickox") @pa_no_init("ingress" , "Hallwood.Nuyaka.Ralls") @pa_no_init("egress" , "Hallwood.Mickleton.Ralls") @pa_atomic("ingress" , "Sequim.Gastonia.Noyes") @pa_atomic("ingress" , "Hallwood.Guion.Belview") @pa_no_overlay("ingress" , "Hallwood.Guion.Belview") @pa_container_size("ingress" , "Hallwood.Guion.Belview" , 16) @pa_no_overlay("ingress" , "Hallwood.Dozier.Broadwell") @pa_no_overlay("ingress" , "Hallwood.Dozier.Grays") @pa_mutually_exclusive("ingress" , "Hallwood.Cassa.Tombstone" , "Hallwood.Pawtucket.Tombstone") @pa_alias("ingress" , "Hallwood.Bridger.Allgood" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "Hallwood.Bridger.Allgood" , "eg_intr_md_for_dprsr.mirror_type") @pa_atomic("ingress" , "Hallwood.Bergton.Merrill") header Florin {
@@ -12,7 +11,7 @@
 
 header Sudbury {
     bit<8> Allgood;
-    @flexible 
+    @flexible
     bit<9> Chaska;
 }
 
@@ -67,41 +66,41 @@ header Aguilita {
     bit<3>  IttaBena;
     bit<1>  Adona;
     bit<4>  Connell;
-    @flexible 
+    @flexible
     bit<8>  Cisco;
-    @flexible 
+    @flexible
     bit<3>  Higginson;
-    @flexible 
+    @flexible
     bit<24> Oriskany;
-    @flexible 
+    @flexible
     bit<24> Bowden;
-    @flexible 
+    @flexible
     bit<12> Cabot;
-    @flexible 
+    @flexible
     bit<3>  Keyes;
-    @flexible 
+    @flexible
     bit<9>  Basic;
-    @flexible 
+    @flexible
     bit<2>  Freeman;
-    @flexible 
+    @flexible
     bit<1>  Exton;
-    @flexible 
+    @flexible
     bit<1>  Floyd;
-    @flexible 
+    @flexible
     bit<32> Fayette;
-    @flexible 
+    @flexible
     bit<16> Osterdock;
-    @flexible 
+    @flexible
     bit<3>  PineCity;
-    @flexible 
+    @flexible
     bit<12> Alameda;
-    @flexible 
+    @flexible
     bit<12> Rexville;
-    @flexible 
+    @flexible
     bit<1>  Quinwood;
-    @flexible 
+    @flexible
     bit<1>  Marfa;
-    @flexible 
+    @flexible
     bit<6>  Palatine;
 }
 

@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 struct Exell {
@@ -3736,4 +3734,3 @@ control Unity<H, M>(inout H LaFayette, inout M Carrizozo, in egress_intrinsic_me
 Pipeline<Ralls, Level, Ralls, Level>(Goulds(), Robinette(), Ackley(), Lushton<Ralls, Level>(), Unity<Ralls, Level>(), Elbing<Ralls, Level>()) Dante;
 
 Switch<Ralls, Level, Ralls, Level, _, _, _, _, _, _, _, _, _, _, _, _>(Dante) main;
-

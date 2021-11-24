@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 struct user_metadata_t {
@@ -164,7 +162,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
         bloom_filter_1_0.apply();
         bloom_filter_2_0.apply();
         bloom_filter_3_0.apply();
-        if (meta.md.bf_tmp != 1w0) 
+        if (meta.md.bf_tmp != 1w0)
             bloom_filter_sample.apply();
     }
 }
@@ -198,4 +196,3 @@ control DeparserE(packet_out b, inout headers hdr, in metadata meta, in egress_i
 Pipeline<headers, metadata, headers, metadata>(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
-

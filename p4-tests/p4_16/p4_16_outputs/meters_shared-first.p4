@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<48> mac_addr_t;
@@ -114,9 +112,9 @@ struct switch_header_t {
 
 struct switch_metadata_t {
     bit<19> qdepth_19;
-    @pa_container_size("egress" , "avg_queue198" , 8) 
+    @pa_container_size("egress" , "avg_queue198" , 8)
     bit<19> avg_queue198;
-    @pa_container_size("egress" , "avg_queue1916" , 16) 
+    @pa_container_size("egress" , "avg_queue1916" , 16)
     bit<19> avg_queue1916;
 }
 
@@ -197,9 +195,9 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
         default_action = NoAction();
     }
     apply {
-        if (eg_intr_md.egress_port == 9w0) 
+        if (eg_intr_md.egress_port == 9w0)
             lpf_19_8.apply(eg_intr_md, eg_md.qdepth_19, eg_md.avg_queue198);
-        else 
+        else
             lpf_19_16.apply(eg_intr_md, eg_md.qdepth_19, eg_md.avg_queue1916);
         t0.apply();
     }
@@ -208,4 +206,3 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
 Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser<switch_header_t, switch_metadata_t>(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
-

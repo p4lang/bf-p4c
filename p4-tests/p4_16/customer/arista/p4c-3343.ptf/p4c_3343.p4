@@ -1,9 +1,7 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 --display-power-budget -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
 // p4c 9.4.0 (SHA: 21a686d)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tna.p4>
 
 @pa_auto_init_metadata @pa_mutually_exclusive("egress" , "Dwight.Armagh.Dennison" , "Virgilina.Recluse.Dennison") @pa_mutually_exclusive("egress" , "Virgilina.Halltown.Eldred" , "Virgilina.Recluse.Dennison") @pa_mutually_exclusive("egress" , "Virgilina.Recluse.Dennison" , "Dwight.Armagh.Dennison") @pa_mutually_exclusive("egress" , "Virgilina.Recluse.Dennison" , "Virgilina.Halltown.Eldred") @pa_mutually_exclusive("ingress" , "Dwight.Yorkshire.Poulan" , "Dwight.Longwood.Stratford") @pa_no_init("ingress" , "Dwight.Yorkshire.Poulan") @pa_mutually_exclusive("ingress" , "Dwight.Yorkshire.LakeLure" , "Dwight.Longwood.Quinhagak") @pa_mutually_exclusive("ingress" , "Dwight.Yorkshire.Cardenas" , "Dwight.Longwood.DeGraff") @pa_no_init("ingress" , "Dwight.Yorkshire.LakeLure") @pa_no_init("ingress" , "Dwight.Yorkshire.Cardenas") @pa_atomic("ingress" , "Dwight.Yorkshire.Cardenas") @pa_atomic("ingress" , "Dwight.Longwood.DeGraff") @pa_container_size("egress" , "Virgilina.Recluse.Killen" , 32) @pa_container_size("egress" , "Dwight.Armagh.Wellton" , 16) @pa_container_size("egress" , "Virgilina.Geistown.Bicknell" , 32) @pa_atomic("ingress" , "Dwight.Armagh.Chavies") @pa_atomic("ingress" , "Dwight.Armagh.Rocklake") @pa_atomic("ingress" , "Dwight.Thawville.Quinault") @pa_atomic("ingress" , "Dwight.Knights.Minturn") @pa_atomic("ingress" , "Dwight.Hearne.Brinklow") @pa_no_init("ingress" , "Dwight.Yorkshire.Fristoe") @pa_no_init("ingress" , "Dwight.Dushore.Mickleton") @pa_no_init("ingress" , "Dwight.Dushore.Mentone") @pa_container_size("ingress" , "Virgilina.Thurmond.Bicknell" , 8 , 8 , 16 , 32 , 32 , 32) @pa_container_size("ingress" , "Virgilina.Recluse.Westboro" , 8) @pa_container_size("ingress" , "Dwight.Yorkshire.Bonney" , 8) @pa_container_size("ingress" , "Dwight.SanRemo.Broadwell" , 32) @pa_container_size("ingress" , "Dwight.Thawville.Komatke" , 32) @pa_solitary("ingress" , "Dwight.Hearne.Naruna") @pa_container_size("ingress" , "Dwight.Hearne.Naruna" , 16) @pa_container_size("ingress" , "Dwight.Hearne.Bicknell" , 16) @pa_container_size("ingress" , "Dwight.Hearne.Hohenwald" , 8) @pa_container_size("ingress" , "Virgilina.Geistown.$valid" , 8) @pa_container_size("ingress" , "Dwight.Yorkshire.Tilton" , 8) @pa_atomic("ingress" , "Dwight.SanRemo.Broadwell") @pa_container_size("ingress" , "Dwight.Yorkshire.Pittsboro" , 8) @pa_container_size("ingress" , "Virgilina.Halltown.Findlay" , 8) @pa_container_size("egress" , "Virgilina.Jerico.Basic" , 16) @pa_container_size("egress" , "Virgilina.Jerico.Higginson" , 16) @pa_mutually_exclusive("ingress" , "Dwight.Casnovia.Ramos" , "Dwight.Humeston.Stennett") @pa_atomic("ingress" , "Dwight.Yorkshire.Grassflat") @gfm_parity_enable @pa_alias("ingress" , "Virgilina.Halltown.Chevak" , "Dwight.Biggers.Aguilita") @pa_alias("ingress" , "Virgilina.Halltown.Mendocino" , "Dwight.Biggers.Blencoe") @pa_alias("ingress" , "Virgilina.Halltown.Eldred" , "Dwight.Armagh.Dennison") @pa_alias("ingress" , "Virgilina.Halltown.Chloride" , "Dwight.Armagh.Buncombe") @pa_alias("ingress" , "Virgilina.Halltown.Garibaldi" , "Dwight.Armagh.Dunstable") @pa_alias("ingress" , "Virgilina.Halltown.Weinert" , "Dwight.Armagh.Madawaska") @pa_alias("ingress" , "Virgilina.Halltown.Cornell" , "Dwight.Armagh.Heuvelton") @pa_alias("ingress" , "Virgilina.Halltown.Noyes" , "Dwight.Armagh.Miranda") @pa_alias("ingress" , "Virgilina.Halltown.Helton" , "Dwight.Armagh.Bells") @pa_alias("ingress" , "Virgilina.Halltown.Grannis" , "Dwight.Armagh.Moorcroft") @pa_alias("ingress" , "Virgilina.Halltown.StarLake" , "Dwight.Armagh.Dairyland") @pa_alias("ingress" , "Virgilina.Halltown.Rains" , "Dwight.Armagh.Arvada") @pa_alias("ingress" , "Virgilina.Halltown.SoapLake" , "Dwight.Armagh.Broussard") @pa_alias("ingress" , "Virgilina.Halltown.Linden" , "Dwight.Armagh.Rocklake") @pa_alias("ingress" , "Virgilina.Halltown.Conner" , "Dwight.Gamaliel.McCracken") @pa_alias("ingress" , "Virgilina.Halltown.Steger" , "Dwight.Yorkshire.Quinwood") @pa_alias("ingress" , "Virgilina.Halltown.Quogue" , "Dwight.Yorkshire.Madera") @pa_alias("ingress" , "Virgilina.Halltown.Findlay" , "Dwight.Yorkshire.Pittsboro") @pa_alias("ingress" , "Virgilina.Halltown.Allison" , "Dwight.Dushore.Kendrick") @pa_alias("ingress" , "Virgilina.Halltown.Topanga" , "Dwight.Dushore.Elkville") @pa_alias("ingress" , "Virgilina.Halltown.Glendevey" , "Dwight.Dushore.McBride") @pa_alias("ingress" , "Virgilina.Halltown.Algodones" , "Dwight.Dushore.Vinemont") @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Dwight.Cranbury.Grabill") @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Dwight.Hillside.Cabot") @pa_alias("ingress" , "ig_intr_md_for_tm.qid" , "Dwight.Hillside.Vichy") @pa_alias("ingress" , "Dwight.Tabler.Juniata" , "Dwight.Yorkshire.Bonduel") @pa_alias("ingress" , "Dwight.Tabler.Brinklow" , "Dwight.Yorkshire.Poulan") @pa_alias("ingress" , "Dwight.Tabler.Bonney" , "Dwight.Yorkshire.Bonney") @pa_alias("ingress" , "Dwight.Pineville.RossFork" , "Dwight.Pineville.Aldan") @pa_alias("egress" , "eg_intr_md.deq_qdepth" , "Dwight.Wanamassa.Floyd") @pa_alias("egress" , "eg_intr_md.egress_port" , "Dwight.Wanamassa.Basic") @pa_alias("egress" , "eg_intr_md.egress_qid" , "Dwight.Wanamassa.Exton") @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Dwight.Cranbury.Grabill") @pa_alias("egress" , "eg_intr_md_from_prsr.global_tstamp" , "Dwight.Biggers.AquaPark") @pa_alias("egress" , "Virgilina.Halltown.Chevak" , "Dwight.Biggers.Aguilita") @pa_alias("egress" , "Virgilina.Halltown.Mendocino" , "Dwight.Biggers.Blencoe") @pa_alias("egress" , "Virgilina.Halltown.Eldred" , "Dwight.Armagh.Dennison") @pa_alias("egress" , "Virgilina.Halltown.Chloride" , "Dwight.Armagh.Buncombe") @pa_alias("egress" , "Virgilina.Halltown.Garibaldi" , "Dwight.Armagh.Dunstable") @pa_alias("egress" , "Virgilina.Halltown.Weinert" , "Dwight.Armagh.Madawaska") @pa_alias("egress" , "Virgilina.Halltown.Cornell" , "Dwight.Armagh.Heuvelton") @pa_alias("egress" , "Virgilina.Halltown.Noyes" , "Dwight.Armagh.Miranda") @pa_alias("egress" , "Virgilina.Halltown.Helton" , "Dwight.Armagh.Bells") @pa_alias("egress" , "Virgilina.Halltown.Grannis" , "Dwight.Armagh.Moorcroft") @pa_alias("egress" , "Virgilina.Halltown.StarLake" , "Dwight.Armagh.Dairyland") @pa_alias("egress" , "Virgilina.Halltown.Rains" , "Dwight.Armagh.Arvada") @pa_alias("egress" , "Virgilina.Halltown.SoapLake" , "Dwight.Armagh.Broussard") @pa_alias("egress" , "Virgilina.Halltown.Linden" , "Dwight.Armagh.Rocklake") @pa_alias("egress" , "Virgilina.Halltown.Conner" , "Dwight.Gamaliel.McCracken") @pa_alias("egress" , "Virgilina.Halltown.Ledoux" , "Dwight.Hillside.Cabot") @pa_alias("egress" , "Virgilina.Halltown.Steger" , "Dwight.Yorkshire.Quinwood") @pa_alias("egress" , "Virgilina.Halltown.Quogue" , "Dwight.Yorkshire.Madera") @pa_alias("egress" , "Virgilina.Halltown.Findlay" , "Dwight.Yorkshire.Pittsboro") @pa_alias("egress" , "Virgilina.Halltown.Dowell" , "Dwight.Orting.Tiburon") @pa_alias("egress" , "Virgilina.Halltown.Allison" , "Dwight.Dushore.Kendrick") @pa_alias("egress" , "Virgilina.Halltown.Topanga" , "Dwight.Dushore.Elkville") @pa_alias("egress" , "Virgilina.Halltown.Glendevey" , "Dwight.Dushore.McBride") @pa_alias("egress" , "Virgilina.Halltown.Algodones" , "Dwight.Dushore.Vinemont") @pa_alias("egress" , "Dwight.Nooksack.RossFork" , "Dwight.Nooksack.Aldan") header Blitchton {
     bit<8> Avondale;
@@ -11,55 +9,55 @@
 
 header Glassboro {
     bit<8> Grabill;
-    @flexible 
+    @flexible
     bit<9> Moorcroft;
 }
 
 header Toklat {
     bit<8>  Grabill;
-    @flexible 
+    @flexible
     bit<9>  Moorcroft;
-    @flexible 
+    @flexible
     bit<9>  Bledsoe;
-    @flexible 
+    @flexible
     bit<32> Blencoe;
-    @flexible 
+    @flexible
     bit<32> AquaPark;
-    @flexible 
+    @flexible
     bit<5>  Vichy;
-    @flexible 
+    @flexible
     bit<19> Lathrop;
 }
 
 header Clyde {
     bit<8>  Grabill;
-    @flexible 
+    @flexible
     bit<9>  Moorcroft;
-    @flexible 
+    @flexible
     bit<32> Blencoe;
-    @flexible 
+    @flexible
     bit<5>  Vichy;
-    @flexible 
+    @flexible
     bit<8>  Clarion;
-    @flexible 
+    @flexible
     bit<16> Aguilita;
-    @flexible 
+    @flexible
     bit<16> Harbor;
 }
 
 header IttaBena {
     bit<8>  Grabill;
-    @flexible 
+    @flexible
     bit<9>  Moorcroft;
-    @flexible 
+    @flexible
     bit<9>  Bledsoe;
-    @flexible 
+    @flexible
     bit<32> Blencoe;
-    @flexible 
+    @flexible
     bit<5>  Vichy;
-    @flexible 
+    @flexible
     bit<8>  Clarion;
-    @flexible 
+    @flexible
     bit<16> Aguilita;
 }
 
@@ -111,23 +109,23 @@ struct Fayette {
 }
 
 header Dassel {
-    @flexible 
+    @flexible
     bit<1>  Bushland;
-    @flexible 
+    @flexible
     bit<1>  Loring;
-    @flexible 
+    @flexible
     bit<16> Suwannee;
-    @flexible 
+    @flexible
     bit<9>  Dugger;
-    @flexible 
+    @flexible
     bit<13> Laurelton;
-    @flexible 
+    @flexible
     bit<16> Ronda;
-    @flexible 
+    @flexible
     bit<5>  LaPalma;
-    @flexible 
+    @flexible
     bit<16> Idalia;
-    @flexible 
+    @flexible
     bit<9>  Cecilton;
 }
 
@@ -142,47 +140,47 @@ header Lacona {
     bit<3>  Topanga;
     bit<1>  Allison;
     bit<12> Spearman;
-    @flexible 
+    @flexible
     bit<16> Chevak;
-    @flexible 
+    @flexible
     bit<32> Mendocino;
-    @flexible 
+    @flexible
     bit<8>  Eldred;
-    @flexible 
+    @flexible
     bit<3>  Chloride;
-    @flexible 
+    @flexible
     bit<24> Garibaldi;
-    @flexible 
+    @flexible
     bit<24> Weinert;
-    @flexible 
+    @flexible
     bit<12> Cornell;
-    @flexible 
+    @flexible
     bit<6>  Noyes;
-    @flexible 
+    @flexible
     bit<3>  Helton;
-    @flexible 
+    @flexible
     bit<9>  Grannis;
-    @flexible 
+    @flexible
     bit<2>  StarLake;
-    @flexible 
+    @flexible
     bit<1>  Rains;
-    @flexible 
+    @flexible
     bit<1>  SoapLake;
-    @flexible 
+    @flexible
     bit<32> Linden;
-    @flexible 
+    @flexible
     bit<16> Conner;
-    @flexible 
+    @flexible
     bit<3>  Ledoux;
-    @flexible 
+    @flexible
     bit<12> Steger;
-    @flexible 
+    @flexible
     bit<12> Quogue;
-    @flexible 
+    @flexible
     bit<1>  Findlay;
-    @flexible 
+    @flexible
     bit<1>  Dowell;
-    @flexible 
+    @flexible
     bit<6>  Glendevey;
 }
 

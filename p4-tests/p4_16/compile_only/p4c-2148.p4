@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 header bridged_header_t {
@@ -1128,4 +1126,3 @@ control EgressDeparserImpl(packet_out pkt, inout headers hdr, in metadata meta, 
 Pipeline(IngressParserImpl(), ingress(), IngressDeparserImpl(), EgressParserImpl(), egress(), EgressDeparserImpl()) pipe;
 
 Switch(pipe) main;
-

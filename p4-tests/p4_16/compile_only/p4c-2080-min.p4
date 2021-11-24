@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 header AquaPark {
@@ -115,4 +113,3 @@ control Alcoma(packet_out Brookneal, inout Savery Hoven, in Newfolden Shirley, i
 Pipeline<Savery, Newfolden, Savery, Newfolden>(Osyka(), Ardsley(), Greenwood(), Parmelee(), Waumandee(), Alcoma()) pipe;
 
 Switch<Savery, Newfolden, Savery, Newfolden, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

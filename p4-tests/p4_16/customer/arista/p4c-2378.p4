@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -10,7 +8,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -61,43 +59,43 @@ header Dixboro {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<4>  Cacao;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<1>  Rockport;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<3>  Sudbury;
-    @flexible 
+    @flexible
     bit<9>  Allgood;
-    @flexible 
+    @flexible
     bit<2>  Chaska;
-    @flexible 
+    @flexible
     bit<1>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<32> Shabbona;
-    @flexible 
+    @flexible
     bit<16> Ronan;
-    @flexible 
+    @flexible
     bit<3>  Anacortes;
-    @flexible 
+    @flexible
     bit<12> Corinth;
-    @flexible 
+    @flexible
     bit<12> Willard;
-    @flexible 
+    @flexible
     bit<1>  Bayshore;
-    @flexible 
+    @flexible
     bit<1>  Florien;
-    @flexible 
+    @flexible
     bit<6>  Freeburg;
 }
 
@@ -6206,4 +6204,3 @@ control Conklin(packet_out Guion, inout Sonoma Doddridge, in SourLake Emida, in 
 @name(".pipe") Pipeline<Sonoma, SourLake, Sonoma, SourLake>(LaMoille(), Covington(), Ekron(), Tusculum(), Munday(), Conklin()) pipe;
 
 @name(".main") Switch<Sonoma, SourLake, Sonoma, SourLake, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

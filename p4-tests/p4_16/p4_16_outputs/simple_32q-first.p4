@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<48> mac_addr_t;
@@ -216,10 +214,10 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
         wred_flag = 1w0;
         avg_queue = 19w0;
         queue.apply();
-        if (avg_queue == 19w0) 
+        if (avg_queue == 19w0)
             exit;
         wred.apply();
-        if (wred_flag == 1w1) 
+        if (wred_flag == 1w1)
             ecn_marking.apply();
     }
 }
@@ -229,4 +227,3 @@ Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>
 Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser<switch_header_t, switch_metadata_t>(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe1;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _>(pipe0, pipe1) main;
-

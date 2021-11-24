@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -131,4 +130,3 @@ control egressDeparser(packet_out packet, inout headers hdr, in metadata meta, i
 Pipeline<headers, metadata, headers, metadata>(ParserImpl(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()) pipe;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

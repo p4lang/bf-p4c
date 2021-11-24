@@ -1,6 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tna.p4>
 
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;

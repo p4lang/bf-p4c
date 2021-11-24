@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Boonsboro.Ekron.Antlers" , 16)
@@ -121,7 +120,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
@@ -236,23 +235,23 @@ struct Blitchton {
 }
 
 header Harbor {
-    @flexible 
+    @flexible
     bit<1>  Campbell;
-    @flexible 
+    @flexible
     bit<1>  Edgemont;
-    @flexible 
+    @flexible
     bit<16> Woodston;
-    @flexible 
+    @flexible
     bit<9>  Ironside;
-    @flexible 
+    @flexible
     bit<13> Parmalee;
-    @flexible 
+    @flexible
     bit<16> Donnelly;
-    @flexible 
+    @flexible
     bit<5>  Kalvesta;
-    @flexible 
+    @flexible
     bit<16> GlenRock;
-    @flexible 
+    @flexible
     bit<9>  Colson;
 }
 
@@ -264,45 +263,45 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible 
+    @flexible
     bit<8>  Oriskany;
-    @flexible 
+    @flexible
     bit<3>  Bowden;
-    @flexible 
+    @flexible
     bit<24> Cabot;
-    @flexible 
+    @flexible
     bit<24> Keyes;
-    @flexible 
+    @flexible
     bit<12> Basic;
-    @flexible 
+    @flexible
     bit<3>  Freeman;
-    @flexible 
+    @flexible
     bit<9>  Exton;
-    @flexible 
+    @flexible
     bit<2>  Floyd;
-    @flexible 
+    @flexible
     bit<1>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<32> PineCity;
-    @flexible 
+    @flexible
     bit<16> Alameda;
-    @flexible 
+    @flexible
     bit<3>  Rexville;
-    @flexible 
+    @flexible
     bit<1>  WestBend;
-    @flexible 
+    @flexible
     bit<12> Quinwood;
-    @flexible 
+    @flexible
     bit<12> Marfa;
-    @flexible 
+    @flexible
     bit<1>  Palatine;
-    @flexible 
+    @flexible
     bit<1>  Mabelle;
-    @flexible 
+    @flexible
     bit<1>  Placida;
-    @flexible 
+    @flexible
     bit<6>  Hoagland;
 }
 

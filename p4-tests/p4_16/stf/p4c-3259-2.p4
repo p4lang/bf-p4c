@@ -1,6 +1,5 @@
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 const bit<32> PORT_TABLE_SIZE = 512;
 const bit<32> STROM_CONTROL_TABLE_SIZE = 1024;
@@ -2309,4 +2308,3 @@ control Eg_front(inout switch_header_t hdr, inout switch_egress_metadata_t ig_md
 Pipeline(IgParser_front(), Ig_front(), IgDeparser_front(), EgParser_front(), Eg_front(), EgDeparser_front()) pp_front;
 
 Switch(pp_front) main;
-

@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 typedef bit<16> ifindex_t;
 typedef bit<16> nexthop_t;
@@ -453,11 +452,11 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
     @name("ifindex_counter.sip_sampler.sampling_cntr") register<bit<32>, bit<18>>(18w143360, 32w1) ifindex_counter_sip_sampler_sampling_cntr_0;
     @name("ifindex_counter.sip_sampler.sampling_alu") stateful_alu<bit<32>, bit<18>, bit<1>, _>(ifindex_counter_sip_sampler_sampling_cntr_0) ifindex_counter_sip_sampler_sampling_alu_0 = {
         void instruction(inout bit<32> v, out bit<1> rv) {
-            if (v >= 32w10) 
+            if (v >= 32w10)
                 v = 32w1;
-            else 
+            else
                 v = v + 32w1;
-            if (ig_intr_md_for_tm.copy_to_cpu == 1w1) 
+            if (ig_intr_md_for_tm.copy_to_cpu == 1w1)
                 rv = 1w0;
         }
     };
@@ -508,7 +507,7 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
     @name("ifindex_counter.flowlet.flowlet_inactive_timeout") stateful_param<bit<32>>(32w5000) ifindex_counter_flowlet_flowlet_inactive_timeout_0;
     @name("ifindex_counter.flowlet.flowlet_alu") stateful_alu<flowlet_state_t, bit<15>, bit<16>, bit<48>>() ifindex_counter_flowlet_flowlet_alu_0 = {
         void instruction(inout flowlet_state_t v, out bit<16> rv, in bit<48> p) {
-            if (md.timestamp - v.ts > p && v.id != 16w65535) 
+            if (md.timestamp - v.ts > p && v.id != 16w65535)
                 v.id = md.nhop_id;
             v.ts = md.timestamp;
             rv = v.id;
@@ -703,41 +702,41 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
         const default_action = pgen_pass_2_lag_failover_set_lag_mbr_down();
     }
     apply {
-        if (md.recirc_pkt == false && md.pkt_gen_pkt == false) 
+        if (md.recirc_pkt == false && md.pkt_gen_pkt == false)
             switch (ifindex_counter_ifindex_0.apply().action_run) {
                 ifindex_counter_drop_it: {
                     tbl_act_1.apply();
-                    if (md.one_bit_val_1 == 1w1 && md.one_bit_val_2 == 1w1) 
+                    if (md.one_bit_val_1 == 1w1 && md.one_bit_val_2 == 1w1)
                         tbl_ifindex_counter_one_bit_read_do_undrop.apply();
                 }
                 default: {
                     tbl_act_2.apply();
-                    if (md.bf_temp == true) 
+                    if (md.bf_temp == true)
                         tbl_ifindex_counter_bloom_filter_bloom_filter_mark_sample.apply();
                     ifindex_counter_sip_sampler_sip_sampler_0.apply();
                     tbl_act_3.apply();
                 }
             }
 
-        else 
-            if (md.recirc_pkt == false && md.pkt_gen_pkt == true) 
+        else
+            if (md.recirc_pkt == false && md.pkt_gen_pkt == true)
                 if (hdr.pktgen_generic.isValid()) {
                     tbl_act_4.apply();
                 }
-                else 
+                else
                     if (hdr.pktgen_recirc.isValid()) {
                         pgen_pass_1_ecmp_failover_make_key_ecmp_fast_update_0.apply();
                         tbl_pgen_pass_1_ecmp_failover_set_mbr_down.apply();
                     }
-                    else 
+                    else
                         pgen_pass_1_prepare_for_recirc_0.apply();
-            else 
-                if (md.recirc_pkt == true && md.pkt_gen_pkt == false) 
+            else
+                if (md.recirc_pkt == true && md.pkt_gen_pkt == false)
                     ;
-                else 
-                    if (hdr.recirc_hdr.rtype == 4w2) 
+                else
+                    if (hdr.recirc_hdr.rtype == 4w2)
                         ;
-                    else 
+                    else
                         if (hdr.recirc_hdr.rtype == 4w1) {
                             pgen_pass_2_lag_failover_eg_ifindex_fast_update_make_key_0.apply();
                             tbl_pgen_pass_2_lag_failover_set_lag_mbr_down.apply();

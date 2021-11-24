@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 parser TofinoIngressParser(packet_in pkt, out ingress_intrinsic_metadata_t ig_intr_md) {
@@ -227,7 +225,7 @@ control npb_ing_flowtable_v4(in header_t hdr, in ingress_metadata_t ig_md, in in
         bit<32> return_value;
         flowtable_hash = h.get<tuple<bit<32>, bit<32>, bit<8>, bit<16>, bit<16>>>({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr, hdr.ipv4.protocol, hdr.tcp.src_port, hdr.tcp.dst_port });
         return_value = test_reg_action.execute(flowtable_hash);
-        if (return_value == (bit<16>)ig_intr_md.ingress_port ++ flowtable_hash[31:16]) 
+        if (return_value == (bit<16>)ig_intr_md.ingress_port ++ flowtable_hash[31:16])
             ig_intr_md_for_dprsr.drop_ctl = 3w0x1;
     }
 }
@@ -305,4 +303,3 @@ control SwitchEgressDeparser(packet_out pkt, inout header_t hdr, in egress_metad
 Pipeline<header_t, ingress_metadata_t, header_t, egress_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch<header_t, ingress_metadata_t, header_t, egress_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

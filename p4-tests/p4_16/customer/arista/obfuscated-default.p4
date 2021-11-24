@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_mutually_exclusive("egress" , "Aniak.Rainelle.Bushland" , "Crannell.Livonia.Bushland")
@@ -120,55 +119,55 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
 header Ackerman {
     bit<8>  Selawik;
-    @flexible 
+    @flexible
     bit<9>  Waipahu;
-    @flexible 
+    @flexible
     bit<9>  Sheyenne;
-    @flexible 
+    @flexible
     bit<32> Kaplan;
-    @flexible 
+    @flexible
     bit<32> McKenna;
-    @flexible 
+    @flexible
     bit<5>  Chatom;
-    @flexible 
+    @flexible
     bit<19> Powhatan;
 }
 
 header McDaniels {
     bit<8>  Selawik;
-    @flexible 
+    @flexible
     bit<9>  Waipahu;
-    @flexible 
+    @flexible
     bit<32> Kaplan;
-    @flexible 
+    @flexible
     bit<5>  Chatom;
-    @flexible 
+    @flexible
     bit<8>  Netarts;
-    @flexible 
+    @flexible
     bit<16> Hartwick;
-    @flexible 
+    @flexible
     bit<16> Toano;
 }
 
 header Crossnore {
     bit<8>  Selawik;
-    @flexible 
+    @flexible
     bit<9>  Waipahu;
-    @flexible 
+    @flexible
     bit<9>  Sheyenne;
-    @flexible 
+    @flexible
     bit<32> Kaplan;
-    @flexible 
+    @flexible
     bit<5>  Chatom;
-    @flexible 
+    @flexible
     bit<8>  Netarts;
-    @flexible 
+    @flexible
     bit<16> Hartwick;
 }
 
@@ -281,17 +280,17 @@ struct Blitchton {
 }
 
 struct Meridean {
-    @flexible 
+    @flexible
     bit<16> Tinaja;
-    @flexible 
+    @flexible
     bit<1>  Ashley;
-    @flexible 
+    @flexible
     bit<12> Ivyland;
-    @flexible 
+    @flexible
     bit<9>  Grottoes;
-    @flexible 
+    @flexible
     bit<1>  Lenexa;
-    @flexible 
+    @flexible
     bit<3>  Dresser;
 }
 
@@ -301,25 +300,25 @@ struct Meridean {
 }
 
 header Harbor {
-    @flexible 
+    @flexible
     bit<1>  Gonzalez;
-    @flexible 
+    @flexible
     bit<1>  Medulla;
-    @flexible 
+    @flexible
     bit<1>  Monteview;
-    @flexible 
+    @flexible
     bit<16> Wildell;
-    @flexible 
+    @flexible
     bit<9>  Waukesha;
-    @flexible 
+    @flexible
     bit<13> Roseville;
-    @flexible 
+    @flexible
     bit<16> Lenapah;
-    @flexible 
+    @flexible
     bit<5>  Kirkwood;
-    @flexible 
+    @flexible
     bit<16> Munich;
-    @flexible 
+    @flexible
     bit<9>  Warsaw;
 }
 
@@ -334,55 +333,55 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<12> Higginson;
-    @flexible 
+    @flexible
     bit<16> Cowan;
-    @flexible 
+    @flexible
     bit<32> Wegdahl;
-    @flexible 
+    @flexible
     bit<8>  Oriskany;
-    @flexible 
+    @flexible
     bit<3>  Bowden;
-    @flexible 
+    @flexible
     bit<24> Cabot;
-    @flexible 
+    @flexible
     bit<24> Keyes;
-    @flexible 
+    @flexible
     bit<12> Basic;
-    @flexible 
+    @flexible
     bit<6>  Freeman;
-    @flexible 
+    @flexible
     bit<3>  Exton;
-    @flexible 
+    @flexible
     bit<9>  Floyd;
-    @flexible 
+    @flexible
     bit<2>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<1>  PineCity;
-    @flexible 
+    @flexible
     bit<32> Alameda;
-    @flexible 
+    @flexible
     bit<16> Rexville;
-    @flexible 
+    @flexible
     bit<3>  Quinwood;
-    @flexible 
+    @flexible
     bit<9>  Corry;
-    @flexible 
+    @flexible
     bit<5>  Eckman;
-    @flexible 
+    @flexible
     bit<12> Marfa;
-    @flexible 
+    @flexible
     bit<12> Palatine;
-    @flexible 
+    @flexible
     bit<1>  Hiwassee;
-    @flexible 
+    @flexible
     bit<1>  WestBend;
-    @flexible 
+    @flexible
     bit<1>  Mabelle;
-    @flexible 
+    @flexible
     bit<1>  Dovray;
-    @flexible 
+    @flexible
     bit<6>  Hoagland;
 }
 

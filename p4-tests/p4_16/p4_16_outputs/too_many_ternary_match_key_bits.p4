@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 header data_h {
@@ -85,4 +83,3 @@ control deparserE(packet_out b, inout packet_t hdrs, in metadata meta, in egress
 Pipeline(parserI(), ingress(), deparserI(), parserE(), egress(), deparserE()) pipe0;
 
 Switch(pipe0) main;
-

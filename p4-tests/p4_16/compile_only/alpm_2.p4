@@ -1,6 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tna.p4>
 
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
@@ -273,4 +271,3 @@ control SwitchIngress(inout header_t hdr, inout metadata_t ig_md, in ingress_int
 Pipeline(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), EmptyEgressParser(), EmptyEgress(), EmptyEgressDeparser()) pipe;
 
 Switch(pipe) main;
-

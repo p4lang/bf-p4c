@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 header data_t {
     bit<32> f1;

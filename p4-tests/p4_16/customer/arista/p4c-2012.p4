@@ -1,15 +1,13 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 
 struct Sagerton {
     bit<1>   Exell;
-    @hidden 
+    @hidden
     bit<1>   Toccopola;
     bit<2>   Roachdale;
-    @hidden 
+    @hidden
     bit<3>   Miller;
     PortId_t Breese;
     bit<48>  Churchill;
@@ -253,9 +251,9 @@ struct Suttle {
 
 header Galloway {
     bit<8>  Ankeny;
-    @flexible 
+    @flexible
     bit<12> Denhoff;
-    @flexible 
+    @flexible
     bit<9>  Idalia;
 }
 
@@ -878,7 +876,7 @@ control Pettry(packet_out Bonduel, inout Rockham Sardinia, in Sutherlin Kaaawa, 
             if (Montague.digest_type == 3w2) {
                 Fredonia.pack({ Kaaawa.Level.McCaulley, Kaaawa.Level.Everton, Kaaawa.Level.Roosville, Kaaawa.Level.Homeacre });
             }
-            else 
+            else
                 if (Montague.digest_type == 3w3) {
                     Stilwell.pack({ Kaaawa.Level.Roosville, Sardinia.Ralls.McCaulley, Sardinia.Ralls.Everton, Sardinia.Ipava.Exton, Sardinia.McCammon.Exton, Sardinia.Hammond.Lafayette, Sardinia.Whitefish.Caroleen, Sardinia.Whitefish.TroutRun });
                 }
@@ -5068,4 +5066,3 @@ control Nerstrand(packet_out Bonduel, inout Rockham Sardinia, in Sutherlin Fernd
 Pipeline<Rockham, Sutherlin, Rockham, Sutherlin>(Ayden(), Amalga(), Pettry(), Twichell(), Bigspring(), Nerstrand()) pipe;
 
 Switch<Rockham, Sutherlin, Rockham, Sutherlin, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

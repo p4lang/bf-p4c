@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 struct metadata {
@@ -105,4 +103,3 @@ control egressDeparser(packet_out packet, inout headers hdr, in metadata meta, i
 Pipeline(ParserImpl(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()) pipe;
 
 Switch(pipe) main;
-

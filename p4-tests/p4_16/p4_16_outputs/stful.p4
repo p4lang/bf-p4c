@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 typedef bit<16> ifindex_t;
 typedef bit<16> nexthop_t;
@@ -624,7 +623,7 @@ control PgenPass1(inout headers_t hdr, inout user_metadata_t md, inout ingress_i
         if (hdr.pktgen_generic.isValid()) {
             clear_bloom_filter.apply(hdr, md);
         }
-        else 
+        else
             if (hdr.pktgen_recirc.isValid()) {
                 ecmp_failover.apply(hdr, md, ig_intr_md_for_tm);
             }
@@ -639,7 +638,7 @@ control PgenPass2(inout headers_t hdr, inout user_metadata_t md, inout ingress_i
     apply {
         if (hdr.recirc_hdr.rtype == 2) {
         }
-        else 
+        else
             if (hdr.recirc_hdr.rtype == (bit<4>)1) {
                 lag_failover.apply(hdr, md, ig_intr_md_for_tm);
             }
@@ -658,11 +657,11 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
         if (md.recirc_pkt == false && md.pkt_gen_pkt == false) {
             ifindex_counter.apply(hdr, md, ig_intr_md, ig_intr_md_for_tm);
         }
-        else 
+        else
             if (md.recirc_pkt == false && md.pkt_gen_pkt == true) {
                 pgen_pass_1.apply(hdr, md, ig_intr_md_for_tm);
             }
-            else 
+            else
                 if (md.recirc_pkt == true && md.pkt_gen_pkt == false) {
                 }
                 else {

@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -75,9 +74,9 @@ control ingress(inout headers hdr, inout metadata meta, in ingress_intrinsic_met
     @name("ingress.ra2") RegisterAction<pair, bit<16>, bit<8>>(accum_0) ra2_0 = {
         void apply(inout pair value, out bit<8> rv) {
             bit<8> tmp_1;
-            if (hdr.data.b2 > value.lo && hdr.data.b2 < value.hi) 
+            if (hdr.data.b2 > value.lo && hdr.data.b2 < value.hi)
                 tmp_1 = 8w1;
-            else 
+            else
                 tmp_1 = 8w0;
             rv = tmp_1;
         }
@@ -155,4 +154,3 @@ control egressDeparser(packet_out packet, inout headers hdr, in metadata meta, i
 Pipeline<headers, metadata, headers, metadata>(ParserImpl(), ingress(), ingressDeparser(), egressParser(), egress(), egressDeparser()) pipe;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

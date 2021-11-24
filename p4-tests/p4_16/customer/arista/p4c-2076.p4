@@ -1,10 +1,8 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 header Sagerton {
     bit<8> Exell;
-    @flexible 
+    @flexible
     bit<9> Toccopola;
 }
 
@@ -54,37 +52,37 @@ header Lafayette {
     bit<3>  Homeacre;
     bit<1>  Dixboro;
     bit<4>  Rayville;
-    @flexible 
+    @flexible
     bit<8>  Rugby;
-    @flexible 
+    @flexible
     bit<3>  Davie;
-    @flexible 
+    @flexible
     bit<24> Cacao;
-    @flexible 
+    @flexible
     bit<24> Mankato;
-    @flexible 
+    @flexible
     bit<12> Rockport;
-    @flexible 
+    @flexible
     bit<20> Union;
-    @flexible 
+    @flexible
     bit<3>  Virgil;
-    @flexible 
+    @flexible
     bit<9>  Florin;
-    @flexible 
+    @flexible
     bit<2>  Requa;
-    @flexible 
+    @flexible
     bit<1>  Sudbury;
-    @flexible 
+    @flexible
     bit<1>  Allgood;
-    @flexible 
+    @flexible
     bit<32> Chaska;
-    @flexible 
+    @flexible
     bit<12> Selawik;
-    @flexible 
+    @flexible
     bit<12> Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<6>  Ronan;
 }
 
@@ -1007,7 +1005,7 @@ control Readsboro(packet_out Hoven, inout Savery Shirley, in Newfolden Ramos, in
             if (Astor.digest_type == 3w2) {
                 Sumner.pack({ Ramos.Ackley.Sawyer, Ramos.Ackley.Iberia, Ramos.Ackley.Skime, Ramos.Ackley.Goldsboro });
             }
-            else 
+            else
                 if (Astor.digest_type == 3w3) {
                     Eolia.pack({ Ramos.Ackley.Skime, Shirley.Hayfield.Sawyer, Shirley.Hayfield.Iberia, Shirley.McCaskill.Quinwood, Shirley.Stennett.Quinwood, Shirley.Salix.Haugan, Ramos.Ackley.Paisano, Ramos.Ackley.Hickox, Shirley.Burwell.McCaulley });
                 }
@@ -1919,11 +1917,11 @@ control Ruffin(inout Savery Shirley, inout Newfolden Ramos, in ingress_intrinsic
             if (Ramos.SourLake.LakeLure & 4w0x2 == 4w0x2 && Ramos.Ackley.Kenbridge == 3w0x2) {
                 Swanlake.apply();
             }
-            else 
+            else
                 if (Ramos.SourLake.LakeLure & 4w0x1 == 4w0x1 && Ramos.Ackley.Kenbridge == 3w0x1) {
                     Emden.apply(Shirley, Ramos, Edwards, Westbury, Astor, Mausdale);
                 }
-                else 
+                else
                     if (Ramos.Dairyland.Soledad == 1w0 && (Ramos.Ackley.Welcome == 1w1 || Ramos.SourLake.LakeLure & 4w0x1 == 4w0x1 && Ramos.Ackley.Kenbridge == 3w0x3)) {
                         Brady.apply();
                     }
@@ -2607,7 +2605,7 @@ control Bowers(inout Savery Shirley, inout Newfolden Ramos, in ingress_intrinsic
             if (Ramos.Ackley.Goldsboro == Ramos.Dairyland.Chatmoss || Ramos.Dairyland.Sledge == 3w1 && Ramos.Dairyland.Sheldahl == 3w5) {
                 Pioche.apply();
             }
-            else 
+            else
                 if (Ramos.Darien.Manilla == 2w2 && Ramos.Dairyland.Chatmoss & 20w0xff800 == 20w0x3800) {
                     Scottdale.apply();
                 }
@@ -4315,4 +4313,3 @@ control Bedrock(packet_out Hoven, inout Savery Shirley, in Newfolden Ramos, in e
 Pipeline<Savery, Newfolden, Savery, Newfolden>(Brookneal(), Westend(), Readsboro(), Stone(), Ragley(), Bedrock()) pipe;
 
 Switch<Savery, Newfolden, Savery, Newfolden, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

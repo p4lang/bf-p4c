@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -218,7 +217,7 @@ control SwitchIngress(inout header_t hdr, inout ingress_metadata_t ig_md, in ing
     }
     apply {
         tbl_act.apply();
-        if (npb_ing_flowtable_v4_tmp_0 == (bit<16>)ig_intr_md.ingress_port ++ npb_ing_flowtable_v4_tmp[31:16]) 
+        if (npb_ing_flowtable_v4_tmp_0 == (bit<16>)ig_intr_md.ingress_port ++ npb_ing_flowtable_v4_tmp[31:16])
             tbl_act_0.apply();
     }
 }
@@ -305,4 +304,3 @@ control SwitchEgressDeparser(packet_out pkt, inout header_t hdr, in egress_metad
 Pipeline<header_t, ingress_metadata_t, header_t, egress_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch<header_t, ingress_metadata_t, header_t, egress_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -231,11 +230,11 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
     apply {
         tbl_act_1.apply();
         queue_0.apply();
-        if (avg_queue_0 == 19w0) 
+        if (avg_queue_0 == 19w0)
             tbl_act_2.apply();
         if (!hasExited) {
             wred_0.apply();
-            if (wred_flag_0 == 1w1) 
+            if (wred_flag_0 == 1w1)
                 ecn_marking_0.apply();
         }
     }
@@ -294,4 +293,3 @@ parser EmptyIngressParser_1(packet_in pkt, out switch_header_t hdr, out switch_m
 Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser_1(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe1;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _>(pipe0, pipe1) main;
-

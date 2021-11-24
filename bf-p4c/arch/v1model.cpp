@@ -302,19 +302,27 @@ class LoadTargetArchitecture : public Inspector {
         char tempPath[PATH_MAX];
         snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
         std::vector<const char *>filenames;
-        if (Device::currentDevice() == Device::TOFINO)
-            filenames.push_back("tofino.p4");
+        if (Device::currentDevice() == Device::TOFINO) {
+            filenames.push_back("tofino1_specs.p4");
+            filenames.push_back("tofino1_base.p4");
+        }
 #if HAVE_JBAY
-        else if (Device::currentDevice() == Device::JBAY)
-            filenames.push_back("tofino2.p4");
+        else if (Device::currentDevice() == Device::JBAY) {
+            filenames.push_back("tofino2_specs.p4");
+            filenames.push_back("tofino2_base.p4");
+        }
 #endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
-        else if (Device::currentDevice() == Device::CLOUDBREAK)
-            filenames.push_back("tofino3.p4");
+        else if (Device::currentDevice() == Device::CLOUDBREAK) {
+            filenames.push_back("tofino3_specs.p4");
+            filenames.push_back("tofino3_base.p4");
+        }
 #endif  // HAVE_CLOUDBREAK
 #if HAVE_FLATROCK
-        else if (Device::currentDevice() == Device::FLATROCK)
-            filenames.push_back("tofino.p4");
+        else if (Device::currentDevice() == Device::FLATROCK) {
+            filenames.push_back("tofino1_specs.p4");
+            filenames.push_back("tofino1_base.p4");
+        }
 #endif  // HAVE_FLATROCK
         else
             BUG("Unsupported device id %s", Device::currentDevice());

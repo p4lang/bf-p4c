@@ -1,8 +1,19 @@
-#ifndef _TOFINO3_NATIVE_ARCHITECTURE_P4_
-#define _TOFINO3_NATIVE_ARCHITECTURE_P4_
+#ifndef _TOFINO3_P4_ARCH_
+#define _TOFINO3_P4_ARCH_
 
-#include "core.p4"
-#include "tofino3.p4"
+/**
+ Version Notes:
+
+ 0.0.1:
+ - Restructuralize P4 header files (t3na.p4 -> tofino3_specs.p4 + tofino3_base.p4 + tofino3_arch.p4)
+   - t3na.p4               : Top-level header file to be included by P4 programs, includes the below
+     -> tofino3_specs.p4   : Target-device-specific types, constants and macros
+     -> tofino3_arch.p4    : Portable parsers, controls and packages (originally tofino3arch.p4)
+        -> tofino3_base.p4 : Portable constants, headers, externs etc. (originally tofino3.p4)
+
+*/
+
+#include "tofino3_base.p4"
 
 // The following declarations provide a template for the programmable blocks in
 // Tofino2.
@@ -66,7 +77,7 @@ package Pipeline<IH, IM, EH, EM>(
     EgressDeparserT<EH, EM> egress_deparser,
     @optional GhostT ghost);
 
-@pkginfo(arch="T2NA", version="0.6.0")
+@pkginfo(arch="T3NA", version="0.0.1")
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
                IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
     Pipeline<IH0, IM0, EH0, EM0> pipe0,
@@ -74,4 +85,4 @@ package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
     @optional Pipeline<IH2, IM2, EH2, EM2> pipe2,
     @optional Pipeline<IH3, IM3, EH3, EM3> pipe3);
 
-#endif  /* _TOFINO3_NATIVE_ARCHITECTURE_P4_ */
+#endif  /* _TOFINO3_P4_ARCH_ */

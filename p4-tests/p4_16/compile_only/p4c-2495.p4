@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino2.p4>
 #include <t2na.p4>
 
 struct metadata_t {
@@ -81,4 +79,3 @@ control SwitchEgressDeparser(packet_out pkt, inout header_t hdr, in metadata_t m
 @name(".pipe") Pipeline<header_t, metadata_t, header_t, metadata_t>(SwitchIngressParser(), ingress(), SwitchIngressDeparser(), SwitchEgressParser(), egress(), SwitchEgressDeparser()) pipe;
 
 @name(".main") Switch<header_t, metadata_t, header_t, metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

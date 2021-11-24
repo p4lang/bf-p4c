@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<48> mac_addr_t;
@@ -176,7 +174,7 @@ control SwitchIngress(inout header_t hdr, inout ingress_metadata_t ig_md, in ing
         npb_ing_flowtable_v4_flowtable_hash = npb_ing_flowtable_v4_tmp;
         npb_ing_flowtable_v4_tmp_0 = npb_ing_flowtable_v4_test_reg_action.execute(npb_ing_flowtable_v4_flowtable_hash);
         npb_ing_flowtable_v4_return_value = npb_ing_flowtable_v4_tmp_0;
-        if (npb_ing_flowtable_v4_return_value == (bit<16>)ig_intr_md.ingress_port ++ npb_ing_flowtable_v4_flowtable_hash[31:16]) 
+        if (npb_ing_flowtable_v4_return_value == (bit<16>)ig_intr_md.ingress_port ++ npb_ing_flowtable_v4_flowtable_hash[31:16])
             ig_intr_md_for_dprsr.drop_ctl = 3w0x1;
     }
 }
@@ -237,4 +235,3 @@ control SwitchEgressDeparser(packet_out pkt, inout header_t hdr, in egress_metad
 Pipeline<header_t, ingress_metadata_t, header_t, egress_metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch<header_t, ingress_metadata_t, header_t, egress_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

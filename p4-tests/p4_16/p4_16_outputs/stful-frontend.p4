@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 typedef bit<16> ifindex_t;
 typedef bit<16> nexthop_t;
@@ -217,7 +216,7 @@ control OneBitRead(inout user_metadata_t md, in ingress_intrinsic_metadata_t ig_
         md.one_bit_val_1 = tmp_1;
         tmp_2 = one_bit_alu_0.execute(16w2);
         md.one_bit_val_2 = tmp_2;
-        if (md.one_bit_val_1 == 1w1 && md.one_bit_val_2 == 1w1) 
+        if (md.one_bit_val_1 == 1w1 && md.one_bit_val_2 == 1w1)
             do_undrop_0();
     }
 }
@@ -274,7 +273,7 @@ control BloomFilter(inout headers_t hdr, inout user_metadata_t md, inout ingress
         tmp_9 = bloom_filter_alu_0.execute(index_5);
         tmp_10 = tmp_8 | tmp_9;
         md.bf_temp = (bool)tmp_10;
-        if (md.bf_temp == true) 
+        if (md.bf_temp == true)
             bloom_filter_mark_sample_0();
     }
 }
@@ -314,11 +313,11 @@ control SipSampler(in headers_t hdr, inout user_metadata_t md, inout ingress_int
     @name("sampling_cntr") register<bit<32>, bit<18>>(18w143360, 32w1) sampling_cntr_0;
     @name("sampling_alu") stateful_alu<bit<32>, bit<18>, bit<1>, _>(sampling_cntr_0) sampling_alu_0 = {
         void instruction(inout bit<32> v, out bit<1> rv) {
-            if (v >= 32w10) 
+            if (v >= 32w10)
                 v = 32w1;
-            else 
+            else
                 v = v + 32w1;
-            if (ig_intr_md_for_tm.copy_to_cpu == 1w1) 
+            if (ig_intr_md_for_tm.copy_to_cpu == 1w1)
                 rv = 1w0;
         }
     };
@@ -356,7 +355,7 @@ control Flowlet(inout headers_t hdr, inout user_metadata_t md) {
     @name("flowlet_inactive_timeout") stateful_param<bit<32>>(32w5000) flowlet_inactive_timeout_0;
     @name("flowlet_alu") stateful_alu<flowlet_state_t, bit<15>, bit<16>, bit<48>>() flowlet_alu_0 = {
         void instruction(inout flowlet_state_t v, out bit<16> rv, in bit<48> p) {
-            if (md.timestamp - v.ts > p && v.id != 16w65535) 
+            if (md.timestamp - v.ts > p && v.id != 16w65535)
                 v.id = md.nhop_id;
             v.ts = md.timestamp;
             rv = v.id;
@@ -506,12 +505,12 @@ control PgenPass1(inout headers_t hdr, inout user_metadata_t md, inout ingress_i
         default_action = NoAction();
     }
     apply {
-        if (hdr.pktgen_generic.isValid()) 
+        if (hdr.pktgen_generic.isValid())
             clear_bloom_filter_0.apply(hdr, md);
-        else 
-            if (hdr.pktgen_recirc.isValid()) 
+        else
+            if (hdr.pktgen_recirc.isValid())
                 ecmp_failover_0.apply(hdr, md, ig_intr_md_for_tm);
-            else 
+            else
                 prepare_for_recirc_0.apply();
     }
 }
@@ -519,10 +518,10 @@ control PgenPass1(inout headers_t hdr, inout user_metadata_t md, inout ingress_i
 control PgenPass2(inout headers_t hdr, inout user_metadata_t md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     @name("lag_failover") LagFailover() lag_failover_0;
     apply {
-        if (hdr.recirc_hdr.rtype == 4w2) 
+        if (hdr.recirc_hdr.rtype == 4w2)
             ;
-        else 
-            if (hdr.recirc_hdr.rtype == 4w1) 
+        else
+            if (hdr.recirc_hdr.rtype == 4w1)
                 lag_failover_0.apply(hdr, md, ig_intr_md_for_tm);
     }
 }
@@ -532,15 +531,15 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
     @name("pgen_pass_1") PgenPass1() pgen_pass;
     @name("pgen_pass_2") PgenPass2() pgen_pass_0;
     apply {
-        if (md.recirc_pkt == false && md.pkt_gen_pkt == false) 
+        if (md.recirc_pkt == false && md.pkt_gen_pkt == false)
             ifindex_counter_0.apply(hdr, md, ig_intr_md, ig_intr_md_for_tm);
-        else 
-            if (md.recirc_pkt == false && md.pkt_gen_pkt == true) 
+        else
+            if (md.recirc_pkt == false && md.pkt_gen_pkt == true)
                 pgen_pass.apply(hdr, md, ig_intr_md_for_tm);
-            else 
-                if (md.recirc_pkt == true && md.pkt_gen_pkt == false) 
+            else
+                if (md.recirc_pkt == true && md.pkt_gen_pkt == false)
                     ;
-                else 
+                else
                     pgen_pass_0.apply(hdr, md, ig_intr_md_for_tm);
     }
 }

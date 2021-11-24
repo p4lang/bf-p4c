@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_atomic("ingress" , "HillTop.Wisdom.Morstein") @pa_container_size("egress" , "HillTop.McGonigle.Buncombe" , 8) @pa_solitary("ingress" , "HillTop.RossFork.Redden") @pa_no_overlay("ingress" , "HillTop.RossFork.TroutRun") @pa_no_overlay("ingress" , "ig_intr_md_for_dprsr.drop_ctl") @pa_container_size("ingress" , "HillTop.Naubinway.Bonduel" , 16) @pa_container_size("ingress" , "HillTop.Naubinway.Sardinia" , 16) @pa_no_overlay("ingress" , "HillTop.RossFork.Suttle") @pa_no_overlay("ingress" , "HillTop.RossFork.Alamosa") @pa_no_overlay("ingress" , "HillTop.RossFork.Boerne") @pa_no_overlay("ingress" , "ig_intr_md_for_tm.copy_to_cpu") @pa_no_overlay("ingress" , "HillTop.Wisdom.Delavan") @pa_container_size("ingress" , "Millston.Maumee.Kaluaaha" , 32) @pa_container_size("ingress" , "Millston.Maumee.Calcasieu" , 32) @pa_container_size("ingress" , "HillTop.RossFork.Suttle" , 8) @pa_container_size("ingress" , "HillTop.RossFork.Boerne" , 8) @pa_container_size("ingress" , "HillTop.RossFork.Alamosa" , 8) @pa_container_size("ingress" , "HillTop.RossFork.Merrill" , 16) @pa_atomic("ingress" , "HillTop.RossFork.Fabens") @pa_atomic("ingress" , "HillTop.RossFork.Merrill") @pa_solitary("ingress" , "HillTop.RossFork.Suttle") @pa_solitary("ingress" , "HillTop.RossFork.Boerne") @pa_container_size("ingress" , "HillTop.RossFork.Algoa" , 32) @pa_solitaryj("ingress" , "HillTop.RossFork.Almedia" ,) @pa_solitary("ingress" , "HillTop.RossFork.Thayne") @pa_no_overlay("egress" , "HillTop.McGonigle.Buncombe") @pa_no_overlay("ingress" , "HillTop.RossFork.Charco") @pa_no_overlay("ingress" , "HillTop.RossFork.Daphne") @pa_container_size("ingress" , "HillTop.Savery.Kaluaaha" , 16) @pa_container_size("ingress" , "HillTop.Savery.Calcasieu" , 16) @pa_container_size("ingress" , "HillTop.Savery.Chevak" , 16) @pa_container_size("ingress" , "HillTop.Savery.Mendocino" , 16) @pa_atomic("ingress" , "HillTop.Savery.LasVegas") @pa_container_size("ingress" , "Millston.Maumee.Norwood" , 8) @pa_no_overlay("ingress" , "HillTop.RossFork.Uvalde") @pa_no_init("ingress" , "HillTop.Wisdom.Dolores") @pa_container_size("ingress" , "HillTop.Ovett.Manilla" , 8) @pa_atomic("ingress" , "HillTop.Bessie.Calcasieu") @pa_atomic("ingress" , "HillTop.Bessie.Chavies") @pa_atomic("ingress" , "HillTop.Bessie.Kaluaaha") @pa_atomic("ingress" , "HillTop.Bessie.Heuvelton") @pa_atomic("ingress" , "HillTop.Bessie.Chevak") @pa_atomic("ingress" , "HillTop.Salix.Hueytown") @pa_atomic("ingress" , "HillTop.RossFork.Crozet") @pa_container_size("ingress" , "HillTop.RossFork.Uvalde" , 32) @pa_container_size("ingress" , "HillTop.Wisdom.Havana" , 32) @pa_container_size("ingress" , "HillTop.Salix.Hueytown" , 16) @pa_no_overlay("ingress" , "Millston.Belgrade.Allgood") @pa_no_overlay("ingress" , "HillTop.Wisdom.Westhoff") @pa_no_overlay("ingress" , "HillTop.Komatke.Monahans") @pa_no_overlay("ingress" , "HillTop.Moose.Monahans") @pa_no_overlay("ingress" , "HillTop.RossFork.Almedia") @pa_no_overlay("ingress" , "HillTop.RossFork.Redden") @pa_no_overlay("ingress" , "HillTop.RossFork.Hulbert") @pa_no_overlay("ingress" , "HillTop.RossFork.Thayne") @pa_no_overlay("ingress" , "HillTop.RossFork.Algoa") header Sagerton {
@@ -8,7 +6,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -59,45 +57,45 @@ header Dixboro {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<4>  Cacao;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<1>  Rockport;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<6>  Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<1>  Anacortes;
-    @flexible 
+    @flexible
     bit<16> Corinth;
-    @flexible 
+    @flexible
     bit<3>  Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<12> Florien;
-    @flexible 
+    @flexible
     bit<1>  Freeburg;
-    @flexible 
+    @flexible
     bit<6>  Matheson;
 }
 
@@ -5776,4 +5774,3 @@ control Blunt(packet_out Lawai, inout Burwell Millston, in Sunflower HillTop, in
 @name(".pipe") Pipeline<Burwell, Sunflower, Burwell, Sunflower>(Thaxton(), Manville(), Belmore(), Leetsdale(), Marvin(), Blunt()) pipe;
 
 @name(".main") Switch<Burwell, Sunflower, Burwell, Sunflower, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

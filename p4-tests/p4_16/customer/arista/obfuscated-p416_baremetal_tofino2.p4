@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_baremetal_tofino2 --bf-rt-schema bf_arista_switch_baremetal_tofino2/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino2.p4>
-#include <tofino2arch.p4>
+#include <tofino2_specs.p4>
+#include <tofino2_arch.p4>
 
 @pa_auto_init_metadata
 @pa_parser_group_monogress
@@ -177,7 +176,7 @@
 header Freeburg {
     bit<8> Matheson;
     bit<8> Uintah;
-    @flexible 
+    @flexible
     bit<9> Blitchton;
 }
 
@@ -292,55 +291,55 @@ struct Clyde {
 }
 
 @pa_container_size("ingress" , "Baker.McFaddin.Suwannee" , 8) header Fayette {
-    @flexible 
+    @flexible
     bit<8>  Maryhill;
-    @flexible 
+    @flexible
     bit<3>  Norwood;
-    @flexible 
+    @flexible
     bit<21> FlatLick;
-    @flexible 
+    @flexible
     bit<3>  Suwannee;
-    @flexible 
+    @flexible
     bit<1>  Alderson;
-    @flexible 
+    @flexible
     bit<9>  Mellott;
-    @flexible 
+    @flexible
     bit<16> CruzBay;
-    @flexible 
+    @flexible
     bit<16> Cecilton;
-    @flexible 
+    @flexible
     bit<9>  Tanana;
-    @flexible 
+    @flexible
     bit<1>  Kingsgate;
-    @flexible 
+    @flexible
     bit<1>  Hillister;
-    @flexible 
+    @flexible
     bit<13> Albemarle;
-    @flexible 
+    @flexible
     bit<1>  Camden;
-    @flexible 
+    @flexible
     bit<3>  Careywood;
-    @flexible 
+    @flexible
     bit<1>  Earlsboro;
-    @flexible 
+    @flexible
     bit<16> Seabrook;
-    @flexible 
+    @flexible
     bit<4>  Devore;
-    @flexible 
+    @flexible
     bit<1>  Melvina;
-    @flexible 
+    @flexible
     bit<4>  Seibert;
-    @flexible 
+    @flexible
     bit<10> Maybee;
-    @flexible 
+    @flexible
     bit<2>  Tryon;
-    @flexible 
+    @flexible
     bit<1>  Topanga;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<16> Marfa;
-    @flexible 
+    @flexible
     bit<7>  Palatine;
 }
 
@@ -350,33 +349,33 @@ struct Clyde {
 @pa_container_size("ingress" , "Baker.McFaddin.Cecilton" , 16)
 @pa_container_size("ingress" , "Baker.McFaddin.Norwood" , 8)
 @pa_atomic("egress" , "Baker.McFaddin.Cecilton") header Ocoee {
-    @flexible 
+    @flexible
     bit<8>  Maryhill;
-    @flexible 
+    @flexible
     bit<3>  Norwood;
-    @flexible 
+    @flexible
     bit<24> Dassel;
-    @flexible 
+    @flexible
     bit<24> Bushland;
-    @flexible 
+    @flexible
     bit<13> Loring;
-    @flexible 
+    @flexible
     bit<6>  Fairborn;
-    @flexible 
+    @flexible
     bit<3>  Suwannee;
-    @flexible 
+    @flexible
     bit<9>  Dugger;
-    @flexible 
+    @flexible
     bit<1>  Ronda;
-    @flexible 
+    @flexible
     bit<1>  LaPalma;
-    @flexible 
+    @flexible
     bit<32> Idalia;
-    @flexible 
+    @flexible
     bit<16> Cecilton;
-    @flexible 
+    @flexible
     bit<13> Albemarle;
-    @flexible 
+    @flexible
     bit<1>  Topanga;
 }
 
@@ -385,13 +384,13 @@ header Hackett {
     bit<3>  Kaluaaha;
     bit<1>  Calcasieu;
     bit<4>  Levittown;
-    @flexible 
+    @flexible
     bit<2>  Laurelton;
-    @flexible 
+    @flexible
     bit<3>  Horton;
-    @flexible 
+    @flexible
     bit<13> Algodones;
-    @flexible 
+    @flexible
     bit<6>  Allison;
 }
 

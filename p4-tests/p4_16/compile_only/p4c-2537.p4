@@ -1,9 +1,8 @@
 // p4c-bfn -I/usr/share/p4c/p4include -DP416=1 -DPROFILE_P416_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_p416_baremetal_tofino2/includes -DTOFINO2=1  --display-power-budget -g -Xp4c='--disable-power-check --auto-init-metadata --create-graphs --disable-parser-state-merging -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement' --target tofino2-t2na --o bf_arista_switch_p416_baremetal_tofino2 --bf-rt-schema bf_arista_switch_p416_baremetal_tofino2/context/bf-rt.json
 // p4c 9.2.0-pr.1 (SHA: ac45e85)
 
-#include <core.p4>
-#include <tofino2.p4>
-#include <tofino2arch.p4>
+#include <tofino2_specs.p4>
+#include <tofino2_arch.p4>
 
 @pa_mutually_exclusive("ingress" , "NantyGlo.Mausdale.Barrow" , "NantyGlo.Mausdale.Clover") @pa_mutually_exclusive("ingress" , "NantyGlo.Mausdale.Barrow" , "Barnhill.Provencal.Anacortes") @pa_mutually_exclusive("egress" , "NantyGlo.Murphy.Blencoe" , "Barnhill.Bergton.Blencoe") @pa_mutually_exclusive("egress" , "Barnhill.Provencal.Union" , "Barnhill.Bergton.Blencoe") @pa_mutually_exclusive("egress" , "Barnhill.Bergton.Blencoe" , "NantyGlo.Murphy.Blencoe") @pa_mutually_exclusive("egress" , "Barnhill.Bergton.Blencoe" , "Barnhill.Provencal.Union") @pa_container_size("ingress" , "NantyGlo.Lamona.Tehachapi" , 32) @pa_container_size("ingress" , "NantyGlo.Murphy.Forkville" , 32) @pa_container_size("ingress" , "NantyGlo.Murphy.Soledad" , 32) @pa_container_size("egress" , "Barnhill.Elkville.Levittown" , 32) @pa_container_size("egress" , "Barnhill.Elkville.Maryhill" , 32) @pa_container_size("ingress" , "Barnhill.Elkville.Levittown" , 32) @pa_container_size("ingress" , "Barnhill.Elkville.Maryhill" , 32) @pa_alias("ingress" , "NantyGlo.Mausdale.Barrow" , "NantyGlo.Mausdale.Clover" , "Barnhill.Provencal.Anacortes") @pa_container_size("ingress" , "NantyGlo.Lamona.Fayette" , 8) @pa_mutually_exclusive("egress" , "Barnhill.Bergton.Harbor" , "Barnhill.Provencal.Bayshore") @pa_mutually_exclusive("egress" , "Barnhill.Bergton.Bledsoe" , "Barnhill.Provencal.Willard") @pa_container_size("ingress" , "NantyGlo.Burwell.FortHunt" , 8) @pa_container_size("ingress" , "ig_intr_md_for_tm.copy_to_cpu" , 8) @pa_container_size("ingress" , "Barnhill.Bridger.Glendevey" , 8) @pa_container_size("ingress" , "NantyGlo.Minturn.Wauconda" , 32) @pa_container_size("ingress" , "NantyGlo.Salix.Pathfork" , 8) @pa_atomic("ingress" , "NantyGlo.Lamona.Galloway") @pa_atomic("ingress" , "NantyGlo.Lewiston.Malinta") @pa_mutually_exclusive("ingress" , "NantyGlo.Lamona.Ankeny" , "NantyGlo.Lewiston.Blakeley") @pa_mutually_exclusive("ingress" , "NantyGlo.Lamona.Kaluaaha" , "NantyGlo.Lewiston.Parkville") @pa_mutually_exclusive("ingress" , "NantyGlo.Lamona.Galloway" , "NantyGlo.Lewiston.Malinta") @pa_no_init("ingress" , "NantyGlo.Murphy.Gasport") @pa_no_init("ingress" , "NantyGlo.Lamona.Ankeny") @pa_no_init("ingress" , "NantyGlo.Lamona.Kaluaaha") @pa_no_init("ingress" , "NantyGlo.Lamona.Galloway") @pa_no_init("ingress" , "NantyGlo.Lamona.Brinkman") @pa_no_init("ingress" , "NantyGlo.Salix.Cabot") @pa_mutually_exclusive("ingress" , "NantyGlo.Burwell.Levittown" , "NantyGlo.Ovett.Levittown") @pa_mutually_exclusive("ingress" , "NantyGlo.Burwell.Maryhill" , "NantyGlo.Ovett.Maryhill") @pa_mutually_exclusive("ingress" , "NantyGlo.Burwell.Levittown" , "NantyGlo.Ovett.Maryhill") @pa_mutually_exclusive("ingress" , "NantyGlo.Burwell.Maryhill" , "NantyGlo.Ovett.Levittown") @pa_no_init("ingress" , "NantyGlo.Burwell.Levittown") @pa_no_init("ingress" , "NantyGlo.Burwell.Maryhill") @pa_atomic("ingress" , "NantyGlo.Burwell.Levittown") @pa_atomic("ingress" , "NantyGlo.Burwell.Maryhill") @pa_atomic("ingress" , "NantyGlo.Naubinway.Grassflat") @pa_atomic("ingress" , "NantyGlo.Ovett.Grassflat") @pa_atomic("ingress" , "NantyGlo.Lamona.Denhoff") @pa_atomic("ingress" , "NantyGlo.Lamona.Paisano") @pa_no_init("ingress" , "NantyGlo.Minturn.Eldred") @pa_no_init("ingress" , "NantyGlo.Minturn.Richvale") @pa_no_init("ingress" , "NantyGlo.Minturn.Levittown") @pa_no_init("ingress" , "NantyGlo.Minturn.Maryhill") @pa_alias("ingress" , "NantyGlo.Minturn.Fayette" , "NantyGlo.Lamona.Fayette") @pa_atomic("ingress" , "NantyGlo.McCaskill.Newfane") @pa_alias("ingress" , "NantyGlo.Minturn.Newfane" , "NantyGlo.Lamona.Kaluaaha") @pa_alias("ingress" , "NantyGlo.Minturn.Grannis" , "NantyGlo.Lamona.Hickox") @pa_atomic("ingress" , "NantyGlo.Lamona.Lafayette") @pa_atomic("ingress" , "NantyGlo.Naubinway.Cardenas") @pa_container_size("egress" , "NantyGlo.Osyka.Wisdom" , 32) @pa_mutually_exclusive("egress" , "Barnhill.Buckhorn.Maryhill" , "NantyGlo.Murphy.Nenana") @pa_mutually_exclusive("egress" , "Barnhill.Rainelle.Cecilton" , "NantyGlo.Murphy.Nenana") @pa_mutually_exclusive("egress" , "Barnhill.Rainelle.Horton" , "NantyGlo.Murphy.Morstein") @pa_mutually_exclusive("egress" , "Barnhill.Cassa.Connell" , "NantyGlo.Murphy.Eastwood") @pa_mutually_exclusive("egress" , "Barnhill.Cassa.Adona" , "NantyGlo.Murphy.Minto") @pa_atomic("ingress" , "NantyGlo.Murphy.Forkville") @pa_container_size("ingress" , "NantyGlo.Lamona.Galloway" , 32) @pa_atomic("ingress" , "ig_intr_md_for_dprsr.drop_ctl") @pa_container_size("egress" , "Barnhill.Buckhorn.Calcasieu" , 16) @pa_container_size("ingress" , "Barnhill.Bergton.Blitchton" , 32) @pa_mutually_exclusive("egress" , "NantyGlo.Murphy.Sheldahl" , "Barnhill.Paulding.Chloride") @pa_alias("egress" , "Barnhill.Bergton.Moorcroft" , "NantyGlo.Murphy.Sledge") @pa_alias("egress" , "Barnhill.Bergton.Toklat" , "NantyGlo.Murphy.Toklat") @pa_no_init("ingress" , "NantyGlo.Osyka.Sunflower") @pa_no_init("ingress" , "NantyGlo.Osyka.Aldan") @pa_mutually_exclusive("egress" , "Barnhill.Buckhorn.Levittown" , "NantyGlo.Murphy.Ambrose") @pa_container_size("ingress" , "NantyGlo.Minturn.Levittown" , 32) @pa_container_size("ingress" , "NantyGlo.Minturn.Maryhill" , 32) @pa_no_overlay("ingress" , "NantyGlo.Lamona.Fairland") @pa_no_overlay("ingress" , "NantyGlo.Lamona.Lowes") @pa_no_overlay("ingress" , "NantyGlo.Lamona.Almedia") @pa_no_overlay("ingress" , "NantyGlo.Salix.Kaaawa") @pa_no_overlay("ingress" , "NantyGlo.McGonigle.Oilmont") @pa_no_overlay("ingress" , "NantyGlo.Plains.Oilmont") @pa_container_size("ingress" , "NantyGlo.Lamona.WindGap" , 32) @pa_container_size("ingress" , "NantyGlo.Lamona.Daphne" , 32) @pa_container_size("ingress" , "NantyGlo.Lamona.Parkland" , 32) @pa_container_size("ingress" , "NantyGlo.Lamona.Sewaren" , 32) @pa_container_size("ingress" , "NantyGlo.Quinault.Dolores" , 8) @pa_mutually_exclusive("ingress" , "NantyGlo.Lamona.Denhoff" , "NantyGlo.Lamona.Provo") @pa_no_init("ingress" , "NantyGlo.Lamona.Denhoff") @pa_no_init("ingress" , "NantyGlo.Lamona.Provo") @pa_no_init("ingress" , "NantyGlo.Amenia.RioPecos") @pa_no_init("egress" , "NantyGlo.Tiburon.RioPecos") @pa_mutually_exclusive("ingress" , "NantyGlo.Naubinway.Grassflat" , "NantyGlo.Ovett.Grassflat") @pa_alias("ingress" , "NantyGlo.Hayfield.Roachdale" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "NantyGlo.Hayfield.Roachdale" , "eg_intr_md_for_dprsr.mirror_type") @pa_atomic("ingress" , "NantyGlo.Lamona.Denhoff") header Sagerton {
     bit<8> Exell;
@@ -11,7 +10,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -66,41 +65,41 @@ header Rugby {
     bit<3>  Cacao;
     bit<1>  Mankato;
     bit<4>  Rockport;
-    @flexible 
+    @flexible
     bit<8>  Union;
-    @flexible 
+    @flexible
     bit<3>  Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<24> Requa;
-    @flexible 
+    @flexible
     bit<12> Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<16> Anacortes;
-    @flexible 
+    @flexible
     bit<3>  Corinth;
-    @flexible 
+    @flexible
     bit<12> Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<1>  Florien;
-    @flexible 
+    @flexible
     bit<1>  Freeburg;
-    @flexible 
+    @flexible
     bit<6>  Matheson;
 }
 

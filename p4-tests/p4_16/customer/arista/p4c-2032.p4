@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -5020,4 +5018,3 @@ control Buras(packet_out Ralls, inout Grassflat Standish, in Provo Blairsden, in
 Pipeline<Grassflat, Provo, Grassflat, Provo>(Whitefish(), Horatio(), Heuvelton(), Shevlin(), Bedrock(), Buras()) pipe;
 
 Switch<Grassflat, Provo, Grassflat, Provo, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

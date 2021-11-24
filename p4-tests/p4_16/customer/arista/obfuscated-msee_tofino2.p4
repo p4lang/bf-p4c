@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino2.p4>
-#include <tofino2arch.p4>
+#include <tofino2_specs.p4>
+#include <tofino2_arch.p4>
 
 @pa_auto_init_metadata
 @pa_parser_group_monogress
@@ -177,7 +176,7 @@
 header Waipahu {
     bit<8> Shabbona;
     bit<8> Yorkville;
-    @flexible 
+    @flexible
     bit<9> Ronan;
 }
 
@@ -292,57 +291,57 @@ struct Glassboro {
 }
 
 @pa_container_size("ingress" , "Wanamassa.Alstown.Keyes" , 8) header Adona {
-    @flexible 
+    @flexible
     bit<8>  Connell;
-    @flexible 
+    @flexible
     bit<3>  Higginson;
-    @flexible 
+    @flexible
     bit<21> Bowden;
-    @flexible 
+    @flexible
     bit<3>  Keyes;
-    @flexible 
+    @flexible
     bit<1>  Freeman;
-    @flexible 
+    @flexible
     bit<9>  Floyd;
-    @flexible 
+    @flexible
     bit<16> Fayette;
-    @flexible 
+    @flexible
     bit<16> Osterdock;
-    @flexible 
+    @flexible
     bit<9>  Alameda;
-    @flexible 
+    @flexible
     bit<1>  Palatine;
-    @flexible 
+    @flexible
     bit<1>  Hoagland;
-    @flexible 
+    @flexible
     bit<13> Calcasieu;
-    @flexible 
+    @flexible
     bit<1>  Wolsey;
-    @flexible 
+    @flexible
     bit<1>  Dassel;
-    @flexible 
+    @flexible
     bit<3>  Dugger;
-    @flexible 
+    @flexible
     bit<1>  Ronda;
-    @flexible 
+    @flexible
     bit<16> Lacona;
-    @flexible 
+    @flexible
     bit<3>  Algodones;
-    @flexible 
+    @flexible
     bit<1>  Topanga;
-    @flexible 
+    @flexible
     bit<4>  Spearman;
-    @flexible 
+    @flexible
     bit<10> Mendocino;
-    @flexible 
+    @flexible
     bit<2>  Chloride;
-    @flexible 
+    @flexible
     bit<1>  Weinert;
-    @flexible 
+    @flexible
     bit<1>  Noyes;
-    @flexible 
+    @flexible
     bit<16> Ledoux;
-    @flexible 
+    @flexible
     bit<7>  Quogue;
 }
 
@@ -352,31 +351,31 @@ struct Glassboro {
 @pa_container_size("ingress" , "Wanamassa.Alstown.Osterdock" , 16)
 @pa_container_size("ingress" , "Wanamassa.Alstown.Higginson" , 8)
 @pa_atomic("egress" , "Wanamassa.Alstown.Osterdock") header Littleton {
-    @flexible 
+    @flexible
     bit<8>  Connell;
-    @flexible 
+    @flexible
     bit<3>  Higginson;
-    @flexible 
+    @flexible
     bit<24> Killen;
-    @flexible 
+    @flexible
     bit<24> Turkey;
-    @flexible 
+    @flexible
     bit<13> Riner;
-    @flexible 
+    @flexible
     bit<3>  Keyes;
-    @flexible 
+    @flexible
     bit<9>  Palmhurst;
-    @flexible 
+    @flexible
     bit<1>  Comfrey;
-    @flexible 
+    @flexible
     bit<1>  Kalida;
-    @flexible 
+    @flexible
     bit<32> Wallula;
-    @flexible 
+    @flexible
     bit<16> Osterdock;
-    @flexible 
+    @flexible
     bit<13> Calcasieu;
-    @flexible 
+    @flexible
     bit<1>  Weinert;
 }
 
@@ -385,13 +384,13 @@ header Dennison {
     bit<3>  Fairhaven;
     bit<1>  Woodfield;
     bit<4>  LasVegas;
-    @flexible 
+    @flexible
     bit<2>  Westboro;
-    @flexible 
+    @flexible
     bit<3>  Newfane;
-    @flexible 
+    @flexible
     bit<13> Norcatur;
-    @flexible 
+    @flexible
     bit<6>  Burrel;
 }
 

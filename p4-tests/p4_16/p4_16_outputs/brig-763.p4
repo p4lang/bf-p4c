@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<16> bd_t;
@@ -404,4 +402,3 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
 Pipeline(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
-

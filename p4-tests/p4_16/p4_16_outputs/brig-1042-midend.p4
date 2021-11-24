@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino2.p4>
+#include <t2na.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -19,7 +18,6 @@ struct tuple_0 {
     bit<8> field_13;
     bit<8> field_14;
 }
-#include <t2na.p4>
 
 header data_h {
     bit<32> da;
@@ -108,4 +106,3 @@ control SwitchEgressDeparser(packet_out pkt, inout headers_t hdr, in user_metada
 Pipeline<headers_t, user_metadata_t, headers_t, user_metadata_t>(InParser(), SwitchIngress(), SwitchIngressDeparser(), EgParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch<headers_t, user_metadata_t, headers_t, user_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
-

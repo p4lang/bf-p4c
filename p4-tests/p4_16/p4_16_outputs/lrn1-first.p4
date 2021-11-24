@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 struct digest_0 {
@@ -264,4 +262,3 @@ control eDprsr(packet_out pkt, inout headers hdr, in metadata md, in egress_intr
 Pipeline<headers, metadata, headers, metadata>(iPrsr(), ig(), iDprsr(), ePrsr(), eg(), eDprsr()) pipe;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

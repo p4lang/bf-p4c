@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<8> inthdr_type_t;
@@ -160,7 +158,7 @@ control egress_deparser(packet_out packet, inout headers_t hdr, in local_metadat
     apply {
         packet.emit<headers_t>(hdr);
         @pa_container_size("egress" , "hdr.bridged_meta.mirror_id" , 16) {
-            if (eg_md.do_clone == 1w1) 
+            if (eg_md.do_clone == 1w1)
                 clone_e2e_mirror.emit<tuple<bit<8>, bit<16>>>(hdr.bridged_meta.mirror_id, { eg_md.mirrored_meta.hdr_type, eg_md.mirrored_meta.pad0 });
         }
     }
@@ -169,4 +167,3 @@ control egress_deparser(packet_out packet, inout headers_t hdr, in local_metadat
 Pipeline<headers_t, local_metadata_t, headers_t, local_metadata_t>(ingress_parser(), ingress_control(), ingress_deparser(), egress_parser(), egress_control(), egress_deparser()) pipeline;
 
 Switch<headers_t, local_metadata_t, headers_t, local_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipeline) main;
-

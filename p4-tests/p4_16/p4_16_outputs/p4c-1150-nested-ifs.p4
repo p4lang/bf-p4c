@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<48> mac_addr_t;
@@ -167,24 +165,24 @@ control iDprsr(packet_out packet, inout headers hdr, in metadata md, in ingress_
         if (ig_intr_md_for_dprs.digest_type == 0) {
             d0.pack({ hdr.ethernet.dmac, hdr.ethernet.smac, hdr.ethernet.etype, md.port });
         }
-        else 
+        else
             if (ig_intr_md_for_dprs.digest_type == 1) {
                 d1.pack({ hdr.ethernet.dmac, hdr.ethernet.smac, hdr.ipv6.src, hdr.ipv6.dst, hdr.ipv6.next_hdr, md.port });
             }
-            else 
+            else
                 if (ig_intr_md_for_dprs.digest_type == 2) {
                     d2.pack({ md.digest2 });
                 }
-                else 
+                else
                     if (ig_intr_md_for_dprs.digest_type == 3) {
                         d3.pack({ hdr.test1.f });
                     }
-                    else 
+                    else
                         if (ig_intr_md_for_dprs.digest_type == 4) {
                             digest_4 t = { hdr.ethernet.smac[0:0] };
                             d4.pack(t);
                         }
-                        else 
+                        else
                             if (ig_intr_md_for_dprs.digest_type == 5) {
                                 digest_5 t = {  };
                                 d5.pack(t);
@@ -220,4 +218,3 @@ control eDprsr(packet_out packet, inout headers hdr, in metadata meta, in egress
 Pipeline(iPrsr(), ingress(), iDprsr(), ePrsr(), egress(), eDprsr()) pipe;
 
 Switch(pipe) main;
-

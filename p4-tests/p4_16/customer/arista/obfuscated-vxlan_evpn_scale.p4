@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_VXLAN_EVPN_SCALE=1 -Ibf_arista_switch_vxlan_evpn_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_vxlan_evpn_scale --bf-rt-schema bf_arista_switch_vxlan_evpn_scale/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Wagener.Flaherty.Galloway" , 16)
@@ -116,7 +115,7 @@
 
 header Freeburg {
     bit<8> Matheson;
-    @flexible 
+    @flexible
     bit<9> Uintah;
 }
 
@@ -231,23 +230,23 @@ struct Lathrop {
 }
 
 header Floyd {
-    @flexible 
+    @flexible
     bit<1>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<16> PineCity;
-    @flexible 
+    @flexible
     bit<9>  Alameda;
-    @flexible 
+    @flexible
     bit<13> Rexville;
-    @flexible 
+    @flexible
     bit<16> Quinwood;
-    @flexible 
+    @flexible
     bit<5>  Marfa;
-    @flexible 
+    @flexible
     bit<16> Palatine;
-    @flexible 
+    @flexible
     bit<9>  Mabelle;
 }
 
@@ -259,41 +258,41 @@ header Ocoee {
     bit<3>  Hackett;
     bit<1>  Kaluaaha;
     bit<4>  Calcasieu;
-    @flexible 
+    @flexible
     bit<8>  Levittown;
-    @flexible 
+    @flexible
     bit<3>  Maryhill;
-    @flexible 
+    @flexible
     bit<24> Norwood;
-    @flexible 
+    @flexible
     bit<24> Dassel;
-    @flexible 
+    @flexible
     bit<12> Bushland;
-    @flexible 
+    @flexible
     bit<3>  Loring;
-    @flexible 
+    @flexible
     bit<9>  Suwannee;
-    @flexible 
+    @flexible
     bit<2>  Dugger;
-    @flexible 
+    @flexible
     bit<1>  Laurelton;
-    @flexible 
+    @flexible
     bit<1>  Ronda;
-    @flexible 
+    @flexible
     bit<32> LaPalma;
-    @flexible 
+    @flexible
     bit<16> Idalia;
-    @flexible 
+    @flexible
     bit<3>  Cecilton;
-    @flexible 
+    @flexible
     bit<12> Horton;
-    @flexible 
+    @flexible
     bit<12> Lacona;
-    @flexible 
+    @flexible
     bit<1>  Albemarle;
-    @flexible 
+    @flexible
     bit<1>  Algodones;
-    @flexible 
+    @flexible
     bit<6>  Buckeye;
 }
 

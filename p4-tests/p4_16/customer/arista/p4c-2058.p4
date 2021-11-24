@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 struct Sagerton {
@@ -253,7 +251,7 @@ struct Ankeny {
 
 header Denhoff {
     bit<8> Provo;
-    @flexible 
+    @flexible
     bit<9> Horton;
 }
 
@@ -470,41 +468,41 @@ header Quinhagak {
     bit<3>  Ivyland;
     bit<1>  Edgemoor;
     bit<4>  Lovewell;
-    @flexible 
+    @flexible
     bit<8>  Dolores;
-    @flexible 
+    @flexible
     bit<1>  Atoka;
-    @flexible 
+    @flexible
     bit<3>  Panaca;
-    @flexible 
+    @flexible
     bit<24> Madera;
-    @flexible 
+    @flexible
     bit<24> Cardenas;
-    @flexible 
+    @flexible
     bit<12> LakeLure;
-    @flexible 
+    @flexible
     bit<3>  Grassflat;
-    @flexible 
+    @flexible
     bit<9>  Whitewood;
-    @flexible 
+    @flexible
     bit<2>  Tilton;
-    @flexible 
+    @flexible
     bit<1>  Wetonka;
-    @flexible 
+    @flexible
     bit<1>  Lecompte;
-    @flexible 
+    @flexible
     bit<32> Lenexa;
-    @flexible 
+    @flexible
     bit<16> Rudolph;
-    @flexible 
+    @flexible
     bit<3>  Bufalo;
-    @flexible 
+    @flexible
     bit<12> Rockham;
-    @flexible 
+    @flexible
     bit<12> Hiland;
-    @flexible 
+    @flexible
     bit<1>  Manilla;
-    @flexible 
+    @flexible
     bit<6>  Hammond;
 }
 
@@ -901,7 +899,7 @@ control Stilwell(packet_out Norland, inout Hematite Pathfork, in Daphne Tombston
             if (LaUnion.digest_type == 3w2) {
                 Belview.pack({ Tombstone.Algoa.McCaulley, Tombstone.Algoa.Everton, Tombstone.Algoa.Roosville, Tombstone.Algoa.Homeacre });
             }
-            else 
+            else
                 if (LaUnion.digest_type == 3w3) {
                     Broussard.pack({ Tombstone.Algoa.Roosville, Pathfork.Barrow.McCaulley, Pathfork.Barrow.Everton, Pathfork.Brainard.Fayette, Pathfork.Fristoe.Fayette, Pathfork.McCammon.Lafayette, Pathfork.Clover.Caroleen, Pathfork.Clover.TroutRun });
                 }
@@ -5108,4 +5106,3 @@ control Trail(packet_out Norland, inout Hematite Pathfork, in Daphne Tombstone, 
 Pipeline<Hematite, Daphne, Hematite, Daphne>(Gause(), WestPark(), Stilwell(), Nerstrand(), Redfield(), Trail()) pipe;
 
 Switch<Hematite, Daphne, Hematite, Daphne, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

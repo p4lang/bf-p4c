@@ -1,7 +1,7 @@
 /* -*- P4_16 -*- */
 
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ != 1
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -555,7 +555,7 @@ control update_register(in bit<16> full_length, in bit<8> capture_ov,
         cap_length_4 = 0;
         cap_length_5 = padded_length;
     }
-    
+
     action comp_port_4_1()
     {
         cap_length_1 = padded_length;
@@ -763,7 +763,7 @@ control update_register(in bit<16> full_length, in bit<8> capture_ov,
                 //new_rich = 8w4;
                 //rich_register = store_last_reg4.execute(0);
             }
-            
+
             //map_last();
     }
 }
@@ -1057,7 +1057,7 @@ control Egress(
     {
         if (hdr.capture.isValid())
         {
-            update_register.apply(eg_intr_md.pkt_length, hdr.capture.reserved, 
+            update_register.apply(eg_intr_md.pkt_length, hdr.capture.reserved,
                 eg_intr_md.egress_port, meta.pkt_type, rich_register);
         }
         if (meta.ing_port_mirror.pkt_type == PKT_TYPE_CAPTURE)
@@ -1096,4 +1096,3 @@ Pipeline(
 ) pipe;
 
 Switch(pipe) main;
-

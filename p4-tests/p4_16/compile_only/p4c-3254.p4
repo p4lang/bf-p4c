@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include   -DSTRIPUSER=1 --verbose 3 --display-power-budget -g -Xp4c='--disable-mpr-config --disable-power-check --no-power-check --create-graphs --disable-parser-state-merging -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid' --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
 // p4c 9.3.0 (SHA: 242f356)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata @pa_mutually_exclusive("egress" , "Osyka.Broussard.Bledsoe" , "Gotham.Mausdale.Bledsoe") @pa_mutually_exclusive("egress" , "Gotham.Edwards.Mankato" , "Gotham.Mausdale.Bledsoe") @pa_mutually_exclusive("egress" , "Gotham.Mausdale.Bledsoe" , "Osyka.Broussard.Bledsoe") @pa_mutually_exclusive("egress" , "Gotham.Mausdale.Bledsoe" , "Gotham.Edwards.Mankato") @pa_mutually_exclusive("ingress" , "Osyka.LaUnion.Hoagland" , "Osyka.Stilwell.McBride") @pa_no_init("ingress" , "Osyka.LaUnion.Hoagland") @pa_mutually_exclusive("ingress" , "Osyka.LaUnion.Naruna" , "Osyka.Stilwell.Mystic") @pa_mutually_exclusive("ingress" , "Osyka.LaUnion.Bicknell" , "Osyka.Stilwell.Parkville") @pa_no_init("ingress" , "Osyka.LaUnion.Naruna") @pa_no_init("ingress" , "Osyka.LaUnion.Bicknell") @pa_atomic("ingress" , "Osyka.LaUnion.Bicknell") @pa_atomic("ingress" , "Osyka.Stilwell.Parkville") @pa_container_size("egress" , "Gotham.Mausdale.Uintah" , 32) @pa_container_size("egress" , "Osyka.Broussard.Bucktown" , 16) @pa_container_size("egress" , "Gotham.Sonoma.Hackett" , 32) @pa_atomic("ingress" , "Osyka.Broussard.Ravena") @pa_atomic("ingress" , "Osyka.Broussard.Rocklin") @pa_atomic("ingress" , "Osyka.Ackley.Eastwood") @pa_atomic("ingress" , "Osyka.Cuprum.Bennet") @pa_atomic("ingress" , "Osyka.Basalt.Woodfield") @pa_no_init("ingress" , "Osyka.LaUnion.Thayne") @pa_no_init("ingress" , "Osyka.McAllen.Orrick") @pa_no_init("ingress" , "Osyka.McAllen.Ipava") @pa_container_size("ingress" , "Gotham.Moose.Hackett" , 8 , 8 , 16 , 32 , 32 , 32) @pa_container_size("ingress" , "Gotham.Mausdale.Lathrop" , 8) @pa_container_size("ingress" , "Osyka.LaUnion.Freeman" , 8) @pa_container_size("ingress" , "Osyka.Candle.Madera" , 32) @pa_container_size("ingress" , "Osyka.Ackley.Placedo" , 32) @pa_solitary("ingress" , "Osyka.Basalt.Kaluaaha") @pa_container_size("ingress" , "Osyka.Basalt.Kaluaaha" , 16) @pa_container_size("ingress" , "Osyka.Basalt.Hackett" , 16) @pa_container_size("ingress" , "Osyka.Basalt.Norland" , 8) @pa_container_size("ingress" , "Gotham.Sonoma.$valid" , 8) @pa_container_size("ingress" , "Osyka.LaUnion.Ankeny" , 8) @pa_atomic("ingress" , "Osyka.Candle.Madera") @pa_container_size("ingress" , "Osyka.LaUnion.Rawson" , 8) @pa_container_size("ingress" , "Gotham.Edwards.Hecker" , 8) @pa_mutually_exclusive("ingress" , "Osyka.Colburn.Margie" , "Osyka.Belview.Jenners") @pa_atomic("ingress" , "Osyka.LaUnion.Suttle") @gfm_parity_enable @pa_alias("ingress" , "Gotham.Edwards.Carrizozo" , "Osyka.Motley.Lamar") @pa_alias("ingress" , "Gotham.Edwards.Munday" , "Osyka.Motley.Pearce") @pa_alias("ingress" , "Gotham.Edwards.Mankato" , "Osyka.Broussard.Bledsoe") @pa_alias("ingress" , "Gotham.Edwards.Union" , "Osyka.Broussard.Philbrook") @pa_alias("ingress" , "Gotham.Edwards.Virgil" , "Osyka.Broussard.IttaBena") @pa_alias("ingress" , "Gotham.Edwards.Florin" , "Osyka.Broussard.Adona") @pa_alias("ingress" , "Gotham.Edwards.Requa" , "Osyka.Broussard.Bradner") @pa_alias("ingress" , "Gotham.Edwards.Sudbury" , "Osyka.Broussard.Redden") @pa_alias("ingress" , "Gotham.Edwards.Allgood" , "Osyka.Broussard.Kremlin") @pa_alias("ingress" , "Gotham.Edwards.Chaska" , "Osyka.Broussard.Miller") @pa_alias("ingress" , "Gotham.Edwards.Selawik" , "Osyka.Broussard.Gasport") @pa_alias("ingress" , "Gotham.Edwards.Waipahu" , "Osyka.Broussard.Guadalupe") @pa_alias("ingress" , "Gotham.Edwards.Shabbona" , "Osyka.Broussard.Piperton") @pa_alias("ingress" , "Gotham.Edwards.Ronan" , "Osyka.Broussard.Rocklin") @pa_alias("ingress" , "Gotham.Edwards.Anacortes" , "Osyka.Kalkaska.Rockham") @pa_alias("ingress" , "Gotham.Edwards.Willard" , "Osyka.LaUnion.CeeVee") @pa_alias("ingress" , "Gotham.Edwards.Bayshore" , "Osyka.LaUnion.Ramapo") @pa_alias("ingress" , "Gotham.Edwards.Hecker" , "Osyka.LaUnion.Rawson") @pa_alias("ingress" , "Gotham.Edwards.Davie" , "Osyka.McAllen.Higginson") @pa_alias("ingress" , "Gotham.Edwards.Rugby" , "Osyka.McAllen.Lapoint") @pa_alias("ingress" , "Gotham.Edwards.Freeburg" , "Osyka.McAllen.Osterdock") @pa_alias("ingress" , "Gotham.Edwards.Unity" , "Osyka.McAllen.PineCity") @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Osyka.Cutten.Roachdale") @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Osyka.Naubinway.Dunedin") @pa_alias("ingress" , "ig_intr_md_for_tm.qid" , "Osyka.Naubinway.Cairo") @pa_alias("ingress" , "Osyka.Daleville.Cornell" , "Osyka.LaUnion.Beaverdam") @pa_alias("ingress" , "Osyka.Daleville.Woodfield" , "Osyka.LaUnion.Hoagland") @pa_alias("ingress" , "Osyka.Daleville.Freeman" , "Osyka.LaUnion.Freeman") @pa_alias("ingress" , "Osyka.Sunflower.Ambrose" , "Osyka.Sunflower.Sledge") @pa_alias("egress" , "eg_intr_md.deq_qdepth" , "Osyka.Ovett.Corder") @pa_alias("egress" , "eg_intr_md.egress_port" , "Osyka.Ovett.Sawyer") @pa_alias("egress" , "eg_intr_md.egress_qid" , "Osyka.Ovett.Statham") @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Osyka.Cutten.Roachdale") @pa_alias("egress" , "eg_intr_md_from_prsr.global_tstamp" , "Osyka.Motley.Belfalls") @pa_alias("egress" , "Gotham.Edwards.Carrizozo" , "Osyka.Motley.Lamar") @pa_alias("egress" , "Gotham.Edwards.Munday" , "Osyka.Motley.Pearce") @pa_alias("egress" , "Gotham.Edwards.Mankato" , "Osyka.Broussard.Bledsoe") @pa_alias("egress" , "Gotham.Edwards.Union" , "Osyka.Broussard.Philbrook") @pa_alias("egress" , "Gotham.Edwards.Virgil" , "Osyka.Broussard.IttaBena") @pa_alias("egress" , "Gotham.Edwards.Florin" , "Osyka.Broussard.Adona") @pa_alias("egress" , "Gotham.Edwards.Requa" , "Osyka.Broussard.Bradner") @pa_alias("egress" , "Gotham.Edwards.Sudbury" , "Osyka.Broussard.Redden") @pa_alias("egress" , "Gotham.Edwards.Allgood" , "Osyka.Broussard.Kremlin") @pa_alias("egress" , "Gotham.Edwards.Chaska" , "Osyka.Broussard.Miller") @pa_alias("egress" , "Gotham.Edwards.Selawik" , "Osyka.Broussard.Gasport") @pa_alias("egress" , "Gotham.Edwards.Waipahu" , "Osyka.Broussard.Guadalupe") @pa_alias("egress" , "Gotham.Edwards.Shabbona" , "Osyka.Broussard.Piperton") @pa_alias("egress" , "Gotham.Edwards.Ronan" , "Osyka.Broussard.Rocklin") @pa_alias("egress" , "Gotham.Edwards.Anacortes" , "Osyka.Kalkaska.Rockham") @pa_alias("egress" , "Gotham.Edwards.Corinth" , "Osyka.Naubinway.Dunedin") @pa_alias("egress" , "Gotham.Edwards.Willard" , "Osyka.LaUnion.CeeVee") @pa_alias("egress" , "Gotham.Edwards.Bayshore" , "Osyka.LaUnion.Ramapo") @pa_alias("egress" , "Gotham.Edwards.Hecker" , "Osyka.LaUnion.Rawson") @pa_alias("egress" , "Gotham.Edwards.Florien" , "Osyka.Newfolden.Weatherby") @pa_alias("egress" , "Gotham.Edwards.Davie" , "Osyka.McAllen.Higginson") @pa_alias("egress" , "Gotham.Edwards.Rugby" , "Osyka.McAllen.Lapoint") @pa_alias("egress" , "Gotham.Edwards.Freeburg" , "Osyka.McAllen.Osterdock") @pa_alias("egress" , "Gotham.Edwards.Unity" , "Osyka.McAllen.PineCity") @pa_alias("egress" , "Osyka.Aldan.Ambrose" , "Osyka.Aldan.Sledge") header Sagerton {
     bit<8> Exell;
@@ -11,53 +10,53 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
 header Emigrant {
     bit<8>  Roachdale;
-    @flexible 
+    @flexible
     bit<9>  Miller;
-    @flexible 
+    @flexible
     bit<9>  Ancho;
-    @flexible 
+    @flexible
     bit<32> Pearce;
-    @flexible 
+    @flexible
     bit<32> Belfalls;
-    @flexible 
+    @flexible
     bit<5>  Cairo;
-    @flexible 
+    @flexible
     bit<19> Clarendon;
 }
 
 header Slayden {
     bit<8>  Roachdale;
-    @flexible 
+    @flexible
     bit<9>  Miller;
-    @flexible 
+    @flexible
     bit<32> Pearce;
-    @flexible 
+    @flexible
     bit<5>  Cairo;
-    @flexible 
+    @flexible
     bit<8>  Edmeston;
-    @flexible 
+    @flexible
     bit<16> Lamar;
 }
 
 header Doral {
     bit<8>  Roachdale;
-    @flexible 
+    @flexible
     bit<9>  Miller;
-    @flexible 
+    @flexible
     bit<9>  Ancho;
-    @flexible 
+    @flexible
     bit<32> Pearce;
-    @flexible 
+    @flexible
     bit<5>  Cairo;
-    @flexible 
+    @flexible
     bit<8>  Edmeston;
-    @flexible 
+    @flexible
     bit<16> Lamar;
 }
 
@@ -109,25 +108,25 @@ struct LaHoma {
 }
 
 header Homeacre {
-    @padding 
+    @padding
     bit<7>  Elliston;
     bit<1>  Moapa;
-    @padding 
+    @padding
     bit<7>  Manakin;
     bit<1>  Tontogany;
     bit<16> Neuse;
-    @padding 
+    @padding
     bit<7>  Fairchild;
     bit<9>  Lushton;
-    @padding 
+    @padding
     bit<3>  Supai;
     bit<13> Sharon;
     bit<16> Separ;
-    @padding 
+    @padding
     bit<3>  Ahmeek;
     bit<5>  Elbing;
     bit<16> Waxhaw;
-    @padding 
+    @padding
     bit<7>  Gerster;
     bit<9>  Rodessa;
 }
@@ -143,47 +142,47 @@ header Rayville {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<12> Cacao;
-    @flexible 
+    @flexible
     bit<16> Carrizozo;
-    @flexible 
+    @flexible
     bit<32> Munday;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<6>  Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<16> Anacortes;
-    @flexible 
+    @flexible
     bit<3>  Corinth;
-    @flexible 
+    @flexible
     bit<12> Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<1>  Hecker;
-    @flexible 
+    @flexible
     bit<1>  Florien;
-    @flexible 
+    @flexible
     bit<6>  Freeburg;
 }
 

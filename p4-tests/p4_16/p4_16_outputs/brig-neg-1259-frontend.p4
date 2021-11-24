@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 header ethernet_t {
@@ -108,9 +106,9 @@ control ingress_control(inout headers_t hdr, inout local_metadata_t ig_md, in in
         const default_action = drop();
     }
     apply {
-        if (ig_md.unknown_pkt_err != 1w0) 
+        if (ig_md.unknown_pkt_err != 1w0)
             set_egress_port_2(9w64, 12w0);
-        else 
+        else
             set_output_0.apply();
     }
 }
@@ -177,7 +175,7 @@ control egress_control(inout headers_t hdr, inout local_metadata_t eg_md, in egr
         const default_action = push_vlan_hdr();
     }
     apply {
-        if (hdr.bridged_meta.vid != 12w0) 
+        if (hdr.bridged_meta.vid != 12w0)
             push_vlan_0.apply();
     }
 }
@@ -212,4 +210,3 @@ control egress_deparser(packet_out packet, inout headers_t hdr, in local_metadat
 Pipeline<headers_t, local_metadata_t, headers_t, local_metadata_t>(ingress_parser(), ingress_control(), ingress_deparser(), egress_parser(), egress_control(), egress_deparser()) pipeline;
 
 Switch<headers_t, local_metadata_t, headers_t, local_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipeline) main;
-

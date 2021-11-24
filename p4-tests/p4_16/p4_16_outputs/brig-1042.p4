@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino2.p4>
 #include <t2na.p4>
 
 header data_h {
@@ -67,4 +65,3 @@ control SwitchEgressDeparser(packet_out pkt, inout headers_t hdr, in user_metada
 Pipeline(InParser(), SwitchIngress(), SwitchIngressDeparser(), EgParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch(pipe0) main;
-

@@ -404,11 +404,6 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "error: .*: Duplicates declaration .*"
-  extensions/p4_tests/p4_16/compile_only/p4c-2495.p4
-)
-
-p4c_add_xfail_reason("tofino3"
   "error: .*: not defined on bit<9> and bit<11>"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1308-d.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1314.p4

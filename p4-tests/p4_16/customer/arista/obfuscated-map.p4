@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Twain.Newhalem.Rains" , 16)
@@ -71,7 +70,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
@@ -169,17 +168,17 @@ struct Blitchton {
 }
 
 struct McKenna {
-    @flexible 
+    @flexible
     bit<16> Powhatan;
-    @flexible 
+    @flexible
     bit<1>  McDaniels;
-    @flexible 
+    @flexible
     bit<12> Scarville;
-    @flexible 
+    @flexible
     bit<9>  Netarts;
-    @flexible 
+    @flexible
     bit<1>  Tilton;
-    @flexible 
+    @flexible
     bit<3>  Hartwick;
 }
 
@@ -189,21 +188,21 @@ struct McKenna {
 }
 
 header Harbor {
-    @flexible 
+    @flexible
     bit<1>  Brockton;
-    @flexible 
+    @flexible
     bit<16> Wibaux;
-    @flexible 
+    @flexible
     bit<9>  Emigrant;
-    @flexible 
+    @flexible
     bit<13> Pearce;
-    @flexible 
+    @flexible
     bit<16> Belfalls;
-    @flexible 
+    @flexible
     bit<5>  Slayden;
-    @flexible 
+    @flexible
     bit<16> Edmeston;
-    @flexible 
+    @flexible
     bit<9>  Doral;
 }
 
@@ -215,49 +214,49 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible 
+    @flexible
     bit<8>  Oriskany;
-    @flexible 
+    @flexible
     bit<3>  Bowden;
-    @flexible 
+    @flexible
     bit<24> Cabot;
-    @flexible 
+    @flexible
     bit<24> Keyes;
-    @flexible 
+    @flexible
     bit<12> Basic;
-    @flexible 
+    @flexible
     bit<3>  Freeman;
-    @flexible 
+    @flexible
     bit<9>  Exton;
-    @flexible 
+    @flexible
     bit<2>  Floyd;
-    @flexible 
+    @flexible
     bit<1>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<32> PineCity;
-    @flexible 
+    @flexible
     bit<16> Alameda;
-    @flexible 
+    @flexible
     bit<3>  Rexville;
-    @flexible 
+    @flexible
     bit<12> Quinwood;
-    @flexible 
+    @flexible
     bit<12> Marfa;
-    @flexible 
+    @flexible
     bit<1>  Palatine;
-    @flexible 
+    @flexible
     bit<1>  Mabelle;
-    @flexible 
+    @flexible
     bit<2>  Hoagland;
-    @flexible 
+    @flexible
     bit<1>  Ocoee;
-    @flexible 
+    @flexible
     bit<1>  Hackett;
-    @flexible 
+    @flexible
     bit<1>  Paradise;
-    @flexible 
+    @flexible
     bit<6>  Kaluaaha;
 }
 

@@ -1,12 +1,10 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 
 header Sagerton {
     bit<8> Exell;
-    @flexible 
+    @flexible
     bit<9> Toccopola;
 }
 
@@ -57,45 +55,45 @@ header Roosville {
     bit<3>  Dixboro;
     bit<1>  Rayville;
     bit<4>  Rugby;
-    @flexible 
+    @flexible
     bit<8>  Davie;
-    @flexible 
+    @flexible
     bit<1>  Cacao;
-    @flexible 
+    @flexible
     bit<3>  Mankato;
-    @flexible 
+    @flexible
     bit<24> Rockport;
-    @flexible 
+    @flexible
     bit<24> Union;
-    @flexible 
+    @flexible
     bit<12> Virgil;
-    @flexible 
+    @flexible
     bit<20> Florin;
-    @flexible 
+    @flexible
     bit<3>  Requa;
-    @flexible 
+    @flexible
     bit<9>  Sudbury;
-    @flexible 
+    @flexible
     bit<2>  Allgood;
-    @flexible 
+    @flexible
     bit<1>  Chaska;
-    @flexible 
+    @flexible
     bit<1>  Selawik;
-    @flexible 
+    @flexible
     bit<32> Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<16> Ronan;
-    @flexible 
+    @flexible
     bit<3>  Anacortes;
-    @flexible 
+    @flexible
     bit<12> Corinth;
-    @flexible 
+    @flexible
     bit<12> Willard;
-    @flexible 
+    @flexible
     bit<1>  Bayshore;
-    @flexible 
+    @flexible
     bit<6>  Florien;
 }
 
@@ -1035,7 +1033,7 @@ control Mather(packet_out Dateland, inout Plains Cassa, in Darien Pawtucket, in 
             if (Rainelle.digest_type == 3w1) {
                 Gambrills.pack({ Pawtucket.SourLake.Iberia, Pawtucket.SourLake.Skime, Pawtucket.SourLake.Goldsboro, Pawtucket.SourLake.Fabens });
             }
-            else 
+            else
                 if (Rainelle.digest_type == 3w2) {
                     Masontown.pack({ Pawtucket.SourLake.Goldsboro, Cassa.Gotham.Iberia, Cassa.Gotham.Skime, Cassa.Belgrade.Ocoee, Cassa.Hayfield.Ocoee, Cassa.Freeny.Paisano, Pawtucket.SourLake.Boquillas, Pawtucket.SourLake.McCaulley, Cassa.Grays.Everton });
                 }
@@ -1761,7 +1759,7 @@ control Sedan(inout Plains Cassa, inout Darien Pawtucket, in ingress_intrinsic_m
         Pawtucket.SourLake.Brinkman = (bit<12>)12w0;
     }
     @idletime_precision(1)
-    @disable_atomic_modify(1) 
+    @disable_atomic_modify(1)
     @name(".Callao") table Callao {
         actions = {
             Hookdale();
@@ -2155,11 +2153,11 @@ control Starkey(inout Plains Cassa, inout Darien Pawtucket, in ingress_intrinsic
             if (Pawtucket.Cutten.Bufalo & 4w0x2 == 4w0x2 && Pawtucket.SourLake.Ramapo == 3w0x2) {
                 Dwight.apply();
             }
-            else 
+            else
                 if (Pawtucket.Cutten.Bufalo & 4w0x1 == 4w0x1 && Pawtucket.SourLake.Ramapo == 3w0x1) {
                     Robstown.apply(Cassa, Pawtucket, Stennett, Buckhorn, Rainelle, McGonigle);
                 }
-                else 
+                else
                     if (Pawtucket.Aldan.Ambrose == 1w0 && (Pawtucket.SourLake.Daphne == 1w1 || Pawtucket.Cutten.Bufalo & 4w0x1 == 4w0x1 && Pawtucket.SourLake.Ramapo == 3w0x3)) {
                         RockHill.apply();
                     }
@@ -2802,7 +2800,7 @@ control Newtonia(inout Plains Cassa, inout Darien Pawtucket, in ingress_intrinsi
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
-        meters = Pioche; 
+        meters = Pioche;
     }
     @disable_atomic_modify(1) @name(".Weathers") table Weathers {
         actions = {
@@ -2864,7 +2862,7 @@ control Coupland(inout Plains Cassa, inout Darien Pawtucket, in ingress_intrinsi
             if (Pawtucket.SourLake.Fabens == Pawtucket.Aldan.Dyess || Pawtucket.Aldan.Waubun == 3w1 && Pawtucket.Aldan.Sledge == 3w5) {
                 LaPlant.apply();
             }
-            else 
+            else
                 if (Pawtucket.Sublett.Brainard == 2w2 && Pawtucket.Aldan.Dyess & 20w0xff800 == 20w0x3800) {
                     Ruston.apply();
                 }
@@ -4321,7 +4319,7 @@ control Maury(inout Plains Cassa, inout Darien Pawtucket, in ingress_intrinsic_m
             Belcourt.apply();
             Capitola.apply();
         }
-        else 
+        else
             if (Pawtucket.SourLake.Ramapo == 3w0x2) {
                 Doyline.apply();
                 Liberal.apply();
@@ -5754,4 +5752,3 @@ control Rembrandt(packet_out Dateland, inout Plains Cassa, in Darien Pawtucket, 
 Pipeline<Plains, Darien, Plains, Darien>(HillTop(), Elysburg(), Mather(), Finlayson(), Stamford(), Rembrandt()) pipe;
 
 Switch<Plains, Darien, Plains, Darien, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

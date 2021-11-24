@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 struct switch_ingress_flags_t {
@@ -104,4 +102,3 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
 Pipeline(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch(pipe0) main;
-

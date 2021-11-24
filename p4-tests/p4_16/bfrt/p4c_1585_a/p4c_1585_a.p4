@@ -29,7 +29,11 @@
 #else /* Default profile */
 
 #include <core.p4>
+#if __TARGET_TOFINO__ >= 2
+#include <t2na.p4>
+#else
 #include <tna.p4>
+#endif
 
 #include "features.p4"
 #include "headers.p4"
@@ -162,11 +166,11 @@ control SwitchIngress(
         hdr.bridged_md.nsh_extr_end_of_chain             = ig_md.nsh_extr.end_of_chain;
 
         // base: word 0
-    
+
         // base: word 1
         hdr.bridged_md.nsh_extr_spi                      = ig_md.nsh_extr.spi;
         hdr.bridged_md.nsh_extr_si                       = ig_md.nsh_extr.si;
-    
+
         // ext: type 2 - word 0
 
         // ext: type 2 - word 1+

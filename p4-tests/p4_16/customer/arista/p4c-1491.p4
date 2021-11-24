@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 header Exell {
@@ -133,4 +131,3 @@ control Bowden<H, M>(inout H Cabot, inout M Keyes, in egress_intrinsic_metadata_
 Pipeline<Quebrada, Lafayette, Quebrada, Lafayette>(Rugby(), Glassboro(), Florin(), Clyde<Quebrada, Lafayette>(), Bowden<Quebrada, Lafayette>(), Adona<Quebrada, Lafayette>()) Fayette;
 
 Switch<Quebrada, Lafayette, Quebrada, Lafayette, _, _, _, _, _, _, _, _, _, _, _, _>(Fayette) main;
-

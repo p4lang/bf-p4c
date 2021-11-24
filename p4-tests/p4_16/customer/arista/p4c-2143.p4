@@ -1,10 +1,8 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_alias("ingress" , "Hoven.Daleville.Bufalo" , "Hoven.Basalt.Bufalo") @pa_alias("ingress" , "Hoven.Sunflower.Ralls" , "Hoven.Sunflower.Whitefish") header Sagerton {
     bit<8> Exell;
-    @flexible 
+    @flexible
     bit<9> Toccopola;
 }
 
@@ -55,43 +53,43 @@ header Roosville {
     bit<3>  Dixboro;
     bit<1>  Rayville;
     bit<4>  Rugby;
-    @flexible 
+    @flexible
     bit<8>  Davie;
-    @flexible 
+    @flexible
     bit<1>  Cacao;
-    @flexible 
+    @flexible
     bit<3>  Mankato;
-    @flexible 
+    @flexible
     bit<24> Rockport;
-    @flexible 
+    @flexible
     bit<24> Union;
-    @flexible 
+    @flexible
     bit<12> Virgil;
-    @flexible 
+    @flexible
     bit<20> Florin;
-    @flexible 
+    @flexible
     bit<3>  Requa;
-    @flexible 
+    @flexible
     bit<9>  Sudbury;
-    @flexible 
+    @flexible
     bit<2>  Allgood;
-    @flexible 
+    @flexible
     bit<1>  Chaska;
-    @flexible 
+    @flexible
     bit<1>  Selawik;
-    @flexible 
+    @flexible
     bit<32> Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Nordheim;
-    @flexible 
+    @flexible
     bit<16> Shabbona;
-    @flexible 
+    @flexible
     bit<12> Ronan;
-    @flexible 
+    @flexible
     bit<12> Anacortes;
-    @flexible 
+    @flexible
     bit<1>  Corinth;
-    @flexible 
+    @flexible
     bit<6>  Willard;
 }
 
@@ -1005,7 +1003,7 @@ control Eolia(packet_out Pawtucket, inout Moose Brookneal, in Knoke Hoven, in in
             if (Ramos.digest_type == 3w1) {
                 Greenland.pack({ Hoven.Dairyland.Iberia, Hoven.Dairyland.Skime, Hoven.Dairyland.Goldsboro, Hoven.Dairyland.Fabens });
             }
-            else 
+            else
                 if (Ramos.digest_type == 3w2) {
                     Shingler.pack({ Hoven.Dairyland.Goldsboro, Brookneal.Calabash.Iberia, Brookneal.Calabash.Skime, Brookneal.Plains.Mabelle, Brookneal.Amenia.Mabelle, Brookneal.Stennett.Paisano, Hoven.Dairyland.Boquillas, Hoven.Dairyland.WindGap, Brookneal.Hayfield.Everton });
                 }
@@ -2104,11 +2102,11 @@ control Brady(inout Moose Brookneal, inout Knoke Hoven, in ingress_intrinsic_met
             if (Hoven.Aldan.Tilton & 4w0x2 == 4w0x2 && Hoven.Dairyland.Kearns == 3w0x2) {
                 Westoak.apply();
             }
-            else 
+            else
                 if (Hoven.Aldan.Tilton & 4w0x1 == 4w0x1 && Hoven.Dairyland.Kearns == 3w0x1) {
                     Starkey.apply(Brookneal, Hoven, Quinault, Shirley, Ramos, Komatke);
                 }
-                else 
+                else
                     if (Hoven.Darien.NewMelle == 1w0 && (Hoven.Dairyland.Almedia == 1w1 || Hoven.Aldan.Tilton & 4w0x1 == 4w0x1 && Hoven.Dairyland.Kearns == 3w0x3)) {
                         Lefor.apply();
                     }
@@ -2816,7 +2814,7 @@ control Waterman(inout Moose Brookneal, inout Knoke Hoven, in ingress_intrinsic_
             if (Hoven.Dairyland.Fabens == Hoven.Darien.Wartburg || Hoven.Darien.Dyess == 3w1 && Hoven.Darien.Chatmoss == 3w5) {
                 Morrow.apply();
             }
-            else 
+            else
                 if (Hoven.Juneau.Orrick == 2w2 && Hoven.Darien.Wartburg & 20w0xff800 == 20w0x3800) {
                     Beatrice.apply();
                 }
@@ -4247,7 +4245,7 @@ control Cowley(inout Moose Brookneal, inout Knoke Hoven, in ingress_intrinsic_me
             Nowlin.apply();
             Waumandee.apply();
         }
-        else 
+        else
             if (Hoven.Dairyland.Kearns == 3w0x2) {
                 Comunas.apply();
                 TinCity.apply();
@@ -5430,4 +5428,3 @@ control Daguao(packet_out Pawtucket, inout Moose Brookneal, in Knoke Hoven, in e
 Pipeline<Moose, Knoke, Moose, Knoke>(Cassa(), Nordland(), Eolia(), Pierson(), Sanatoga(), Daguao()) pipe;
 
 Switch<Moose, Knoke, Moose, Knoke, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

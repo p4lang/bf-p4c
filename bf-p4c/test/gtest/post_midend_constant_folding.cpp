@@ -35,17 +35,17 @@ TEST(PostMidendConstantFolding, SizeInBytesConstConst) {
             }
         )";
     Match::CheckList expected {
-        "action tofino1arch`(\\d+)`() {",
+        "action p4headers_tofino1l`(\\d+)`() {",
             "hdr.h.f1 = 32w34;",
         "}",
-        "table tbl_tofino1arch`\\1` {",
+        "table tbl_p4headers_tofino1l`\\1` {",
             "actions = {",
-                "tofino1arch`\\1`();",
+                "p4headers_tofino1l`\\1`();",
             "}",
-            "const default_action = tofino1arch`\\1`();",
+            "const default_action = p4headers_tofino1l`\\1`();",
         "}",
         "apply {",
-            "tbl_tofino1arch`\\1`.apply();",
+            "tbl_p4headers_tofino1l`\\1`.apply();",
         "}"
     };
     RUN_CHECK(input, expected);
@@ -58,17 +58,17 @@ TEST(PostMidendConstantFolding, ConstSizeInBytesConst) {
             }
         )";
     Match::CheckList expected {
-        "action tofino1arch`(\\d+)`() {",
+        "action p4headers_tofino1l`(\\d+)`() {",
             "hdr.h.f1 = 32w34;",
         "}",
-        "table tbl_tofino1arch`\\1` {",
+        "table tbl_p4headers_tofino1l`\\1` {",
             "actions = {",
-                "tofino1arch`\\1`();",
+                "p4headers_tofino1l`\\1`();",
             "}",
-            "const default_action = tofino1arch`\\1`();",
+            "const default_action = p4headers_tofino1l`\\1`();",
         "}",
         "apply {",
-            "tbl_tofino1arch`\\1`.apply();",
+            "tbl_p4headers_tofino1l`\\1`.apply();",
         "}"
     };
     RUN_CHECK(input, expected);
@@ -81,17 +81,17 @@ TEST(PostMidendConstantFolding, ConstConstSizeInBytes) {
             }
         )";
     Match::CheckList expected {
-        "action tofino1arch`(\\d+)`() {",
+        "action p4headers_tofino1l`(\\d+)`() {",
             "hdr.h.f1 = 32w34;",
         "}",
-        "table tbl_tofino1arch`\\1` {",
+        "table tbl_p4headers_tofino1l`\\1` {",
             "actions = {",
-                "tofino1arch`\\1`();",
+                "p4headers_tofino1l`\\1`();",
             "}",
-            "const default_action = tofino1arch`\\1`();",
+            "const default_action = p4headers_tofino1l`\\1`();",
         "}",
         "apply {",
-            "tbl_tofino1arch`\\1`.apply();",
+            "tbl_p4headers_tofino1l`\\1`.apply();",
         "}"
     };
     RUN_CHECK(input, expected);
@@ -104,17 +104,17 @@ TEST(PostMidendConstantFolding, SizeInBytesConstConstExplicitParentheses) {
             }
         )";
     Match::CheckList expected {
-        "action tofino1arch`(\\d+)`() {",
+        "action p4headers_tofino1l`(\\d+)`() {",
             "hdr.h.f1 = 32w34;",
         "}",
-        "table tbl_tofino1arch`\\1` {",
+        "table tbl_p4headers_tofino1l`\\1` {",
             "actions = {",
-                "tofino1arch`\\1`();",
+                "p4headers_tofino1l`\\1`();",
             "}",
-            "const default_action = tofino1arch`\\1`();",
+            "const default_action = p4headers_tofino1l`\\1`();",
         "}",
         "apply {",
-            "tbl_tofino1arch`\\1`.apply();",
+            "tbl_p4headers_tofino1l`\\1`.apply();",
         "}"
     };
     RUN_CHECK(input, expected);

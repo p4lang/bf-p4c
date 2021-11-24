@@ -1,6 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tna.p4>
 #include <tna.p4>  /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -6717,4 +6715,3 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_egress_metadata_t e
 Pipeline(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
-

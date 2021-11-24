@@ -3,6 +3,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "midend/validateProperties.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/arch/add_t2na_meta.h"
 #include "bf-p4c/arch/check_extern_invocation.h"
 #include "bf-p4c/arch/fromv1.0/phase0.h"
 #include "bf-p4c/arch/t2na.h"
@@ -17,6 +18,7 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
     setName("T2naArchTranslation");
     addDebugHook(options.getDebugHook());
     addPasses({
+        new AddT2naMeta(),
         new RewriteControlAndParserBlocks(refMap, typeMap),
         new RestoreParams(options),
         new CheckT2NAExternInvocation(refMap, typeMap),

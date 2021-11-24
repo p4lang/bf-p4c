@@ -695,6 +695,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
   arch/arch.cpp
+  arch/add_t2na_meta.cpp
   arch/intrinsic_metadata.cpp
   arch/bridge_metadata.cpp
   arch/check_extern_invocation.cpp
@@ -737,6 +738,7 @@ build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/arch.h
+  arch/add_t2na_meta.h
   arch/intrinsic_metadata.h
   arch/bridge_metadata.h
   arch/check_extern_invocation.h
@@ -843,8 +845,9 @@ set (BF_P4C_GRAPHS_SRCS
   )
 
 set (p4include_HEADERS
-  p4include/tofino.p4
-  p4include/tofino1arch.p4
+  p4include/tofino1_specs.p4
+  p4include/tofino1_base.p4
+  p4include/tofino1_arch.p4
   p4include/tna.p4
   p4include/tofino/lpf.p4
   p4include/tofino/meter.p4
@@ -860,8 +863,9 @@ set (p4include_HEADERS
 if (ENABLE_JBAY)
 set (p4include_HEADERS
   ${p4include_HEADERS}
-  p4include/tofino2.p4
-  p4include/tofino2arch.p4
+  p4include/tofino2_specs.p4
+  p4include/tofino2_base.p4
+  p4include/tofino2_arch.p4
   p4include/t2na.p4
   )
 endif (ENABLE_JBAY)
@@ -869,8 +873,9 @@ endif (ENABLE_JBAY)
 if (ENABLE_CLOUDBREAK)
 set (p4include_HEADERS
   ${p4include_HEADERS}
-  p4include/tofino3.p4
-  p4include/tofino3arch.p4
+  p4include/tofino3_specs.p4
+  p4include/tofino3_base.p4
+  p4include/tofino3_arch.p4
   p4include/t3na.p4
   )
 endif (ENABLE_CLOUDBREAK)
@@ -1320,6 +1325,18 @@ if (ENABLE_TESTING)
   set (P4HEADERS_CPP      "${P4C_BINARY_DIR}/p4headers.cpp")
   set (BFN_P4INCLUDE_DIR  "${BFN_P4C_SOURCE_DIR}/bf-p4c/p4include")
   set (I_P4INCLUDE        -I "${BFN_P4INCLUDE_DIR}" -I "${P4C_SOURCE_DIR}/p4include")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino1_specs.p4"     TOFINO1_SPECS)
+  file(WRITE  "${P4C_BINARY_DIR}/p4headers_tofino1.p4" "${TOFINO1_SPECS}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino1_arch.p4"      TOFINO1_ARCH)
+  file(APPEND "${P4C_BINARY_DIR}/p4headers_tofino1.p4" "${TOFINO1_ARCH}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino2_specs.p4"     TOFINO2_SPECS)
+  file(WRITE  "${P4C_BINARY_DIR}/p4headers_tofino2.p4" "${TOFINO2_SPECS}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino2_arch.p4"      TOFINO2_ARCH)
+  file(APPEND "${P4C_BINARY_DIR}/p4headers_tofino2.p4" "${TOFINO2_ARCH}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_specs.p4"     TOFINO3_SPECS)
+  file(WRITE  "${P4C_BINARY_DIR}/p4headers_tofino3.p4" "${TOFINO3_SPECS}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_arch.p4"      TOFINO3_ARCH)
+  file(APPEND "${P4C_BINARY_DIR}/p4headers_tofino3.p4" "${TOFINO3_ARCH}")
   add_custom_command (OUTPUT "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit" >  "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "#ifndef P4HEADERS_H_"                >> "${P4HEADERS_H}"
@@ -1339,30 +1356,32 @@ if (ENABLE_TESTING)
       VERBATIM)
   add_custom_target(p4headers_h DEPENDS "${P4HEADERS_H}")
   add_custom_command (OUTPUT "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit"                   >  "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "#include \"${P4HEADERS_H}\""                           >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "namespace Test {"                                      >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "namespace {"                                           >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers p4h = {"                               >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    std::string{R\"("                                  >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_C_COMPILER} -E -x c "${BFN_P4INCLUDE_DIR}/tofino1arch.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                            >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_C_COMPILER} -E -x c "${BFN_P4INCLUDE_DIR}/tofino2arch.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                            >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_C_COMPILER} -E -x c "${BFN_P4INCLUDE_DIR}/tofino3arch.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                            >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit"                      >  "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "#include \"${P4HEADERS_H}\""                              >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "namespace Test {"                                         >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "namespace {"                                              >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers p4h = {"                                  >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    std::string{R\"("                                     >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino1.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino2.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino3.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_C_COMPILER} -E -x c -DV1MODEL_VERSION=20180101
-                                       "${P4C_SOURCE_DIR}/p4include/v1model.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                            >> "${P4HEADERS_CPP}"
+                                       "${P4C_SOURCE_DIR}/p4include/v1model.p4" ${I_P4INCLUDE}    >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_C_COMPILER} -E -x c -DV1MODEL_VERSION=20200408
-                                       "${P4C_SOURCE_DIR}/p4include/v1model.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}};"                                            >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace"                                       >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers& p4headers() {return p4h;}"            >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace Test"                                  >> "${P4HEADERS_CPP}"
-      DEPENDS "${BFN_P4INCLUDE_DIR}/tofino1arch.p4" "${BFN_P4INCLUDE_DIR}/tofino2arch.p4"
-              "${BFN_P4INCLUDE_DIR}/tofino3arch.p4" "${P4C_SOURCE_DIR}/p4include/v1model.p4"
-      COMMENT "Stringify tofino1arch.p4, tofino2arch.p4, tofino3arch.p4 -> ${P4HEADERS_CPP}"
+                                       "${P4C_SOURCE_DIR}/p4include/v1model.p4" ${I_P4INCLUDE}    >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}};"                                               >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace"                                          >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers& p4headers() {return p4h;}"               >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace Test"                                     >> "${P4HEADERS_CPP}"
+      DEPENDS "${BFN_P4INCLUDE_DIR}/tofino1_base.p4" "${P4C_BINARY_DIR}/p4headers_tofino1.p4"
+              "${BFN_P4INCLUDE_DIR}/tofino2_base.p4" "${P4C_BINARY_DIR}/p4headers_tofino2.p4"
+              "${BFN_P4INCLUDE_DIR}/tofino3_base.p4" "${P4C_BINARY_DIR}/p4headers_tofino3.p4"
+              "${P4C_SOURCE_DIR}/p4include/v1model.p4"
+      COMMENT "Stringify P4 headers -> ${P4HEADERS_CPP}"
       VERBATIM)
   add_custom_target(p4headers_cpp DEPENDS "${P4HEADERS_CPP}")
   add_library (bf_gtest_support "${P4HEADERS_CPP}"

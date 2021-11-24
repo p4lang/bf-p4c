@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<48> mac_addr_t;
@@ -116,24 +114,24 @@ struct switch_metadata_t {
     bit<32> qdepth_32;
     bit<7>  qdepth_7;
     bit<19> qdepth_19;
-    @pa_container_size("egress" , "avg_queue328" , 8) 
+    @pa_container_size("egress" , "avg_queue328" , 8)
     bit<32> avg_queue328;
-    @pa_container_size("egress" , "avg_queue3216" , 16) 
+    @pa_container_size("egress" , "avg_queue3216" , 16)
     bit<32> avg_queue3216;
-    @pa_container_size("egress" , "avg_queue3232" , 32) 
+    @pa_container_size("egress" , "avg_queue3232" , 32)
     bit<32> avg_queue3232;
-    @pa_container_size("egress" , "avg_queue198" , 8) 
+    @pa_container_size("egress" , "avg_queue198" , 8)
     bit<19> avg_queue198;
-    @pa_container_size("egress" , "avg_queue1916" , 16) 
+    @pa_container_size("egress" , "avg_queue1916" , 16)
     bit<19> avg_queue1916;
-    @pa_container_size("egress" , "avg_queue1932" , 32) 
+    @pa_container_size("egress" , "avg_queue1932" , 32)
     bit<19> avg_queue1932;
     bit<19> avg_queue;
-    @pa_container_size("egress" , "avg_queue78" , 8) 
+    @pa_container_size("egress" , "avg_queue78" , 8)
     bit<7>  avg_queue78;
-    @pa_container_size("egress" , "avg_queue716" , 16) 
+    @pa_container_size("egress" , "avg_queue716" , 16)
     bit<7>  avg_queue716;
-    @pa_container_size("egress" , "avg_queue732" , 32) 
+    @pa_container_size("egress" , "avg_queue732" , 32)
     bit<7>  avg_queue732;
 }
 
@@ -247,4 +245,3 @@ control SwitchEgress(inout switch_header_t hdr, inout switch_metadata_t eg_md, i
 Pipeline<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t>(EmptyIngressParser<switch_header_t, switch_metadata_t>(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 
 Switch<switch_header_t, switch_metadata_t, switch_header_t, switch_metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe0) main;
-

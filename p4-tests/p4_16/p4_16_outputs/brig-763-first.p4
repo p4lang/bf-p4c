@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 typedef bit<16> bd_t;
@@ -316,7 +314,7 @@ control SwitchIngress(inout switch_header_t hdr, inout metadata_t ig_md, in ingr
         default_action = NoAction();
     }
     apply {
-        if (hdr.pktgen_tail.isValid()) 
+        if (hdr.pktgen_tail.isValid())
             forward.apply();
         else {
             pkt_port_counter.count(ig_intr_md.ingress_port);
@@ -342,10 +340,10 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
     Register<bit<8>, bit<32>>(32w1024) dip_choose_reg;
     RegisterAction<bit<8>, bit<32>, bit<8>>(dip_choose_reg) dip_choose_alu = {
         void apply(inout bit<8> value, out bit<8> read_value) {
-            if (eg_md.pkt_counter == 1w1) 
-                if (value < eg_md.max_index) 
+            if (eg_md.pkt_counter == 1w1)
+                if (value < eg_md.max_index)
                     value = value + 8w1;
-                else 
+                else
                     value = 8w0;
             read_value = value;
         }
@@ -406,4 +404,3 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
 Pipeline<switch_header_t, metadata_t, switch_header_t, metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch<switch_header_t, metadata_t, switch_header_t, metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

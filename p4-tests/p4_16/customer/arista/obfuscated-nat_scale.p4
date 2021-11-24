@@ -1,9 +1,8 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
 // p4c 9.7.0 (SHA: da5115f)
 
-#include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Fishers.Swanlake.$valid" , 16)
@@ -152,7 +151,7 @@
 
 header Freeburg {
     bit<8> Matheson;
-    @flexible 
+    @flexible
     bit<9> Uintah;
 }
 
@@ -267,71 +266,71 @@ struct Lathrop {
 
 @pa_container_size("pipe_b" , "ingress" , "Fishers.Glenoma.Norwood" , 16)
 @pa_solitary("pipe_b" , "ingress" , "Fishers.Glenoma.Norwood") header Floyd {
-    @flexible 
+    @flexible
     bit<8>  Fayette;
-    @flexible 
+    @flexible
     bit<3>  Osterdock;
-    @flexible 
+    @flexible
     bit<20> PineCity;
-    @flexible 
+    @flexible
     bit<1>  Alameda;
-    @flexible 
+    @flexible
     bit<1>  Rexville;
-    @flexible 
+    @flexible
     bit<16> Quinwood;
-    @flexible 
+    @flexible
     bit<16> Marfa;
-    @flexible 
+    @flexible
     bit<9>  Palatine;
-    @flexible 
+    @flexible
     bit<32> Mabelle;
-    @flexible 
+    @flexible
     bit<32> Hoagland;
-    @flexible 
+    @flexible
     bit<1>  Ocoee;
-    @flexible 
+    @flexible
     bit<1>  Hackett;
-    @flexible 
+    @flexible
     bit<1>  Kaluaaha;
-    @flexible 
+    @flexible
     bit<16> Calcasieu;
-    @flexible 
+    @flexible
     bit<32> Levittown;
-    @flexible 
+    @flexible
     bit<16> Maryhill;
-    @flexible 
+    @flexible
     bit<12> Norwood;
-    @flexible 
+    @flexible
     bit<8>  Dassel;
-    @flexible 
+    @flexible
     bit<32> Bushland;
-    @flexible 
+    @flexible
     bit<1>  Loring;
-    @flexible 
+    @flexible
     bit<16> Suwannee;
-    @flexible 
+    @flexible
     bit<1>  Dugger;
-    @flexible 
+    @flexible
     bit<3>  Laurelton;
-    @flexible 
+    @flexible
     bit<3>  Ronda;
-    @flexible 
+    @flexible
     bit<1>  LaPalma;
-    @flexible 
+    @flexible
     bit<1>  Idalia;
-    @flexible 
+    @flexible
     bit<4>  Cecilton;
-    @flexible 
+    @flexible
     bit<8>  Horton;
-    @flexible 
+    @flexible
     bit<2>  Lacona;
-    @flexible 
+    @flexible
     bit<1>  Albemarle;
-    @flexible 
+    @flexible
     bit<1>  Algodones;
-    @flexible 
+    @flexible
     bit<16> Buckeye;
-    @flexible 
+    @flexible
     bit<5>  Topanga;
 }
 
@@ -341,57 +340,57 @@ struct Lathrop {
 @pa_container_size("ingress" , "Fishers.Baker.Marfa" , 16)
 @pa_container_size("ingress" , "Fishers.Baker.Osterdock" , 8)
 @pa_atomic("egress" , "Fishers.Baker.Marfa") header Allison {
-    @flexible 
+    @flexible
     bit<8>  Fayette;
-    @flexible 
+    @flexible
     bit<3>  Osterdock;
-    @flexible 
+    @flexible
     bit<24> Spearman;
-    @flexible 
+    @flexible
     bit<24> Chevak;
-    @flexible 
+    @flexible
     bit<16> Mendocino;
-    @flexible 
+    @flexible
     bit<4>  Eldred;
-    @flexible 
+    @flexible
     bit<12> Chloride;
-    @flexible 
+    @flexible
     bit<9>  Garibaldi;
-    @flexible 
+    @flexible
     bit<1>  Weinert;
-    @flexible 
+    @flexible
     bit<4>  Cornell;
-    @flexible 
+    @flexible
     bit<7>  Noyes;
-    @flexible 
+    @flexible
     bit<1>  Helton;
-    @flexible 
+    @flexible
     bit<32> Grannis;
-    @flexible 
+    @flexible
     bit<16> Marfa;
-    @flexible 
+    @flexible
     bit<12> Norwood;
-    @flexible 
+    @flexible
     bit<1>  Albemarle;
 }
 
 header StarLake {
     bit<8>  Matheson;
-    @flexible 
+    @flexible
     bit<3>  Rains;
-    @flexible 
+    @flexible
     bit<2>  SoapLake;
-    @flexible 
+    @flexible
     bit<3>  Linden;
-    @flexible 
+    @flexible
     bit<12> Conner;
-    @flexible 
+    @flexible
     bit<1>  Monrovia;
-    @flexible 
+    @flexible
     bit<1>  Ledoux;
-    @flexible 
+    @flexible
     bit<3>  Steger;
-    @flexible 
+    @flexible
     bit<6>  Quogue;
 }
 

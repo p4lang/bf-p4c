@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 struct Exell {
@@ -3671,4 +3669,3 @@ control Lushton<H, M>(inout H Supai, inout M Sharon, in egress_intrinsic_metadat
 Pipeline<Tombstone, Level, Tombstone, Level>(FortHunt(), Parole(), Maddock(), LaHoma<Tombstone, Level>(), Lushton<Tombstone, Level>(), Moapa<Tombstone, Level>()) Gerster;
 
 Switch<Tombstone, Level, Tombstone, Level, _, _, _, _, _, _, _, _, _, _, _, _>(Gerster) main;
-

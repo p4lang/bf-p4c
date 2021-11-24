@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>
 
 struct digest_0 {
@@ -168,29 +166,29 @@ control iDprsr(packet_out packet, inout headers hdr, in metadata md, in ingress_
     @name("iDprsr.d4") Digest<digest_4>() d4_0;
     @name("iDprsr.d5") Digest<digest_5>() d5_0;
     apply {
-        if (ig_intr_md_for_dprs.digest_type == 3w0) 
+        if (ig_intr_md_for_dprs.digest_type == 3w0)
             d0_0.pack({hdr.ethernet.dmac,hdr.ethernet.smac,hdr.ethernet.etype,md.port});
-        else 
-            if (ig_intr_md_for_dprs.digest_type == 3w1) 
+        else
+            if (ig_intr_md_for_dprs.digest_type == 3w1)
                 d1_0.pack({hdr.ethernet.dmac,hdr.ethernet.smac,hdr.ipv6.src,hdr.ipv6.dst,hdr.ipv6.next_hdr,md.port});
-            else 
-                if (ig_intr_md_for_dprs.digest_type == 3w2) 
+            else
+                if (ig_intr_md_for_dprs.digest_type == 3w2)
                     d2_0.pack({md.digest2});
-                else 
-                    if (ig_intr_md_for_dprs.digest_type == 3w3) 
+                else
+                    if (ig_intr_md_for_dprs.digest_type == 3w3)
                         d3_0.pack({hdr.test1.f});
-                    else 
+                    else
                         if (ig_intr_md_for_dprs.digest_type == 3w4) {
                             t_0 = { hdr.ethernet.smac[0:0] };
                             d4_0.pack(t_0);
                         }
-                        else 
-                            if (ig_intr_md_for_dprs.digest_type == 3w5) 
+                        else
+                            if (ig_intr_md_for_dprs.digest_type == 3w5)
                                 d5_0.pack(t_1);
-        if (ig_intr_md_for_dprs.mirror_type == 3w0) 
+        if (ig_intr_md_for_dprs.mirror_type == 3w0)
             m0_0.emit<tuple<>>(md.session_id, {  });
-        if (ig_intr_md_for_dprs.mirror_type != 3w0) 
-            if (ig_intr_md_for_dprs.mirror_type == 3w1) 
+        if (ig_intr_md_for_dprs.mirror_type != 3w0)
+            if (ig_intr_md_for_dprs.mirror_type == 3w1)
                 m1_0.emit<tuple<>>(md.session_id, {  });
         packet.emit<headers>(hdr);
     }
@@ -215,4 +213,3 @@ control eDprsr(packet_out packet, inout headers hdr, in metadata meta, in egress
 Pipeline<headers, metadata, headers, metadata>(iPrsr(), ingress(), iDprsr(), ePrsr(), egress(), eDprsr()) pipe;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

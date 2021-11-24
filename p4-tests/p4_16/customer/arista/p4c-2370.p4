@@ -1,5 +1,3 @@
-#include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -10,7 +8,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -61,45 +59,45 @@ header Dixboro {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<4>  Cacao;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<1>  Rockport;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<6>  Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<1>  Anacortes;
-    @flexible 
+    @flexible
     bit<16> Corinth;
-    @flexible 
+    @flexible
     bit<3>  Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<12> Florien;
-    @flexible 
+    @flexible
     bit<1>  Freeburg;
-    @flexible 
+    @flexible
     bit<6>  Matheson;
 }
 
@@ -6187,4 +6185,3 @@ control Eustis(packet_out NantyGlo, inout Ramos Corvallis, in Mausdale Bridger, 
 @name(".pipe") Pipeline<Ramos, Mausdale, Ramos, Mausdale>(Barnhill(), Skiatook(), Lindsborg(), Wyanet(), Varna(), Eustis()) pipe;
 
 @name(".main") Switch<Ramos, Mausdale, Ramos, Mausdale, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

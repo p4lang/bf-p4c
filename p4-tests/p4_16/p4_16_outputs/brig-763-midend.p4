@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -414,7 +413,7 @@ control SwitchIngress(inout switch_header_t hdr, inout metadata_t ig_md, in ingr
         const default_action = drop();
     }
     apply {
-        if (hdr.pktgen_tail.isValid()) 
+        if (hdr.pktgen_tail.isValid())
             forward_0.apply();
         else {
             tbl_act_1.apply();
@@ -446,10 +445,10 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
     @name("SwitchEgress.dip_choose_reg") Register<bit<8>, bit<32>>(32w1024) dip_choose_reg_0;
     @name("SwitchEgress.dip_choose_alu") RegisterAction<bit<8>, bit<32>, bit<8>>(dip_choose_reg_0) dip_choose_alu_0 = {
         void apply(inout bit<8> value, out bit<8> read_value) {
-            if (eg_md.pkt_counter == 1w1) 
-                if (value < eg_md.max_index) 
+            if (eg_md.pkt_counter == 1w1)
+                if (value < eg_md.max_index)
                     value = value + 8w1;
-                else 
+                else
                     value = 8w0;
             read_value = value;
         }
@@ -512,4 +511,3 @@ control SwitchEgress(inout switch_header_t hdr, inout metadata_t eg_md, in egres
 Pipeline<switch_header_t, metadata_t, switch_header_t, metadata_t>(SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) pipe;
 
 Switch<switch_header_t, metadata_t, switch_header_t, metadata_t, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

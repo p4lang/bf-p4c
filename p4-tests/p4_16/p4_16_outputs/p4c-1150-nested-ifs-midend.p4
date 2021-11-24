@@ -1,5 +1,4 @@
-#include <core.p4>
-#include <tofino.p4>
+#include <tna.p4>
 
 struct tuple_0 {
     bit<8> field;
@@ -274,28 +273,28 @@ control iDprsr(packet_out packet, inout headers hdr, in metadata md, in ingress_
         const default_action = act_7();
     }
     apply {
-        if (ig_intr_md_for_dprs.digest_type == 3w0) 
+        if (ig_intr_md_for_dprs.digest_type == 3w0)
             tbl_act.apply();
-        else 
-            if (ig_intr_md_for_dprs.digest_type == 3w1) 
+        else
+            if (ig_intr_md_for_dprs.digest_type == 3w1)
                 tbl_act_0.apply();
-            else 
-                if (ig_intr_md_for_dprs.digest_type == 3w2) 
+            else
+                if (ig_intr_md_for_dprs.digest_type == 3w2)
                     tbl_act_1.apply();
-                else 
-                    if (ig_intr_md_for_dprs.digest_type == 3w3) 
+                else
+                    if (ig_intr_md_for_dprs.digest_type == 3w3)
                         tbl_act_2.apply();
-                    else 
+                    else
                         if (ig_intr_md_for_dprs.digest_type == 3w4) {
                             tbl_act_3.apply();
                         }
-                        else 
-                            if (ig_intr_md_for_dprs.digest_type == 3w5) 
+                        else
+                            if (ig_intr_md_for_dprs.digest_type == 3w5)
                                 tbl_act_4.apply();
-        if (ig_intr_md_for_dprs.mirror_type == 3w0) 
+        if (ig_intr_md_for_dprs.mirror_type == 3w0)
             tbl_act_5.apply();
-        if (ig_intr_md_for_dprs.mirror_type != 3w0) 
-            if (ig_intr_md_for_dprs.mirror_type == 3w1) 
+        if (ig_intr_md_for_dprs.mirror_type != 3w0)
+            if (ig_intr_md_for_dprs.mirror_type == 3w1)
                 tbl_act_6.apply();
         tbl_act_7.apply();
     }
@@ -320,4 +319,3 @@ control eDprsr(packet_out packet, inout headers hdr, in metadata meta, in egress
 Pipeline<headers, metadata, headers, metadata>(iPrsr(), ingress(), iDprsr(), ePrsr(), egress(), eDprsr()) pipe;
 
 Switch<headers, metadata, headers, metadata, _, _, _, _, _, _, _, _, _, _, _, _>(pipe) main;
-

@@ -1,4 +1,13 @@
-#include <tna.p4>
+#if __TARGET_TOFINO__ == 1
+#include <tofino1_specs.p4>
+#include <tofino1_arch.p4>
+#elif __TARGET_TOFINO__ == 2
+#include <tofino2_specs.p4>
+#include <tofino2_arch.p4>
+#else
+#include <tofino3_specs.p4>
+#include <tofino3_arch.p4>
+#endif
 
 struct metadata { }
 
