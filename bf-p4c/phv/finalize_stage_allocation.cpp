@@ -135,13 +135,11 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         }
     }
 
+    int physDeparser = std::max(depStages.getDeparserStage(), Device::numStages());
     // Map minStage liverange to physical liverange and update each AllocSlice
     for (auto& alloc : f->get_alloc()) {
         if (parserMin == alloc.getEarliestLiveness() && deparserMax == alloc.getLatestLiveness()) {
             // Change max stage to deparser in the physical stage list.
-            int physDeparser = std::max(depStages.getDeparserStage(), Device::numStages());
-            BUG_CHECK(physDeparser >= 0, "No tables detected while finalizing allocation of %1%",
-                    alloc);
             PHV::StageAndAccess max = std::make_pair(physDeparser, write);
             alloc.setLatestLiveness(max);
             alloc.setPhysicalDeparserStage(true);
@@ -214,6 +212,10 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                     if (physStage > maxPhysicalRead) maxPhysicalRead = physStage;
                 }
             }
+            if (usedInDeparser && (stage == deparserMax.first)) {
+                if (maxPhysicalRead == NOTSET) maxPhysicalRead = physDeparser;
+                if (minPhysicalRead == NOTSET) minPhysicalRead = physDeparser;
+            }
         }
         for (auto stage = minStageWritten; stage <= maxStageWritten; stage++) {
             LOG5("\t\t\tWrite Stage: " << stage);
@@ -267,12 +269,16 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                  alloc.getLatestLiveness().first << alloc.getLatestLiveness().second);
             continue;
         }
-        // Make sure that there is some physical stage during which this slice is alive.
-        // No need to check parser, because there will be at least one use from the parser extract.
-        BUG_CHECK(!readAbsent || !writeAbsent || alwaysRunLastStageSlice ,
-                "No read or write detected for allocated slice %1%", alloc);
 
-        if (readAbsent) {
+        // If there are no unit referencing this slice, use [-1r, 0r]
+        // as the trivial liverange which does not impact PHV allocation
+        if (readAbsent && writeAbsent && !alwaysRunLastStageSlice) {
+            LOG4("\t Slice " << alloc << " does not have any refs and is not last stage ARA");
+            new_min_stage = -1;
+            new_max_stage = 0;
+            new_min_use = read;
+            new_max_use = read;
+        } else if (readAbsent) {
             // If this slice only has write.
             new_min_stage = minPhysicalWrite;
             new_min_use = write;

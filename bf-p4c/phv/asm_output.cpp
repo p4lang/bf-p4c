@@ -9,14 +9,6 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
 
-namespace {
-
-int deparser_stage() {
-    return BFNContext::get().options().alt_phv_alloc ? Device::numStages()
-                                                     : PhvInfo::getDeparserStage();
-}
-
-}  // namespace
 
 PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse,
                            const TableSummary& tbl_summary,
