@@ -99,7 +99,7 @@
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/trivial_alloc.h"
-#include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/phv/finalize_physical_liverange.h"
 
 namespace BFN {
 
@@ -320,6 +320,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,
+        options.alt_phv_alloc ? new PHV::FinalizePhysicalLiverange(phv, clot) : nullptr,
         liveRangeReport,
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),

@@ -141,7 +141,14 @@ bool PHV::AllocSlice::isLiveAt(int stage, const PHV::FieldUse& use) const {
         // and must end with read. Also, no AllocSlice will have overlapped live range.
         const int actual_stage = use.isWrite() ? stage + 1 : stage;
         const int start = min_stage_i.second.isWrite() ? min_stage_i.first + 1 : min_stage_i.first;
-        return start <= actual_stage && actual_stage <= max_stage_i.first;
+        // XXX(yumin): Unfortunately we will still have tail-write field slices (liverange ends with
+        // a write), until we implement fieldslice-level defuse and deadcode-elim.
+        // Example case in P4C-4050:
+        // ig_mg.hash is set in stage 6 in expresion `hash[31:0] = ipv6_hash.get(***);`,
+        // but only the first half-word is ever read in `ig_md.hash[15:0] : selector;`.
+        // Then, live range of ig_md.hash[15:0] will be [6w, 6w].
+        const int end = max_stage_i.second.isWrite() ? max_stage_i.first + 1 : max_stage_i.first;
+        return start <= actual_stage && actual_stage <= end;
     } else {
         // after starting write
         const bool after_start = (min_stage_i.first < stage) ||

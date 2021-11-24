@@ -1,5 +1,6 @@
 #include "fieldslice_live_range.h"
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/exceptions.h"
@@ -116,14 +117,14 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
             const auto empty_liverange = std::make_pair(uninit_read, uninit_read);
             if (lives_i[i] == OpInfo::READ) {
                 rst.emplace_back(empty_liverange);
-                LOG3("uninitialized read: " << uninit_read);
+                LOG6("uninitialized read: " << uninit_read);
                 continue;
             } else {
                 // The read in this READ_WRITE must be not actually initialized.
                 // DO NOT skip this WRITE of READ_WRITE starting from i.
                 if (!last_defined_read || last_defined_read != i) {
                     rst.emplace_back(empty_liverange);
-                    LOG3("uninitialized read: " << uninit_read);
+                    LOG6("uninitialized read: " << uninit_read);
                 }
             }
         }
@@ -133,7 +134,6 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
         while (j < int(lives_i.size()) && lives_i[j] == OpInfo::LIVE) ++j;
         if (j == int(lives_i.size()) ||
             lives_i[j] == OpInfo::DEAD || lives_i[j] == OpInfo::WRITE) {
-            LOG3("found tailing write at " << i);
             rst.emplace_back(std::make_pair(start, start));
             i = j - 1;
             continue;
@@ -292,13 +292,14 @@ void FieldSliceLiveRangeDB::DBSetter::update_live_range_info(const PHV::FieldSli
         ::warning(
             "Because of ignore_table_dependency pragma, for %1% field, the read in stage %2% "
             "cannot source its definition of the write in stage %3%. Unexpected value might be "
-            "read and physical live range analysis will mark the parser as the first "
-            "definition of the field, regardless of actual start of definition.",
+            "read and physical live range analysis will set its liverange to the whole pipeline,"
+            " regardless of the actual physical live range.",
             cstring::to_cstring(fs), use_range.first, def_range.second);
-        liverange.parser() = liverange.parser() || OpInfo::WRITE;
-        for (int i = 0; i <= use_range.second - 1; i++) {
-            liverange.stage(i) = liverange.stage(i) || OpInfo::LIVE;
+        liverange.parser() = OpInfo::WRITE;
+        for (int i = 0; i <= Device::numStages() - 1; i++) {
+            liverange.stage(i) = OpInfo::LIVE;
         }
+        liverange.deparser() = OpInfo::READ;
     }
 }
 
@@ -329,28 +330,28 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
 
         // set (W..L...R) for all paired defuses.
         for (const FieldDefUse::locpair& use : defuse->getAllUses(fs.field()->id)) {
-            LOG5("found use: " << use.first);
+            LOG5("found use: " << use.second);
             const auto use_loc = to_location(field, use, true);
             BUG_CHECK(use_loc, "use cannot be ignored");
             const auto& defs_of_use = defuse->getDefs(use);
 
-            // Update uses if there is no defs. It is possible that read without initialization.
-            // For example, fields added by compiler as padding for deparsed(digested) metadata.
-            if (defs_of_use.size() == 0) {
-                update_live_status(liverange, *use_loc, true);
-                continue;
-            }
+            // Always update uses It is possible for field to be read without def.
+            // For example,
+            // (1) fields added by compiler as padding for deparsed(digested) metadata.
+            // (2) a = a & 1, when a has not been written before, including auto-init-metadata
+            //     is disabled on this field.
+            update_live_status(liverange, *use_loc, true);
 
             // mark(or) W and R and all stages in between to LIVE.
             for (const auto& def : defs_of_use) {
-                LOG5("found paired def: " << def.first);
+                LOG5("found paired def: " << def.second);
                 const auto* field = fs.field();
                 const auto def_loc = to_location(field, def, false);
                 if (def_loc) {
                     update_live_range_info(fs, *use_loc, *def_loc, fs_info_map[fs]);
                 } else {
-                    LOG5("ignoring a def of " << field->name
-                                              << ", because auto-init-metadata is not enabled");
+                    LOG5("ignoring parser init of " << field->name
+                         << ", because @pa_auto_init_metadata is not enabled for this field.");
                 }
             }
         }

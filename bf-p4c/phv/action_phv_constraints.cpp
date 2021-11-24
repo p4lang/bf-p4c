@@ -875,8 +875,12 @@ boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
                             le_bitrange(StartLen(container_range_start, rangeRead.size())));
         rst.setIsPhysicalStageBased(first.isPhysicalStageBased());
         rst.setLiveness(first.getEarliestLiveness(), first.getLatestLiveness());
-        BUG_CHECK(!source_slice, "multiple source slice found for one dest: %1% and %2%",
-                  *source_slice, rst);
+        // a corner case:
+        // f1 = f1 | f2, when f1 and f2 are allocated (overlaid) to the same container
+        // because f1 was uninitialized, it is okay to return any source here.
+        BUG_CHECK(!source_slice || (source_slice->container() == rst.container() &&
+                                    source_slice->container_slice() == rst.container_slice()),
+                  "multiple source slice found for one dest: %1% and %2%", *source_slice, rst);
         source_slice = rst;
     }
 

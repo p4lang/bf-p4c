@@ -555,6 +555,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/auto_init_metadata.cpp
   phv/cluster_phv_operations.cpp
   phv/create_thread_local_instances.cpp
+  phv/finalize_physical_liverange.cpp
   phv/finalize_stage_allocation.cpp
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
@@ -629,6 +630,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/collect_strided_headers.h
   phv/create_thread_local_instances.h
   phv/parser_extract_balance_score.h
+  phv/finalize_physical_liverange.h
   phv/finalize_stage_allocation.h
   phv/make_clusters.h
   phv/mau_backtracker.h

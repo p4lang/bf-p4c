@@ -37,9 +37,11 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
             PHV::FieldUse use(PHV::FieldUse::READ);
             auto slicesToProcess =
                 field->get_combined_alloc_bytes(PHV::AllocContext::of_unit(currentTable), &use);
-            for (const auto& alloc : slicesToProcess) {
-                if (fi.lo < alloc.field_slice().lo || fi.hi > alloc.field_slice().hi)
-                    continue;
+            //  early check to make debugging incorrect PHV live range easier.
+            BUG_CHECK(!slicesToProcess.empty(), "cannot find allocation of %1%, read in %2% ",
+                      field, currentTable->externalName());
+            for (const auto &alloc : slicesToProcess) {
+                if (fi.lo < alloc.field_slice().lo || fi.hi > alloc.field_slice().hi) continue;
                 size_t potential_mod4_offset = alloc.container_slice().lo / 8;
                 if (!container_set) {
                     container = alloc.container();
@@ -59,19 +61,22 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
                           "information on an input xbar byte: %s", byte);
                 byte_use |= fi.cont_loc();
             }
-            if (!byte_found || !single_byte)
+            if (!byte_found || !single_byte) {
                 throw IXBar::failure(-1, byte.loc.group);
+            }
         }
 
         if (use->type != IXBar::Use::TERNARY_MATCH) {
-            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset)
+            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset) {
                 throw IXBar::failure(-1, byte.loc.group);
+            }
         } else {
             size_t byte_offset = byte.loc.group * IXBar::TERNARY_BYTES_PER_GROUP;
             byte_offset += (byte.loc.group + 1) / 2;
             byte_offset += byte.loc.byte;
-            if ((byte_offset % (container.size() / 8)) != mod_4_offset)
+            if ((byte_offset % (container.size() / 8)) != mod_4_offset) {
                 throw IXBar::failure(-1, byte.loc.group);
+            }
         }
     }
 }

@@ -90,7 +90,8 @@ class AllocContext {
     ///             bug.
     static const AllocContext* of_unit(const IR::BFN::Unit* unit) {
         if (!unit) return nullptr;
-        if (unit->to<IR::BFN::Parser>()) return PARSER;
+        if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>() ||
+            unit->is<IR::BFN::GhostParser>()) return PARSER;
         if (unit->to<IR::BFN::Deparser>()) return DEPARSER;
         if (auto table = unit->to<IR::MAU::Table>()) return new AllocContext(table);
         BUG("Improper usage of PHV::AllocContext interface. Not a parser, deparser, or table: %1%",

@@ -48,6 +48,7 @@
 #include <numeric>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/hex.h"
@@ -232,7 +233,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
             BUG("incorrect current state when alt_phv_alloc is enabled: %1%", state_name[state]);
         }
         if (state == FAILURE) {
-            ::error(
+            ::fatal_error(
                 "table allocation (alt-phv-alloc enabled) failed to allocate tables "
                 "within %1% stages. Allocation state: %2%, "
                 "stage used: %3%, table placement warnings and errors seen: %4%",

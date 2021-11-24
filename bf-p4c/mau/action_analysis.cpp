@@ -450,18 +450,20 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
 
     if (phv_alloc) {
         le_bitrange bits;
-
-        auto *field = phv.field(field_action.write.expr, &bits);
+        const auto *field = phv.field(field_action.write.expr, &bits);
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         int split_count = 0;
-        field->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice&) {
+        bitvec unallocated_bits(bits.lo, bits.size());
+        field->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice& s) {
             split_count++;
+            unallocated_bits.clrrange(s.field_slice().lo, s.field_slice().size());
         });
 
-        BUG_CHECK(split_count > 0 || is_allowed_unalloc(field_action.write.expr),
+        // a helpful bugcheck to ensure that all relevant slices has been allocated.
+        BUG_CHECK(unallocated_bits.empty() || is_allowed_unalloc(field_action.write.expr),
                   "PHV not allocated for field %s wrt table %s", field, (tbl ? tbl->name : "null"));
-        bool split = (split_count != 1);
 
+        const bool split = (split_count != 1);
         field->foreach_alloc(bits, tbl, &use,
                 [&](const PHV::AllocSlice &alloc) {
             auto container = alloc.container();
@@ -690,18 +692,20 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
     auto *field = phv.field(write.expr, &range);
     BUG_CHECK(field, "Write in an instruction has no PHV location");
 
-    int count = 0;
-    le_bitrange write_bits;
-    PHV::FieldUse use(PHV::FieldUse::WRITE);
-    field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::AllocSlice &alloc) {
-        count++;
+    boost::optional<PHV::AllocSlice> write_slice;
+    const PHV::FieldUse use(PHV::FieldUse::WRITE);
+    field->foreach_alloc(range, cont_action.table_context, &use, [&](const PHV::AllocSlice &alloc) {
         BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
-        write_bits = alloc.container_slice();
+        BUG_CHECK(!write_slice,
+                  "ActionAnalysis did not split up container by container. "
+                  "Field: %1%, alloc1: %2%, alloc2: %3%, table: %4%.",
+                  field->name, *write_slice, alloc, cont_action.table_context->externalName());
+        write_slice = alloc;
     });
+    BUG_CHECK(write_slice, "ActionAnalysis cannot find allocation of field %1% for table %2%",
+              field->name, cont_action.table_context->externalName());
 
-    BUG_CHECK((count == 1), "ActionAnalysis did not split up container by container");
-
+    le_bitrange write_bits = write_slice->container_slice();
     bool initialized;
     if (read.is_conditional)
         return true;
@@ -1777,7 +1781,7 @@ void ActionAnalysis::TotalAlignment::set_implicit_bits_from_mask(bitvec mask,
     implicit_read_bits = implicit_write_bits.rotate_right_copy(0, left_shift, container.size());
     implicit_read_bits &= cont_mask;
     LOG5("  Setting implicit_read_bits : 0x" << std::hex << implicit_read_bits
-            << ", implicit_write_bits : 0x" << std::hex << implicit_write_bits);
+         << ", implicit_write_bits : 0x" << implicit_write_bits << std::dec);
 }
 
 void ActionAnalysis::TotalAlignment::determine_df_implicit_bits(PHV::Container container) {

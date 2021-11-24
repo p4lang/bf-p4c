@@ -281,6 +281,8 @@ struct LiveRange {
         else
             return end.first < other.end.first;
     }
+    // extend live range to include @p access.
+    void extend(const StageAndAccess& access);
 };
 
 std::ostream& operator<<(std::ostream& out, const PHV::Kind k);

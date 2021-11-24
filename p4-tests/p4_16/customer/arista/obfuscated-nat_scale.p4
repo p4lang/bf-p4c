@@ -2928,7 +2928,7 @@ control Kingman(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic
     @name(".Owentown") action Owentown() {
         Philip.Kinde.Moose = (bit<2>)2w1;
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Basye") table Basye {
+    @disable_atomic_modify(1) @stage(6) @placement_priority(1) @name(".Basye") table Basye {
         actions = {
             BirchRun();
             Owentown();
@@ -2973,7 +2973,7 @@ control Ardsley(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic
     @name(".Westend") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Westend;
     @name(".Scotland.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Westend) Scotland;
     @name(".Addicks") ActionSelector(32w1024, Scotland, SelectorMode_t.RESILIENT) Addicks;
-    @disable_atomic_modify(1) @stage(4) @placement_priority(1) @name(".Wyandanch") table Wyandanch {
+    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Wyandanch") table Wyandanch {
         actions = {
             Astatula();
             @defaultonly NoAction();
@@ -4171,7 +4171,7 @@ control Keltys(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_
     }
     @name(".Keller") action Keller() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Maupin") table Maupin {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(5) @name(".Maupin") table Maupin {
         key = {
             Philip.Swifton.Mather    : exact @name("Swifton.Mather") ;
             Philip.PeaRidge.Ramapo   : exact @name("PeaRidge.Ramapo") ;

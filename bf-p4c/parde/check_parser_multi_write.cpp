@@ -337,7 +337,7 @@ struct InferWriteMode : public ParserTransform {
                     return nullptr;
                 }
             }
-            return new IR::BFN::ParserZeroInit(extract->dest->field);
+            return new IR::BFN::ParserZeroInit(new IR::BFN::FieldLVal(extract->dest->field));
         }
 
         if (dead_extracts.count(orig)) {

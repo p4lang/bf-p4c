@@ -193,7 +193,7 @@ abstract ParserCounterPrimitive : ParserPrimitive {
 }
 
 class ParserZeroInit : ParserPrimitive {
-    IR::Expression field;
+    ParserLVal field;
     dbprint { out << "Parser zero init: " << field; }
 }
 

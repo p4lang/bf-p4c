@@ -140,6 +140,15 @@ bool LiveRange::is_disjoint(const LiveRange& other) const {
     return false;
 }
 
+
+void LiveRange::extend(const StageAndAccess& access) {
+    if (access < start) {
+        start = access;
+    } else if (end < access) {
+        end = access;
+    }
+}
+
 std::ostream& operator<<(std::ostream& out, const PHV::Kind k) {
     switch (k) {
         case PHV::Kind::normal:   return out << "";
