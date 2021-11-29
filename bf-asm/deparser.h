@@ -5,6 +5,7 @@
 #include "bitops.h"
 #include "sections.h"
 #include "phv.h"
+#include "constants.h"
 
 enum {
     // limits over all targets
@@ -185,7 +186,8 @@ class Deparser : public Section {
 
     // Writes POV information in json used for field dictionary logging
     // and deparser resources
-    static void write_pov_in_json(json::map& fd, json::map& fd_entry, const Phv::Register* phv, int bit, int offset) {
+    static void write_pov_in_json(json::map& fd, json::map& fd_entry,
+            const Phv::Register* phv, int bit, int offset) {
         auto povName = Phv::get_pov_name(phv->uid, offset);
         // Field dictionary logging
         fd["POV PHV"] = phv->uid;
@@ -195,6 +197,18 @@ class Deparser : public Section {
         fd_entry["pov_bit"] =  bit;
         fd_entry["pov_name"] = povName;
         return;
+    }
+
+    // Digest Handle Setup
+    // ------------------------------------------------------
+    // | FIELD TYPE | Pipe ID |  Field List Handle          |
+    // 31 ...     24         20                             0
+    // Field List Handle = 20 bits
+    // Pipe ID = 4 bits
+    // Field List Type = 8 bits (Field list is 0x21)
+    static unsigned unique_field_list_handle;
+    static unsigned next_handle() {
+        return unique_field_list_handle++ | unique_table_offset << 20 | FIELD_HANDLE_START;
     }
 
  private:

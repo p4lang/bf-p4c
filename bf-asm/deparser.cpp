@@ -10,8 +10,7 @@
 #include "../lib/stringref.h"
 #include "ubits.h"
 
-static unsigned unique_field_list_handle = FIELD_HANDLE_START;
-
+unsigned Deparser::unique_field_list_handle;
 Deparser Deparser::singleton_object;
 
 Deparser::Deparser() : Section("deparser") { }
@@ -665,7 +664,7 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
             json::map quanta;
             quanta["name"] = (*tname).c_str();
             quanta["lq_cfg_type"] = digentry->first->as_number()->val;
-            quanta["handle"] = unique_field_list_handle++;
+            quanta["handle"] = next_handle();
             auto *digfields = digentry->second->as_vector();
             if (digfields) {
                 auto &digfields_vec = *digfields;

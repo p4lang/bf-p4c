@@ -15,3 +15,7 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::Flatrock>() {
 template<> void Deparser::write_config(Target::Flatrock::deparser_regs&) {
     error(lineno[0], "Flatrock deparser not implemented yet");
 }
+
+template<> void Deparser::gen_learn_quanta(Target::Flatrock::deparser_regs&,
+                                           json::vector &) {
+}

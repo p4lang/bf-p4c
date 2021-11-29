@@ -290,7 +290,7 @@ void emit_phv_field(
 #endif /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
     } else if (Device::currentDevice() == Device::FLATROCK) {
-        emit_stage_phv_field(out, field);
+        emit_stage_phv_field(out, field, lrr);
 #endif /* HAVE_FLATROCK */
     } else if (Device::currentDevice() == Device::TOFINO) {
         field->foreach_alloc([&](const PHV::AllocSlice& slice) {
