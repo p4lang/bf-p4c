@@ -187,7 +187,9 @@ const char *PragmaCommandLine::help = "@pragma command_line <cmd_line_option(s)>
     "  --placement-order,\n"
     "  --auto-init-metadata,\n"
     "  --decaf,\n"
-    "  --infer-payload-offset";
+    "  --infer-payload-offset,\n"
+    "  --relax-phv-init,\n"
+    "  --excludeBackendPasses";
 
 const char *PragmaDefaultPortmap::name = "default_portmap";
 const char *PragmaDefaultPortmap::description = "To be documented";  // FIXME

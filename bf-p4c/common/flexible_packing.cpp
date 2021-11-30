@@ -420,6 +420,15 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         // Run after InstructionSelection, before deadcode elimination.
         flexiblePacking,
     });
+
+    if (options.excludeBackendPasses) {
+        try {
+            removePasses(options.passesToExcludeBackend);
+        } catch (const std::runtime_error& e) {
+            // Ignore this error since this is only a subset of the backend passes
+            LOG3(e.what());
+        }
+    }
 }
 
 void PackFlexibleHeaders::end_apply() {

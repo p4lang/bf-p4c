@@ -305,6 +305,17 @@ BFN_Options::BFN_Options() {
     registerOption("--enable-event-logger", nullptr,
         [this] (const char *) { enable_event_logger = true; return true; },
         "Enable logging to Event Logger. Creates events.json in output folder.");
+    registerOption(
+        "--excludeBackendPasses", "pass1[,pass2]",
+        [this](const char* arg) {
+            excludeBackendPasses = true;
+            auto copy = strdup(arg);
+            while (auto pass = strsep(&copy, ","))
+                passesToExcludeBackend.push_back(pass);
+            return true;
+        },
+        "Exclude passes from backend passes whose name is equal\n"
+        "to one of `passX' strings.\n");
 }
 
 using Target = std::pair<cstring, cstring>;
@@ -547,7 +558,8 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
         { "--auto-init-metadata",       true },  // brig only
         { "--decaf",                    true },  // brig only
         { "--infer-payload-offset",     true },
-        { "--relax-phv-init",           true }
+        { "--relax-phv-init",           true },
+        { "--excludeBackendPasses",     true }
     };
 
     boost::optional<CommandLineOptions> newOptions;

@@ -355,6 +355,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     });
     setName("Barefoot backend");
 
+    if (options.excludeBackendPasses)
+        removePasses(options.passesToExcludeBackend);
+
 #if 0
     // check for passes that incorrectly duplicate shared attached tables
     // FIXME -- table placement currently breaks this because it does not rename attached
