@@ -258,28 +258,34 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     BFN::Backend backend(options, maupipe->id);
     backend.addDebugHook(EventLogger::getDebugHook(), true);
 #if BFP4C_CATCH_EXCEPTIONS
-    try {
-#endif  // BFP4C_CATCH_EXCEPTIONS
-        maupipe = maupipe->apply(backend);
-        bool mau_success = maupipe != nullptr;
-        bool comp_success = (::errorCount() > 0) ? false : true;
-        GenerateOutputs as(backend, backend.get_options(), maupipe->id,
-                backend.get_prim_json(), backend.get_json_graph(),
-                mau_success && comp_success);
-        if (maupipe)
-            maupipe->apply(as);
-#if BFP4C_CATCH_EXCEPTIONS
-    } catch (...) {
-        GenerateOutputs as(backend, backend.get_options(), maupipe->id,
-                backend.get_prim_json(), backend.get_json_graph(), false);
-        if (maupipe)
-            maupipe->apply(as);
+    struct failure_guard : boost::noncopyable {
+        failure_guard(BFN::Backend& backend, const IR::BFN::Pipe* maupipe)
+            : backend(backend), maupipe(maupipe)
+        {}
+        ~failure_guard() {
+            if (std::uncaught_exception()) {
+                GenerateOutputs as(backend, backend.get_options(), maupipe->id,
+                    backend.get_prim_json(), backend.get_json_graph(), false);
+                if (maupipe)
+                    maupipe->apply(as);
 
-        if (Log::verbose())
-            std::cerr << "Failed." << std::endl;
-        throw;
-    }
+                if (Log::verbose())
+                    std::cerr << "Failed." << std::endl;
+            }
+        }
+        BFN::Backend& backend;
+        const IR::BFN::Pipe* maupipe;
+    };
+    failure_guard guard(backend, maupipe);
 #endif  // BFP4C_CATCH_EXCEPTIONS
+    maupipe = maupipe->apply(backend);
+    bool mau_success = maupipe != nullptr;
+    bool comp_success = (::errorCount() > 0) ? false : true;
+    GenerateOutputs as(backend, backend.get_options(), maupipe->id,
+            backend.get_prim_json(), backend.get_json_graph(),
+            mau_success && comp_success);
+    if (maupipe)
+        maupipe->apply(as);
 }
 
 int main(int ac, char **av) {
