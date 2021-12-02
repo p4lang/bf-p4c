@@ -187,6 +187,36 @@ static void addEgressMetadata(IR::BFN::TnaParser *parser,
     addNewStartState(parser, "egress_tna_entry_point", egMetadataState->name);
 }
 
+/**
+ * Rename possible P4 multientry start state (when @packet_entry was used).
+ */
+class RenameP4StartState : public Transform {
+    bool found_start = false;
+
+ public:
+    IR::ParserState* preorder(IR::ParserState *state) override {
+        auto anno = state->getAnnotation("name");
+        if (!anno) return state;
+        auto name = anno->expr.at(0)->to<IR::StringLiteral>();
+        // We want to check if the .start was found, which indicates that
+        // the p4c indeed added start_0 and .$start and we should
+        // therefore rename the generated start state
+        if (name->value == ".$start") {
+            LOG1("Found p4c added start state for @packet_entry");
+            found_start = true;
+        }
+        return state;
+    }
+
+    IR::BFN::TnaParser* postorder(IR::BFN::TnaParser *parser) override {
+        if (found_start) {
+            LOG1("Renaming p4c generated start state for @packet_entry");
+            convertStartStateToNormalState(parser, "old_p4_start_point_to_be_removed");
+        }
+        return parser;
+    }
+};
+
 // Add parser code to extract the standard TNA intrinsic metadata.
 // This pass is used by the P4-14 to V1model translation path.
 class AddMetadataFields : public Transform {
@@ -273,6 +303,7 @@ class AddIntrinsicMetadata : public PassManager {
  public:
      AddIntrinsicMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
          addPasses({
+             new RenameP4StartState,
              new AddMetadataFields,
              new P4::ClonePathExpressions,
              new P4::ClearTypeMap(typeMap),
