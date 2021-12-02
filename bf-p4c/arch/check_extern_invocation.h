@@ -3,7 +3,9 @@
 
 #include "ir/ir.h"
 #include "ir/visitor.h"
-#include "lib/bitvec.h"
+#include "bf-p4c/arch/arch.h"
+#include "frontends/p4/methodInstance.h"
+#include "midend/checkExternInvocationCommon.h"
 
 namespace P4 {
 class ReferenceMap;
@@ -12,56 +14,35 @@ class TypeMap;
 
 namespace BFN {
 
-class CheckExternInvocationCommon : public Inspector {
- public:
-    CheckExternInvocationCommon(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
-        refMap(refMap), typeMap(typeMap) {}
-
-    P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
-    std::map<cstring /* extType */, bitvec> pipe_constraints;
-
-    void set_pipe_constraints(cstring extType, bitvec vec) {
-        if (!pipe_constraints.count(extType)) {
-            pipe_constraints.emplace(extType, vec);
-        } else {
-            auto &cons = pipe_constraints.at(extType);
-            cons |= vec; }
-    }
-
-    bool preorder(const IR::MethodCallExpression *expr) override;
-
+class CheckExternInvocationCommon : public P4::CheckExternInvocationCommon {
  protected:
-    void init_common_pipe_constraints();
-
- private:
-    virtual void init_pipe_constraints() = 0;
-
-    bool check_pipe_constraints(cstring extType, bitvec bv,
-            const IR::MethodCallExpression *expr, cstring extName, cstring pipe);
+    int genIndex(gress_t gress, ArchBlock_t block) {
+        return gress * ArchBlock_t::BLOCK_TYPE + block;
+    }
+    cstring getBlockName(int bit) override {
+        static const char* lookup[] = {"parser", "control (MAU)", "deparser"};
+        BUG_CHECK(sizeof(lookup)/sizeof(lookup[0]) == ArchBlock_t::BLOCK_TYPE, "Bad lookup table");
+        return lookup[bit % ArchBlock_t::BLOCK_TYPE];
+    }
+    void initCommonPipeConstraints();
+    void checkExtern(const P4::ExternMethod *extMethod,
+            const IR::MethodCallExpression *expr) override;
+    CheckExternInvocationCommon(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
+        P4::CheckExternInvocationCommon(refMap, typeMap) {}
 };
 
-
 class CheckTNAExternInvocation : public CheckExternInvocationCommon {
+    void initPipeConstraints() override;
  public:
     CheckTNAExternInvocation(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
-        CheckExternInvocationCommon(refMap, typeMap) {
-        init_pipe_constraints();
-    }
-
- private:
-    void init_pipe_constraints() override;
+        CheckExternInvocationCommon(refMap, typeMap) { initPipeConstraints(); }
 };
 
 class CheckT2NAExternInvocation : public CheckExternInvocationCommon {
+    void initPipeConstraints() override;
  public:
     CheckT2NAExternInvocation(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
-            CheckExternInvocationCommon(refMap, typeMap) {
-        init_pipe_constraints();
-    }
-
- private:
-    void init_pipe_constraints() override;
+        CheckExternInvocationCommon(refMap, typeMap) { initPipeConstraints(); }
 };
 
 }  // namespace BFN
