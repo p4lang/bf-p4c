@@ -5469,7 +5469,7 @@ def simple_vxlan_packet_no_l2(pktlen=300,
     Generates a simple VXLAN packet. Users shouldn't assume anything about
     this packet other than that it is a valid IP/UDP/VXLAN frame.
     """
-    if testutils.scapy.VXLAN is None:
+    if testutils.packet.VXLAN is None:
         logging.error(
             "A VXLAN packet was requested but VXLAN is not supported "
             "by your Scapy. See README for more information")
