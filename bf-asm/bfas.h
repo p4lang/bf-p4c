@@ -12,14 +12,17 @@ enum config_version_t { CONFIG_OLD = 1, CONFIG_NEW = 2, CONFIG_BOTH = 3 };
 enum target_t { NO_TARGET = 0, TOFINO, TOFINO2, JBAY = TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
                 TOFINO2A0, TOFINO3, CLOUDBREAK = TOFINO3, TOFINO5, FLATROCK = TOFINO5,
                 TARGET_INDEX_LIMIT };
-enum binary_type_t { NO_BINARY,
-    FOUR_PIPE,  // binary replicating to all 4 pipes
-    ONE_PIPE,   // binary for one pipe with pipe offset addresses
-    PIPE0,      // binary with data just in pipe 0
-    PIPE1,      // binary with data just in pipe 1
-    PIPE2,      // binary with data just in pipe 2
-    PIPE3,      // binary with data just in pipe 3
+enum binary_type_t {
+    NO_BINARY = -3,
+    FOUR_PIPE = -2,  // binary replicating to all 4 pipes
+    ONE_PIPE =  -1,  // binary for one pipe with pipe offset addresses
+    PIPE0 = 0,       // binary with data just in pipe 0
+    PIPE1,           // binary with data just in pipe 1
+    PIPE2,           // binary with data just in pipe 2
+    PIPE3,           // binary with data just in pipe 3
+    MAX_PIPE_COUNT,  // Maximum number of pipes which bfas can create binary for
 };
+
 extern struct option_t {
     binary_type_t       binary;
     bool                condense_json;

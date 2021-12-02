@@ -80,6 +80,7 @@
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(int, NUM_MAU_STAGES_PRIVATE) \
     M(int, NUM_PARSERS) \
+    M(int, NUM_PIPES) \
     M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
     M(int, PARSER_CHECKSUM_UNITS) \
     M(bool, PARSER_EXTRACT_BYTES) \
@@ -233,6 +234,7 @@ class Target::Tofino : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -8,  // TODO
         NUM_PARSERS = 18,
+        NUM_PIPES = 4,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
         TABLES_REQUIRE_ROW = 1,
         TABLES_REQUIRE_WAYS = true,
@@ -359,6 +361,7 @@ class Target::JBay : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 36,
+        NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
         TABLES_REQUIRE_WAYS = true,
     };
@@ -530,6 +533,16 @@ class Target::Cloudbreak : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 36,
+        /**
+         * @brief Number of pipes per subdev.
+         *
+         * Cloudbreak has 2 subdevs with 4 pipes in address space of each subdev.
+         * Currently assembler generates the binary only for one subdev,
+         * thus we consider only address space of one subdev.
+         *
+         * See also chip.schema.
+         */
+        NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
         TABLES_REQUIRE_WAYS = true,
     };
@@ -626,6 +639,7 @@ class Target::Flatrock : public Target {
         STATEFUL_ALU_CONST_MAX = 7,
         MINIMUM_INSTR_CONSTANT = -4,  // TODO
         NUM_PARSERS = 1,
+        NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
         TABLES_REQUIRE_WAYS = false,
     };

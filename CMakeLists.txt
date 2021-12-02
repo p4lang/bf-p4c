@@ -114,6 +114,7 @@ set(SCHEMA_FILES
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/context_schema.py
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/manifest_schema.py
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/phv_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/power_schema.py
   ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/resources_schema.py
   )
 foreach (f ${SCHEMA_FILES})

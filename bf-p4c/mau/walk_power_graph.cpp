@@ -740,7 +740,7 @@ void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
                              BF_P4C_VERSION,
                              BackendOptions().programName + ".p4",
                              RunId::getId(),
-                             "1.0.0");  // schema version
+                             POWER_SCHEMA_VERSION);
 
   produce_json_tables();
   produce_json_total_power(root->to<IR::BFN::Pipe>()->id);

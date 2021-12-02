@@ -69,6 +69,10 @@ get_schema_version(phv_schema PHV_SCHEMA_VERSION)
 MESSAGE(STATUS "Found phv schema version ${PHV_SCHEMA_VERSION}")
 add_definitions("-DPHV_SCHEMA_VERSION=\"${PHV_SCHEMA_VERSION}\"")
 
+get_schema_version(power_schema POWER_SCHEMA_VERSION)
+MESSAGE(STATUS "Found power schema version ${POWER_SCHEMA_VERSION}")
+add_definitions("-DPOWER_SCHEMA_VERSION=\"${POWER_SCHEMA_VERSION}\"")
+
 get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
 MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
 if (ENABLE_UNIFIED_COMPILATION)

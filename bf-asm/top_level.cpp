@@ -70,7 +70,7 @@ TopLevelRegs<TARGET>::~TopLevelRegs() {
 // is the name 'fpp' instead of 'pipes' (and the number of pipes)
 template<>
 void TopLevelRegs<Target::Flatrock>::output(json::map &ctxt_json) {
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < Target::NUM_PIPES(); i++) {
         if (options.binary >= PIPE0 && options.binary != PIPE0 + i) {
             // this->mem_top.pipes[i].disable();
             this->reg_top.fpp[i].disable();
@@ -118,7 +118,7 @@ void TopLevelRegs<Target::Flatrock>::output(json::map &ctxt_json) {
 #endif  /* HAVE_FLATROCK */
 template<class TARGET>
 void TopLevelRegs<TARGET>::output(json::map &ctxt_json) {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < Target::NUM_PIPES(); i++) {
         if (options.binary >= PIPE0 && options.binary != PIPE0 + i) {
             this->mem_top.pipes[i].disable();
             this->reg_top.pipes[i].disable();

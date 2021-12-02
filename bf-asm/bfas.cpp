@@ -56,7 +56,23 @@ std::unique_ptr<std::ostream> gfm_out;
 int log_error = 0;
 extern char *program_name;
 
-// or-ed with table_handle[31:30] to generate unique table handle
+/**
+ * @brief Maximum handle offset which can be used for table and parser handles.
+ *
+ * Selected bits in parser and table handles are dedicated to distinguish handles
+ * for different pipes.
+ * See comments in bf-asm/parser.h and bf-asm/p4_table.cpp to get more information
+ * about format of parser and table handles.
+ * Currently 4 bits are dedicated for pipe id.
+ */
+#define MAX_HANDLE_OFFSET 16
+
+/**
+ * @brief Value OR-ed with table and parser handles to create unique handles.
+ *
+ * See comments in bf-asm/parser.h and bf-asm/p4_table.cpp to get more information
+ * about format of parser and table handles.
+ */
 unsigned unique_table_offset = 0;
 
 std::unique_ptr<std::ostream> open_output(const char *name, ...) {
@@ -126,6 +142,24 @@ void output_all() {
     delete TopLevel::all;
 }
 
+void check_target_pipes(int pipe_id) {
+    if (pipe_id >= 0) {
+        if (pipe_id >= MAX_PIPE_COUNT) {
+            std::cerr << "Pipe number (" << pipe_id <<
+                    ") exceeds implementation limit of pipes (" << MAX_PIPE_COUNT <<
+                    ")." << std::endl;
+            error_count++;
+        } else if (pipe_id < Target::NUM_PIPES()) {
+            options.binary = static_cast<binary_type_t>(PIPE0 + pipe_id);
+        } else {
+            std::cerr << "Pipe number (" << pipe_id <<
+                    ") exceeds maximum number of pipes (" << Target::NUM_PIPES() <<
+                    ") for target " << Target::name() << "." << std::endl;
+            error_count++;
+        }
+    }
+}
+
 
 
 #define MATCH_TARGET_OPTION(TARGET, OPT) \
@@ -141,6 +175,7 @@ int main(int ac, char **av) {
     struct stat st;
     bool asmfile = false;
     bool disable_clog = true;
+    int pipe_id = -1;
     extern void register_exit_signals();
     register_exit_signals();
     program_name = av[0];
@@ -187,9 +222,8 @@ int main(int ac, char **av) {
         } else if (!strcmp(av[i], "--old_json")) {
             std::cerr << "Old context json is no longer supported" << std::endl;
             error_count++;
-        } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] &&
-                   val >= 0 && val < 4) {
-            options.binary = static_cast<binary_type_t>(PIPE0 + val);
+        } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] && val >= 0) {
+            pipe_id = val;
         } else if (!strcmp(av[i], "--singlepipe")) {
             options.binary = ONE_PIPE;
         } else if (!strcmp(av[i], "--singlewrite")) {
@@ -219,7 +253,8 @@ int main(int ac, char **av) {
           } else {
             options.fill_noop_slot = av[i] + val;
           }
-        } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 && val >= 0 && val < 4) {
+        } else if (sscanf(av[i], "--table-handle-offset%d", &val) > 0 &&
+                   val >= 0 && val < MAX_HANDLE_OFFSET) {
             unique_table_offset = val;
         } else if (sscanf(av[i], "--num-stages-override%d", &val) > 0 && val >= 0) {
             options.num_stages_override = val;
@@ -363,6 +398,9 @@ int main(int ac, char **av) {
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }
+
+    check_target_pipes(pipe_id);
+
     if (disable_clog)
         std::clog.setstate(std::ios_base::failbit);
     if (!asmfile) {

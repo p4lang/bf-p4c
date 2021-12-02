@@ -79,10 +79,16 @@ package Pipeline<IH, IM, EH, EM>(
 
 @pkginfo(arch="T3NA", version="0.0.1")
 package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
-               IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
+               IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3,
+               IH4, IM4, EH4, EM4, IH5, IM5, EH5, EM5,
+               IH6, IM6, EH6, EM6, IH7, IM7, EH7, EM7>(
     Pipeline<IH0, IM0, EH0, EM0> pipe0,
     @optional Pipeline<IH1, IM1, EH1, EM1> pipe1,
     @optional Pipeline<IH2, IM2, EH2, EM2> pipe2,
-    @optional Pipeline<IH3, IM3, EH3, EM3> pipe3);
+    @optional Pipeline<IH3, IM3, EH3, EM3> pipe3,
+    @optional Pipeline<IH4, IM4, EH4, EM4> pipe4,
+    @optional Pipeline<IH5, IM5, EH5, EM5> pipe5,
+    @optional Pipeline<IH6, IM6, EH6, EM6> pipe6,
+    @optional Pipeline<IH7, IM7, EH7, EM7> pipe7);
 
 #endif  /* _TOFINO3_P4_ARCH_ */
