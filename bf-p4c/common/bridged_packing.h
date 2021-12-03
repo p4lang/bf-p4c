@@ -288,15 +288,9 @@ using DebugInfo = ordered_map<cstring, ordered_map<cstring, ordered_set<cstring>
  */
 class ConstraintSolver {
     const PhvInfo& phv;
-    ordered_map<cstring, size_t> hash;
     z3::context& context;
     z3::optimize& solver;
     DebugInfo& debug_info;
-
- public:
-    explicit ConstraintSolver(const PhvInfo& p, z3::context& context,
-            z3::optimize& solver, DebugInfo& dbg) :
-        phv(p), context(context), solver(solver), debug_info(dbg) {}
 
     void add_field_alignment_constraints(cstring, const PHV::Field*, int);
     void add_non_overlap_constraints(cstring, ordered_set<const PHV::Field*>&);
@@ -305,16 +299,24 @@ class ConstraintSolver {
     void add_deparsed_to_tm_constraints(cstring, ordered_set<const PHV::Field*>&);
     void add_no_pack_constraints(cstring, ordered_set<const PHV::Field*>&);
     void add_no_split_constraints(cstring, ordered_set<const PHV::Field*>&);
-    void add_mutually_aligned_constraints(ordered_set<const PHV::Field*>&);
 
-    void print_assertions();
-    void dump_unsat_core();
     const PHV::Field* create_padding(int size);
-    void add_constraints(cstring, ordered_set<const PHV::Field*>&);
-    ordered_map<cstring, std::vector<const PHV::Field*>> solve(
-            ordered_map<cstring, ordered_set<const PHV::Field*>>&);
     std::vector<const PHV::Field*> insert_padding(
             std::vector<std::pair<unsigned, std::string>>&);
+
+    void dump_unsat_core();
+
+ public:
+    explicit ConstraintSolver(const PhvInfo& p, z3::context& context,
+            z3::optimize& solver, DebugInfo& dbg) :
+        phv(p), context(context), solver(solver), debug_info(dbg) {}
+
+    void add_constraints(cstring, ordered_set<const PHV::Field*>&);
+    void add_mutually_aligned_constraints(ordered_set<const PHV::Field*>&);
+    ordered_map<cstring, std::vector<const PHV::Field*>> solve(
+            ordered_map<cstring, ordered_set<const PHV::Field*>>&);
+
+    void print_assertions();
 };
 
 // This class computes the optimal field packing for all flexible field lists.
@@ -330,8 +332,6 @@ class PackWithConstraintSolver : public Inspector {
     const PhvInfo& phv;
     ConstraintSolver& solver;
     ordered_set<cstring>& candidates;
-    ordered_set<const Constraints::GroupConstraint*> group_constraints;
-    ordered_set<const Constraints::BooleanConstraint*> boolean_constraints;
 
     ordered_map<cstring, const IR::Type_StructLike*>& repackedTypes;
 
@@ -421,10 +421,10 @@ using FieldListEntry = std::pair<int, const IR::Type*>;
 // Given the mapping from original flexible header type and the optimized
 // type, replace the use of type in program.
 class ReplaceFlexibleType : public Transform {
-    RepackedHeaderTypes& repackedTypes;
+    const RepackedHeaderTypes& repackedTypes;
 
  public:
-    explicit ReplaceFlexibleType(RepackedHeaderTypes& m) : repackedTypes(m) {}
+    explicit ReplaceFlexibleType(const RepackedHeaderTypes& m) : repackedTypes(m) {}
 
     // if used in backend
     const IR::Node* postorder(IR::HeaderOrMetadata* h) override;

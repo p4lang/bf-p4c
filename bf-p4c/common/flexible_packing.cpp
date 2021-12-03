@@ -300,19 +300,13 @@ FlexiblePacking::FlexiblePacking(
         const PhvUse& u,
         DependencyGraph& dg,
         const BFN_Options &o,
-        PackWithConstraintSolver& sol,
-        RepackedHeaderTypes& map) :
+        PackWithConstraintSolver& sol) :
           options(o),
-          ingressBridgedFields(p),
-          egressBridgedFields(p),
           pa_no_pack(p),
           packConflicts(p, dg, tMutex, table_alloc, aMutex, pa_no_pack),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
-          packWithConstraintSolver(sol),
-          repackedTypes(map) {
+          packWithConstraintSolver(sol) {
               addPasses({
-                      &ingressBridgedFields,
-                      &egressBridgedFields,
                       new FindDependencyGraph(p, dg, &options),
                       new PHV_Field_Operations(p),
                       new PragmaContainerSize(p),
@@ -386,7 +380,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
     constraint_solver(phv, context, solver, debug_info),
     packWithConstraintSolver(phv, constraint_solver, candidates, map) {
     flexiblePacking = new FlexiblePacking(phv, uses, deps, options,
-            packWithConstraintSolver, map);
+            packWithConstraintSolver);
     flexiblePacking->addDebugHook(options.getDebugHook(), true);
     PragmaAlias *pragmaAlias = new PragmaAlias(phv);
     addPasses({

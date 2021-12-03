@@ -265,9 +265,9 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
     });
 }
 
-SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes &map,
-                                                 CollectSourceInfoLogging& sourceInfoLogging)
-    : map(map) {
+SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options,
+                                                 const RepackedHeaderTypes &map,
+                                                 CollectSourceInfoLogging& sourceInfoLogging) {
     refMap.setIsV1(true);
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);

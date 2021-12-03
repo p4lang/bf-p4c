@@ -120,8 +120,6 @@ class LogFlexiblePacking : public Logging::PassManager {
 class FlexiblePacking : public PassManager {
  private:
     const BFN_Options&                                  options;
-    CollectIngressBridgedFields                         ingressBridgedFields;
-    CollectEgressBridgedFields                          egressBridgedFields;
     MauBacktracker                                      table_alloc;
     PragmaNoPack                                        pa_no_pack;
     PackConflicts                                       packConflicts;
@@ -139,16 +137,13 @@ class FlexiblePacking : public PassManager {
     ordered_set<const PHV::Field*>                      fieldsToPack;
     PackWithConstraintSolver&                           packWithConstraintSolver;
 
-    RepackedHeaderTypes& repackedTypes;
-
  public:
     explicit FlexiblePacking(
             PhvInfo& p,
             const PhvUse& u,
             DependencyGraph& dg,
             const BFN_Options &o,
-            PackWithConstraintSolver& sol,
-            RepackedHeaderTypes& map);
+            PackWithConstraintSolver& sol);
 
     // Return a Json representation of flexible headers to be saved in .bfa/context.json
     // must be called after the pass is applied

@@ -145,7 +145,6 @@ class SubstitutePackedHeaders : public PassManager {
     ParamBinding* bindings;
     ApplyEvaluator *evaluator;
     BackendConverter *conv;
-    RepackedHeaderTypes &map;
 
  public:
     P4::ReferenceMap refMap;
@@ -154,7 +153,7 @@ class SubstitutePackedHeaders : public PassManager {
     ordered_map<int, const IR::BFN::Pipe*> pipes;
 
  public:
-    SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes& repackedMap,
+    SubstitutePackedHeaders(BFN_Options& options, const RepackedHeaderTypes& repackedMap,
                             CollectSourceInfoLogging& sourceInfoLogging);
     const ProgramThreads &getThreads() const { return conv->getThreads(); }
     const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
