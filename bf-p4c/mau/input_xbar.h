@@ -383,6 +383,7 @@ struct IXBar {
         // very optimal in the given structure
         bool chained_addr = false;
         bitvec possible_shifts() const;
+        friend std::ostream &operator<<(std::ostream &, HashDistAllocPostExpand &);
 
      public:
         HashDistAllocPostExpand(P4HashFunction *f, le_bitrange b, HashDistDest_t d, int s)

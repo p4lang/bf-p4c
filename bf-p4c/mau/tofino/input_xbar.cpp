@@ -3148,6 +3148,18 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
  * IR::MAU::HashDist object.   The HashDistIRUse object is a subset of the total
  * hash dist object, (i.e. multiple IR nodes that are 8 bit immediate sections).  The purpose
  * of this is to subset the IR section
+ * @param alloc_req
+ * @param hdu
+ * @param all_reqs
+ * @param phv
+ * @param hash_group
+ * @param hash_bits_used
+ *      bit vector covering the bits out of the hash that are used in this hash_dist
+ * @param total_post_expand_bits
+ *      bit vector of the used bits in the hash_dist after the 'expand' step.  This may
+ *      include more upper bits (zero extended) than are in hash_bits_used
+ * @param tbl
+ * @param name
  */
 void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &hdu,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
@@ -3189,6 +3201,9 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
 
     auto &hdh = use->hash_dist_hash;
 
+    BUG_CHECK(hash_bits_used.popcount() == total_post_expand_bits.popcount() ||
+              total_post_expand_bits.popcount() > std::max(hash_bits_used.popcount(), 23),
+              "Mismatch in bits input and output for hash_dist post expand");
     int bits_seen = 0;
     int bits_of_my_hash_seen = 0;
     // Coordinate hash positions of an a single IR Use for the whole allocation
@@ -3201,6 +3216,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
                 post_expand_sect_bv.setbit(bit);
             index++;
         }
+        bits_seen += galois_range.size();
 
         BUG_CHECK(post_expand_sect_bv.is_contiguous(), "Cannot associate galois matrix region "
             "with hash function");
@@ -3210,10 +3226,8 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
             = { post_expand_sect_bv.min().index(), post_expand_sect_bv.max().index() };
         auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                             (alloc_req.bits_in_use.intersectWith(post_expand_sect));
-        if (boost_sl == boost::none) {
-            bits_seen += galois_range.size();
+        if (boost_sl == boost::none)
             continue;
-        }
         le_bitrange overlap = *boost_sl;
 
         int lo_add = overlap.lo - post_expand_sect.lo;
@@ -3229,7 +3243,6 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         p4_range = p4_range.shiftedByBits(alloc_req.func->hash_bits.lo);
         hdh.galois_start_bit_to_p4_hash[galois_range.lo] = p4_range;
 
-        bits_seen += galois_range.size();
         bits_of_my_hash_seen += overlap.size();
     }
     hdh.algorithm = alloc_req.func->algorithm;

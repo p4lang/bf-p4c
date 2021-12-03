@@ -408,6 +408,24 @@ void IXBar::Use::Byte::add_info(const FieldInfo &fi) {
     bit_use |= fi.cont_loc();
 }
 
+std::ostream &operator<<(std::ostream &out, IXBar::HashDistAllocPostExpand &hda) {
+    if (hda.func)
+        hda.func->dbprint(out);
+    else
+        out << "(null)";
+    out << " " << IXBar::hash_dist_name(hda.dest);
+    out << "[" << hda.bits_in_use.hi << ":" << hda.bits_in_use.lo << "]";
+    if (hda.shift) out << " shft=" << hda.shift;
+    if (hda.chained_addr) out << " chain";
+    return out;
+}
+
+void dump(IXBar::HashDistAllocPostExpand &hda) { std::cout << hda << std::endl; }
+void dump(std::vector<IXBar::HashDistAllocPostExpand> &hdav) {
+    for (auto &hda : hdav)
+        std::cout << hda << std::endl;
+}
+
 static int need_align_flags[4][IXBar::REPEATING_CONSTRAINT_SECT] = {
     { 0, 0, 0, 0 },  // 8bit -- no alignment needed
     { IXBar::Use::Align16lo, IXBar::Use::Align16hi, IXBar::Use::Align16lo, IXBar::Use::Align16hi },
@@ -592,11 +610,26 @@ bool IXBar::FieldManagement::preorder(const IR::MAU::ActionArg *aa) {
     return false;
 }
 
+static std::string db_slices(const IR::MAU::Table *tbl, const PHV::Field *field, le_bitrange bits) {
+    std::stringstream rv;
+    bool first = true;
+    PHV::FieldUse READ(PHV::FieldUse::READ);
+    field->foreach_alloc(bits, tbl, &READ, [&](const PHV::AllocSlice &slice) {
+        if (first)
+            first = false;
+        else
+            rv << ", ";
+        rv << slice.container() << "[" << slice.container_slice().hi << ":"
+            << slice.container_slice().lo << "]"; });
+    return rv.str();
+}
+
 bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
     LOG3("IXBar::FieldManagement preorder expression : " << e);
     le_bitrange bits = { };
     auto *finfo = phv.field(e, &bits);
     if (!finfo) return true;
+    LOG4("  " << db_slices(tbl, finfo, bits));
     field_list_order.push_back(e);
     bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
     // Currently, due to driver, only one field is allowed to be the partition index
