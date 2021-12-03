@@ -605,8 +605,9 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
 }
 
 enum class AnalysisType {BIT8, BIT16};
-const auto phv_8bit_extractors =  { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 };
-const auto phv_16bit_extractors =  { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 };
+using extractor_slots_list = std::initializer_list<extractor_slots>;
+const extractor_slots_list phv_8bit_extractors =   { phv_8b_0,  phv_8b_1,  phv_8b_2,  phv_8b_3 };
+const extractor_slots_list phv_16bit_extractors = { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 };
 // Declare a helping type for the count cache class
 using ExtractionCountCache = TwoLevelCache<const Parser::State::Match*, AnalysisType, int>;
 
@@ -815,7 +816,7 @@ int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &re
  * @param prefix Prefix to add before the print
  */
 static void print_slot_occupancy(const Parser::State::Match *match,
-    const std::initializer_list<const extractor_slots> indexes,
+    const std::initializer_list<extractor_slots> indexes,
     const std::string prefix = "") {
     // Print the prefix if not empty, iterate over checked indexes and
     // print slot occupancy information.
