@@ -487,6 +487,17 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
 )
 
+# pd scripts have problems with tofino2?
+p4c_add_xfail_reason("tofino2"
+  "error This program is intended to compile for Tofino P4 architecture only"
+  extensions/p4_tests/p4_14/ptf/sful_split1.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Action .NoAction/NoAction not defined as part of a table"
+  extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
+)
+
 # P4C-3914
 p4c_add_xfail_reason("tofino2"
   "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.

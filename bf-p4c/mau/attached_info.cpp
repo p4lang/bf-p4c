@@ -187,13 +187,14 @@ bool SplitAttachedInfo::EnableAndTypesOnActions::preorder(const IR::MAU::Action 
         auto &addr_info = self.address_info_per_table[tbl->name][at->name];
 
         auto pfe_p = act->per_flow_enables.find(uai);
-        auto type_p = act->meter_types.find(uai);
-        if (pfe_p == act->per_flow_enables.end()) {
+        if (pfe_p != act->per_flow_enables.end()) {
             if (!act->hit_only())
                 addr_info.always_run_on_miss = false;
             if (!act->miss_only())
                 addr_info.always_run_on_hit = false;
         }
+
+        auto type_p = act->meter_types.find(uai);
         if (type_p != act->meter_types.end()) {
             int meter_type = static_cast<int>(type_p->second);
             if (!act->hit_only())
