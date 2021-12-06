@@ -5,13 +5,12 @@ bool AddSpecialConstraints::preorder(const IR::BFN::DeparserParameter* param) {
     auto field = phv_i.field(param->source->field);
 
     if (!field->deparsed_bottom_bits()) {
-        // choose best fit container for ones that are shift-able
-        if (field->size > 8) {
-            auto container_size = ((field->size + 7) / 8) * 8;
-            pragmas_i.pa_container_sizes().add_constraint(field, { PHV::Size(container_size) });
-        } else {
-            field->setToBottomByte();
-        }
+        // The lsb of DeparserParameter field must in the bottom byte.
+        // The limit comes from a hardware limit that the deparser only has a 3-bit 'shift' field,
+        // it can only (right) shift the value by at most 7 when extracting
+        // output intrinsic metadata from the container.
+        field->setStartBitsToBottomByte();
+        LOG1("setting StartBitsToBottomByte for " << field << ", because it is DeparserParameter");
     }
 
     return false;

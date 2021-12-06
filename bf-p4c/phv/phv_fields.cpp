@@ -1066,6 +1066,17 @@ bitvec PHV::Field::getStartBits(PHV::Size size) const {
     return startBitsByContainerSize_i.at(size);
 }
 
+void PHV::Field::setStartBitsToBottomByte() {
+    for (auto container_size : Device::phvSpec().containerSizes()) {
+        const int shiftable_bits = int(container_size) - size;
+        const int n_start_bits = shiftable_bits >= 0 ? std::min(8, shiftable_bits + 1) : 0;
+        startBitsByContainerSize_i[container_size] = bitvec(0, n_start_bits);
+        LOG3("Setting field " << name << " to bottom byte: " <<
+             startBitsByContainerSize_i[container_size]);
+    }
+}
+
+
 PHV::AbstractField *PHV::AbstractField::create(const PhvInfo &info, const IR::Expression *e) {
     if (auto *c = e->to<IR::Constant>())
         return new PHV::Constant(c);

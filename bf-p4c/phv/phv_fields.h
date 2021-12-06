@@ -793,19 +793,9 @@ class Field : public LiftLess<Field> {
         return name < other.name;
     }
 
-    void setToBottomByte() {
-        if (size > 8) {
-            ::warning("Ignoring bottom byte constraint for field %1% of size %2%b",
-                    name, size);
-            return;
-        }
-        for (auto container_size : Device::phvSpec().containerSizes()) {
-            int start = (size > 8) ? 1 : (8 - size + 1);
-            startBitsByContainerSize_i[container_size] = bitvec(0, start);
-            LOG3("Setting field " << name << " to bottom byte: " <<
-                    startBitsByContainerSize_i[container_size]);
-        }
-    }
+    // setStartBitsToBottomByte will set the start bit of this field to be limited to
+    // the [0..7]-th (little endian) bit of any-sized containers.
+    void setStartBitsToBottomByte();
 };
 
 /**

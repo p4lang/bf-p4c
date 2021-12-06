@@ -1696,9 +1696,11 @@ struct switch_port_metadata_t {
 // --------------------------------------------------------------------------------
 // Ingress Metadata
 // --------------------------------------------------------------------------------
-
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
+@pa_container_size("ingress" , "ig_intr_md_for_tm.level2_mcast_hash" , 16)
+@pa_container_size("ingress" , "ig_intr_md_for_tm.level2_exclusion_id" , 16)
+@pa_container_size("ingress" , "ig_intr_md_for_tm.rid" , 16)
+@pa_container_size("ingress" , "ig_intr_md_for_dprsr.mtu_trunc_len" , 16)
+@pa_container_size("egress" , "eg_intr_md_for_dprsr.mtu_trunc_len" , 16)
 //@pa_container_size("ingress", "smac_src_move", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 

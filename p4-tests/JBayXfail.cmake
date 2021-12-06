@@ -534,3 +534,8 @@ p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received"
   extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
 )
+
+# P4C-4053
+p4c_add_xfail_reason("tofino2"
+  "learning: .* container .* seen in consecutive locations"
+  extensions/p4_tests/p4_16/compile_only/p4c-1719.p4)

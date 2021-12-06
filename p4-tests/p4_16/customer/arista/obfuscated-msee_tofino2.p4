@@ -5,7 +5,13 @@
 #include <tofino2_arch.p4>
 
 @pa_auto_init_metadata
-@pa_parser_group_monogress
+@pa_container_size("ingress", "ig_intr_md_for_tm.bypass_egress" , 8)
+@pa_container_size("ingress", "Peoria.Ekwok.Matheson" , 8)
+@pa_container_size("ingress", "ig_intr_md_for_tm.qid" , 8)
+@pa_container_size("ingress", "ig_intr_md_for_dprsr.drop_ctl" , 8)
+@pa_container_size("egress", "eg_intr_md_for_dprsr.drop_ctl" , 8)
+@pa_container_size("egress", "eg_intr_md_for_dprsr.mirror_io_select" , 8)
+
 @pa_atomic("ingress", "Peoria.Yerington.Denhoff")  // table fitting hack.
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Kendrick" , "Wanamassa.Knights.Kendrick")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights.Kendrick" , "Peoria.Belmore.Kendrick")
