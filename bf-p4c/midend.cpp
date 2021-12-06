@@ -1,6 +1,6 @@
 /**
- * \defgroup midend Mid-end
- * \brief Mid-end-related content
+ * \defgroup midend Midend
+ * \brief Overview of midend passes
  *
  * The mid-end performs a mix of passes from p4c and bf-p4c. These passes
  * modify the IR, usually making transformations that keep the functionality

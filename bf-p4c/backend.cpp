@@ -1,12 +1,12 @@
 /**
- * \defgroup backend Back-end
- * \brief Back-end-related content
+ * \defgroup backend Backend
+ * \brief Overview of backend passes
  *
  * The back-end performs a series of passes that can
  * possibly introduce some backtracking - returning to
  * a given point in the sequence of passes to re-run
  * it again, possibly with new information. This ussually
- * happens when PHV or Table allocation fails.
+ * happens when %PHV or %table allocation fails.
  *
  * The back-end starts with IR that was already transformed from front-end/mid-end IR
  * into back-end IR (via BackendConverter). Also the back-end works
@@ -17,12 +17,12 @@
  * There are currently two top-level flows. Changing between them
  * can be done by setting options.alt_phv_alloc. These two flows are:
  * - Main flow:
- *   1. Run full PHV allocation
+ *   1. Run full %PHV allocation
  *   2. Run MAU allocation
  * - Alternative flow:
- *   1. Run trivial PHV allocation
+ *   1. Run trivial %PHV allocation
  *   2. Run MAU allocation
- *   3. Run full PHV allocation
+ *   3. Run full %PHV allocation
  * - Note: Both flows include different optimization/transformation
  *         passes in between and also possible backtracking.
  *
@@ -38,7 +38,7 @@
  *   - CollectPhvLoggingInfo
  *   - GeneratePrimitiveInfo
  *   - LiveRangeReport
- *   - CollectIXBarInfo
+ *   - BFN::CollectIXBarInfo
  */
 
 #include "backend.h"

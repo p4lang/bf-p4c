@@ -7,28 +7,37 @@
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+/**
+ * \ingroup bridged_packing
+ * \brief Adjusted packing of bridged and fixed-size headers;
+ *        output of BFN::BridgedPacking, input for BFN::SubstitutePackedHeaders.
+ *
+ * There are two sources of adjusted packing:
+ * - PackWithConstraintSolver::solve
+ * - PadFixedSizeHeaders::preorder
+ *
+ * Adjusted packing is then used in the ReplaceFlexibleType pass.
+ */
 using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
 
 /**
- * Todo list for future improvements
+ * The inspector builds a map of aliased fields (IR::BFN::AliasMember) mapping
+ * alias destinations to their sources. Only aliases with destinations annotated
+ * with the \@flexible annotation are considered.
  *
- * IMPL_NOTE(0) no_split and no_split_container_size constraints
+ * <table>
+ * <caption>Logging options</caption>
+ * <tr>
+ * <td>-Tbridged_packing:5
+ * <td>
+ * - The aliases being added to the map
+ * - Notice when a field is marked bridged in PhvInfo and is not included
+ *   in the CollectIngressBridgedFields::bridged_to_orig map
+ * </table>
  *
- * The alignment constraint analysis may collect multiple alignment constraints
- * on a single bridged field. In this case, the bridge packing algorithm must
- * pick one of the alignment constraint as the final alignment for packing. If
- * the selected alignment constraint is derived from a source field that span
- * across byte boundary, then we generate additional no_split and
- * no_split_container_size constraint on the bridged field. E.g.,
- * if the alignment requirement is bit 6 with a field size of 6, then the
- * no_split constraint is 1 and no_split_container_size is round_up(6 + 6).
- */
-
-/**
- * Gather ingress bridge to original field map
- *
- * XXX(hanw): This pass depends on Alias pass, We could figure out the mapping
- * from def-use analysis instead.
+ * @pre The Alias pass needs to be performed before this one to create
+ *      IR::BFN::AliasMember IR nodes.
+ *      XXX(hanw): We could figure out the mapping from def-use analysis instead.
  */
 class CollectIngressBridgedFields : public Inspector {
  private:
@@ -47,26 +56,42 @@ class CollectIngressBridgedFields : public Inspector {
  public:
     explicit CollectIngressBridgedFields(const PhvInfo& phv) : phv(phv) { }
 
-    /// Key: Bridged Field name, Value: Original field name.
+    /// Key: bridged field name, value: original field name
     ordered_map<cstring, cstring> bridged_to_orig;
 };
 
 /**
- * Gather egress bridge/original field map
+ * The inspector builds the CollectEgressBridgedFields::bridged_to_orig map
+ * mapping source (bridged) fields to the destination (original) fields.
+ * Only non-solitary destination fields are considered
+ * (those not used in an arithmetic operation).
+ * Only flexible source fields are considered.
  *
- * XXX(hanw): This pass must be run before eliminating assignment statement in
- * parser states (ParserCopyProp).
+ * The information is later used to induce alignment constraints.
+ *
+ * <table>
+ * <caption>Logging options</caption>
+ * <tr>
+ * <td>-Tbridged_packing:5
+ * <td>
+ * - Candidate fields to be added to the CollectEgressBridgedFields::bridged_to_orig map.
+ * </table>
+ *
+ * @pre The ParserCopyProp pass cannot be run before this inspector since
+ *      it removes assignment statements in parser states.
+ *      TODO Why assignments? This pass processes only extracts.
  */
 class CollectEgressBridgedFields : public Inspector {
     const PhvInfo& phv;
+    /// Map-map-set: destination (IR::BFN::ParserLVal) -> source (IR::BFN::SavedRVal) -> state
     ordered_map<const PHV::Field*,
-        ordered_map<const PHV::Field*,
-        ordered_set<const IR::BFN::ParserState*>>> candidateSourcesInParser;
+                ordered_map<const PHV::Field*,
+                            ordered_set<const IR::BFN::ParserState*>>> candidateSourcesInParser;
 
  public:
     explicit CollectEgressBridgedFields(const PhvInfo& p) : phv(p) {}
 
-    /// Key: Bridged field name, Value: Original field name.
+    /// Map: bridged field name -> original field name
     ordered_map<cstring, cstring> bridged_to_orig;
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
@@ -74,17 +99,30 @@ class CollectEgressBridgedFields : public Inspector {
     void end_apply() override;
 };
 
-// This class identifies all metadata fields that have alignment constraints
-// due to initialization by SavedRVals in the parser.
+/**
+ * The inspector collects all fields extracted in parser and stores both directions
+ * of mapping between source (original) fields (IR::BFN::SavedRVal)
+ * and bridged (destination) fields (IR::BFN::FieldLVal).
+ *
+ * The information is later used to induce alignment constraints.
+ *
+ * <table>
+ * <caption>Logging options</caption>
+ * <tr>
+ * <td>-Tbridged_packing:5
+ * <td>
+ * - The fields being extracted to in parser
+ * </table>
+ */
 class GatherParserExtracts : public Inspector {
  public:
     using FieldToFieldSet = ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>;
 
  private:
     const PhvInfo& phv;
-    // Map of all fields with alignment constraints due to initialization in
-    // the parser with values being the field they are initialized to.
+    /// Extracted fields (IR::BFN::FieldLVal -> IR::BFN::SavedRVal)
     FieldToFieldSet parserAlignedFields;
+    /// Extracted fields (IR::BFN::SavedRVal -> IR::BFN::FieldLVal)
     FieldToFieldSet reverseParserAlignMap;
 
     profile_t init_apply(const IR::Node* root) override {
@@ -145,9 +183,23 @@ void forAllMatchingDoPostOrder(const IR::Node* root, Func&& function) {
     root->apply(NodeVisitor(std::forward<Func>(function)));
 }
 
-// This class identifies all metadata fields that have alignment constraints
-// due to usage in digest field list.
-// The collected digest field mapping is currently not used.
+/**
+ * The inspector collects all header/metadata/digest field list fields
+ * with the \@flexible annotation and builds both directions of mapping
+ * between digest field list fields and their source header/metadata fields.
+ *
+ * The information would be later used to induce alignment constraints.
+ * **However, it is not currently being used anywhere.**
+ *
+ * <table>
+ * <caption>Logging options</caption>
+ * <tr>
+ * <td>-Tbridged_packing:1
+ * <td>
+ * - The header/metadata/digest field list fields with the \@flexible annotation
+ *   and header/metadata/digest field list type names
+ * </table>
+ */
 class GatherDigestFields : public Inspector {
  public:
     using FieldToFieldSet = ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>;
@@ -159,21 +211,36 @@ class GatherDigestFields : public Inspector {
     FieldToFieldSet digestFieldMap;
     FieldToFieldSet reverseDigestFieldMap;
 
+    /// Made private to make sure the pass is not used anywhere
+    const FieldToFieldSet& getDigestMap() const { return digestFieldMap; }
+    /// Made private to make sure the pass is not used anywhere
+    const FieldToFieldSet& getReverseDigestMap() const { return reverseDigestFieldMap; }
+
  public:
     explicit GatherDigestFields(const PhvInfo& p) : phv(p) { }
     bool preorder(const IR::BFN::DigestFieldList* fl) override;
     bool preorder(const IR::HeaderOrMetadata* hdr) override;
     void end_apply() override;
-
-    const FieldToFieldSet& getDigestMap() const { return digestFieldMap; }
-    const FieldToFieldSet& getReverseDigestMap() const { return reverseDigestFieldMap; }
 };
 
 using AlignmentConstraint = Constraints::AlignmentConstraint;
 using SolitaryConstraint = Constraints::SolitaryConstraint;
 
 /**
- * Compute alignment constraints for bridging fields
+ * The inspector induces alignment constraints for bridged fields based on the information
+ * collected in the CollectIngressBridgedFields, CollectEgressBridgedFields,
+ * GatherParserExtracts, GatherDigestFields, and ActionPhvConstraints passes,
+ * and updates PhvInfo.
+ *
+ * \par no_split and no_split_container_size constraints
+ * The alignment constraint analysis may collect multiple alignment constraints
+ * on a single bridged field. In this case, the bridge packing algorithm must
+ * pick one of the alignment constraint as the final alignment for packing. If
+ * the selected alignment constraint is derived from a source field that span
+ * across byte boundary, then we generate additional no_split and
+ * no_split_container_size constraint on the bridged field. E.g.,
+ * if the alignment requirement is bit 6 with a field size of 6, then the
+ * no_split constraint is 1 and no_split_container_size is round_up(6 + 6).
  */
 class CollectConstraints : public Inspector {
     PhvInfo& phv;
@@ -252,15 +319,14 @@ class CollectConstraints : public Inspector {
 };
 
 /**
- *
+ * @pre XXX(hanw): The Alias pass TODO why
  */
 class GatherAlignmentConstraints : public PassManager {
  private:
-    // XXX(hanw): a dependency on Alias pass.
     CollectIngressBridgedFields collectIngressBridgedFields;
     CollectEgressBridgedFields  collectEgressBridgedFields;
     GatherParserExtracts        collectParserAlignedFields;
-    GatherDigestFields          collectDigestFields;
+    GatherDigestFields          collectDigestFields;  // Outputs currently not used
 
  public:
     GatherAlignmentConstraints(PhvInfo& p, const ActionPhvConstraints& a) :
@@ -280,16 +346,50 @@ class GatherAlignmentConstraints : public PassManager {
     }
 };
 
-// header -> constraint type -> constraint
+/**
+ * Represents constraints induced in the ConstraintSolver class in the form
+ * header -> constraint type -> description of constraint.
+ */
 using DebugInfo = ordered_map<cstring, ordered_map<cstring, ordered_set<cstring>>>;
 
 /**
- * Class to generate packing for a set of phv fields given a set of constraints
+ * \brief The class uses the Z3 solver to generate packing for a set of %PHV fields
+ *        given a set of constraints.
+ *
+ * The constraints for the Z3 solver are determined using the information from PhvInfo
+ * for the set of %PHV fields delivered using the ConstraintSolver::add_constraints
+ * and ConstraintSolver::add_mutually_aligned_constraints methods.
+ *
+ * The method ConstraintSolver::solve executes the Z3 solver and it returns,
+ * for each header, a vector of fields whose offset is adjusted based on the
+ * solution of the Z3 solver with padding fields inserted where necessary.
+ *
+ * <table>
+ * <caption>Logging options</caption>
+ * <tr>
+ * <td>-Tbridged_packing:1
+ * <td>
+ * - The fields the constraints are being added for to the Z3 solver
+ * - The constraints being added to the Z3 solver
+ * <tr>
+ * <td>-Tbridged_packing:3
+ * <td>
+ * - The Z3 solver model in the case of a satisfied solution
+ * - The Z3 solver core in the case of an unsatisfied solution
+ * <tr>
+ * <td>-Tbridged_packing:5
+ * <td>
+ * - The Z3 solver assertions
+ * </table>
+ *
+ * @pre Up-to-date PhvInfo.
  */
 class ConstraintSolver {
     const PhvInfo& phv;
     z3::context& context;
     z3::optimize& solver;
+    /// Stores induced per-header-per-type constraints in a human-readable form.
+    /// For use outside of this class.
     DebugInfo& debug_info;
 
     void add_field_alignment_constraints(cstring, const PHV::Field*, int);
@@ -319,34 +419,79 @@ class ConstraintSolver {
     void print_assertions();
 };
 
-// This class computes the optimal field packing for all flexible field lists.
-// We modeled as a single (larger) optimization problem as opposed to multiple
-// (smaller) optimization because a field may exists in multiple flexible field
-// lists. The computed alignment for the field must be consistent across all
-// instances of the flexible field list. However, the optimizer is still
-// optimizing each field list with individual optimization goals and
-// constraints.  The number of constraints scales linearly with respect to the
-// number of fields list instances. Within each field lists, the number of
-// constraints scales at O(n^2) with respect to the number of fields.
+/**
+ * The class adjusts the packing of headers/metadata/digest field lists
+ * that contain the fields with the \@flexible annotation whose width is
+ * not a multiply of eight bits.
+ *
+ * The candidates for packing adjustment can be delivered through the constructor.
+ * This approach is used for bridged headers. If the list of candidates
+ * (PackWithConstraintSolver::candidates) is empty, the inspector looks
+ * for the candidates among all headers/metadata (IR::HeaderOrMetadata)
+ * and digest field lists (IR::BFN::DigestFieldList).
+ *
+ * The class then computes the optimal field packing using the constraint solver
+ * (PackWithConstraintSolver::solver).
+ * We modeled as a single (larger) optimization problem as opposed to multiple
+ * (smaller) optimization because a field may exists in multiple flexible field
+ * lists. The computed alignment for the field must be consistent across all
+ * instances of the flexible field list. However, the optimizer is still
+ * optimizing each field list with individual optimization goals and
+ * constraints.  The number of constraints scales linearly with respect to the
+ * number of fields list instances. Within each field lists, the number of
+ * constraints scales at O(n^2) with respect to the number of fields.
+ *
+ * <table>
+ * <caption>Logging options</caption>
+ * <tr>
+ * <td>-Tbridged_packing:1
+ * <td>
+ * - A list of \@flexible fields whose width is not a multiple of eight bits
+ * - Original (non-\@flexible) and adjusted (\@flexible whose width in not a multiply
+ *   of eight bits) fields being used in the adjusted headers/metadata/digest field lists
+ * - Adjusted headers/metadata/digest field lists
+ * <tr>
+ * <td>-Tbridged_packing:3
+ * <td>
+ * - Which digest field list is being processed
+ * <tr>
+ * <td>-Tbridged_packing:5
+ * <td>
+ * - Print candidates to pack and when a header/metadata/digest field list is skipped
+ * </table>
+ *
+ * @pre Up-to-date PhvInfo.
+ */
 class PackWithConstraintSolver : public Inspector {
     const PhvInfo& phv;
+    /// The constraint solver wrapping the Z3 solver to be used for adjusted packing
+    /// of \@flexible fields whose width is not a multiply of eight bits
     ConstraintSolver& solver;
-    ordered_set<cstring>& candidates;
+    /// A list of candidates to be processed.
+    /// If empty, the candidates are found by this inspector.
+    const ordered_set<cstring>& candidates;
 
+    /// Adjusted packing
     ordered_map<cstring, const IR::Type_StructLike*>& repackedTypes;
 
-    // These maps collect information about @flexible fields from each
-    // IR::HeaderOrMetadata and IR::BFN::DigestFieldList.
+    /// An ordered set of \@flexible fields whose width is not a multiply of eight bits
+    /// for each header/metadata/digest field list
     ordered_map<cstring, ordered_set<const PHV::Field*>> nonByteAlignedFieldsMap;
+    /// An ordered set of \@flexible fields whose width is a multiply of eight bits
+    /// for each header/metadata/digest field list
     ordered_map<cstring, ordered_set<const PHV::Field*>> byteAlignedFieldsMap;
+    /// A mapping from \@flexible PHV::Field to the corresponding IR::StructField
+    /// for each header/metadata/digest field list
     ordered_map<cstring, ordered_map<const PHV::Field*, const IR::StructField*>>
                                                          phvFieldToStructFieldMap;
+    /// A mapping from header/metadata/digest field list name to the corresponding
+    /// IR::Type_StructLike for each header/metadata/digest field list
     ordered_map<cstring, const IR::Type_StructLike*>     headerMap;
 
  public:
     explicit PackWithConstraintSolver(const PhvInfo& p,
             ConstraintSolver& solver,
-            ordered_set<cstring>& c,
+            const ordered_set<cstring>& c,
             ordered_map<cstring, const IR::Type_StructLike*>& r):
         phv(p), solver(solver), candidates(c), repackedTypes(r) {}
 
@@ -359,7 +504,11 @@ class PackWithConstraintSolver : public Inspector {
     void solve();
 };
 
-// Pad phase0 and resubmit header to hardware-defined sizes.
+/**
+ * The inspector looks for the phase0 and resubmit headers and adds their adjusted
+ * versions to the PadFixedSizeHeaders::repackedTypes map. The adjusted versions
+ * include a padding so that the headers have hardware-defined sizes.
+ */
 class PadFixedSizeHeaders : public Inspector {
     ordered_map<cstring, const IR::Type_StructLike*>& repackedTypes;
 
@@ -418,8 +567,13 @@ class PadFixedSizeHeaders : public Inspector {
 using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
 using FieldListEntry = std::pair<int, const IR::Type*>;
 
-// Given the mapping from original flexible header type and the optimized
-// type, replace the use of type in program.
+/**
+ * The transformer replaces specified headers/metadata/digest field lists
+ * with adjusted versions. The adjusted versions are to be delivered through
+ * the constructor (ReplaceFlexibleType::repackedTypes).
+ *
+ * The transformer works both with midend and backend IR.
+ */
 class ReplaceFlexibleType : public Transform {
     const RepackedHeaderTypes& repackedTypes;
 

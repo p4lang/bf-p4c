@@ -21,26 +21,80 @@
 
 namespace BFN {
 
-// A Tna program specifies the packet processing logic on individual pipe in
-// Tofino. In a 32q program, a packet may be processed by multiple pipes, which
-// forms a 'logical' pipeline that spans multiple 'physical' pipe in Tofino.
-// For example, a typical 32q program process a packet in the following order:
-//
-// ig0 -> eg1 -> ig1 -> eg0
-//
-// Using the backend's terminology, the packet is processed by 4 threads of
-// IR::BFN::thread_t type in a run-to-completion manner. Because of this
-// construction, the bridging header shared by these 4 threads must conform to
-// the constraint induced by all of these threads, which makes it potentially
-// more difficult to allocate in terms of PHV. That's the price to pay for more
-// capacity. However, user does not have pay the price if no bridge header is
-// shared by more than two threads. The allocation for the latter case would be
-// as difficult as a regular 64q program.
-//
-// The goal of the this pass is to analyze the use of Serializer extern in the
-// program to infer how bridge header is shared between threads. In the end, this
-// pass builds objects that will be used by bridge header packing algorithm to
-// automatically optimize the layout of bridge header to save bandwidth.
+/**
+ * \defgroup bridged_packing Packing of bridged and fixed-size headers
+ * \ingroup post_midend
+ * \brief Overview of passes that adjust packing of bridged headers
+ *
+ * Packing of bridged headers is performed in order to satisfy constraints induced
+ * by the processing threads where the bridged headers are used.
+ * Bridging can be used from an ingress to an egress processing thread of a possibly
+ * different pipe, from an egress to an ingress processing thread of the same pipe
+ * in the case of a folded program, or the combination of both.
+ *
+ * The egress to ingress bridging is available on Tofino 32Q with loopbacks present
+ * at pipes 1 and 3. It is not available on Tofino 64Q with no loopbacks.
+ *
+ * The case of the combination of both bridging in a folded program is shown below:
+ *
+ * \dot
+ * digraph folded_pipeline {
+ *   layout=neato
+ *   node [shape=box,style="rounded,filled",fontname="sans-serif,bold",
+ *     margin="0.05,0.05",color=dodgerblue3,fillcolor=dodgerblue3,fontcolor=white,fontsize=10]
+ *   edge [fontname="sans-serif",color=gray40,fontcolor=gray40,fontsize=10]
+ *   IG0 [label="pipe0:ingress", pos="-1,1!"]
+ *   EG0 [label="pipe0:egress", pos="1,1!"]
+ *   IG1 [label="pipe1:ingress", pos="-1,0!"]
+ *   EG1 [label="pipe1:egress", pos="1,0!"]
+ *   IG0 -> EG1
+ *   EG1 -> IG1 [label="32Q loopback"]
+ *   IG1 -> EG0
+ * }
+ * \enddot
+ *
+ * Packets are processed in a "logical" pipe(line) that spans multiple "physical" pipe(line)s.
+ * Using the backend's terminology, the packet is processed by four threads
+ * of the IR::BFN::Pipe::thread_t type in a run-to-completion manner.
+ *
+ * All bridged headers needs to be analyzed in all threads they are used in.
+ * They are emitted by the source thread and extracted by the destination thread.
+ * In the case above, if a bridged header is used in all threads, the analysis is
+ * performed on pairs (pipe0:ingress, pipe1:egress), (pipe1:egress, pipe1:ingress),
+ * and (pipe1:ingress, pipe0:egress) (following the arrows).
+ *
+ * Packing of bridged headers is performed only for the headers/structs
+ * with the \@flexible annotation and for resubmit headers,
+ * which are fixed-sized (transformed into the IR::BFN::Type_FixedSizeHeader type in midend).
+ *
+ * The steps are as follows:
+ *
+ * 1. BFN::BridgedPacking:
+ *    Perform some auxiliary passes and convert the midend IR towards the backend IR
+ *    (BackendConverter).
+ * 2. BFN::BridgedPacking -> ExtractBridgeInfo::preorder(IR::P4Program):
+ *    Find usages of bridged headers (CollectBridgedFieldsUse).
+ * 3. BFN::BridgedPacking -> ExtractBridgeInfo::end_apply():
+ *    For all pairs of gresses where the bridged headers are used, perform some auxiliary
+ *      backend passes (under PackFlexibleHeaders) and collect the constraints of
+ *      bridged headers (FlexiblePacking).
+ * 4. BFN::BridgedPacking -> ExtractBridgeInfo::end_apply()
+ *    -> PackFlexibleHeaders::solve() -> FlexiblePacking::solve()
+ *    -> PackWithConstraintSolver::solve() -> ConstraintSolver::solve():
+ *    Use Z3 solver to find a satisfying packing of the bridged headers,
+ *      which is stored in the RepackedHeaderTypes map.
+ * 5. BFN::BridgedPacking -> PadFixedSizeHeaders:
+ *    Look for fixed-size headers and add their adjusted packing to the RepackedHeaderTypes map.
+ * 6. The modifications of the auxiliary passes performed in 1., the converted backend IR,
+ *      and the modifications of auxiliary backend passes performed in 3. are thrown away.
+ * 7. BFN::SubstitutePackedHeaders -> ReplaceFlexibleType::postorder:
+ *    The solution found by the Z3 solver is used to substitute the original bridged headers
+ *      with adjusted ones. Fixed-size headers are also substituted with adjusted ones.
+ * 8. BFN::SubstitutePackedHeaders:
+ *    Perform the same auxiliary passes and convert the IR towards the backend IR as in 1.
+ *      and perform the PostMidEndLast pass.
+ */
+
 using PipeAndGress = std::pair<std::pair<cstring, gress_t>, std::pair<cstring, gress_t>>;
 
 using BridgeLocs = ordered_map<std::pair<cstring, gress_t>, IR::HeaderRef*>;
@@ -117,8 +171,13 @@ class ExtractBridgeInfo : public Inspector {
     void end_apply(const IR::Node*) override;
 };
 
-// Apply this pass manager to IR::P4Program after midend processing.
-// Returns IR::P4Program after flexible metadata packing.
+/**
+ * \ingroup bridged_packing
+ * \brief The pass analyzes the usage of bridged headers and adjusts their packing.
+ *
+ * @pre Apply this pass manager to IR::P4Program after midend processing.
+ * @post The RepackedHeaderTypes map filled in with adjusted packing of bridged headers.
+ */
 class BridgedPacking : public PassManager {
     ParamBinding* bindings;
     ApplyEvaluator *evaluator;
@@ -139,7 +198,9 @@ class BridgedPacking : public PassManager {
 };
 
 /**
- * Replace \@flexible type definition with packed version
+ * \ingroup bridged_packing
+ * \brief The pass substitutes bridged headers with adjusted ones
+ *        and converts the IR into the backend form.
  */
 class SubstitutePackedHeaders : public PassManager {
     ParamBinding* bindings;

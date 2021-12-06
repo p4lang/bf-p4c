@@ -80,6 +80,7 @@ void CollectEgressBridgedFields::end_apply() {
         ss << "\t  " << f.first->name << ", ";
         const PHV::Field* srcField = nullptr;
         if (f.second.size() > 1) continue;
+        // The only source
         for (const auto& kv : f.second) {
             srcField = kv.first;
             ss << kv.first->name << ", ";
@@ -110,7 +111,7 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
 }
 
 bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
-    /// when does a field list not have a type?
+    /// TODO when does a field list not have a type?
     if (!fl->type)
         return false;
 
@@ -992,7 +993,6 @@ void ConstraintSolver::add_field_alignment_constraints(
     auto align = f->getAlignmentConstraint();
     if (align.hasConstraint()) {
         LOG1("Alignment constraint: " << align.getAlignment() << " for " << f->name);
-        // solver.add(vec[0] % 8 == static_cast<int>(align.getAlignment()));
         solver.add(v % 8 == static_cast<int>(align.getAlignment()));
 
         std::stringstream str;
@@ -1057,6 +1057,9 @@ void ConstraintSolver::add_extract_together_constraints(
     }
 }
 
+/**
+ * Initializes the Z3 solver with mutually aligned constraints from PhvInfo.
+ */
 void ConstraintSolver::add_mutually_aligned_constraints(ordered_set<const PHV::Field*>& fields) {
     if (!fields.size()) return;
 
@@ -1245,17 +1248,21 @@ const PHV::Field* ConstraintSolver::create_padding(int size) {
     return padding;
 }
 
-// initialize solver with collected constraints
+/**
+ * Initializes the Z3 solver with constraints from PhvInfo (except for the mutually aligned
+ * constraint, which is handled with ConstraintSolver::add_mutually_aligned_constraints).
+ */
 void ConstraintSolver::add_constraints(cstring hdr, ordered_set<const PHV::Field*>& fields) {
     for (auto f : fields)
         LOG1("add constraints for " << f);
-    // compute upper bound assuming each field is padded to next byte boundary
+    /// Computes upper bound of the overall size of all fields, which is used as a constraint
+    /// to Z3 solver in the ConstraintSolver::add_field_alignment_constraints method.
+    /// It assumes that each field is padded to next byte boundary.
     int upper_bound = 0;
     for (auto f : fields) {
-        // See NOTE(1):
-        // When a 'small' bridged field must be packed into a large container,
-        // we must extend the upper_bound by the size of the large container,
-        // instead of the round-up value based on the bridge field size.
+        /// When a 'small' bridged field must be packed into a large container,
+        /// we must extend the upper bound by the size of the large container,
+        /// instead of the round-up value based on the bridge field size.
         if (f->no_split_container_size() != -1) {
             upper_bound += f->no_split_container_size();
         } else {
@@ -1367,7 +1374,15 @@ void ConstraintSolver::dump_unsat_core() {
     }
 }
 
-// execute solver to optimize packing
+/**
+ * Executes the Z3 solver.
+ *
+ * \param[in] fields For each header, an ordered set of fields to be packed based on
+ *                   the solution of the Z3 solver.
+ *
+ * \return For each header, a vector of fields whose offset is adjusted based
+ * on the solution of the Z3 solver with padding fields inserted where necessary.
+ */
 ordered_map<cstring, std::vector<const PHV::Field*>>
 ConstraintSolver::solve(
         ordered_map<cstring, ordered_set<const PHV::Field*>>& fields) {
@@ -1415,6 +1430,17 @@ Visitor::profile_t PackWithConstraintSolver::init_apply(const IR::Node* root) {
     return Inspector::init_apply(root);
 }
 
+/**
+ * Looks for \@flexible header/metadata fields. For those whose witdh is a multiple
+ * of eight bits, it updates the PackWithConstraintSolver::byteAlignedFieldsMap map.
+ * For those whose width is not a multiple of eight bits, it updates the
+ * PackWithConstraintSolver::nonByteAlignedFieldsMap map.
+ *
+ * Also stores the mapping from a PHV::Field to the corresponding IR::StructField
+ * into the PackWithConstraintSolver::phvFieldToStructFieldMap map
+ * and the mapping from a header/metadata name to the corresponding IR::Type_StructLike
+ * into the PackWithConstraintSolver::headerMap map.
+ */
 bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
     // if we choose to only pack 'candidates' and
     // current header type is not one of the 'candidates', skip.
@@ -1467,6 +1493,16 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
     return false;
 }
 
+/**
+ * Looks for \@flexible fields of digest field lists whose with is, and is not a multiple
+ * of eight bits and updates the PackWithConstraintSolver::byteAlignedFieldsMap,
+ * and PackWithConstraintSolver::nonByteAlignedFieldsMap maps, respectively.
+ *
+ * Also stores the mapping from a PHV::Field to the corresponding IR::StructField
+ * into the PackWithConstraintSolver::phvFieldToStructFieldMap map
+ * and the mapping from a header/metadata name to the corresponding IR::Type_StructLike
+ * into the PackWithConstraintSolver::headerMap map.
+ */
 bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     if (!d->type)
         return false;
@@ -1474,7 +1510,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     // if we choose to only pack 'candidates' and
     // current header type is not one of the 'candidates', skip.
     if (candidates.size() != 0 && !candidates.count(d->type->name)) {
-        LOG3("skip " << d);
+        LOG5("skip " << d);
         return false;
     }
 
@@ -1533,6 +1569,19 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     return false;
 }
 
+/**
+ * Triggers adding constraints for all \@flexible fields whose width is not a multiply
+ * of eight bits to the constraint solver.
+ *
+ * There are two steps. The first one adds constraints for individual
+ * headers/metadata/digest field lists using ConstraintSolver::add_constraints.
+ * The other step adds mutually aligned constraints for fields of all
+ * headers/metadata/digest field lists using ConstraintSolver::add_mutually_aligned_constraints.
+ *
+ * If corresponding logging is enabled, the Z3 solver assertions are printed out to the log.
+ *
+ * \see ConstraintSolver for logging options to log the Z3 %solver assertions.
+ */
 void PackWithConstraintSolver::optimize() {
     for (auto f : nonByteAlignedFieldsMap) {
         for (auto g : f.second) {
@@ -1553,11 +1602,29 @@ void PackWithConstraintSolver::optimize() {
     solver.print_assertions();
 }
 
+/**
+ * Runs optimizer to trigger adding constraints to the constraint solver.
+ */
 void PackWithConstraintSolver::end_apply() {
-    // run optimizer.
     optimize();
 }
 
+/**
+ * Runs the constraint solver to get adjusted packing of \@flexible fields whose width is not
+ * a multiply of eight bits and creates adjusted headers/metadata/digest field lists
+ * containing these fields.
+ *
+ * Adjusted header/metadata/digest field list is composed as follows:
+ *
+ * 1. Original non-\@flexbile and non-\@padding fields
+ * 2. Original \@flexible fields whose width is a multiply of eight bits
+ * 3. Adjusted \@flexible fields whose width is not a multiply of eigth bits
+ *    including possible padding fields obtained from the constraint solver.
+ *    The padding fields are annotated with \@padding and \@overlayable.
+ *
+ * Adjusted headers/metadata/digest field lists are stored
+ * in PackWithConstraintSolver::repackedTypes.
+ */
 void PackWithConstraintSolver::solve() {
     auto optimizedPackings = solver.solve(nonByteAlignedFieldsMap);
 

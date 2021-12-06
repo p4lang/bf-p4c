@@ -1,38 +1,44 @@
 /**
- * \page toplevel_passes Overview of the top-level bf-p4c
+ * \defgroup bf_p4c Overview of bf-p4c
+ * \brief Overview of passes performed by the bf-p4c binary.
  *
  * The compiler goes through this sequence of high-level passes:
  * 1. Frontend
  *   * Parses input P4 file
  *   * Creates IR
- *   * See `bf-p4c/frontend.{h|cpp}`, `p4c/frontends/`
+ *   * See bf-p4c/frontend.h, bf-p4c/frontend.cpp, and p4c/frontends/
  * 2. Generate P4 Runtime
  *   * Creates the Barefoot runtime JSON file
  *   * Currently also:
- *     * replaces typedefs (`EliminateTypedef`) – this is also done in midend
- *     * rewrites action selectors to newer syntax (`RewriteActionSelector`)
- *   * See `bf-p4c/control-plane/tofino_p4runtime.{h|cpp}`,
- *     `p4c/control-plane/p4RuntimeSerializer.{h|cpp}`
- * 3. Midend
- *   * @sa midend
- * 4. Bridge Packing
- *   * Transforms the IR towards backend IR (vector of pipes) – no longer able to be type-checked
- *   * Flexible header repack (bridged metadata egress->ingress)
- *   * See `bf-p4c/arch/bridge.{h|cpp}`
- * 5. Substitue Packed Headers
- *   * Replaces flexible type definition with packed version
- *   * This ends the “post-midend” passes
- *   * See `bf-p4c/arch/bridge.{h|cpp}`
- * 6. Source Info Logging
+ *     * replaces typedefs (P4::EliminateTypedef) – this is also done in midend
+ *     * rewrites action selectors to newer syntax (BFN::RewriteActionSelector)
+ *   * See bf-p4c/control-plane/p4runtime.h, bf-p4c/control-plane/p4runtime.cpp,
+ *     p4c/control-plane/p4RuntimeSerializer.h, and p4c/control-plane/p4RuntimeSerializer.cpp
+ * 3. \ref midend
+ * 4. \ref post_midend
+ *   * Bridge Packing
+ *     * Flexible header repack (bridged metadata egress->ingress)
+ *   * Substitute Packed Headers
+ *     * Transforms the IR towards backend IR (vector of pipes, no longer able to be type-checked)
+ *     * Replaces flexible type definition with packed version
+ *   * See bf-p4c/arch/bridge.h and bf-p4c/arch/bridge.cpp
+ * 5. Source Info Logging
  *   * Creates a JSON file with source info for P4I
  *   * This is done via information that were collected in different parts of the compiler
- *     by `CollectSourceInfoLogging`
- *   * See `bf-p4c/logging/source_info_logging.{h|cpp}`
- * 7. Generate graphs
+ *     by CollectSourceInfoLogging
+ *   * See bf-p4c/logging/source_info_logging.h and bf-p4c/logging/source_info_logging.cpp
+ * 6. Generate graphs
  *   * Essentially a backend for generating graphs of programs
- *   * See `p4c/backends/graphs/`
- * 8. Backend
- *   * @sa backend
+ *   * See p4c/backends/graphs/
+ * 7. \ref backend
+ */
+
+/**
+ * \defgroup post_midend Post-midend
+ * \brief Overview of post-midend passes
+ *
+ * Post-midend passes follow midend; they adjust packing of bridged and fixed-size headers
+ * and convert midend IR towards backend IR.
  */
 
 #include <sys/stat.h>
