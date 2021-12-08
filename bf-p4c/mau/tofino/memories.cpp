@@ -1,3 +1,4 @@
+#include<functional>
 #include "bf-p4c/device.h"
 #include "bf-p4c/mau/tofino/memories.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -1226,8 +1227,29 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         // Currently stashes are only used for atomic modify (of entries) within
         // the RAM. Since JBAY HW has a way to deal with this (by introducing a
         // bubble) stashes are not required. We disable it for now.
+        std::map<table_alloc*, int> table_alloc_ram_widths;
         for (auto *ta : exact_tables) {
-            if (IS_FLATROCK) continue;  // TODO
+            auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
+            for (auto u_id : ta->allocation_units()) {
+                auto &alloc = (*ta->memuse)[u_id];
+                for (auto mem_way : alloc.ways) {
+                    int ram_width = mem_way.rams.size()/mem_way.size;
+                    if (ram_width > table_alloc_ram_widths[ta])
+                            table_alloc_ram_widths[ta] = ram_width;
+                }
+            }
+        }
+        // Flip map to create a sorted multimap of ram widths (greater first) to table allocs
+        std::multimap<int, table_alloc*, std::greater<int>> ram_width_table_allocs;
+        for (auto &tr : table_alloc_ram_widths) {
+            ram_width_table_allocs.insert(std::pair<int, table_alloc*>(tr.second, tr.first));
+        }
+        // Iterate over the sorted multimap, table allocs with wider matches are
+        // allocated stashes first since they have to be aligned to same stash
+        // column. However for single RAM matches there is no such restriction
+        // and they can go in any column.
+        for (auto &tr : ram_width_table_allocs) {
+            auto *ta = tr.second;
             auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
             BUG_CHECK(match_ixbar, "match_ixbar wrong type");
             for (auto u_id : ta->allocation_units()) {
@@ -1239,26 +1261,54 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                 std::map<int, std::vector<int>> stash_map;
                 for (auto mem_way : alloc.ways) {
                     LOG5("way group : " << ixbar_way->group
-                            << " - way: " << wayno << " - size : " << mem_way.size);
+                            << " - way: " << wayno << " - size : " << mem_way.size
+                            << " - mem way: " << mem_way);
                     if (stash_map.count(ixbar_way->group) == 0) {
                         auto ram_width = mem_way.rams.size()/mem_way.size;
-                        // Get available stash unit, all units should be aligned in
+                        LOG6("Ram Width: " << ram_width << ", mem way rams size : "
+                                << mem_way.rams.size() << " mem way size : " << mem_way.size);
+                        // Determine stash unit, all units should be aligned in
                         // the same stash column for wide matches
                         auto stash_unit = -1;
                         for (int i = 0; i < STASH_UNITS; i++) {
                             if (stash_unit == -1) {
+                                LOG7("Assigning for stash unit " << i);
                                 unsigned width = 0;
-                                for (auto ram : mem_way.rams) {
-                                    if (stash_use[ram.first][i]) {
-                                        stash_unit = -1;
+                                // For wide RAMS, the stash units must be
+                                // aligned in the same column on all rows of the
+                                // wide match.
+                                if (ram_width > 1) {
+                                    for (auto ram : mem_way.rams) {
+                                        LOG7("\tRam : " << ram.first << " stash unit: "
+                                                << stash_use[ram.first][i] << " width: "
+                                                << width << ", ram_width: " << ram_width);
+                                        if (!stash_use[ram.first][i].isNullOrEmpty()) {
+                                            stash_unit = -1;
+                                            break;
+                                        }
+                                        if (width >= ram_width) break;
+                                        stash_unit = i;
+                                        LOG7("\tAssigned stash unit " << stash_unit);
+                                        width++;
+                                    }
+                                // For single RAM width allocate any slot
+                                // available on any row the RAMs are present
+                                } else {
+                                    for (auto ram : mem_way.rams) {
+                                        LOG7("\tRam : " << ram.first << " stash unit: "
+                                                << stash_use[ram.first][i]
+                                                << ", ram_width: " << ram_width);
+                                        if (!stash_use[ram.first][i].isNullOrEmpty()) {
+                                            continue;
+                                        }
+                                        stash_unit = i;
+                                        LOG7("\tAssigned stash unit " << stash_unit);
                                         break;
                                     }
-                                    if (width >= ram_width) break;
-                                    stash_unit = i;
-                                    width++;
                                 }
                             }
-                            if (stash_unit >= 0) {  // Set stash unit for table
+                            // Set the determined stash unit on table
+                            if (stash_unit >= 0) {
                                 unsigned width = 0;
                                 for (auto ram : mem_way.rams) {
                                     if (width >= ram_width) break;
@@ -1276,8 +1326,12 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                                     }
                                     width++;
                                 }
-                            }  // error if no stash unit assigned, is this possible?
+                                break;
+                            }
                         }
+                        LOG7("Stash Usage: \n" << stash_use);
+                        BUG_CHECK(stash_unit >= 0,
+                            "No stash unit found for table %1%", u_id.build_name());
                     }
                     wayno++;
                     ixbar_way++;

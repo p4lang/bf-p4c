@@ -69,12 +69,15 @@ struct Memories {
                 out << "Row " << row << " with bus " << bus;
             }
         };
+
         struct Way {
             int size;
             unsigned select_mask;
             safe_vector<std::pair<int, int>> rams;
             explicit Way(int s, unsigned sm) : size(s), select_mask(sm) {}
         };
+        friend std::ostream &operator<<(std::ostream &out, const Way &w);
+
         struct Gateway {
             uint64_t payload_value = 0ULL;
             int      payload_match_address = -1;

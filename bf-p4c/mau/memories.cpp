@@ -46,4 +46,13 @@ std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const Memories::Use::Way &w) {
+    out << "size : " << w.size << ", select_mask: " << w.select_mask << std::endl;
+    out << "\trams - ";
+    for (auto r : w.rams) {
+        out << "[ " << r.first << ", " << r.second << " ] ";
+    }
+    out << std::endl;
+}
+
 Memories *Memories::create() { return new Tofino::Memories; }
