@@ -2,6 +2,8 @@
 #include <core.p4>
 #include <v1model.p4>
 
+@command_line("--disable-parse-max-depth-limit")
+
 header boyhoods {
      bit<6> contributes;
      bit<6> anorexic;

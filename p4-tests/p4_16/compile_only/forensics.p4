@@ -1096,6 +1096,9 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 # 3 "/home/yxia/bfn/bf-p4c-compilers/build/p4c/p4include/tna.p4" 2
 # 5 "test/liraflow/forensics.p4" 2
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 # 1 "test/liraflow/precision.p4" 1
 // vim: ts=4:sw=4:et:syntax=c
 

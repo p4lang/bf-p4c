@@ -7,6 +7,9 @@
 
 #include <tna.p4>
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 // Get added to main pkginfo:
 
 // Packet hdr definitions:

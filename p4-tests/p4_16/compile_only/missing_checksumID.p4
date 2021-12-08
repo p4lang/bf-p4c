@@ -2,6 +2,8 @@
 #include <core.p4>
 #include <v1model.p4>
 
+@command_line("--disable-parse-max-depth-limit")
+
 header crucifixions {
      bit<5> squatnesss;
      bit<8> wigwags;

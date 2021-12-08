@@ -1,6 +1,6 @@
+#include <type_traits>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/optional.hpp>
-#include <type_traits>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -61,6 +61,7 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::create(source);
 }

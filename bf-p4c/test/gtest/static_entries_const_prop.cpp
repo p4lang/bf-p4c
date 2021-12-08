@@ -135,6 +135,7 @@ const switch_pkt_type_t FABRIC_PKT_TYPE_IP = 0x05;
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 

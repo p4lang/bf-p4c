@@ -14,7 +14,12 @@ set (V1_EXCLUDE_FILES
     "issue2291\\.p4"
     "header-stack-ops-bmv2\\.p4"
     "hash-extern-bmv2\\.p4"
-    "gauntlet.*-bmv2\\.p4")
+    "gauntlet.*-bmv2\\.p4"
+    "bvec-hdr-bmv2\\.p4"                # min depth limit
+    "table-entries-exact-bmv2\\.p4"     # min depth limit
+    "checksum-l4-bmv2\\.p4"             # max depth limit
+    "issue1755-1-bmv2\\.p4"             # min+max depth limit
+    )
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4" "${P4TESTDATA}/p4_16_samples/parser-inline/*.p4")
 p4c_find_tests("${P4TESTS_FOR_TOFINO}" P4_16_V1_TESTS INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${V1_EXCLUDE_PATTERNS}")
@@ -146,6 +151,27 @@ set (TOFINO_V1_TEST_SUITES_P416
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
+# Tests requiring disabling egress parse depth limits which can't easily have command_line pragmas added
+set (P4TESTS_FOR_TOFINO_NO_MIN_DEPTH
+    "bvec-hdr-bmv2.p4"
+    "table-entries-exact-bmv2.p4"
+    )
+set (P4TESTS_FOR_TOFINO_NO_MAX_DEPTH
+    "checksum-l4-bmv2.p4"
+    )
+set (P4TESTS_FOR_TOFINO_NO_DEPTH
+    "issue1755-1-bmv2.p4"
+    )
+foreach (test ${P4TESTS_FOR_TOFINO_NO_MIN_DEPTH})
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-min-depth-limit\"")
+endforeach()
+foreach (test ${P4TESTS_FOR_TOFINO_NO_MAX_DEPTH})
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
+endforeach()
+foreach (test ${P4TESTS_FOR_TOFINO_NO_DEPTH})
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-depth-limit\"")
+endforeach()
+
 # P4C-2985
 # We need to create two tests with different args for one p4 file.
 # We utilize the fact that p4c_add_bf_backend_tests and p4c_add_test_with_args use the same name
@@ -272,7 +298,7 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
   )
-p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes -Xp4c=\"--disable-parse-min-depth-limit\"")
 
 # Add labels for tests to be run as MUST PASS in Jenkins
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_14/customer/rdp/case9757.p4")
@@ -329,17 +355,20 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw ^int")
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
-    "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_SPGW -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_SPGW -arch v1model -Xp4c=\"--disable-parse-depth-limit\""
     ${ONOS_FABRIC_PTF} "all ^int")
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_INT_TRANSIT -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_INT_TRANSIT -arch v1model -Xp4c=\"--disable-parse-depth-limit\""
     ${ONOS_FABRIC_PTF} "all ^spgw")
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model -Xp4c=\"--disable-parse-depth-limit\""
     ${ONOS_FABRIC_PTF} "all")
 p4c_add_test_label("tofino" "need_scapy" "fabric")
 p4c_add_test_label("tofino" "need_scapy" "fabric-DWITH_SPGW")
@@ -557,19 +586,24 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "COMPILER-1186" "${BFN_P4C_SOURCE_DIR}/gl
     "${testExtraArgs} -pd -to 2000" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1186")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "psa_recirculate" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_recirculate.p4"
-    "${testExtraArgs} -ptf -to 2000 -arch psa" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_recirculate.ptf")
+    "${testExtraArgs} -ptf -to 2000 -arch psa -Xp4c=\"--disable-parse-min-depth-limit\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_recirculate.ptf")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "psa_resubmit" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_resubmit.p4"
-    "${testExtraArgs} -ptf -to 2000 -arch psa" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_resubmit.ptf")
+    "${testExtraArgs} -ptf -to 2000 -arch psa -Xp4c=\"--disable-parse-min-depth-limit\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_resubmit.ptf")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "psa_clone_i2e" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_clone_i2e.p4"
-    "${testExtraArgs} -ptf -to 2000 -arch psa" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_clone_i2e.ptf")
+    "${testExtraArgs} -ptf -to 2000 -arch psa -Xp4c=\"--disable-parse-min-depth-limit\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_clone_i2e.ptf")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "psa_clone_e2e" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_clone_e2e.p4"
-    "${testExtraArgs} -ptf -to 2000 -arch psa" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_clone_e2e.ptf")
+    "${testExtraArgs} -ptf -to 2000 -arch psa -Xp4c=\"--disable-parse-min-depth-limit\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_clone_e2e.ptf")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "psa_checksum" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_checksum.p4"
-    "${testExtraArgs} -ptf -to 2000 -arch psa" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_checksum.ptf")
+    "${testExtraArgs} -ptf -to 2000 -arch psa -Xp4c=\"--disable-parse-min-depth-limit\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/psa_checksum.ptf")
 
 # 500s timeout is too little for compiling and testing the entire test, bumping it up
 set_tests_properties("tofino/smoketest_programs_basic_ipv4" PROPERTIES TIMEOUT 3600)
@@ -750,7 +784,8 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_checksum" ${CMAKE_CURRENT_SOUR
 p4c_add_test_label("tofino" "need_scapy" "simple_l3_checksum")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "basic_switching" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-980/basic_switching.p4
-     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-980/basic_switching.ptf")
+     "${testExtraArgs} -pd -Xp4c=\"--disable-parse-min-depth-limit\""
+     "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-980/basic_switching.ptf")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "case6738" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-879/case6738.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-879/case6738.ptf")
@@ -807,10 +842,11 @@ foreach(t IN LISTS ba102_tests)
   get_filename_component(__td ${t} DIRECTORY)
   set (ptfdir "${__td}/../ptf-tests")
   if (EXISTS ${ptfdir})
-    p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna" ${ptfdir})
+    p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna -Xp4c=\"--disable-parse-max-depth-limit\"" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}"
+	    "-arch tna -bfrt -force-link -Xp4c=\"--disable-parse-max-depth-limit\"")
   endif()
   p4c_add_test_label("tofino" "BA-102" ba102_${testname})
   set_tests_properties("tofino/ba102_${testname}" PROPERTIES RUN_SERIAL 1)
@@ -977,8 +1013,9 @@ set (P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY
 
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
+  # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_simple_switch" ${p4_16_programs_path}/tna_simple_switch/tna_simple_switch.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
+  "p4_16_programs_tna_simple_switch" ${p4_16_programs_path}/tna_simple_switch/tna_simple_switch.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs -Xp4c=\"--disable-parse-depth-limit\"" "")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -991,8 +1028,14 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
-  p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
-    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+  # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
+  if (${t} STREQUAL "tna_meter_lpf_wred")
+    p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
+      "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=\"--disable-parse-depth-limit\" -to 2000 --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+  else()
+    p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
+      "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+  endif()
   bfn_set_p4_build_flag("tofino" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports.json)
   if (EXISTS ${ports_json})
@@ -1054,7 +1097,8 @@ p4c_add_ptf_test_with_ptfdir (
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2249" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249/p4c_2249.p4"
-    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249")
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 -Xp4c=\"--disable-parse-max-depth-limit\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249")
 set_tests_properties("tofino/p4c_2249" PROPERTIES TIMEOUT 2000)
 p4c_add_test_label("tofino" "need_scapy" "p4c_2249")
 

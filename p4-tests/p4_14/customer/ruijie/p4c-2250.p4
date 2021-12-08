@@ -110,6 +110,9 @@ header_type ingress_parser_control_signals {
     }
 }
 
+// Test program exceeds Tof1 egress parse depth
+@pragma command_line --disable-parse-max-depth-limit
+
 @pragma not_deparsed ingress
 @pragma not_deparsed egress
 @pragma pa_intrinsic_header ingress ig_prsr_ctrl

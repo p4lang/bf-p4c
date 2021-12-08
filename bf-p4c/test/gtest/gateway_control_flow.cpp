@@ -119,6 +119,7 @@ Switch(pipe) main;
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "tna";
+    options.disable_parse_min_depth_limit = true;
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 

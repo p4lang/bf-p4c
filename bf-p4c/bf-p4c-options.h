@@ -44,6 +44,8 @@ class BFN_Options : public CompilerOptions {
     int traffic_limit = 100;
     int num_stages_override = 0;
     bool enable_event_logger = false;
+    bool disable_parse_min_depth_limit = false;
+    bool disable_parse_max_depth_limit = false;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in

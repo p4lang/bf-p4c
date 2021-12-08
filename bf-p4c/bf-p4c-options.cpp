@@ -316,6 +316,21 @@ BFN_Options::BFN_Options() {
         },
         "Exclude passes from backend passes whose name is equal\n"
         "to one of `passX' strings.\n");
+    registerOption("--disable-parse-min-depth-limit", nullptr,
+        [this] (const char *) { disable_parse_min_depth_limit = true; return true; },
+        "Disable parser minimum depth limiting. (Tofino 1 egress parser only.)");
+    registerOption("--disable-parse-max-depth-limit", nullptr,
+        [this] (const char *) { disable_parse_max_depth_limit = true; return true; },
+        "Disable parser maximum depth limiting. (Tofino 1 egress parser only.)");
+    registerOption(
+        "--disable-parse-depth-limit", nullptr,
+        [this](const char *) {
+            disable_parse_min_depth_limit = true;
+            disable_parse_max_depth_limit = true;
+            return true;
+        },
+        "Disable parser minimum and maximum depth limiting. Equivalent to "
+        "\"--disable-parse-min-depth-limit --disable-parse-max-depth-limit\"");
 }
 
 using Target = std::pair<cstring, cstring>;
@@ -550,16 +565,19 @@ boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
 BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
     static const std::map<cstring, bool> cmdLinePragmas = {
-        { "--no-dead-code-elimination", false },
-        { "--force-match-dependency",   false },
-        { "--metadata-overlay",         false },
-        { "--placement",                true },
-        { "--placement-order",          false },
-        { "--auto-init-metadata",       true },  // brig only
-        { "--decaf",                    true },  // brig only
-        { "--infer-payload-offset",     true },
-        { "--relax-phv-init",           true },
-        { "--excludeBackendPasses",     true }
+        { "--no-dead-code-elimination",  false },
+        { "--force-match-dependency",    false },
+        { "--metadata-overlay",          false },
+        { "--placement",                 true },
+        { "--placement-order",           false },
+        { "--auto-init-metadata",        true },  // brig only
+        { "--decaf",                     true },  // brig only
+        { "--infer-payload-offset",      true },
+        { "--relax-phv-init",            true },
+        { "--excludeBackendPasses",      true },
+        { "--disable-parse-depth-limit", false },
+        { "--disable-parse-min-depth-limit", true },  // brig only
+        { "--disable-parse-max-depth-limit", true },  // brig only
     };
 
     boost::optional<CommandLineOptions> newOptions;

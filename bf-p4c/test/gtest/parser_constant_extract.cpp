@@ -64,6 +64,7 @@ createParserConstantExtractTestCase(const std::string& parserSource) {
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }

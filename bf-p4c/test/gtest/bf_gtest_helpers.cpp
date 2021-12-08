@@ -384,6 +384,9 @@ TestCode::TestCode(Hdr header, std::string code,
         default:
             o.target = "tofino";
             o.arch = "tna";
+            // Disable the min depth limit by default as we typically don't want to add parser
+            // padding in tests. Set to false if needed.
+            o.disable_parse_min_depth_limit = true;
             break;
         case Hdr::Tofino2arch:
             o.target = "tofino2";

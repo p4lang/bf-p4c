@@ -76,6 +76,7 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }

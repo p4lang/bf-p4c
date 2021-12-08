@@ -14,6 +14,10 @@
 #include <tofino/stateful_alu_blackbox.p4>
 #include <tofino/wred_blackbox.p4>
 #include <tofino/meter_blackbox.p4>
+
+// Test program exceeds Tof1 egress parse depth
+@pragma command_line --disable-parse-max-depth-limit
+
 @pragma pa_container_size ingress Jenkins.Amesville 32
 @pragma pa_container_size ingress Auburn.Ralls 32
 @pragma pa_container_size ingress Millsboro.Sespe 16

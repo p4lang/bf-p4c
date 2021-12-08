@@ -1,8 +1,8 @@
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
-
 #include <array>
 #include <initializer_list>
+
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -97,6 +97,7 @@ V1Switch(parse(), verifyChecksum(), igrs(), my_egress(),
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = target;
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }

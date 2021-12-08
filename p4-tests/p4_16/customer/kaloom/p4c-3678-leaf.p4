@@ -1120,6 +1120,10 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 # 1 "/mnt/build/p4c/p4include/tna.p4" 1
 # 17 "common/p4lib/core/types.p4" 2
 # 28 "common/p4lib/core/types.p4"
+
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 typedef bit<48> mac_addr_t;
 typedef bit<8> mac_addr_id_t;
 typedef bit<16> ethertype_t;

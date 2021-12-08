@@ -1138,6 +1138,9 @@ package MultiParserSwitch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 
 
 
+// Test program exceeds Tof1 egress parse depth. Min depth limit causes PHV alloc to fail.
+@command_line("--disable-parse-min-depth-limit", "--disable-parse-max-depth-limit")
+
 
 typedef bit<48> mac_addr_t;
 typedef bit<8> mac_addr_id_t;

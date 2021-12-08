@@ -36,6 +36,7 @@ error {
                            /// not supported by the implementation.
 }
 
+@command_line("--disable-parse-max-depth-limit")
 extern packet_in {
     /// Read a header from the packet into a fixed-sized header @hdr and advance the cursor.
     /// May trigger error PacketTooShort or StackOutOfBounds.

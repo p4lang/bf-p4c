@@ -1,6 +1,9 @@
 #include <tna.p4>
 #include <tna.p4>  /* TOFINO1_ONLY */
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 @pa_auto_init_metadata
 
 const bit<32> VLAN_TABLE_SIZE = 4096;

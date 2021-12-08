@@ -1,5 +1,9 @@
 #include <tna.p4>  /* TOFINO1_ONLY */
 
+// Disable min depth limit to prevent padding being added
+// Causes fitting issues with this program
+@command_line("--disable-parse-min-depth-limit")
+
 const bit<32> PORT_TABLE_SIZE = 288 * 2;
 const bit<32> VLAN_TABLE_SIZE = 4096;
 const bit<32> EVLAN_FLOOD_TABLE_SIZE = VLAN_TABLE_SIZE * 4;

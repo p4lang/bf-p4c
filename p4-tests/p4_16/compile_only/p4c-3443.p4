@@ -20,7 +20,7 @@
  *
  ******************************************************************************/
 
-
+@command_line("--disable-parse-max-depth-limit")
 
 
 typedef bit<48> mac_addr_t;

@@ -4,6 +4,9 @@
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-min-depth-limit", "--disable-parse-max-depth-limit")
+
 @pa_auto_init_metadata
 @pa_container_size("egress" , "Longwood.Aniak.Grannis" , 16)
 @pa_container_size("ingress" , "Yorkshire.Astor.Weinert" , 8)

@@ -1295,10 +1295,13 @@ struct AllocateParserState : public ParserTransform {
 /// a load via the Counter Initialization RAM. Therefore the compiler needs to insert a
 /// stall state if is_zero/is_negative is used in the cycle immediately following the load.
 struct InsertParserCounterStall : public ParserTransform {
+    std::map<cstring, int> stall_counts;
+
     void insert_stall_state(IR::BFN::Transition* t) {
         auto src = findContext<IR::BFN::ParserState>();
 
-        cstring name = src->name + ".$ctr_stall";
+        int suffix = stall_counts[src->name]++;
+        cstring name = src->name + ".$ctr_stall" + std::to_string(suffix).c_str();
         auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
 
         LOG2("created stall state for counter select on "

@@ -66,6 +66,9 @@
   #include "npb_ing_hdr_stack_counters.p4"
 #endif
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 // ----------------------------------------------------------------------------
 
 control SwitchIngress(

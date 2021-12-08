@@ -43,3 +43,13 @@ p4c_add_xfail_reason("tofino"
   "Name 'pipe.abc' is used for multiple table objects in the P4Info message"
   extensions/p4_tests/p4_16/errors/p4c-3967.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Can't enforce minimum parse depth for parser EgressParser because parser counter is already used"
+  extensions/p4_tests/p4_16/errors/parse_depth_counter.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Parser EgressParser: longest path through parser .* exceeds maximum parse depth"
+  extensions/p4_tests/p4_16/errors/parse_depth_length.p4
+)

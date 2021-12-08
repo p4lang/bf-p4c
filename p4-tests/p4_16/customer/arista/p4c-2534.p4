@@ -6,6 +6,9 @@
 #include <core.p4>
 #include <tna.p4>
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 @pa_container_size("egress" , "HillTop.Maddock.Foster" , 16) @pa_container_size("egress" , "HillTop.Maddock.Palatine" , 16) @pa_container_size("ingress" , "Millston.Maumee.Noyes" , 16) @pa_container_size("ingress" , "Millston.Ramos.Noyes" , 16) @pa_container_size("ingress" , "Millston.Tiburon.Glassboro" , 32) @pa_container_size("ingress" , "Millston.Wondervu.$valid" , 8) @pa_container_size("ingress" , "Millston.Shirley.$valid" , 8) @pa_mutually_exclusive("ingress" , "HillTop.Daleville.Lovewell" , "HillTop.Basalt.Lovewell") @pa_alias("ingress" , "HillTop.Komatke.Roachdale" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "HillTop.Komatke.Roachdale" , "eg_intr_md_for_dprsr.mirror_type") header Sagerton {
     bit<8> Exell;
 }

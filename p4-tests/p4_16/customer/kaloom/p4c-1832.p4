@@ -1,5 +1,8 @@
 #include <tna.p4>       /* TOFINO1_ONLY */
 
+// Test program exceeds Tof1 egress parse depth
+@command_line("--disable-parse-max-depth-limit")
+
 typedef bit<48> mac_addr_t;
 typedef bit<16> ethertype_t;
 typedef bit<12> vlan_id_t;

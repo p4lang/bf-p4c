@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_
 
+#include <numeric>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/copy.hpp>
 #include <boost/graph/topological_sort.hpp>
@@ -216,10 +217,43 @@ class ParserGraphImpl : public DirectedGraph {
         return mapped_result;
     }
 
-    // longest path from src to end of parser
-    std::vector<const State*> longest_path(const State* src) const {
-        std::map<const State*, std::vector<const State*>> path_map;
-        return longest_path_impl(src, path_map);
+    // longest path (in states) from src to end of parser
+    std::vector<const State*> longest_path_states(const State* src) const {
+        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        return min_max_path_impl(src, path_map, true, true, true).second;
+    }
+
+    // shortest path from src to end of parser
+    std::vector<const State*> shortest_path_states(const State* src) const {
+        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        return min_max_path_impl(src, path_map, false, true, true).second;
+    }
+
+    // longest path (in bytes) from src to end of parser
+    std::pair<unsigned, std::vector<const State*>> longest_path_bytes(const State* src) const {
+        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        return min_max_path_impl(src, path_map, true, true, false);
+    }
+
+    // shortest path (in bytes) from src to end of parser
+    std::pair<unsigned, std::vector<const State*>> shortest_path_bytes(const State* src) const {
+        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        return min_max_path_impl(src, path_map, false, true, false);
+    }
+
+    // shortest path (in bytes) from src to end of parser
+    std::pair<unsigned, std::vector<const State*>> shortest_path_thru_bytes(
+            const State* src) const {
+        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map_from;
+        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map_to;
+
+        auto from = min_max_path_impl(src, path_map_from, false, true, false);
+        auto to = min_max_path_impl(src, path_map_to, false, false, false);
+
+        std::vector<const State*> ret = to.second;
+        ret.insert(ret.end(), ++from.second.begin(), from.second.end());
+
+        return std::make_pair(from.first + to.first, ret);
     }
 
     const State* get_src(const Transition* t) const {
@@ -250,30 +284,88 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
  private:
-    std::vector<const State*> longest_path_impl(const State* src,
-            std::map<const State*, std::vector<const State*>>& path_map) const {
+    std::vector<const State*> longest_or_shortest_path_states_impl(const State* src,
+            std::map<const State*, std::vector<const State*>>& path_map, bool longest) const {
         if (path_map.count(src))
             return path_map.at(src);
 
-        const State* longest_succ = nullptr;
-        std::vector<const State*> longest_succ_path;
+        const State* best_succ = nullptr;
+        std::vector<const State*> best_succ_path;
 
-        if (successors().count(src)) {
+        if ((longest || to_pipe(src).size() == 0) && successors().count(src)) {
             for (auto succ : successors().at(src)) {
-                auto succ_path = longest_path_impl(succ, path_map);
+                auto succ_path = longest_or_shortest_path_states_impl(succ, path_map, longest);
 
-                if (!longest_succ || succ_path.size() > longest_succ_path.size()) {
-                    longest_succ_path = succ_path;
-                    longest_succ = succ;
+                bool gt = succ_path.size() > best_succ_path.size();
+                bool lt = succ_path.size() < best_succ_path.size();
+                if (!best_succ || (longest ? gt : lt)) {
+                    best_succ_path = succ_path;
+                    best_succ = succ;
                 }
             }
         }
 
-        longest_succ_path.insert(longest_succ_path.begin(), src);
+        best_succ_path.insert(best_succ_path.begin(), src);
 
-        path_map[src] = longest_succ_path;
+        path_map[src] = best_succ_path;
 
-        return longest_succ_path;
+        return best_succ_path;
+    }
+
+    /**
+     * Identify the longest or shortest path from or to a node
+     *
+     * @param state State to start/end at
+     * @param path_map Map of State* to longest/shortest path
+     * @param longest Find the longest path, otherwise find the shortest
+     * @param origin Is state the start (true) or end (false) of the path
+     * @param states Count path length by states (true) or bytes (false)
+     */
+    std::pair<unsigned, std::vector<const State*>> min_max_path_impl(
+            const State* state,
+            std::map<const State*, std::pair<unsigned, std::vector<const State*>>>& path_map,
+            bool longest, bool origin, bool states) const {
+        if (path_map.count(state))
+            return path_map.at(state);
+
+        const State* best = nullptr;
+        std::vector<const State*> best_path;
+        unsigned best_len = 0;
+
+        auto max = [](unsigned v, const Transition* t) { return v > t->shift ? v : t->shift; };
+        auto min = [](unsigned v, const Transition* t) { return v < t->shift ? v : t->shift; };
+
+        auto next_map = origin ? successors() : predecessors();
+        auto exit_trans = origin ? to_pipe(state) : std::set<const Transition*>({});
+
+        if ((longest || exit_trans.size() == 0) && next_map.count(state)) {
+            for (auto next : next_map.at(state)) {
+                auto next_path = min_max_path_impl(next, path_map, longest, origin, states);
+                auto next_trans = origin ? transitions(state, next) : transitions(next, state);
+                unsigned next_inc =
+                    states ? 1
+                           : std::accumulate(next_trans.begin(), next_trans.end(),
+                                             longest ? 0u : SIZE_MAX, longest ? max : min);
+
+                unsigned path_len = next_inc + next_path.first;
+                bool better = longest ? path_len > best_len : path_len < best_len;
+                if (!best || better) {
+                    best_path = next_path.second;
+                    best = next;
+                    best_len = path_len;
+                }
+            }
+        } else if (exit_trans.size()) {
+            best_len = states ? 1
+                              : std::accumulate(exit_trans.begin(), exit_trans.end(),
+                                                longest ? 0u : SIZE_MAX, longest ? max : min);
+        }
+
+        best_path.insert(origin ? best_path.begin() : best_path.end(), state);
+
+        path_map[state] = std::make_pair(best_len, best_path);
+
+        return path_map[state];
     }
 
     void get_all_descendants_impl(const State* src,

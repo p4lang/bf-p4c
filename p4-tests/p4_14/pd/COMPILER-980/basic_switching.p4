@@ -21,6 +21,9 @@ limitations under the License.
 #include <tofino/intrinsic_metadata.p4>
 #include <tofino/constants.p4>
 
+// Test program exceeds Tof1 egress parse depth
+@pragma command_line --disable-parse-max-depth-limit
+
 header_type nat_metadata_t {
     fields {
         ingress_nat_mode : 2;          /* 0: none, 1: inside, 2: outside */

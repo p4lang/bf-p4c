@@ -1071,7 +1071,7 @@ struct ElimEmptyState : public ParserTransform {
                 return false;
         }
 
-        if (state->name.endsWith("$ctr_stall"))  // compiler generated stall
+        if (state->name.find(".$ctr_stall"))  // compiler generated stall
             return false;
 
         if (state->name.endsWith("$hdr_len_stop_stall"))  // compiler generated stall
@@ -1279,6 +1279,7 @@ struct LowerParserIR : public PassManager {
             parser_info,
             new ElimEmptyState(*parser_info),
             allocateParserChecksums,
+            LOGGING(4) ? new DumpParser("after_alloc_parser_csums") : nullptr,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
             computeLoweredParserIR,
             new ReplaceParserIR(*computeLoweredParserIR),

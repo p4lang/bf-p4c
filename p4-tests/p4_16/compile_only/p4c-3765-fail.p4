@@ -73,6 +73,7 @@ extern packet_out {
 extern void verify(in bool check, in error toSignal);
 
 /// Built-in action that does nothing.
+@command_line("--disable-parse-max-depth-limit")
 @noWarn("unused")
 action NoAction() {}
 

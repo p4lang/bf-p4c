@@ -70,6 +70,8 @@ extern packet_out {
 /// otherwise set the parser error to @toSignal, and transition to the `reject` state.
 extern void verify(in bool check, in error toSignal);
 
+@command_line("--disable-parse-max-depth-limit")
+
 /// Built-in action that does nothing.
 action NoAction() {}
 

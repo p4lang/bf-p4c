@@ -85,6 +85,12 @@ class PardeSpec {
     /// The maximum offset+length a CLOT can have, in bits.
     virtual unsigned bitMaxClotPos() const = 0;
 
+    /// The minimum parse depth for the given gress
+    virtual size_t minParseDepth(gress_t /*gress*/) const { return 0; }
+
+    /// The maximum parse depth for the given gress
+    virtual size_t maxParseDepth(gress_t /*gress*/) const { return SIZE_MAX; }
+
     // Number of deparser consant bytes available
     virtual unsigned numDeparserConstantBytes() const = 0;
 
@@ -93,6 +99,12 @@ class PardeSpec {
 
     // Number of deparser checksum units that can invert its output
     virtual unsigned numDeparserInvertChecksumUnits() const = 0;
+
+    /// Clock frequency
+    virtual double clkFreq() const = 0;
+
+    /// Max line rate per-port (Gbps)
+    virtual unsigned lineRate() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -140,9 +152,16 @@ class TofinoPardeSpec : public PardeSpec {
 
     unsigned bitMaxClotPos() const override { BUG("No CLOTs in Tofino"); }
 
+    size_t minParseDepth(gress_t gress) const override { return gress == EGRESS ? 65 : 0; }
+
+    size_t maxParseDepth(gress_t gress) const override { return gress == EGRESS ? 160 : SIZE_MAX; }
+
     unsigned numDeparserConstantBytes() const override { return 0; }
     unsigned numDeparserChecksumUnits() const override { return 6; }
     unsigned numDeparserInvertChecksumUnits() const override { return 0; }
+
+    double clkFreq() const override { return 1.22; }
+    unsigned lineRate() const override { return 100; }
 };
 
 class JBayPardeSpec : public PardeSpec {
@@ -202,6 +221,10 @@ class JBayPardeSpec : public PardeSpec {
     unsigned numDeparserConstantBytes() const override { return 8; }
     unsigned numDeparserChecksumUnits() const override { return 8; }
     unsigned numDeparserInvertChecksumUnits() const override { return 4; }
+
+    // FIXME: adjust to true clock rate
+    double clkFreq() const override { return 1.35; }
+    unsigned lineRate() const override { return 400; }
 };
 
 class JBayA0PardeSpec : public JBayPardeSpec {

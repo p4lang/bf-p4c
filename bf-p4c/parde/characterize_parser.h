@@ -265,12 +265,22 @@ class CharacterizeParser : public Inspector {
 
         std::clog << std::endl;
 
-        auto longest_path = cgl.graphs().at(parser)->longest_path(parser->start);
+        auto longest_path = cgl.graphs().at(parser)->longest_path_states(parser->start);
 
         std::clog << "Longest path (" << longest_path.size()
                   << " states) on " << gress << ":" << std::endl;
 
         for (auto s : longest_path)
+            std::clog << "    " << s->name << std::endl;
+
+        std::clog << std::endl;
+
+        auto shortest_path = cgl.graphs().at(parser)->shortest_path_states(parser->start);
+
+        std::clog << "Shortest path (" << shortest_path.size() << " states) on " << gress << ":"
+                  << std::endl;
+
+        for (auto s : shortest_path)
             std::clog << "    " << s->name << std::endl;
 
         std::clog << std::endl;

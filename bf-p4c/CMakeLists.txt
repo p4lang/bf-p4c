@@ -162,6 +162,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/move_to_egress.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
+  midend/parser_enforce_depth_req.cpp
   midend/parser_graph.cpp
   midend/detect_multiple_pipelines.cpp
   midend/ping_pong_generation.cpp
@@ -195,6 +196,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/move_to_egress.h
   midend/normalize_params.h
   midend/param_binding.h
+  midend/parser_enforce_depth_req.h
   midend/parser_graph.h
   midend/register_read_write.h
   midend/detect_multiple_pipelines.h
@@ -537,6 +539,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/resolve_negative_extract.h
   parde/rewrite_parser_locals.h
   parde/split_parser_state.h
+  parde/verify_parse_depth.h
   parde/clot/allocate_clot.h
   parde/clot/clot_candidate.h
   parde/clot/clot_info.h

@@ -22,6 +22,7 @@ static boost::optional<TofinoPipeTestCase> makeTestCase(
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
 
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header H1 { bit<%BITWIDTH%> f; }
@@ -146,6 +147,7 @@ static boost::optional<TofinoPipeTestCase> makeTestCaseIngress(
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
     options.target = "tofino";
     options.arch = "v1model";
+    options.disable_parse_min_depth_limit = true;
 
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         struct H { }

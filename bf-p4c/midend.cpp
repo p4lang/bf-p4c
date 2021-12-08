@@ -103,6 +103,7 @@
 #include "midend/nestedStructs.h"
 #include "midend/move_to_egress.h"
 #include "midend/orderArguments.h"
+#include "midend/parser_enforce_depth_req.h"
 #include "midend/predication.h"
 #include "midend/remove_action_params.h"
 #include "midend/removeLeftSlices.h"
@@ -436,6 +437,10 @@ MidEnd::MidEnd(BFN_Options& options) {
         new RegisterReadWrite(&refMap, &typeMap, typeChecking),
         new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
         new BFN::FoldConstantHashes(&refMap, &typeMap, typeChecking),
+        BackendOptions().disable_parse_min_depth_limit &&
+                BackendOptions().disable_parse_max_depth_limit
+            ? nullptr
+            : new BFN::ParserEnforceDepthReq(&refMap, &typeMap, evaluator),
 
         // Collects source info for logging. Call this after all transformations are complete.
         sourceInfoLogging,
