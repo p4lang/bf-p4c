@@ -19,7 +19,7 @@ class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::Instruction *) override { return true; }
     bool preorder(const IR::Expression *) override;
     bitvec current_vliw;
-    bool current_has_unalloc_tempvar;
+    bool current_has_unalloc_tempvar = false;
     ordered_map<const IR::MAU::Action *, bitvec> table_instrs;
     ordered_map<const IR::MAU::Action *, bool> table_instrs_has_unalloc_tempvar;
 

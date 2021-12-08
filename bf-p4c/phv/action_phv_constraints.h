@@ -110,7 +110,7 @@ class ActionPhvConstraints : public Inspector {
     // TODO: Will we ever need a boolean indicating read or write in this
     // struct?
     struct OperandInfo {
-        int unique_action_id;
+        int unique_action_id = -1;
         enum field_read_flags_t {
             MOVE = 1,
             BITWISE = (1 << 1),

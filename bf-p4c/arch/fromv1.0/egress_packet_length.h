@@ -32,8 +32,8 @@
 //
 
 class AdjustEgressPacketLength : public PassManager {
-    bool egressParsesMirror;
-    bool egressUsesPacketLength;
+    bool egressParsesMirror = false;
+    bool egressUsesPacketLength = false;
  public:
     AdjustEgressPacketLength(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
