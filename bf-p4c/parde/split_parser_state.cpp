@@ -850,6 +850,14 @@ struct AllocateParserState : public ParserTransform {
                 return {current, spilled};
             }
 
+            /* test to see if an access running past the end of the input buffer is due
+             * to a lookahead rather than an extract.  FIXME -- this is a guess */
+            bool buffer_is_lookahead() {
+                for (auto t : sa.state->transitions)
+                    if (t->shift >= Device::pardeSpec().byteInputBufferSize())
+                        return false;
+                return !sa.state->transitions.empty(); }
+
             void allocate() override {
                 ordered_map<Clot*,
                         ordered_set<const IR::BFN::ExtractClot*>> clot_to_extracts;
@@ -876,12 +884,23 @@ struct AllocateParserState : public ParserTransform {
                                 spilled.push_back(e);
                                 LOG3("spill " << e << " (out of buffer)");
                             } else if (within_buffer(e)) {
+                                LOG4("have " << e << " (in buffer)");
                                 current.push_back(e);
                                 allocated = true;
                             } else if (straddles_buffer(e)) {
-                                auto sliced = slice_by_buffer(e);
-                                current.push_back(sliced.first);
-                                spilled.push_back(sliced.second);
+                                if (e->is<IR::BFN::ExtractClot>() &&
+                                    buffer_is_lookahead()) {
+                                    /* CLOTs don't need to be all in the buffer -- they'll
+                                     * spool in.  However if it has already been split due
+                                     * to a checksum, we need to split it consistently */
+                                    current.push_back(e);
+                                    LOG4("have " << e << " (clot)");
+                                } else {
+                                    auto sliced = slice_by_buffer(e);
+                                    current.push_back(sliced.first);
+                                    spilled.push_back(sliced.second);
+                                    LOG4("have " << sliced.first << " (in buffer)");
+                                    LOG3("spill " << sliced.second << " (out of buffer)"); }
                                 allocated = true;
                             }
                         }
@@ -1099,11 +1118,9 @@ struct AllocateParserState : public ParserTransform {
             splits.insert(splits.begin(), state);
 
             if (splits.size() > 1 && LOGGING(1)) {
-                std::clog << state->name << " is split into "
-                          << splits.size() << " states:" << std::endl;
-
+                LOG1(state->name << " is split into " << splits.size() << " states:");
                 for (auto s : splits)
-                    std::clog << "  " << s->name << std::endl;
+                    LOG1("  " << s->name);
             }
         }
 
@@ -1204,6 +1221,8 @@ struct AllocateParserState : public ParserTransform {
 
         std::vector<IR::BFN::ParserState*>
         split_parser_state(IR::BFN::ParserState* state, cstring prefix, unsigned iteration) {
+            LOG3("split_parser_state(" << state->name << ", " << prefix << ", " <<
+                 iteration << ")" << IndentCtl::indent);
             ParserStateAllocator alloc(state, phv, clot);
 
             if (alloc.spilled_statements.empty() && !alloc.spill_selects) {
@@ -1220,6 +1239,7 @@ struct AllocateParserState : public ParserTransform {
                     splits.push_back(stall);
                 }
 
+                LOG3_UNINDENT;
                 return splits;
             }
 
@@ -1231,6 +1251,12 @@ struct AllocateParserState : public ParserTransform {
 
             LOG3("computed max shift = " << max_shift << " for split iteration "
                   << iteration << " of " << state->name);
+            LOG4(alloc.spilled_statements.size() << " split, " <<
+                 alloc.current_statements.size() << " current");
+            if (max_shift == 0 && alloc.current_statements.empty()) {
+                error(ErrorType::ERR_OVERLIMIT, "lookahead in %s too far", state);
+                LOG3_UNINDENT;
+                return std::vector<IR::BFN::ParserState*>(); }
 
             state->statements = alloc.current_statements;
             split->statements = *(alloc.spilled_statements.apply(ShiftPacketRVal(max_shift)));
@@ -1266,6 +1292,7 @@ struct AllocateParserState : public ParserTransform {
             // verify this iteration
             verify.check_sanity(state, split);
 
+            LOG3_UNINDENT;
             // recurse
             auto splits = split_parser_state(split, prefix, ++iteration);
             splits.insert(splits.begin(), split);
@@ -1364,8 +1391,12 @@ struct ClipTerminalTransition : ParserModifier {
 struct CheckOutOfBufferExtracts : ParserInspector {
     bool preorder(const IR::BFN::PacketRVal* rval) override {
         if (auto extract = findContext<IR::BFN::Extract>()) {
+            // CLOTs don't need to be enitrely in the buffer to be extracted -- just the
+            // start of the CLOT needs to be in the buffer
             if (rval->range.lo < 0 ||
-                rval->range.hi > Device::pardeSpec().byteInputBufferSize() * 8) {
+                (extract->is<IR::BFN::ExtractClot>()
+                 ? rval->range.lo >= Device::pardeSpec().byteInputBufferSize() * 8
+                 : rval->range.hi > Device::pardeSpec().byteInputBufferSize() * 8)) {
                 auto state = findContext<IR::BFN::ParserState>();
 
                 ::fatal_error("Extraction source for %1% is out of state %2%'s input buffer"

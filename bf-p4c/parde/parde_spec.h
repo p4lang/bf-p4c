@@ -6,6 +6,7 @@
 
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/match_register.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 class PardeSpec {
  public:
@@ -211,7 +212,8 @@ class JBayPardeSpec : public PardeSpec {
     unsigned maxClotsPerState() const override { return 2; }
 
     // Cap max size to 56 as a workaround of TF2LAB-44
-    unsigned byteMaxClotSize() const override { return 56;  /* 64 */ }
+    unsigned byteMaxClotSize() const override {
+        return BackendOptions().tof2lab44_workaround ? 56 : 64; }
 
     unsigned numClotsPerGress() const override { return 64; }
     unsigned maxClotsLivePerGress() const override { return 16; }

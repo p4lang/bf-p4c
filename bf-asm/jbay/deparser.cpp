@@ -323,6 +323,8 @@ void output_jbay_field_dictionary_helper(int lineno,
 
             // Write the CLOT to the next segment in the current group.
             if (!check_chunk(lineno, ch)) break;
+            if (chunks_in_clot == CHUNKS_PER_GROUP && (ch % CHUNKS_PER_GROUP))
+                error(clot->lineno, "--tof2lab44-workaround incompatible with clot >56 bytes");
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
             write_clot(ch, entry_n, seg_tag, clot_tag, ent.pov, clot);
@@ -395,7 +397,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             if (!check_chunk(lineno, ch)) break;
 
             // CLOTs cannot span multiple groups.
-            BUG_CHECK(ch/CHUNKS_PER_GROUP == group);
+            BUG_CHECK(ch/CHUNKS_PER_GROUP == group || error_count > 0, "CLOT spanning groups");
 
             regs.chunk_info[ch].chunk_vld = 1;
             regs.chunk_info[ch].pov = pov.at(&pov_bit->reg) + pov_bit->lo;
@@ -480,7 +482,7 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
             if (!check_chunk(lineno, ch)) break;
 
             // CLOTs cannot span multiple groups.
-            BUG_CHECK(ch/CHUNKS_PER_GROUP == group);
+            BUG_CHECK(ch/CHUNKS_PER_GROUP == group || error_count > 0, "CLOT spanning groups");
 
             fd["Field Dictionary Number"] = entry_n;
             fd_entry["entry"] = entry_n;

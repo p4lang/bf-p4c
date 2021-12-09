@@ -38,7 +38,7 @@ option_t options = {
 #endif  /* !HAVE_JBAY && !HAVE_CLOUDBREAK */
     .stage_dependency_pattern = "",
     .target = NO_TARGET,
-    .tof2lab44_workaround = true,
+    .tof2lab44_workaround = false,
     .version = CONFIG_OLD,
     .werror = false,
     .nowarn = false,
@@ -232,6 +232,8 @@ int main(int ac, char **av) {
             options.multi_parsers = true;
         } else if (!strcmp(av[i], "--disable-tof2lab44-workaround")) {
             options.tof2lab44_workaround = false;
+        } else if (!strcmp(av[i], "--tof2lab44-workaround")) {
+            options.tof2lab44_workaround = true;
         } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
           ++i;
           if (!av[i]) {

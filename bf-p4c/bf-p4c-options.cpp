@@ -115,6 +115,10 @@ BFN_Options::BFN_Options() {
         [this](const char *) { stage_allocation = true; return true; },
         "Write out PHV allocation based on stage based allocation",
         OptionFlags::Hide);
+    registerOption("--tof2lab44-workaround", nullptr,
+        [this](const char *) { tof2lab44_workaround = true; return true; },
+        "enable workaround for tofino2 A0 issue (tof2lab44)",
+        OptionFlags::Hide);
     registerOption("--seo", nullptr,
         [this](const char *) { skip_seo = false; return true; },
         "do frontend side-effect ordering",
