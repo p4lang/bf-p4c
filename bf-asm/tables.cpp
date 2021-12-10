@@ -2661,6 +2661,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
         }
         field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
         field_entry["field_name"] = json::string(name);
+        field_entry["global_name"] = json::string("");
 
         if (field.conditional_value) {
             field_entry["is_mod_field_conditionally_value"] = true;

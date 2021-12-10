@@ -1094,6 +1094,8 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
     if (name != "match") {
         Table::add_field_to_pack_format(field_list, basebit, name, field, act);
         return; }
+    LOG3("Adding fields for " << name << " - " << field << " to pack format for SRAM table "
+            << this->name() << " in action : " << act);
     unsigned bit = 0;
     for (auto &piece : field.bits) {
         auto mw = --match_by_bit.upper_bound(bit);
@@ -1110,27 +1112,27 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             get_cjson_source(mw_name, source, start_bit);
             if (source == "")
                 error(lineno, "Cannot determine proper source for field %s", name.c_str());
-            std::string key_name;
+            std::string field_name, global_name = "";
             std::string match_mode;
             if (auto phv_p = dynamic_cast<Phv::Ref *>(mw->second)) {
-                std::string field_name = mw->second->name();
+                field_name = mw->second->name();
                 // If the name has a slice in it, remove it and add the lo bit of
                 // the slice to field_bit.  This takes the place of
                 // canon_field_list(), rather than extracting the slice component
                 // of the field name, if present, and appending it to the key name.
                 int slice_offset = remove_name_tail_range(field_name);
-                auto p = find_p4_param(field_name);
-                key_name = field_name;
+                start_bit = lo + slice_offset + mw->second->fieldlobit();
+                global_name = field_name;
+                auto p = find_p4_param(field_name, "", start_bit);
                 if (!p && !p4_params_list.empty()) {
                     warning(lineno, "Cannot find field name %s in p4_param_order "
                             "for table %s", field_name.c_str(), this->name());
                 } else if (p && !p->key_name.empty()) {
-                    key_name = p->key_name;
+                    field_name = p->key_name;
                 }
                 match_mode = get_match_mode(*phv_p, mw->first);
-                start_bit = lo + slice_offset + mw->second->fieldlobit();
             } else if (dynamic_cast<HashMatchSource *>(mw->second)) {
-                key_name = "--proxy_hash--";
+                field_name = "--proxy_hash--";
                 match_mode = "unused";
                 start_bit = mw->second->fieldlobit();
             } else {
@@ -1138,7 +1140,8 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             }
 
             field_list.push_back(json::map {
-                    { "field_name", json::string(key_name) },
+                    { "field_name", json::string(field_name) },
+                    { "global_name", json::string(global_name) },
                     { "source", json::string(source) },
                     { "lsb_mem_word_offset", json::number(offset) },
                     { "start_bit", json::number(start_bit) },
@@ -1149,6 +1152,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                     { "match_mode", json::string(match_mode) },
                     { "enable_pfe", json::False() },  // FIXME-JSON
                     { "field_width", json::number(mw->second->size()) }});
+            LOG5("Adding json field  " << field_list.back());
             offset += mw->second->size();
             lo = 0;
             ++mw; }

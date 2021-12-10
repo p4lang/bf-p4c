@@ -476,10 +476,12 @@ void ExactMatchTable::gen_ghost_bits(int hash_function_number,
     for (auto kv : ghost_bit_pos) {
         json::map ghost_bit_info;
         auto field_name = kv.first.first;
+        auto global_name = field_name;
         auto p4_param = find_p4_param(field_name);
         if (p4_param && !p4_param->key_name.empty())
             field_name = p4_param->key_name;
         ghost_bit_info["field_name"] = field_name;
+        ghost_bit_info["global_name"] = global_name;
         ghost_bit_info["bit_in_match_spec"] = kv.first.second;
         ghost_bits_info.push_back(std::move(ghost_bit_info));
 

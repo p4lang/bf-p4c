@@ -1000,6 +1000,7 @@ set (P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY
 
 ## Internal P4-16 Programs
 set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
+  misc1
   tna_pvs_multi_states
   tna_multi_prsr_programs_multi_pipes
   )
@@ -1083,6 +1084,8 @@ endforeach()
      "all ^test.Ipv4UdpTranslateSpecialUpdTest")
  bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes"
      "test.Phase0TableOpTest")
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_misc1"
+     "all ^test.TestNonDflt ^test.IdleTimeoutNotifications")
 
 # Add extra flags for p4_16_programs
 # Exclude the MirrorHA tests as they have hard coded install path (specific to p4factory)

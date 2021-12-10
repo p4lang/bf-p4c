@@ -61,7 +61,7 @@ cstring keyAnnotationName(const IR::MAU::TableKey* table_key, cstring table_name
             if (!table_name.isNullOrEmpty())
                 // XXX(cole): It would be nice to report srcInfo here.
                 ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
-                          "%1%: Table key name not supported.  "
+                          "%1%: Table key name not supported. "
                           "Replacing \"%2%\" with \"%3%\".", table_name, annName, newAnnName);
             annName = newAnnName;
         }

@@ -515,25 +515,27 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
         hash_bit["seed"] = input_xbar->get_seed_bit(hash_group_no, col.first);
         for (const auto &bit : col.second.data) {
             if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
-                std::string field_name = ref.name();
+                std::string field_name, global_name;
+                field_name = ref.name();
 
                 auto field_bit = remove_name_tail_range(field_name) + ref.lobit();
+                global_name = field_name;
 
                 // Look up this field in the param list to get a custom key
                 // name, if present.
-                std::string key_name = field_name;
                 auto p = find_p4_param(field_name);
                 if (!p && !p4_params_list.empty()) {
                     warning(col.second.lineno, "Cannot find field name %s in p4_param_order "
                             "for table %s", field_name.c_str(), name());
                 } else if (p && !p->key_name.empty()) {
-                    key_name = p->key_name;
+                    field_name = p->key_name;
                 }
                 // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
 
                 bits_to_xor->push_back(json::map{
                     {"field_bit", json::number(field_bit)},
-                    {"field_name", json::string(key_name)},
+                    {"field_name", json::string(field_name)},
+                    {"global_name", json::string(global_name)},
                     {"hash_match_group", json::number(hash_table_id / 2)},
                     {"hash_match_group_bit", json::number((hash_table_id % 2) * 64 + bit)}
                     });

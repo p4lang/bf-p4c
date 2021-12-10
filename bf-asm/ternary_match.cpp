@@ -527,10 +527,11 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 }
 
 void TernaryMatchTable::gen_entry_cfg2(json::vector &out, std::string field_name,
-        unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, std::string source,
-        unsigned start_bit, unsigned field_width, bitvec &tcam_bits) const {
+        std::string global_name, unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx,
+        std::string source, unsigned start_bit, unsigned field_width, bitvec &tcam_bits) const {
     json::map entry;
     entry["field_name"] = field_name;
+    entry["global_name"] = global_name;
     entry["lsb_mem_word_offset"] = lsb_offset;
     entry["lsb_mem_word_idx"] = lsb_idx;
     entry["msb_mem_word_idx"] = msb_idx;
@@ -562,27 +563,29 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             << " start_bit: " << start_bit << " field_width: " << field_width
             << " index: " << index << " tcam_bits: " << tcam_bits << " nibble_offset: "
             << nibble_offset);
-    std::string fix_name(name);
+    std::string field_name(name);
 
     // If the name has a slice in it, remove it and add the lo bit of
     // the slice to field_bit.  This takes the place of
     // canon_field_list(), rather than extracting the slice component
     // of the field name, if present, and appending it to the key name.
-    int slice_offset = remove_name_tail_range(fix_name);
-    LOG4("    Fix Name: " << fix_name << " slice_offset: " << slice_offset);
+    int slice_offset = remove_name_tail_range(field_name);
+    LOG4("    Field Name: " << field_name << " slice_offset: " << slice_offset);
 
     // Get the key name, if any.
     int param_start_bit = slice_offset + start_bit;
-    auto params = find_p4_params(fix_name, "", param_start_bit, field_width);
+    auto params = find_p4_params(field_name, "", param_start_bit, field_width);
+    std::string global_name = "";
     if (params.size() == 0) {
-        gen_entry_cfg2(out, fix_name, lsb_offset, lsb_idx, msb_idx, source, param_start_bit,
-                field_width, tcam_bits);
+        gen_entry_cfg2(out, field_name, global_name, lsb_offset, lsb_idx,
+                msb_idx, source, param_start_bit, field_width, tcam_bits);
     } else {
         for (auto param : params) {
             if (!param) continue;
             if (!param->key_name.empty()) {
                 LOG4("    Found param : " << *param);
-                fix_name = param->key_name;
+                field_name = param->key_name;
+                global_name = param->name;
             }
             // For multiple params concatenated within the field width, we only
             // chose the param width which represents the slice.
@@ -646,20 +649,20 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                     }
 
                     // Add the range entry
-                    gen_entry_cfg2(out, fix_name, bit + TCAM_MATCH_BITS_START, lsb_idx, msb_idx,
-                            "range", range_start_bit, range_width, tcam_bits);
+                    gen_entry_cfg2(out, field_name, global_name, bit + TCAM_MATCH_BITS_START,
+                            lsb_idx, msb_idx, "range", range_start_bit, range_width, tcam_bits);
                     auto &last_entry = out.back()->to<json::map>();
                     gen_entry_range_cfg(last_entry, false, nibble_offset);
 
                     // Adding the duplicate range entry
-                    gen_entry_cfg2(out, fix_name, bit + TCAM_MATCH_BITS_START + 4, lsb_idx, msb_idx,
-                            "range", range_start_bit, range_width, tcam_bits);
+                    gen_entry_cfg2(out, field_name, global_name, bit + TCAM_MATCH_BITS_START + 4,
+                            lsb_idx, msb_idx, "range", range_start_bit, range_width, tcam_bits);
                     auto &last_entry_dup = out.back()->to<json::map>();
                     gen_entry_range_cfg(last_entry_dup, true, nibble_offset);
                 }
 
             } else {
-                gen_entry_cfg2(out, fix_name, lsb_offset, lsb_idx, msb_idx, source,
+                gen_entry_cfg2(out, field_name, global_name, lsb_offset, lsb_idx, msb_idx, source,
                         param_start_bit, field_width, tcam_bits);
             }
             param_start_bit += field_width;

@@ -993,7 +993,7 @@ protected:
         GroupInfo() : overhead_word(-1), overhead_bit(-1), result_bus_word(-1) {}
         // important function in order to determine shiftcount for exact match entries
         int result_bus_word_group() const { return match_group.at(result_bus_word); }
-    };
+    };  // NOLINT
     std::vector<GroupInfo>      group_info;
     std::vector<std::vector<int>> word_info;    // which format group corresponds to each
                                                 // match group in each word
@@ -1248,11 +1248,11 @@ public:
             return indirect->hit_next.size();
         return hit_next.size(); }
     table_type_t table_type() const override { return TERNARY; }
-    void gen_entry_cfg(json::vector &out, std::string name, \
-        unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
+    void gen_entry_cfg(json::vector &out, std::string name,
+        unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx,
         std::string source, unsigned start_bit, unsigned field_width,
         unsigned index, bitvec &tcam_bits, unsigned byte_offset) const;
-    void gen_entry_cfg2(json::vector &out, std::string field_name,
+    void gen_entry_cfg2(json::vector &out, std::string field_name, std::string global_name,
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, std::string source,
         unsigned start_bit, unsigned field_width, bitvec &tcam_bits) const;
     void gen_entry_range_cfg(json::map &entry, bool duplicate, unsigned nibble_offset) const;
