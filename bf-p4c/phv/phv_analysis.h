@@ -118,6 +118,9 @@ class PHV_AnalysisPass : public Logging::PassManager {
     void set_physical_liverange_overlay(bool enable) {
         settings.physical_liverange_overlay = enable;
     }
+    const PHV::Pragmas& get_pragmas() {
+        return pragmas;
+    }
 };
 
 #endif  /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

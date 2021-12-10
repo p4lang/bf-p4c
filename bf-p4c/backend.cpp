@@ -100,6 +100,7 @@
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/finalize_physical_liverange.h"
+#include "bf-p4c/common/check_uninitialized_read.h"
 
 namespace BFN {
 
@@ -337,6 +338,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // have to backtrack to mau_backtracker to avoid aliasing issue, and after backtracking
         // temp vars are lost.
         new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
+        new CheckUninitializedRead(defuse, phv, PHV_Analysis->get_pragmas()),
         new InstructionAdjustment(phv),
         &nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),

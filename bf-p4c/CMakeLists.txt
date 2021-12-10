@@ -264,6 +264,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/slice.cpp
   common/size_of.cpp
   common/utils.cpp
+  common/check_uninitialized_read.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -293,6 +294,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/size_of.h
   common/table_printer.h
   common/utils.h
+  common/check_uninitialized_read.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 
