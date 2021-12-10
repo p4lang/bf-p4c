@@ -26,8 +26,18 @@ MapTablesToActions::getDefaultActionsForTable(const IR::MAU::Table* t) const {
 boost::optional<const IR::MAU::Table*>
 MapTablesToActions::getTableForAction(const IR::MAU::Action* act) const {
     BUG_CHECK(act, "Null action encountered.");
-    if (!actionMap.count(act)) return boost::none;
-    return actionMap.at(act);
+    if (actionMap.count(act)) {
+        return actionMap.at(act);
+    } else {
+        // This is to workaround a problem with the getInitPoints() from AllocSlice that carry
+        // old IR::MAU::Action pointer. Using the clone_id instead is less efficient but resilient
+        // over IR transformation.
+        for (auto kv : actionMap) {
+            if (kv.first->clone_id == act->clone_id)
+                return kv.second;
+        }
+    }
+    return boost::none;
 }
 
 bool MapTablesToActions::preorder(const IR::MAU::Table* t) {
