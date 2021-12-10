@@ -13,5 +13,8 @@
 **/PATENTS
 **/RELEASING
 **/*.md
+!README.md
+!bf-p4c/**/*.md
+!bf-asm/**/*.md
 
 docker/Dockerfile*

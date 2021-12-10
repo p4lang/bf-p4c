@@ -17,6 +17,9 @@ it appears under the corresponding "Modules" section. Put the \\defgroup command
 suitable file for the description of a particular topic. Then, each class that should be
 included is marked with the \\ingroup command.
 
+Don't forget to keep .dockerignore and the INPUT tag synchronized in order to include
+desired .md files.
+
 ### Best practices for using Doxygen
 
 - Use \@brief to introduce a brief, one-sentence description, which is used in listings.
