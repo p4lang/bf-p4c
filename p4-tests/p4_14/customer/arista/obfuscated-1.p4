@@ -1,3 +1,5 @@
+@pragma command_line --disable-parse-max-depth-limit
+
 // Copyright (c) 2016 Arista Networks, Inc.  All rights reserved.
 // Arista Networks, Inc. Confidential and Proprietary.
 // By accepting and/or using this Arista Software, Barefoot Networks,

@@ -311,7 +311,12 @@ while [ $# -gt 1 ]; do
         ;;
     -D*)
         out_ext=$out_ext$1
+        P4C_ARGS+=("$1")
         P4PPFLAGS="$P4PPFLAGS $1"
+        ;;
+    -Xp4c*)
+        P4C_ARGS+=("$1")
+        P4FLAGS="$P4FLAGS $1"
         ;;
     *)  P4C_ARGS+=("$1")
         ;;
@@ -661,7 +666,6 @@ configure_and_build() {
         fi
     done
 
-    P4FLAGS="$P4FLAGS ${P4C_ARGS[@]}"
     echo "Configure command: $p4builddir/configure $config_args P4FLAGS="$P4FLAGS" P4PPFLAGS="$P4PPFLAGS" PDFLAGS="$PDFLAGS""
     run $p4builddir/configure $config_args P4FLAGS="$P4FLAGS" P4PPFLAGS="$P4PPFLAGS" PDFLAGS="$PDFLAGS" >$testout/p4-build-conf.log || die
 

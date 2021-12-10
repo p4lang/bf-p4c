@@ -16,22 +16,26 @@ set  (testExtraArgs "${testExtraArgs} -Xp4c=\"--disable-power-check\"")
 set  (isXFail TRUE)
 
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE")
+    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_dc_basic")
 p4c_add_test_label("tofino" "p414_nightly" "switch_dc_basic")
 
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_FIN_POSTCARD_PROFILE")
+    "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_FIN_POSTCARD_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "p414_nightly" "switch_ent_fin_postcard")
 
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -to 1200")
+    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -to 1200 -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_ent_dc_general")
 p4c_add_test_label("tofino" "p414_nightly" "switch_ent_dc_general")
 
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_PROFILE -DP4_WRED_DEBUG")
+    "switch_msdc" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_PROFILE -DP4_WRED_DEBUG -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc")
 p4c_add_test_label("tofino" "p414_nightly" "switch_msdc")
 
@@ -45,24 +49,25 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_l3" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_L3_PROFILE -Xp4c=\"--disable-parse-depth-limit\"")
 p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_l3")
 
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_SPINE_DTEL_INT_PROFILE")
+    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_SPINE_DTEL_INT_PROFILE -Xp4c=\"--disable-parse-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_spine_int")
 p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_spine_int")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_LEAF_DTEL_INT_PROFILE -Xp4c=\"--disable-parse-depth-limit\"")
+    "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_LEAF_DTEL_INT_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_leaf_int")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_l3_heavy_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} -DL3_HEAVY_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-depth-limit\"")
+    "switch_l3_heavy_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} -DL3_HEAVY_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "p414_nightly" "switch_l3_heavy_int_leaf")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_generic_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-depth-limit\"")
+    "switch_generic_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "p414_nightly" "switch_generic_int_leaf")
 
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
@@ -407,8 +412,9 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_sai_hostif_BGP
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_L2VlanScaleTest")
 
 # Switch master ENT_DC_GENERAL_PROFILE tests
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general" ${SWITCH_P4}
-        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600 -Xp4c=\"--disable-parse-max-depth-limit\"" "${SWITCH_PTF_DIR}")
 p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ent_dc_general")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general"
         "ent ^aclfrag ^stp ^dynhash32
@@ -431,8 +437,9 @@ bfn_set_ptf_test_spec("tofino" "smoketest_switch_ent_dc_general_set_1"
         switch_tests.L2VxlanUnicastBasicTest
         switch_tests.L3EcmpLagTest
         switch_tests.L3VIIPv4HostMacMoveTest")
+# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general_egress_acl" ${SWITCH_P4}
-        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR_EGRESS_ACL}")
+        "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -pd -to 3600 -Xp4c=\"--disable-parse-max-depth-limit\"" "${SWITCH_PTF_DIR_EGRESS_ACL}")
 p4c_add_test_label("tofino" "p414_nightly" "smoketest_switch_ent_dc_general_egress_acl")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up

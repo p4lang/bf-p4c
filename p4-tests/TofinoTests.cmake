@@ -90,6 +90,9 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "p4c-2250\\.p4"
                             "08-FullTPHV3\\.p4"
                             "p4c-2661\\.p4"
+                            "action_bus1\\.p4"            # max depth limit
+                            "06-FullTPHV1\\.p4"           # max depth limit
+                            "07-FullTPHV2\\.p4"           # max depth limit
                             )
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
@@ -153,20 +156,28 @@ set (TOFINO_V1_TEST_SUITES_P416
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 # Tests requiring disabling egress parse depth limits which can't easily have command_line pragmas added
-set (P4TESTS_FOR_TOFINO_NO_MIN_DEPTH
+set (P4TESTS_P4_16_FOR_TOFINO_NO_MIN_DEPTH
     "bvec-hdr-bmv2.p4"
     "table-entries-exact-bmv2.p4"
     )
-set (P4TESTS_FOR_TOFINO_NO_MAX_DEPTH
+set (P4TESTS_P4_16_FOR_TOFINO_NO_MAX_DEPTH
     "checksum-l4-bmv2.p4"
+    )
+set (P4TESTS_P4_14_FOR_TOFINO_NO_MAX_DEPTH
+    "06-FullTPHV1.p4"
+    "07-FullTPHV2.p4"
+    "action_bus1.p4"
     )
 set (P4TESTS_FOR_TOFINO_NO_DEPTH
     "issue1755-1-bmv2.p4"
     )
-foreach (test ${P4TESTS_FOR_TOFINO_NO_MIN_DEPTH})
+foreach (test ${P4TESTS_P4_14_FOR_TOFINO_NO_MAX_DEPTH})
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_14_samples/${test}" "testdata/p4_14_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
+endforeach()
+foreach (test ${P4TESTS_P4_16_FOR_TOFINO_NO_MIN_DEPTH})
     p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-min-depth-limit\"")
 endforeach()
-foreach (test ${P4TESTS_FOR_TOFINO_NO_MAX_DEPTH})
+foreach (test ${P4TESTS_P4_16_FOR_TOFINO_NO_MAX_DEPTH})
     p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
 endforeach()
 foreach (test ${P4TESTS_FOR_TOFINO_NO_DEPTH})

@@ -1,3 +1,5 @@
+@pragma command_line --disable-parse-min-depth-limit --disable-parse-max-depth-limit
+
 #include <tofino/intrinsic_metadata.p4>
 
 header_type data_t {

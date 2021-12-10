@@ -1,3 +1,5 @@
+@pragma command_line --disable-parse-max-depth-limit
+
 # 1 "pktgen9.p4"
 # 1 "<built-in>"
 # 1 "<command-line>"

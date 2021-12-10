@@ -1,3 +1,4 @@
+@pragma command_line --disable-parse-max-depth-limit
 
 #include "tofino/intrinsic_metadata.p4"
 

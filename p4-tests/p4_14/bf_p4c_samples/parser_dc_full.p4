@@ -1,3 +1,5 @@
+@pragma command_line --disable-parse-max-depth-limit
+
 /*
 Copyright 2013-present Barefoot Networks, Inc. 
 

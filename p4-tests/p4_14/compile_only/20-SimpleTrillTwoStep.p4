@@ -1,3 +1,5 @@
+@pragma command_line --disable-parse-min-depth-limit --disable-parse-max-depth-limit
+
 #ifdef __TARGET_TOFINO__
 #include <tofino/constants.p4>
 #include <tofino/intrinsic_metadata.p4>
