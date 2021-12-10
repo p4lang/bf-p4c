@@ -171,6 +171,8 @@ parser [<thread>] [<port_use>, ...]:
     pipe_mask:
         # pipe_mask to be set for ghost packets 
         # (tm_status_phv.pipe_mask in tofino2)
+    parse_depth_checks_disabled: true | false
+        # Parse depth checks disabled
 stage <constant> <thread>:
     # Defines a single stage of the MAU.  The order of the tables within the
     # stage is the logical table ordering, so order matters

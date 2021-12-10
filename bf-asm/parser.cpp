@@ -278,6 +278,13 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 if (CHECKTYPE(kv.value, tINT))
                     meta_opt = kv.value.i;
                 continue; }
+            if (kv.key == "parse_depth_checks_disabled") {
+                if (options.target == TOFINO)
+                    options.tof1_egr_parse_depth_checks_disabled = get_bool(kv.value);
+                else
+                    warning(kv.key.lineno,
+                            "parse_depth_checks_disabled unexpected: supported only by Tofino");
+                continue; }
             define_state(gress, kv); }
 
         // process the CLOTs immediately rather than in Parser::process() so that it

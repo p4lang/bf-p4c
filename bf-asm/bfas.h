@@ -45,6 +45,7 @@ extern struct option_t {
     bool                log_hashes;
     std::string         output_dir;
     int                 num_stages_override;
+    bool                tof1_egr_parse_depth_checks_disabled;
     const char          *fill_noop_slot;
 } options;
 

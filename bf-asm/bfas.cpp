@@ -44,7 +44,8 @@ option_t options = {
     .nowarn = false,
     .log_hashes = false,
     .output_dir = ".",
-    .num_stages_override = 0
+    .num_stages_override = 0,
+    .tof1_egr_parse_depth_checks_disabled = false,
 };
 
 std::string asmfile_name;                                               // NOLINT(runtime/string)
@@ -134,6 +135,9 @@ void output_all() {
     json::map driver_options;
     driver_options["hash_parity_enabled"] = !options.disable_gfm_parity;
     driver_options["high_availability_enabled"] = options.high_availability_enabled;
+    if (options.target == TOFINO)
+        driver_options["tof1_egr_parse_depth_checks_disabled"] =
+            options.tof1_egr_parse_depth_checks_disabled;
     ctxtJson["driver_options"] = std::move(driver_options);
 
     auto json_out = open_output("context.json");

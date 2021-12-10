@@ -117,6 +117,13 @@ struct ParserAsmSerializer : public ParserInspector {
         if (parser->parserError)
             out << indent << "parser_error: " << parser->parserError << std::endl;
 
+        // Parse depth checks disabled (used by driver to disable multi-threading)
+        if ((Device::pardeSpec().minParseDepth(parser->gress) > 0 &&
+             BackendOptions().disable_parse_min_depth_limit) ||
+            (Device::pardeSpec().maxParseDepth(parser->gress) < SIZE_MAX &&
+             BackendOptions().disable_parse_max_depth_limit))
+            out << indent << "parse_depth_checks_disabled: true" << std::endl;
+
         // Rate Limiter Setup :
         //
         // The rate limiter is configured in the parser arbiter which controls
