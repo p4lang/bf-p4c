@@ -118,6 +118,18 @@ bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
     if (inst->operands.empty()) return true;
     const PHV::Field* destField = phv.field(inst->operands[0]);
     if (!destField) return true;
+    for (auto &candidate : candidateSources) {
+        //  see if the destination of the current instruction has been selected
+        //  as the source for an alias previously
+        if (candidate.second.count(destField)) {
+            dropFromCandidateSet(candidate.first);
+            LOG3("\tDrop candidate header : " << candidate.first->name
+                                    << " because it's source : "
+                                    << destField->name
+                                    << " is written in further traversal");
+            return true;
+        }
+    }
     if (!initialCandidateSet.count(destField)) return true;
     if (inst->name != "set" || inst->operands.size() != 2) {
         dropFromCandidateSet(destField);

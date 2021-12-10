@@ -534,3 +534,10 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "learning: .* container .* seen in consecutive locations"
   extensions/p4_tests/p4_16/compile_only/p4c-1719.p4)
+
+# P4C-3620
+p4c_add_xfail_reason("tofino2"
+  "Bug: Need to update liveranges"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
+)
