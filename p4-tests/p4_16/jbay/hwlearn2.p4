@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta,
     action compute_digest() {
         meta.tmp32 = digest_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr,
                                        hdr.ipv4.protocol, meta.src_port, meta.dst_port }); }
-    action set_egress_port() { ig_intr_tm_md.ucast_egress_port = 3; }
+    action set_egress_port() { ig_intr_tm_md.ucast_egress_port = 4; }
 
     /* 1st dleft cache table -- 1 way in one stage (so no sbus) */
     Register<pair, bit<12>>(4096) learn_cache_1;

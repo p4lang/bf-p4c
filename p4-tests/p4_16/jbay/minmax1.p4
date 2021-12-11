@@ -24,10 +24,10 @@ control ingress(inout headers hdr, inout metadata meta,
 
     action nop() {}
     action doload(bit<10> idx) {
-        ig_intr_tm_md.ucast_egress_port = 1;
+        ig_intr_tm_md.ucast_egress_port = 2;
         load.execute(idx); }
     action domax(bit<10> idx) {
-        ig_intr_tm_md.ucast_egress_port = 2;
+        ig_intr_tm_md.ucast_egress_port = 4;
         hdr.data.b2 = rmax.execute(idx); }
 
     table test {

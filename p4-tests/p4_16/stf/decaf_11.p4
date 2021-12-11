@@ -78,7 +78,7 @@ control IngressP(
 
     table set_egress_port {
         actions = { set_port; }
-        default_action = set_port(1);
+        default_action = set_port(2);
     }
 
     apply {

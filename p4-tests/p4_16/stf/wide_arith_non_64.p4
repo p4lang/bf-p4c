@@ -45,7 +45,7 @@ control ingress(inout Headers h, inout ingress_metadata_t m, in ingress_intrinsi
         h.sum.sum = (bit<64>)m.sum_clone;
     }
     apply {
-        ig_tm_md.ucast_egress_port = 1;
+        ig_tm_md.ucast_egress_port = 2;
         sum_up();
         copy_back();
     }

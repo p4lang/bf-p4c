@@ -2,4 +2,4 @@
 
 #        | ethernet header            | | IPv4 header                                  | | UDP header      | | payload ...
 #        dstAddr      srcAddr      type VL   len  id       ttl    csum                 |  sp   dp  len     | |
-packet 1 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f

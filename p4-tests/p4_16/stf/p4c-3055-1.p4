@@ -162,9 +162,9 @@ control Ingress(inout headers_t hdr,
 	}
 	if(hdr.shift_8_to_16.isValid()) {
 	    if(shift_dst8 == 0x180) {
-	        egress_port = 1;
-	    } else if(shift_dst8 == 0x760) {
 	        egress_port = 2;
+	    } else if(shift_dst8 == 0x760) {
+	        egress_port = 4;
 	    }
 	}
 
@@ -183,9 +183,9 @@ control Ingress(inout headers_t hdr,
 	}
 	if(hdr.shift_8_to_16.isValid()) {
 	    if(shift_dst32 == 0x54) {
-	        egress_port = 3;
+	        egress_port = 6;
 	    } else if(shift_dst32 == 0x32) {
-	        egress_port = 4;
+	        egress_port = 8;
 	    }
 	}
         send_back(egress_port);

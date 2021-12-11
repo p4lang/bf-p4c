@@ -34,11 +34,11 @@ parser parse_ethernet {
 action nop() { }
 
 action do1() {
-    modify_field(m.f1, 1);
+    modify_field(m.f1, 2);
 }
 
 action do2() {
-    modify_field(m.f2, 2);
+    modify_field(m.f2, 3);
 }
 
 table t1 {

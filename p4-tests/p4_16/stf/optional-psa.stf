@@ -2,9 +2,9 @@
 add MyIC.test1 0 f1:0x0 f2:0xf a1(id:0xeeee)
 # is-valid = true, ternary mask is 0
 add MyIC.test2 0 f1:0x*2 a2(id:0xffff, port:2)
-add MyIC.test2 1 f1:0x*1 a2(id:0xffff, port:3)
+add MyIC.test2 1 f1:0x*1 a2(id:0xffff, port:4)
 
-expect 3 01 0f 0303 ffff 05 66 77 88
+expect 4 01 0f 0303 ffff 05 66 77 88
 packet 0 01 0f 0303 0404 05 66 77 88
 
 expect 2 02 0e 0303 ffff 05 66 77 88

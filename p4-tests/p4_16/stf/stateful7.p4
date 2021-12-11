@@ -34,9 +34,9 @@ control ingress(inout headers hdr, inout metadata meta,
     apply {
         bit<1> is_burst = bursts.execute(hdr.data.f1[12:0]);
         if (is_burst == 1) {
-            ig_intr_tm_md.ucast_egress_port = 3;
+            ig_intr_tm_md.ucast_egress_port = 4;
         } else {
-            ig_intr_tm_md.ucast_egress_port = 1;
+            ig_intr_tm_md.ucast_egress_port = 2;
         }
     }
 }

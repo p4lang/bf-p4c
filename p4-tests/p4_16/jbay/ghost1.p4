@@ -32,7 +32,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 hdr.data.f2 = pong_read.execute(hdr.data.h1[10:0]);
             }
         }
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
     }
 }
 

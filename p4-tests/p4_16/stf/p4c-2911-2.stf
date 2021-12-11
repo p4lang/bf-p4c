@@ -1,5 +1,5 @@
-# Default action forwards out port 1
-add set_port hdr.data.f1:0x10000001 act(port:1)
+# Default action forwards out port 2
+add set_port hdr.data.f1:0x10000001 act(port:2)
 add set_bridged hdr.data.f1:0x10000001 set_bmd()
 add update_ingress_counter hdr.data.f1:0x10000001 update() = A
 add update_ingress_counter2 hdr.data.f1:0x10000001 update2(idx:1)
@@ -8,9 +8,9 @@ add update_egress_counter2 hdr.data.f1:0x10000001 update2(idx:1)
 
 #        f1       f2       h1   b1 b2 b2
 packet 0 10000001 00000002 f654 55 66 77
-expect 1 10000001 00000002 f654 11 22 77
+expect 2 10000001 00000002 f654 11 22 77
 packet 0 10000001 00000002 f654 55 66 77
-expect 1 10000001 00000002 f654 11 22 77
+expect 2 10000001 00000002 f654 11 22 77
 
 wait
 

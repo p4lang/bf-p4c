@@ -31,7 +31,7 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     apply {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         if (test1.apply().miss) {
             test2.apply();
         }

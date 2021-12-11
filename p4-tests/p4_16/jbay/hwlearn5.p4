@@ -274,7 +274,7 @@ control ingress(inout headers hdr, inout metadata meta,
             if (hdr.ethernet.ether_type == 0xfffe) {
                 meta.age_sweep = 1;
             } else {
-                ig_intr_tm_md.ucast_egress_port = 3;
+                ig_intr_tm_md.ucast_egress_port = 4;
                 if (cuckoo_match.apply().hit) {
                     cuckoo_hit();;
                 }

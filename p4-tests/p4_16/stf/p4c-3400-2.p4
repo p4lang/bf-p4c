@@ -43,7 +43,7 @@ control ingress(inout headers hdr, inout metadata meta,
     apply {
         if (ig_intr_md.ingress_port < 32) {
             test1.apply();
-            if (ig_intr_md.ingress_port[0:0] == 0) {
+            if (ig_intr_md.ingress_port[1:1] == 0) {
                 test2.apply();
             }
            test3.apply();

@@ -89,7 +89,7 @@ control Ingress(
         hdr.ctr.b = 0x12345678;
     }
     apply {
-        send(1);
+        send(2);
     }
 }
 

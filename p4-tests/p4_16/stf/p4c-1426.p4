@@ -38,7 +38,7 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
 
   action act(PortId_t port) {ig_intr_tm_md.ucast_egress_port = port;}
     
-   apply {act(1);}
+   apply {act(2);}
 }
 
 control IgDeparser(packet_out packet, inout headers_t hdr,in metadata_t meta, in ingress_intrinsic_metadata_for_deparser_t standard_metadata) {

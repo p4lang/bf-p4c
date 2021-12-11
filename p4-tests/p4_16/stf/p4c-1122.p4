@@ -55,7 +55,7 @@ control ingress(
         } else {
             pong_rmax.execute(0, idx);
         }
-        ig_intr_tm_md.ucast_egress_port = (PortId_t)idx;
+        ig_intr_tm_md.ucast_egress_port[8:1] = (bit<8>)idx;
     }
 }
 

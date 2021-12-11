@@ -1,5 +1,5 @@
-add test3 hdr.ethernet.dst_addr:0xafafafafafaf act(port:3)
+add test3 hdr.ethernet.dst_addr:0xafafafafafaf act(port:4)
 
 #        dstAddr        srcAddr        etherType  payload
-expect 3 afaf afaf afaf bbbb bbbb bbbb 0800       DEADBEEF
+expect 4 afaf afaf afaf bbbb bbbb bbbb 0800       DEADBEEF
 packet 0 afaf afaf afaf bbbb bbbb bbbb 0800       DEADBEEF

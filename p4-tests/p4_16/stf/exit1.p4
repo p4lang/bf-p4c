@@ -14,7 +14,7 @@ control ingress(inout headers hdr, inout metadata meta,
         if (hdr.data.b1 == 1) {
             ig_intr_tm_md.ucast_egress_port = 2;
             exit; }
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
     }
 }
 

@@ -33,7 +33,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
 
     apply {
-        standard_metadata.egress_spec = 3;
+        standard_metadata.egress_spec = 4;
         meta.a = meta.a + hdr.data.f1[15:0];
         meta.b = meta.b + hdr.data.f2[15:0];
         if (hdr.data.b1 == 0) {

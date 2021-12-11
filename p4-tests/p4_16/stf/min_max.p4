@@ -27,7 +27,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         hdr.data.f1 = min(hdr.data.f2, hdr.data.f3);
         hdr.data.h1 = max(hdr.data.h2, hdr.data.h3);
         hdr.data.b1 = min(hdr.data.b2, hdr.data.b3);

@@ -37,7 +37,7 @@ control ingress(inout headers hdr, inout metadata meta,
 		setb2: { hdr.data.h1 = hdr.data.h1 + 1; }
 		default: { hdr.data.h1 = hdr.data.h1 + 2; }
 	    }
-            if (ig_intr_md.ingress_port[0:0] == 0) {
+            if (ig_intr_md.ingress_port[1:1] == 0) {
                 test2.apply();
             }
         }

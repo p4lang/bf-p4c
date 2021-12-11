@@ -319,7 +319,7 @@ control Ingress(
 {
     apply {
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1) {
-            ig_tm_md.ucast_egress_port = 1;
+            ig_tm_md.ucast_egress_port = 2;
         }
     }
 }

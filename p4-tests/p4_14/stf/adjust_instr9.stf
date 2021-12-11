@@ -1,11 +1,11 @@
 add cc1_table init.read:0x01010101 cc1_act
 add cc2_table init.read:0x02020202 cc2_act
 
-add port_table 500 init.read:0x******** port_action(port:0x1)
+add port_table 500 init.read:0x******** port_action(port:0x2)
 
-expect 1 01010101 01 f3 ff
+expect 2 01010101 01 f3 ff
 packet 0 01010101 01 00 ff 
-expect 1 02020202 02 db bd
+expect 2 02020202 02 db bd
 packet 0 02020202 02 00 bd
 
 

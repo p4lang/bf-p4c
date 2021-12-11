@@ -6,19 +6,19 @@ add test1 data.read:0x0505 a5()
 add test1 data.read:0x0606 a6()
 add test1 data.read:0x0707 a7()
 
-add set_port 500 data.read:0x**** setport(port:0x1)
+add set_port 500 data.read:0x**** setport(port:0x2)
 
-expect 1 0101 05 99 4444 aaaaaaaa
+expect 2 0101 05 99 4444 aaaaaaaa
 packet 0 0101 55 99 4444 aaaaaaaa
-expect 1 0202 e2 bb cccc dddddddd 
+expect 2 0202 e2 bb cccc dddddddd 
 packet 0 0202 aa bb cccc dddddddd
-expect 1 0303 23 e8 2345 98765432
+expect 2 0303 23 e8 2345 98765432
 packet 0 0303 23 34 2345 98765432
-expect 1 0404 55 65 7777 66666666 
+expect 2 0404 55 65 7777 66666666 
 packet 0 0404 55 88 7777 66666666 
-expect 1 0505 aa bb 8ffd dddddddd
+expect 2 0505 aa bb 8ffd dddddddd
 packet 0 0505 aa bb 8888 dddddddd
-expect 1 0606 88 99 fff8 dddddddd
+expect 2 0606 88 99 fff8 dddddddd
 packet 0 0606 88 99 cccc dddddddd 
-expect 1 0707 44 aa cccc ffffffe7 
+expect 2 0707 44 aa cccc ffffffe7 
 packet 0 0707 44 aa cccc 33333333 

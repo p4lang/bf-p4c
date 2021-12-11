@@ -112,10 +112,10 @@ control ingress(inout Headers h, inout ingress_metadata_t ig_md, in ingress_intr
     apply {
         ig_tm_md.ucast_egress_port = 0;
         if(h.prt5.isValid()) {
-            ig_tm_md.ucast_egress_port = 1;
+            ig_tm_md.ucast_egress_port = 2;
             swap_macs();
         } else if (h.prt4.isValid()) {
-            ig_tm_md.ucast_egress_port = 2;
+            ig_tm_md.ucast_egress_port = 4;
         }
     }
 }

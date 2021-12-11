@@ -36,7 +36,7 @@ control ingr(inout headers hdr,
              inout ingress_intrinsic_metadata_for_tm_t       intr_tm_md) {
   apply {
     if (md.lame == 0x6) {
-      intr_tm_md.ucast_egress_port = 0x1;
+      intr_tm_md.ucast_egress_port = 0x2;
     }
   }
 }

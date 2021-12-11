@@ -18,7 +18,7 @@ control ingress(inout headers hdr, inout metadata meta,
         size = 256;
     }
     apply {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         if (hdr.data.f1[7:0] > 100)
             test.apply();
     }

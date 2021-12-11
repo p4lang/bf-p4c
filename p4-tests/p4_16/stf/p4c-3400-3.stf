@@ -17,20 +17,20 @@ add test2 1 hdr.data.f1:0x0d****** setb1(v:0xdc)
 add test2 2 hdr.data.f1:0x0b****** setb1(v:0xba)
 
 # Miss initial gateway
-expect 33 deadbeaf cafeface abba ac dc
-packet 33 deadbeaf cafeface abba ac dc
+expect 34 deadbeaf cafeface abba ac dc
+packet 34 deadbeaf cafeface abba ac dc
 
 # Miss test1, miss test2
-expect 9 0a0a0a0a 00000000 0002 00 00
-packet 9 0a0a0a0a 00000000 0000 00 00
+expect 10 0a0a0a0a 00000000 0002 00 00
+packet 10 0a0a0a0a 00000000 0000 00 00
 
 # Hit on all test1 stages, miss test2
-expect 9 0f0f0f0f 00000000 0001 00 f0
-expect 9 0d0d0d0d 00000000 0001 00 f2
-expect 9 0b0b0b0b 00000000 0001 00 f3
-packet 9 0f0f0f0f 00000000 0000 00 00
-packet 9 0d0d0d0d 00000000 0000 00 00
-packet 9 0b0b0b0b 00000000 0000 00 00
+expect 10 0f0f0f0f 00000000 0001 00 f0
+expect 10 0d0d0d0d 00000000 0001 00 f2
+expect 10 0b0b0b0b 00000000 0001 00 f3
+packet 10 0f0f0f0f 00000000 0000 00 00
+packet 10 0d0d0d0d 00000000 0000 00 00
+packet 10 0b0b0b0b 00000000 0000 00 00
 
 # Hit test1 stage 0, hit test2
 expect 4 0f0f0f0f 00000000 0001 fe f0

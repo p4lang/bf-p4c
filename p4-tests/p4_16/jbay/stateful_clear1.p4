@@ -20,10 +20,10 @@ control ingress(inout headers hdr, inout metadata meta,
 
     apply {
         if (hdr.data.f1[31:31] == 0) {
-            ig_intr_tm_md.ucast_egress_port = 1;
+            ig_intr_tm_md.ucast_egress_port = 2;
             hdr.data.h1 = add.execute(hdr.data.f1[15:0]);
         } else {
-            ig_intr_tm_md.ucast_egress_port = 2;
+            ig_intr_tm_md.ucast_egress_port = 4;
             accum.clear(32, 0xde10);
         }
     }

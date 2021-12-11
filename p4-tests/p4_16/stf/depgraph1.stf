@@ -2,8 +2,8 @@
 add ingress.t1 0 data.f1:0x****0101 ingress.set_f2(val:0x203)
 add ingress.t2 0 data.f2:0x****0203 ingress.set_b1(val:0x56)
 add ingress.t3 0 data.h1:0x0303     ingress.set_f1(val:0x102)
-add ingress.t4 0 data.h1:0x0303     ingress.set_f1_b1_port(f1:0x103, b1:0x57, port:1)
+add ingress.t4 0 data.h1:0x0303     ingress.set_f1_b1_port(f1:0x103, b1:0x57, port:2)
 
 #        f1       f2       h1   b1 b2
-expect 1 00000103 00000203 0303 57 66
+expect 2 00000103 00000203 0303 57 66
 packet 0 00000101 00000202 0303 55 66

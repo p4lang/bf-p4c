@@ -1,27 +1,27 @@
-add MyIC.test1 f1:0x1 a1(port:1)
-add MyIC.test1 f1:0x2 a1(port:2)
-add MyIC.test1 f1:0x3 a1(port:3)
-add MyIC.test1 f1:0x4 a1(port:4)
-add MyIC.test1 f1:0x5 a1(port:5)
-add MyIC.test1 f1:0x6 a1(port:6)
-add MyIC.test1 f1:0x7 a1(port:7)
-add MyIC.test1 f1:0x8 a1(port:8)
-add MyIC.test1 f1:0x9 a1(port:9)
+add MyIC.test1 f1:0x1 a1(port:2)
+add MyIC.test1 f1:0x2 a1(port:4)
+add MyIC.test1 f1:0x3 a1(port:6)
+add MyIC.test1 f1:0x4 a1(port:8)
+add MyIC.test1 f1:0x5 a1(port:10)
+add MyIC.test1 f1:0x6 a1(port:12)
+add MyIC.test1 f1:0x7 a1(port:14)
+add MyIC.test1 f1:0x8 a1(port:16)
+add MyIC.test1 f1:0x9 a1(port:18)
 
-expect 1 01 00000202 0303 05 66 77 88
+expect 2 01 00000202 0303 05 66 77 88
 packet 0 01 00000202 0303 05 66 77 88
 
-expect 2 02 00000202 0303 05 66 77 88
+expect 4 02 00000202 0303 05 66 77 88
 packet 0 02 00000202 0303 05 66 77 88
 
-expect 3 03 00000202 0303 05 66 77 88
+expect 6 03 00000202 0303 05 66 77 88
 packet 0 03 00000202 0303 05 66 77 88
 
-expect 4 04 00000202 0303 05 66 77 88
+expect 8 04 00000202 0303 05 66 77 88
 packet 0 04 00000202 0303 05 66 77 88
 
-expect 5 05 00000202 0303 05 66 77 88
-packet 0 05 00000202 0303 05 66 77 88
+expect 10 05 00000202 0303 05 66 77 88
+packet  0 05 00000202 0303 05 66 77 88
 
 # No expect command indicates no packet should be output on any port
 

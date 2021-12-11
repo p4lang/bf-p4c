@@ -68,11 +68,11 @@ parser ingressParser(packet_in packet, out headers hdr,
         packet.advance(PORT_METADATA_SIZE);
         transition select(ig_intr_md.ingress_port) {
             0: p_0;
-            1: p_1;
-            2: p_2;
-            3: p_3;
-            4: p_4;
-            5: p_5;
+            2: p_1;
+            4: p_2;
+            6: p_3;
+            8: p_4;
+            10: p_5;
             default: accept;
         }
     }
@@ -136,15 +136,15 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
         if (hdr.h4.isValid()) {
-            ig_intr_tm_md.ucast_egress_port = 4;
+            ig_intr_tm_md.ucast_egress_port = 8;
         } else if (hdr.h3.isValid()) {
-            ig_intr_tm_md.ucast_egress_port = 3;
+            ig_intr_tm_md.ucast_egress_port = 6;
         } else if (hdr.h2.isValid()) {
-            ig_intr_tm_md.ucast_egress_port = 2;
+            ig_intr_tm_md.ucast_egress_port = 4;
         } else if (hdr.h1.isValid()) {
-            ig_intr_tm_md.ucast_egress_port = 1;
+            ig_intr_tm_md.ucast_egress_port = 2;
         } else {
-            ig_intr_tm_md.ucast_egress_port = 9;
+            ig_intr_tm_md.ucast_egress_port = 10;
         }
     }
 }

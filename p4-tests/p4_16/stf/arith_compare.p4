@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta,
         meta.is_eq64 = false;
         meta.is_neq64 = false;
 
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         test1.apply();
         if (meta.is_gtequ) {
             hdr.data.f2 = 32w0x00000001;

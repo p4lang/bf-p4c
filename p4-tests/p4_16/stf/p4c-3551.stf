@@ -1,9 +1,9 @@
 # Take the path through the parse_prt5 state to be sure that historic data are working
 #          DST MAC          SRCMAC          ETH Type    PRT(fld_a 32, fld_b 16)     PRT3(fld_a3 32, fld_b3 16 fld_c3 32, fld_d3 16)     PRT5(fld_a5 14, fld_b5 2)    
 packet 0   110022334455     AABBCCDDEEFF    EECC        00000000 FFFF               FFFFFFFF 0000 FFFFFFFF FFFF                         EECC                            22
-expect 1   AABBCCDDEEFF     00000000FFFF    EECC        00000000 FFFF               FFFFFFFF 0000 FFFFFFFF FFFF                         EECC                            22
+expect 2   AABBCCDDEEFF     00000000FFFF    EECC        00000000 FFFF               FFFFFFFF 0000 FFFFFFFF FFFF                         EECC                            22
 
 # And one frame which doesn't go through the prt5 but through the prt4
 packet 0   110022334455     AABBCCDDEEFF    EECC        00000000 FFFF               AAAAAAAA FFFF BBBBBBBB CCCC                         C0C0                            EF
-expect 2   110022334455     AABBCCDDEEFF    EECC        00000000 FFFF               AAAAAAAA FFFF BBBBBBBB CCCC                         C0C0                            EF
+expect 4   110022334455     AABBCCDDEEFF    EECC        00000000 FFFF               AAAAAAAA FFFF BBBBBBBB CCCC                         C0C0                            EF
 

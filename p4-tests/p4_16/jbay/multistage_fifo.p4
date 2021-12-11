@@ -40,7 +40,7 @@ control ingress(inout headers hdr, inout metadata meta,
     RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) read_3 = {
         void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };
     action multi_stage_1_dequeue() {
-        ig_intr_tm_md.ucast_egress_port = 1;
+        ig_intr_tm_md.ucast_egress_port = 2;
         hdr.ethernet.src_addr[31:0] = read_1.dequeue();
         meta.address = read_1.address(); }
     action multi_stage_2_dequeue() {
@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta,
     RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) write_3 = {
         void apply(inout pair value) { value.lo[31:0] = hdr.ethernet.src_addr[31:0]; } };
     action multi_stage_1_enqueue() {
-        ig_intr_tm_md.ucast_egress_port = 2;
+        ig_intr_tm_md.ucast_egress_port = 4;
         write_1.enqueue();
         meta.address = write_1.address(); }
     action multi_stage_2_enqueue() {

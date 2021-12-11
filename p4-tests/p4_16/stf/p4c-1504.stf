@@ -1,5 +1,5 @@
-expect 1 0B
-packet 1 07
+expect 2 0B
+packet 2 07
 
-expect 1 03
-packet 1 FF
+expect 2 03
+packet 2 FF

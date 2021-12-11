@@ -1,4 +1,4 @@
-add test data.key:0x01010101 a1(port:0x1)
+add test data.key:0x01010101 a1(port:0x2)
 
-expect 1 01010101 9a aa 55
+expect 2 01010101 9a aa 55
 packet 0 01010101 00 aa 55

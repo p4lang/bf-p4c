@@ -1,6 +1,6 @@
-# Default action forwards out port 1
-add test hdr.data.f1:0x10000001 act(port:1)
+# Default action forwards out port 2
+add test hdr.data.f1:0x10000001 act(port:2)
 
 #        f1       f2       h1   b1 b2
-expect 1 10000001 00000002 c667 55 66
+expect 2 10000001 00000002 c667 55 66
 packet 0 10000001 00000002 0003 55 66

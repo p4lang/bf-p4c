@@ -22,10 +22,10 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
   # ingress_port isn't being setup properly (STF harness bug)
   p4c_add_xfail_reason("tofino3"
     ".* expected packet.* on port .* not seen"
-    testdata/p4_14_samples/gateway1.p4
-    testdata/p4_14_samples/gateway2.p4
-    testdata/p4_14_samples/gateway3.p4
-    testdata/p4_14_samples/gateway4.p4
+    #testdata/p4_14_samples/gateway1.p4
+    #testdata/p4_14_samples/gateway2.p4
+    #testdata/p4_14_samples/gateway3.p4
+    #testdata/p4_14_samples/gateway4.p4
   )
 
   p4c_add_xfail_reason("tofino3"
@@ -63,7 +63,7 @@ endif() # HARLYN_STF
 
 p4c_add_xfail_reason("tofino3"
   "table .* Cannot match on multiple fields using lpm match type"
-  testdata/p4_14_samples/issue60.p4
+  #testdata/p4_14_samples/issue60.p4
   )
 
 #END: XFAILS that match glass XFAILS
@@ -73,7 +73,7 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 p4c_add_xfail_reason("tofino3"
   "address too large for table"
-  testdata/p4_14_samples/saturated-bmv2.p4
+  #testdata/p4_14_samples/saturated-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -84,12 +84,12 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
   "error: Assignment source cannot be evaluated in the parser"
-  testdata/p4_14_samples/axon.p4
+  #testdata/p4_14_samples/axon.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "This action requires hash, which can only be done through the hit pathway"
-  testdata/p4_14_samples/acl1.p4
+  #testdata/p4_14_samples/acl1.p4
 )
 
 #bf-rt has problems with dleft hash?
@@ -101,28 +101,28 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
 # Fail on purpose due to indirect tables not being mutually exclusive
   "table .* and table .* cannot share Counter .* because use of the Counter .* is not mutually exclusive"
-  testdata/p4_14_samples/12-Counters.p4
-  testdata/p4_14_samples/13-Counters1and2.p4
+  #testdata/p4_14_samples/12-Counters.p4
+  #testdata/p4_14_samples/13-Counters1and2.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
-  testdata/p4_14_samples/queueing.p4
+  #testdata/p4_14_samples/queueing.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "There are issues with the following indirect externs"
-  testdata/p4_14_samples/counter.p4
+  #testdata/p4_14_samples/counter.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "Only compile-time constants are supported for hash base offset and max value"
-  testdata/p4_14_samples/flowlet_switching.p4
+  #testdata/p4_14_samples/flowlet_switching.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   ": P4_14 extern type not fully supported"
-  testdata/p4_14_samples/issue604.p4
+  #testdata/p4_14_samples/issue604.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -132,34 +132,34 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
   "standard_metadata.* is not accessible in the ingress pipe"
-  testdata/p4_14_samples/p414-special-ops.p4
+  #testdata/p4_14_samples/p414-special-ops.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "Action profile .* does not have any action data"
-  testdata/p4_14_samples/selector0.p4
+  #testdata/p4_14_samples/selector0.p4
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
-  testdata/p4_14_samples/const_default_action.p4
+  #testdata/p4_14_samples/const_default_action.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "error: .*: action spanning multiple stages."
-  testdata/p4_14_samples/action_inline.p4
+  #testdata/p4_14_samples/action_inline.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "multiple varbit fields in a parser state is currently unsupported"
-  testdata/p4_14_samples/issue576.p4
+  #testdata/p4_14_samples/issue576.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "Assignment source cannot be evaluated in the parser"
-  testdata/p4_14_samples/TLV_parsing.p4
+  #testdata/p4_14_samples/TLV_parsing.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "Unsupported type argument for Value Set"
-  testdata/p4_14_samples/parser_value_set2.p4
+  #testdata/p4_14_samples/parser_value_set2.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -188,7 +188,7 @@ endif() # PTF_REQUIREMENTS_MET
 
 p4c_add_xfail_reason("tofino3"
   "error: .*could not fit .* along with .* Counter"
-  testdata/p4_14_samples/counter5.p4
+  #testdata/p4_14_samples/counter5.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -198,29 +198,29 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
   "./p4c TIMEOUT|condition expression too complex"
-  testdata/p4_14_samples/header-stack-ops-bmv2.p4
+  #testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "The meter .* requires either an idletime or stats address bus"
-  testdata/p4_14_samples/hash_action_two_same.p4
+  #testdata/p4_14_samples/hash_action_two_same.p4
 )
 
 # P4C-539
 p4c_add_xfail_reason("tofino3"
   "error: .*: declaration not found"
   # We fail to translate `generate_digest()`.
-  testdata/p4_14_samples/issue1058.p4
+  #testdata/p4_14_samples/issue1058.p4
   # We fail to translate `resubmit()`.
-  testdata/p4_14_samples/resubmit.p4
+  #testdata/p4_14_samples/resubmit.p4
   # Checksum16 is deprecated
   extensions/p4_tests/p4_16/stf/ipv4_options.p4
   # We fail to translate `standard_metadata.instance_type`.
-  testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/packet_redirect.p4
-  testdata/p4_14_samples/simple_nat.p4
+  #testdata/p4_14_samples/copy_to_cpu.p4
+  #testdata/p4_14_samples/packet_redirect.p4
+  #testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in jna
-  testdata/p4_14_samples/truncate.p4
+  #testdata/p4_14_samples/truncate.p4
 )
 
 # P4C-1011
@@ -237,13 +237,13 @@ p4c_add_xfail_reason("tofino3"
 # Expected failure
 p4c_add_xfail_reason("tofino3"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
-  testdata/p4_14_samples/p414-special-ops-2-bmv2.p4
-  testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
+  #testdata/p4_14_samples/p414-special-ops-2-bmv2.p4
+  #testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino3"
   "HashAlgorithm_t.CSUM16: Invalid enum tag"
-  testdata/p4_14_samples/issue894.p4
+  #testdata/p4_14_samples/issue894.p4
 )
 
 # Not being tracked by JBay regression yet
@@ -393,7 +393,7 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
   "Cannot operate on values with different types"
-  testdata/p4_14_samples/issue-1426.p4
+  #testdata/p4_14_samples/issue-1426.p4
 )
 
 # pd scripts have problems with tofino3?
@@ -418,7 +418,7 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
   "error: Use of uninitialized parser value"
-  testdata/p4_14_samples/issue2196.p4
+  #testdata/p4_14_samples/issue2196.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -461,7 +461,7 @@ p4c_add_xfail_reason("tofino3"
 # digest fields related failures or expected to fail.
 p4c_add_xfail_reason("tofino3"
   "invalid SuperCluster was formed"
-  testdata/p4_14_samples/source_routing.p4
+  #testdata/p4_14_samples/source_routing.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -510,3 +510,9 @@ Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
   extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
 )
+
+p4c_add_xfail_reason("tofino3"
+  "cb_test_harness: .*/queueing.cpp:.* cb::Queueing::enqueue_die.*: Assertion .* failed."
+  extensions/p4_tests/p4_16/stf/p4c-4055.p4
+)
+

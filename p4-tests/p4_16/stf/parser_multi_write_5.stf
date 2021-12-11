@@ -1,2 +1,2 @@
-expect 1 0a0b
+expect 2 0a0b
 packet 0 0a0b

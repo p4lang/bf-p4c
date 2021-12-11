@@ -87,7 +87,7 @@ table forward {
     actions {
         set_egr;
     }
-    default_action: set_egr(1);
+    default_action: set_egr(2);
 }
 
 action do_test() {

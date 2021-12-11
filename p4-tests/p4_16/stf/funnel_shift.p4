@@ -63,7 +63,7 @@ control Ingress(
         ig_intr_tm_md.ucast_egress_port = port;
     }
     action parse_80() {
-        forward(1);
+        forward(2);
         hdr.tunnel_data.qfi  = hdr.ipv6.dst_addr[47:40];
         // teid0 = dst_addr[39:24]
         funnel_shift_right(hdr.tunnel_data.teid0[15:0], hdr.ipv6.dst_addr[47:32], hdr.ipv6.dst_addr[31:16], 8);
@@ -71,20 +71,20 @@ control Ingress(
         funnel_shift_right(hdr.tunnel_data.teid1[15:0], hdr.ipv6.dst_addr[31:16], hdr.ipv6.dst_addr[15:0], 8);
     }
     action parse_72() {
-        forward(1);
+        forward(2);
         hdr.tunnel_data.qfi   = hdr.ipv6.dst_addr[55:48];
         hdr.tunnel_data.teid0 = hdr.ipv6.dst_addr[47:32];
         hdr.tunnel_data.teid1 = hdr.ipv6.dst_addr[31:16];
     }
     action parse_64() {
-        forward(1);
+        forward(2);
         hdr.tunnel_data.qfi  = hdr.ipv6.dst_addr[63:56];
         funnel_shift_right(hdr.tunnel_data.teid0[15:0], hdr.ipv6.dst_addr[63:48], hdr.ipv6.dst_addr[47:32], 8);
         funnel_shift_right(hdr.tunnel_data.teid1[15:0], hdr.ipv6.dst_addr[47:32], hdr.ipv6.dst_addr[31:16], 8);
 
     }
     action parse_56() {
-        forward(1);
+        forward(2);
         hdr.tunnel_data.qfi   = hdr.ipv6.dst_addr[71:64];
         hdr.tunnel_data.teid0 = hdr.ipv6.dst_addr[63:48];
         hdr.tunnel_data.teid1 = hdr.ipv6.dst_addr[47:32];

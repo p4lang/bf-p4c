@@ -2,13 +2,13 @@ add test1 data.read:0x0101 constant_conversion_adt(param1:0x5, param2:0x12345678
 add test2 data.read:0x0202 constant_conversion_immed(param1:0x6)
 add test1 data.read:0x0303 constant_conversion_adt2(param1:0x7)
 
-add port_setter data.read:0x0101 set_port(port:1)
-add port_setter data.read:0x0202 set_port(port:1)
-add port_setter data.read:0x0303 set_port(port:1)
+add port_setter data.read:0x0101 set_port(port:2)
+add port_setter data.read:0x0202 set_port(port:2)
+add port_setter data.read:0x0303 set_port(port:2)
 
-expect 1 0101 12345678 78 45
+expect 2 0101 12345678 78 45
 packet 0 0101 87654321 78 21
-expect 1 0202 87654321 ab 76
+expect 2 0202 87654321 ab 76
 packet 0 0202 87654321 78 21
-expect 1 0303 77777f77 78 97
+expect 2 0303 77777f77 78 97
 packet 0 0303 87654321 78 21 

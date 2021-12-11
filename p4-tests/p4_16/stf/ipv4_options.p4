@@ -55,7 +55,7 @@ control ingress(inout packet_t p, inout user_metadata_t m,
         meta.egress_spec = CPU_PORT;
     }
     action forward() {
-        meta.egress_spec = 1;
+        meta.egress_spec = 2;
     }
     action cloneToCPU() {
         // to be implemented when we figure out how to clone in P4_16

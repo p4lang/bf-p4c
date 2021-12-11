@@ -32,7 +32,7 @@ control ingress(inout headers hdr, inout metadata meta,
         if (hdr.data.b1 == 0)
             doload();
         else {
-            ig_intr_tm_md.ucast_egress_port = 1;
+            ig_intr_tm_md.ucast_egress_port = 2;
             domax(); }
     }
 }

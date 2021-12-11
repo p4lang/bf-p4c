@@ -35,7 +35,7 @@ control ingress(inout Headers h, inout ingress_metadata_t ig_md, in ingress_intr
     }
 
     apply {
-        ig_tm_md.ucast_egress_port = 1;
+        ig_tm_md.ucast_egress_port = 2;
         h.eth_hdr.src_addr = 2;
         // this condition is always true
         // there is no way for the expression to be 2

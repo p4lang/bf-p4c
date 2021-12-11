@@ -20,7 +20,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        standard_metadata.egress_spec = 3;
+        standard_metadata.egress_spec = 4;
         if (hdr.data.x2 == 0) {
             hdr.data.f2 = hdr.data.f1;
         }

@@ -1,6 +1,6 @@
 #include <v1model.p4>
 
-#define CPU_PORT 2 
+#define CPU_PORT 4 
 
 header ipv4_t {
     bit<4>  version;
@@ -42,7 +42,7 @@ control ingress(inout packet_t p, inout user_metadata_t m,
         meta.egress_spec = CPU_PORT;
     }
     action forward() {
-        meta.egress_spec = 1;
+        meta.egress_spec = 2;
     }
 
     apply {

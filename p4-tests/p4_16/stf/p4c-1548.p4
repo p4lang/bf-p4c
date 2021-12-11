@@ -33,7 +33,7 @@ control ingress(inout headers hdr, inout metadata meta,
     
     apply {
         meta.carry_min = hdr.data.f1;
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         hdr.data.b2 = flow_table_ctrs_2_read_cmp_action.execute(hdr.data.b1);
     }
 }

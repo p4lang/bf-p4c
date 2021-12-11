@@ -1,14 +1,14 @@
-add learn_1.learn_match 1 learn_result:0b000000000000000* do_learn_match()
+add learn_1.learn_match 2 learn_result:0b000000000000000* do_learn_match()
 add learn_1.learn_match 0 learn_result:0x**** do_retire_cid()
-add learn_2.learn_match 1 learn_result:0b000000000000000* do_learn_match()
+add learn_2.learn_match 2 learn_result:0b000000000000000* do_learn_match()
 add learn_2.learn_match 0 learn_result:0x**** do_retire_cid()
-add learn_3.learn_match 1 learn_result:0b000000000000000* do_learn_match()
+add learn_3.learn_match 2 learn_result:0b000000000000000* do_learn_match()
 add learn_3.learn_match 0 learn_result:0x**** do_retire_cid()
 
 #prime the fid fifo with some (32) fids.
 $(for fid in $(seq 10 41); do printf "packet 4 %012x %012x ffff %012x;" $fid 0 0; done)
 
-expect 3  # packets come out port 3
+expect 4  # packets come out port 3
 
 # most of the ethernet + the ipv4 header.  We leave off the first 2 bytes so we can make them
 # different for every packet (easier to track where a packet came from if it comes out somewhere
@@ -21,67 +21,67 @@ setenv AGE packet 4 000000000000 000000000000 fffe 000000000000
 
 #                    | UDP header      | | payload ...
 #       pkt #        |sp   dp  len     | |
-packet 1 0021 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0022 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0023 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0021 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0022 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0023 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(10) lo = 3
 check_register output_fifo(0) lo = 0x640065
 check_register output_fifo(0) hi = 010
 
-packet 1 0024 $FIXED 0064 0066 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0024 $FIXED 0064 0066 0010 0000 000102030405060708090a0b0c0d0e0f
 $AGE
-packet 1 0026 $FIXED 0064 0066 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0026 $FIXED 0064 0066 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(11) lo = 2
 check_register output_fifo(1) lo = 0x640066
 check_register output_fifo(1) hi = 011
 
-packet 1 0027 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0027 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(10) lo = 4
 
-packet 1 0028 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0028 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
 $AGE
-packet 1 002a $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 002a $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
 $AGE
-packet 1 002c $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 002c $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
 $AGE
 wait
 check_register flow_counter(12) lo = 3
 check_register output_fifo(2) lo = 0x640067
 check_register output_fifo(2) hi = 012
 
-packet 1 002e $FIXED 0064 0068 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 002f $FIXED 0064 0068 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 002e $FIXED 0064 0068 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 002f $FIXED 0064 0068 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(13) lo = 2
 check_register output_fifo(3) lo = 0x640068
 check_register output_fifo(3) hi = 013
 
-packet 1 0030 $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0031 $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0032 $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0030 $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0031 $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0032 $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(14) lo = 3
 check_register output_fifo(4) lo = 0x640069
 check_register output_fifo(4) hi = 014
 
-packet 1 0033 $FIXED 0064 006a 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0034 $FIXED 0064 006a 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0033 $FIXED 0064 006a 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0034 $FIXED 0064 006a 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(15) lo = 2
 check_register output_fifo(5) lo = 0x64006a
 check_register output_fifo(5) hi = 015
 
-packet 1 0035 $FIXED 0064 006b 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0036 $FIXED 0064 006c 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0037 $FIXED 0064 006d 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0038 $FIXED 0064 006e 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0039 $FIXED 0064 006f 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 003a $FIXED 0064 0070 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 003b $FIXED 0064 0071 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 003c $FIXED 0064 0072 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0035 $FIXED 0064 006b 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0036 $FIXED 0064 006c 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0037 $FIXED 0064 006d 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0038 $FIXED 0064 006e 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0039 $FIXED 0064 006f 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 003a $FIXED 0064 0070 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 003b $FIXED 0064 0071 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 003c $FIXED 0064 0072 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register output_fifo(6) lo = 0x64006b
 check_register output_fifo(6) hi = 016
@@ -100,12 +100,12 @@ check_register output_fifo(12) hi = 024
 check_register output_fifo(13) lo = 0x640072
 check_register output_fifo(13) hi = 025
 
-packet 1 003d $FIXED 0064 0073 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 003e $FIXED 0064 0074 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 003f $FIXED 0064 0075 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0040 $FIXED 0064 0076 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0041 $FIXED 0064 0077 0010 0000 000102030405060708090a0b0c0d0e0f
-packet 1 0042 $FIXED 0064 0078 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 003d $FIXED 0064 0073 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 003e $FIXED 0064 0074 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 003f $FIXED 0064 0075 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0040 $FIXED 0064 0076 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0041 $FIXED 0064 0077 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0042 $FIXED 0064 0078 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register output_fifo(14) lo = 0x640073
 check_register output_fifo(14) hi = 026
@@ -123,14 +123,14 @@ check_register output_fifo(19) hi = 033
 add cuckoo_match src_addr:0x01020304 dst_addr:0x0a000002 protocol:0x11 src_port:0x0064 dst_port:0x0065 match_flow(fid:10)
 
 # retire this flow from 010 (now in the cuckoo table)
-packet 1 0043 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0043 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
 # retire this flow from 022 (now in 010)
-packet 1 0044 $FIXED 0064 006f 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0044 $FIXED 0064 006f 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(10) lo = 5
 check_register flow_counter(20) lo = 2
 # new flow into the empty slot in 022
-packet 1 0045 $FIXED 0064 0079 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0045 $FIXED 0064 0079 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register output_fifo(20) lo = 0x640079
 check_register output_fifo(20) hi = 022
@@ -139,12 +139,12 @@ $AGE; $AGE; $AGE; $AGE; $AGE;
 $AGE; $AGE; $AGE; $AGE; $AGE;
 $AGE; $AGE; $AGE; # age out flow 11 in 011
 
-packet 1 0053 $FIXED 0064 007a 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0053 $FIXED 0064 007a 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register output_fifo(21) lo = 0x64007a
 check_register output_fifo(21) hi = 011
 
 $AGE;  # 15 ages for flow 12, so NOT yet aged out...
-packet 1 0055 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0055 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
 wait
 check_register flow_counter(12) lo = 4

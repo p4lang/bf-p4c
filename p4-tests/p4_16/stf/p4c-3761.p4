@@ -488,7 +488,7 @@ control Ingress(
 
         /* Mirroring */
         port_acl.apply();
-        send(1);
+        send(2);
 
         /* Fill in any other fields you need to  bridge */
         hdr.bridge.ingress_global_tstamp = ig_prsr_md.global_tstamp;

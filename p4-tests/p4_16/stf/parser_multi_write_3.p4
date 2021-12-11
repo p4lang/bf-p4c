@@ -25,7 +25,7 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.a);
 
-        meta.m.f = 0x1;
+        meta.m.f = 0x2;
 
         transition select(hdr.a.f) {
             8w0xa: parse_b;
@@ -36,7 +36,7 @@ parser ParserImpl(packet_in packet, out headers hdr,
     state parse_b {
         packet.extract(hdr.b);
 
-        meta.m.f = meta.m.f | 0x2;   // bitwise-or
+        meta.m.f = meta.m.f | 0x4;   // bitwise-or
 
         transition accept;
     }

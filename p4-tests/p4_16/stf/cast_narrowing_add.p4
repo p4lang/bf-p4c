@@ -47,7 +47,7 @@ control IngressP(
     table test {
         actions = { act; }
         key = { hdr.data.f1: exact; }
-        default_action = act(1);
+        default_action = act(2);
     }
     apply {
         test.apply();

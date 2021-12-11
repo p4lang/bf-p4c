@@ -25,7 +25,7 @@ control ingress(inout headers hdr, inout metadata meta,
             rv = (bit<16>)value.hi; } };
 
     action do_run() {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         hdr.data.h1 = run.execute(0); }
     action do_read() {
         ig_intr_tm_md.ucast_egress_port = 2;

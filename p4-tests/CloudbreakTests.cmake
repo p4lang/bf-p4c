@@ -37,8 +37,8 @@ set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
 
 set (CLOUDBREAK_V1_TEST_SUITES_P414
-  ${p4_14_samples}
-#  ${v1tests}
+# ${p4_14_samples}   -- don't run p4c tests on cloudbreak as they need
+#  ${v1tests}        -- port rewriting
   ${STF_P4_TESTS}
   ${PTF_P4_TESTS}
 # p4_14_samples

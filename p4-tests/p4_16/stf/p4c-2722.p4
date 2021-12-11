@@ -244,7 +244,7 @@ control Ingress(
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md)
 {
     apply {
-        ig_tm_md.ucast_egress_port = 5;
+        ig_tm_md.ucast_egress_port = 6;
 
         hdr.bridge.setValid();
 

@@ -35,7 +35,7 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     action act1( bool val1, bool val2) {
-        ig_intr_tm_md.ucast_egress_port = 1;
+        ig_intr_tm_md.ucast_egress_port = 2;
         meta.csum1 = val1;
         meta.csum2 = val2;
    }

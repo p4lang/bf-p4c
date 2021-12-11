@@ -1,8 +1,8 @@
-add test1 read_values.f1:0x10101010 set_test1(param:0x563, port:1)
-add test1 read_values.f1:0x20202020 xor_test1(param:0xfff, port:1)
+add test1 read_values.f1:0x10101010 set_test1(param:0x563, port:2)
+add test1 read_values.f1:0x20202020 xor_test1(param:0xfff, port:2)
 
-expect 1 10101010 5638 8563 ****
+expect 2 10101010 5638 8563 ****
 packet 0 10101010 8888 8888 aaaa
 
-expect 1 20202020 5558 8fff aaaa
+expect 2 20202020 5558 8fff aaaa
 packet 0 20202020 8888 8888 aaaa

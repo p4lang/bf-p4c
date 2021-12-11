@@ -56,7 +56,7 @@ table fourth {
 
 table port_set {
     actions { set_port; }
-    default_action : set_port(5);
+    default_action : set_port(6);
 }
 
 control ingress {

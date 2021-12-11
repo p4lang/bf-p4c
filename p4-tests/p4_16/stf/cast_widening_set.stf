@@ -1,5 +1,5 @@
-# Default action forwards out port 1
+# Default action forwards out port 2
 
 #        f1       f2       h1   b1 b2
-expect 1 00000066 00000002 0003 55 66
+expect 2 00000066 00000002 0003 55 66
 packet 0 10000001 00000002 0003 55 66

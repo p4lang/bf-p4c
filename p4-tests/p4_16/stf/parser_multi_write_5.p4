@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
         if (meta.m.f == 0xf)
-            ig_intr_tm_md.ucast_egress_port = 0x1;
+            ig_intr_tm_md.ucast_egress_port = 0x2;
     }
 }
 

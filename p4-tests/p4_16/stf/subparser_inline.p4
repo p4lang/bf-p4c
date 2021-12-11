@@ -51,7 +51,7 @@ control Ingress(inout headers_t hdr,
     action act(bit<9> port) {ig_intr_tm_md.ucast_egress_port = port;}
     table test {
         actions = { act; }
-        default_action = act(1);
+        default_action = act(2);
     }
     apply {test.apply();}
 }

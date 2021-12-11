@@ -38,7 +38,7 @@ table setting_port {
     actions {
         setport;
     }
-    default_action: setport(1);
+    default_action: setport(2);
 }
 
 control ingress {

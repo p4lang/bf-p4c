@@ -62,7 +62,7 @@ calculated_field bar.cksum  {
 }
 
 parser start {
-    set_metadata(standard_metadata.egress_spec, 0x1);
+    set_metadata(standard_metadata.egress_spec, 0x2);
     extract(foo);
     return parse_bar;
 }

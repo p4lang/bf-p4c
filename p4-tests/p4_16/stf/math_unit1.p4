@@ -30,7 +30,7 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     }
     apply {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         test1.apply();
     }
 }

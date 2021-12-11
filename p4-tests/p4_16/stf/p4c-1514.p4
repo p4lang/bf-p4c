@@ -41,7 +41,7 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
     table test {
         actions = { act; }
         key = { hdr.sample.a: exact; }
-        default_action = act(1);
+        default_action = act(2);
     }
     apply {test.apply();}
 }

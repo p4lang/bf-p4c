@@ -38,11 +38,11 @@ control ingress(inout headers hdr, inout metadata meta,
     apply {
         burst_state is_burst = bursts.execute(hdr.data.f1[12:0]);
         if (is_burst == burst_state.NEW) {
-            ig_intr_tm_md.ucast_egress_port = 1;
-        } else if (is_burst == burst_state.SMALL) {
             ig_intr_tm_md.ucast_egress_port = 2;
+        } else if (is_burst == burst_state.SMALL) {
+            ig_intr_tm_md.ucast_egress_port = 4;
         } else if (is_burst == burst_state.LARGE) {
-            ig_intr_tm_md.ucast_egress_port = 3;
+            ig_intr_tm_md.ucast_egress_port = 6;
         }
     }
 }

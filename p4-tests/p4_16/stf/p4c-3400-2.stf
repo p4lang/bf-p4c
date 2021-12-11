@@ -16,8 +16,8 @@ add test3 hdr.data.b1:0xf3 seth1(v:0x00f3)
 add test3 hdr.data.b1:0xf7 seth1(v:0x00f7)
 
 # Miss initial gateway
-expect 33 ffffffff ffffffff ffff ff ff
-packet 33 ffffffff ffffffff ffff ff ff
+expect 34 ffffffff ffffffff ffff ff ff
+packet 34 ffffffff ffffffff ffff ff ff
 
 # Hit test1, miss test2, miss test3
 expect 4 f0000000 00000000 0000 00 f0

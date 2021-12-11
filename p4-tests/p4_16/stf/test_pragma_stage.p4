@@ -13,13 +13,13 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     action act1() {
-        ig_intr_tm_md.ucast_egress_port = 1;
+        ig_intr_tm_md.ucast_egress_port = 2;
         hdr.data.h1 = 1; }
     action act2() {
-        ig_intr_tm_md.ucast_egress_port = 2;
+        ig_intr_tm_md.ucast_egress_port = 4;
         hdr.data.h1 = 2; }
     action act3() {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 6;
         hdr.data.h1 = 3; }
     action dep() { // unused, but causes dependencies between things
         hdr.data.f2[7:0] = hdr.data.f2[31:24]; }

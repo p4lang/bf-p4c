@@ -3,19 +3,19 @@ add t1 hdr.read:0x02020202 a2(half0:0x0001, half1:0x1112, half2:0x2223, half3:0x
 add t1 hdr.read:0x03030303 a3(byte0:0x01, byte1:0x12, byte2:0x23, byte3:0x34, byte4:0x45, byte5:0x56, byte6:0x67, byte7:0x78, byte8:0x89, byte9:0x9a, half5:0x5556, half6:0x6667, half7:0x7778)
 add t1 hdr.read:0x04040404 a4(byte0:0x01, byte1:0x12, byte2:0x23, byte3:0x34, byte4:0x45, byte5:0x56, half0:0x0001, half1:0x1112, half2:0x2223, full0:0xfefefefe)
 
-add setting_port hdr.read:0x01010101 setport(port:0x1)
-add setting_port hdr.read:0x02020202 setport(port:0x1)
-add setting_port hdr.read:0x03030303 setport(port:0x1)
-add setting_port hdr.read:0x04040404 setport(port:0x1)
+add setting_port hdr.read:0x01010101 setport(port:0x2)
+add setting_port hdr.read:0x02020202 setport(port:0x2)
+add setting_port hdr.read:0x03030303 setport(port:0x2)
+add setting_port hdr.read:0x04040404 setport(port:0x2)
 
-expect 1 01010101 01 12 23 34 45 56 67 78 89 9a ab bc cd de ef f0 0123 4567 89ab cdef 0123 4567 89ab cdef 01234567 89abcdef
+expect 2 01010101 01 12 23 34 45 56 67 78 89 9a ab bc cd de ef f0 0123 4567 89ab cdef 0123 4567 89ab cdef 01234567 89abcdef
 packet 0 01010101 fe dc ba 98 76 54 32 10 fe dc ba 98 76 54 32 10 0123 4567 89ab cdef 0123 4567 89ab cdef 01234567 89abcdef
 
-expect 1 02020202 fe dc ba 98 76 54 32 10 fe dc ba 98 76 54 32 10 0001 1112 2223 3334 4445 5556 6667 7778 01234567 89abcdef
+expect 2 02020202 fe dc ba 98 76 54 32 10 fe dc ba 98 76 54 32 10 0001 1112 2223 3334 4445 5556 6667 7778 01234567 89abcdef
 packet 0 02020202 fe dc ba 98 76 54 32 10 fe dc ba 98 76 54 32 10 0123 4567 89ab cdef 0123 4567 89ab cdef 01234567 89abcdef
 
-expect 1 03030303 01 12 23 34 45 56 67 78 89 9a ba 98 76 54 32 10 0123 4567 89ab cdef 0123 5556 66677778 01234567 89abcdef
+expect 2 03030303 01 12 23 34 45 56 67 78 89 9a ba 98 76 54 32 10 0123 4567 89ab cdef 0123 5556 66677778 01234567 89abcdef
 packet 0 03030303 fe dc ba 98 76 54 32 10 fe dc ba 98 76 54 32 10 0123 4567 89ab cdef 0123 4567 89ab cdef 01234567 89abcdef
 
-expect 1 04040404 01 12 23 34 45 56 32 10 fe dc ba 98 76 54 32 10 0001 1112 2223 cdef 0123 4567 89ab cdef fefefefe 89abcdef
+expect 2 04040404 01 12 23 34 45 56 32 10 fe dc ba 98 76 54 32 10 0001 1112 2223 cdef 0123 4567 89ab cdef fefefefe 89abcdef
 packet 0 04040404 fe dc ba 98 76 54 32 10 fe dc ba 98 76 54 32 10 0123 4567 89ab cdef 0123 4567 89ab cdef 01234567 89abcdef

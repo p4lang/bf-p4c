@@ -72,7 +72,7 @@ control Ingress(
 
     apply {
         wrapper.apply(hdr, hdr.data.op);
-        ig_tm_md.ucast_egress_port = 1;
+        ig_tm_md.ucast_egress_port = 2;
     }
 }
 

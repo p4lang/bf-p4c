@@ -1,12 +1,12 @@
 add Ingress.test tunnel_id:0x00111111 Ingress.forward(port:2)
-add Ingress.test tunnel_id:0x00222222 Ingress.forward(port:3)
-add Ingress.test tunnel_id:0x33333333 Ingress.forward(port:4)
-add Ingress.test tunnel_id:0x00004444 Ingress.forward(port:5)
+add Ingress.test tunnel_id:0x00222222 Ingress.forward(port:4)
+add Ingress.test tunnel_id:0x33333333 Ingress.forward(port:6)
+add Ingress.test tunnel_id:0x00004444 Ingress.forward(port:8)
 
 expect 2 01 11111122
-expect 3 02 12 123456 222222 99
-expect 4 03 33333333
-expect 5 04 4444
+expect 4 02 12 123456 222222 99
+expect 6 03 33333333
+expect 8 04 4444
 
 packet 0 01 11111122
 packet 0 02 12 123456 222222 99

@@ -1,14 +1,14 @@
 add test1 meta.m1:0x01 first()
 add test1 meta.m1:0x02 second(param:0x5)
 add test1 meta.m1:0x00 second(param:0x3)
-add setting_port pkt.f1:0x1 setport(port:0x7)
+add setting_port pkt.f1:0x1 setport(port:0x8)
 add setting_port pkt.f1:0x2 setport(port:0x6)
 
-expect 7 080402
-packet 1 010101
+expect 8 080402
+packet 0 010101
 
 expect 6 050305
 packet 2 020202
 
 expect 6 030305
-packet 3 020001
+packet 4 020001

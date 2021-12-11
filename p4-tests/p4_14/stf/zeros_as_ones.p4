@@ -59,7 +59,7 @@ parser start {
 }
 
 action act() {
-    ig_intr_md_for_tm.ucast_egress_port = 1;
+    ig_intr_md_for_tm.ucast_egress_port = 2;
 }
 
 action set_zeros_as_ones() {

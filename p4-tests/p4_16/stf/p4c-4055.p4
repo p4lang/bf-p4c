@@ -457,13 +457,13 @@ header dtel_report_base_h {
 
 
 
-    bit<7> pad0;
+    bit<(16 - PORT_ID_WIDTH)> pad0;
 
     PortId_t ingress_port;
 
 
 
-    bit<7> pad1;
+    bit<(16 - PORT_ID_WIDTH)> pad1;
 
     PortId_t egress_port;
 
@@ -533,13 +533,13 @@ header dtel_metadata_1_h {
 
 
 
-    bit<7> pad0;
+    bit<(16 - PORT_ID_WIDTH)> pad0;
 
     PortId_t ingress_port;
 
 
 
-    bit<7> pad1;
+    bit<(16 - PORT_ID_WIDTH)> pad1;
 
     PortId_t egress_port;
 }
@@ -683,9 +683,12 @@ typedef PortId_t switch_port_t;
 
 
 
-
+#if __TARGET_TOFINO__ >= 3
+const switch_port_t SWITCH_PORT_INVALID = 11w0x7ff;
+#else
 const switch_port_t SWITCH_PORT_INVALID = 9w0x1ff;
-typedef bit<7> switch_port_padding_t;
+#endif
+typedef bit<(16 - PORT_ID_WIDTH)> switch_port_padding_t;
 
 
 typedef QueueId_t switch_qid_t;

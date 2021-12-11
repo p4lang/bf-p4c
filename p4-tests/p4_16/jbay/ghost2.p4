@@ -25,7 +25,7 @@ control ingress(inout headers hdr, inout metadata meta,
         void apply(inout bit<32> value, out bit<32> rv) { rv = value; } };
 
     apply {
-        ig_intr_tm_md.ucast_egress_port = 3;
+        ig_intr_tm_md.ucast_egress_port = 4;
         if (!skip_packet.apply().hit) {
             if (gmd.ping_pong == 0) {
                 hdr.data.f2 = ping_read.execute(hdr.data.h1[10:0]);

@@ -155,7 +155,7 @@ control ingress(inout headers hdr, inout metadata meta,
             meta.flow_id = hdr.ethernet.dst_addr[15:0];
             do_insert_new_fid.apply();
         } else {
-            ig_intr_tm_md.ucast_egress_port = 3;
+            ig_intr_tm_md.ucast_egress_port = 4;
             if (!cuckoo_match.apply().hit) {
                 learn_match.apply();
                 meta.cache_id[14:13] = meta.cache_id[18:17];  // squeeze out excess vpn bits

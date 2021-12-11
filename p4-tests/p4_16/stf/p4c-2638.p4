@@ -45,7 +45,7 @@ control ingress(inout Headers h, inout ingress_metadata_t m, in ingress_intrinsi
         h.eth_hdr.eth_type = ((bit<16>)(h.buf.b));
     }
     apply {
-        ig_tm_md.ucast_egress_port = 1;
+        ig_tm_md.ucast_egress_port = 2;
         do_action();
         h.buf.a = 64w1662341537;
         h.h.a = 32w847657477;
