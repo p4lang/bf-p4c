@@ -60,7 +60,7 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2992\\.p4" "p4c-2410-leaf\\.p4" "p4c-2573-leaf\\.p4" "p4c-2753\\.p4"
     "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4"
     "p4c-2534\\.p4" "p4c-3678-leaf\\.p4" "p4c-2722\\.p4" "p4c-3920-b\\.p4" "p4c_3926\\.p4"
-    "p4c-4064\\.p4" "forensics\\.p4")
+    "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
@@ -1146,6 +1146,12 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3926" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_3926.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2400 --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_3926.ptf")
+
+p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c_4158" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_4158/p4c_4158.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2400 -Xp4c=\"--set-max-power 60\""
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_4158")
+set_tests_properties("tofino/p4c_4158" PROPERTIES TIMEOUT 2400)
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)

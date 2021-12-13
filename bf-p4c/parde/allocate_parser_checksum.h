@@ -14,30 +14,30 @@ struct CollectParserChecksums : public ParserInspector {
 
     const CollectParserInfo& parser_info;
 
-    std::map<const IR::BFN::Parser*,
+    ordered_map<const IR::BFN::Parser*,
         ordered_set<cstring>> parser_to_decl_names;
 
-    std::map<const IR::BFN::Parser*,
+    ordered_map<const IR::BFN::Parser*,
         ordered_set<cstring>> parser_to_verifies;
 
-    std::map<const IR::BFN::Parser*,
+    ordered_map<const IR::BFN::Parser*,
         ordered_set<cstring>> parser_to_residuals;
 
-    std::map<const IR::BFN::Parser*,
+    ordered_map<const IR::BFN::Parser*,
         ordered_set<cstring>> parser_to_clots;
 
-    std::map<const IR::BFN::Parser*,
-        std::map<cstring,
+    ordered_map<const IR::BFN::Parser*,
+        ordered_map<cstring,
             std::vector<const IR::BFN::ParserChecksumPrimitive*>>> decl_name_to_prims;
 
-    std::map<const IR::BFN::Parser*,
-        std::map<cstring,
+    ordered_map<const IR::BFN::Parser*,
+        ordered_map<cstring,
             ordered_set<const IR::BFN::ParserState*>>> decl_name_to_states;
 
-    std::map<const IR::BFN::ParserState*,
+    ordered_map<const IR::BFN::ParserState*,
         std::vector<const IR::BFN::ParserChecksumPrimitive*>> state_to_prims;
 
-    std::map<const IR::BFN::ParserChecksumPrimitive*,
+    ordered_map<const IR::BFN::ParserChecksumPrimitive*,
              const IR::BFN::ParserState*> prim_to_state;
 
     profile_t init_apply(const IR::Node* root) override {
@@ -128,17 +128,17 @@ class AllocateParserChecksums : public Logging::PassManager {
     CollectParserChecksums checksum_info;
 
  public:
-    std::map<const IR::BFN::Parser*,
-        std::map<cstring, unsigned>> decl_to_checksum_id;
+    ordered_map<const IR::BFN::Parser*,
+        ordered_map<cstring, unsigned>> decl_to_checksum_id;
 
-    std::map<const IR::BFN::Parser*,
-        std::map<unsigned, std::set<cstring>>> checksum_id_to_decl;
+    ordered_map<const IR::BFN::Parser*,
+        ordered_map<unsigned, ordered_set<cstring>>> checksum_id_to_decl;
 
-    std::map<const IR::BFN::Parser*,
-        std::map<cstring, std::set<const IR::BFN::ParserState*>>> decl_to_start_states;
+    ordered_map<const IR::BFN::Parser*,
+        ordered_map<cstring, ordered_set<const IR::BFN::ParserState*>>> decl_to_start_states;
 
-    std::map<const IR::BFN::Parser*,
-        std::map<cstring, std::set<const IR::BFN::ParserState*>>> decl_to_end_states;
+    ordered_map<const IR::BFN::Parser*,
+        ordered_map<cstring, ordered_set<const IR::BFN::ParserState*>>> decl_to_end_states;
 
     AllocateParserChecksums(const PhvInfo& phv, const ClotInfo& clot);
 

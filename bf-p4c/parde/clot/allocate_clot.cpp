@@ -40,11 +40,11 @@ class GreedyClotAllocator : public Visitor {
             const IR::BFN::ParserGraph* graph,
             const IR::BFN::ParserState* state = nullptr,
             FieldExtractInfo* result = nullptr,
-            std::set<const IR::BFN::ParserState*>* visited = nullptr) {
+            ordered_set<const IR::BFN::ParserState*>* visited = nullptr) {
         // Initialize parameters if needed.
         if (!state) state = graph->root;
         if (!result) result = new FieldExtractInfo();
-        if (!visited) visited = new std::set<const IR::BFN::ParserState*>();
+        if (!visited) visited = new ordered_set<const IR::BFN::ParserState*>();
 
         LOG6("Finding extracts in state " << state->name);
         visited->insert(state);

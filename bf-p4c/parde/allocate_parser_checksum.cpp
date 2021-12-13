@@ -8,10 +8,10 @@
 #include "bf-p4c/parde/dump_parser.h"
 #include "device.h"
 
-static std::set<const IR::BFN::ParserState*>
+static ordered_set<const IR::BFN::ParserState*>
 compute_end_states(const IR::BFN::Parser* parser, const CollectParserInfo& parser_info,
                    const ordered_set<const IR::BFN::ParserState*>& calc_states) {
-    std::set<const IR::BFN::ParserState*> end_states;
+    ordered_set<const IR::BFN::ParserState*> end_states;
     for (auto a : calc_states) {
         bool is_end = true;
         for (auto b : calc_states) {
@@ -30,7 +30,7 @@ compute_end_states(const IR::BFN::Parser* parser, const CollectParserInfo& parse
 // Eliminate subtracts that do not have a terminal get()
 class ComputeDeadParserChecksums : public ParserInspector {
  public:
-    std::set<const IR::BFN::ParserPrimitive*> to_elim;
+    ordered_set<const IR::BFN::ParserPrimitive*> to_elim;
 
     ComputeDeadParserChecksums(const CollectParserInfo& parser_info,
         const CollectParserChecksums& checksum_info) :
@@ -112,7 +112,7 @@ class ComputeDeadParserChecksums : public ParserInspector {
         }
     }
 
-    std::map<const IR::BFN::ParserState*,
+    ordered_map<const IR::BFN::ParserState*,
         std::set<const IR::BFN::ParserState*>> state_to_descendants;
 
     const CollectParserInfo& parser_info;
@@ -120,11 +120,11 @@ class ComputeDeadParserChecksums : public ParserInspector {
 };
 
 class ElimDeadParserChecksums : public ParserModifier {
-    const std::set<const IR::BFN::ParserPrimitive*>& to_elim;
+    const ordered_set<const IR::BFN::ParserPrimitive*>& to_elim;
 
  public:
     ElimDeadParserChecksums(
-        const std::set<const IR::BFN::ParserPrimitive*>& to_elim) :
+        const ordered_set<const IR::BFN::ParserPrimitive*>& to_elim) :
            to_elim(to_elim) { }
 
     bool preorder(IR::BFN::ParserState* state) override {
@@ -374,9 +374,9 @@ struct ParserChecksumAllocator : public Visitor {
     /// Returns the checksum calculation start state for declaration. A calculation
     /// may have mutiple start states, e.g. branches that extract same header. A state
     /// is a start state is no other state is its ancestor.
-    std::set<const IR::BFN::ParserState*>
+    ordered_set<const IR::BFN::ParserState*>
     get_start_states(const IR::BFN::Parser* parser, cstring decl) {
-        std::set<const IR::BFN::ParserState*> start_states;
+        ordered_set<const IR::BFN::ParserState*> start_states;
         auto& calc_states = checksum_info.decl_name_to_states.at(parser).at(decl);
         for (auto a : calc_states) {
             bool is_start = true;
@@ -397,9 +397,9 @@ struct ParserChecksumAllocator : public Visitor {
     /// may have multiple end states, e.g. IPv4 with variable length options where
     /// each option length is its own parser state. A state is an end state is no
     /// other state is its descendant.
-    std::set<const IR::BFN::ParserState*>
+    ordered_set<const IR::BFN::ParserState*>
     get_end_states(const IR::BFN::Parser* parser, cstring decl) {
-        std::set<const IR::BFN::ParserState*> end_states;
+        ordered_set<const IR::BFN::ParserState*> end_states;
 
         auto& calc_states = checksum_info.decl_name_to_states.at(parser).at(decl);
         return compute_end_states(parser, parser_info, calc_states);
@@ -480,7 +480,7 @@ struct ParserChecksumAllocator : public Visitor {
                 id++;
             }
         } else if (Device::numClots() > 0) {
-            std::set<unsigned> clots;
+            ordered_set<unsigned> clots;
 
             unsigned id = 2;  // allocate clot checksums first
             for (auto& ds : disjoint_sets) {
@@ -528,7 +528,7 @@ struct InsertParserClotChecksums : public PassManager {
                 le_bitrange field_range;
                 auto field = phv.field(source->field->field, &field_range);
                 std::map<const PHV::FieldSlice*, Clot*,
-                                PHV::FieldSlice::Greater>* clot_map = nullptr;
+                         PHV::FieldSlice::Greater>* clot_map = nullptr;
                 if (clotInfo.is_readonly(field)) {
                     clot_map = clotInfo.slice_clots(field);
                 } else {
@@ -547,12 +547,12 @@ struct InsertParserClotChecksums : public PassManager {
         }
         // Maps checksum fields used in clot to range of each field slice allocated to clots
         // Each range of field slice maps to its corresponding clot
-        std::map<const PHV::Field*,
-                       std::map<le_bitrange, const Clot*>> checksum_field_slice_to_clot;
+        ordered_map<const PHV::Field*,
+                       ordered_map<le_bitrange, const Clot*>> checksum_field_slice_to_clot;
         // Maps checksum field used in CLOT to range of each field slice allocated to clots
         // Each range of field size maps to their offset in deparser checksum fieldlist
-        std::map<const PHV::Field*,
-                        std::map<le_bitrange, int>> checksum_field_slice_to_offset;
+        ordered_map<const PHV::Field*,
+                        ordered_map<le_bitrange, int>> checksum_field_slice_to_offset;
         const PhvInfo& phv;
         const ClotInfo& clotInfo;
     };
@@ -562,11 +562,11 @@ struct InsertParserClotChecksums : public PassManager {
         const CollectParserInfo& parser_info;
         const ClotInfo& clotInfo;
         const CollectClotChecksumFields& clot_checksum_fields;
-        std::map<const IR::BFN::ParserState*,
-                 std::map<const Clot*,
+        ordered_map<const IR::BFN::ParserState*,
+                 ordered_map<const Clot*,
                           std::vector<const IR::BFN::ParserChecksumPrimitive*>>>
                                  state_to_clot_primitives;
-        std::map<const IR::BFN::Parser*, std::map<const Clot*,
+        ordered_map<const IR::BFN::Parser*, ordered_map<const Clot*,
                           ordered_set<const IR::BFN::ParserState*>>> clot_to_states;
 
         CreateParserPrimitives(const PhvInfo& phv, const CollectParserInfo& parser_info,
@@ -701,8 +701,8 @@ struct InsertParserClotChecksums : public PassManager {
 //          d            d'
 // Ticket : P4C-2236
 struct DuplicateStates : public ParserTransform {
-    std::map<cstring,
-        std::map<cstring, ordered_set<const IR::BFN::ParserState*>>> duplicate_path;
+    ordered_map<cstring,
+        ordered_map<cstring, ordered_set<const IR::BFN::ParserState*>>> duplicate_path;
     AllocateParserChecksums& allocator;
     const CollectParserInfo&      parser_info;
     const CollectParserChecksums& checksum_info;
@@ -714,7 +714,7 @@ struct DuplicateStates : public ParserTransform {
 
     // Finds the path that needs to be duplicated.
     bool add_state_to_duplicate(const IR::BFN::ParserState* state,
-                            const std::set<const IR::BFN::ParserState*>& start_states,
+                            const ordered_set<const IR::BFN::ParserState*>& start_states,
                             const IR::BFN::Parser* parser,
                             ordered_set<const IR::BFN::ParserState*>& path) {
         if (start_states.count(state)) {
@@ -737,7 +737,7 @@ struct DuplicateStates : public ParserTransform {
 
     /// Is any state in "calc_states_" an ancestor of "dst"?
     bool has_ancestor(const IR::BFN::Parser* parser,
-                      const std::set<const IR::BFN::ParserState*>& calc_states,
+                      const ordered_set<const IR::BFN::ParserState*>& calc_states,
                       const IR::BFN::ParserState* dst) {
         for (auto s : calc_states)
             if (parser_info.graph(parser).is_ancestor(s, dst))
@@ -747,7 +747,7 @@ struct DuplicateStates : public ParserTransform {
 
     void find_state_to_duplicate(const IR::BFN::Parser* parser, cstring decl) {
         if (!(checksum_info.is_residual(parser, decl))) return;
-        std::set<const IR::BFN::ParserState*> start_states;
+        ordered_set<const IR::BFN::ParserState*> start_states;
         auto end_states = allocator.decl_to_end_states[parser][decl];
         // get start state of all the residual checksums that uses same checksum engine
         // as decl

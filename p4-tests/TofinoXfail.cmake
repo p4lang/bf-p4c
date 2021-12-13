@@ -2086,3 +2086,10 @@ p4c_add_xfail_reason("tofino"
   "Can only switch on table"
   testdata/p4_16_samples/invalid-hdr-warnings3.p4
 )
+
+# P4C-4158 - Expected program output not communicated to us by customer (Arista)
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device"
+  p4c_4158
+)
+
