@@ -3848,12 +3848,16 @@ bool IXBar::XBarHashDist::allocate_hash_dist() {
     for (int i = HD_IMMED_LO; i < HD_DESTS; i++) {
         bool dynamic_hash = false;
         safe_vector<HashDistAllocPostExpand> dest_reqs;
+        ordered_set<HashDistAllocPostExpand> dedup;
         for (auto alloc_req : alloc_reqs) {
             if (alloc_req.dest == static_cast<HashDistDest_t>(i)) {
                 if (alloc_req.func && alloc_req.func->is_dynamic())
                     dynamic_hash = true;
+                if (dedup.count(alloc_req) != 0)
+                    continue;
 
                 dest_reqs.push_back(alloc_req);
+                dedup.insert(alloc_req);
             }
         }
         if (dest_reqs.empty())

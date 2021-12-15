@@ -146,24 +146,19 @@ bool Format::preorder(const IR::MAU::Table *tbl) {
         create_alu_ops_for_action(container_actions_map, action->name.name, ops_per_action);
     }
 
-    const IR::MAU::AttachedMemory *am = nullptr;
-
+    bool found_attached_meter_or_stateful_alu = false;
     for (auto ba : tbl->attached) {
         if (!ba->attached->is<IR::MAU::Meter>() && !ba->attached->is<IR::MAU::StatefulAlu>())
             continue;
-        if (am != nullptr)
-            BUG("%1%: Multiple meter alu users attached to the same table %2%", tbl->srcInfo,
-                tbl->externalName());
-        am = ba->attached;
+        attached_to_table_map[ba->attached].insert(tbl);
+        found_attached_meter_or_stateful_alu = true;
     }
 
-    if (am == nullptr) {
+    if (!found_attached_meter_or_stateful_alu) {
         for (auto action_ops : ops_per_action) {
             BUG_CHECK(action_ops.second.empty(), "Operations on meter alu users in action %1% "
                 "in table %2% with no object attached", action_ops.first, tbl->externalName());
         }
-    } else {
-        attached_to_table_map[am].insert(tbl);
     }
     return true;
 }

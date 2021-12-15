@@ -388,6 +388,10 @@ struct IXBar {
      public:
         HashDistAllocPostExpand(P4HashFunction *f, le_bitrange b, HashDistDest_t d, int s)
             : func(f), bits_in_use(b), dest(d), shift(s) {}
+        bool operator<(const HashDistAllocPostExpand& hd) const {
+            return std::tie(dest, shift, bits_in_use, chained_addr) <
+                std::tie(hd.dest, hd.shift, hd.bits_in_use, hd.chained_addr);
+        }
     };
 
     struct HashDistIRUse {
