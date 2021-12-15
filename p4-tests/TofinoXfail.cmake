@@ -741,10 +741,9 @@ p4c_add_xfail_reason("tofino"
 
 # This test attempts to match on a field of `error` type.
 p4c_add_xfail_reason("tofino"
-  "error: error: width not well-defined"
+  "PHV details for .* not found"
   testdata/p4_16_samples/issue1062-1-bmv2.p4
   testdata/p4_16_samples/issue1062-bmv2.p4
-  testdata/p4_16_samples/psa-example-parser-checksum.p4
 )
 
 # BRIG-934: this issue is not resolved, need fix in ConvertEnums.
@@ -1378,6 +1377,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1989-bmv2.p4
   # p4c update 2021-11-08
   testdata/p4_16_samples/invalid-hdr-warnings4.p4
+  # p4c update 2021-12-06
+  testdata/p4_16_samples/control-hs-index-test1.p4
+  testdata/p4_16_samples/control-hs-index-test2.p4
+  testdata/p4_16_samples/control-hs-index-test3.p4
+  testdata/p4_16_samples/control-hs-index-test4.p4
+  testdata/p4_16_samples/control-hs-index-test5.p4
+  testdata/p4_16_samples/control-hs-index-test6.p4
 )
 
 # select ranges not supported
@@ -1979,6 +1985,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "extern Checksum does not have method matching this call"
   testdata/p4_16_samples/internet_checksum1-bmv2.p4
+  testdata/p4_16_samples/psa-example-parser-checksum.p4
 )
 
 # P4C-2985 - tests added to p4c do not compile for tofino

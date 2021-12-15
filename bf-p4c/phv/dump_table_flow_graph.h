@@ -47,6 +47,10 @@ struct DumpTableFlowGraph : public Visitor {
                 out << "M:\\l" << std::endl;
                 for (auto m : tbl->match_key) {
                     auto f = phv.field(m->expr);
+                    // When match on an error type is used the PHV does not exist
+                    BUG_CHECK(f,
+                        "PHV details for %s not found. Possibly trying to match on an error type?",
+                        m->expr);
                     out << " " << stripThreadPrefix(f->name) << "\\l" << std::endl;
                 }
                 out << "\\l";
@@ -99,7 +103,6 @@ struct DumpTableFlowGraph : public Visitor {
             auto fs = open_file(kv.first, root->to<IR::BFN::Pipe>()->id);
             kv.second.dump_viz(*fs, new PhvDetails(phv));
         }
-
         return rv;
     }
 };
