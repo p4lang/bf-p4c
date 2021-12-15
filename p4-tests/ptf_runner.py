@@ -252,6 +252,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     test_params += ';thrift_server=\'localhost\''
     test_params += ';use_pi=\'False\''
     test_params += ';test_seed=\'None\''
+    test_params += ";base_pick_path='{}'".format(testdir)
     # Pass api_model_json for bf_switch
     if 'switch_16' in testdir:
         test_params += ';api_model_json=\'{}\''.format(os.path.join(testdir, 'share/switch/aug_model.json'))

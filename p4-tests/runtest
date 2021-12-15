@@ -836,24 +836,25 @@ if $run_bfrt; then
         set_env
 
         result_file="$testout/build_result.txt"
+        mkdir -p $testout/$name
         if [ -d "$ptftestdir" ] && [ -r "$result_file" ] && [ "$(cat "$result_file")" = "0" ]; then
             echo "Using existing P4 build in $testout/build/." \
                  "Remove $result_file and rerun to recompile the program."
         else
-            echo "Building $file in $testout/build/"
+            echo "Building $file in $testout/$name/"
             rm -f "$result_file"
-            P4C_ARGS+=(--bf-rt-schema "$testout/build/bf-rt.json")
-            native_compile "${P4C_ARGS[@]}" "$file" -o "$testout/build"
+            P4C_ARGS+=(--bf-rt-schema "$testout/$name/bf-rt.json")
+            native_compile "${P4C_ARGS[@]}" "$file" -o "$testout/$name"
             echo $? > "$result_file"
         fi
 
-        manifest="$testout/build/manifest.json"
+        manifest="$testout/$name/manifest.json"
         if [ -f "$manifest" ]; then
             pipes=$("$MANIFEST_CONFIG" --pipe "$manifest")
         fi
 
         if [ "$p4_version" == "p4-16" ]; then
-            conf_args="--name $name --device $device --testdir $testout --installdir $testout/build --pipe ${pipes}"
+            conf_args="--name $name --device $device --testdir $testout --installdir $testout/$name --pipe ${pipes}"
             model_logs_option=""
             echo "gen_config_opts: ./p4c-gen-bfrt-conf $conf_args"
             run ./p4c-gen-bfrt-conf $conf_args
