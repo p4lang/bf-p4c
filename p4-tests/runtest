@@ -469,7 +469,7 @@ if [[ x$MANIFEST_CONFIG == x"" ]]; then
 fi
 
 remove_old_files() {
-    pipes=( $2 )
+    local pipes=( $2 )
     for p in "${pipes[@]}"; do
         output_dir=$name${out_ext}.out
         if [ -e $testdir/$output_dir ]; then
@@ -490,7 +490,7 @@ if [ -r $manifest ]; then
     # find all pipe names from previous compilation
     pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
     # delete old outputs so we don't get confused if they're not overwritten
-    remove_old_files $p4_version $pipes
+    remove_old_files $p4_version "$pipes"
 fi
 
 # Run P4C and extract pipes
@@ -502,7 +502,7 @@ native_compile() {
 }
 
 compress_cfg_json() {
-    pipes=( $2 )
+    local pipes=( $2 )
     for p in "${pipes[@]}"; do
         output_dir=$name${out_ext}.out
         if [ $1 == "p4-16" ]; then
@@ -533,7 +533,7 @@ compress_cfg_json() {
 }
 
 check_bfa() {
-    pipes=( $2 )
+    local pipes=( $2 )
     for p in "${pipes[@]}"; do
         output_dir=$name${out_ext}.out
         if [ $1 == "p4-16" ]; then
@@ -552,10 +552,10 @@ if ! $run_pd && ! $run_ptf && ! $run_bfrt ; then
     native_compile "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
 
     # compress cfg.json files if they exist
-    compress_cfg_json $p4_version $pipes
+    compress_cfg_json $p4_version "$pipes"
 
     # sanity check
-    check_bfa $p4_version $pipes
+    check_bfa $p4_version "$pipes"
 fi
 
 if $run_stf && [ -r ${file%.p4}.stf ]; then
