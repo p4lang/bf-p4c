@@ -407,6 +407,9 @@ bitvec FindPayloadCandidates::determine_indirect_addr_payload(const IR::MAU::Act
         return rv;
     }
 
+    // No index implies call is direct
+    if (call->index == nullptr) return rv;
+
     if (auto aa = call->index->to<IR::MAU::ActionArg>()) {
         BUG_CHECK(act->args.size() == payload_args.size(), "Cannot have an action argument "
             "without a payload argument");
@@ -498,17 +501,17 @@ bitvec FindPayloadCandidates::determine_match_group_payload(const IR::MAU::Table
                 current_value = determine_indirect_pfe_payload(act, stats_alu_user);
                 break;
             case TableFormat::METER:
-                BUG_CHECK(meter_alu_user != nullptr, "Must have a counter to have a counter "
+                BUG_CHECK(meter_alu_user != nullptr, "Must have a meter to have a meter "
                           "address");
                 current_value = determine_indirect_addr_payload(act, arguments, meter_alu_user);
                 break;
             case TableFormat::METER_PFE:
-                BUG_CHECK(meter_alu_user != nullptr, "Must have a counter to have a counter "
+                BUG_CHECK(meter_alu_user != nullptr, "Must have a meter to have a meter "
                           "address");
                 current_value = determine_indirect_pfe_payload(act, meter_alu_user);
                 break;
             case TableFormat::METER_TYPE:
-                BUG_CHECK(meter_alu_user != nullptr, "Must have a counter to have a counter "
+                BUG_CHECK(meter_alu_user != nullptr, "Must have a meter to have a meter "
                           "address");
                 current_value = determine_meter_type_payload(act, meter_alu_user);
                 break;

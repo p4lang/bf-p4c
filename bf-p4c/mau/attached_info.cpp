@@ -38,6 +38,8 @@ void ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         addr_type_t type) {
     IR::MAU::Table::IndirectAddress ia;
     auto ba = findContext<IR::MAU::BackendAttached>();
+    LOG3("Free address for attached " << am->name << " with size " << am->size
+        << " and location " << ba->addr_location << " on table " << tbl->name);
     if (users[type] != nullptr) {
         if (!compatible(users[type], ba))
             ::error(ErrorType::ERR_INVALID,
@@ -61,13 +63,10 @@ void ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         am->srcInfo, am->name);
 
     ia.shifter_enabled = true;
-    bool from_hash = false;
-    if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD) {
-        ia.address_bits = std::max(ceil_log2(am->size), 10);
-    } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
-        from_hash = true;
-        ia.hash_bits = std::max(ceil_log2(am->size), 10);
-    }
+    ia.address_bits = std::max(ceil_log2(am->size), 10);
+
+    bool from_hash = (ba->addr_location == IR::MAU::AddrLocation::HASH)
+                        ? true : false;
 
     if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
         if (from_hash) {
@@ -95,6 +94,9 @@ void ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         ia.meter_type_bits = 3;
     }
     ind_addrs[type] = ia;
+    LOG3("\tSetting indirect address info { addr_bits : " << ia.address_bits
+            << ", meter_type_bits : " << ia.meter_type_bits
+            << ", per_flow_enable : " << ia.per_flow_enable);
 }
 
 bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::Counter *cnt) {
@@ -144,6 +146,7 @@ bool SplitAttachedInfo::BuildSplitMaps::preorder(const IR::MAU::Table *tbl) {
 
 
 bool SplitAttachedInfo::ValidateAttachedOfAllTables::preorder(const IR::MAU::Table *tbl) {
+    LOG3("ValidateAttachedOfAllTables on table : " << tbl->name);
     ValidateAttachedOfSingleTable::TypeToAddressMap ia;
     ValidateAttachedOfSingleTable validate_attached(ia, tbl);
     tbl->attached.apply(validate_attached);
@@ -167,7 +170,7 @@ bool SplitAttachedInfo::ValidateAttachedOfAllTables::preorder(const IR::MAU::Tab
 
         auto &addr_info = self.address_info_per_table[tbl->name][at->name];
         addr_info.address_bits = ia[addr_type].address_bits;
-        addr_info.hash_bits = ia[addr_type].hash_bits;
+        LOG4("\tSetting address info for attached " << at->name);
     }
 
     return true;
@@ -212,7 +215,7 @@ int SplitAttachedInfo::addr_bits_to_phv_on_split(const IR::MAU::Table *tbl,
     if (address_info_per_table.count(tbl->name) == 0)
         return 0;
     auto &addr_info = address_info_per_table.at(tbl->name).at(at->name);
-    return std::max(addr_info.address_bits, addr_info.hash_bits);
+    return addr_info.address_bits;
 }
 
 bool SplitAttachedInfo::enable_to_phv_on_split(const IR::MAU::Table *tbl,
@@ -488,6 +491,9 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
         for (unsigned i = 0U; i < att.size(); ++i) {
             if (format_type.attachedThisStage(i) && format_type.attachedLaterStage(i)) {
                 auto *idx = split_index(att.at(i), tbl);
+                BUG_CHECK(idx, "Cannot split index for table %1% on"
+                        " attached table %2% with format type %3%",
+                        tbl->name, att.at(i)->name, format_type);
                 auto *adj_idx = new IR::MAU::StatefulCounter(idx->type, att.at(i));
                 auto *set = new IR::MAU::Instruction("set", idx, adj_idx);
                 rv->action.push_back(set); } }

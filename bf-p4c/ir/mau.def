@@ -91,7 +91,6 @@ class Table : BFN::Unit, IAnnotated  {
     class IndirectAddress {
         bool shifter_enabled = false;
         int address_bits = 0;
-        int hash_bits = 0;   // this is a temporary field to do some of the splitting statefuls
         bool per_flow_enable = false;
         int meter_type_bits = 0;
 #emit

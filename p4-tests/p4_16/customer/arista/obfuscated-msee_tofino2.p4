@@ -14956,7 +14956,7 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Peoria.Baudette.Murphy = Peoria.Minneota.Murphy;
         Peoria.Baudette.Ovett = Peoria.Minneota.Ovett;
     }
-    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Robstown") table Robstown {
+    @disable_atomic_modify(1) @name(".Robstown") table Robstown {
         actions = {
             Geistown();
             Ruffin();
