@@ -74,14 +74,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/parser-inline/parser-inline-test10.p4
     )
 
-  # P4C-4107
-  # Once https://github.com/intel-restricted/networking.switching.barefoot.model/pull/1541
-  # is merged, remove this xfail.
-  p4c_add_xfail_reason("tofino"
-    "shorter than expected (.*)"
-    extensions/p4_tests/p4_16/stf/p4c-4107.p4
-    )
-
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
