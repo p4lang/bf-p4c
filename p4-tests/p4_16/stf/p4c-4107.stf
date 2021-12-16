@@ -1,0 +1,19 @@
+# Emulate Tofino 32Q loopback
+wire 128 -> 128
+
+# Computation of h1.c (in pipe1egress; thus h1.data == 0x01011111; one's complement arithmetic):
+#   h2 is valid:                    h2 is invalid (thus zeroed):
+#   0x0101 (h1.data[31:16])         0x0101 (h1.data[31:16])
+# + 0x1111 (h1.data[15:0])          0x1111 (h1.data[15:0])
+# + 0xaaaa (h2.data[31:16])         0x0000
+# + 0xaaaa (h2.data[15:0])          0x0000
+#   ------                          ------
+#   0x9898                          0xeded
+
+#          h1.data  h1.c h2.data
+# Expected packet
+expect 0   11111111 eded 00000000 00000000
+# By-product of `wire 128 -> 128' still emitted by the test harness
+expect 128 ******** **** ******** ******** ********
+packet 0   01010101 0000 aaaaaaaa 00000000 00000000
+

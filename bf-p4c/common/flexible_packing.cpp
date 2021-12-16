@@ -394,8 +394,6 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new CollectPhvInfo(phv),
         &defuse,
         Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
-        Device::currentDevice() == Device::TOFINO ?
-            new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
