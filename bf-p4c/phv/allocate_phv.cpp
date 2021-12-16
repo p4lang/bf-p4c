@@ -696,6 +696,12 @@ bool PHV::AllocUtils::can_physical_liverange_be_overlaid(
     if (never_overlay(a.field()) || never_overlay(b.field())) {
         return false;
     }
+    if (a.container().size() > 8 || b.container().size() > 8) {
+        if (a.getLatestLiveness().first == Device::numStages() ||
+            b.getLatestLiveness().first == Device::numStages()) {
+            return false;
+        }
+    }
     return pragmas.pa_no_overlay().can_overlay(a.field(), b.field()) && a.isLiveRangeDisjoint(b);
 }
 

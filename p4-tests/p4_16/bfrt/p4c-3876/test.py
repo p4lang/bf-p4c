@@ -758,6 +758,7 @@ class IPv4ToCpuEgr(EgrMirrorCpuGroup):
         exp_pkt.set_do_not_care_scapy(ToCpu, "deq_timedelta")
         exp_pkt.set_do_not_care_scapy(ToCpu, "egress_qid")
         exp_pkt.set_do_not_care_scapy(ToCpu, "egress_cos")
+        exp_pkt.set_do_not_care_scapy(ToCpu, "pad8")
 
         # We know that deflection flag should be 0
         # exp_pkt.set_do_not_care_scapy(ToCpu, "deflection_flag")
