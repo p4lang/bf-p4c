@@ -53,7 +53,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
               tableActionsMap, alloc),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
                 domTree, alloc),
-      clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), action_constraints),
+      clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), pragmas.pa_byte_pack(),
+                 action_constraints),
       strided_headers(phv),
       physical_liverange_db(&alloc, &defuse, phv, pragmas),
       source_tracker(phv),
@@ -123,17 +124,18 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine parser constant extract constraints, to be run before Clustering.
             Device::currentDevice() == Device::TOFINO ? new TofinoParserConstantExtract(phv) :
                 nullptr,
-            // From this point on, we are starting to transform the PHV related data structures.
-            // Before this is all analysis that collected constraints for PHV allocation to use.
-            &clustering,
-            new PhvInfo::DumpPhvFields(phv, uses),
             &table_ids,
             &strided_headers,
             &parser_info,
             phvLoggingInfo,
             &physical_liverange_db,
             &source_tracker,
-            new AllocatePHV(utils, alloc, phv),
+            new PhvInfo::DumpPhvFields(phv, uses),
+            // From this point on, we are starting to transform the PHV related data structures.
+            // Before this is all analysis that collected constraints for PHV allocation to use.
+            // &table_friendly_packing_backtracker,    // <---
+            &clustering,                               //    |
+            new AllocatePHV(utils, alloc, phv),        // ----
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,
             phvLoggingInfo,

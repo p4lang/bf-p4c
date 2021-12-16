@@ -16,6 +16,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
+#include "bf-p4c/phv/pragma/pa_byte_pack.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/mau/gateway.h"
 
@@ -46,6 +47,7 @@ class Clustering : public PassManager {
     PhvUse& uses_i;
     const PackConflicts& conflicts_i;
     const PragmaContainerSize& pa_container_sizes_i;
+    const PragmaBytePack& pa_byte_pack_i;
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -74,6 +76,10 @@ class Clustering : public PassManager {
     /// Utility method for querying \a fields_to_slices_i.
     /// @returns the slices of @p field in \a fields_to_slices_i overlapping with @p range.
     std::vector<PHV::FieldSlice> slices(const PHV::Field* field, le_bitrange range) const;
+
+    /// This method will insert aligned cluster and rotational cluster for the field.
+    /// @returns the created rotational cluster.
+    PHV::RotationalCluster* insert_rotational_cluster(PHV::Field* f);
 
     /** For backtracking, clear all the pre-existing structs in the Clustering object.
       */
@@ -300,6 +306,7 @@ class Clustering : public PassManager {
         // NOTE: the lower the number, the higher the priority(more constraints).
         // This priority is used by the solver algorithm.
         enum class Reason : int {
+            PaBytePack      = 0,  // pa_byte_pack pragma
             Header          = 1,  // parsed + deparsed
             Resubmit        = 2,  // 8-bytes limit + deparsed
             Mirror          = 3,  // deparsed
@@ -350,7 +357,11 @@ class Clustering : public PassManager {
         /// because those fields are parsed and deparsed. See comments of Reason for more.
         void solve_place_together_constraints();
 
-        // pack metadata fieldslices with pa_container_size pramgas into a slicelist.
+        /// pack metadata fieldslices specified in pa_byte_pack and update their alignments
+        /// in PhvInfo. If there were any invalid packing layout, it will call ::error();
+        void pack_pa_byte_pack_and_update_alignment();
+
+        /// pack metadata fieldslices with pa_container_size pramgas into a slicelist.
         void pack_pa_container_sized_metadata();
 
         /// pack metadata fieldslices with constraints together.
@@ -474,9 +485,12 @@ class Clustering : public PassManager {
     };
 
  public:
-    Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa,
+    Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c,
+               const PragmaContainerSize& pa_sz,
+               const PragmaBytePack& pa_byte_pack,
                const ActionPhvConstraints& a)
-        : phv_i(p), uses_i(u), conflicts_i(c), pa_container_sizes_i(pa), slice_i(*this, pa) {
+        : phv_i(p), uses_i(u), conflicts_i(c), pa_container_sizes_i(pa_sz),
+          pa_byte_pack_i(pa_byte_pack), slice_i(*this, pa_sz) {
         auto* inconsistent_extracts =
             new CollectInconsistentFlexibleFieldExtract(*this, this->phv_i);
         auto* place_togethers =

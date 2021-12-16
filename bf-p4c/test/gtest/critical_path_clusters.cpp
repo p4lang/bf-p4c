@@ -200,14 +200,12 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     ActionPhvConstraints actions(phv, uses, conflicts, tableActionsMap, deps);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
-    Clustering clustering(phv, uses, conflicts, pragmas->pa_container_sizes(), actions);
+    Clustering clustering(phv, uses, conflicts, pragmas->pa_container_sizes(),
+                          pragmas->pa_byte_pack(), actions);
 
-    auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
-                                       defuse,
-                                       clustering,
-                                       table_alloc,
-                                       deps, conflicts, tableActionsMap, actions,
-                                       parser_critical_path, *pragmas);
+    auto* post_pm_pipe =
+        runMockPasses(test->pipe, phv, uses, defuse, clustering, table_alloc, deps, conflicts,
+                      tableActionsMap, actions, parser_critical_path, *pragmas);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);
     post_pm_pipe = post_pm_pipe->apply(*cluster_cp);

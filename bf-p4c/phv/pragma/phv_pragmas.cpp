@@ -18,6 +18,9 @@ bool PHV::Pragmas::gressValid(cstring gress) {
 bool PHV::Pragmas::determinePipeGressArgs(const IR::Vector<IR::Expression>& exprs,
         unsigned& expr_index, unsigned& required_args,
         const IR::StringLiteral*& pipe_arg, const IR::StringLiteral*& gress_arg) {
+    if (exprs.empty()) {
+        return false;
+    }
     // At least one argument is present, ensured by grammar
     auto arg0 = exprs.at(expr_index++)->to<IR::StringLiteral>();
 

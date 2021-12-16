@@ -946,8 +946,40 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     bool is_unallocated() const { return field_i->is_unallocated(); }
 };
 
+/// PackingLayout represents a packing constraint that specifies slices of fields must be
+/// allocated in the specified layout, similar to header layout constraints.
+struct PackingLayout {
+    using FieldRange = std::pair<const PHV::Field*, le_bitrange>;
+    /// FieldRangeOrPadding is a helper class to store either
+    /// a slice of field or an integer representing the number of padding bits.
+    class FieldRangeOrPadding {
+        boost::optional<FieldRange> slice;
+        int padding = 0;
+
+     public:
+        explicit FieldRangeOrPadding(const FieldRange& fs) : slice(fs) {}
+        explicit FieldRangeOrPadding(int n_padding_bits) : padding(n_padding_bits) {}
+        bool is_fs() const { return slice.is_initialized(); }
+        const FieldRange& fs() const { return *slice; }
+        int size() const {
+            if (is_fs())
+                return slice->second.size();
+            else
+                return padding;
+        }
+    };
+
+    /// actual layout
+    safe_vector<FieldRangeOrPadding> layout;
+    /// gress
+    gress_t gress;
+};
+
 std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);
+std::ostream &operator<<(std::ostream &out, const PackingLayout &);
+std::ostream &operator<<(std::ostream &out, const PackingLayout *);
+
 }  // namespace PHV
 
 /// Expresses the constraints for inserting a table into the IR. The first element of the pair

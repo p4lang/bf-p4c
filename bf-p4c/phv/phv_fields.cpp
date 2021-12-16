@@ -2353,6 +2353,27 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* fs) {
     return out;
 }
 
+std::ostream& operator<<(std::ostream& out, const PackingLayout& p) {
+    out << "[";
+    cstring sep = "";
+    for (const auto& v : p.layout) {
+        out << sep;
+        sep = ", ";
+        if (v.is_fs()) {
+            out << v.fs().first->name << " " << v.fs().second;
+        } else {
+            out << v.size();
+        }
+    }
+    out << "]";
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const PackingLayout* p) {
+    out << *p;
+    return out;
+}
+
 }   // namespace PHV
 
 namespace std {

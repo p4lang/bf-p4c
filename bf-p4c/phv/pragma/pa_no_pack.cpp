@@ -13,7 +13,7 @@ const char *PragmaNoPack::help =
     "\n"
     "Suggest that the indicated pair of fields should not be packed into one container."
     "\n"
-    "Compiler will ignore invalid pa_no_pack pragmss if two fields must be allocated to"
+    "Compiler will ignore invalid pa_no_pack pragma(s) if two fields must be allocated to"
     "one container because of constraints, e.g. header fields in a same byte.";
 
 bool PragmaNoPack::preorder(const IR::BFN::Pipe* pipe) {

@@ -111,6 +111,7 @@ class AlignmentConstraint : IntegerConstraint {
         TERNARY_MATCH = (1 << 3),
         DIGEST = (1 << 4),
         INTRINSIC = (1 << 5),
+        PA_BYTE_PACK = (1 << 6),
     };
 
     ~AlignmentConstraint() {}

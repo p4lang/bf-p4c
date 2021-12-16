@@ -9,6 +9,7 @@
 #include "lib/algorithm.h"
 #include "lib/log.h"
 #include "lib/ordered_set.h"
+#include "lib/source_file.h"
 #include "lib/stringref.h"
 
 Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node* root) {
@@ -65,6 +66,16 @@ std::vector<PHV::FieldSlice> Clustering::slices(const PHV::Field* field, le_bitr
     for (auto& slice : fields_to_slices_i.at(field))
         if (slice.range().overlaps(range)) rv.push_back(slice);
     return rv;
+}
+
+PHV::RotationalCluster* Clustering::insert_rotational_cluster(PHV::Field* f) {
+    auto fs = PHV::FieldSlice(f);
+    auto* aligned_cluster =
+        new PHV::AlignedCluster(PHV::Kind::normal, std::vector<PHV::FieldSlice>{fs});
+    auto* rot_cluster = new PHV::RotationalCluster({aligned_cluster});
+    aligned_clusters_i.push_back(aligned_cluster);
+    rotational_clusters_i.push_back(rot_cluster);
+    return rot_cluster;
 }
 
 bool Clustering::MakeSlices::updateSlices(const PHV::Field* field, le_bitrange range) {
@@ -525,6 +536,34 @@ void Clustering::CollectPlaceTogetherConstraints::pack_bridged_extracted_togethe
     }
 }
 
+void Clustering::CollectPlaceTogetherConstraints::pack_pa_byte_pack_and_update_alignment() {
+    for (const auto& src_layout : self.pa_byte_pack_i.packings()) {
+        const auto& src_info = src_layout.src_info;
+        const auto& layout = src_layout.packing;
+        int n = 0;
+        auto* sl = new PHV::SuperCluster::SliceList();
+        // Use reverse(layout), which is consistent with creating header layout.
+        // layout order: MSB to LSB
+        // slice list order: LSB to MSB
+        for (const auto& v : boost::adaptors::reverse(layout.layout)) {
+            if (v.is_fs()) {
+                const auto fs = v.fs();
+                sl->push_back(PHV::FieldSlice(fs.first, fs.second));
+            } else {
+                auto* padding = phv_i.create_dummy_padding(v.size(), layout.gress);
+                padding->set_ignore_alloc(true);
+                padding->updateAlignment(PHV::AlignmentReason::PA_BYTE_PACK,
+                                         FieldAlignment(le_bitrange(StartLen(n, padding->size))),
+                                         src_info ? *src_info : Util::SourceInfo());
+                self.insert_rotational_cluster(padding);
+                sl->push_back(PHV::FieldSlice(padding));
+            }
+            n += sl->back().size();
+        }
+        place_together_i[Reason::PaBytePack].push_back(sl);
+    }
+}
+
 void Clustering::CollectPlaceTogetherConstraints::pack_pa_container_sized_metadata() {
     for (const auto& kv : self.pa_container_sizes_i.field_to_layout()) {
         const auto* field = kv.first;
@@ -578,18 +617,12 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
 
                 auto padding_size = ROUNDUP(sum_bits, 32) * 32 - sum_bits;
                 if (padding_size != 0) {
-                    auto* padding = phv_i.create_dummy_padding(padding_size,
-                                                               list->front().gress());
+                    auto* padding = phv_i.create_dummy_padding(padding_size, list->front().gress());
                     padding->set_exact_containers(list->front().field()->exact_containers());
                     padding->set_deparsed(list->front().field()->deparsed());
                     auto padding_fs = PHV::FieldSlice(padding);
                     list->push_back(padding_fs);
-                    auto* aligned_cluster_padding = new PHV::AlignedCluster(
-                        PHV::Kind::normal, std::vector<PHV::FieldSlice>{padding_fs});
-                    auto* rot_cluster_padding = new PHV::RotationalCluster(
-                        {aligned_cluster_padding});
-                    self.aligned_clusters_i.push_back(aligned_cluster_padding);
-                    self.rotational_clusters_i.push_back(rot_cluster_padding);
+                    self.insert_rotational_cluster(padding);
                     LOG4("Added " << padding_fs << " for " << list);
                 }
             }
@@ -1095,9 +1128,9 @@ void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constrain
     LOG1("break slice list of different deparsed zero constraints");
     candidates = break_slicelist_by(candidates, "deparsed-zero", break_cond_deparsed_zero);
 
-    // break at conflicting aligments.
-    LOG1("break slice list of conflicting aligments");
-    candidates = break_slicelist_by(candidates, "aligment", break_cond_alignment_conflict);
+    // break at conflicting alignments.
+    LOG1("break slice list of conflicting alignments");
+    candidates = break_slicelist_by(candidates, "alignment", break_cond_alignment_conflict);
 
     // break by solitary.
     LOG1("break slice list of mixed solitary/non-solitary fields");
@@ -1111,6 +1144,7 @@ void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constrain
 
 void Clustering::CollectPlaceTogetherConstraints::end_apply() {
     // constraint solving
+    pack_pa_byte_pack_and_update_alignment();
     pack_pa_container_sized_metadata();
     pack_constrained_metadata();
     pack_bridged_extracted_together();
