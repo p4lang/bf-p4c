@@ -1,4 +1,4 @@
-# Overview of p4c-extension-tofino
+# Overview of bf-p4c
 
 ## Setup
 
@@ -312,3 +312,33 @@ greedy allocation.
 
 Inspector passes to find constraints could logically be either part of
 the component they are anaylzing (parde or mau) or part of phv allocation.
+
+# Compiler's output
+
+General documentation for the compiler output can be found on the wiki:
+* [Synopsis of Compiler Inputs and Outputs](https://wiki.ith.intel.com/pages/viewpage.action?pageId=1981604254#Gettingstarted-SynopsisofCompilerInputsandOutputs)
+* [The Manifest File: Information on the Generated Files](https://wiki.ith.intel.com/pages/viewpage.action?pageId=1981604254#Gettingstarted-TheManifestFile:InformationontheGeneratedFiles)
+* [Compiler output for debugging](https://wiki.ith.intel.com/display/BXDCOMPILER/Appendix+F_+Compiler+Output+for+Debugging)
+
+Produced JSON files have certain schemas, which have to adhere to [schema policies](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/README.md#schema-versioning-policy). When
+changing schemas, these changes have to be approved by the _schema review board_ 
+this is because these schemas are often used by mutliple projects (p4c, p4i,
+drivers...) and since this is always produced by p4c, the p4c approval is 
+always needed. More about the review process can be found [here](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/README.md#contributions-and-change-process).
+
+| __File__        | __Schema__          | __Consumers__        | __Schema__ |
+|-----------------|---------------------|----------------------|------------|
+| context.json    | Context_schema      | Drivers, Model, P4I  | [context_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/context_schema.py) |
+| bfrt.json       | Bfrt_schema         | Drivers              | [bfrt_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/bfrt_schema.py) |
+| manifest.json   | Manifest_schema     | Drivers, P4I         | [manifest_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/manifest_schema.py) |
+| resources.json  | Resources_schema    | P4I                  | [resources_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/resources_schema.py) |
+| mau.json        | Mau_schema          | P4I                  | [mau_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/mau_schema.py) |
+| phv.json        | Phv_schema          | P4I                  | [phv_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/phv_schema.py) |
+| dep.json        | Table_Graph_schema  | P4I                  | [table_graph_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/table_graph_schema.py) |
+| power.json      | Power_schema        | P4I                  | [power_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/power_schema.py) |
+| source.json     | Source_info_schema  | P4I                  | [source_info_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/source_info_schema.py) |
+| metrics.json    | Metrics_schema      | P4C                  | [metrics_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/metrics_schema.py) |
+| events.json     | Event_log_schema    | P4I                  | [event_log_schema.py](https://github.com/intel-restricted/networking.switching.barefoot.compiler-interfaces/blob/master/schemas/event_log_schema.py) |
+
+
+Assembler source code (`*.bfa`) is a structured file using YAML syntax described in `SYNTAX.yaml` and is extensible for multiple architectures (Tofino, Tofino2...).
