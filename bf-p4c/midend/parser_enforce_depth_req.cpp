@@ -58,17 +58,17 @@ class IdentifyPadRequirements : public Inspector {
     std::set<cstring> counters;
 
     /// Have any uses of counters been detected for the current parser?
-    bool counterInUse;
+    bool counterInUse = false;
 
     /// Are any methods called by the parser? (i.e., does it do anything?)
-    bool callsMethod;
+    bool callsMethod = false;
 
     /// Accumulated size of the current state. Updated as extract and advance statements are
     /// processed.
     int currStateSize = 0;
 
-    int minDepthAllowed;
-    int maxDepthAllowed;
+    int minDepthAllowed = -1;
+    int maxDepthAllowed = -1;
 
     /// Map of parsers and the pad requirements for each parser
     std::map<const IR::P4Parser *, ParserEnforceDepthReq::ParserPadReq> &padReq;
@@ -422,7 +422,7 @@ class AddParserPad : public Modifier {
     const std::map<const IR::P4Control *, std::set<const IR::P4Parser *>> &mauPipeParser;
 
     /// Counter shift amount. Calculated based on port speed and clock rate.
-    int ctrShiftAmt;
+    int ctrShiftAmt = -1;
 
     /// Map from header struct name to pad instance name
     std::map<cstring, cstring> headerToPadName;
@@ -432,7 +432,7 @@ class AddParserPad : public Modifier {
 
     /// Insert header valid initialization after this assignment statement.
     /// A nullptr indicates that initialization shouldn't occur in this state.
-    const IR::AssignmentStatement *insertHdrVldInitAfter;
+    const IR::AssignmentStatement *insertHdrVldInitAfter = nullptr;
 
     /// Set of all parser names to pad
     std::set<cstring> padPrsrNames;
@@ -443,15 +443,15 @@ class AddParserPad : public Modifier {
     std::map<cstring, const IR::Type_Control *> replacedTCtrl;
 
     /// Minimum depth allowed in the current gress
-    int minDepthAllowed;
+    int minDepthAllowed = -1;
 
     // Information about the current parser
-    bool prsrHasPadStack;
+    bool prsrHasPadStack = false;
     cstring prsrPktName;
     cstring prsrHdrName;
     cstring prsrHdrType;
     cstring prsrPadInstName;
-    int prsrNumPadStates;
+    int prsrNumPadStates = -1;
     cstring prsrCtrName;
 
     // Map of destination state (accept/reject) to preceding pad state names
@@ -459,17 +459,17 @@ class AddParserPad : public Modifier {
     std::map<cstring, cstring> prsrCheckLoopState;
 
     // Type information gathered while walking the IR
-    const IR::Type_Extern *pktInExtern;
-    const IR::Type_Extern *pktOutExtern;
-    const IR::Type_Extern *prsrCtrExtern;
-    const IR::Type_Method *prsrCtrSetMethod;
-    const IR::Type_Method *prsrCtrDecMethod;
-    const IR::Type_Method *prsrExtractMethod;
-    const IR::Type_Method *dprsrEmitMethod;
+    const IR::Type_Extern *pktInExtern = nullptr;
+    const IR::Type_Extern *pktOutExtern = nullptr;
+    const IR::Type_Extern *prsrCtrExtern = nullptr;
+    const IR::Type_Method *prsrCtrSetMethod = nullptr;
+    const IR::Type_Method *prsrCtrDecMethod = nullptr;
+    const IR::Type_Method *prsrExtractMethod = nullptr;
+    const IR::Type_Method *dprsrEmitMethod = nullptr;
 
     // New IR nodes created by this pass
-    IR::StructField *padField;
-    IR::Type_Header *padHdr;
+    IR::StructField *padField = nullptr;
+    IR::Type_Header *padHdr = nullptr;
     std::map<cstring, IR::Type_Stack *> padHdrStack;
     std::map<cstring, IR::StructField *> padHdrStackField;
     std::map<cstring, const IR::Type_Struct *> hdrStruct;
