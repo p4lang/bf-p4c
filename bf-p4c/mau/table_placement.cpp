@@ -417,8 +417,10 @@ struct TablePlacement::Placed {
         }
 
         auto curr = prev;
-        while (curr && curr->table->is_always_run_action()) {
-            curr = curr->prev;
+        for (; curr; curr = curr->prev) {
+            if (curr->table->is_always_run_action()) continue;
+            if (!Device::threadsSharePipe(table->gress, curr->table->gress)) continue;
+            break;
         }
 
         if (curr && curr->stage == stage) {
@@ -432,8 +434,10 @@ struct TablePlacement::Placed {
     // how many logical id slots are left in the current stage?
     int logical_ids_left() const {
         auto *p = this;
-        while (p && p->table->is_always_run_action())
-            p = p->prev;
+        for (; p; p = p->prev) {
+            if (p->table->is_always_run_action()) continue;
+            if (!Device::threadsSharePipe(table->gress, p->table->gress)) continue;
+            break; }
         if (!p || p->stage != stage)
             return StageUse::MAX_LOGICAL_IDS;
         int left = StageUse::MAX_LOGICAL_IDS - (p->logical_id % StageUse::MAX_LOGICAL_IDS);
@@ -487,8 +491,10 @@ static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) 
     StageUseEstimate    rv;
     if (pl) {
         int stage = pl->stage;
-        for (; pl && pl->stage == stage; pl = pl->prev)
-            rv += pl->use; }
+        gress_t gress = pl->table->gress;
+        for (; pl && pl->stage == stage; pl = pl->prev) {
+            if (!Device::threadsSharePipe(pl->table->gress, gress)) continue;
+            rv += pl->use; } }
     return rv;
 }
 
@@ -775,6 +781,9 @@ class DecidePlacement::PlacementScore {
             while (pl) {
                 if (pl->stage != init_stage)
                     break;
+                // FIXME -- should skip tables in other gress if it has its own pipe?
+                // or maybe always skip tables in other gress as they don't interact
+                // control-dependency wise.
 
                 // The "dep_stages_control_anti_split" variant was added to use previous table
                 // stages usage for a more accurate compute.
@@ -1098,6 +1107,8 @@ class DecidePlacement::FinalPlacement {
 
 namespace {
 class StageSummary {
+    // This seems inappropriate for flatrock, which has separate ingress and egress
+    // pipes, but they share tcams.
     std::unique_ptr<IXBar>      ixbar;
     std::unique_ptr<Memories>   mem;
  public:
@@ -1463,6 +1474,7 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
     next->resources.clear_ixbar();
     std::unique_ptr<IXBar> current_ixbar(IXBar::create());
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         current_ixbar->update(p->table, &p->resources);
     }
     current_ixbar->add_collisions();
@@ -1492,8 +1504,9 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
     }
 
     std::unique_ptr<IXBar> verify_ixbar(IXBar::create());
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev)
-        verify_ixbar->update(p->table, &p->resources);
+    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+        verify_ixbar->update(p->table, &p->resources); }
     verify_ixbar->update(next->table, &next->resources);
     verify_ixbar->verify_hash_matrix();
     LOG7(IndentCtl::indent << IndentCtl::indent);
@@ -1620,6 +1633,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
     next->resources.meter_xbar.reset();
 
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         current_adb->update(p->name, &p->resources, p->table);
     }
     if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_action_format(),
@@ -1647,6 +1661,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
 
     std::unique_ptr<ActionDataBus> adb_update(ActionDataBus::create());
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         adb_update->update(p->name, &p->resources, p->table);
     }
     adb_update->update(next->name, &next->resources, next->table);
@@ -1662,6 +1677,7 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
     next->resources.instr_mem.clear();
 
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         imem.update(p->name, &p->resources, p->table);
     }
 
@@ -1679,6 +1695,7 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
 
     InstructionMemory verify_imem;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         verify_imem.update(p->name, &p->resources, p->table);
     }
     verify_imem.update(next->name, &next->resources, next->table);
@@ -2057,6 +2074,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     std::vector<Placed *> whole_stage;
     error_message = "";
     // clone the already-placed tables in this stage so they can be re-placed
+    // TODO -- for Flatrock, memory allocation is global, so perhaps need all tables,
+    // not just those in this stage.  Or perhaps we defer memory alloc until after all
+    // table placement and don't need 'whole_stage' at all.
     for (const Placed **p = &rv->prev; *p && (*p)->stage == rv->stage; ) {
         auto clone = new Placed(**p);
         whole_stage.push_back(clone);
