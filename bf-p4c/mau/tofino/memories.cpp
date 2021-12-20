@@ -1229,7 +1229,6 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         // bubble) stashes are not required. We disable it for now.
         std::map<table_alloc*, int> table_alloc_ram_widths;
         for (auto *ta : exact_tables) {
-            auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
             for (auto u_id : ta->allocation_units()) {
                 auto &alloc = (*ta->memuse)[u_id];
                 for (auto mem_way : alloc.ways) {

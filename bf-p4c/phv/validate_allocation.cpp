@@ -426,14 +426,14 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         return true;
     };
     // TODO(yumin): there should be more conditions. pa_no_overlay and aliasingHeader?
-    auto allCanBeOverlaid = [&](const ordered_set<const PHV::Field*> fields) {
+    /*auto allCanBeOverlaid = [&](const ordered_set<const PHV::Field*> fields) {
         for (const auto* f : fields) {
             if (f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch()) {
                 return false;
             }
         }
         return true;
-    };
+    };*/
 
     // Check that we've marked a field as deparsed if and only if it's actually
     // emitted in the deparser.

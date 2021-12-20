@@ -854,7 +854,7 @@ struct AllocateParserState : public ParserTransform {
              * to a lookahead rather than an extract.  FIXME -- this is a guess */
             bool buffer_is_lookahead() {
                 for (auto t : sa.state->transitions)
-                    if (t->shift >= Device::pardeSpec().byteInputBufferSize())
+                    if (static_cast<int>(t->shift) >= Device::pardeSpec().byteInputBufferSize())
                         return false;
                 return !sa.state->transitions.empty(); }
 

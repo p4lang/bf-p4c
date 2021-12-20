@@ -52,7 +52,7 @@ std::ostream &operator<<(std::ostream &out, const Memories::Use::Way &w) {
     for (auto r : w.rams) {
         out << "[ " << r.first << ", " << r.second << " ] ";
     }
-    out << std::endl;
+    return out << std::endl;
 }
 
 Memories *Memories::create() { return new Tofino::Memories; }

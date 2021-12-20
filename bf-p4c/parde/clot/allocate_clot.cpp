@@ -645,14 +645,15 @@ class GreedyClotAllocator : public Visitor {
                 start->max_packet_bit_offset() <
                            Device::pardeSpec().byteTotalIngressMetadataSize()*8) {
                 if (start->slice()->size() >
-                   (Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
+                    static_cast<int>(Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
                     start->max_packet_bit_offset())) {
                     start->trim(0, Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
                                                       start->max_packet_bit_offset());
                 }
             } else if (start->slice()->field()->gress == EGRESS &&
                        start->max_packet_bit_offset() < 28 * 8) {
-                if (start->slice()->size() > 28 * 8 - start->max_packet_bit_offset()) {
+                if (start->slice()->size() >
+                    static_cast<int>(28 * 8 - start->max_packet_bit_offset())) {
                     start->trim(0, 28*8 - start->max_packet_bit_offset());
                 }
             }

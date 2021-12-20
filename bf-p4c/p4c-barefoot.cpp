@@ -360,7 +360,6 @@ int main(int ac, char **av) {
 
     // Dump frontend IR for p4i if debug (-g) was selected
     // Or if the --toJson was used
-    cstring irFilePath = nullptr;
     if (BackendOptions().debugInfo || options.dumpJsonFile) {
         // Dump file is either whatever --toJson specifies or a default one for p4i
         cstring irFilePath = options.dumpJsonFile ?

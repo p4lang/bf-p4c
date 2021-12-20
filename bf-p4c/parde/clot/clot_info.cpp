@@ -376,11 +376,12 @@ bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
 bool ClotInfo::is_slice_below_min_offset(const PHV::FieldSlice* slice,
                                          int max_packet_bit_offset) const {
     if (slice->field()->gress == INGRESS) {
-        if (max_packet_bit_offset < Device::pardeSpec().byteTotalIngressMetadataSize()*8) {
+        if (max_packet_bit_offset <
+            static_cast<int>(Device::pardeSpec().byteTotalIngressMetadataSize()*8)) {
             // If the size of the slice is greater than difference between HDR_LEN_ADJ and
             // max_packet_bit_offset, then the slice can be trimed later
-            if (slice->size() < (Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
-                                                             max_packet_bit_offset)) {
+            if (slice->size() < (static_cast<int>(
+                Device::pardeSpec().byteTotalIngressMetadataSize())*8 - max_packet_bit_offset)) {
                 return true;
             }
         }

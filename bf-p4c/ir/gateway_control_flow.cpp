@@ -22,7 +22,8 @@ std::set<cstring> BFN::GatewayControlFlow::gateway_earlier_tags() const {
     const Context *ctxt = nullptr;
     std::set<cstring> rv;
     if (auto *tbl = findContext<IR::MAU::Table>(ctxt)) {
-        for (size_t i = 0; i < ctxt->child_index && i < tbl->gateway_rows.size(); ++i)
+        for (int i = 0; i < ctxt->child_index &&
+                        i < static_cast<int>(tbl->gateway_rows.size()); ++i)
             rv.insert(tbl->gateway_rows[i].second); }
     return rv;
 }
