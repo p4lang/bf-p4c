@@ -246,6 +246,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
   common/check_for_unimplemented_features.cpp
+  common/check_uninitialized_read.cpp
   common/dump_pipe.cpp
   common/pragma/collect_global_pragma.cpp
   common/elim_unused.cpp
@@ -264,7 +265,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/slice.cpp
   common/size_of.cpp
   common/utils.cpp
-  common/check_uninitialized_read.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -274,6 +274,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/autoindent.h
   common/check_for_unimplemented_features.h
   common/check_header_refs.h
+  common/check_uninitialized_read.h
   common/pragma/collect_global_pragma.h
   common/debug_info.h
   common/elim_unused.h
@@ -294,7 +295,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/size_of.h
   common/table_printer.h
   common/utils.h
-  common/check_uninitialized_read.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 

@@ -1,9 +1,9 @@
 #ifndef BF_P4C_COMMON_CHECK_UNINITIALIZED_READ_H_
 #define BF_P4C_COMMON_CHECK_UNINITIALIZED_READ_H_
 
-#include "ir/ir.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "ir/ir.h"
 
 class CheckUninitializedRead : public Inspector {
  private:

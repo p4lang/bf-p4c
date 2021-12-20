@@ -50,6 +50,7 @@
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
 #include "bf-p4c/common/check_header_refs.h"
+#include "bf-p4c/common/check_uninitialized_read.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/flexible_packing.h"
@@ -100,7 +101,6 @@
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/finalize_physical_liverange.h"
-#include "bf-p4c/common/check_uninitialized_read.h"
 
 namespace BFN {
 
