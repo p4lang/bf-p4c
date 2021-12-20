@@ -789,6 +789,15 @@ bool CollectGatewayFields::compute_offsets() {
                     alloc_bytes[alloc_byte] = bytes;
                     ++bytes; }
             }); } }
+    // we collect slices that could be allocated to either bytes or bits here, then
+    // allocate the largest ones to the bytes and then try to pack any remaining ones
+    // into the bits
+    struct need_alloc_t {
+        const PHV::FieldSlice   *field;
+        info_t                  *info;
+        PHV::AllocSlice         slice;    // need a copy as the ref from foreach_byte is local
+    };
+    std::vector<need_alloc_t>                   need_alloc;
     for (auto *it : sort_by_size) {
         const PHV::FieldSlice &field = it->first;
         info_t &info = it->second;
@@ -824,26 +833,34 @@ bool CollectGatewayFields::compute_offsets() {
                     LOG5(sl << " already done via hash");
                     return; }
                 auto alloc_byte = std::make_pair(sl.container(), sl.container_slice().lo/8U);
-                bool duplicate = alloc_bytes.count(alloc_byte);
-                auto bit = (duplicate ? alloc_bytes.at(alloc_byte) : bytes) * 8U +
-                           sl.container_slice().lo % 8U;
-                info.offsets.emplace_back(bit, sl.field_slice());
-                field_bits.clrrange(sl.field_slice().lo, sl.width());
-                LOG5("  " << (duplicate ? "duplicate " : "") << "byte " << (bit/8) <<
-                     " " << field << ' ' << sl);
-                if (!duplicate) {
-                    alloc_bytes[alloc_byte] = bytes;
-                    if (bytes == Device::gatewaySpec().PhvBytes && bits == 0) {
-                        bits += sl.width();
-                    } else {
-                        ++bytes; } }
-            }); }
+                if (alloc_bytes.count(alloc_byte)) {
+                    auto bit = alloc_bytes.at(alloc_byte) * 8U + sl.container_slice().lo % 8U;
+                    info.offsets.emplace_back(bit, sl.field_slice());
+                    LOG5("  duplicate byte " << (bit/8) << " " << field << ' ' << sl);
+                } else {
+                    need_alloc.push_back({ &field, &info, sl }); }
+                field_bits.clrrange(sl.field_slice().lo, sl.width()); }); }
 #if 0
         // FIXME -- should check this, but sometimes this gets run when PHV allocation has failed
         // to allocate this field, in which case we don't want to crash here.
         BUG_CHECK(field_bits.empty(), "failed to cover all of %s in gateway", field);
 #endif
     }
+
+    std::stable_sort(need_alloc.begin(), need_alloc.end(),
+                     [](const need_alloc_t &a, const need_alloc_t &b) {
+                             return a.slice.width() > b.slice.width(); });
+    for (need_alloc_t &n : need_alloc) {
+        if (bytes < Device::gatewaySpec().PhvBytes) {
+            auto bit = (bytes * 8U) + (n.slice.container_slice().lo % 8U);
+            n.info->offsets.emplace_back(bit, n.slice.field_slice());
+            LOG5("  byte " << bytes << ' ' << *n.field << ' ' << n.slice);
+            ++bytes;
+        } else {
+            n.info->offsets.emplace_back(32 + bits, n.slice.field_slice());
+            LOG5("  bit " << bits << ' ' << *n.field << ' ' << n.slice);
+            bits += n.slice.width(); } }
+
     LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
     if (bytes > Device::gatewaySpec().PhvBytes) return false;
     if (bits > Device::gatewaySpec().HashBits) return false;
