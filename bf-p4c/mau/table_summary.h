@@ -114,6 +114,7 @@ class TableSummary: public MauInspector {
 
     int pipe_id;
     const DependencyGraph& deps;
+    const PhvInfo& phv;
 
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
@@ -127,11 +128,36 @@ class TableSummary: public MauInspector {
     /// Map of table pointers to the names used for communicating table placement information
     ordered_map<cstring, cstring> tableNames;
 
-    std::map<int, const IR::MAU::Table *>               order;
-    std::map<int, std::unique_ptr<IXBar>>               ixbar;
-    std::map<int, std::unique_ptr<Memories>>            memory;
-    std::map<int, std::unique_ptr<ActionDataBus>>       action_data_bus;
-    std::map<int, InstructionMemory>                    imems;
+    // Map of Global ID -> Table
+    std::map<int, const IR::MAU::Table *> order;
+    // Map of Stage -> All Tables in stage
+    std::map<int, std::set<const IR::MAU::Table *>> tables;
+    // Map of Field Name -> Map of Field Slice -> Map of Stage -> No. of IXBar
+    // Bytes
+    // E.g.
+    // { hdr.ipv4.dstAddr, {
+    //      { (0:31), {   // For Slice 0..31
+    //          { 1, 4 }, // Stage 1 has 4 bytes
+    //          { 2, 4 }  // Stage 2 has 4 bytes
+    //        }
+    //      }, { (32:47), { // For Slice 32..47
+    //          { 1, 2 },   // Stage 1 has 2 bytes
+    //          { 2, 4 }    // Stage 2 has 4 bytes
+    //         }
+    //      }
+    //   ...
+    //  }
+    std::map<cstring, std::map<le_bitrange, std::map<int, int>>> ixbarBytes;
+    // Map of Stage -> Input Xbar
+    std::map<int, std::unique_ptr<IXBar>> ixbar;
+    // Map of Stage -> Memories
+    std::map<int, std::unique_ptr<Memories>> memory;
+    // Map of Stage -> ActionDataBus
+    std::map<int, std::unique_ptr<ActionDataBus>> action_data_bus;
+    // Map of Stage -> InstructionMemory
+    std::map<int, InstructionMemory> imems;
+    // Map of Table Name -> logical id
+    std::map<cstring, unsigned> logical_ids;
 
     /// Sum of all resources being used for all stages on last pass
     StageUseEstimate allStages;
@@ -144,8 +170,14 @@ class TableSummary: public MauInspector {
     /// Prints the stage wise table placement.
     void printTablePlacement();
 
+    /// Populates ixbarBytes data structure with no. of input xbar bytes used
+    /// per field slice per stage
+    /// Note; Funciton uses table pointers which can get obsolete outside the
+    /// pass
+    void generateIxbarBytesInfo();
+
  public:
-    explicit TableSummary(int pipe_id, const DependencyGraph& dg);
+    explicit TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo &phv);
 
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.
@@ -174,6 +206,24 @@ class TableSummary: public MauInspector {
     state_t getActualState() const { return state; }
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
     StageUseEstimate getAllStagesResources() const { return allStages; }
+
+    // Returns a map of stage and bytes used on ixbar in that stage
+    // e.g. field f1 -
+    // Stage 1     -> 2 bytes (Normal)
+    // Stage 2 - 3 -> 1 byte  (Dark)
+    // Stage 4     -> 3 byte  (Normal)
+    // Map : {
+    // --------------------------
+    // Stage | No. of Ixbar Bytes
+    // --------------------------
+    //  1    |       2
+    //  2    |       1
+    //  3    |       1
+    //  4    |       3
+    // --------------------------
+    // }
+    std::map<int, int> findBytesOnIxbar(const PHV::FieldSlice &slice) const;
+    void printAllIxbarUsages(const PhvInfo *phv = nullptr) const;
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

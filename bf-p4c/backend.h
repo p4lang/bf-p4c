@@ -33,10 +33,11 @@ class Backend : public PassManager {
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     DeparserCopyOpt decaf;
-    /// Class that represents the backtracking point from table placement to PHV allocation.
-    MauBacktracker mau_backtracker;
+    /// Class that represents the resource allocation post table placement round
     TableSummary table_summary;
     TableAllocPass table_alloc;
+    /// Class that represents the backtracking point from table placement to PHV allocation.
+    MauBacktracker mau_backtracker;
     // Primitives Json Node, is populated before instruction adjustment and
     // passed to AsmOutput to output primitive json file
     Util::JsonObject primNode;

@@ -76,6 +76,28 @@ int TableResourceAlloc::rng_unit() const {
     return -1;
 }
 
+int TableResourceAlloc::findBytesOnIxbar(const PHV::FieldSlice& slice) const {
+    int bytesOnIxbar = 0;
+    if (match_ixbar)
+        bytesOnIxbar = match_ixbar->findBytesOnIxbar(slice);
+    if (bytesOnIxbar > 0) return bytesOnIxbar;
+    if (gateway_ixbar)
+        bytesOnIxbar = gateway_ixbar->findBytesOnIxbar(slice);
+    if (bytesOnIxbar > 0) return bytesOnIxbar;
+    if (proxy_hash_ixbar)
+        bytesOnIxbar = proxy_hash_ixbar->findBytesOnIxbar(slice);
+    if (bytesOnIxbar > 0) return bytesOnIxbar;
+    if (selector_ixbar)
+        bytesOnIxbar = selector_ixbar->findBytesOnIxbar(slice);
+    if (bytesOnIxbar > 0) return bytesOnIxbar;
+    if (salu_ixbar)
+        bytesOnIxbar = salu_ixbar->findBytesOnIxbar(slice);
+    if (bytesOnIxbar > 0) return bytesOnIxbar;
+    if (meter_ixbar)
+        bytesOnIxbar = meter_ixbar->findBytesOnIxbar(slice);
+    return bytesOnIxbar;
+}
+
 std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     // FIXME -- there's a huge amount of data in alloc -- what should we log?
     // this is a prime candidate for structured logging.

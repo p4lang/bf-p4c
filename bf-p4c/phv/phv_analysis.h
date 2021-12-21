@@ -121,6 +121,7 @@ class PHV_AnalysisPass : public Logging::PassManager {
     const PHV::Pragmas& get_pragmas() {
         return pragmas;
     }
+    void end_apply() override;
 };
 
 #endif  /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

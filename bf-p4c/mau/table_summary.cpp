@@ -45,12 +45,17 @@
  */
 
 #include "bf-p4c/mau/table_summary.h"
+
 #include <numeric>
+#include <boost/optional/optional_io.hpp>"
+
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/resource_estimate.h"
+#include "bf-p4c/ir/gress.h"
+
 #include "lib/hex.h"
 #include "lib/map.h"
 #include "lib/safe_vector.h"
@@ -62,7 +67,8 @@ void TableSummary::FinalizePlacement() {
     state = BFNContext::get().options().alt_phv_alloc ? ALT_FINALIZE_TABLE : FINAL_PLACEMENT;
 }
 
-TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg) : pipe_id(pipe_id), deps(dg) {
+TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo& phv)
+    : pipe_id(pipe_id), deps(dg), phv(phv) {
     state = BFNContext::get().options().alt_phv_alloc ? ALT_INITIAL : INITIAL;
     static std::set<int>        ids_seen;
     BUG_CHECK(ids_seen.count(pipe_id) == 0, "Duplicate pipe id %d", pipe_id);
@@ -81,10 +87,12 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     memory.clear();
     action_data_bus.clear();
     imems.clear();
+    tables.clear();
     tableAlloc.clear();
     internalTableAlloc.clear();
     tableNames.clear();
     mergedGateways.clear();
+    ixbarBytes.clear();
     maxStage = 0;
     ingressDone = false;
     egressDone = false;
@@ -96,7 +104,33 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     return rv;
 }
 
+void TableSummary::generateIxbarBytesInfo() {
+    LOG3("Generating All Input XBar Usages - STATE : " << state_name[state]);
+    for (auto &f : phv.get_all_fields()) {
+        le_bitrange bits(0, f.second.size - 1);
+        f.second.foreach_alloc(bits, [&](const PHV::AllocSlice& sl) {
+            auto fptr = sl.field();
+            auto fname = fptr->name;
+            auto frange = sl.field_slice();
+            auto fs = PHV::FieldSlice(fptr, frange);
+            auto bytesOnIxbar = findBytesOnIxbar(fs);
+            if (bytesOnIxbar.size() > 0) {
+                for (auto i : bytesOnIxbar) {
+                    auto stage = i.first;
+                    auto ixByt = i.second;
+                    ixbarBytes[fname][frange][stage] = ixByt;
+                    LOG5("\tAdding entry : " << fname << "-> ("
+                        << frange << ", (" << stage << ", " << ixByt << "))");
+                }
+            }
+        });
+    }
+}
+
 void TableSummary::end_apply() {
+    // Generate Input XBar Bytes per Field Slice per stage
+    generateIxbarBytesInfo();
+    printAllIxbarUsages();
     printTablePlacement();
     LOG2(*this);
     Logging::FileLog::close(tsLog);
@@ -115,7 +149,9 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
               "Encountering table multiple times in IR traversal");
     assert(order.count(*t->global_id()) == 0);
     order[*t->global_id()] = t;
-    LOG3("Table " << t->name);
+    logical_ids[t->name] = *t->logical_id;
+    LOG3("Table " << t->name << ", id: " << logical_ids[t->name]
+            << ", global id : " << t->global_id() << " stage: " << t->stage());
     tableNames[t->name] = getTableName(t);
     if (t->gateway_name) {
         mergedGateways[t->name] = t->gateway_name;
@@ -128,7 +164,8 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         if (!action_data_bus[t->stage()])
             action_data_bus[t->stage()].reset(ActionDataBus::create());
         action_data_bus[t->stage()]->update(t);
-        imems[t->stage()].update(t); }
+        imems[t->stage()].update(t);
+        tables[t->stage()].insert(t); }
     auto stage_pragma = t->get_provided_stage();
     if (t->match_table && t->stage_split <= 0 && stage_pragma >= 0 && t->stage() != stage_pragma) {
         // FIXME -- move to TablePlacement
@@ -365,6 +402,75 @@ void TableSummary::printTablePlacement() {
 
     tp.print();
     LOG1(ss.str());
+}
+
+std::map<int, int> TableSummary::findBytesOnIxbar(const PHV::FieldSlice &slice) const {
+    std::map<int, int> ixbarBytesPerStage;
+    for (auto &tstage : tables) {
+        auto tbl_stage = tstage.first;
+        for (auto &tbl : tstage.second) {
+            auto *tbl_res = tbl->resources;
+            if (!tbl_res) continue;
+            auto bytesOnIxbar = tbl_res->findBytesOnIxbar(slice);
+            if (bytesOnIxbar > 0) {
+                ixbarBytesPerStage[tbl_stage] = bytesOnIxbar;
+                LOG5("In stage " << tbl_stage << " on table " << tbl->name
+                    << " with Field Slice : " << slice
+                    << ", IxbarBytes : " << bytesOnIxbar);
+                break;
+            }
+        }
+    }
+
+    return ixbarBytesPerStage;
+}
+
+// Print all Input XBar usages on a per field per slice basis
+// Usages are determined on each stage the field slice is valid
+void TableSummary::printAllIxbarUsages(const PhvInfo *phv_i) const {
+    if (!LOGGING(3)) return;
+    LOG3("Printing All Input XBar Usages - STATE : " << state_name[state]);
+    if (!phv_i) phv_i = &phv;
+    std::stringstream ss;
+    std::vector<std::string> header;
+    header.push_back("FIELD NAME");
+    header.push_back("SLICE");
+    header.push_back("GRESS");
+    // auto deviceStages = Device::numStages();
+    auto deviceStages = maxStages() + 1;
+    for (auto i = 0; i < deviceStages; i++)
+        header.push_back(std::to_string(i));
+    TablePrinter tp(ss, header, TablePrinter::Align::CENTER);
+    for (auto &f : phv.get_all_fields()) {
+        le_bitrange bits(0, f.second.size - 1);
+        f.second.foreach_alloc(bits, [&](const PHV::AllocSlice& sl) {
+            auto fl = sl.field();
+            auto fn = fl->name;
+            auto fr = sl.field_slice();
+            auto fs = PHV::FieldSlice(fl, fr);
+            // auto bytesOnIxbar = findBytesOnIxbar(fs);
+            // auto bytesOnIxbar = ixbarBytes[sl.field()][sl.field_slice()];
+            if (ixbarBytes.count(fn) == 0) return;
+            auto fIxbarBytes = ixbarBytes.at(fn);
+            if (fIxbarBytes.count(fr) == 0) return;
+            auto bytesOnIxbar = fIxbarBytes.at(fr);
+            if (bytesOnIxbar.size() > 0) {
+                std::vector<std::string> row;
+                row.push_back(std::string(stripThreadPrefix(f.first.c_str())));
+                row.push_back(std::string("(" + std::to_string(fr.hi)
+                                        + ":" + std::to_string(fr.lo) + ")"));
+                row.push_back(std::string(toSymbol(f.second.gress).c_str()));
+                for (auto i = 0; i < deviceStages; i++)
+                    row.push_back("-");
+                for (auto i : bytesOnIxbar) {
+                    row[3 + i.first] = std::to_string(i.second);
+                }
+                tp.addRow(row);
+            }
+        });
+    }
+    tp.print();
+    LOG3(ss.str());
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {

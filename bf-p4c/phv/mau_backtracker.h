@@ -41,6 +41,13 @@ class MauBacktracker : public Backtrack {
     /// True if PHV allocation and table placement both fit in round 1.
     bool firstRoundFit = false;
 
+    /// TABLE PLACEMENT FIRST
+    /// Post Table Placement Round, table summary pass runs and populates all
+    /// resource allocation on a per stage basis. PHV Allocation Round can use this
+    /// information to assist in identifying PHV constraints associated with
+    /// input_xbar, live ranges etc.
+    const TableSummary *table_summary;
+
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override;
 
     /// This is the function that catches the backtracking exception from TableSummary. This should
@@ -79,13 +86,18 @@ class MauBacktracker : public Backtrack {
     /// @returns the number of stages in the table allocation
     int numStages() const;
 
+    /// @returns the Table Summary pointer
+    const TableSummary* get_table_summary() const { return table_summary; };
+
     /// Clear the MauBacktracker state.
     /// Only use when backtracking to a point where everything should be reset.
     /// We pass state back through this object in many cases -- don't clear in those cases.
     void clear();
 
-    /// Constructor takes mutually exclusive to be able to clear it before every PHV allocation pass
-    MauBacktracker() {}
+    /// Constructor takes mutually exclusive to be able to clear it before every
+    /// PHV allocation pass
+    explicit MauBacktracker(const TableSummary *table_summary = nullptr)
+        : table_summary(table_summary) {}
 };
 
 #endif /* BF_P4C_PHV_MAU_BACKTRACKER_H_ */

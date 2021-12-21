@@ -290,6 +290,14 @@ struct IXBar {
 
             bool can_add_info(const FieldInfo &fi) const;
             void add_info(const FieldInfo &fi);
+            bool has_field_slice(const PHV::FieldSlice& sl) const {
+                for (auto &fi : field_bytes) {
+                    if (fi.field == sl.field()->name
+                            && sl.range().overlaps(fi.lo, fi.hi))
+                        return true;
+                }
+                return false;
+            }
         };
         safe_vector<Byte>    use;
 
@@ -357,6 +365,17 @@ struct IXBar {
         virtual int search_buses_single() const;
         virtual int total_input_bits() const = 0;
         virtual void update_resources(int, BFN::Resources::StageResources &) const = 0;
+        int findBytesOnIxbar(const PHV::FieldSlice& sl) const {
+            int bytesOnIxbar = 0;
+            for (auto &u : use) {
+                for (auto &fi : u.field_bytes) {
+                    if (fi.field == sl.field()->name
+                            && sl.range().overlaps(fi.lo, fi.hi))
+                        ++bytesOnIxbar;
+                }
+            }
+            return bytesOnIxbar;
+        }
     };
 
     static HashDistDest_t dest_location(const IR::Node *node, bool precolor = false);

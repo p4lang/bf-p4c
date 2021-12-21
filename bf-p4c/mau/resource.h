@@ -54,6 +54,7 @@ struct TableResourceAlloc {
     bool has_tind() const;
     safe_vector<int> hash_dist_immed_units() const;
     int rng_unit() const;
+    int findBytesOnIxbar(const PHV::FieldSlice&) const;
 };
 
 std::ostream &operator<<(std::ostream &, const TableResourceAlloc &);

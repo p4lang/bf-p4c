@@ -153,6 +153,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     setName("PHV Analysis");
 }
 
+void PHV_AnalysisPass::end_apply() {
+    Logging::PassManager::end_apply();
+}
+
 namespace {
 
 class IncrementalPHVAllocPass : public Logging::PassManager {
