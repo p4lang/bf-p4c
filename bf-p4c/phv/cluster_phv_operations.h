@@ -55,6 +55,29 @@ class PHV_Field_Operations : public Inspector {
  private:
     PhvInfo &phv;
 
+    // Strip down version of input_xbar.cpp FindSaluSources
+    class Find_Salu_Sources : public Inspector {
+        const PhvInfo              &phv;
+
+        bool preorder(const IR::MAU::SaluAction *) override;
+        bool preorder(const IR::Expression *e) override;
+        bool preorder(const IR::MAU::HashDist *) override;
+        bool preorder(const IR::MAU::IXBarExpression *) override;
+        ///> In order to prevent any annotations, i.e. chain_vpn, and determining this as a source
+        bool preorder(const IR::Annotation *) override { return false; }
+        bool preorder(const IR::Declaration_Instance *) override { return false; }
+        bool preorder(const IR::MAU::Selector *) override { return false; }
+
+        static void collapse_contained(std::map<le_bitrange, const IR::Expression *> &m);
+
+     public:
+        explicit Find_Salu_Sources(const PhvInfo &phv): phv(phv) {}
+
+        ordered_map<const PHV::Field *, std::map<le_bitrange, const IR::Expression *>>
+                                                        phv_sources;
+        std::vector<const IR::MAU::IXBarExpression *>   hash_sources;
+    };
+
     void processSaluInst(const IR::MAU::Instruction*);
     void processInst(const IR::MAU::Instruction*);
     bool preorder(const IR::MAU::Instruction*) override;

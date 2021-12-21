@@ -34,6 +34,59 @@ const ordered_set<cstring> PHV_Field_Operations::SATURATE_OPS = {
     "ssubs"
 };
 
+bool PHV_Field_Operations::Find_Salu_Sources::preorder(const IR::MAU::SaluAction *a) {
+    visit(a->action, "action");  // just visit the action instructions
+    return false;
+}
+
+bool PHV_Field_Operations::Find_Salu_Sources::preorder(const IR::Expression *e) {
+    le_bitrange bits;
+    if (auto *finfo = phv.field(e, &bits)) {
+        if (!findContext<IR::MAU::IXBarExpression>()) {
+            phv_sources[finfo][bits] = e;
+            collapse_contained(phv_sources[finfo]);
+        }
+        return false;
+    }
+    return true;
+}
+
+bool PHV_Field_Operations::Find_Salu_Sources::preorder(const IR::MAU::HashDist *) {
+    // Handled in a different section
+    return false;
+}
+
+bool PHV_Field_Operations::Find_Salu_Sources::preorder(const IR::MAU::IXBarExpression *e) {
+    for (auto ex : hash_sources)
+        if (ex->equiv(*e))
+            return true;
+    hash_sources.push_back(e);
+    return true;
+}
+
+/* Remove ranges from the map if they are contained in some other range in the map. This is largely
+ * inspired from input_xbar.cpp FindSaluSources used to validate the PHV allocation. Modification
+ * from one function should probably be mirrored on the other. Currently the code does not seem to
+ * properly handle range overlap and assume that one of the two compared range include the other.
+ * If a range have overlap with another one, both will be kept intact and the
+ * max_total_operand_size might be overvalued triggering an unneeded alignment constraint.
+ */
+void PHV_Field_Operations::Find_Salu_Sources::collapse_contained(std::map<le_bitrange,
+                                                                 const IR::Expression *> &m) {
+    for (auto it = m.begin(); it != m.end();) {
+        bool remove = false;
+        for (auto &el : Keys(m)) {
+            if (el == it->first) continue;
+            if (el.contains(it->first)) {
+                remove = true;
+                break; }
+            if (el.lo > it->first.lo) break; }
+        if (remove)
+            it = m.erase(it);
+        else
+            ++it; }
+}
+
 void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     LOG4("Stateful instruction: " << inst);
     // SALU operands have the following constraints:
@@ -59,23 +112,29 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     BUG_CHECK(statefulAlu, "Found an SALU instruction not in a Stateful ALU IR node: %1%", inst);
     int sourceWidth = statefulAlu->source_width();
 
-    bool is_bitwise_op = BITWISE_OPS.count(inst->name);
-    if (!inst->operands.empty()) {
-        size_t max_total_operand_size = 0;
-        for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
-            le_bitrange field_bits;
-            PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
-            if (!field) continue;
-            if (field_bits.size() % 8 <= 1)
+    Find_Salu_Sources sources(phv);
+    statefulAlu->apply(sources);
+    size_t max_total_operand_size = 0;
+    for (auto &source : sources.phv_sources) {
+        auto field = source.first;
+        for (auto &range : Keys(source.second)) {
+            LOG4("\tStateful ALU Field:" << field << " range:" << range);
+            // Why do we round up like that?! I don't know.
+            if (range.size() % 8 <= 1)
                 // If the field is byte aligned or 1 bit larger than a byte aligned size,
                 // then round it up to the next byte-aligned bit size.
-                max_total_operand_size += (8 * ROUNDUP(field_bits.size(), 8));
+                max_total_operand_size += (8 * ROUNDUP(range.size(), 8));
             else
                 // If the field is more than 1 bit larger than a byte aligned size,
                 // then it may take up one byte more than the next byte-aligned size
                 // in the worst case.
-                max_total_operand_size += (8 * (ROUNDUP(field_bits.size(), 8) + 1));
+                max_total_operand_size += (8 * (ROUNDUP(range.size(), 8) + 1));
+            LOG4("\tStateful max_total_operand_size increased to:" << max_total_operand_size);
         }
+    }
+
+    bool is_bitwise_op = BITWISE_OPS.count(inst->name);
+    if (!inst->operands.empty()) {
         for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
             le_bitrange field_bits;
             PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
@@ -129,10 +188,14 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
             //
             if (max_total_operand_size <= SALU_HASH_SOURCE_LIMIT) continue;
             for (auto size : Device::phvSpec().containerSizes()) {
-                if (sourceWidth <= int(size))
+                if (sourceWidth <= int(size)) {
+                    LOG4("Setting Field:" << field << " setStartBits(" << size << ", bitvec(0, 1)");
                     field->setStartBits(size, bitvec(0, 1));
-                else
+                } else {
+                    LOG4("Setting Field:" << field << " setStartBits(" << size << ", bitvec(" <<
+                         int(idx * int(size)) << ", 1)");
                     field->setStartBits(size, bitvec(idx * int(size), 1)); } } }
+                }
 }
 
 void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
