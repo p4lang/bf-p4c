@@ -1015,6 +1015,7 @@ set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
   tna_pvs_multi_states
   tna_multi_prsr_programs_multi_pipes
   )
+
 ## Internal P4-16 Programs - compile-only
 set (P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY
   fr_test
@@ -1079,6 +1080,9 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   endif()
 endforeach()
 p4c_add_test_label("tofino" "need_python2" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes")
+
+ set_tests_properties("tofino/p4_16_programs_internal_misc1" PROPERTIES TIMEOUT 900)
+ set_tests_properties("tofino/p4_16_programs_internal_tna_pvs_multi_states" PROPERTIES TIMEOUT 900)
 
 # Compile-only internal P4-16 Programs
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY)
