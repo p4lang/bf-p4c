@@ -2101,3 +2101,11 @@ p4c_add_xfail_reason("tofino"
   p4c_4158
 )
 
+# needs switchd and/or compiler fix, more details in
+# https://github.com/intel-restricted/networking.switching.barefoot.bf-p4c-compilers/pull/5617#issuecomment-999475972
+p4c_add_xfail_reason("tofino"
+  "Timed out while waiting for switchd to be ready"
+  t2na_static_entry
+)
+
+
