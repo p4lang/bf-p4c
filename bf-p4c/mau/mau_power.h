@@ -88,7 +88,7 @@ class MauFeatures {
     */
   int get_max_selector_words(gress_t gress, int stage) const;
   /**
-    * @param gress The thread of compute.
+    * @param g     The thread of compute.
     * @param stage The MAU stage number, running 0 to n-1.
     * @return Stage dependency type to the previous MAU stage.
     */

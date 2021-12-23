@@ -147,10 +147,10 @@ struct AllocUtils {
     /// a cluster must be allocated to the same container group.
     static std::list<PHV::ContainerGroup *> make_device_container_groups();
 
-    /// clear alloc_slices allocated in @phv, if any.
+    /// clear alloc_slices allocated in @p phv, if any.
     static void clear_slices(PhvInfo& phv);
 
-    /// Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
+    /// Translate each AllocSlice in @p alloc into a PHV::Field::alloc_slice and
     /// attach it to the PHV::Field it slices.
     static void bind_slices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv);
 
@@ -434,7 +434,8 @@ class CoreAllocation {
             const PHV::Field* f,
             const ordered_set<PHV::AllocSlice>& slices);
 
-    /// @returns true if @f can overlay all fields in @slices in terms of physical liveranges.
+    /// @returns true if @p slice can overlay all fields in @p allocated in terms
+    /// of physical liveranges.
     bool can_physical_liverange_overlay(const PHV::AllocSlice& slice,
                                         const ordered_set<PHV::AllocSlice>& allocated) const;
 
@@ -538,6 +539,7 @@ class CoreAllocation {
      * @param super_cluster ???
      * @param start_positions a map. Keys are the field slices to be allocated. Values are the
      *                        corresponding conditional constraint on the field slice.
+     * @param score_ctx TODO
      */
     /// XXX(yumin): there is an assumption that only fieldslice of the slice list, shows up
     /// in the @p start_positions map (as there is no slice list passed as args).
@@ -841,7 +843,7 @@ class TrivialAllocStrategy {
  * field mutual exclusion information; and clusters.
  *
  * @post PhvInfo::Fields in \a phv are annotated with `alloc_slice` information
- * that assigns field slices to containers, or `::error` explains why PHV
+ * that assigns field slices to containers, or error explains why PHV
  * allocation was unsuccessful.
  */
 class AllocatePHV : public Visitor {
@@ -856,12 +858,12 @@ class AllocatePHV : public Visitor {
      */
     const IR::Node *apply_visitor(const IR::Node* root, const char *name = 0) override;
 
-    /// Throw a pretty-printed ::error when allocation fails due to resource constraints.
+    /// Throw a pretty-printed error when allocation fails due to resource constraints.
     void formatAndThrowError(
         const PHV::Allocation& alloc,
         const std::list<const PHV::SuperCluster *>& unallocated);
 
-    /// Throw a pretty-printed ::error when allocation fails due to
+    /// Throw a pretty-printed error when allocation fails due to
     /// unsatisfiable constraints.
     void formatAndThrowUnsat(const std::list<const PHV::SuperCluster *>& unallocated) const;
 

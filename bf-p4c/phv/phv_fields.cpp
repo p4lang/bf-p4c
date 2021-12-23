@@ -245,7 +245,7 @@ cstring PhvInfo::full_hdr_name(const cstring& name_) const {
     return cstring("");
 }
 
-/// Get all the fields of header named @name_ and store them in set @flds
+/// Get all the fields of header named @p name_ and store them in set @p flds
 /// ---
 void PhvInfo::get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const {
     const PhvInfo::StructInfo arr_info = struct_info(full_hdr_name(name_));

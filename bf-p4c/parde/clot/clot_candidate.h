@@ -87,11 +87,11 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
 
     const std::vector<const FieldSliceExtractInfo*>& extracts() const;
 
-    /// The indices into the vector returned by @ref extracts, corresponding to fields that can
+    /// The indices into the vector returned by @a extracts, corresponding to fields that can
     /// start a CLOT, in ascending order.
     const std::vector<unsigned>& can_start_indices() const;
 
-    /// The indices into the vector returned by @ref extracts, corresponding to fields that can end
+    /// The indices into the vector returned by @a extracts, corresponding to fields that can end
     /// a CLOT, in descending order.
     const std::vector<unsigned>& can_end_indices() const;
 

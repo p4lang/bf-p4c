@@ -7,13 +7,13 @@ bool PHV::Pragmas::gressValid(cstring gress) {
 
 /**
  * Check if valid combination of pipe and gress arguments is passed.
- * @param[in]     expr List of expressions
+ * @param[in]     exprs List of expressions
  * @param[in,out] expr_index Index of the first argument that is not pipe or gress
- * @param[in,out] min_required_arguments Minimal number of arguments without the pipe argument
+ * @param[in,out] required_args Minimal number of arguments without the pipe argument
  * @param[out]    pipe_arg Pointer to the pipe argument
  * @param[out]    gress_arg Pointer to the gress argument
- * @return Returns true if valid combination of pipe and gress arguments is found,
- *         false otherwise.
+ * @returns true if valid combination of pipe and gress arguments is found,
+ *          false otherwise.
  */
 bool PHV::Pragmas::determinePipeGressArgs(const IR::Vector<IR::Expression>& exprs,
         unsigned& expr_index, unsigned& required_args,
@@ -52,9 +52,9 @@ bool PHV::Pragmas::determinePipeGressArgs(const IR::Vector<IR::Expression>& expr
 
 /**
  * Check if all arguments of the pragma are string literals.
- * @param[in]     expr List of expressions
- * @return Returns true if all arguments of the pragma are string literals,
- *         false otherwise.
+ * @param[in]     exprs List of expressions
+ * @returns true if all arguments of the pragma are string literals,
+ *          false otherwise.
  */
 bool PHV::Pragmas::checkStringLiteralArgs(const IR::Vector<IR::Expression>& exprs) {
     for (auto& expr : exprs) {
@@ -103,9 +103,9 @@ bool PHV::Pragmas::checkNumberArgs(const IR::Annotation* annotation,
 
 /**
  * Check whether the pragma should be applied in the specified pipe.
+ * @param[in] annotation Pragma
  * @param[in] pipe Pipe IR argument
  * @param[in] pipe_arg Pipe argument delivered in the pragma
- * @param[in] pragma Pragma
  * @return Returns true if the pragma should be applied in the specified pipe,
  *         false otherwise.
  */

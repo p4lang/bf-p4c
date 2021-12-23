@@ -358,7 +358,7 @@ class Clustering : public PassManager {
         void solve_place_together_constraints();
 
         /// pack metadata fieldslices specified in pa_byte_pack and update their alignments
-        /// in PhvInfo. If there were any invalid packing layout, it will call ::error();
+        /// in PhvInfo. If there were any invalid packing layout, it will call \:\:error();
         void pack_pa_byte_pack_and_update_alignment();
 
         /// pack metadata fieldslices with pa_container_size pramgas into a slicelist.

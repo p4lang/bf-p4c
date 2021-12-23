@@ -2,6 +2,7 @@
 #include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/mau/table_layout.h"
 
+namespace MeterALU {
 
 /**
  * The purpose of this file is to determine the requirements of any LPF, WRED, or Stateful ALU
@@ -39,7 +40,6 @@
  * Multiple stateful ALU outputs can be OR’ed together onto the action data bus by configuring the
  * shift values the same across each stateful ALU.
  */
-namespace MeterALU {
 
 bool Format::Use::contains_adb_slot(ActionData::SlotType_t type, int start_byte) const {
     int bytes = ActionData::slot_type_to_bits(type) / 8;

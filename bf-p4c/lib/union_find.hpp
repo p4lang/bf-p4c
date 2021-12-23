@@ -94,22 +94,22 @@ class UnionFind {
         sets_i.erase(sets_i.find(smaller));
     }
 
-    /// @returns a canonical element of the set containing @x.
-    /// @exception if @x is not present.
+    /// @returns a canonical element of the set containing @p x.
+    /// @exception if @p x is not present.
     const T find(const T x) const {
         Set* internal = internalFind(x);
         return *internal->begin();
     }
 
-    /// @returns the size of the set containing @x.
-    /// @exception if @x is not present.
+    /// @returns the size of the set containing @p x.
+    /// @exception if @p x is not present.
     size_t sizeOf(const T x) {
         const Set* internal = internalFind(x);
         return internal->size();
     }
 
-    /// @returns a copy of the set containing @x.
-    /// @exception if @x is not present.
+    /// @returns a copy of the set containing @p x.
+    /// @exception if @p x is not present.
     Set* setOf(const T x) {
         const Set* internal = internalFind(x);
         auto* rv = new Set();
@@ -117,8 +117,8 @@ class UnionFind {
         return rv;
     }
 
-    /// @returns a copy of the set containing @x.
-    /// @exception if @x is not present.
+    /// @returns a copy of the set containing @p x.
+    /// @exception if @p x is not present.
     Set* setOf(const T x) const {
         const Set* internal = internalFind(x);
         auto* rv = new Set();

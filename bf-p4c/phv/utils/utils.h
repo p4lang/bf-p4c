@@ -243,7 +243,7 @@ class Allocation {
     /// @returns number of containers owned by this allocation.
     virtual size_t size() const = 0;
 
-    /// @returns true if this allocation owns @c.
+    /// @returns true if this allocation owns @p c.
     virtual bool contains(PHV::Container c) const = 0;
 
     /// @returns all the fields that must be initialized in action @p act.
@@ -374,12 +374,12 @@ class Allocation {
     /// @returns the container status of @c and fails if @c is not present.
     virtual GressAssignment gress(const PHV::Container& c) const;
 
-    /// @returns the gress of @c's parser group, if any.  If a container
+    /// @returns the gress of @p c's parser group, if any.  If a container
     /// holds extracted fields, then its gress must match that of its parser
     /// group.
     virtual GressAssignment parserGroupGress(PHV::Container c) const;
 
-    /// @returns the gress of @c's deparser group, if any.  If a container
+    /// @returns the gress of @p c's deparser group, if any.  If a container
     /// holds deparsed fields, then its gress must match that of its deparser
     /// group.
     virtual GressAssignment deparserGroupGress(PHV::Container c) const;
@@ -475,7 +475,7 @@ class ConcreteAllocation : public Allocation {
     /// @returns number of containers owned by this allocation.
     size_t size() const override { return container_status_i.size(); }
 
-    /// @returns true if this allocation owns @c.
+    /// @returns true if this allocation owns @p c.
     bool contains(PHV::Container c) const override;
 };
 
@@ -531,7 +531,7 @@ class Transaction : public Allocation {
     /// @returns number of containers owned by this allocation.
     size_t size() const override { return parent_i->size(); }
 
-    /// @returns true if this allocation owns @c.
+    /// @returns true if this allocation owns @p c.
     bool contains(PHV::Container c) const override { return parent_i->contains(c); }
 
     /// @returns a difference between the transaction and the parent.
@@ -1122,7 +1122,7 @@ class SuperCluster : public ClusterStats {
     /// @returns the total bits in a @p list paramter
     static int slice_list_total_bits(const SliceList& list);
 
-    /// @returns the vector of \ref le_bitrange instances identified for each \ref PHV::FieldSlice
+    /// @returns the vector of le_bitrange instances identified for each PHV::FieldSlice
     static std::vector<le_bitrange> slice_list_exact_containers(const SliceList& list);
 
     /// @returns true iff the slice list has any exact container inside

@@ -4348,7 +4348,7 @@ void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_t
                     map_inuse[r.row] &= ~(1 << col); } } }
 }
 
-void Memories::update(cstring name, const Memories::Use &alloc) {
+void Memories::update(cstring name, const Use &alloc) {
     visitUse(alloc, [name](cstring &use, update_type_t u_type) {
         if (use && use != name) {
             bool collision = true;
@@ -4370,7 +4370,7 @@ void Memories::update(const std::map<UniqueId, Use> &alloc) {
     for (auto &a : alloc) update(a.first.build_name(), a.second);
 }
 
-void Memories::remove(cstring name, const Memories::Use &alloc) {
+void Memories::remove(cstring name, const Use &alloc) {
     visitUse(alloc, [name](cstring &use, update_type_t) {
         if (use != name)
             BUG("Undo failure for %s", name);

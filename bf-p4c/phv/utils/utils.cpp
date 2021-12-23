@@ -621,7 +621,7 @@ PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& us
 : PHV::ConcreteAllocation::ConcreteAllocation(phv, uses, Device::phvSpec().physicalContainers())
 { }
 
-/// @returns true if this allocation owns @c.
+/// @returns true if this allocation owns @p c.
 bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
     return container_status_i.find(c) != container_status_i.end();
 }

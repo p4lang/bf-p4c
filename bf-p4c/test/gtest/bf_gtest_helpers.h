@@ -5,13 +5,12 @@
  *  See test-bf_getst_helper.cpp for example usage.
  */
 
-#include <boost/operators.hpp>
 #include <string>
 #include <vector>
 #include <iosfwd>
 #include <initializer_list>
 #include <regex>
-
+#include <boost/operators.hpp>
 #include "lib/compile_context.h"
 
 // Forward declarations.
@@ -201,8 +200,8 @@ class TestCode {
              std::string code,  ///< Program, with insertions points.
              const std::initializer_list<std::string>& insertion = {},  ///< Default: none.
              const std::string& blockMarker = "",  ///< Default: all code.
-             const std::initializer_list<std::string>& options = {});  ///< Default: P4_16,
-                        ///< tofino, tna (or tofinoX, tXna when using TofinoXarch header file)
+             /// Default: P4_16, tofino, tna (or tofinoX, tXna when using TofinoXarch header file)
+             const std::initializer_list<std::string>& options = {});
 
     /** See test_bf_gtest_helpers.cpp for example usage of 'TestControlBlock'.
      *  TestControlBlock() is a handy wrapper for testing minimal control block P4 programs.
@@ -211,6 +210,7 @@ class TestCode {
      *
      * @param defines   Must contain a definition of 'struct Headers'.
      * @param block     The code inserted into 'control testingress(inout Headers headers){%1%}'.
+     * @param header    Required header.
      */
     static TestCode TestControlBlock(const std::string& defines,
                                      const std::string& block,

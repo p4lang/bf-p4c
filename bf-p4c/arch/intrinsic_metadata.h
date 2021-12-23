@@ -188,7 +188,7 @@ static void addEgressMetadata(IR::BFN::TnaParser *parser,
 }
 
 /**
- * Rename possible P4 multientry start state (when @packet_entry was used).
+ * Rename possible P4 multientry start state (when \@packet_entry was used).
  */
 class RenameP4StartState : public Transform {
     bool found_start = false;

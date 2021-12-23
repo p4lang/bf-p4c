@@ -396,7 +396,7 @@ class CollectClotInfo : public Inspector {
     /// and collects the set of POV bits on which each field's emit is predicated.
     bool preorder(const IR::BFN::EmitChecksum* emit) override;
 
-    /// Uses @ref fields_to_pov_bits to identify pseudoheaders.
+    /// Uses @a fields_to_pov_bits to identify pseudoheaders.
     void postorder(const IR::BFN::Deparser* deparser) override;
 
     /// Helper.

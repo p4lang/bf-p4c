@@ -116,12 +116,11 @@ class BFNContext : public virtual P4CContext {
     /// Clear the backend options
     void clearBackendOptions();
 
-    /// Return a string that represents a path to an output directory:
+    /// @returns a string that represents a path to an output directory:
     /// options.outputDir + pipename + suffix
-    ///
-    /// If the @param pipe is not set (-1) return just options.outputDir.
+    /// If @p pipe_id is not set (-1) return just options.outputDir.
     /// No other files except for the manifest should be stored in the
-    /// root. If the the @param suffix is empty, return options.outputDir + pipename.
+    /// root. If @p suffix is empty, return options.outputDir + pipename.
     ///
     /// The structure of the output directory is:
     /// options.outputDir / manifest.json

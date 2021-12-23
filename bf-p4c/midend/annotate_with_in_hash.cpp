@@ -8,10 +8,10 @@ namespace BFN {
  * The function checks whether the combination of the key table presence and
  * default action is suitable for using a hash unit. It deals with the following errors:
  *
- * error: Cannot specify <action> as the default action, as it requires the hash distribution
+ * error: Cannot specify @p action as the default action, as it requires the hash distribution
  *        unit.
  *
- * error: The table <table> with no key cannot have the action <action>.  This action requires
+ * error: The table @p table with no key cannot have the action `<action>`.  This action requires
  *        hash, which can only be done through the hit pathway.  However, because the table has
  *        multiple actions, the driver may need to change at runtime, and the driver can only
  *        currently program the miss pathway.  The solution may be to declare only one action
@@ -48,11 +48,11 @@ bool DoAnnotateWithInHash::checkKeyDefaultAction(const IR::P4Control &control,
  * is the case of the \@in_hash unit applied to zero-extended operand.
  * The suitable structure is the following:
  *
- *   (0 ++ <op1>) <binop> <op2>
+ *   `(0 ++ <op1>) <binop> <op2>`
  *
- * In case <binop> is commutative, also the following case is suitable:
+ * In case `<binop>` is commutative, also the following case is suitable:
  *
- *   <op1> <binop> (0 ++ <op2>)
+ *   `<op1> <binop> (0 ++ <op2>)`
  *
  * Only (saturating) addition and (saturating) subtraction operations are supported
  * since other binary operations are treated in a different way and do not suffer

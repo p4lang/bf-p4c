@@ -398,7 +398,7 @@ class Field : public LiftLess<Field> {
     bool parsed() const                                    { return parsed_i; }
     void set_parsed(bool b)                                { parsed_i = b; }
     /// NB: Fields satisfying the deparsed constraint are not necessarily emitted. To determine
-    /// whether a field is emitted by the deparser onto the wire, see @ref emitted.
+    /// whether a field is emitted by the deparser onto the wire, see @a emitted_i.
     bool deparsed() const                                  { return deparsed_i; }
     void set_deparsed(bool b)                              { deparsed_i = b; }
 
@@ -517,7 +517,7 @@ class Field : public LiftLess<Field> {
 
     /** For each byte-aligned container byte of each allocated slice of this
      * field, construct an alloc_slice representing that allocated byte (or
-     * fraction thereof) and apply @fn to it, BUT ONLY if the container is NOT
+     * fraction thereof) and apply @p fn to it, BUT ONLY if the container is NOT
      * a TPHV container.
      *
      *  For example, suppose a 16b field (f) is allocated as follows:
@@ -578,9 +578,9 @@ class Field : public LiftLess<Field> {
             const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use) const;
 
-    /// Apply @fn to each PHV::AllocSlice within the specified @ctxt to which @this has been
-    /// allocated (if any). @ctxt can be one of ParserState, Table, Deparser, or
-    /// null for no filter. @use can be READ or WRITE. For now, the context is the
+    /// Apply @p fn to each PHV::AllocSlice within the specified @p ctxt to which this has been
+    /// allocated (if any). @p ctxt can be one of ParserState, Table, Deparser, or
+    /// null for no filter. @p use can be READ or WRITE. For now, the context is the
     /// entire pipeline, as PHV allocation is global.
     void foreach_alloc(le_bitrange r, const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
                        std::function<void(const PHV::AllocSlice&)> fn) const;
@@ -1482,19 +1482,19 @@ class PhvInfo {
     /// Clear the container_to_fields map
     void clear_container_to_fields() { container_to_fields.clear(); }
     /** Add new field to a container
-      * @param f, field stored within container c
-      * @param c, container to store field f
+      * @param f field stored within container @p c
+      * @param c container to store field @p f
       */
     void add_container_to_field_entry(const PHV::Container c, const PHV::Field *f);
 
-    /// @returns the set of fields assigned (partially or entirely) to @c
+    /// @returns the set of fields assigned (partially or entirely) to @p c
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
-    /// @returns the set of alloc slices assigned to a container @c.
+    /// @returns the set of alloc slices assigned to a container @p c.
     std::vector<PHV::AllocSlice>
         get_slices_in_container(const PHV::Container c) const;
 
-    /** @returns the set of alloc slices assigned to a container @c within a context.
+    /** @returns the set of alloc slices assigned to a container @p c within a context.
      *  The context is one of ParserState, Table/Stage, Deparser. A null context represents the
      *  entire pipeline.
      */

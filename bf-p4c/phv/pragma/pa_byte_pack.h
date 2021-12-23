@@ -9,7 +9,7 @@
 /// PragmaBytePack allows users and also other compiler passes to specify byte layouts
 /// of metadata for PHV allocation. The concept `byte layout` can be illustrated in the
 /// following example:
-/// Assume we have @pa_byte_pack(2, f1<4>, 1, f2<6>, f3<3>), (MSB to LSB)
+/// Assume we have \@pa_byte_pack(2, f1<4>, 1, f2<6>, f3<3>), (MSB to LSB)
 /// PHV allocation must allocate following 2 bytes to byte-aligned position of containers
 /// byte1: [f3, f2<6>[0:4]], byte2: [f2<6>[5:5], pad1<1>, f1<4>, pad0<2>] (LSB to MSB)
 /// Internally, we implement this feature by packing fields into a PHV::SuperCluster::SliceList

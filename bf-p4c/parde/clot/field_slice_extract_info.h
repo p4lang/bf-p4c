@@ -99,16 +99,19 @@ class FieldSliceExtractInfo {
     /// Trims the extract to a sub-slice.
     ///
     /// @param start_idx The start of the new slice, relative to the start of the old slice.
+    /// @param bits The number of bits.
     const FieldSliceExtractInfo* trim(int start_idx, int bits) const;
 
-    /// Removes any bytes that conflict with the given @arg candidate, returning the resulting list
+    /// Removes any bytes that conflict with the given @p candidate, returning the resulting list
     /// of FieldSliceExtractInfo instances, in the order in which they appear in the packet. More
     /// than one instance can result if conflicting bytes occur in the middle of the extract.
     ///
-    /// @param preGapBits The size, in bits, of the inter-CLOT gap required before the given
-    ///                   @arg candidate.
-    /// @param preGapBits The size, in bits, of the inter-CLOT gap required after the given
-    ///                   @arg candidate.
+    /// @param parserInfo  Parser info.
+    /// @param preGapBits  The size, in bits, of the inter-CLOT gap required before the given
+    ///                    @p candidate.
+    /// @param candidate   CLOT candidate.
+    /// @param postGapBits The size, in bits, of the inter-CLOT gap required after the given
+    ///                   @p candidate.
     std::vector<const FieldSliceExtractInfo*>*
     remove_conflicts(const CollectParserInfo& parserInfo,
                      int preGapBits,

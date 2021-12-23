@@ -106,8 +106,8 @@ class SimplePowerGraph {
     * Connects a parent Node to one or more child nodes via an Edge.
     * This function creates Node and Edge objects, if they do not already exist.
     * @param parent The unique representation of a parent logical table.
-    * @param activated. The set of unique IDs for what children this parent may
-    *                   activate next in the control flow.
+    * @param activated The set of unique IDs for what children this parent may
+    *                  activate next in the control flow.
     * @param edge_name A debug name to give the edge, to be used in dot display.
     */
   void add_connection(UniqueId parent, ordered_set<UniqueId> activated, cstring edge_name);

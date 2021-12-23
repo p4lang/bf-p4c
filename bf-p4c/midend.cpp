@@ -9,8 +9,8 @@
  * a shape that is easily translatable for the backend.
  *
  * The form of mid-end IR is the same as the form of front-end IR.
- * The passes from p4c are enclosed in the \ref P4 namespace while the passes
- * from bf-p4c are enclosed in the \ref BFN namespace.
+ * The passes from p4c are enclosed in the P4 namespace while the passes
+ * from bf-p4c are enclosed in the BFN namespace.
  * 
  * There are two main structures used across most of the passes:
  * * P4::ReferenceMap maps paths found within the IR to a declaration node for

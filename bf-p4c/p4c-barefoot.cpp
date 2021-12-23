@@ -41,6 +41,24 @@
  * and convert midend IR towards backend IR.
  */
 
+// The following comments of the namespaces are here to make sure they are present in Doxygen.
+/**
+ * @namespace BFN
+ * @brief The namespace encapsulating Barefoot/Intel-specific stuff
+ */
+/**
+ * @namespace IR
+ * @brief The namespace encapsulating IR node classes
+ */
+/**
+ * @namespace PHV
+ * @brief The namespace encapsulating PHV-related stuff
+ */
+/**
+ * @namespace Test
+ * @brief The namespace encapsulating test-related stuff
+ */
+
 #include <sys/stat.h>
 #include <unistd.h>
 #include <libgen.h>

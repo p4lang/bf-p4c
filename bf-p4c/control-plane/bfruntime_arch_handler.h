@@ -1560,7 +1560,7 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
     static constexpr int64_t defaultMaxGroupSize = 120;
 };
 
-/// Implements @ref BFRuntimeArchHandlerIface for the Tofino architecture. The
+/// Implements BFRuntimeArchHandlerIface for the Tofino architecture. The
 /// overridden methods will be called by the P4RuntimeSerializer to collect and
 /// serialize Tofino-specific symbols which are exposed to the control-plane.
 class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<Arch::TNA> {

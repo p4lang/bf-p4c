@@ -184,7 +184,7 @@ class PhvSpec {
      *
      * To generate the range [B10, B16), use `range(Kind::B, 10, 6)`.
      *
-     * @param kind The type of container.
+     * @param t The type of container.
      * @param start The index of first container in the range.
      * @param length The number of containers in the range. May be zero.
      */
@@ -213,11 +213,12 @@ class PhvSpec {
     /// @return the MAU group id for the container
     virtual unsigned mauGroupId(const PHV::Container &c) const = 0;
 
-    /// @return a pair <#groups, #containers per group> corresponding to the
+    /// @return a pair <em><\#groups, \#containers per group></em> corresponding to the
     /// PHV Type @p t
     const std::pair<int, int> mauGroupNumAndSize(const PHV::Type t) const;
 
-    /// @return a pair <#groups, #containers per group> corresponding to the PHV Type @p t.
+    /// @return a pair <em><\#groups, \#containers per group></em> corresponding
+    /// to the PHV Type @p t.
     const std::pair<int, int> deparserGroupNumAndSize(const PHV::Type t) const;
 
     /// @return the ID of tagalong collection that the container belongs to

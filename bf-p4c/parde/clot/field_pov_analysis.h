@@ -33,7 +33,7 @@ class FieldPovAnalysis : public Inspector {
     std::set<const IR::BFN::Parser*> parsers;
     std::map<const PHV::Field*, std::set<const PHV::Field*>> pov_to_fields;
 
-    /// Mapping of state to <field_vec and pov_vec>. Refer to above comment for more info.
+    /// Mapping of state to `<field_vec, pov_vec>`. Refer to above comment for more info.
     std::map<cstring, std::pair<bitvec, bitvec>> state_to_field_pov;
     bool preorder(const IR::BFN::Parser* parser) override;
     bool preorder(const IR::BFN::EmitField* emit) override;

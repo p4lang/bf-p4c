@@ -19,8 +19,8 @@ class Reachability {
  public:
     using Vertex = typename Graph::vertex_descriptor;
 
-    /// Determines whether vertex @v2 (described by the string @n2) is reachable from the vertex
-    /// @v1 (described by the string @n1).
+    /// Determines whether vertex @p v2 (described by the string @p n2) is reachable from the vertex
+    /// @p v1 (described by the string @p n1).
     bool canReach(Vertex v1, cstring n1, Vertex v2, cstring n2) {
         if (forwardsReachableVertices.empty()) recompute();
 
@@ -29,8 +29,8 @@ class Reachability {
         return forwardsReachableVertices.at(v1).getbit(v2);
     }
 
-    /// @returns a bitvec representing all vertices that are reachable from @v1 (described by the
-    /// string @n1) and can reach @v2 (described by the string @n2).
+    /// @returns a bitvec representing all vertices that are reachable from @p v1 (described by the
+    /// string @p n1) and can reach @p v2 (described by the string @p n2).
     bitvec reachableBetween(Vertex v1, cstring n1, Vertex v2, cstring n2) {
         if (forwardsReachableVertices.empty() || backwardsReachableVertices.empty()) recompute();
 
@@ -41,9 +41,9 @@ class Reachability {
         return forwardsReachableVertices.at(v1) & backwardsReachableVertices.at(v2);
     }
 
-    /// Clears reachability information so that it gets recomputed the next time @canReach is
+    /// Clears reachability information so that it gets recomputed the next time @a canReach is
     /// called. This should be called at least once whenever the underlying graph changes after any
-    /// call to @canReach.
+    /// call to @a canReach.
     void clear() {
         forwardsReachableVertices.clear();
         backwardsReachableVertices.clear();
@@ -96,8 +96,8 @@ class Reachability {
         }
     }
 
-    /// Helper for recompute(). If @reachMatrix indicates that @src can reach @mid, then the entry
-    /// for @src is updated with nodes reachable from @mid.
+    /// Helper for recompute(). If @p reachMatrix indicates that @p src can reach @p mid,
+    /// then the entry for @p src is updated with nodes reachable from @p mid.
     void recompute(std::map<Vertex, bitvec>& reachMatrix, Vertex src, Vertex mid) {
         // If we can't reach mid from src, don't bother going through dsts.
         if (!reachMatrix[src].getbit(mid)) return;

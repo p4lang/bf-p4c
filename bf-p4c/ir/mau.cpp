@@ -653,7 +653,7 @@ bool IR::MAU::Table::getAnnotation(cstring name, bool &val) const {
     return true;
 }
 
-bool IR::MAU::Table::getAnnotation(cstring name, ID &val) const {
+bool IR::MAU::Table::getAnnotation(cstring name, IR::ID &val) const {
     if (auto *expr = getExprAnnotation(name)) {
         if (auto v = expr->to<IR::StringLiteral>()) {
             val = *v;
@@ -664,7 +664,7 @@ bool IR::MAU::Table::getAnnotation(cstring name, ID &val) const {
     return false;
 }
 
-bool IR::MAU::Table::getAnnotation(cstring name, std::vector<ID> &val) const {
+bool IR::MAU::Table::getAnnotation(cstring name, std::vector<IR::ID> &val) const {
     if (!match_table) return false;
     bool rv = false;
     for (auto *annot : match_table->getAnnotations()->annotations) {

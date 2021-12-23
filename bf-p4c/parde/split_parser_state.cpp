@@ -77,9 +77,10 @@ struct SliceExtracts : public ParserModifier {
 
     SliceExtracts(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
 
-    /// Rewrites an extract so that it extracts exactly the slice specified by @arg le_low_idx and
-    /// @arg width, and marks the extract with the given @arg extract_type.
+    /// Rewrites an extract so that it extracts exactly the slice specified by @p le_low_idx and
+    /// @p width, and marks the extract with the given extract type.
     ///
+    /// @param extract extract to be rewritten.
     /// @param le_low_idx the little-endian index for the low end of the slice.
     /// @param width the width of the slice, in bits.
     template <class Extract>
