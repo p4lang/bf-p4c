@@ -27,6 +27,7 @@ usage() {
 install_prefix=/usr/local
 barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=OFF"
 enable_cb="-DENABLE_CLOUDBREAK=OFF"
+enable_fr="-DENABLE_FLATROCK=OFF"
 while [ $# -gt 0 ]; do
     case $1 in
         --build-dir)
@@ -51,6 +52,9 @@ while [ $# -gt 0 ]; do
         --enable-cb)
             enable_cb="-DENABLE_CLOUDBREAK=ON"
             ;;
+        --enable-fr)
+            enable_fr="-DENABLE_FLATROCK=ON"
+            ;;
 	-j)
             parallel_make="$2"
             shift;
@@ -74,8 +78,7 @@ $topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
                                    -DCMAKE_INSTALL_PREFIX=$install_prefix \
                                    -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF -DENABLE_UBPF=OFF \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
-                                   $enable_cb \
-                                   -DENABLE_FLATROCK=OFF \
+                                   $enable_cb $enable_fr \
                                    $enable_static \
                                    $barefoot_internal \
                                    -DENABLE_GTESTS=OFF

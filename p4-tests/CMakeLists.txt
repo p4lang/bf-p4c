@@ -55,7 +55,7 @@ if (ENABLE_TESTING)
   if (ENABLE_CLOUDBREAK)
     include(CloudbreakTests.cmake)
   endif()
-  if (ENAGBLE_FLATROCK)
+  if (ENABLE_FLATROCK)
     include(FlatrockTests.cmake)
   endif()
 

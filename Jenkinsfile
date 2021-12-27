@@ -425,7 +425,7 @@ node ('compiler-travis') {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 4,
-                            "ctest -R '^tofino3' -LE 'ptf|stf'"
+                            "ctest -R '^tofino3' -LE 'ptf'"
                         )
                     },
 

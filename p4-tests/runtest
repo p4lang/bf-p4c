@@ -183,6 +183,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -gdb           run p4c-barefoot under gdb"
         echo >&2 "   -tofino2       target tofino2 -- deprecate"
         echo >&2 "   -tofino3       target tofino3 -- deprecate"
+        echo >&2 "   -tofino5       target tofino5 -- deprecate"
         echo >&2 "   -nop4info      not generate p4info"
         echo >&2 "   -bfrt          generate the BF-RT JSON"
         echo >&2 "   -profile       switch-16 profile"
@@ -260,6 +261,8 @@ while [ $# -gt 1 ]; do
             toolsdevice="jbay"
         elif [[ $target =~ "tofino3" ]]; then
             toolsdevice="cb"
+        elif [[ $target =~ "tofino5" ]]; then
+            toolsdevice="fr"
         else
             echo "Unknown target $target"
             exit 1
@@ -285,6 +288,12 @@ while [ $# -gt 1 ]; do
         device="tofino3${TOFINO3_VARIANT}"
         toolsdevice="cb"
         testdir="tofino3${TOFINO3_VARIANT}"
+        ;;
+    -tofino5)
+        target="tofino5${TOFINO5_VARIANT}"
+        device="tofino5${TOFINO5_VARIANT}"
+        toolsdevice="fr"
+        testdir="tofino5${TOFINO5_VARIANT}"
         ;;
     -arch)
         arch=$2
