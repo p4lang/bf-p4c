@@ -16,6 +16,22 @@ void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v) {  // NOLINT(white
     m.push_back(s, std::move(v));
 }
 
+VECTOR(value_t) &VECTOR(value_t)::add(value_t &&v) {
+    VECTOR_add(*this, std::move(v));
+    return *this;
+}
+VECTOR(value_t) &VECTOR(value_t)::add(int v) {
+    value_t tmp{tINT, v};
+    VECTOR_add(*this, tmp);
+    return *this;
+}
+VECTOR(value_t) &VECTOR(value_t)::add(const char *v) {
+    value_t tmp{tSTR, -1};
+    tmp.s = const_cast<char *>(v);
+    VECTOR_add(*this, tmp);
+    return *this;
+}
+
 /** check a value and see if it is a list of maps -- if so, concatenate the
  * maps into a single map and replace the list with that */
 void collapse_list_of_maps(value_t &v, bool singleton_only) {

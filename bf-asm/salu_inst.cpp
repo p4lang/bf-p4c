@@ -21,6 +21,7 @@ struct operand {
         virtual bool equiv(const Base *) const = 0;
         virtual const char *kind() const = 0;
         virtual Base *lookup(Base *&) { return this; }
+        virtual bool phvRead(std::function<void(const ::Phv::Slice &sl)>) { return false; }
         virtual void pass1(StatefulTable *) { }
     } *op;
     struct Const : public Base {
@@ -87,6 +88,9 @@ struct operand {
         int phv_index(StatefulTable *tbl) override {
             int base = options.target == TOFINO ? 8 : 0;
             return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > base; }
+        bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+            fn(*reg);
+            return true; }
     };
     // Operand which directly accesses phv(hi/lo) from Input Xbar
     struct PhvRaw : public Phv {
@@ -118,6 +122,7 @@ struct operand {
                 error(lineno, "slice out of range for %d byte value", size);
             tbl->phv_byte_mask |= mask << (size * pi); }
         int phv_index(StatefulTable *tbl) override { return pi; }
+        bool phvRead(std::function<void(const ::Phv::Slice &sl)>) override { return true; }
     };
     struct Memory : public Base {
         Table                     *tbl;
@@ -155,6 +160,8 @@ struct operand {
     explicit operator bool() const { return op != 0; }
     bool operator==(operand &a) {
         return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
+        return op ? op->lookup(op)->phvRead(fn) : false; }
     void dbprint(std::ostream &out) const {
         if (neg) out << '-';
         if (op)
@@ -176,6 +183,7 @@ struct operand::MathFn : public Base {
             return of.op == a->of.op;
         } else { return false; } }
     const char *kind() const override { return "math fn"; }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return of->phvRead(fn); }
     void pass1(StatefulTable *tbl) override { of->pass1(tbl); }
 };
 
@@ -239,8 +247,6 @@ enum salu_slot_use {
 struct SaluInstruction : public Instruction {
     explicit SaluInstruction(int lineno): Instruction(lineno) {}
     // Stateful ALU's dont access PHV's directly
-    void phvRead(std::function<void(const Phv::Slice &sl)>) final {};
-    bool salu_output() const override { return slot >= ALUOUT; }
     static int decode_predicate(const value_t &exp);
 };
 
@@ -315,7 +321,10 @@ struct AluOP : public SaluInstruction {
     std::string name() override { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *)  override { }
+    bool salu_alu() const override { return true; }
     bool equiv(Instruction *a_) override;
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+        return srca.phvRead(fn) | srcb.phvRead(fn); }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name << " pred=0x" << hex(predication_encode)
             << " " << (dest ? "hi" : "lo") << ", " << srca << ", " << srcb; }
@@ -474,6 +483,14 @@ Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     if (srcb) srcb->pass1(tbl);
     return this; }
 
+Instruction *genNoop(StatefulTable *tbl, Table::Actions::Action *act) {
+    VECTOR(value_t) args = EMPTY_VECTOR_INIT;
+    args.add("or").add("lo").add(0).add(tbl->format->begin()->first.c_str());
+    auto *rv = Instruction::decode(tbl, act, args);
+    VECTOR_fini(args);
+    return rv;
+}
+
 struct BitOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
         std::string name;
@@ -488,7 +505,9 @@ struct BitOP : public SaluInstruction {
     std::string name() override { return opc->name; };
     Instruction *pass1(Table *, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *, Table::Actions::Action *) override { }
+    bool salu_alu() const override { return true; }
     bool equiv(Instruction *a_) override;
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override { return false; }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
@@ -537,6 +556,12 @@ struct CmpOP : public SaluInstruction {
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+        bool rv = false;
+        if (srca) rv |= srca->phvRead(fn);
+        if (srcb) rv |= srcb->phvRead(fn);
+        if (srcc) rv |= srcc->phvRead(fn);
+        return rv; }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name << " cmp" << slot;
         if (srca) {
@@ -661,6 +686,8 @@ struct TMatchOP : public SaluInstruction {
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+        return srcb ? srcb->phvRead(fn) : false; }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name << " cmp" << slot;
         if (srca) out << ", " << *srca;
@@ -766,12 +793,25 @@ struct OutOP : public SaluInstruction {
 #endif  /* HAVE_JBAY */
     operand::Phv *output_operand = 0;
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void decode_output_mux, (register_type, value_t &op))
+    void decode_output_mux(value_t &op) {
+        SWITCH_FOREACH_TARGET(options.target, decode_output_mux(TARGET(), op);); }
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, int decode_output_option, (register_type, value_t &op))
+    int decode_output_option(value_t &op) {
+        SWITCH_FOREACH_TARGET(options.target, return decode_output_option(TARGET(), op);); }
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, bool output_mux_is_phv, (register_type))
+    bool output_mux_is_phv() {
+        SWITCH_FOREACH_TARGET(options.target, return output_mux_is_phv(TARGET());); }
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
+    bool salu_output() const override { return true; }
     bool equiv(Instruction *a_) override;
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+        bool rv = output_mux_is_phv();
+        if (output_operand)
+            rv |= output_operand->phvRead(fn);
+        return rv; }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: output " << "pred=0x" << hex(predication_encode)
 #if HAVE_JBAY
@@ -828,7 +868,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 #endif  /* HAVE_JBAY */
     // Check mux operand
     if (idx < op.size) {
-        SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]););
+        rv->decode_output_mux(op[idx]);
         if (rv->output_mux < 0) {
             operand src(tbl, act, op[idx], true);
             if ((rv->output_operand = src.to<operand::Phv>()))
@@ -841,9 +881,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         error(rv->lineno, "too few operands for %s instruction", op[0].s);
     }
     while (idx < op.size) {
-        int err = 0;
-        SWITCH_FOREACH_TARGET(options.target, err = rv->decode_output_option(TARGET(), op[idx]););
-        if (err < 0) break;
+        if (rv->decode_output_option(op[idx]) < 0) break;
         ++idx; }
     if (idx < op.size)
         error(rv->lineno, "too many operands for %s instruction", op[0].s);
@@ -869,6 +907,31 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
         tbl->output_lmatch = this; }
 #endif  /* HAVE_JBAY */
     return this; }
+
+/* There's a problem in the SALU hardware where, if the output from the SALU is reading
+ * from the phv input to the SALU, but the phv input is not otherwise used (in any CMP
+ * or regular ALU), then the SALU outputs 0 instead of the correct value.  This was identified
+ * as P4C-4138 and we're guessing that the hardware is incorrectly turning off some bus to
+ * save power in this case.  For now, we have a workaround where when we detect this case,
+ * we insert an extra comparison with phv_lo (which is unused) that avoids the problem.
+ * If there are no spare CMP ALUs, we'll fail here -- we could probably do something with
+ * a spare regular ALU in that case, if there was one */
+Instruction *p4c4138_workaround(StatefulTable *tbl, Table::Actions::Action *act) {
+    unsigned avail_cmp = (1U << Target::STATEFUL_CMP_UNITS()) - 1;
+    for (auto *inst : act->instr)
+        if (auto *cmp = dynamic_cast<CmpOP *>(inst))
+            avail_cmp &= ~(1U << (cmp->slot - CMP0));
+    if (avail_cmp) {
+        char pred[8];
+        snprintf(pred, sizeof(pred), "cmp%d", ffs(avail_cmp) - 1);
+        VECTOR(value_t) args = EMPTY_VECTOR_INIT;
+        args.add("geq.u").add(pred).add("phv_lo").add(0);
+        auto *rv = Instruction::decode(tbl, act, args);
+        VECTOR_fini(args);
+        return rv; }
+    error(act->lineno, "Can't find an available cmp ALU for hardware SALU workaround");
+    return nullptr;
+}
 
 #include "tofino/salu_inst.cpp"         // NOLINT(build/include)
 #if HAVE_JBAY

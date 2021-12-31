@@ -51,10 +51,12 @@ struct MinMax : public SaluInstruction {
     std::string name() override { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override;
+    bool salu_alu() const override { return true; }
     bool equiv(Instruction *a_) override {
         if (auto *a = dynamic_cast<MinMax *>(a_))
             return opc == a->opc && phv == a->phv && mask == a->mask && postmod == a->postmod;
         return false; }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)>) override { return phv; }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name << (phv ? "phv, " : "mem, ") << mask;
         if (postmod) out << ", " << postmod; }
@@ -401,6 +403,7 @@ int OutOP::decode_output_option(Target::JBay, value_t &op) {
     }
     return 0;
 }
+bool OutOP::output_mux_is_phv(Target::JBay) { return output_mux == 2 || output_mux == 3; }
 
 template<>
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {

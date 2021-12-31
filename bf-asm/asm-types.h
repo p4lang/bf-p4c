@@ -45,15 +45,17 @@ extern const char *value_type_desc[];
 struct value_t;
 struct pair_t;
 #ifdef __cplusplus
-DECLARE_VECTOR3(value_t, value_t,
+DECLARE_VECTOR(value_t,
     value_t &operator[](int) const;
     value_t &back() const;
     value_t *begin() const { return data; }
     value_t *end() const;
     value_t &front() const;
+    VECTOR(value_t) &add(value_t &&);
+    VECTOR(value_t) &add(int);
+    VECTOR(value_t) &add(const char *);
 )
-DECLARE_VECTOR3(pair_t, pair_t,
-public:
+DECLARE_VECTOR(pair_t,
     void push_back(const char *, value_t &&);  // NOLINT(whitespace/operators)
     pair_t &operator[](int) const;
     pair_t *operator[](const char *) const;
@@ -316,7 +318,7 @@ class MapIterChecked {
         bool operator==(iter &a) const { return p == a.p; }
         iter &operator++() { p++; check(); return *this; } };
 
-public:
+ public:
     explicit MapIterChecked(const VECTOR(pair_t) &map_, bool o=false,
                             const std::set<std::string> &dup = {})
     : map(map_), allow(o), duplicates_allowed(dup) {}

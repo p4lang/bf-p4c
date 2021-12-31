@@ -17,7 +17,9 @@ struct Instruction {
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;
     virtual bool salu_output() const { return false; }
-    virtual void phvRead(std::function<void(const Phv::Slice &sl)>) = 0;
+    virtual bool salu_alu() const { return false; }
+    virtual bool phvRead(std::function<void(const Phv::Slice &sl)>) = 0;
+    bool phvRead() { return phvRead([](const Phv::Slice &sl){}); }
 #define VIRTUAL_TARGET_METHODS(TARGET) \
     virtual void write_regs(Target::TARGET::mau_regs &, Table *, Table::Actions::Action *) = 0;
     FOR_ALL_REGISTER_SETS(VIRTUAL_TARGET_METHODS)

@@ -299,6 +299,7 @@ int OutOP::decode_output_option(Target::Cloudbreak, value_t &op) {
     }
     return 0;
 }
+bool OutOP::output_mux_is_phv(Target::Cloudbreak) { return output_mux == 2 || output_mux == 3; }
 
 template<>
 void OutOP::write_regs(Target::Cloudbreak::mau_regs &regs, Table *tbl_,

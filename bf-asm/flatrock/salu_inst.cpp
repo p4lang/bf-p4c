@@ -67,3 +67,8 @@ int OutOP::decode_output_option(Target::Flatrock, value_t &op) {
     BUG("TBD");
     return 0;
 }
+
+bool OutOP::output_mux_is_phv(Target::Flatrock) {
+    BUG("TBD");
+    return false;
+}

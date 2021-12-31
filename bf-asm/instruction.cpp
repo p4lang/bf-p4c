@@ -81,7 +81,7 @@ struct operand {
         virtual unsigned bitoffset(int group) const { return 0; }
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
-        virtual void phvRead(std::function<void(const ::Phv::Slice &sl)>) {}
+        virtual bool phvRead(std::function<void(const ::Phv::Slice &sl)>) { return false; }
         /** pass1 called as part of pass1 processing of stage
          * @param tbl table containing the action with the instruction with this operand
          * @param group mau PHV group of the ALU (dest) for this instruction */
@@ -146,7 +146,9 @@ struct operand {
         void pass1(Table *tbl, int) override {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void dbprint(std::ostream &out) const override { out << reg; }
-        void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override { fn(*reg); }
+        bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+            fn(*reg);
+            return true; }
     };
     struct Action : Base {
         /* source referring to either an action data or immediate field OR an attached table
@@ -475,7 +477,8 @@ struct operand {
     unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { op->lookup(op)->phvRead(fn); }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
+        return op->lookup(op)->phvRead(fn); }
     int bits(int group, int dest_size = -1) { return op->lookup(op)->bits(group, dest_size); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
     Base *operator->() { return op->lookup(op); }
@@ -635,9 +638,11 @@ struct AluOP : VLIWInstruction {
         if (!ignoreSrc2) src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
-        if (!ignoreSrc1) src1.phvRead(fn);
-        if (!ignoreSrc2) src2.phvRead(fn); }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
+        bool rv = false;
+        if (!ignoreSrc1) rv |= src1.phvRead(fn);
+        if (!ignoreSrc2) rv |= src2.phvRead(fn);
+        return rv; }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
 };
@@ -783,7 +788,7 @@ struct LoadConst : VLIWInstruction {
     void pass2(Table *, Table::Actions::Action *) {}
     int encode() { return Target::encodeConst(src); }
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override { return false; }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
 };
@@ -870,11 +875,15 @@ struct CondMoveMux : VLIWInstruction {
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
-        if (cond & 1) fn(*dest);
-        src1.phvRead(fn);
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
+        bool rv = false;
+        if (cond & 1) {
+            fn(*dest);
+            rv = true; }
+        rv |= src1.phvRead(fn);
         if (!opc->src2opt || (cond & 4))
-            src2.phvRead(fn); }
+            rv |= src2.phvRead(fn);
+        return rv; }
     void dbprint(std::ostream &out) const {
         out << "INSTR: cmov " << dest << ", " << src1 << ", " << src2; }
 };
@@ -963,9 +972,8 @@ struct ByteRotateMerge : VLIWInstruction {
     }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
-        src1.phvRead(fn); src2.phvRead(fn);
-    }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
+        return src1.phvRead(fn) | src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: byte_rotate_merge " << dest << ", " << src1 << ", " << src2 << " "
             << byte_mask;
@@ -1082,8 +1090,8 @@ struct DepositField : VLIWInstruction {
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
-        src1.phvRead(fn); src2.phvRead(fn); }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
+        return src1.phvRead(fn) | src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: deposit_field " << dest << ", " << src1 << ", " << src2; }
 };
@@ -1176,7 +1184,7 @@ struct Set : VLIWInstruction {
     void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return src.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
 };
@@ -1266,7 +1274,7 @@ struct NulOP : VLIWInstruction {
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return false; }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << " " << dest; }
 };
@@ -1329,8 +1337,8 @@ struct ShiftOP : VLIWInstruction {
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
-        src1.phvRead(fn); src2.phvRead(fn); }
+    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
+        return src1.phvRead(fn) | src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << shift; }
 };
@@ -1458,12 +1466,7 @@ std::unique_ptr<Instruction> genNoopFill(Table *tbl, Table::Actions::Action *act
                                          const char *op, int slot) {
     VECTOR(value_t) args;
     VECTOR_init(args, 3);
-    value_t tmp{tSTR, -1};
-    tmp.s = const_cast<char *>(op);
-    VECTOR_add(args, tmp);
-    tmp.s = const_cast<char *>(Phv::reg(slot)->name);
-    VECTOR_add(args, tmp);
-    VECTOR_add(args, tmp);
+    args.add(op).add(Phv::reg(slot)->name).add(Phv::reg(slot)->name);
     std::unique_ptr<Instruction> rv(Instruction::decode(tbl, act, args));
     VECTOR_fini(args);
     return rv;

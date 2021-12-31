@@ -6,21 +6,17 @@
 
 #define CAT(A, B)        A##B
 #define VECTOR(NAME)    CAT(NAME, _VECTOR)
-#define DECLARE_VECTOR(TYPE)            \
-typedef struct {                        \
-    int         capacity, size;         \
-    TYPE        *data;                  \
+#define DECLARE_VECTOR(TYPE, ...)               \
+typedef struct CAT(TYPE, _VECTOR) {             \
+    int         capacity, size;                 \
+    TYPE        *data;                          \
+    __VA_ARGS__                                 \
 } CAT(TYPE, _VECTOR);
-#define DECLARE_VECTOR2(NAME, ELTYPE)   \
-typedef struct {                        \
-    int         capacity, size;         \
-    ELTYPE      *data;                  \
-} CAT(NAME, _VECTOR);
-#define DECLARE_VECTOR3(NAME, ELTYPE, EXTRA)    \
-typedef struct {                        \
-    int         capacity, size;         \
-    ELTYPE      *data;                  \
-    EXTRA                               \
+#define DECLARE_VECTOR2(NAME, ELTYPE, ...)      \
+typedef struct CAT(NAME, _VECTOR) {             \
+    int         capacity, size;                 \
+    ELTYPE      *data;                          \
+    __VA_ARGS__                                 \
 } CAT(NAME, _VECTOR);
 
 #define RAW(X)          X

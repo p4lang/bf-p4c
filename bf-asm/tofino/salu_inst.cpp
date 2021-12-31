@@ -146,6 +146,7 @@ void OutOP::decode_output_mux(Target::Tofino, value_t &op) {
         output_mux = -1;
 }
 int OutOP::decode_output_option(Target::Tofino, value_t &op) { return -1; }
+bool OutOP::output_mux_is_phv(Target::Tofino) { return output_mux == 2 || output_mux == 3; }
 
 template<>
 void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
