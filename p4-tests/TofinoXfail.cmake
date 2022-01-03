@@ -237,6 +237,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/ucloud/COMPILER-1042/uxr.p4
   ../glass/testsuite/p4_tests/ucloud/COMPILER-1045/case6975.p4
   ../glass/testsuite/p4_tests/zte/COMPILER-594/comp594.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1902,12 +1903,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-dpdk-externs.p4
 )
 
-# P4C-3698
-p4c_add_xfail_reason("tofino"
-  "error: PHV allocation produced following overlapping slices of field .* that are simultaneously live in the MAU pipeline|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
-)
-
 # P4C-3765
 p4c_add_xfail_reason("tofino"
   "error: Value used in select statement needs to be set from input packet"
@@ -2106,6 +2101,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Timed out while waiting for switchd to be ready"
   t2na_static_entry
+)
+
+p4c_add_xfail_reason("tofino"
+  "No phv record"
+  extensions/p4_tests/p4_14/compile_only/p4c-4090.p4
 )
 
 
