@@ -76,24 +76,22 @@ struct IXBar : public ::IXBar {
     static constexpr auto PARITY_DISABLED = ::IXBar::PARITY_DISABLED;
 
     /** IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
-     * to record the name of the field it will be getting and the bit offset within the field.
-     * cstrings here are field names as used in PhvInfo (so PhvInfo::field can be used to find
-     * out details about the field)
+     * to record the container it will be getting and the bit offset within the container.
      * NOTE: Changes here require changes to .gdbinit pretty printer */
-    Alloc2D<std::pair<cstring, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>       exact_use;
-    Alloc2D<std::pair<cstring, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>   ternary_use;
-    Alloc1D<std::pair<cstring, int>, BYTE_GROUPS>                               byte_group_use;
-    Alloc2Dbase<std::pair<cstring, int>> &use(bool ternary) {
+    Alloc2D<std::pair<PHV::Container, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>     exact_use;
+    Alloc2D<std::pair<PHV::Container, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP> ternary_use;
+    Alloc1D<std::pair<PHV::Container, int>, BYTE_GROUPS>                             byte_group_use;
+    Alloc2Dbase<std::pair<PHV::Container, int>> &use(bool ternary) {
         if (ternary) return ternary_use;
         return exact_use; }
-    /* reverse maps of the above, mapping field names to sets of group+byte */
-    std::multimap<cstring, Loc>         exact_fields;
-    std::multimap<cstring, Loc>         ternary_fields;
-    std::multimap<cstring, Loc> &fields(bool ternary) {
+    /* reverse maps of the above, mapping containers sets of group+byte */
+    std::multimap<PHV::Container, Loc>         exact_fields;
+    std::multimap<PHV::Container, Loc>         ternary_fields;
+    std::multimap<PHV::Container, Loc> &fields(bool ternary) {
         return ternary ? ternary_fields : exact_fields; }
 
-    // map from field names to tables that use those fields (mostly for debugging)
-    std::map<cstring, std::set<cstring>>        field_users;
+    // map from container to tables that use those fields (mostly for debugging)
+    std::map<PHV::Container, std::set<cstring>>        field_users;
 
     /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure?
      * strings here are table names
@@ -118,9 +116,10 @@ struct IXBar : public ::IXBar {
 
     /* API for unit tests */
  public:
-    Alloc2Dbase<std::pair<cstring, int>> &get_exact_use() { return exact_use; }
-    Alloc2Dbase<std::pair<cstring, int>> &get_ternary_use() { return ternary_use; }
-    Alloc1D<std::pair<cstring, int>, BYTE_GROUPS> &get_byte_group_use() { return byte_group_use; }
+    Alloc2Dbase<std::pair<PHV::Container, int>> &get_exact_use() { return exact_use; }
+    Alloc2Dbase<std::pair<PHV::Container, int>> &get_ternary_use() { return ternary_use; }
+    Alloc1D<std::pair<PHV::Container, int>, BYTE_GROUPS> &get_byte_group_use() {
+        return byte_group_use; }
 
     // map (type, group, byte) coordinate to linear xbar output space
     unsigned toIXBarOutputByte(bool ternary, int group, int byte) {
@@ -509,8 +508,8 @@ struct IXBar : public ::IXBar {
     void verify_hash_matrix() const;
     void dbprint(std::ostream &) const;
 
-    const Loc *findExactByte(cstring name, int byte) const {
-        for (auto &p : Values(exact_fields.equal_range(name)))
+    const Loc *findExactByte(PHV::Container c, int byte) const {
+        for (auto &p : Values(exact_fields.equal_range(c)))
             if (exact_use.at(p.group, p.byte).second/8 == byte)
                 return &p;
         /* FIXME -- what if it's in more than one place? */

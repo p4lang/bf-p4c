@@ -255,12 +255,8 @@ struct IXBar {
             Byte(PHV::Container c, int l, int g, int gb) : container(c), lo(l), loc(g, gb) {}
             operator std::pair<PHV::Container, int>() const {
                 return std::make_pair(container, lo); }
-            operator std::pair<cstring, int>() const {
-                return std::make_pair(container.toString(), lo); }
             bool operator==(const std::pair<PHV::Container, int> &a) const {
                 return container == a.first && lo == a.second; }
-            bool operator==(const std::pair<cstring, int> &a) const {
-                return container.toString() == a.first && lo == a.second; }
             bool operator==(const Byte &b) const {
                 return container == b.container && lo == b.lo;
             }

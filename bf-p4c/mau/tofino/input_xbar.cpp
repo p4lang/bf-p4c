@@ -578,7 +578,7 @@ void IXBar::calculate_found(safe_vector<IXBar::Use::Byte *> &unalloced,
     }
 
     for (auto &need : unalloced) {
-        for (auto &p : Values(fields.equal_range(need->container.toString()))) {
+        for (auto &p : Values(fields.equal_range(need->container))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP) {
                 if (need->is_range())
                     continue;
@@ -676,7 +676,7 @@ void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced
             continue;
 
 
-        for (auto &p : Values(fields.equal_range(need.container.toString()))) {
+        for (auto &p : Values(fields.equal_range(need.container))) {
             if (ternary && p.byte == TERNARY_BYTES_PER_GROUP)
                 continue;
 
@@ -718,7 +718,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
             break;
         if (match_bytes_placed >= total_match_bytes)
             break;
-        for (auto &p : Values(fields.equal_range(need.container.toString()))) {
+        for (auto &p : Values(fields.equal_range(need.container))) {
             if (!(ternary && p.byte == TERNARY_BYTES_PER_GROUP))
                 continue;
 
@@ -891,7 +891,7 @@ void IXBar::fill_out_use(safe_vector<IXBar::Use::Byte *> &alloced, bool ternary)
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
     for (auto &need : alloced) {
-        fields.emplace(need->container.toString(), need->loc);
+        fields.emplace(need->container, need->loc);
         if (ternary && need->loc.byte == 5) {
             byte_group_use[need->loc.group/2] = *(need);
         } else {
@@ -4081,7 +4081,7 @@ void IXBar::update(cstring name, const ::IXBar::Use &alloc_) {
     cstring xbar_type = alloc.type == Use::TERNARY_MATCH ? "TCAM" : "SRAM";
     for (auto &byte : alloc.use) {
         if (!byte.loc) continue;
-        field_users[byte.container.toString()].insert(name);
+        field_users[byte.container].insert(name);
         if (byte.loc.byte == 5 && alloc.type == Use::TERNARY_MATCH) {
             /* the sixth byte in a ternary group is actually half a byte group it shares with
              * the adjacent ternary group */
@@ -4097,7 +4097,7 @@ void IXBar::update(cstring name, const ::IXBar::Use &alloc_) {
                     byte.loc.group, byte.loc.byte);
             }
             use[byte.loc] = byte; }
-        fields.emplace(byte.container.toString(), byte.loc); }
+        fields.emplace(byte.container, byte.loc); }
     for (auto &bits : alloc.bit_use) {
         for (int b = 0; b < bits.width; b++) {
             for (auto ht : bitvec(alloc.hash_table_inputs[bits.group])) {
@@ -4328,8 +4328,8 @@ static void add_names(cstring n, std::map<cstring, char> &names) {
         else
             names.emplace(n, 'A' + names.size()); }
 }
-static void add_names(const std::pair<cstring, int> &n, std::map<cstring, char> &names) {
-    add_names(n.first, names); }
+static void add_names(const std::pair<PHV::Container, int>& c, std::map<cstring, char> &names) {
+    add_names(c.first.toString(), names); }
 template<class T>
 static void add_names(const T &n, std::map<cstring, char> &names) {
     for (auto &a : n) add_names(a, names); }
@@ -4364,6 +4364,10 @@ static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &nam
     } else {
         out << '.'; }
 }
+static void write_one(std::ostream &out, const std::pair<PHV::Container, int> &f,
+                      std::map<cstring, char> &fields) {
+    write_one(out, std::make_pair(f.first.toString(), f.second), fields);
+}
 
 template<class T>
 static void write_group(std::ostream &out, const T &grp, std::map<cstring, char> &fields) {
@@ -4372,6 +4376,10 @@ static void write_group(std::ostream &out, const T &grp, std::map<cstring, char>
 
 /* IXBarPrinter in .gdbinit should match this */
 void IXBar::dbprint(std::ostream &out) const {
+    std::map<cstring, std::set<cstring>> field_users_names;
+    for (const auto& kv : field_users) {
+        field_users_names[kv.first.toString()] = kv.second;
+    }
     std::map<cstring, char>     fields;
     add_names(exact_use, fields);
     add_names(ternary_use, fields);
@@ -4391,8 +4399,8 @@ void IXBar::dbprint(std::ostream &out) const {
     for (auto &f : fields) {
         out << "   " << f.second << " " << f.first;
         const char *sep = " (";
-        if (field_users.count(f.first)) {
-            for (auto t : field_users.at(f.first)) {
+        if (field_users_names.count(f.first)) {
+            for (auto t : field_users_names.at(f.first)) {
                 out << sep << t;
                 sep = ", "; } }
         if (*sep == ',') out << ')';
