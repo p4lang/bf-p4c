@@ -782,6 +782,18 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
             ::error("%s: Please provide a valid alpm for table %s", tbl->srcInfo, tbl->name);
         }
     }
+
+    // check if alpm table contains ternary match, ternary is not supported.
+    if (alpm_table.count(tbl->name) != 0) {
+        for (auto key : tbl->getKey()->keyElements) {
+            if (key->matchType->path->toString() == "ternary") {
+                ::error(ErrorType::ERR_UNSUPPORTED,
+                        "ternary match %s in ALPM table %s is not supported",
+                        key->expression, tbl->name);
+                break;
+            }
+        }
+    }
 }
 
 }  // namespace BFN
