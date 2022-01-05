@@ -69,7 +69,8 @@ class FindPaddingCandidate : public Inspector {
     HeaderTypeMap* all_header_types;
 
  public:
-    std::vector<cstring> find_headers_to_pad(P4::MethodInstance* mi, bool resubmit);
+    std::vector<cstring> find_headers_to_pad(P4::MethodInstance* mi);
+    std::vector<const IR::Type_StructLike*> find_all_headers(P4::MethodInstance* mi);
     void check_mirror(P4::MethodInstance* mi);
     void check_digest(P4::MethodInstance* mi);
     void check_resubmit(P4::MethodInstance* mi);
@@ -103,6 +104,15 @@ class AddPaddingFields : public Transform {
     const IR::Node* preorder(IR::StructExpression *) override;
 };
 
+// This pass transforms all resubmit headers from Type_Header to Type_FixedSizeHeader
+class TransformResubmitHeaders : public Transform {
+    ResubmitHeaders* resubmit_headers;
+ public:
+    explicit TransformResubmitHeaders(ResubmitHeaders* resubmit_headers) :
+        resubmit_headers(resubmit_headers) {}
+    const IR::Node* preorder(IR::Type_Header *) override;
+};
+
 class PadFlexibleField : public PassManager {
     // headers used in mirror, resubmit and digest
     HeaderToPad headers_to_pad;
@@ -117,6 +127,7 @@ class PadFlexibleField : public PassManager {
                     &headers_to_pad, &resubmit_headers, &all_header_types),
             new AddPaddingFields(refMap, typeMap,
                     &headers_to_pad, &resubmit_headers, &all_header_types),
+            new TransformResubmitHeaders(&resubmit_headers),
             // After padding the TypeInference might
             // change new ListExpressions to StructExpressions
             new P4::ClearTypeMap(typeMap),

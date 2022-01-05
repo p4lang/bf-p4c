@@ -43,23 +43,27 @@ bool CheckHeaderAlignment::preorder(const IR::Type_Header* header) {
 /**
  * Pad headers used in Mirror/Resubmit/Digest emit() method to byte boundaries.
  */
-std::vector<cstring> FindPaddingCandidate::find_headers_to_pad(P4::MethodInstance* mi,
-        bool resubmit = false) {
+std::vector<cstring> FindPaddingCandidate::find_headers_to_pad(P4::MethodInstance* mi) {
+    const auto all_hdrs = find_all_headers(mi);
     std::vector<cstring> retval;
+    for (const auto & structlike : all_hdrs) {
+        if (findFlexibleAnnotation(structlike)) retval.push_back(structlike->name);
+    }
+    return retval;
+}
+
+// This function find all headers in MethodInstance Parameters
+std::vector<const IR::Type_StructLike*>
+FindPaddingCandidate::find_all_headers(P4::MethodInstance* mi) {
+    std::vector<const IR::Type_StructLike*> retval;
     for (auto p : *mi->substitution.getParametersInArgumentOrder()) {
         if (p->direction != IR::Direction::In)
             continue;
         auto paramType = typeMap->getType(p, true);
         if (auto hdr = paramType->to<IR::Type_Header>()) {
-            if (findFlexibleAnnotation(hdr) || resubmit) {
-                LOG3("  found flexible annotation in " << hdr->name <<
-                        ", add as padding candidate");
-                retval.push_back(hdr->name); }
+            retval.push_back(hdr);
         } else if (auto st = paramType->to<IR::Type_Struct>()) {
-            if (findFlexibleAnnotation(st) || resubmit) {
-                LOG3("  found flexible annotation in " << st->name <<
-                        ", add as padding candidate");
-                retval.push_back(st->name); }
+            retval.push_back(st);
         }
     }
     return retval;
@@ -72,11 +76,16 @@ void FindPaddingCandidate::check_mirror(P4::MethodInstance* mi) {
 }
 
 void FindPaddingCandidate::check_resubmit(P4::MethodInstance* mi) {
-    auto hdrs = find_headers_to_pad(mi, true);
-    for (auto v : hdrs)
+    // This hdr means headers that have flexible fields, but it does not decide if it is resubmit
+    const auto hdrs_to_pad = find_headers_to_pad(mi);
+    for (const auto v : hdrs_to_pad)
         headers_to_pad->insert(v);
-    for (auto v : hdrs) {
-        resubmit_headers->insert(v);
+    // If it is in Resubmit()'s arguments, then it is a resubmit header regardless whether it has
+    // flexible fields or not.
+    const auto all_resubmit_hdrs = find_all_headers(mi);
+    for (const auto v : all_resubmit_hdrs) {
+        LOG5("add resubmit hdr: " << v->name);
+        resubmit_headers->insert(v->name);
     }
 }
 
@@ -162,16 +171,6 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
         structFields.push_back(field);
     }
 
-    /**
-     * header used in resubmit is special, it must always be 64bit in size.
-     * We use a special IR node so that flexible_packing knows how to deal with
-     * the packing of resubmit header in the backend.
-     */
-    if (resubmit_headers->count(header->name)) {
-        LOG3("rewrite resubmit header as fixed size");
-        return new IR::BFN::Type_FixedSizeHeader(header->srcInfo, header->name,
-                header->annotations, structFields,
-                Device::pardeSpec().bitResubmitSize()); }
     auto retval = new IR::Type_Header(header->srcInfo, header->name,
             header->annotations, structFields);
     LOG6("rewrite flexible struct " << retval);
@@ -235,6 +234,20 @@ const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
     auto retval = new IR::StructExpression(st->srcInfo, st->structType, components);
     LOG6("rewrite field list to " << retval);
     return retval;
+}
+
+const IR::Node* TransformResubmitHeaders::preorder(IR::Type_Header* header) {
+    /**
+     * header used in resubmit is special, it must always be 64bit in size.
+     * We use a special IR node so that flexible_packing knows how to deal with
+     * the packing of resubmit header in the backend.
+     */
+    if (resubmit_headers->count(header->name)) {
+        LOG3("rewrite resubmit header as fixed size");
+        return new IR::BFN::Type_FixedSizeHeader(header->srcInfo, header->name,
+            header->annotations, header->fields, Device::pardeSpec().bitResubmitSize()); }
+
+    return header;
 }
 
 }  // namespace BFN
