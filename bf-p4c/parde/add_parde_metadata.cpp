@@ -167,7 +167,6 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
       getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
     addDeparserParamRename(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
     addDeparserParamRename(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
-    addDeparserParamRename(d, outputMeta, "force_tx_error", "force_tx_err");
 
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl");

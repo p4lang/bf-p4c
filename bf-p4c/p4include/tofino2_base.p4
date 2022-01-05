@@ -370,7 +370,6 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                         // elapsed time field (8), byte offset
                                         // for UDP checksum (8)> in front of the
                                         // Ethernet header.
-    bit<1> force_tx_error;              // force a hardware transmission error
 }
 
 // -----------------------------------------------------------------------------

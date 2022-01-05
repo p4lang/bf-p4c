@@ -316,7 +316,6 @@ std::string TofinoMin() {
     struct egress_intrinsic_metadata_for_output_port_t {
         bit<1> capture_tstamp_on_tx;
         bit<1> update_delay_on_tx;
-        bit<1> force_tx_error;
     }
     parser IngressParserT<H, M>(
         packet_in pkt,
