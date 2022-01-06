@@ -111,8 +111,60 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
     if (!info.metadata)
         read(phv.field(hr->toString() + ".$valid"), unit, e, needsIXBar);
 }
-void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
-                        const IR::Expression *e, bool needsIXBar, bool partial) {
+
+void FieldDefUse::shadow_previous_ranges(FieldDefUse::info &info, le_bitrange &bit_range) {
+    safe_vector<locpair> def_to_rm;
+    for (auto &def_ranges : info.def_covered_ranges_map) {
+        auto &def = def_ranges.first;
+        auto &ranges = def_ranges.second;
+        safe_vector<ordered_set<ordered_set<le_bitrange>>::iterator> range_to_rm;
+        ordered_set<le_bitrange> new_ranges;
+        for (auto range : ranges){
+            if (!bit_range.overlaps(range)) {
+                new_ranges.insert(range);
+                continue;
+            }
+            if (!bit_range.contains(range)) {
+                if (range.contains(bit_range)) {
+                    if (range.hi == bit_range.hi) {
+                        // e.g., bit_range = [5-7], range = [3-7], unshadowed range is [3-4]
+                        new_ranges.insert(le_bitrange(range.lo, bit_range.lo - 1));
+                    } else if (range.lo == bit_range.lo) {
+                        // e.g., bit_range = [3-5], range = [3-7], unshadowed range is [6-7]
+                        new_ranges.insert(le_bitrange(bit_range.hi + 1, range.hi));
+                    } else {
+                        // e.g., bit_range = [3-5], range = [0-7] unshadowed ranges are [0-2] and
+                        // [6-7]
+                        new_ranges.insert(le_bitrange(range.lo, bit_range.lo - 1));
+                        new_ranges.insert(le_bitrange(bit_range.hi + 1, range.hi));
+                    }
+                } else {
+                    if (range.hi > bit_range.hi) {
+                        // e.g., bit_range = [0-5], range = [2-7] unshadowed range is [6-7]
+                        new_ranges.insert(le_bitrange(bit_range.hi + 1, range.hi));
+                    } else {
+                        // e.g., bit_range = [2-7], range = [0-5] unshadowed range is [0-1]
+                        new_ranges.insert(le_bitrange(range.lo, bit_range.lo - 1));
+                    }
+                }
+            }  // else this range is shadowed.
+        }
+        if (new_ranges.empty()) {
+            def_to_rm.push_back(def);
+        } else {
+            ranges.clear();
+            for (auto range : new_ranges) ranges.insert(range);
+        }
+    }
+
+    for (auto& def : def_to_rm) {
+        BUG_CHECK(info.def_covered_ranges_map.erase(def), "def not find");
+        BUG_CHECK(info.def.erase(def), "def not find");
+    }
+}
+
+void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit, const IR::Expression *e,
+                        bool needsIXBar, boost::optional<le_bitrange> partial) {
     if (!f) return;
     auto &info = field(f);
     LOG3("defuse: " << DBPrint::Brief << *unit <<
@@ -124,7 +176,13 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
         LOG4("  " << def << " overwrites " << old_def);
         output_deps[def].insert(old_def);
     }
-
+    le_bitrange bit_range;
+    if (!partial) {
+        bit_range.lo = 0;
+        bit_range.hi = f->size - 1;
+    } else {
+        bit_range = *partial;
+    }
     if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
@@ -132,10 +190,17 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
             info.use.clear();
             // Though parser do OR value into phv, as long as it is not partial, the zero-init
             // def should be remove, because this def will override the 0.
-            auto def_copy = info.def;
-            for (const auto& v : def_copy) {
+            safe_vector<locpair> to_rm;
+            for (const auto& v : info.def) {
                 if (parser_zero_inits.count(v)) {
-                    info.def.erase(v); } }
+                    to_rm.push_back(v);
+                }
+            }
+
+            for (const auto& v : to_rm) {
+                info.def.erase(v);
+                info.def_covered_ranges_map.erase(v);
+            }
         }
 
         info.use.emplace(unit, e);
@@ -143,8 +208,15 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
         for (auto def : info.def)
             LOG4("  " << e << " in " << *unit << " combines with " <<
                  def.second << " from " << *def.first);
-    } else if (!partial) {
-        info.def.clear(); }
+    } else {
+        if (!partial) {
+            info.def.clear();
+            info.def_covered_ranges_map.clear();
+        }
+        shadow_previous_ranges(info, bit_range);
+    }
+
+    info.def_covered_ranges_map[locpair(unit, e)].insert(bit_range);
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
     ixbar_refs[def] |= needsIXBar;
@@ -200,6 +272,8 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
         auto& info = field(f_p);
         parser_zero_inits.emplace(parser_begin, dummy_expr);
         info.def.emplace(parser_begin, dummy_expr);
+        info.def_covered_ranges_map[locpair(parser_begin, dummy_expr)].insert(
+            le_bitrange(0, f_p->size - 1));
         located_defs[f.id].emplace(parser_begin, dummy_expr);
     }
 
@@ -307,7 +381,11 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
             * being non-contiguous and overwrite if the range is contiguous
             */
             bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
-            write(f, unit, e, needsIXBar, partial);
+            if (partial) {
+                write(f, unit, e, needsIXBar, bits);
+            } else {
+                write(f, unit, e, needsIXBar, boost::none);
+            }
             write(hr, unit, e, needsIXBar);
             LOG3("  write at unit : " << unit);
         } else {
@@ -326,8 +404,28 @@ void FieldDefUse::flow_merge(Visitor &a_) {
         auto &info = field(i.field);
         BUG_CHECK(&info != &i, "same object in FieldDefUse::flow_merge");
         info.def.insert(i.def.begin(), i.def.end());
-        info.use.insert(i.use.begin(), i.use.end()); }
+        info.use.insert(i.use.begin(), i.use.end());
 
+        // consider a program like this:
+        // bit<16> foo = 1;
+        // if (bar == 1) {
+        //     foo[15:9] = 2;
+        // }
+        //   <---------- flow merge point
+        // if (foo == 3) {...}
+        // At flow merge point, locpair for foo = 1 will have two copies. One copy will go through
+        // true branch of if statement, another will go through false branch(but do nothing).
+        // At the time of flow merging, for the true branch one, unshadowed range will be [8:0]
+        // and for false branch one, unshadow range will be [15:0]. We will need to collect both
+        // unshadow ranges.
+        for (auto &def_ranges : i.def_covered_ranges_map) {
+            for (auto &range : def_ranges.second) {
+                // It is ok if two ranges are the same and are inserted into a set, since they are
+                // effectively like one def.
+                info.def_covered_ranges_map[def_ranges.first].insert(range);
+            }
+        }
+    }
     for (auto ndr : a.ixbar_refs) {
         ixbar_refs[ndr.first] |= a.ixbar_refs[ndr.first];
     }

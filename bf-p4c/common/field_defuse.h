@@ -72,6 +72,13 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     struct info {
         const PHV::Field    *field = 0;
         LocPairSet           def, use;
+        ordered_map<locpair, ordered_set<le_bitrange>> def_covered_ranges_map;
+        // The reason to have a set of bit range is that there is a case that new def's range only
+        // shadows a segment of a previous range, e.g., [3,5] shadows [0,7]. In this case, the
+        // unshadowed range will be cut into two ranges. In addition, as shown in
+        // bf-p4c/test/gtest/field_defuse.cpp test case FieldDefUseTest.ComplexSliceTest3, a def may
+        // be duplicated since a def may go through multiple branchs and each branch may have
+        // different covered def bit range.
     };
     /// Intermediate data structure for computing def/use sets.
     std::unordered_map<int, info> defuse;
@@ -84,7 +91,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     void read(const PHV::Field *, const IR::BFN::Unit *, const IR::Expression *, bool);
     void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
     void write(const PHV::Field *, const IR::BFN::Unit *,
-               const IR::Expression *, bool, bool partial = false);
+               const IR::Expression *, bool, boost::optional<le_bitrange> partial = boost::none);
     void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
     info &field(const PHV::Field *);
     info &field(int id) { return field(phv.field(id)); }
@@ -100,6 +107,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     void flow_merge(Visitor &) override;
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
+    void shadow_previous_ranges(FieldDefUse::info &, le_bitrange &);
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
     friend void dump(const FieldDefUse::info &);
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse &);

@@ -1440,6 +1440,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/error_reporter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/event_logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_defuse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
