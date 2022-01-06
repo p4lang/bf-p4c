@@ -47,6 +47,7 @@ class LayoutOption {
             return static_cast<int>(dleft_hash_sizes.size());
         return 1;
     }
+    friend std::ostream &operator<<(std::ostream &, const LayoutOption &);
 };
 
 class LayoutChoices {

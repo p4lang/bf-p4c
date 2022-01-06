@@ -1522,3 +1522,62 @@ TableLayout::TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia)
         new CheckPlacementPriorities
     });
 }
+
+std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
+    out << "layout: " << lo.layout.entries;
+    if (lo.layout.pre_classifier) out << 'c';
+    if (lo.layout.gateway) out << 'g';
+    if (lo.layout.exact) out << 'e';
+    if (lo.layout.ternary) out << 't';
+    if (lo.layout.hash_action) out << 'h';
+    if (lo.layout.gateway_match) out << 'G';
+    if (lo.layout.atcam) out << 'T';
+    if (lo.layout.alpm) out << 'L';
+    if (lo.layout.has_range) out << 'r';
+    if (lo.layout.proxy_hash) out << 'P';
+    if (lo.layout.requires_versioning) out << 'V';
+    out << " ixbar:" << lo.layout.ixbar_bytes << "B/" << lo.layout.ixbar_width_bits << "b";
+    out << " match:" << lo.layout.match_bytes << "B/" << lo.layout.match_width_bits << "b";
+    if (lo.layout.ghost_bytes) out << " gh:" << lo.layout.ghost_bytes;
+    if (lo.layout.action_data_bytes || lo.layout.action_data_bytes_in_table) {
+        out << " adb:" << lo.layout.action_data_bytes;
+        if (lo.layout.action_data_bytes_in_table)
+            out << "/" << lo.layout.action_data_bytes_in_table; }
+    if (lo.layout.overhead_bits) out << " ov:" << lo.layout.overhead_bits;
+    if (lo.layout.immediate_bits) out << " imm:" << lo.layout.immediate_bits;
+    if (lo.layout.partition_bits) out << " part:" << lo.layout.partition_bits;
+    out << IndentCtl::indent << Log::endl;
+    bool empty = true;
+    if (lo.way.match_groups || lo.way.entries || lo.way.width || !lo.way_sizes.empty()) {
+        empty = false;
+        out << "way:{ g:" << lo.way.match_groups << " e:" << lo.way.entries
+            << " w:" << lo.way.width;
+        for (auto s  : lo.way_sizes) out << " " << s;
+        out << " }"; }
+    if (!lo.partition_sizes.empty()) {
+        empty = false;
+        out << " part:";
+        const char *sep = "";
+        for (auto s : lo.partition_sizes) {
+            out << sep << s;
+            sep = "/"; } }
+    if (!lo.dleft_hash_sizes.empty()) {
+        empty = false;
+        out << " dleft:";
+        const char *sep = "";
+        for (auto s : lo.dleft_hash_sizes) {
+            out << sep << s;
+            sep = "/"; } }
+    if (!empty) out << Log::endl;
+    out << "entries:" << lo.entries << " srams:" << lo.srams << " maprams:" << lo.maprams
+        << " tcams:" << lo.tcams;
+    if (lo.select_bus_split >= 0) out << " sbs:" << lo.select_bus_split;
+    if (lo.action_format_index >= 0) out << " afi:" << lo.action_format_index;
+    if (lo.previously_widened) out << " W";
+    if (lo.identity) out << " I";
+    out << IndentCtl::unindent;
+    return out;
+}
+
+void dump(const LayoutOption &lo) { std::cout << lo << std::endl; }
+void dump(const LayoutOption *lo) { std::cout << *lo << std::endl; }

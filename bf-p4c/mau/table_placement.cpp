@@ -1348,6 +1348,15 @@ bool TablePlacement::pick_layout_option(Placed *next) {
                 return false; }
         }
     } while (!table_format);
+    if (auto *lo = next->use.preferred()) {
+        if (auto entries = lo->entries) {
+            /* There's some confusion here as to exactly what 'entries == 0' means
+             * The TableLayout code use that for "no-match" tables that have no match
+             * entries, while the table placement code seems to use "entries == 1" for that.
+             * May be a holdover from before FormatType_t was added, so could be cleaned up?
+             * For now we avoid changing table placement's entries to 0, but otherwise we
+             * update it to match what the chosen layout specifies */
+            next->entries = entries; } }
     return true;
 }
 
@@ -1595,6 +1604,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 }
 
 bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
+    LOG5("try_alloc_format: " << *next->use.preferred());
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
     gw_linked |= next->use.preferred()->layout.gateway_match;

@@ -1,0 +1,21 @@
+
+setenv MAX 255
+$(for c in $(seq 1 $MAX); do                                                    \
+    h=$(printf "%02x" $c);                                                      \
+    printf "add SwitchIngress.set_backend group_id:0x1$h$h backend_index:0x11 ";\
+    printf "set_backend_member(dst_mac:0x$h$h$h$h$h, dst_ipv4:0x$h$h$h$h, ";    \
+    printf "vxlan_id:0x$h$h$h);";                                               \
+done)
+
+$(for c in $(seq 1 $MAX); do                                                    \
+    h=$(printf "%02x" $c);                                                      \
+    : ethernet       dstAddr        srcAddr      type ;                         \
+    printf "expect 2 $h$h$h$h${h}55 01020301$h$h 0800";                         \
+    : ipv4  VL   len  id       ttl p       srcAddr  dstAddr ;                   \
+    printf "4500 002c 0000 0065 40 11 6c55 01$h$h$h $h$h$h$h ";                 \
+    : udp   sp   dp   len       payload ;                                       \
+    printf "0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f;";             \
+    printf "packet 2 001122334455 01020301$h$h 0800";                           \
+    printf "4500 002c 0000 0065 40 11 6c55 01020304 0a000002 ";                 \
+    printf "0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f;";             \
+done)

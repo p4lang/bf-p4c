@@ -47,7 +47,7 @@
 #include "bf-p4c/mau/table_summary.h"
 
 #include <numeric>
-#include <boost/optional/optional_io.hpp>"
+#include <boost/optional/optional_io.hpp>
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/table_printer.h"
