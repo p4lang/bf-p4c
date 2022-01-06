@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -120,7 +120,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible
+    @flexible 
     bit<9> Waipahu;
 }
 
@@ -235,23 +235,23 @@ struct Blitchton {
 }
 
 header Harbor {
-    @flexible
+    @flexible 
     bit<1>  Campbell;
-    @flexible
+    @flexible 
     bit<1>  Edgemont;
-    @flexible
+    @flexible 
     bit<16> Woodston;
-    @flexible
+    @flexible 
     bit<9>  Ironside;
-    @flexible
+    @flexible 
     bit<13> Parmalee;
-    @flexible
+    @flexible 
     bit<16> Donnelly;
-    @flexible
+    @flexible 
     bit<5>  Kalvesta;
-    @flexible
+    @flexible 
     bit<16> GlenRock;
-    @flexible
+    @flexible 
     bit<9>  Colson;
 }
 
@@ -263,45 +263,45 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible
+    @flexible 
     bit<8>  Oriskany;
-    @flexible
+    @flexible 
     bit<3>  Bowden;
-    @flexible
+    @flexible 
     bit<24> Cabot;
-    @flexible
+    @flexible 
     bit<24> Keyes;
-    @flexible
+    @flexible 
     bit<12> Basic;
-    @flexible
+    @flexible 
     bit<3>  Freeman;
-    @flexible
+    @flexible 
     bit<9>  Exton;
-    @flexible
+    @flexible 
     bit<2>  Floyd;
-    @flexible
+    @flexible 
     bit<1>  Fayette;
-    @flexible
+    @flexible 
     bit<1>  Osterdock;
-    @flexible
+    @flexible 
     bit<32> PineCity;
-    @flexible
+    @flexible 
     bit<16> Alameda;
-    @flexible
+    @flexible 
     bit<3>  Rexville;
-    @flexible
+    @flexible 
     bit<1>  WestBend;
-    @flexible
+    @flexible 
     bit<12> Quinwood;
-    @flexible
+    @flexible 
     bit<12> Marfa;
-    @flexible
+    @flexible 
     bit<1>  Palatine;
-    @flexible
+    @flexible 
     bit<1>  Mabelle;
-    @flexible
+    @flexible 
     bit<1>  Placida;
-    @flexible
+    @flexible 
     bit<6>  Hoagland;
 }
 
@@ -337,6 +337,10 @@ header Maryville {
 
 header Albemarle {
     bit<16> Lathrop;
+}
+
+header Laramie {
+    bit<416> Pinebluff;
 }
 
 header Shorter {
@@ -706,6 +710,7 @@ struct Panaca {
     bit<6>  Higgston;
     bit<1>  Cortland;
     bit<8>  Ambrose;
+    bit<1>  Fentress;
 }
 
 struct Raiford {
@@ -1756,6 +1761,7 @@ struct Dateland {
     Sidnaw     Placida;
     Shanghai   Cistern;
     Shanghai   Newkirk;
+    Shanghai   Molino;
 }
 
 struct Udall {
@@ -1956,8 +1962,8 @@ parser Ekwok(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out ingr
     }
     state Wanamassa {
         Talco.Emida.Lathrop = 16w0x86dd;
-        Talco.Emida.Laxon = (bit<3>)3w5;
-        transition accept;
+        Talco.Emida.Laxon = (bit<3>)3w4;
+        transition Tabler;
     }
     state Humeston {
         Crump.extract<Albemarle>(Boonsboro.Yerington);
@@ -2439,7 +2445,7 @@ control RichBar(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrins
             Harding();
         }
         key = {
-            Talco.Emida.Toklat & 12w0xfff: exact @name("Emida.Toklat") ;
+            Talco.Emida.Toklat & 12w4095: exact @name("Emida.Toklat") ;
         }
         const default_action = Harding(1w0, 1w0, 1w0);
         size = 4096;
@@ -3289,6 +3295,7 @@ control Exeter(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsi
             Talco.Lawai.Whitewood & 20w0xc0000: ternary @name("Lawai.Whitewood") ;
         }
         requires_versioning = false;
+        size = 512;
         const default_action = Oconee();
     }
     apply {
@@ -3337,15 +3344,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Dahlgren();
         Pettigrew();
     }
-    @name(".Ozona") action Ozona() {
-        Talco.Lawai.Rudolph = (bit<3>)3w6;
-        Talco.Emida.Horton = Boonsboro.Masontown.Horton;
-        Talco.Emida.Lacona = Boonsboro.Masontown.Lacona;
-        Talco.Emida.Grabill = Boonsboro.Masontown.Grabill;
-        Talco.Emida.Moorcroft = Boonsboro.Masontown.Moorcroft;
-        Talco.Emida.Belfair = (bit<3>)3w0x0;
-        Pettigrew();
-    }
     @name(".Leland") action Leland() {
         Talco.Lawai.Rudolph = (bit<3>)3w0;
         Talco.Mentone.Allison = Boonsboro.Wesson[0].Allison;
@@ -3391,7 +3389,7 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Emida.Toklat = Talco.Guion.RedElm;
         Talco.Emida.Bledsoe = Lewellen;
     }
-    @name(".Absecon") action Absecon(bit<12> Brodnax, bit<20> Lewellen) {
+    @name(".Absecon") action Absecon(bit<32> Bessie, bit<12> Brodnax, bit<20> Lewellen) {
         Talco.Emida.Toklat = Brodnax;
         Talco.Emida.Bledsoe = Lewellen;
         Talco.Guion.Renick = (bit<1>)1w1;
@@ -3449,7 +3447,6 @@ control Spanaway(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         actions = {
             Andrade();
             McDonough();
-            Ozona();
             Millikin();
             @defaultonly Meyers();
         }
@@ -4750,6 +4747,7 @@ control Natalbany(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intri
             Talco.Mentone.Arvada   : exact @name("Mentone.Arvada") ;
             Talco.Mentone.Broussard: exact @name("Mentone.Broussard") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -4988,9 +4986,12 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
     @name(".Recluse") action Recluse() {
         ;
     }
+    @name(".Ossineke") action Ossineke(bit<16> Parmelee) {
+        Talco.Livonia.Uintah = Talco.Livonia.Uintah + Parmelee;
+    }
     @name(".Moorman") action Moorman(bit<16> Tallassee, bit<16> Parmelee, bit<16> Bagwell) {
         Talco.Lawai.Lecompte = Tallassee;
-        Talco.Livonia.Uintah = Talco.Livonia.Uintah + Parmelee;
+        Ossineke(Parmelee);
         Talco.LaMoille.Crestone = Talco.LaMoille.Crestone & Bagwell;
     }
     @name(".Wright") action Wright(bit<32> Orrick, bit<16> Tallassee, bit<16> Parmelee, bit<16> Bagwell) {
@@ -5004,10 +5005,10 @@ control Belcourt(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
     }
     @name(".TinCity") action TinCity(bit<16> Tallassee, bit<16> Parmelee) {
         Talco.Lawai.Lecompte = Tallassee;
-        Talco.Livonia.Uintah = Talco.Livonia.Uintah + Parmelee;
+        Ossineke(Parmelee);
     }
     @name(".Comunas") action Comunas(bit<16> Parmelee) {
-        Talco.Livonia.Uintah = Talco.Livonia.Uintah + Parmelee;
+        Ossineke(Parmelee);
     }
     @name(".Alcoma") action Alcoma(bit<2> Norwood) {
         Talco.Lawai.Cardenas = (bit<3>)3w2;
@@ -5671,6 +5672,7 @@ control Fittstown(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrin
             Livonia.egress_rid: exact @name("Livonia.egress_rid") ;
         }
         const default_action = Recluse();
+        size = 4096;
     }
     apply {
         if (Livonia.egress_rid != 16w0) {
@@ -6260,7 +6262,7 @@ control Burnett(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsi
         Talco.Lawai.Spearman = Spearman;
         Talco.Lawai.Sheldahl = (bit<1>)1w0;
     }
-    @name(".Casselman") action Casselman(bit<12> Spearman) {
+    @name(".Casselman") action Casselman(bit<32> Bessie, bit<12> Spearman) {
         Talco.Lawai.Spearman = Spearman;
         Talco.Lawai.Sheldahl = (bit<1>)1w1;
     }
@@ -6346,7 +6348,6 @@ control Ludowici(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrins
     }
     @name(".Recluse") action Longport() {
         Forbes.count();
-        ;
     }
     @disable_atomic_modify(1) @name(".Deferiet") table Deferiet {
         actions = {
@@ -6390,9 +6391,9 @@ control Dedham(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsic
             Manasquan();
         }
         key = {
-            Talco.Emida.Gasport             : exact @name("Emida.Gasport") ;
-            Talco.Lawai.Rudolph             : exact @name("Lawai.Rudolph") ;
-            Talco.Emida.Lordstown & 12w0xfff: exact @name("Emida.Lordstown") ;
+            Talco.Emida.Gasport            : exact @name("Emida.Gasport") ;
+            Talco.Lawai.Rudolph            : exact @name("Lawai.Rudolph") ;
+            Talco.Emida.Lordstown & 12w4095: exact @name("Emida.Lordstown") ;
         }
         const default_action = Manasquan();
         size = 12288;
@@ -6784,8 +6785,6 @@ control Elbing(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsi
 
                         (3w5, false, true) : ElJebel();
 
-                        (3w6, false, true) : ElJebel();
-
                         (3w1, true, false) : McCartys();
 
                         (3w1, false, true) : Duncombe();
@@ -6839,7 +6838,7 @@ control Elbing(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsi
         requires_versioning = false;
         const default_action = Recluse();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Benitez") table Benitez {
+    @ternary(1) @disable_atomic_modify(1) @name(".Benitez") table Benitez {
         actions = {
             SandCity();
             Baroda();
@@ -7104,13 +7103,13 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
     state Chispa {
         Crump.extract<Maryville>(Boonsboro.Masontown);
         Crump.extract<Albemarle>(Boonsboro.Yerington);
-        transition accept;
+        transition Meridean;
     }
     state Asherton {
         Crump.extract<Maryville>(Boonsboro.Masontown);
         Crump.extract<Albemarle>(Boonsboro.Yerington);
         Boonsboro.Newkirk.setValid();
-        transition accept;
+        transition Meridean;
     }
     state Bridgton {
         transition select(Talco.Emida.Iroquois) {
@@ -7120,7 +7119,7 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
     }
     state Saugatuck {
         Crump.extract<Albemarle>(Boonsboro.Yerington);
-        transition accept;
+        transition Tinaja;
     }
     state Norco {
         Crump.extract<Buckeye>(Boonsboro.Tennessee);
@@ -7139,8 +7138,13 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
             (8w0x45 &&& 8w0xff, 16w0x800): Humeston;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Kinde;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Hillside;
+            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Dovray;
             default: Saugatuck;
         }
+    }
+    state Dovray {
+        Boonsboro.Molino.setValid();
+        transition Saugatuck;
     }
     state Humeston {
         Crump.extract<Albemarle>(Boonsboro.Yerington);
@@ -7149,14 +7153,14 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
             (13w0x0 &&& 13w0x1fff, 8w1): Hearne;
             (13w0x0 &&& 13w0x1fff, 8w17): Torrance;
             (13w0x0 &&& 13w0x1fff, 8w6): Pineville;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Tinaja;
             default: Bronwood;
         }
     }
     state Torrance {
         Crump.extract<Madawaska>(Boonsboro.Westville);
         transition select(Boonsboro.Westville.Tallassee) {
-            default: accept;
+            default: Tinaja;
         }
     }
     state Kinde {
@@ -7164,11 +7168,11 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
         Boonsboro.Belmore.Dowell = (Crump.lookahead<bit<160>>())[31:0];
         Boonsboro.Belmore.Helton = (Crump.lookahead<bit<14>>())[5:0];
         Boonsboro.Belmore.Steger = (Crump.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Tinaja;
     }
     state Bronwood {
         Boonsboro.Cistern.setValid();
-        transition accept;
+        transition Tinaja;
     }
     state Hillside {
         Crump.extract<Albemarle>(Boonsboro.Yerington);
@@ -7177,18 +7181,18 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
             8w58: Hearne;
             8w17: Torrance;
             8w6: Pineville;
-            default: accept;
+            default: Tinaja;
         }
     }
     state Hearne {
         Crump.extract<Madawaska>(Boonsboro.Westville);
-        transition accept;
+        transition Tinaja;
     }
     state Pineville {
         Talco.Doddridge.Tehachapi = (bit<3>)3w6;
         Crump.extract<Madawaska>(Boonsboro.Westville);
         Crump.extract<Irvine>(Boonsboro.Ekron);
-        transition accept;
+        transition Tinaja;
     }
     state Bothwell {
         transition Saugatuck;
@@ -7216,7 +7220,7 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
             }
         }
         Crump.extract<Maryville>(Boonsboro.Masontown);
-        transition accept;
+        transition Tinaja;
     }
     state Valier {
         Chaska Ocracoke;
@@ -7225,7 +7229,7 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
         transition select(Ocracoke.Selawik) {
             8w1 &&& 8w0x7: Chispa;
             8w2 &&& 8w0x7: Asherton;
-            default: accept;
+            default: Meridean;
         }
     }
     state Lilydale {
@@ -7235,6 +7239,12 @@ parser Cassadaga(packet_in Crump, out Sumner Boonsboro, out Dateland Talco, out 
             }
         }
         transition Bridgton;
+    }
+    state Meridean {
+        transition accept;
+    }
+    state Tinaja {
+        transition accept;
     }
 }
 

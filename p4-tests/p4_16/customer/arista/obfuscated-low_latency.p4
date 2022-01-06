@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_LOW_LATENCY=1 -Ibf_arista_switch_low_latency/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_low_latency --bf-rt-schema bf_arista_switch_low_latency/context/bf-rt.json --disable-egress-latency-padding
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -32,7 +32,7 @@
 
 header Avondale {
     bit<8> Glassboro;
-    @flexible
+    @flexible 
     bit<9> Grabill;
 }
 
@@ -135,23 +135,23 @@ struct Harbor {
 }
 
 header Alameda {
-    @flexible
+    @flexible 
     bit<1>  Quinwood;
-    @flexible
+    @flexible 
     bit<1>  Palatine;
-    @flexible
+    @flexible 
     bit<1>  Hoagland;
-    @flexible
+    @flexible 
     bit<9>  Hackett;
-    @flexible
+    @flexible 
     bit<13> Calcasieu;
-    @flexible
+    @flexible 
     bit<16> Levittown;
-    @flexible
+    @flexible 
     bit<5>  Norwood;
-    @flexible
+    @flexible 
     bit<16> Dassel;
-    @flexible
+    @flexible 
     bit<9>  Loring;
 }
 
@@ -160,17 +160,17 @@ header Suwannee {
 
 header Dugger {
     bit<8>  Glassboro;
-    @flexible
+    @flexible 
     bit<8>  Laurelton;
-    @flexible
+    @flexible 
     bit<3>  Ronda;
-    @flexible
+    @flexible 
     bit<12> LaPalma;
-    @flexible
+    @flexible 
     bit<9>  Idalia;
-    @flexible
+    @flexible 
     bit<1>  Cecilton;
-    @flexible
+    @flexible 
     bit<12> Horton;
 }
 
@@ -206,6 +206,10 @@ header Penzance {
 
 header Linden {
     bit<16> Basic;
+}
+
+header DeepGap {
+    bit<416> Horatio;
 }
 
 header Scottdale {
@@ -556,6 +560,7 @@ struct Manilla {
     bit<6>  Staunton;
     bit<1>  Scarville;
     bit<8>  RockPort;
+    bit<1>  Rives;
 }
 
 struct Lugert {
@@ -964,7 +969,7 @@ control Tabler(inout Udall Jayton, inout Wildorado Millstone, in ingress_intrins
             Moultrie();
         }
         key = {
-            Millstone.Ocracoke.Higginson & 12w0xfff: exact @name("Ocracoke.Higginson") ;
+            Millstone.Ocracoke.Higginson & 12w4095: exact @name("Ocracoke.Higginson") ;
         }
         const default_action = Moultrie(1w0, 1w0, 1w0);
         size = 4096;
@@ -1794,7 +1799,6 @@ control FairOaks(inout Udall Jayton, inout Wildorado Millstone, in egress_intrin
     }
     @name(".Hettinger") action Notus() {
         Salitpa.count();
-        ;
     }
     @disable_atomic_modify(1) @stage(6) @name(".Dahlgren") table Dahlgren {
         actions = {

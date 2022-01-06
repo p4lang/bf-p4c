@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -110,7 +110,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible
+    @flexible 
     bit<9> Waipahu;
 }
 
@@ -209,17 +209,17 @@ struct Blitchton {
 }
 
 struct Trego {
-    @flexible
+    @flexible 
     bit<16> Manistee;
-    @flexible
+    @flexible 
     bit<1>  Penitas;
-    @flexible
+    @flexible 
     bit<12> Ivyland;
-    @flexible
+    @flexible 
     bit<9>  Leflore;
-    @flexible
+    @flexible 
     bit<1>  Lenexa;
-    @flexible
+    @flexible 
     bit<3>  Brashear;
 }
 
@@ -229,21 +229,21 @@ struct Trego {
 }
 
 header Harbor {
-    @flexible
+    @flexible 
     bit<1>  Haena;
-    @flexible
+    @flexible 
     bit<16> Janney;
-    @flexible
+    @flexible 
     bit<9>  Loyalton;
-    @flexible
+    @flexible 
     bit<13> Lasara;
-    @flexible
+    @flexible 
     bit<16> Perma;
-    @flexible
+    @flexible 
     bit<5>  Navarro;
-    @flexible
+    @flexible 
     bit<16> Edgemont;
-    @flexible
+    @flexible 
     bit<9>  Neshoba;
 }
 
@@ -255,43 +255,43 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible
+    @flexible 
     bit<8>  Oriskany;
-    @flexible
+    @flexible 
     bit<3>  Bowden;
-    @flexible
+    @flexible 
     bit<24> Cabot;
-    @flexible
+    @flexible 
     bit<24> Keyes;
-    @flexible
+    @flexible 
     bit<12> Basic;
-    @flexible
+    @flexible 
     bit<6>  Freeman;
-    @flexible
+    @flexible 
     bit<3>  Exton;
-    @flexible
+    @flexible 
     bit<9>  Floyd;
-    @flexible
+    @flexible 
     bit<2>  Fayette;
-    @flexible
+    @flexible 
     bit<1>  Osterdock;
-    @flexible
+    @flexible 
     bit<1>  PineCity;
-    @flexible
+    @flexible 
     bit<32> Alameda;
-    @flexible
+    @flexible 
     bit<16> Rexville;
-    @flexible
+    @flexible 
     bit<3>  Quinwood;
-    @flexible
+    @flexible 
     bit<12> Marfa;
-    @flexible
+    @flexible 
     bit<12> Palatine;
-    @flexible
+    @flexible 
     bit<1>  Mabelle;
-    @flexible
+    @flexible 
     bit<1>  Verdigris;
-    @flexible
+    @flexible 
     bit<6>  Hoagland;
 }
 
@@ -327,6 +327,10 @@ header Otsego {
 
 header Albemarle {
     bit<16> Lathrop;
+}
+
+header Raven {
+    bit<416> Bowdon;
 }
 
 header Wainaku {
@@ -743,6 +747,7 @@ struct Weatherby {
     bit<6>  Kealia;
     bit<1>  Thistle;
     bit<8>  Soledad;
+    bit<1>  Kisatchie;
 }
 
 struct Traverse {
@@ -2145,7 +2150,7 @@ control Emden(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intrins
             Skillman();
         }
         key = {
-            Alstown.Mickleton.Toklat & 12w0xfff: exact @name("Mickleton.Toklat") ;
+            Alstown.Mickleton.Toklat & 12w4095: exact @name("Mickleton.Toklat") ;
         }
         const default_action = Skillman(1w0, 1w0, 1w0);
         size = 4096;
@@ -3109,7 +3114,7 @@ control Cheyenne(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intr
         Alstown.Mickleton.Toklat = Alstown.Belmont.Ericsburg;
         Alstown.Mickleton.Bledsoe = WildRose;
     }
-    @name(".Kellner") action Kellner(bit<12> Hagaman, bit<20> WildRose) {
+    @name(".Kellner") action Kellner(bit<32> Wisdom, bit<12> Hagaman, bit<20> WildRose) {
         Alstown.Mickleton.Toklat = Hagaman;
         Alstown.Mickleton.Bledsoe = WildRose;
         Alstown.Belmont.Staunton = (bit<1>)1w1;
@@ -3826,7 +3831,6 @@ control Miltona(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intri
     }
     @name(".Chilson") action Chilson(bit<9> Reynolds) {
         Shingler.ucast_egress_port = Reynolds;
-        Alstown.Elkville.Lovewell = (bit<6>)6w0;
         Wakeman();
     }
     @name(".Kosmos") action Kosmos() {
@@ -4314,6 +4318,7 @@ control Kingsdale(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_int
             Alstown.Barnhill.Pettry  : exact @name("Barnhill.Pettry") ;
             Alstown.Barnhill.Buncombe: exact @name("Barnhill.Buncombe") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -4452,9 +4457,12 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
     @name(".Lauada") action Lauada() {
         ;
     }
+    @name(".Coconut") action Coconut(bit<16> Romeo) {
+        Alstown.Gastonia.Uintah = Alstown.Gastonia.Uintah + Romeo;
+    }
     @name(".Antoine") action Antoine(bit<16> Tallassee, bit<16> Romeo, bit<16> Caspian) {
         Alstown.Elkville.Atoka = Tallassee;
-        Alstown.Gastonia.Uintah = Alstown.Gastonia.Uintah + Romeo;
+        Coconut(Romeo);
         Alstown.Bridger.Pinole = Alstown.Bridger.Pinole & Caspian;
     }
     @name(".Norridge") action Norridge(bit<32> Lecompte, bit<16> Tallassee, bit<16> Romeo, bit<16> Caspian) {
@@ -4468,10 +4476,10 @@ control Catlin(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intrins
     }
     @name(".CassCity") action CassCity(bit<16> Tallassee, bit<16> Romeo) {
         Alstown.Elkville.Atoka = Tallassee;
-        Alstown.Gastonia.Uintah = Alstown.Gastonia.Uintah + Romeo;
+        Coconut(Romeo);
     }
     @name(".Sanborn") action Sanborn(bit<16> Romeo) {
-        Alstown.Gastonia.Uintah = Alstown.Gastonia.Uintah + Romeo;
+        Coconut(Romeo);
     }
     @name(".Kerby") action Kerby(bit<2> Norwood) {
         Alstown.Elkville.Quinhagak = (bit<3>)3w2;
@@ -5103,7 +5111,7 @@ control Telegraph(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intr
         Alstown.Elkville.Spearman = Spearman;
         Alstown.Elkville.Randall = (bit<1>)1w0;
     }
-    @name(".Parole") action Parole(bit<12> Spearman) {
+    @name(".Parole") action Parole(bit<32> Wisdom, bit<12> Spearman) {
         Alstown.Elkville.Spearman = Spearman;
         Alstown.Elkville.Randall = (bit<1>)1w1;
     }
@@ -5190,7 +5198,6 @@ control TonkaBay(inout Gambrills Lookeba, inout ElkNeck Alstown, in egress_intri
     }
     @name(".Lauada") action Canalou() {
         Cisne.count();
-        ;
     }
     @disable_atomic_modify(1) @name(".Engle") table Engle {
         actions = {
@@ -6164,7 +6171,7 @@ control Wibaux(inout Gambrills Lookeba, inout ElkNeck Alstown, in ingress_intrin
         requires_versioning = false;
         const default_action = Lauada();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".McCartys") table McCartys {
+    @ternary(1) @disable_atomic_modify(1) @name(".McCartys") table McCartys {
         actions = {
             Rodessa();
             Unity();
@@ -6495,20 +6502,20 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
     state Wegdahl {
         Basco.extract<Otsego>(Lookeba.Empire);
         Basco.extract<Albemarle>(Lookeba.Balmorhea);
-        transition accept;
+        transition Urbanette;
     }
     state Denning {
         Basco.extract<Otsego>(Lookeba.Empire);
         Basco.extract<Albemarle>(Lookeba.Balmorhea);
         Lookeba.Dubach.setValid();
-        transition accept;
+        transition Urbanette;
     }
     state Cross {
         transition Hearne;
     }
     state Parkway {
         Basco.extract<Albemarle>(Lookeba.Balmorhea);
-        transition accept;
+        transition Temelec;
     }
     state Hearne {
         Basco.extract<Otsego>(Lookeba.Empire);
@@ -6552,7 +6559,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
             (13w0x0 &&& 13w0x1fff, 8w1): Dacono;
             (13w0x0 &&& 13w0x1fff, 8w17): Snowflake;
             (13w0x0 &&& 13w0x1fff, 8w6): Saugatuck;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Temelec;
             default: Hookdale;
         }
     }
@@ -6564,7 +6571,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
             Cowan: Pueblo;
             16w319: Zeeland;
             16w320: Zeeland;
-            default: accept;
+            default: Temelec;
         }
     }
     state Mayflower {
@@ -6572,11 +6579,11 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
         Lookeba.Earling.Dowell = (Basco.lookahead<bit<160>>())[31:0];
         Lookeba.Earling.Helton = (Basco.lookahead<bit<14>>())[5:0];
         Lookeba.Earling.Steger = (Basco.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Temelec;
     }
     state Hookdale {
         Lookeba.Bergoo.setValid();
-        transition accept;
+        transition Temelec;
     }
     state Halltown {
         Basco.extract<Albemarle>(Lookeba.Balmorhea);
@@ -6585,23 +6592,23 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
             8w58: Dacono;
             8w17: Snowflake;
             8w6: Saugatuck;
-            default: accept;
+            default: Temelec;
         }
     }
     state Panola {
         Alstown.Readsboro.Grays = (bit<1>)1w1;
-        transition accept;
+        transition Temelec;
     }
     state Craigtown {
         transition select(Lookeba.Aniak.Tallassee) {
-            16w4789: accept;
+            16w4789: Temelec;
             default: Panola;
         }
     }
     state Fentress {
         transition select((Basco.lookahead<Hagerman>()).Buenos) {
             15w539: Craigtown;
-            default: accept;
+            default: Temelec;
         }
     }
     state Pinebluff {
@@ -6612,14 +6619,14 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
     }
     state Beaman {
         transition select((Basco.lookahead<Hagerman>()).Harvey) {
-            1w1: accept;
+            1w1: Temelec;
             1w0: Pinebluff;
         }
     }
     state Ossineke {
         transition select((Basco.lookahead<Colson>()).Almond) {
             15w539: Craigtown;
-            default: accept;
+            default: Temelec;
         }
     }
     state Molino {
@@ -6637,21 +6644,21 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
     state Tinaja {
         transition select((Basco.lookahead<Parmalee>()).Kalvesta) {
             15w539: Craigtown;
-            default: accept;
+            default: Temelec;
         }
     }
     state Meridean {
         transition select((Basco.lookahead<Parmalee>()).Welch) {
             1w1: Tinaja;
             1w0: Craigtown;
-            default: accept;
+            default: Temelec;
         }
     }
     state Berwyn {
         transition select(Lookeba.Twain.Coulter, (Basco.lookahead<Parmalee>()).GlenRock) {
             (1w0x1 &&& 1w0x1, 1w0x1 &&& 1w0x1): Gracewood;
             (1w0x1 &&& 1w0x1, 1w0x0 &&& 1w0x1): Meridean;
-            default: accept;
+            default: Temelec;
         }
     }
     state Pueblo {
@@ -6660,14 +6667,14 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
     }
     state Dacono {
         Basco.extract<Madawaska>(Lookeba.Aniak);
-        transition accept;
+        transition Temelec;
     }
     state Saugatuck {
         Alstown.Nuyaka.Tehachapi = (bit<3>)3w6;
         Basco.extract<Madawaska>(Lookeba.Aniak);
         Basco.extract<Irvine>(Lookeba.Lindsborg);
         Basco.extract<Pilar>(Lookeba.Magasco);
-        transition accept;
+        transition Temelec;
     }
     state Herald {
         Basco.extract<Albemarle>(Lookeba.Balmorhea);
@@ -6676,7 +6683,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
     state Zeeland {
         Basco.extract<Masardis>(Lookeba.Armstrong);
         Basco.extract<Cortland>(Lookeba.Anaconda);
-        transition accept;
+        transition Temelec;
     }
     state Hilltop {
         transition Parkway;
@@ -6704,7 +6711,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
             }
         }
         Basco.extract<Otsego>(Lookeba.Empire);
-        transition accept;
+        transition Temelec;
     }
     state Ellinger {
         Chaska Hohenwald;
@@ -6713,7 +6720,7 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
         transition select(Hohenwald.Selawik) {
             8w1 &&& 8w0x7: Wegdahl;
             8w2 &&& 8w0x7: Denning;
-            default: accept;
+            default: Urbanette;
         }
     }
     state Stanwood {
@@ -6723,6 +6730,12 @@ parser Vincent(packet_in Basco, out Gambrills Lookeba, out ElkNeck Alstown, out 
             }
         }
         transition Cross;
+    }
+    state Urbanette {
+        transition accept;
+    }
+    state Temelec {
+        transition accept;
     }
 }
 

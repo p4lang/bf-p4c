@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_FIREWALL=1 -Ibf_arista_switch_firewall/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_firewall --bf-rt-schema bf_arista_switch_firewall/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -68,7 +68,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible
+    @flexible 
     bit<9> Waipahu;
 }
 
@@ -169,31 +169,31 @@ struct Blitchton {
 struct Harbor {
     bit<32>  IttaBena;
     bit<32>  Adona;
-    @flexible
+    @flexible 
     bit<8>   Connell;
-    @flexible
+    @flexible 
     bit<8>   Cisco;
-    @flexible
+    @flexible 
     bit<32>  Higginson;
-    @flexible
+    @flexible 
     bit<32>  Oriskany;
-    @flexible
+    @flexible 
     bit<16>  Bowden;
-    @flexible
+    @flexible 
     bit<16>  Cabot;
-    @flexible
+    @flexible 
     bit<8>   Keyes;
-    @flexible
+    @flexible 
     PortId_t Corinth;
-    @flexible
+    @flexible 
     bit<1>   Basic;
-    @flexible
+    @flexible 
     bit<32>  Freeman;
-    @flexible
+    @flexible 
     bit<1>   Exton;
-    @flexible
+    @flexible 
     bit<1>   Floyd;
-    @flexible
+    @flexible 
     bit<48>  Fayette;
 }
 
@@ -203,23 +203,23 @@ struct Harbor {
 }
 
 header Osterdock {
-    @flexible
+    @flexible 
     bit<1>  Unity;
-    @flexible
+    @flexible 
     bit<16> LaFayette;
-    @flexible
+    @flexible 
     bit<9>  Munday;
-    @flexible
+    @flexible 
     bit<13> Holcut;
-    @flexible
+    @flexible 
     bit<16> FarrWest;
-    @flexible
+    @flexible 
     bit<16> Dante;
-    @flexible
+    @flexible 
     bit<5>  Wyanet;
-    @flexible
+    @flexible 
     bit<16> Chunchula;
-    @flexible
+    @flexible 
     bit<9>  ElJebel;
 }
 
@@ -231,43 +231,43 @@ header Alameda {
     bit<3>  Rexville;
     bit<1>  Quinwood;
     bit<4>  Marfa;
-    @flexible
+    @flexible 
     bit<8>  Palatine;
-    @flexible
+    @flexible 
     bit<3>  Mabelle;
-    @flexible
+    @flexible 
     bit<24> Hoagland;
-    @flexible
+    @flexible 
     bit<24> Ocoee;
-    @flexible
+    @flexible 
     bit<12> Hackett;
-    @flexible
+    @flexible 
     bit<3>  Kaluaaha;
-    @flexible
+    @flexible 
     bit<9>  Calcasieu;
-    @flexible
+    @flexible 
     bit<2>  Levittown;
-    @flexible
+    @flexible 
     bit<1>  Maryhill;
-    @flexible
+    @flexible 
     bit<1>  Norwood;
-    @flexible
+    @flexible 
     bit<32> Dassel;
-    @flexible
+    @flexible 
     bit<32> Bushland;
-    @flexible
+    @flexible 
     bit<32> Loring;
-    @flexible
+    @flexible 
     bit<16> Suwannee;
-    @flexible
+    @flexible 
     bit<3>  Dugger;
-    @flexible
+    @flexible 
     bit<12> Laurelton;
-    @flexible
+    @flexible 
     bit<12> Ronda;
-    @flexible
+    @flexible 
     bit<1>  LaPalma;
-    @flexible
+    @flexible 
     bit<6>  Idalia;
 }
 
@@ -303,6 +303,10 @@ header Belcher {
 
 header StarLake {
     bit<16> Lathrop;
+}
+
+header Stanwood {
+    bit<416> Weslaco;
 }
 
 header Blanchard {
@@ -658,6 +662,7 @@ struct Edgemoor {
     bit<6>  Nashua;
     bit<1>  McClusky;
     bit<8>  Keyes;
+    bit<1>  Cassadaga;
 }
 
 struct Ralls {
@@ -1989,7 +1994,7 @@ control Wagener(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intri
             Monrovia();
         }
         key = {
-            Balmorhea.Buckhorn.Toklat & 12w0xfff: exact @name("Buckhorn.Toklat") ;
+            Balmorhea.Buckhorn.Toklat & 12w4095: exact @name("Buckhorn.Toklat") ;
         }
         const default_action = Monrovia(1w0, 1w0, 1w0);
         size = 4096;
@@ -2300,7 +2305,7 @@ control Ponder(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intrin
         Balmorhea.Buckhorn.Toklat = Balmorhea.Doddridge.Lugert;
         Balmorhea.Buckhorn.Bledsoe = Hettinger;
     }
-    @name(".Coryville") action Coryville(bit<12> Bellamy, bit<20> Hettinger) {
+    @name(".Coryville") action Coryville(bit<32> Lewiston, bit<12> Bellamy, bit<20> Hettinger) {
         Balmorhea.Buckhorn.Toklat = Bellamy;
         Balmorhea.Buckhorn.Bledsoe = Hettinger;
         Balmorhea.Doddridge.Goulds = (bit<1>)1w1;
@@ -3516,6 +3521,7 @@ control Barnwell(inout Goodwin Daisytown, inout Cassa Balmorhea, in ingress_intr
             Balmorhea.Lawai.Rocklake: exact @name("Lawai.Rocklake") ;
             Balmorhea.Lawai.Montague: exact @name("Lawai.Montague") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -3655,9 +3661,12 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
     @name(".Casnovia") action Casnovia() {
         ;
     }
+    @name(".Chispa") action Chispa(bit<16> Kelliher) {
+        Balmorhea.Dozier.Uintah = Balmorhea.Dozier.Uintah + Kelliher;
+    }
     @name(".Linville") action Linville(bit<16> Cabot, bit<16> Kelliher, bit<16> Hopeton) {
         Balmorhea.Millston.Grassflat = Cabot;
-        Balmorhea.Dozier.Uintah = Balmorhea.Dozier.Uintah + Kelliher;
+        Chispa(Kelliher);
         Balmorhea.Dateland.Corydon = Balmorhea.Dateland.Corydon & Hopeton;
     }
     @name(".Bernstein") action Bernstein(bit<32> Bufalo, bit<16> Cabot, bit<16> Kelliher, bit<16> Hopeton) {
@@ -3671,10 +3680,10 @@ control Punaluu(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
     }
     @name(".BirchRun") action BirchRun(bit<16> Cabot, bit<16> Kelliher) {
         Balmorhea.Millston.Grassflat = Cabot;
-        Balmorhea.Dozier.Uintah = Balmorhea.Dozier.Uintah + Kelliher;
+        Chispa(Kelliher);
     }
     @name(".Portales") action Portales(bit<16> Kelliher) {
-        Balmorhea.Dozier.Uintah = Balmorhea.Dozier.Uintah + Kelliher;
+        Chispa(Kelliher);
     }
     @name(".Owentown") action Owentown(bit<2> Topanga) {
         Balmorhea.Millston.Dolores = (bit<3>)3w2;
@@ -4274,7 +4283,7 @@ control Amsterdam(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intr
         Balmorhea.Millston.Ledoux = Ledoux;
         Balmorhea.Millston.Lakehills = (bit<1>)1w0;
     }
-    @name(".Rolla") action Rolla(bit<12> Ledoux) {
+    @name(".Rolla") action Rolla(bit<32> Lewiston, bit<12> Ledoux) {
         Balmorhea.Millston.Ledoux = Ledoux;
         Balmorhea.Millston.Lakehills = (bit<1>)1w1;
     }
@@ -4360,7 +4369,6 @@ control Milltown(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intri
     }
     @name(".Casnovia") action Alcoma() {
         TinCity.count();
-        ;
     }
     @disable_atomic_modify(1) @name(".Kilbourne") table Kilbourne {
         actions = {
@@ -5340,7 +5348,7 @@ control Renfroe(inout Goodwin Daisytown, inout Cassa Balmorhea, in egress_intrin
         requires_versioning = false;
         const default_action = Casnovia();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Canalou") table Canalou {
+    @ternary(1) @disable_atomic_modify(1) @name(".Canalou") table Canalou {
         actions = {
             Burgdorf();
             Stovall();
@@ -5623,20 +5631,20 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
     state Neuse {
         Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
-        transition accept;
+        transition Asherton;
     }
     state Fairchild {
         Lindsborg.extract<Belcher>(Daisytown.Kamrar);
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
         Daisytown.Beaman.setValid();
-        transition accept;
+        transition Asherton;
     }
     state Lushton {
         transition Covert;
     }
     state Cranbury {
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
-        transition accept;
+        transition Bridgton;
     }
     state Covert {
         Lindsborg.extract<Belcher>(Daisytown.Kamrar);
@@ -5678,14 +5686,14 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
             (13w0x0 &&& 13w0x1fff, 8w1): Basco;
             (13w0x0 &&& 13w0x1fff, 8w17): Supai;
             (13w0x0 &&& 13w0x1fff, 8w6): Bratt;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Bridgton;
             default: Dacono;
         }
     }
     state Supai {
         Lindsborg.extract<Loris>(Daisytown.Makawao);
         transition select(Daisytown.Makawao.Cabot) {
-            default: accept;
+            default: Bridgton;
         }
     }
     state Pineville {
@@ -5693,11 +5701,11 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
         Daisytown.Gastonia.Oriskany = (Lindsborg.lookahead<bit<160>>())[31:0];
         Daisytown.Gastonia.Riner = (Lindsborg.lookahead<bit<14>>())[5:0];
         Daisytown.Gastonia.Cisco = (Lindsborg.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Bridgton;
     }
     state Dacono {
         Daisytown.Gracewood.setValid();
-        transition accept;
+        transition Bridgton;
     }
     state Nooksack {
         Lindsborg.extract<StarLake>(Daisytown.Shingler);
@@ -5706,18 +5714,18 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
             8w58: Basco;
             8w17: Supai;
             8w6: Bratt;
-            default: accept;
+            default: Bridgton;
         }
     }
     state Basco {
         Lindsborg.extract<Loris>(Daisytown.Makawao);
-        transition accept;
+        transition Bridgton;
     }
     state Bratt {
         Balmorhea.Pawtucket.Laxon = (bit<3>)3w6;
         Lindsborg.extract<Loris>(Daisytown.Makawao);
         Lindsborg.extract<Mackville>(Daisytown.Martelle);
-        transition accept;
+        transition Bridgton;
     }
     state Kenyon {
         transition Cranbury;
@@ -5745,7 +5753,7 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
             }
         }
         Lindsborg.extract<Belcher>(Daisytown.Kamrar);
-        transition accept;
+        transition Bridgton;
     }
     state Paradise {
         Chaska Baytown;
@@ -5754,7 +5762,7 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
         transition select(Baytown.Selawik) {
             8w1 &&& 8w0x7: Neuse;
             8w2 &&& 8w0x7: Fairchild;
-            default: accept;
+            default: Asherton;
         }
     }
     state Sharon {
@@ -5764,6 +5772,12 @@ parser Tontogany(packet_in Lindsborg, out Goodwin Daisytown, out Cassa Balmorhea
             }
         }
         transition Lushton;
+    }
+    state Asherton {
+        transition accept;
+    }
+    state Bridgton {
+        transition accept;
     }
 }
 

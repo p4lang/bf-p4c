@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -124,7 +124,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible
+    @flexible 
     bit<9> Waipahu;
 }
 
@@ -238,21 +238,21 @@ struct Blitchton {
 }
 
 header Harbor {
-    @flexible
+    @flexible 
     bit<1>  Blanchard;
-    @flexible
+    @flexible 
     bit<16> Gonzalez;
-    @flexible
+    @flexible 
     bit<9>  Monteview;
-    @flexible
+    @flexible 
     bit<13> Conda;
-    @flexible
+    @flexible 
     bit<16> Waukesha;
-    @flexible
+    @flexible 
     bit<5>  Roseville;
-    @flexible
+    @flexible 
     bit<16> Lenapah;
-    @flexible
+    @flexible 
     bit<9>  Kirkwood;
 }
 
@@ -264,47 +264,47 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible
+    @flexible 
     bit<8>  Oriskany;
-    @flexible
+    @flexible 
     bit<3>  Bowden;
-    @flexible
+    @flexible 
     bit<24> Cabot;
-    @flexible
+    @flexible 
     bit<24> Keyes;
-    @flexible
+    @flexible 
     bit<16> Gosnell;
-    @flexible
+    @flexible 
     bit<4>  Wharton;
-    @flexible
+    @flexible 
     bit<12> Basic;
-    @flexible
+    @flexible 
     bit<3>  Exton;
-    @flexible
+    @flexible 
     bit<9>  Floyd;
-    @flexible
+    @flexible 
     bit<2>  Fayette;
-    @flexible
+    @flexible 
     bit<1>  Osterdock;
-    @flexible
+    @flexible 
     bit<4>  Cortland;
-    @flexible
+    @flexible 
     bit<7>  Rendville;
-    @flexible
+    @flexible 
     bit<1>  PineCity;
-    @flexible
+    @flexible 
     bit<32> Alameda;
-    @flexible
+    @flexible 
     bit<16> Quinwood;
-    @flexible
+    @flexible 
     bit<3>  Marfa;
-    @flexible
+    @flexible 
     bit<12> Palatine;
-    @flexible
+    @flexible 
     bit<12> Mabelle;
-    @flexible
+    @flexible 
     bit<1>  Hoagland;
-    @flexible
+    @flexible 
     bit<6>  Ocoee;
 }
 
@@ -340,6 +340,10 @@ header Kinsley {
 
 header Algodones {
     bit<16> Lathrop;
+}
+
+header Alderson {
+    bit<416> Mellott;
 }
 
 header Newberg {
@@ -728,6 +732,7 @@ struct McCammon {
     bit<6>  Woodville;
     bit<1>  Compton;
     bit<8>  RioPecos;
+    bit<1>  CruzBay;
 }
 
 struct Satolah {
@@ -1888,7 +1893,7 @@ control Emden(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
             Skillman();
         }
         key = {
-            Yorkshire.NantyGlo.Toklat & 12w0xfff: exact @name("NantyGlo.Toklat") ;
+            Yorkshire.NantyGlo.Toklat & 12w4095: exact @name("NantyGlo.Toklat") ;
         }
         const default_action = Skillman(1w0, 1w0, 1w0);
         size = 4096;
@@ -2337,6 +2342,7 @@ control Tenstrike(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
             Yorkshire.Ocracoke.Traverse & 20w0xc0000: ternary @name("Ocracoke.Traverse") ;
         }
         requires_versioning = false;
+        size = 512;
         const default_action = Mulvane();
     }
     apply {
@@ -3118,7 +3124,7 @@ control Arial(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intrin
         Yorkshire.NantyGlo.Toklat = Yorkshire.BealCity.Wellton;
         Yorkshire.NantyGlo.Bledsoe = Timnath;
     }
-    @name(".Woodsboro") action Woodsboro(bit<12> Amherst, bit<20> Timnath) {
+    @name(".Woodsboro") action Woodsboro(bit<32> Wondervu, bit<12> Amherst, bit<20> Timnath) {
         Yorkshire.NantyGlo.Toklat = Amherst;
         Yorkshire.NantyGlo.Bledsoe = Timnath;
         Yorkshire.BealCity.Kenney = (bit<1>)1w1;
@@ -4345,6 +4351,7 @@ control Lackey(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intri
             Yorkshire.Bernice.Cutten: exact @name("Bernice.Cutten") ;
             Yorkshire.Bernice.Wisdom: exact @name("Bernice.Wisdom") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -4482,9 +4489,12 @@ control Moorman(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
     @name(".Lauada") action Lauada() {
         ;
     }
+    @name(".Tanana") action Tanana(bit<16> Bagwell) {
+        Yorkshire.Yerington.Uintah = Yorkshire.Yerington.Uintah + Bagwell;
+    }
     @name(".Parmelee") action Parmelee(bit<16> Irvine, bit<16> Bagwell, bit<16> Wright) {
         Yorkshire.Ocracoke.Ralls = Irvine;
-        Yorkshire.Yerington.Uintah = Yorkshire.Yerington.Uintah + Bagwell;
+        Tanana(Bagwell);
         Yorkshire.Sanford.Basalt = Yorkshire.Sanford.Basalt & Wright;
     }
     @name(".Stone") action Stone(bit<32> Kaaawa, bit<16> Irvine, bit<16> Bagwell, bit<16> Wright) {
@@ -4498,10 +4508,10 @@ control Moorman(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
     }
     @name(".Comunas") action Comunas(bit<16> Irvine, bit<16> Bagwell) {
         Yorkshire.Ocracoke.Ralls = Irvine;
-        Yorkshire.Yerington.Uintah = Yorkshire.Yerington.Uintah + Bagwell;
+        Tanana(Bagwell);
     }
     @name(".Alcoma") action Alcoma(bit<16> Bagwell) {
-        Yorkshire.Yerington.Uintah = Yorkshire.Yerington.Uintah + Bagwell;
+        Tanana(Bagwell);
     }
     @name(".Kilbourne") action Kilbourne(bit<2> Dassel) {
         Yorkshire.Ocracoke.Wamego = (bit<3>)3w2;
@@ -5579,7 +5589,7 @@ control Canalou(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intri
         Yorkshire.Ocracoke.Chevak = Chevak;
         Yorkshire.Ocracoke.Gasport = (bit<1>)1w0;
     }
-    @name(".Duster") action Duster(bit<12> Chevak) {
+    @name(".Duster") action Duster(bit<32> Wondervu, bit<12> Chevak) {
         Yorkshire.Ocracoke.Chevak = Chevak;
         Yorkshire.Ocracoke.Gasport = (bit<1>)1w1;
     }
@@ -5665,7 +5675,6 @@ control Dollar(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intrin
     }
     @name(".Lauada") action Marvin() {
         Flomaton.count();
-        ;
     }
     @disable_atomic_modify(1) @placement_priority(- 10) @name(".Daguao") table Daguao {
         actions = {
@@ -6106,7 +6115,7 @@ control Waretown(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         requires_versioning = false;
         const default_action = Lauada();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Elliston") table Elliston {
+    @ternary(1) @disable_atomic_modify(1) @name(".Elliston") table Elliston {
         actions = {
             Edmeston();
             Doral();
@@ -6359,20 +6368,20 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
     state Sheyenne {
         Orting.extract<Kinsley>(Longwood.Earling);
         Orting.extract<Algodones>(Longwood.Crannell);
-        transition accept;
+        transition Kingsgate;
     }
     state Kaplan {
         Orting.extract<Kinsley>(Longwood.Earling);
         Orting.extract<Algodones>(Longwood.Crannell);
         Longwood.Duncombe.setValid();
-        transition accept;
+        transition Kingsgate;
     }
     state McKenna {
         transition Hearne;
     }
     state Sespe {
         Orting.extract<Algodones>(Longwood.Crannell);
-        transition accept;
+        transition Hillister;
     }
     state Hearne {
         Orting.extract<Kinsley>(Longwood.Earling);
@@ -6414,14 +6423,14 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
             (13w0x0 &&& 13w0x1fff, 8w1): Cotter;
             (13w0x0 &&& 13w0x1fff, 8w17): Powhatan;
             (13w0x0 &&& 13w0x1fff, 8w6): Flaherty;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Hillister;
             default: Funston;
         }
     }
     state Powhatan {
         Orting.extract<Hampton>(Longwood.Magasco);
         transition select(Longwood.Magasco.Irvine) {
-            default: accept;
+            default: Hillister;
         }
     }
     state Halltown {
@@ -6429,11 +6438,11 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
         Longwood.Aniak.Glendevey = (Orting.lookahead<bit<160>>())[31:0];
         Longwood.Aniak.Grannis = (Orting.lookahead<bit<14>>())[5:0];
         Longwood.Aniak.Quogue = (Orting.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Hillister;
     }
     state Funston {
         Longwood.Caguas.setValid();
-        transition accept;
+        transition Hillister;
     }
     state Recluse {
         Orting.extract<Algodones>(Longwood.Crannell);
@@ -6442,18 +6451,18 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
             8w58: Cotter;
             8w17: Powhatan;
             8w6: Flaherty;
-            default: accept;
+            default: Hillister;
         }
     }
     state Cotter {
         Orting.extract<Hampton>(Longwood.Magasco);
-        transition accept;
+        transition Hillister;
     }
     state Flaherty {
         Yorkshire.Barnhill.Sewaren = (bit<3>)3w6;
         Orting.extract<Hampton>(Longwood.Magasco);
         Orting.extract<Antlers>(Longwood.Boonsboro);
-        transition accept;
+        transition Hillister;
     }
     state Woodston {
         transition Sespe;
@@ -6481,7 +6490,7 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
             }
         }
         Orting.extract<Kinsley>(Longwood.Earling);
-        transition accept;
+        transition Hillister;
     }
     state Buenos {
         Chaska Makawao;
@@ -6490,7 +6499,7 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
         transition select(Makawao.Selawik) {
             8w1 &&& 8w0x7: Sheyenne;
             8w2 &&& 8w0x7: Kaplan;
-            default: accept;
+            default: Kingsgate;
         }
     }
     state McDaniels {
@@ -6500,6 +6509,12 @@ parser Ackerman(packet_in Orting, out Ekron Longwood, out Hapeville Yorkshire, o
             }
         }
         transition McKenna;
+    }
+    state Kingsgate {
+        transition accept;
+    }
+    state Hillister {
+        transition accept;
     }
 }
 

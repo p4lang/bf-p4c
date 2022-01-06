@@ -48,6 +48,7 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-nat_scale.p4"
   "obfuscated-nat_scale-2021-11-16.p4"
   "obfuscated-nat_static.p4"
+  "obfuscated-nat_vxlan.p4"
   "obfuscated-packet_filter.p4"
   "obfuscated-small_scale_test.p4"
   "obfuscated-stateless_load_balance_v4v6.p4"
@@ -232,6 +233,7 @@ set (P16_TNA_ARISTA_SET_MAX_POWER_FILES
   "obfuscated-nat_scale.p4"
   "obfuscated-nat_static.p4"
   "obfuscated-nat_scale-2021-11-16.p4"
+  "obfuscated-nat_vxlan.p4"
 )
 
 cmake_policy(SET CMP0057 NEW)

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_PACKET_FILTER=1 -Ibf_arista_switch_packet_filter/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_packet_filter --bf-rt-schema bf_arista_switch_packet_filter/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -66,7 +66,7 @@
 
 header Blitchton {
     bit<8> Avondale;
-    @flexible
+    @flexible 
     bit<9> Glassboro;
 }
 
@@ -170,21 +170,21 @@ struct Aguilita {
 }
 
 header PineCity {
-    @flexible
+    @flexible 
     bit<1>  Alameda;
-    @flexible
+    @flexible 
     bit<16> Rexville;
-    @flexible
+    @flexible 
     bit<9>  Quinwood;
-    @flexible
+    @flexible 
     bit<13> Marfa;
-    @flexible
+    @flexible 
     bit<16> Palatine;
-    @flexible
+    @flexible 
     bit<5>  Mabelle;
-    @flexible
+    @flexible 
     bit<16> Hoagland;
-    @flexible
+    @flexible 
     bit<9>  Ocoee;
 }
 
@@ -196,45 +196,45 @@ header Kaluaaha {
     bit<3>  Allison;
     bit<1>  Topanga;
     bit<4>  Calverton;
-    @flexible
+    @flexible 
     bit<8>  Calcasieu;
-    @flexible
+    @flexible 
     bit<3>  Levittown;
-    @flexible
+    @flexible 
     bit<24> Maryhill;
-    @flexible
+    @flexible 
     bit<24> Norwood;
-    @flexible
+    @flexible 
     bit<12> Dassel;
-    @flexible
+    @flexible 
     bit<3>  Bushland;
-    @flexible
+    @flexible 
     bit<9>  Loring;
-    @flexible
+    @flexible 
     bit<2>  Suwannee;
-    @flexible
+    @flexible 
     bit<1>  Dugger;
-    @flexible
+    @flexible 
     bit<1>  Laurelton;
-    @flexible
+    @flexible 
     bit<32> Ronda;
-    @flexible
+    @flexible 
     bit<1>  LaPalma;
-    @flexible
+    @flexible 
     bit<16> Idalia;
-    @flexible
+    @flexible 
     bit<1>  Cecilton;
-    @flexible
+    @flexible 
     bit<16> Horton;
-    @flexible
+    @flexible 
     bit<16> Lacona;
-    @flexible
+    @flexible 
     bit<3>  Albemarle;
-    @flexible
+    @flexible 
     bit<12> Algodones;
-    @flexible
+    @flexible 
     bit<1>  Buckeye;
-    @flexible
+    @flexible 
     bit<6>  Spearman;
 }
 
@@ -270,6 +270,10 @@ header Supai {
 
 header Dowell {
     bit<16> Keyes;
+}
+
+header Poynette {
+    bit<416> Wyanet;
 }
 
 header LaHoma {
@@ -631,6 +635,7 @@ struct Sardinia {
     bit<6>  Bells;
     bit<1>  Manilla;
     bit<8>  Wetonka;
+    bit<1>  Chunchula;
 }
 
 struct Corydon {
@@ -1872,7 +1877,7 @@ control Oneonta(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_
             Sneads();
         }
         key = {
-            Almota.Masontown.Cisco & 12w0xfff: exact @name("Masontown.Cisco") ;
+            Almota.Masontown.Cisco & 12w4095: exact @name("Masontown.Cisco") ;
         }
         const default_action = Sneads(1w0, 1w0, 1w0);
         size = 4096;
@@ -1975,7 +1980,7 @@ control Nixon(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_me
         Almota.Masontown.Cisco = Almota.Westville.Broussard;
         Almota.Masontown.Higginson = Osterdock;
     }
-    @name(".Mulvane") action Mulvane(bit<12> Luning, bit<20> Osterdock) {
+    @name(".Mulvane") action Mulvane(bit<32> Emida, bit<12> Luning, bit<20> Osterdock) {
         Almota.Masontown.Cisco = Luning;
         Almota.Masontown.Higginson = Osterdock;
         Almota.Westville.Arvada = (bit<1>)1w1;
@@ -3108,6 +3113,7 @@ control Mondovi(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsic_
             Almota.Swisshome.Freeny : exact @name("Swisshome.Freeny") ;
             Almota.Swisshome.Tiburon: exact @name("Swisshome.Tiburon") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -3280,9 +3286,12 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
     @name(".Bellamy") action Bellamy() {
         ;
     }
+    @name(".Darden") action Darden(bit<16> Vananda) {
+        Almota.Covert.Clarion = Almota.Covert.Clarion + Vananda;
+    }
     @name(".Wyandanch") action Wyandanch(bit<16> Ankeny, bit<16> Vananda, bit<16> Yorklyn) {
         Almota.Belmore.Pittsboro = Ankeny;
-        Almota.Covert.Clarion = Almota.Covert.Clarion + Vananda;
+        Darden(Vananda);
         Almota.Newhalem.Komatke = Almota.Newhalem.Komatke & Yorklyn;
     }
     @name(".Botna") action Botna(bit<32> Satolah, bit<16> Ankeny, bit<16> Vananda, bit<16> Yorklyn) {
@@ -3296,10 +3305,10 @@ control Addicks(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
     }
     @name(".Inkom") action Inkom(bit<16> Ankeny, bit<16> Vananda) {
         Almota.Belmore.Pittsboro = Ankeny;
-        Almota.Covert.Clarion = Almota.Covert.Clarion + Vananda;
+        Darden(Vananda);
     }
     @name(".Gowanda") action Gowanda(bit<16> Vananda) {
-        Almota.Covert.Clarion = Almota.Covert.Clarion + Vananda;
+        Darden(Vananda);
     }
     @name(".BurrOak") action BurrOak(bit<2> Cornell) {
         Almota.Belmore.Gause = (bit<3>)3w2;
@@ -3750,7 +3759,7 @@ control Ragley(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_me
         Almota.Belmore.Riner = Riner;
         Almota.Belmore.Grassflat = (bit<1>)1w0;
     }
-    @name(".Gunder") action Gunder(bit<12> Riner) {
+    @name(".Gunder") action Gunder(bit<32> Emida, bit<12> Riner) {
         Almota.Belmore.Riner = Riner;
         Almota.Belmore.Grassflat = (bit<1>)1w1;
     }
@@ -3836,7 +3845,6 @@ control Doyline(inout Orting Sedan, inout Martelle Almota, in egress_intrinsic_m
     }
     @name(".Bellamy") action Parmelee() {
         Belcourt.count();
-        ;
     }
     @disable_atomic_modify(1) @name(".Bagwell") table Bagwell {
         actions = {
@@ -4878,7 +4886,7 @@ control Kilbourne(inout Orting Sedan, inout Martelle Almota, in ingress_intrinsi
         size = 512;
         counters = Crystola;
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Tocito") table Tocito {
+    @ternary(1) @disable_atomic_modify(1) @name(".Tocito") table Tocito {
         actions = {
             Dougherty();
             Unionvale();
@@ -5115,20 +5123,20 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
     state Valmont {
         Recluse.extract<Supai>(Sedan.Hearne);
         Recluse.extract<Dowell>(Sedan.Pinetop);
-        transition accept;
+        transition ElJebel;
     }
     state Millican {
         Recluse.extract<Supai>(Sedan.Hearne);
         Recluse.extract<Dowell>(Sedan.Pinetop);
         Sedan.LaFayette.setValid();
-        transition accept;
+        transition ElJebel;
     }
     state Decorah {
         transition Ambler;
     }
     state Indios {
         Recluse.extract<Dowell>(Sedan.Pinetop);
-        transition accept;
+        transition McCartys;
     }
     state Ambler {
         Recluse.extract<Supai>(Sedan.Hearne);
@@ -5170,14 +5178,14 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
             (13w0x0 &&& 13w0x1fff, 8w1): Lauada;
             (13w0x0 &&& 13w0x1fff, 8w17): Waretown;
             (13w0x0 &&& 13w0x1fff, 8w6): Olcott;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): McCartys;
             default: Dwight;
         }
     }
     state Waretown {
         Recluse.extract<Suttle>(Sedan.Biggers);
         transition select(Sedan.Biggers.Ankeny) {
-            default: accept;
+            default: McCartys;
         }
     }
     state Robstown {
@@ -5185,11 +5193,11 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
         Sedan.Garrison.Solomon = (Recluse.lookahead<bit<160>>())[31:0];
         Sedan.Garrison.Norcatur = (Recluse.lookahead<bit<14>>())[5:0];
         Sedan.Garrison.Irvine = (Recluse.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition McCartys;
     }
     state Dwight {
         Sedan.Unity.setValid();
-        transition accept;
+        transition McCartys;
     }
     state Ponder {
         Recluse.extract<Dowell>(Sedan.Pinetop);
@@ -5198,18 +5206,18 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
             8w58: Lauada;
             8w17: Waretown;
             8w6: Olcott;
-            default: accept;
+            default: McCartys;
         }
     }
     state Lauada {
         Recluse.extract<Suttle>(Sedan.Biggers);
-        transition accept;
+        transition McCartys;
     }
     state Olcott {
         Almota.Gambrills.Gasport = (bit<3>)3w6;
         Recluse.extract<Suttle>(Sedan.Biggers);
         Recluse.extract<Denhoff>(Sedan.Nooksack);
-        transition accept;
+        transition McCartys;
     }
     state Levasy {
         transition Indios;
@@ -5237,7 +5245,7 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
             }
         }
         Recluse.extract<Supai>(Sedan.Hearne);
-        transition accept;
+        transition McCartys;
     }
     state Downs {
         Blitchton Twain;
@@ -5246,7 +5254,7 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
         transition select(Twain.Avondale) {
             8w1 &&& 8w0x7: Valmont;
             8w2 &&& 8w0x7: Millican;
-            default: accept;
+            default: ElJebel;
         }
     }
     state Moxley {
@@ -5256,6 +5264,12 @@ parser Leetsdale(packet_in Recluse, out Orting Sedan, out Martelle Almota, out e
             }
         }
         transition Decorah;
+    }
+    state ElJebel {
+        transition accept;
+    }
+    state McCartys {
+        transition accept;
     }
 }
 

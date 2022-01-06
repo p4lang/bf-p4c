@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -43,6 +43,8 @@
 @pa_container_size("ingress" , "Philip.Bratt.Clover" , 16)
 @pa_container_size("ingress" , "Philip.Bratt.Wetonka" , 32)
 @pa_container_size("ingress" , "Philip.Bratt.Commack" , 8)
+@pa_container_size("pipe_b" , "ingress" , "Fishers.Lindy.Uvalde" , 32)
+@pa_container_size("pipe_b" , "ingress" , "Fishers.Lindy.Halaula" , 32)
 @pa_atomic("ingress" , "Philip.Moultrie.Arvada")
 @pa_atomic("ingress" , "Philip.PeaRidge.Chaffee")
 @pa_atomic("ingress" , "Philip.Swifton.Bicknell")
@@ -151,7 +153,7 @@
 
 header Freeburg {
     bit<8> Matheson;
-    @flexible
+    @flexible 
     bit<9> Uintah;
 }
 
@@ -266,71 +268,71 @@ struct Lathrop {
 
 @pa_container_size("pipe_b" , "ingress" , "Fishers.Glenoma.Norwood" , 16)
 @pa_solitary("pipe_b" , "ingress" , "Fishers.Glenoma.Norwood") header Floyd {
-    @flexible
+    @flexible 
     bit<8>  Fayette;
-    @flexible
+    @flexible 
     bit<3>  Osterdock;
-    @flexible
+    @flexible 
     bit<20> PineCity;
-    @flexible
+    @flexible 
     bit<1>  Alameda;
-    @flexible
+    @flexible 
     bit<1>  Rexville;
-    @flexible
+    @flexible 
     bit<16> Quinwood;
-    @flexible
+    @flexible 
     bit<16> Marfa;
-    @flexible
+    @flexible 
     bit<9>  Palatine;
-    @flexible
+    @flexible 
     bit<32> Mabelle;
-    @flexible
+    @flexible 
     bit<32> Hoagland;
-    @flexible
+    @flexible 
     bit<1>  Ocoee;
-    @flexible
+    @flexible 
     bit<1>  Hackett;
-    @flexible
+    @flexible 
     bit<1>  Kaluaaha;
-    @flexible
+    @flexible 
     bit<16> Calcasieu;
-    @flexible
+    @flexible 
     bit<32> Levittown;
-    @flexible
+    @flexible 
     bit<16> Maryhill;
-    @flexible
+    @flexible 
     bit<12> Norwood;
-    @flexible
+    @flexible 
     bit<8>  Dassel;
-    @flexible
+    @flexible 
     bit<32> Bushland;
-    @flexible
+    @flexible 
     bit<1>  Loring;
-    @flexible
+    @flexible 
     bit<16> Suwannee;
-    @flexible
+    @flexible 
     bit<1>  Dugger;
-    @flexible
+    @flexible 
     bit<3>  Laurelton;
-    @flexible
+    @flexible 
     bit<3>  Ronda;
-    @flexible
+    @flexible 
     bit<1>  LaPalma;
-    @flexible
+    @flexible 
     bit<1>  Idalia;
-    @flexible
+    @flexible 
     bit<4>  Cecilton;
-    @flexible
+    @flexible 
     bit<8>  Horton;
-    @flexible
+    @flexible 
     bit<2>  Lacona;
-    @flexible
+    @flexible 
     bit<1>  Albemarle;
-    @flexible
+    @flexible 
     bit<1>  Algodones;
-    @flexible
+    @flexible 
     bit<16> Buckeye;
-    @flexible
+    @flexible 
     bit<5>  Topanga;
 }
 
@@ -340,57 +342,57 @@ struct Lathrop {
 @pa_container_size("ingress" , "Fishers.Baker.Marfa" , 16)
 @pa_container_size("ingress" , "Fishers.Baker.Osterdock" , 8)
 @pa_atomic("egress" , "Fishers.Baker.Marfa") header Allison {
-    @flexible
+    @flexible 
     bit<8>  Fayette;
-    @flexible
+    @flexible 
     bit<3>  Osterdock;
-    @flexible
+    @flexible 
     bit<24> Spearman;
-    @flexible
+    @flexible 
     bit<24> Chevak;
-    @flexible
+    @flexible 
     bit<16> Mendocino;
-    @flexible
+    @flexible 
     bit<4>  Eldred;
-    @flexible
+    @flexible 
     bit<12> Chloride;
-    @flexible
+    @flexible 
     bit<9>  Garibaldi;
-    @flexible
+    @flexible 
     bit<1>  Weinert;
-    @flexible
+    @flexible 
     bit<4>  Cornell;
-    @flexible
+    @flexible 
     bit<7>  Noyes;
-    @flexible
+    @flexible 
     bit<1>  Helton;
-    @flexible
+    @flexible 
     bit<32> Grannis;
-    @flexible
+    @flexible 
     bit<16> Marfa;
-    @flexible
+    @flexible 
     bit<12> Norwood;
-    @flexible
+    @flexible 
     bit<1>  Albemarle;
 }
 
 header StarLake {
     bit<8>  Matheson;
-    @flexible
+    @flexible 
     bit<3>  Rains;
-    @flexible
+    @flexible 
     bit<2>  SoapLake;
-    @flexible
+    @flexible 
     bit<3>  Linden;
-    @flexible
+    @flexible 
     bit<12> Conner;
-    @flexible
+    @flexible 
     bit<1>  Monrovia;
-    @flexible
+    @flexible 
     bit<1>  Ledoux;
-    @flexible
+    @flexible 
     bit<3>  Steger;
-    @flexible
+    @flexible 
     bit<6>  Quogue;
 }
 
@@ -426,6 +428,10 @@ header Anaconda {
 
 header Armona {
     bit<16> Oriskany;
+}
+
+header Melvina {
+    bit<416> Seibert;
 }
 
 header Dunstable {
@@ -731,6 +737,7 @@ struct Jenners {
     bit<1>    Satolah;
     bit<1>    RedElm;
     bit<32>   Renick;
+    bit<16>   Ludell;
     bit<2>    Pajaros;
     bit<3>    Wauconda;
     bit<1>    Richvale;
@@ -815,6 +822,7 @@ struct Fredonia {
     bit<6>  Savery;
     bit<1>  Richvale;
     bit<8>  LaConner;
+    bit<1>  Maybee;
 }
 
 struct Quinault {
@@ -1375,6 +1383,8 @@ struct Harriet {
     Beaverdam    Geistown;
     Kapalua      Lindy;
     Brinkman     Brady;
+    Brinkman     Tryon;
+    Brinkman     Fairborn;
     Bradner      Emden;
     Anaconda     Skillman;
     Armona       Caguas;
@@ -1562,7 +1572,7 @@ control Sneads(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_
             Hemlock();
         }
         key = {
-            Philip.Bratt.IttaBena & 12w0xfff: exact @name("Bratt.IttaBena") ;
+            Philip.Bratt.IttaBena & 12w4095: exact @name("Bratt.IttaBena") ;
         }
         const default_action = Hemlock(1w0, 1w0, 1w0);
         size = 4096;
@@ -1747,40 +1757,27 @@ control Campo(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_m
     @name(".Boyle") action Boyle() {
         ;
     }
-    @name(".SanPablo") action SanPablo() {
-        Fishers.Brady.Boerne = ~Fishers.Brady.Boerne;
-    }
-    @name(".Forepaugh") action Forepaugh() {
-        Fishers.Brady.Boerne = ~Fishers.Brady.Boerne;
-        Philip.Bratt.Renick = (bit<32>)32w0;
-    }
-    @name(".Chewalla") action Chewalla() {
-        Fishers.Brady.Boerne = 16w65535;
-        Philip.Bratt.Renick = (bit<32>)32w0;
-    }
-    @name(".WildRose") action WildRose() {
-        Fishers.Brady.Boerne = (bit<16>)16w0;
-        Philip.Bratt.Renick = (bit<32>)32w0;
-    }
     @name(".Kellner") action Kellner() {
         Fishers.Clearmont.Ramapo = Philip.Tabler.Ramapo;
         Fishers.Clearmont.Bicknell = Philip.Tabler.Bicknell;
     }
-    @name(".Hagaman") action Hagaman() {
-        SanPablo();
-        Kellner();
+    @name(".China") action China() {
+        Fishers.Clearmont.Ramapo = Philip.Tabler.Ramapo;
+        Fishers.Clearmont.Bicknell = Philip.Tabler.Bicknell;
         Fishers.Swanlake.Parkland = Philip.Bratt.Ralls;
         Fishers.Swanlake.Coulter = Philip.Bratt.Standish;
     }
-    @name(".McKenney") action McKenney() {
+    @name(".Shorter") action Shorter() {
         Kellner();
-        Chewalla();
+        Fishers.Brady.setInvalid();
+        Fishers.Fairborn.setValid();
         Fishers.Swanlake.Parkland = Philip.Bratt.Ralls;
         Fishers.Swanlake.Coulter = Philip.Bratt.Standish;
     }
-    @name(".Decherd") action Decherd() {
-        WildRose();
+    @name(".Point") action Point() {
         Kellner();
+        Fishers.Brady.setInvalid();
+        Fishers.Tryon.setValid();
         Fishers.Swanlake.Parkland = Philip.Bratt.Ralls;
         Fishers.Swanlake.Coulter = Philip.Bratt.Standish;
     }
@@ -1788,10 +1785,9 @@ control Campo(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_m
         actions = {
             Boyle();
             Kellner();
-            Hagaman();
-            McKenney();
-            Decherd();
-            Forepaugh();
+            China();
+            Shorter();
+            Point();
             @defaultonly NoAction();
         }
         key = {
@@ -2028,7 +2024,7 @@ control Lewellen(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsi
         Philip.Bratt.IttaBena = Philip.Milano.Broadwell;
         Philip.Bratt.Adona = Exton;
     }
-    @name(".Flynn") action Flynn(bit<12> Algonquin, bit<20> Exton) {
+    @name(".Flynn") action Flynn(bit<32> Ekron, bit<12> Algonquin, bit<20> Exton) {
         Philip.Bratt.IttaBena = Algonquin;
         Philip.Bratt.Adona = Exton;
         Philip.Milano.Grays = (bit<1>)1w1;
@@ -2927,7 +2923,7 @@ control Kingman(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic
     @name(".Owentown") action Owentown() {
         Philip.Kinde.Moose = (bit<2>)2w1;
     }
-    @disable_atomic_modify(1) @stage(6) @placement_priority(1) @name(".Basye") table Basye {
+    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Basye") table Basye {
         actions = {
             BirchRun();
             Owentown();
@@ -2972,7 +2968,7 @@ control Ardsley(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic
     @name(".Westend") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Westend;
     @name(".Scotland.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Westend) Scotland;
     @name(".Addicks") ActionSelector(32w1024, Scotland, SelectorMode_t.RESILIENT) Addicks;
-    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Wyandanch") table Wyandanch {
+    @disable_atomic_modify(1) @stage(4) @placement_priority(1) @name(".Wyandanch") table Wyandanch {
         actions = {
             Astatula();
             @defaultonly NoAction();
@@ -3217,7 +3213,7 @@ control Goldsmith(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrins
         Encinitas((bit<5>)Sanford);
         Philip.Nooksack.BealCity = (bit<1>)Issaquah.execute(Sanford);
     }
-    @ignore_table_dependency(".Mantee") @disable_atomic_modify(1) @ignore_table_dependency(".Mantee") @name(".Wattsburg") table Wattsburg {
+    @disable_atomic_modify(1) @ignore_table_dependency(".Mantee") @name(".Wattsburg") table Wattsburg {
         actions = {
             Encinitas();
             Herring();
@@ -3255,6 +3251,7 @@ control DeBeque(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic
             Philip.Nooksack.BealCity: exact @name("Nooksack.BealCity") ;
             Philip.Nooksack.Sanford : exact @name("Nooksack.Sanford") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -3392,9 +3389,12 @@ control Lackey(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_m
     @name(".Ackerly") action Ackerly() {
         ;
     }
+    @name(".McFaddin") action McFaddin(bit<16> Baldridge) {
+        Philip.Lemont.Vichy = Philip.Lemont.Vichy + Baldridge;
+    }
     @name(".Trion") action Trion(bit<16> Coulter, bit<16> Baldridge, bit<16> Carlson) {
         Philip.Moultrie.Newfolden = Coulter;
-        Philip.Lemont.Vichy = Philip.Lemont.Vichy + Baldridge;
+        McFaddin(Baldridge);
         Philip.Garrison.Belmont = Philip.Garrison.Belmont & Carlson;
     }
     @name(".Ivanpah") action Ivanpah(bit<32> RossFork, bit<16> Coulter, bit<16> Baldridge, bit<16> Carlson) {
@@ -3408,10 +3408,10 @@ control Lackey(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_m
     }
     @name(".Newland") action Newland(bit<16> Coulter, bit<16> Baldridge) {
         Philip.Moultrie.Newfolden = Coulter;
-        Philip.Lemont.Vichy = Philip.Lemont.Vichy + Baldridge;
+        McFaddin(Baldridge);
     }
     @name(".Waumandee") action Waumandee(bit<16> Baldridge) {
-        Philip.Lemont.Vichy = Philip.Lemont.Vichy + Baldridge;
+        McFaddin(Baldridge);
     }
     @name(".Nowlin") action Nowlin(bit<2> Turkey) {
         Philip.Moultrie.LaUnion = (bit<3>)3w2;
@@ -3789,7 +3789,7 @@ control Mynard(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_
         Fishers.Glenoma.Algodones = (bit<1>)1w1;
         Philip.Moultrie.Comfrey = (bit<8>)8w26;
     }
-    @ignore_table_dependency(".Wattsburg") @disable_atomic_modify(1) @ignore_table_dependency(".Wattsburg") @name(".Mantee") table Mantee {
+    @disable_atomic_modify(1) @ignore_table_dependency(".Wattsburg") @name(".Mantee") table Mantee {
         actions = {
             LasLomas();
             Deeth();
@@ -4170,7 +4170,7 @@ control Keltys(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_
     }
     @name(".Keller") action Keller() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(5) @name(".Maupin") table Maupin {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Maupin") table Maupin {
         key = {
             Philip.Swifton.Mather    : exact @name("Swifton.Mather") ;
             Philip.PeaRidge.Ramapo   : exact @name("PeaRidge.Ramapo") ;
@@ -4486,7 +4486,7 @@ control Bosco(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsic_me
         Philip.Moultrie.Kendrick = Kendrick;
         Philip.Moultrie.Lapoint = (bit<1>)1w0;
     }
-    @name(".Burgdorf") action Burgdorf(bit<12> Kendrick) {
+    @name(".Burgdorf") action Burgdorf(bit<32> Ekron, bit<12> Kendrick) {
         Philip.Moultrie.Kendrick = Kendrick;
         Philip.Moultrie.Lapoint = (bit<1>)1w1;
     }
@@ -4572,7 +4572,6 @@ control Telegraph(inout Rienzi Fishers, inout Harriet Philip, in egress_intrinsi
     }
     @name(".Ackerly") action Picacho() {
         Veradale.count();
-        ;
     }
     @disable_atomic_modify(1) @name(".Reading") table Reading {
         actions = {
@@ -5970,7 +5969,7 @@ control Holcut(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsic_
         requires_versioning = false;
         const default_action = Ackerly();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Poteet") table Poteet {
+    @ternary(1) @disable_atomic_modify(1) @name(".Poteet") table Poteet {
         actions = {
             Benitez();
             Forman();
@@ -6233,20 +6232,20 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
     state Beaman {
         Ludowici.extract<Anaconda>(Fishers.Tofte);
         Ludowici.extract<Armona>(Fishers.Wabbaseka);
-        transition accept;
+        transition Jigger;
     }
     state Challenge {
         Ludowici.extract<Anaconda>(Fishers.Tofte);
         Ludowici.extract<Armona>(Fishers.Wabbaseka);
         Fishers.FlatLick.setValid();
-        transition accept;
+        transition Jigger;
     }
     state Seaford {
         transition Salamonia;
     }
     state Carrizozo {
         Ludowici.extract<Armona>(Fishers.Wabbaseka);
-        transition accept;
+        transition Villanova;
     }
     state Salamonia {
         Ludowici.extract<Anaconda>(Fishers.Tofte);
@@ -6288,14 +6287,14 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
             (13w0x0 &&& 13w0x1fff, 8w1): Corder;
             (13w0x0 &&& 13w0x1fff, 8w17): Craigtown;
             (13w0x0 &&& 13w0x1fff, 8w6): Tontogany;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Villanova;
             default: Ahmeek;
         }
     }
     state Craigtown {
         Ludowici.extract<Thayne>(Fishers.Swanlake);
         transition select(Fishers.Swanlake.Coulter) {
-            default: accept;
+            default: Villanova;
         }
     }
     state Waxhaw {
@@ -6303,11 +6302,11 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
         Fishers.Clearmont.Bicknell = (Ludowici.lookahead<bit<160>>())[31:0];
         Fishers.Clearmont.Mackville = (Ludowici.lookahead<bit<14>>())[5:0];
         Fishers.Clearmont.Blakeley = (Ludowici.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Villanova;
     }
     state Ahmeek {
         Fishers.Draketown.setValid();
-        transition accept;
+        transition Villanova;
     }
     state Gerster {
         Ludowici.extract<Armona>(Fishers.Wabbaseka);
@@ -6316,18 +6315,18 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
             8w58: Corder;
             8w17: Craigtown;
             8w6: Tontogany;
-            default: accept;
+            default: Villanova;
         }
     }
     state Corder {
         Ludowici.extract<Thayne>(Fishers.Swanlake);
-        transition accept;
+        transition Villanova;
     }
     state Tontogany {
         Philip.Dushore.Eastwood = (bit<3>)3w6;
         Ludowici.extract<Thayne>(Fishers.Swanlake);
         Ludowici.extract<Kapalua>(Fishers.Lindy);
-        transition accept;
+        transition Villanova;
     }
     state LaFayette {
         transition Carrizozo;
@@ -6360,7 +6359,7 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
             }
         }
         Ludowici.extract<Anaconda>(Fishers.Tofte);
-        transition accept;
+        transition Villanova;
     }
     state Compton {
         Freeburg Saugatuck;
@@ -6369,7 +6368,7 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
         transition select(Saugatuck.Matheson) {
             8w1 &&& 8w0x7: Beaman;
             8w2 &&& 8w0x7: Challenge;
-            default: accept;
+            default: Jigger;
         }
     }
     state Penalosa {
@@ -6384,6 +6383,12 @@ parser Berwyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out eg
             }
         }
         transition Seaford;
+    }
+    state Jigger {
+        transition accept;
+    }
+    state Villanova {
+        transition accept;
     }
 }
 
@@ -6522,6 +6527,7 @@ struct Hagerman {
 
 parser Jermyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out ingress_intrinsic_metadata_t Sedan) {
     @name(".Valier") value_set<bit<9>>(2) Valier;
+    @name(".Mishawaka") Checksum() Mishawaka;
     state start {
         Ludowici.extract<ingress_intrinsic_metadata_t>(Sedan);
         transition Cleator;
@@ -6591,9 +6597,10 @@ parser Jermyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out in
         Ludowici.extract<Armona>(Fishers.Wabbaseka);
         Ludowici.extract<Bonney>(Fishers.Clearmont);
         Philip.Bratt.Blakeley = Fishers.Clearmont.Blakeley;
+        Mishawaka.subtract<tuple<bit<32>, bit<32>>>({ Fishers.Clearmont.Ramapo, Fishers.Clearmont.Bicknell });
         transition select(Fishers.Clearmont.Malinta, Fishers.Clearmont.Blakeley) {
-            (13w0x0 &&& 13w0x1fff, 8w17): LaHoma;
-            (13w0x0 &&& 13w0x1fff, 8w6): Tontogany;
+            (13w0x0 &&& 13w0x1fff, 8w17): Hillcrest;
+            (13w0x0 &&& 13w0x1fff, 8w6): Oskawalik;
             default: accept;
         }
     }
@@ -6604,25 +6611,30 @@ parser Jermyn(packet_in Ludowici, out Rienzi Fishers, out Harriet Philip, out in
         Philip.Hearne.Bicknell = Fishers.Ruffin.Bicknell;
         Philip.Hearne.Ramapo = Fishers.Ruffin.Ramapo;
         transition select(Fishers.Ruffin.Ankeny) {
-            8w17: LaHoma;
-            8w6: Tontogany;
+            8w17: Hillcrest;
+            8w6: Oskawalik;
             default: accept;
         }
     }
-    state LaHoma {
+    state Hillcrest {
         Ludowici.extract<Thayne>(Fishers.Swanlake);
         Ludowici.extract<Beaverdam>(Fishers.Geistown);
         Ludowici.extract<Brinkman>(Fishers.Brady);
+        Mishawaka.subtract<tuple<bit<16>, bit<16>, bit<16>>>({ Fishers.Swanlake.Parkland, Fishers.Swanlake.Coulter, Fishers.Brady.Boerne });
+        Mishawaka.subtract_all_and_deposit<bit<16>>(Philip.Bratt.Ludell);
         Philip.Bratt.Coulter = Fishers.Swanlake.Coulter;
         Philip.Bratt.Parkland = Fishers.Swanlake.Parkland;
         transition accept;
     }
-    state Tontogany {
+    state Oskawalik {
+        Philip.Dushore.Eastwood = (bit<3>)3w6;
         Ludowici.extract<Thayne>(Fishers.Swanlake);
         Ludowici.extract<Kapalua>(Fishers.Lindy);
         Ludowici.extract<Brinkman>(Fishers.Brady);
         Philip.Bratt.Coulter = Fishers.Swanlake.Coulter;
         Philip.Bratt.Parkland = Fishers.Swanlake.Parkland;
+        Mishawaka.subtract<tuple<bit<16>, bit<16>, bit<16>>>({ Fishers.Swanlake.Parkland, Fishers.Swanlake.Coulter, Fishers.Brady.Boerne });
+        Mishawaka.subtract_all_and_deposit<bit<16>>(Philip.Bratt.Ludell);
         transition accept;
     }
     state Wibaux {
@@ -6844,6 +6856,7 @@ control Masardis(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsi
             Philip.Moultrie.Arvada & 20w0xc0000: ternary @name("Moultrie.Arvada") ;
         }
         requires_versioning = false;
+        size = 512;
         const default_action = Paoli();
     }
     @name(".Murdock") DirectCounter<bit<64>>(CounterType_t.PACKETS) Murdock;
@@ -6867,8 +6880,6 @@ control Masardis(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsi
             Almota.copy_to_cpu      : ternary @name("Almota.copy_to_cpu") ;
             Philip.Moultrie.Cuprum  : ternary @name("Moultrie.Cuprum") ;
             Philip.Moultrie.Maddock : ternary @name("Moultrie.Maddock") ;
-            Philip.Callao.Edgemoor  : ternary @name("Callao.Edgemoor") ;
-            Philip.Bratt.Richvale   : ternary @name("Bratt.Richvale") ;
         }
         const default_action = Coalton();
         size = 2048;
@@ -6935,12 +6946,18 @@ control Masardis(inout Rienzi Fishers, inout Harriet Philip, in ingress_intrinsi
 
 control Kinsley(packet_out Ludowici, inout Rienzi Fishers, in Harriet Philip, in ingress_intrinsic_metadata_for_deparser_t Indios) {
     @name(".Cross") Mirror() Cross;
-    @name(".Ludell") Checksum() Ludell;
+    @name(".Pelland") Checksum() Pelland;
+    @name(".Gomez") Checksum() Gomez;
     @name(".Snowflake") Checksum() Snowflake;
     apply {
         Fishers.Clearmont.Poulan = Snowflake.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Fishers.Clearmont.Pilar, Fishers.Clearmont.Loris, Fishers.Clearmont.Mackville, Fishers.Clearmont.McBride, Fishers.Clearmont.Vinemont, Fishers.Clearmont.Kenbridge, Fishers.Clearmont.Parkville, Fishers.Clearmont.Mystic, Fishers.Clearmont.Kearns, Fishers.Clearmont.Malinta, Fishers.Clearmont.Commack, Fishers.Clearmont.Blakeley, Fishers.Clearmont.Ramapo, Fishers.Clearmont.Bicknell }, false);
         {
-            Fishers.Brady.Boerne = Ludell.update<tuple<bit<32>, bit<16>>>({ Philip.Bratt.Renick, Fishers.Brady.Boerne }, false);
+            Fishers.Fairborn.Boerne = Pelland.update<tuple<bit<32>, bit<32>, bit<16>, bit<16>, bit<16>>>({ Fishers.Clearmont.Ramapo, Fishers.Clearmont.Bicknell, Fishers.Swanlake.Parkland, Fishers.Swanlake.Coulter, Philip.Bratt.Ludell }, true);
+        }
+        {
+            Fishers.Tryon.Boerne = Gomez.update<tuple<bit<32>, bit<32>, bit<16>, bit<16>, bit<16>>>({ Fishers.Clearmont.Ramapo, Fishers.Clearmont.Bicknell, Fishers.Swanlake.Parkland, Fishers.Swanlake.Coulter, Philip.Bratt.Ludell }, false);
+        }
+        {
         }
         Ludowici.emit<StarLake>(Fishers.Olmitz);
         {
@@ -6959,6 +6976,10 @@ control Kinsley(packet_out Ludowici, inout Rienzi Fishers, in Harriet Philip, in
         Ludowici.emit<Beaverdam>(Fishers.Geistown);
         Ludowici.emit<Kapalua>(Fishers.Lindy);
         Ludowici.emit<Brinkman>(Fishers.Brady);
+        {
+            Ludowici.emit<Brinkman>(Fishers.Fairborn);
+            Ludowici.emit<Brinkman>(Fishers.Tryon);
+        }
         Ludowici.emit<Alamosa>(Fishers.Starkey);
     }
 }

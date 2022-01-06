@@ -1,18 +1,11 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino2_specs.p4>
 #include <tofino2_arch.p4>
 
 @pa_auto_init_metadata
-@pa_container_size("ingress", "ig_intr_md_for_tm.bypass_egress" , 8)
-@pa_container_size("ingress", "Peoria.Ekwok.Matheson" , 8)
-@pa_container_size("ingress", "ig_intr_md_for_tm.qid" , 8)
-@pa_container_size("ingress", "ig_intr_md_for_dprsr.drop_ctl" , 8)
-@pa_container_size("egress", "eg_intr_md_for_dprsr.drop_ctl" , 8)
-@pa_container_size("egress", "eg_intr_md_for_dprsr.mirror_io_select" , 8)
-
-@pa_atomic("ingress", "Peoria.Yerington.Denhoff")  // table fitting hack.
+@pa_parser_group_monogress
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Kendrick" , "Wanamassa.Knights.Kendrick")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights.Kendrick" , "Peoria.Belmore.Kendrick")
 @pa_container_size("ingress" , "Peoria.Masontown.Lapoint" , 32)
@@ -58,6 +51,10 @@
 @pa_atomic("ingress" , "Peoria.Daisytown.Colona")
 @pa_atomic("ingress" , "Peoria.Masontown.Clarion")
 @pa_atomic("ingress" , "Peoria.Wesson.Daleville")
+@pa_container_size("egress" , "Wanamassa.Moultrie.Charco" , 32)
+@pa_container_size("egress" , "Wanamassa.Moultrie.Chugwater" , 32)
+@pa_container_size("ingress" , "Wanamassa.Moultrie.Charco" , 32)
+@pa_container_size("ingress" , "Wanamassa.Moultrie.Chugwater" , 32)
 @pa_mutually_exclusive("egress" , "Wanamassa.Basco.Charco" , "Peoria.Belmore.Corydon")
 @pa_mutually_exclusive("egress" , "Wanamassa.Gamaliel.Tenino" , "Peoria.Belmore.Corydon")
 @pa_mutually_exclusive("egress" , "Wanamassa.Gamaliel.Pridgen" , "Peoria.Belmore.Heuvelton")
@@ -65,7 +62,6 @@
 @pa_mutually_exclusive("egress" , "Wanamassa.Humeston.Mackville" , "Peoria.Belmore.Miranda")
 @pa_atomic("ingress" , "Peoria.Belmore.Tornillo")
 @pa_atomic("ingress" , "ig_intr_md_for_dprsr.drop_ctl")
-@pa_container_size("egress" , "Wanamassa.Basco.Almedia" , 16)
 @pa_container_size("ingress" , "Wanamassa.Knights.Armona" , 32)
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Renick" , "Wanamassa.Orting.Glenmora")
 @pa_mutually_exclusive("egress" , "Wanamassa.Basco.Chugwater" , "Peoria.Belmore.LaLuz")
@@ -78,29 +74,17 @@
 @pa_no_init("egress" , "Peoria.Nevis.LaUnion")
 @pa_parser_group_monogress
 @pa_no_init("egress" , "Peoria.Belmore.Orrick")
-@pa_atomic("ingress" , "Wanamassa.Moultrie.Provo")
-@pa_atomic("ingress" , "Peoria.Udall.Brookneal")
 @pa_no_init("ingress" , "Peoria.Masontown.Gould")
-@pa_container_size("ingress" , "Peoria.Masontown.Gould" , 32)
 @pa_container_size("pipe_b" , "ingress" , "Peoria.Ekron.Ackley" , 8)
 @pa_container_size("pipe_b" , "ingress" , "Wanamassa.Yorkshire.Mendocino" , 8)
 @pa_container_size("pipe_b" , "ingress" , "Wanamassa.Alstown.Comfrey" , 8)
 @pa_container_size("pipe_b" , "ingress" , "Wanamassa.Alstown.Riner" , 16)
 @pa_atomic("pipe_b" , "ingress" , "Wanamassa.Alstown.Wallula")
 @pa_atomic("egress" , "Wanamassa.Alstown.Wallula")
-@pa_no_overlay("pipe_a" , "ingress" , "Peoria.Belmore.LaConner")
-@pa_no_overlay("pipe_a" , "ingress" , "Wanamassa.Yorkshire.Keyes")
 @pa_solitary("pipe_b" , "ingress" , "Wanamassa.Alstown.$valid")
-@pa_no_pack("pipe_a" , "ingress" , "Peoria.Masontown.Madera" , "Peoria.Masontown.Rudolph")
-@pa_no_overlay("pipe_a" , "ingress" , "Peoria.Masontown.Madera")
-@pa_no_pack("pipe_a" , "ingress" , "Peoria.Masontown.Rudolph" , "Peoria.Masontown.Ivyland")
-@pa_no_pack("pipe_a" , "ingress" , "Peoria.Masontown.Rudolph" , "Peoria.Masontown.Madera")
 @pa_atomic("pipe_a" , "ingress" , "Peoria.Masontown.Whitewood")
-@pa_mutually_exclusive("egress" , "Peoria.Belmore.Goessel" , "Peoria.Belmore.McCammon")
-@pa_mutually_exclusive("egress" , "Peoria.Belmore.Coalwood" , "Wanamassa.Knights.Coalwood")
-@pa_container_size("pipe_a" , "egress" , "Peoria.Belmore.Bells" , 32)
-@pa_no_overlay("pipe_a" , "ingress" , "Peoria.Masontown.Lenexa")
 @pa_container_size("pipe_a" , "egress" , "Wanamassa.Dushore.Colona" , 16)
+@pa_container_size("pipe_a" , "ingress" , "Peoria.Millhaven.Komatke" , 32)
 @pa_mutually_exclusive("ingress" , "Peoria.ElMirage.Thistle" , "Peoria.Yerington.Darien")
 @pa_no_overlay("ingress" , "Wanamassa.Moultrie.Charco")
 @pa_no_overlay("ingress" , "Wanamassa.Pinetop.Charco")
@@ -182,7 +166,7 @@
 header Waipahu {
     bit<8> Shabbona;
     bit<8> Yorkville;
-    @flexible
+    @flexible 
     bit<9> Ronan;
 }
 
@@ -297,57 +281,57 @@ struct Glassboro {
 }
 
 @pa_container_size("ingress" , "Wanamassa.Alstown.Keyes" , 8) header Adona {
-    @flexible
+    @flexible 
     bit<8>  Connell;
-    @flexible
+    @flexible 
     bit<3>  Higginson;
-    @flexible
+    @flexible 
     bit<21> Bowden;
-    @flexible
+    @flexible 
     bit<3>  Keyes;
-    @flexible
+    @flexible 
     bit<1>  Freeman;
-    @flexible
+    @flexible 
     bit<9>  Floyd;
-    @flexible
+    @flexible 
     bit<16> Fayette;
-    @flexible
+    @flexible 
     bit<16> Osterdock;
-    @flexible
+    @flexible 
     bit<9>  Alameda;
-    @flexible
+    @flexible 
     bit<1>  Palatine;
-    @flexible
+    @flexible 
     bit<1>  Hoagland;
-    @flexible
+    @flexible 
     bit<13> Calcasieu;
-    @flexible
+    @flexible 
     bit<1>  Wolsey;
-    @flexible
+    @flexible 
     bit<1>  Dassel;
-    @flexible
+    @flexible 
     bit<3>  Dugger;
-    @flexible
+    @flexible 
     bit<1>  Ronda;
-    @flexible
+    @flexible 
     bit<16> Lacona;
-    @flexible
+    @flexible 
     bit<3>  Algodones;
-    @flexible
+    @flexible 
     bit<1>  Topanga;
-    @flexible
+    @flexible 
     bit<4>  Spearman;
-    @flexible
+    @flexible 
     bit<10> Mendocino;
-    @flexible
+    @flexible 
     bit<2>  Chloride;
-    @flexible
+    @flexible 
     bit<1>  Weinert;
-    @flexible
+    @flexible 
     bit<1>  Noyes;
-    @flexible
+    @flexible 
     bit<16> Ledoux;
-    @flexible
+    @flexible 
     bit<7>  Quogue;
 }
 
@@ -357,31 +341,31 @@ struct Glassboro {
 @pa_container_size("ingress" , "Wanamassa.Alstown.Osterdock" , 16)
 @pa_container_size("ingress" , "Wanamassa.Alstown.Higginson" , 8)
 @pa_atomic("egress" , "Wanamassa.Alstown.Osterdock") header Littleton {
-    @flexible
+    @flexible 
     bit<8>  Connell;
-    @flexible
+    @flexible 
     bit<3>  Higginson;
-    @flexible
+    @flexible 
     bit<24> Killen;
-    @flexible
+    @flexible 
     bit<24> Turkey;
-    @flexible
+    @flexible 
     bit<13> Riner;
-    @flexible
+    @flexible 
     bit<3>  Keyes;
-    @flexible
+    @flexible 
     bit<9>  Palmhurst;
-    @flexible
+    @flexible 
     bit<1>  Comfrey;
-    @flexible
+    @flexible 
     bit<1>  Kalida;
-    @flexible
+    @flexible 
     bit<32> Wallula;
-    @flexible
+    @flexible 
     bit<16> Osterdock;
-    @flexible
+    @flexible 
     bit<13> Calcasieu;
-    @flexible
+    @flexible 
     bit<1>  Weinert;
 }
 
@@ -390,13 +374,13 @@ header Dennison {
     bit<3>  Fairhaven;
     bit<1>  Woodfield;
     bit<4>  LasVegas;
-    @flexible
+    @flexible 
     bit<2>  Westboro;
-    @flexible
+    @flexible 
     bit<3>  Newfane;
-    @flexible
+    @flexible 
     bit<13> Norcatur;
-    @flexible
+    @flexible 
     bit<6>  Burrel;
 }
 
@@ -432,6 +416,10 @@ header Trooper {
 
 header Vinemont {
     bit<16> Clarion;
+}
+
+header Suring {
+    bit<416> Yorkville;
 }
 
 header ElkPoint {
@@ -797,6 +785,7 @@ struct Lugert {
     bit<6>   Crumstown;
     bit<1>   Ardara;
     bit<8>   McCammon;
+    bit<1>   Lakeside;
 }
 
 struct Rocklake {
@@ -1863,6 +1852,8 @@ struct Martelle {
     Devers       Neponset;
     Springlee    Newhalen;
     Springlee    Newcastle;
+    Springlee    Telephone;
+    Suring       Warba;
 }
 
 struct Paoli {
@@ -2047,7 +2038,7 @@ control Olmitz(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
             Baker();
         }
         key = {
-            Peoria.Masontown.Blencoe & 13w0x1fff: exact @name("Masontown.Blencoe") ;
+            Peoria.Masontown.Blencoe & 13w8191: exact @name("Masontown.Blencoe") ;
         }
         const default_action = Baker(1w0, 1w0, 1w0);
         size = 8192;
@@ -2095,6 +2086,7 @@ control RichBar(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intri
             Peoria.Swisshome.Wisdom                : ternary @name("Swisshome.Wisdom") ;
             Peoria.Swisshome.Sublett               : ternary @name("Swisshome.Sublett") ;
             Peoria.Masontown.Hammond               : ternary @name("Masontown.Hammond") ;
+            Peoria.Masontown.Pidcoke               : ternary @name("Masontown.Pidcoke") ;
         }
         const default_action = Harding();
         size = 512;
@@ -2154,6 +2146,7 @@ control Luning(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
             Peoria.Belmore.Tornillo & 21w0x1c0000: ternary @name("Belmore.Tornillo") ;
         }
         requires_versioning = false;
+        size = 512;
         const default_action = Cadwell();
     }
     apply {
@@ -2201,15 +2194,6 @@ control Nucla(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
         Micro();
         Smithland();
     }
-    @name(".Pacifica") action Pacifica() {
-        Peoria.Belmore.Wauconda = (bit<3>)3w6;
-        Peoria.Masontown.Mackville = Wanamassa.Bratt.Mackville;
-        Peoria.Masontown.McBride = Wanamassa.Bratt.McBride;
-        Peoria.Masontown.Toklat = Wanamassa.Bratt.Toklat;
-        Peoria.Masontown.Bledsoe = Wanamassa.Bratt.Bledsoe;
-        Peoria.Masontown.Jenners = (bit<3>)3w0x0;
-        Smithland();
-    }
     @name(".Judson") action Judson() {
         Peoria.Belmore.Wauconda = (bit<3>)3w0;
         Peoria.Sequim.Kearns = Wanamassa.Tabler[0].Kearns;
@@ -2255,7 +2239,7 @@ control Nucla(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
         Peoria.Masontown.Blencoe = Peoria.Westville.Sunflower;
         Peoria.Masontown.AquaPark = Forepaugh;
     }
-    @name(".Chewalla") action Chewalla(bit<13> WildRose, bit<21> Forepaugh) {
+    @name(".Chewalla") action Chewalla(bit<32> LaMoille, bit<13> WildRose, bit<21> Forepaugh) {
         Peoria.Masontown.Blencoe = WildRose;
         Peoria.Masontown.AquaPark = Forepaugh;
         Peoria.Westville.Aldan = (bit<1>)1w1;
@@ -2313,7 +2297,6 @@ control Nucla(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
         actions = {
             Lattimore();
             Cheyenne();
-            Pacifica();
             Pimento();
             @defaultonly Campo();
         }
@@ -3680,7 +3663,7 @@ control Onamia(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
     @name(".Annandale") action Annandale() {
         Bavaria.count(Peoria.Whitetail.Etter);
     }
-    @ignore_table_dependency(".Nicollet") @disable_atomic_modify(1) @stage(18) @name(".Tekonsha") table Tekonsha {
+    @disable_atomic_modify(1) @stage(18) @name(".Tekonsha") table Tekonsha {
         actions = {
             Brule();
             Kingsdale();
@@ -3699,16 +3682,18 @@ control Onamia(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         size = 512;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @stage(17) @name(".Slade") table Slade {
+    @disable_atomic_modify(1) @name(".Slade") table Slade {
         actions = {
             Stewart();
         }
+        size = 1;
         const default_action = Stewart();
     }
     @disable_atomic_modify(1) @name(".ElmPoint") table ElmPoint {
         actions = {
             Annandale();
         }
+        size = 1;
         const default_action = Annandale();
     }
     apply {
@@ -3736,6 +3721,7 @@ control Clermont(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
             Peoria.Sequim.Calabash: exact @name("Sequim.Calabash") ;
             Peoria.Sequim.Hayfield: exact @name("Sequim.Hayfield") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -3777,7 +3763,7 @@ control Chambers(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Protivin(Napanoch);
         Peoria.Masontown.Blencoe = (bit<13>)Wanamassa.Tabler[0].Malinta;
     }
-    @disable_atomic_modify(1) @stage(17) @name(".Haugen") table Haugen {
+    @disable_atomic_modify(1) @name(".Haugen") table Haugen {
         actions = {
             OjoFeliz();
             Pearcy();
@@ -3861,7 +3847,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
         const default_action = Issaquah(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @stage(1) @name(".Cavalier") table Cavalier {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Cavalier") table Cavalier {
         actions = {
             Issaquah();
         }
@@ -4192,7 +4178,7 @@ control Norridge(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
         Wanamassa.Tabler[0].Mystic = Peoria.Sequim.Burwell;
         Wanamassa.Tabler[0].Kearns = Peoria.Sequim.Kearns;
     }
-    @ways(2) @disable_atomic_modify(1) @stage(19) @name(".CassCity") table CassCity {
+    @ways(2) @disable_atomic_modify(1) @ternary(1) @name(".CassCity") table CassCity {
         actions = {
             Lowemont();
             Wauregan();
@@ -4214,9 +4200,12 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
     @name(".Hookdale") action Hookdale() {
         ;
     }
+    @name(".BigWater") action BigWater(bit<16> Saxis) {
+        Peoria.Crump.Avondale = Peoria.Crump.Avondale + Saxis;
+    }
     @name(".Kerby") action Kerby(bit<16> Glenmora, bit<16> Saxis, bit<16> Langford) {
         Peoria.Belmore.Renick = Glenmora;
-        Peoria.Crump.Avondale = Peoria.Crump.Avondale + Saxis;
+        BigWater(Saxis);
         Peoria.Newhalem.Stennett = Peoria.Newhalem.Stennett & Langford;
     }
     @name(".Cowley") action Cowley(bit<32> LaLuz, bit<16> Glenmora, bit<16> Saxis, bit<16> Langford) {
@@ -4230,10 +4219,10 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
     }
     @name(".Baldridge") action Baldridge(bit<16> Glenmora, bit<16> Saxis) {
         Peoria.Belmore.Renick = Glenmora;
-        Peoria.Crump.Avondale = Peoria.Crump.Avondale + Saxis;
+        BigWater(Saxis);
     }
     @name(".Carlson") action Carlson(bit<16> Saxis) {
-        Peoria.Crump.Avondale = Peoria.Crump.Avondale + Saxis;
+        BigWater(Saxis);
     }
     @name(".Ivanpah") action Ivanpah(bit<2> Irvine) {
         Peoria.Belmore.LaConner = (bit<3>)3w2;
@@ -4427,6 +4416,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
             @defaultonly NoAction();
         }
         key = {
+            Wanamassa.Telephone.isValid()          : ternary @name("Lakeside") ;
             Peoria.Belmore.Wauconda                : ternary @name("Belmore.Wauconda") ;
             Peoria.Belmore.LaConner                : exact @name("Belmore.LaConner") ;
             Peoria.Belmore.Pinole                  : ternary @name("Belmore.Pinole") ;
@@ -4562,7 +4552,7 @@ control Wells(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
         size = 32768;
         counters = Edinburgh;
     }
-    @disable_atomic_modify(1) @stage(18) @name(".Magazine") table Magazine {
+    @disable_atomic_modify(1) @name(".Magazine") table Magazine {
         actions = {
             Ferndale();
             Broadford();
@@ -4729,7 +4719,7 @@ control Olivet(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
         Wanamassa.Yorkshire.Noyes = (bit<1>)1w1;
         Peoria.Belmore.Kendrick = (bit<8>)8w26;
     }
-    @ignore_table_dependency(".Tekonsha") @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
+    @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
         actions = {
             Upalco();
             Alnwick();
@@ -4881,6 +4871,7 @@ control LaMarque(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
             Crump.egress_rid: exact @name("Crump.egress_rid") ;
         }
         const default_action = Hookdale();
+        size = 4096;
     }
     apply {
         if (Crump.egress_rid != 16w0) {
@@ -5470,12 +5461,13 @@ control Engle(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsi
         Peoria.Belmore.Malinta = Malinta;
         Peoria.Belmore.Orrick = (bit<1>)1w0;
     }
-    @name(".BigBow") action BigBow(bit<12> Malinta) {
+    @name(".BigBow") action BigBow(bit<32> LaMoille, bit<12> Malinta) {
         Peoria.Belmore.Malinta = Malinta;
         Peoria.Belmore.Orrick = (bit<1>)1w1;
     }
     @name(".Elsinore") action Elsinore(bit<12> Malinta, bit<12> Caguas) {
-        BigBow(Malinta);
+        Peoria.Belmore.Malinta = Malinta;
+        Peoria.Belmore.Orrick = (bit<1>)1w1;
         Wanamassa.Tabler[1].setValid();
         Wanamassa.Tabler[1].Malinta = Caguas;
         Wanamassa.Tabler[1].Clarion = 16w0x8100;
@@ -5565,9 +5557,8 @@ control Flomaton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     }
     @name(".Hookdale") action Daguao() {
         LaHabra.count();
-        ;
     }
-    @disable_atomic_modify(1) @stage(19) @name(".Ripley") table Ripley {
+    @disable_atomic_modify(1) @name(".Ripley") table Ripley {
         actions = {
             Marvin();
             Daguao();
@@ -6022,7 +6013,7 @@ control Devore(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
     @name(".Seibert") action Seibert(bit<32> Maybee) {
         Peoria.Masontown.Ardara = (bit<1>)Melvina.execute(Maybee);
     }
-    @disable_atomic_modify(1) @stage(18) @name(".Fairborn") table Fairborn {
+    @disable_atomic_modify(1) @name(".Fairborn") table Fairborn {
         actions = {
             @tableonly Seibert();
             @defaultonly NoAction();
@@ -6108,10 +6099,10 @@ control McGovern(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     }
     @name(".Eggleston") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES, true) Eggleston;
     @name(".Heron") action Heron() {
+        Terrell();
         Eggleston.count();
     }
-    // Forcing a stage to avoid table split that consume 2 tEOP buses
-    @disable_atomic_modify(1) @stage(15) @name(".Paisley") table Paisley {
+    @disable_atomic_modify(1) @name(".Paisley") table Paisley {
         actions = {
             Heron();
             @defaultonly NoAction();
@@ -6130,6 +6121,7 @@ control McGovern(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     }
     @name(".Bajandas") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES, true) Bajandas;
     @name(".Reinbeck") action Reinbeck() {
+        Terrell();
         Bajandas.count();
     }
     @disable_atomic_modify(1) @name(".Equality") table Equality {
@@ -6164,6 +6156,7 @@ control McGovern(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     }
 @pa_no_init("egress" , "Peoria.Belmore.Salamatof")
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Stratford" , "Peoria.Belmore.Piqua")
+@pa_no_init("egress" , "Peoria.Belmore.Stratford")
 @pa_no_init("egress" , "Peoria.Belmore.Piqua")
 @disable_atomic_modify(1)
 @name(".Towaoc") table Towaoc {
@@ -6344,7 +6337,7 @@ control Toano(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
     @name(".Grovetown") action Grovetown() {
         Peoria.Wesson.Daleville = Kekoskee.get<tuple<bit<2>, bit<30>>>({ Peoria.Ekron.Ackley[9:8], Peoria.Wesson.Charco[31:2] });
     }
-    @hidden @disable_atomic_modify(1) @name(".Suwanee") table Suwanee {
+    @hidden @stage(0) @disable_atomic_modify(1) @name(".Suwanee") table Suwanee {
         actions = {
             Grovetown();
         }
@@ -14446,8 +14439,8 @@ parser Lamar(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out in
     }
     state Eustis {
         Peoria.Masontown.Clarion = 16w0x86dd;
-        Peoria.Masontown.RioPecos = (bit<3>)3w5;
-        transition accept;
+        Peoria.Masontown.RioPecos = (bit<3>)3w4;
+        transition Gerster;
     }
     state Tontogany {
         Doral.extract<Vinemont>(Wanamassa.Hearne);
@@ -14698,7 +14691,7 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
     @name(".Forman") action Forman() {
         Peoria.Millhaven.Moose = Tusculum.get<tuple<bit<128>, bit<128>, bit<20>, bit<8>, bit<9>>>({ Peoria.Yerington.Chugwater, Peoria.Yerington.Charco, Wanamassa.PeaRidge.Daphne, Peoria.Gambrills.Nenana, Peoria.Covert.Bayshore });
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".WestLine") table WestLine {
+    @ternary(1) @disable_atomic_modify(1) @name(".WestLine") table WestLine {
         actions = {
             Benitez();
             Forman();
@@ -14745,7 +14738,7 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
     @name(".Lansdale") action Lansdale() {
         Peoria.Newhalem.McGonigle = Peoria.Millhaven.Salix;
     }
-    @disable_atomic_modify(1) @stage(14) @name(".Rardin") table Rardin {
+    @disable_atomic_modify(1) @name(".Rardin") table Rardin {
         actions = {
             Laney();
             McClusky();
@@ -14956,7 +14949,7 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Peoria.Baudette.Murphy = Peoria.Minneota.Murphy;
         Peoria.Baudette.Ovett = Peoria.Minneota.Ovett;
     }
-    @disable_atomic_modify(1) @name(".Robstown") table Robstown {
+    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Robstown") table Robstown {
         actions = {
             Geistown();
             Ruffin();
@@ -15095,8 +15088,6 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
                         (3w5, true, false) : Parmele();
 
                         (3w5, false, true) : Easley();
-
-                        (3w6, false, true) : Easley();
 
                         (3w1, true, false) : Rawson();
 
@@ -15591,20 +15582,20 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
     state Colburn {
         Doral.extract<Trooper>(Wanamassa.Bratt);
         Doral.extract<Vinemont>(Wanamassa.Hearne);
-        transition accept;
+        transition Rehoboth;
     }
     state Kirkwood {
         Doral.extract<Trooper>(Wanamassa.Bratt);
         Doral.extract<Vinemont>(Wanamassa.Hearne);
         Wanamassa.Newcastle.setValid();
-        transition accept;
+        transition Rehoboth;
     }
     state Munich {
         transition Folcroft;
     }
     state Newburgh {
         Doral.extract<Vinemont>(Wanamassa.Hearne);
-        transition accept;
+        transition Rotterdam;
     }
     state Folcroft {
         Doral.extract<Trooper>(Wanamassa.Bratt);
@@ -15629,6 +15620,7 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
         }
     }
     state Elliston {
+        Wanamassa.Telephone.setValid();
         Doral.extract<Parkville>(Wanamassa.Tabler[0]);
         transition select((Doral.lookahead<bit<24>>())[7:0], (Doral.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Moapa;
@@ -15646,14 +15638,14 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
             (13w0x0 &&& 13w0x1fff, 8w1): Rodessa;
             (13w0x0 &&& 13w0x1fff, 8w17): Nuevo;
             (13w0x0 &&& 13w0x1fff, 8w6): Holcut;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Rotterdam;
             default: ElJebel;
         }
     }
     state Nuevo {
         Doral.extract<Knierim>(Wanamassa.Milano);
         transition select(Wanamassa.Milano.Glenmora) {
-            default: accept;
+            default: Rotterdam;
         }
     }
     state Glouster {
@@ -15661,11 +15653,11 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
         Wanamassa.Moultrie.Charco = (Doral.lookahead<bit<160>>())[31:0];
         Wanamassa.Moultrie.Denhoff = (Doral.lookahead<bit<14>>())[5:0];
         Wanamassa.Moultrie.Lowes = (Doral.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Rotterdam;
     }
     state ElJebel {
         Wanamassa.Newhalen.setValid();
-        transition accept;
+        transition Rotterdam;
     }
     state Penrose {
         Doral.extract<Vinemont>(Wanamassa.Hearne);
@@ -15674,18 +15666,18 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
             8w58: Rodessa;
             8w17: Nuevo;
             8w6: Holcut;
-            default: accept;
+            default: Rotterdam;
         }
     }
     state Rodessa {
         Doral.extract<Knierim>(Wanamassa.Milano);
-        transition accept;
+        transition Rotterdam;
     }
     state Holcut {
         Peoria.Gambrills.Placedo = (bit<3>)3w6;
         Doral.extract<Knierim>(Wanamassa.Milano);
         Peoria.Belmore.McCammon = (Doral.lookahead<DonaAna>()).Sewaren;
-        transition accept;
+        transition Rotterdam;
     }
     state Paicines {
         transition Newburgh;
@@ -15718,7 +15710,7 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
             }
         }
         Doral.extract<Trooper>(Wanamassa.Bratt);
-        transition accept;
+        transition Rotterdam;
     }
     state Coconino {
         Waipahu Talco;
@@ -15728,7 +15720,7 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
         transition select(Talco.Shabbona) {
             8w1 &&& 8w0x7: Colburn;
             8w2 &&& 8w0x7: Kirkwood;
-            default: accept;
+            default: Rehoboth;
         }
     }
     state Warsaw {
@@ -15744,9 +15736,115 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
         }
         transition Munich;
     }
+    state Rehoboth {
+        transition accept;
+    }
+    state Rotterdam {
+        Wanamassa.Warba.setValid();
+        Wanamassa.Warba = Doral.lookahead<Suring>();
+        transition accept;
+    }
 }
 
 control Stratton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
+    @name(".Toxey") action Toxey() {
+        Wanamassa.Warba.setInvalid();
+    }
+    @name(".Lamoni") action Lamoni() {
+        Tullytown.mtu_trunc_len = (bit<14>)14w64;
+    }
+    @hidden @disable_atomic_modify(1) @name(".Isleta") table Isleta {
+        key = {
+            Wanamassa.Knights.isValid()  : ternary @name("Knights") ;
+            Wanamassa.Tabler[0].isValid(): ternary @name("Tabler[0]") ;
+            Wanamassa.Tabler[1].isValid(): ternary @name("Tabler[1]") ;
+            Wanamassa.Basco.isValid()    : ternary @name("Basco") ;
+            Wanamassa.Gamaliel.isValid() : ternary @name("Gamaliel") ;
+            Wanamassa.Harriet.isValid()  : ternary @name("Harriet") ;
+            Peoria.Belmore.Pinole        : ternary @name("Belmore.Pinole") ;
+            Wanamassa.Telephone.isValid(): ternary @name("Telephone") ;
+            Peoria.Belmore.Wauconda      : ternary @name("Belmore.Wauconda") ;
+            Peoria.Crump.Avondale        : range @name("Crump.Avondale") ;
+        }
+        actions = {
+            Toxey();
+            Lamoni();
+        }
+        size = 512;
+        requires_versioning = false;
+        const default_action = Toxey();
+        const entries = {
+                        (false, default, default, default, default, true, default, default, default, default) : Toxey();
+
+                        (false, default, default, true, default, default, default, default, default, default) : Toxey();
+
+                        (false, default, default, default, true, default, default, default, default, default) : Toxey();
+
+                        (true, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w89) : Lamoni();
+
+                        (true, default, default, false, false, false, default, default, 3w1, default) : Toxey();
+
+                        (true, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w89) : Lamoni();
+
+                        (true, default, default, false, false, false, default, default, 3w5, default) : Toxey();
+
+                        (true, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w89) : Lamoni();
+
+                        (true, default, default, false, false, false, default, default, 3w6, default) : Toxey();
+
+                        (true, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w89) : Lamoni();
+
+                        (true, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w93) : Lamoni();
+
+                        (true, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w93) : Lamoni();
+
+                        (true, default, default, false, false, false, default, default, default, default) : Toxey();
+
+                        (false, false, false, false, false, false, default, default, 3w1, 16w0 .. 16w103) : Lamoni();
+
+                        (false, true, false, false, false, false, default, default, 3w1, 16w0 .. 16w99) : Lamoni();
+
+                        (false, true, true, false, false, false, default, default, 3w1, 16w0 .. 16w95) : Lamoni();
+
+                        (false, default, default, false, false, false, default, default, 3w1, default) : Toxey();
+
+                        (false, false, false, false, false, false, default, default, 3w5, 16w0 .. 16w103) : Lamoni();
+
+                        (false, true, false, false, false, false, default, default, 3w5, 16w0 .. 16w99) : Lamoni();
+
+                        (false, true, true, false, false, false, default, default, 3w5, 16w0 .. 16w95) : Lamoni();
+
+                        (false, default, default, false, false, false, default, default, 3w5, default) : Toxey();
+
+                        (false, false, false, false, false, false, default, default, 3w6, 16w0 .. 16w103) : Lamoni();
+
+                        (false, true, false, false, false, false, default, default, 3w6, 16w0 .. 16w99) : Lamoni();
+
+                        (false, true, true, false, false, false, default, default, 3w6, 16w0 .. 16w95) : Lamoni();
+
+                        (false, default, default, false, false, false, default, default, 3w6, default) : Toxey();
+
+                        (false, false, false, false, false, false, 1w0, false, default, 16w0 .. 16w103) : Lamoni();
+
+                        (false, false, false, false, false, false, 1w1, false, default, 16w0 .. 16w107) : Lamoni();
+
+                        (false, false, false, false, false, false, 1w1, true, default, 16w0 .. 16w111) : Lamoni();
+
+                        (false, true, false, false, false, false, 1w0, false, default, 16w0 .. 16w99) : Lamoni();
+
+                        (false, true, false, false, false, false, 1w1, false, default, 16w0 .. 16w103) : Lamoni();
+
+                        (false, true, false, false, false, false, 1w1, true, default, 16w0 .. 16w107) : Lamoni();
+
+                        (false, true, true, false, false, false, 1w0, false, default, 16w0 .. 16w95) : Lamoni();
+
+                        (false, true, true, false, false, false, 1w1, false, default, 16w0 .. 16w99) : Lamoni();
+
+                        (false, true, true, false, false, false, 1w1, true, default, 16w0 .. 16w103) : Lamoni();
+
+        }
+
+    }
     @name(".Rippon") McFaddin() Rippon;
     @name(".Cowan") Woolwine() Cowan;
     @name(".Wegdahl") Westend() Wegdahl;
@@ -15829,6 +15927,9 @@ control Stratton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
             if (!Wanamassa.Knights.isValid() && Peoria.Belmore.Wauconda != 3w2 && Peoria.Belmore.LaConner != 3w3) {
                 Weslaco.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             }
+            if (Wanamassa.Warba.isValid()) {
+                Isleta.apply();
+            }
         }
         Compton.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
         VanHorn.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
@@ -15870,6 +15971,7 @@ control Cassadaga(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria,
             Doral.emit<Knierim>(Wanamassa.Milano);
             Doral.emit<DonaAna>(Wanamassa.Biggers);
             Doral.emit<Devers>(Wanamassa.Neponset);
+            Doral.emit<Suring>(Wanamassa.Warba);
         }
     }
 }
@@ -15950,8 +16052,8 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         Peoria.Wesson.Charco = Wanamassa.Moultrie.Charco;
         Peoria.Wesson.Chugwater = Wanamassa.Moultrie.Chugwater;
         transition select(Wanamassa.Moultrie.Teigen, Wanamassa.Moultrie.Lowes) {
-            (13w0x0 &&& 13w0x1fff, 8w17): Hookstown;
-            (13w0x0 &&& 13w0x1fff, 8w6): Holcut;
+            (13w0x0 &&& 13w0x1fff, 8w17): Gallion;
+            (13w0x0 &&& 13w0x1fff, 8w6): Hurdtown;
             default: accept;
         }
     }
@@ -15962,12 +16064,12 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         Peoria.Yerington.Charco = Wanamassa.Pinetop.Charco;
         Peoria.Yerington.Chugwater = Wanamassa.Pinetop.Chugwater;
         transition select(Wanamassa.Pinetop.Algoa) {
-            8w17: Hookstown;
-            8w6: Holcut;
+            8w17: Gallion;
+            8w6: Hurdtown;
             default: accept;
         }
     }
-    state Hookstown {
+    state Gallion {
         Doral.extract<Knierim>(Wanamassa.Milano);
         Doral.extract<Caroleen>(Wanamassa.Dacono);
         Doral.extract<Belfair>(Wanamassa.Pineville);
@@ -15975,7 +16077,8 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         Peoria.Masontown.Montross = Wanamassa.Milano.Montross;
         transition accept;
     }
-    state Holcut {
+    state Hurdtown {
+        Peoria.Gambrills.Placedo = (bit<3>)3w6;
         Doral.extract<Knierim>(Wanamassa.Milano);
         Doral.extract<DonaAna>(Wanamassa.Biggers);
         Doral.extract<Belfair>(Wanamassa.Pineville);
@@ -16077,7 +16180,7 @@ control Lilydale(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Saugatuck.drop_ctl = (bit<3>)3w3;
         Simla.count();
     }
-    @disable_atomic_modify(1) @stage(19) @name(".Sidnaw") table Sidnaw {
+    @disable_atomic_modify(1) @stage(17) @name(".Sidnaw") table Sidnaw {
         actions = {
             LaCenter();
             Maryville();
@@ -16143,6 +16246,8 @@ control Lilydale(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
 control Almond(packet_out Doral, inout Lookeba Wanamassa, in Martelle Peoria, in ingress_intrinsic_metadata_for_deparser_t Saugatuck) {
     @name(".Waukesha") Mirror() Waukesha;
     apply {
+        {
+        }
         Doral.emit<Dennison>(Wanamassa.Longwood);
         {
             Doral.emit<Littleton>(Wanamassa.Alstown);

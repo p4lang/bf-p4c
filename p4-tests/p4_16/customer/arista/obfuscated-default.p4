@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 2 -g -Xp4c='--set-max-power 65.0 --create-graphs -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.7.0 (SHA: da5115f)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
+// p4c 9.7.1 (SHA: 4316cda)
 
 #include <tofino1_specs.p4>
 #include <tofino1_arch.p4>
@@ -119,55 +119,55 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible
+    @flexible 
     bit<9> Waipahu;
 }
 
 header Ackerman {
     bit<8>  Selawik;
-    @flexible
+    @flexible 
     bit<9>  Waipahu;
-    @flexible
+    @flexible 
     bit<9>  Sheyenne;
-    @flexible
+    @flexible 
     bit<32> Kaplan;
-    @flexible
+    @flexible 
     bit<32> McKenna;
-    @flexible
+    @flexible 
     bit<5>  Chatom;
-    @flexible
+    @flexible 
     bit<19> Powhatan;
 }
 
 header McDaniels {
     bit<8>  Selawik;
-    @flexible
+    @flexible 
     bit<9>  Waipahu;
-    @flexible
+    @flexible 
     bit<32> Kaplan;
-    @flexible
+    @flexible 
     bit<5>  Chatom;
-    @flexible
+    @flexible 
     bit<8>  Netarts;
-    @flexible
+    @flexible 
     bit<16> Hartwick;
-    @flexible
+    @flexible 
     bit<16> Toano;
 }
 
 header Crossnore {
     bit<8>  Selawik;
-    @flexible
+    @flexible 
     bit<9>  Waipahu;
-    @flexible
+    @flexible 
     bit<9>  Sheyenne;
-    @flexible
+    @flexible 
     bit<32> Kaplan;
-    @flexible
+    @flexible 
     bit<5>  Chatom;
-    @flexible
+    @flexible 
     bit<8>  Netarts;
-    @flexible
+    @flexible 
     bit<16> Hartwick;
 }
 
@@ -280,17 +280,17 @@ struct Blitchton {
 }
 
 struct Meridean {
-    @flexible
+    @flexible 
     bit<16> Tinaja;
-    @flexible
+    @flexible 
     bit<1>  Ashley;
-    @flexible
+    @flexible 
     bit<12> Ivyland;
-    @flexible
+    @flexible 
     bit<9>  Grottoes;
-    @flexible
+    @flexible 
     bit<1>  Lenexa;
-    @flexible
+    @flexible 
     bit<3>  Dresser;
 }
 
@@ -300,25 +300,25 @@ struct Meridean {
 }
 
 header Harbor {
-    @flexible
+    @flexible 
     bit<1>  Gonzalez;
-    @flexible
+    @flexible 
     bit<1>  Medulla;
-    @flexible
+    @flexible 
     bit<1>  Monteview;
-    @flexible
+    @flexible 
     bit<16> Wildell;
-    @flexible
+    @flexible 
     bit<9>  Waukesha;
-    @flexible
+    @flexible 
     bit<13> Roseville;
-    @flexible
+    @flexible 
     bit<16> Lenapah;
-    @flexible
+    @flexible 
     bit<5>  Kirkwood;
-    @flexible
+    @flexible 
     bit<16> Munich;
-    @flexible
+    @flexible 
     bit<9>  Warsaw;
 }
 
@@ -333,55 +333,55 @@ header Adona {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<12> Higginson;
-    @flexible
+    @flexible 
     bit<16> Cowan;
-    @flexible
+    @flexible 
     bit<32> Wegdahl;
-    @flexible
+    @flexible 
     bit<8>  Oriskany;
-    @flexible
+    @flexible 
     bit<3>  Bowden;
-    @flexible
+    @flexible 
     bit<24> Cabot;
-    @flexible
+    @flexible 
     bit<24> Keyes;
-    @flexible
+    @flexible 
     bit<12> Basic;
-    @flexible
+    @flexible 
     bit<6>  Freeman;
-    @flexible
+    @flexible 
     bit<3>  Exton;
-    @flexible
+    @flexible 
     bit<9>  Floyd;
-    @flexible
+    @flexible 
     bit<2>  Fayette;
-    @flexible
+    @flexible 
     bit<1>  Osterdock;
-    @flexible
+    @flexible 
     bit<1>  PineCity;
-    @flexible
+    @flexible 
     bit<32> Alameda;
-    @flexible
+    @flexible 
     bit<16> Rexville;
-    @flexible
+    @flexible 
     bit<3>  Quinwood;
-    @flexible
+    @flexible 
     bit<9>  Corry;
-    @flexible
+    @flexible 
     bit<5>  Eckman;
-    @flexible
+    @flexible 
     bit<12> Marfa;
-    @flexible
+    @flexible 
     bit<12> Palatine;
-    @flexible
+    @flexible 
     bit<1>  Hiwassee;
-    @flexible
+    @flexible 
     bit<1>  WestBend;
-    @flexible
+    @flexible 
     bit<1>  Mabelle;
-    @flexible
+    @flexible 
     bit<1>  Dovray;
-    @flexible
+    @flexible 
     bit<6>  Hoagland;
 }
 
@@ -417,6 +417,10 @@ header Dalton {
 
 header Albemarle {
     bit<16> Lathrop;
+}
+
+header Tolono {
+    bit<416> Toano;
 }
 
 header Ellinger {
@@ -808,6 +812,7 @@ struct Weatherby {
     bit<6>  Keenes;
     bit<1>  Ellicott;
     bit<8>  Soledad;
+    bit<1>  Ocheyedan;
 }
 
 struct Traverse {
@@ -1646,6 +1651,7 @@ struct Provencal {
     Sahuarita  Dovray;
     Lamboglia  Paicines;
     Lamboglia  Krupp;
+    Lamboglia  Powelton;
 }
 
 struct Sequim {
@@ -2274,7 +2280,7 @@ control Ambler(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
             Olmitz();
         }
         key = {
-            Aniak.Cassa.Toklat & 12w0xfff: exact @name("Cassa.Toklat") ;
+            Aniak.Cassa.Toklat & 12w4095: exact @name("Cassa.Toklat") ;
         }
         const default_action = Olmitz(1w0, 1w0, 1w0);
         size = 4096;
@@ -2440,7 +2446,7 @@ control Starkey(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
         Aniak.Rendville.Cleator = Cleator;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
-    @idletime_precision(1) @disable_atomic_modify(1) @pack(2) @name(".RockHill") table RockHill {
+    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".RockHill") table RockHill {
         actions = {
             Swanlake();
             Clearmont();
@@ -2869,7 +2875,7 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Aniak.Cassa.Toklat = Aniak.HillTop.Ericsburg;
         Aniak.Cassa.Bledsoe = Mulvane;
     }
-    @name(".Luning") action Luning(bit<12> Flippen, bit<20> Mulvane) {
+    @name(".Luning") action Luning(bit<32> Wisdom, bit<12> Flippen, bit<20> Mulvane) {
         Aniak.Cassa.Toklat = Flippen;
         Aniak.Cassa.Bledsoe = Mulvane;
         Aniak.HillTop.Staunton = (bit<1>)1w1;
@@ -3708,7 +3714,6 @@ control Jemison(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
     }
     @name(".Nighthawk") action Nighthawk(bit<9> Tullytown) {
         NantyGlo.ucast_egress_port = Tullytown;
-        Aniak.Rainelle.Lovewell = (bit<6>)6w0;
         Aniak.Padonia.Sheyenne = Tullytown;
         Pillager();
     }
@@ -4256,6 +4261,7 @@ control Astatula(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrin
             Aniak.Sopris.Pettry  : exact @name("Sopris.Pettry") ;
             Aniak.Sopris.Buncombe: exact @name("Sopris.Buncombe") ;
         }
+        size = 512;
         const default_action = NoAction();
     }
     apply {
@@ -4447,9 +4453,12 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
     @name(".Lemont") action Lemont() {
         ;
     }
+    @name(".Annette") action Annette(bit<16> Issaquah) {
+        Aniak.Wildorado.Uintah = Aniak.Wildorado.Uintah + Issaquah;
+    }
     @name(".Encinitas") action Encinitas(bit<16> Tallassee, bit<16> Issaquah, bit<16> Herring) {
         Aniak.Rainelle.Atoka = Tallassee;
-        Aniak.Wildorado.Uintah = Aniak.Wildorado.Uintah + Issaquah;
+        Annette(Issaquah);
         Aniak.Millston.Pinole = Aniak.Millston.Pinole & Herring;
     }
     @name(".Wattsburg") action Wattsburg(bit<32> Lecompte, bit<16> Tallassee, bit<16> Issaquah, bit<16> Herring) {
@@ -4463,10 +4472,10 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
     }
     @name(".Plush") action Plush(bit<16> Tallassee, bit<16> Issaquah) {
         Aniak.Rainelle.Atoka = Tallassee;
-        Aniak.Wildorado.Uintah = Aniak.Wildorado.Uintah + Issaquah;
+        Annette(Issaquah);
     }
     @name(".Bethune") action Bethune(bit<16> Issaquah) {
-        Aniak.Wildorado.Uintah = Aniak.Wildorado.Uintah + Issaquah;
+        Annette(Issaquah);
     }
     @name(".PawCreek") action PawCreek(bit<2> Norwood) {
         Aniak.Rainelle.Quinhagak = (bit<3>)3w2;
@@ -4626,6 +4635,7 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
             @defaultonly NoAction();
         }
         key = {
+            Crannell.Powelton.isValid()            : ternary @name("Ocheyedan") ;
             Aniak.Rainelle.Madera                  : ternary @name("Rainelle.Madera") ;
             Aniak.Rainelle.Quinhagak               : exact @name("Rainelle.Quinhagak") ;
             Aniak.Rainelle.Bufalo                  : ternary @name("Rainelle.Bufalo") ;
@@ -5091,6 +5101,7 @@ control Ferndale(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
             Wildorado.egress_rid: exact @name("Wildorado.egress_rid") ;
         }
         const default_action = Lemont();
+        size = 4096;
     }
     apply {
         if (Wildorado.egress_rid != 16w0) {
@@ -5244,7 +5255,7 @@ control Upalco(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         const default_action = Lemont();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Newsoms") table Newsoms {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(4) @name(".Newsoms") table Newsoms {
         actions = {
             @tableonly Hartwell();
             @defaultonly NoAction();
@@ -5680,7 +5691,7 @@ control Minetto(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
         Aniak.Rainelle.Spearman = Spearman;
         Aniak.Rainelle.Randall = (bit<1>)1w0;
     }
-    @name(".Kinston") action Kinston(bit<12> Spearman) {
+    @name(".Kinston") action Kinston(bit<32> Wisdom, bit<12> Spearman) {
         Aniak.Rainelle.Spearman = Spearman;
         Aniak.Rainelle.Randall = (bit<1>)1w1;
     }
@@ -5774,7 +5785,6 @@ control Holyoke(inout Toluca Crannell, inout Provencal Aniak, in egress_intrinsi
     }
     @name(".Lemont") action Shauck() {
         Skiatook.count();
-        ;
     }
     @disable_atomic_modify(1) @name(".Telegraph") table Telegraph {
         actions = {
@@ -6706,20 +6716,20 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
     state Sturgeon {
         Talco.extract<Dalton>(Crannell.Gastonia);
         Talco.extract<Albemarle>(Crannell.Westbury);
-        transition accept;
+        transition Wainaku;
     }
     state Putnam {
         Talco.extract<Dalton>(Crannell.Gastonia);
         Talco.extract<Albemarle>(Crannell.Westbury);
         Crannell.Krupp.setValid();
-        transition accept;
+        transition Wainaku;
     }
     state Hartville {
         transition Circle;
     }
     state Cotter {
         Talco.extract<Albemarle>(Crannell.Westbury);
-        transition accept;
+        transition Wimbledon;
     }
     state Circle {
         Talco.extract<Dalton>(Crannell.Gastonia);
@@ -6744,6 +6754,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         }
     }
     state Jayton {
+        Crannell.Powelton.setValid();
         Talco.extract<Buckeye>(Crannell.Hillsview[0]);
         transition select((Talco.lookahead<bit<24>>())[7:0], (Talco.lookahead<bit<16>>())[15:0]) {
             (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Millstone;
@@ -6761,14 +6772,14 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
             (13w0x0 &&& 13w0x1fff, 8w1): Longwood;
             (13w0x0 &&& 13w0x1fff, 8w17): Gurdon;
             (13w0x0 &&& 13w0x1fff, 8w6): Pinetop;
-            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): accept;
+            (13w0x0 &&& 13w0x1fff, 8w0 &&& 8w0): Wimbledon;
             default: Courtdale;
         }
     }
     state Gurdon {
         Talco.extract<Madawaska>(Crannell.Gambrills);
         transition select(Crannell.Gambrills.Tallassee) {
-            default: accept;
+            default: Wimbledon;
         }
     }
     state PeaRidge {
@@ -6776,11 +6787,11 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Makawao.Dowell = (Talco.lookahead<bit<160>>())[31:0];
         Crannell.Makawao.Helton = (Talco.lookahead<bit<14>>())[5:0];
         Crannell.Makawao.Steger = (Talco.lookahead<bit<80>>())[7:0];
-        transition accept;
+        transition Wimbledon;
     }
     state Courtdale {
         Crannell.Paicines.setValid();
-        transition accept;
+        transition Wimbledon;
     }
     state Cranbury {
         Talco.extract<Albemarle>(Crannell.Westbury);
@@ -6789,18 +6800,18 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
             8w58: Longwood;
             8w17: Gurdon;
             8w6: Pinetop;
-            default: accept;
+            default: Wimbledon;
         }
     }
     state Longwood {
         Talco.extract<Madawaska>(Crannell.Gambrills);
-        transition accept;
+        transition Wimbledon;
     }
     state Pinetop {
         Aniak.Bergton.Tehachapi = (bit<3>)3w6;
         Talco.extract<Madawaska>(Crannell.Gambrills);
         Talco.extract<Irvine>(Crannell.Wesson);
-        transition accept;
+        transition Wimbledon;
     }
     state LoneJack {
         transition Cotter;
@@ -6838,7 +6849,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
             }
         }
         Talco.extract<Dalton>(Crannell.Gastonia);
-        transition accept;
+        transition Wimbledon;
     }
     state Sidnaw {
         Chaska Belmont;
@@ -6847,7 +6858,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         transition select(Belmont.Selawik) {
             8w1 &&& 8w0x7: Sturgeon;
             8w2 &&& 8w0x7: Putnam;
-            default: accept;
+            default: Wainaku;
         }
     }
     state Newkirk {
@@ -6874,7 +6885,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Janney = Aniak.Padonia.Chatom;
         Crannell.Arredondo.Loyalton = (bit<8>)8w71;
         Crannell.Arredondo.Dunstable = (bit<16>)16w0;
-        transition accept;
+        transition Wainaku;
     }
     state Pelland {
         Ackerman Gomez;
@@ -6898,7 +6909,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Dunstable = (bit<15>)15w0;
         Crannell.Reidville.Cassadaga = (bit<6>)6w0;
         Crannell.Reidville.Asherton = Gomez.Kaplan;
-        transition accept;
+        transition Wainaku;
     }
     state Placida {
         Ackerman Oketo;
@@ -6922,7 +6933,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Dunstable = (bit<15>)15w0;
         Crannell.Reidville.Cassadaga = (bit<6>)6w0;
         Crannell.Reidville.Asherton = Oketo.Kaplan;
-        transition accept;
+        transition Wainaku;
     }
     state Lovilia {
         McDaniels Simla;
@@ -6946,7 +6957,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Janney = Simla.Chatom;
         Crannell.Arredondo.Loyalton = Simla.Netarts;
         Crannell.Arredondo.Dunstable = (bit<16>)16w0;
-        transition accept;
+        transition Wainaku;
     }
     state LaCenter {
         Crossnore Maryville;
@@ -6971,7 +6982,7 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Crannell.Reidville.Janney = Maryville.Chatom;
         Crannell.Arredondo.Loyalton = Maryville.Netarts;
         Crannell.Arredondo.Dunstable = (bit<16>)16w0;
-        transition accept;
+        transition Wainaku;
     }
     state Poteet {
         {
@@ -6980,6 +6991,12 @@ parser Hawthorne(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
             }
         }
         transition Hartville;
+    }
+    state Wainaku {
+        transition accept;
+    }
+    state Wimbledon {
+        transition accept;
     }
 }
 
