@@ -1,4 +1,5 @@
 #include "bf-p4c/phv/finalize_physical_liverange.h"
+#include <sstream>
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/table_summary.h"
@@ -45,7 +46,9 @@ void FinalizePhysicalLiverange::update_liverange(const safe_vector<AllocSlice>& 
 /// collect table to stage.
 bool FinalizePhysicalLiverange::preorder(const IR::MAU::Table* t) {
     tables_i.insert(t);
-    table_stages_i[TableSummary::getTableName(t)].insert(t->stage());
+    for (const auto& stage : table_summary_i.stages(t)) {
+        table_stages_i[TableSummary::getTableName(t)].insert(stage);
+    }
     return true;
 }
 
@@ -72,8 +75,10 @@ void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bit
         update_liverange(alloc_slices, {Device::numStages(), FieldUse(FieldUse::READ)});
     } else if (unit->is<IR::MAU::Table>()) {
         const auto* t = unit->to<IR::MAU::Table>();
-        update_liverange(alloc_slices,
-                         {t->stage(), FieldUse(is_write ? FieldUse::WRITE : FieldUse::READ)});
+        for (const auto& stage : table_summary_i.stages(t)) {
+            update_liverange(alloc_slices,
+                             {stage, FieldUse(is_write ? FieldUse::WRITE : FieldUse::READ)});
+        }
     } else {
         BUG("unknown unit: %1%, field: %2%", unit, f);
     }
@@ -134,7 +139,8 @@ void FinalizePhysicalLiverange::end_apply() {
             }
         }
         if (!read_only_slices.empty()) {
-            ordered_set<AllocSlice> to_remove;
+            // map slice to the number of duplication.
+            ordered_map<AllocSlice, int> to_remove;
             for (auto& slices : Values(read_only_slices)) {
                 // sort by the start of live range.
                 sort(slices.begin(), slices.end(), [](AllocSlice& a, AllocSlice& b) {
@@ -145,7 +151,7 @@ void FinalizePhysicalLiverange::end_apply() {
                 for (auto itr = slices.begin() + 1; itr != slices.end(); itr++) {
                     if (itr->getLatestLiveness().first <= latest_lr) {
                         LOG3("Removing duplicated : " << *itr);
-                        to_remove.insert(*itr);
+                        to_remove[*itr]++;
                     } else {
                         if (itr->getEarliestLiveness().first <= latest_lr) {
                             const auto old =
@@ -162,7 +168,10 @@ void FinalizePhysicalLiverange::end_apply() {
             if (!to_remove.empty()) {
                 safe_vector<AllocSlice> filtered;
                 for (auto& slice : f.get_alloc()) {
-                    if (to_remove.count(slice)) continue;
+                    if (to_remove.count(slice) && to_remove[slice] > 0) {
+                        to_remove[slice]--;
+                        continue;
+                    }
                     filtered.push_back(slice);
                 }
                 f.set_alloc(filtered);
@@ -178,6 +187,30 @@ void FinalizePhysicalLiverange::end_apply() {
                   "cannot find stage info of table: %1%", table);
         PhvInfo::setPhysicalStages(table, table_stages_i.at(TableSummary::getTableName(table)));
     }
+
+    if (LOGGING(3)) {
+        // log final phv allocation
+        LOG3("PHV Allocation Result After Live Range Finalization");
+        for (const auto& f : phv_i) {
+            for (const auto& alloc_sl : f.get_alloc()) {
+                LOG3(alloc_sl);
+            }
+        }
+        // log table to physical stages
+        LOG3("Table Physical Liverange Map After Live Range Finalization");
+        for (const auto& kv : PhvInfo::table_to_physical_stages) {
+            const cstring table = kv.first;
+            std::stringstream ss;
+            ss << table << ": ";
+            cstring sep = "";
+            for (const auto& v : kv.second) {
+                ss << sep << v;
+                sep = ", ";
+            }
+            LOG3(ss.str());
+        }
+    }
 }
 
 }  // namespace PHV
+

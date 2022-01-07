@@ -1,11 +1,49 @@
 #include "fieldslice_live_range.h"
+#include <sstream>
+#include <string>
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/exceptions.h"
+#include "lib/safe_vector.h"
 
 namespace PHV {
+
+namespace {
+
+std::vector<std::string> to_string_vec(const LiveRangeInfo& info) {
+    std::vector<std::string> ops(Device::numStages() + 2);
+    for (int i = 0; i < Device::numStages() + 2; i++) {
+        std::ostringstream s;
+        s << info.vec()[i];
+        ops[i] = s.str();
+    }
+    return ops;
+}
+
+void pretty_print_live_range_info(std::ostream& out, const LiveRangeInfo& info,
+                                  const LiveRangeInfo* access_logs = nullptr) {
+    static const std::vector<std::string>* tp_format = nullptr;
+    if (tp_format == nullptr) {
+        auto format = new std::vector<std::string>(Device::numStages() + 2);
+        format->at(0) = "P";
+        format->at(Device::numStages() + 1) = "D";
+        for (int i = 1; i <= Device::numStages(); i++) {
+            format->at(i) = std::to_string(i);
+        }
+        tp_format = format;
+    }
+    TablePrinter tp(out, *tp_format, TablePrinter::Align::RIGHT);
+    tp.addRow(to_string_vec(info));
+    if (access_logs) {
+        tp.addRow(to_string_vec(*access_logs));
+    }
+    tp.print();
+}
+
+}  // namespace
 
 // result table
 //    D  R  W  RW L
@@ -15,7 +53,7 @@ namespace PHV {
 // RW RW RW RW RW L
 // L  L  L  L  L  L
 LiveRangeInfo::OpInfo
-operator||(const LiveRangeInfo::OpInfo& a, const LiveRangeInfo::OpInfo& b) {
+operator|(const LiveRangeInfo::OpInfo& a, const LiveRangeInfo::OpInfo& b) {
     using OpInfo = LiveRangeInfo::OpInfo;
     // (1) either dead, the other
     if (a == OpInfo::DEAD) {
@@ -37,6 +75,11 @@ operator||(const LiveRangeInfo::OpInfo& a, const LiveRangeInfo::OpInfo& b) {
     } else {
         return a;
     }
+}
+
+LiveRangeInfo::OpInfo& operator|=(LiveRangeInfo::OpInfo& a, const LiveRangeInfo::OpInfo& b) {
+    a = a | b;
+    return a;
 }
 
 bool LiveRangeInfo::can_overlay(const LiveRangeInfo& other) const {
@@ -151,26 +194,24 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
     return rst;
 }
 
-std::ostream &operator<<(std::ostream &out, const LiveRangeInfo& info) {
-    auto opinfo_to_str = [](const LiveRangeInfo::OpInfo& opinfo) {
-        if (opinfo == LiveRangeInfo::OpInfo::DEAD)
-            return "DEAD";
-        else if (opinfo == LiveRangeInfo::OpInfo::READ)
-            return "READ";
-        else if (opinfo == LiveRangeInfo::OpInfo::WRITE)
-            return "WRITE";
-        else if (opinfo == LiveRangeInfo::OpInfo::READ_WRITE)
-            return "READ_WRITE";
-        else if (opinfo == LiveRangeInfo::OpInfo::LIVE)
-            return "LIVE";
-        return "";
-    };
+std::ostream &operator<<(std::ostream &out, const LiveRangeInfo::OpInfo& opinfo) {
+    if (opinfo == LiveRangeInfo::OpInfo::DEAD)
+        out << "";
+    else if (opinfo == LiveRangeInfo::OpInfo::READ)
+        out << "R";
+    else if (opinfo == LiveRangeInfo::OpInfo::WRITE)
+        out << "W";
+    else if (opinfo == LiveRangeInfo::OpInfo::READ_WRITE)
+        out << "RW";
+    else if (opinfo == LiveRangeInfo::OpInfo::LIVE)
+        out << "L";
+    else
+        BUG("unknown LiveRangeInfo::OpInfo: %1%", int(opinfo));
+    return out;
+}
 
-    out << "Parser: " << opinfo_to_str(info.parser()) << std::endl;
-    for (int i = 0; i < Device::numStages(); i++) {
-        out << "Stage_" << i << ": " << opinfo_to_str(info.stage(i)) << std::endl;
-    }
-    out << "Deparser: " << opinfo_to_str(info.deparser()) << std::endl;
+std::ostream &operator<<(std::ostream &out, const LiveRangeInfo& info) {
+    pretty_print_live_range_info(out, info);
     return out;
 }
 
@@ -246,16 +287,16 @@ std::pair<int, int> FieldSliceLiveRangeDB::DBSetter::update_live_status(
     const LiveRangeInfo::OpInfo op = is_read ? OpInfo::READ : OpInfo::WRITE;
     std::pair<int, int> updated_range;
     if (loc.u == Location::PARSER) {
-        liverange.parser() = liverange.parser() || op;
+        liverange.parser() |= op;
         updated_range = std::make_pair(-1, -1);
     } else if (loc.u == Location::DEPARSER) {
-        liverange.deparser() = liverange.deparser() || op;
+        liverange.deparser() |= op;
         updated_range = std::make_pair(Device::numStages(), Device::numStages());
     } else if (loc.u == Location::TABLE) {
         BUG_CHECK(loc.stages.size() > 0, "table not allocated");
         const auto min_max = std::minmax_element(loc.stages.begin(), loc.stages.end());
         for (int i = *min_max.first; i <= *min_max.second; i++) {
-            liverange.stage(i) = liverange.stage(i) || op;
+            liverange.stage(i) |= op;
         }
         updated_range = std::make_pair(*min_max.first, *min_max.second);
     } else {
@@ -278,7 +319,7 @@ void FieldSliceLiveRangeDB::DBSetter::update_live_range_info(const PHV::FieldSli
         // NOTE: for fieldslice the its def or use table are split across multiple stages.
         // The live range starts at the first def table stage and end at the last read stage.
         for (int i = def_range.first + 1; i <= use_range.second - 1; i++) {
-            liverange.stage(i) = liverange.stage(i) || OpInfo::LIVE;
+            liverange.stage(i) |= OpInfo::LIVE;
         }
     } else {
         // read write within parser does not matter.
@@ -310,6 +351,7 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
         LOG1("alt-phv-alloc not enabled or no table placement found, skip FieldSliceLiveRangeDB");
         return;
     }
+    using OpInfo = LiveRangeInfo::OpInfo;
     // collect all field slice. Note that because defuse analysis is still based on
     // whole fields instead of slices, it is okay to use the whole field.
     // TODO(yumin):
@@ -317,10 +359,12 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
     //   (2) update defuse pass to use slice-level read/write analysis.
     ordered_set<PHV::FieldSlice> fs_set;
     ordered_map<FieldSlice, LiveRangeInfo> fs_info_map;
+    ordered_map<FieldSlice, LiveRangeInfo> table_access_logs;
     for (const auto& kv : phv.get_all_fields()) {
         const auto fs = PHV::FieldSlice(&kv.second);
         fs_set.insert(fs);
         fs_info_map.emplace(fs, LiveRangeInfo());
+        table_access_logs.emplace(fs, LiveRangeInfo());
     }
 
     for (const auto& fs : fs_set) {
@@ -333,9 +377,15 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
             LOG5("found use: " << use.second);
             const auto use_loc = to_location(field, use, true);
             BUG_CHECK(use_loc, "use cannot be ignored");
-            const auto& defs_of_use = defuse->getDefs(use);
 
-            // Always update uses It is possible for field to be read without def.
+            // update table access logs.
+            if (use_loc->u == Location::unit::TABLE) {
+                for (const auto& s : use_loc->stages) {
+                    table_access_logs[fs].stage(s) |= OpInfo::READ;
+                }
+            }
+
+            // Always update uses. It is possible for field to be read without def.
             // For example,
             // (1) fields added by compiler as padding for deparsed(digested) metadata.
             // (2) a = a & 1, when a has not been written before, including auto-init-metadata
@@ -343,12 +393,18 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
             update_live_status(liverange, *use_loc, true);
 
             // mark(or) W and R and all stages in between to LIVE.
+            const auto& defs_of_use = defuse->getDefs(use);
             for (const auto& def : defs_of_use) {
                 LOG5("found paired def: " << def.second);
                 const auto* field = fs.field();
                 const auto def_loc = to_location(field, def, false);
                 if (def_loc) {
                     update_live_range_info(fs, *use_loc, *def_loc, fs_info_map[fs]);
+                    if (def_loc->u == Location::unit::TABLE) {
+                        for (const auto& s : def_loc->stages) {
+                            table_access_logs[fs].stage(s) |= OpInfo::WRITE;
+                        }
+                    }
                 } else {
                     LOG5("ignoring parser init of " << field->name
                          << ", because @pa_auto_init_metadata is not enabled for this field.");
@@ -376,9 +432,13 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
         }
     }
 
+    LOG3("LiveRange Result:");
     for (auto it : fs_info_map) {
         self.set_liverange(it.first, it.second);
-        LOG3("Live range of " << it.first << ":\n" << it.second);
+        LOG3(it.first);
+        std::ostringstream ss;
+        pretty_print_live_range_info(ss, it.second, &table_access_logs.at(it.first));
+        LOG3(ss.str());
     }
 }
 

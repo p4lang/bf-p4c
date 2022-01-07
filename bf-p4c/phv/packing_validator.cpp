@@ -31,6 +31,14 @@ std::set<int> intersect(const std::set<int>& a, const std::set<int>& b) {
     return rv;
 }
 
+boost::optional<unsigned int> slice_list_alignment(const SuperCluster::SliceList* sl) {
+    const auto& head = sl->front();
+    if (head.alignment()) {
+        return head.alignment()->align;
+    }
+    return boost::none;
+}
+
 /// @returns if @p sources has only one phv source of move-based instruction, return that slice.
 boost::optional<FieldSlice> get_phv_move_src(const safe_vector<SourceOp>& sources) {
     if (sources.size() != 1 || sources.front().t != SourceOp::OpType::move) {
@@ -202,8 +210,7 @@ Result make_slicelist_group_prop(
 
     // compute and save misc properties.
     for (const auto* sl : boost::range::join(prop->settled_sl, prop->unsettled_byte_sl)) {
-        const auto& head = sl->front();
-        int offset = head.alignment() ? head.alignment()->align : 0;
+        int offset = slice_list_alignment(sl).get_value_or(0);
         for (const auto& fs : *sl) {
             prop->fs_sl[fs] = sl;
             prop->fs_offset[fs] = offset;
@@ -468,7 +475,7 @@ Result validate_slicelist_for_action(
             }
             solver.add_assign(dest_operand, src_operand);
             dest_live.setrange(dest_offset + prop.fs_offset.at(fs), fs.size());
-            LOG5("adding phv assignment from " << src_operand);
+            LOG5("adding phv assignment from " << src_operand << " to " << dest_operand);
         }
     }
     LOG5("dest live bits bitvec: " << dest_live);
@@ -518,16 +525,18 @@ Result validate_one_byte_slice_list(const SliceListGroupProp& prop,
     const int byte_list_sz = prop.sl_bits.at(byte_list);  // it could be less than 8 bits.
     LOG5("byte_list decided container size: " << *cont_size);
     for (const auto* action : prop.sl_actions.at(byte_list)) {
-        LOG5("check action: " << action->externalName());
         auto check_mixed_op = validate_mixed_op(prop.fs_sources, byte_list, action);
         if (check_mixed_op.code == Code::BAD) {
             return check_mixed_op;
         }
         Result rst;
-        for (int offset = 0; offset <= *cont_size - byte_list_sz; offset++) {
+        const int step = slice_list_alignment(byte_list) ? 8 : 1;
+        for (int offset = 0; offset <= *cont_size - byte_list_sz; offset += step) {
+            LOG5("check action: " << action->externalName() << ", dest alloc offset: " << offset);
             rst = validate_slicelist_for_action(
                     prop, "byte_dest", *cont_size, offset, byte_list, action);
             if (rst.code == Code::OK || rst.code == Code::UNKNOWN) {
+                LOG5("found valid allocation at offset " << offset);
                 break;
             }
         }
@@ -581,16 +590,18 @@ Result ActionPackingValidator::can_pack(
         // we need to verify all of them so that if there is any alignment that the action
         // can be synthesized, we will allow it to pass validation.
         const int floating_range = prop.floating_range(sl);
+        const int step = slice_list_alignment(sl) ? 8 : 1;
         // validate every action involved in this slice list.
         for (const auto* action : prop.sl_actions.at(sl)) {
-            LOG5("check action: " << (cstring)action->externalName());
             auto mixed_op_rst = validate_mixed_op(prop.fs_sources, sl, action);
             if (mixed_op_rst.code == Code::BAD) {
                 return mixed_op_rst;
             }
             // If there is one offset that the action can be synthesized, return OK.
             Result rst;
-            for (int offset = 0; offset <= floating_range; offset++) {
+            for (int offset = 0; offset <= floating_range; offset += step) {
+                LOG5("check action: " << action->externalName()
+                                      << ", dest alloc offset: " << offset);
                 rst = validate_slicelist_for_action(prop, *prop.container(sl),
                                                     *prop.container_size(sl), offset, sl, action);
                 if (rst.code == Code::OK || rst.code == Code::UNKNOWN) {

@@ -90,9 +90,11 @@ class LiveRangeInfo {
     std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> disjoint_ranges() const;
 };
 
-LiveRangeInfo::OpInfo operator||(const LiveRangeInfo::OpInfo&, const LiveRangeInfo::OpInfo&);
+LiveRangeInfo::OpInfo operator|(const LiveRangeInfo::OpInfo&, const LiveRangeInfo::OpInfo&);
+LiveRangeInfo::OpInfo& operator|=(LiveRangeInfo::OpInfo&, const LiveRangeInfo::OpInfo&);
 
-std::ostream &operator<<(std::ostream &out, const LiveRangeInfo& info);
+std::ostream &operator<<(std::ostream &out, const LiveRangeInfo::OpInfo& opinfo);
+std::ostream &operator<<(std::ostream &out, const LiveRangeInfo& lr);
 
 class IFieldSliceLiveRangeDB {
  public:
