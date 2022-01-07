@@ -142,7 +142,10 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, const Table *table
     BUG_CHECK(table_type < NUM_TABLE_TYPES);
     tbl["name"] = p4_name();
     tbl["table_type"] = type_name[table_type];
-    tbl["size"] = explicit_size ? this->size : size;
+    if (!explicit_size && tbl["size"])
+        tbl["size"]->as_number()->val += size;
+    else
+        tbl["size"] = explicit_size ? this->size : size;
     if (hidden) tbl["p4_hidden"] = true;
     return &tbl;
 }
