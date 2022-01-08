@@ -142,6 +142,18 @@ struct FlowGraph {
       path_finder(g)
     { }
 
+    FlowGraph(const FlowGraph& other)
+    : g(other.g),
+      gress(other.gress),
+      reachability(g),
+      tableToVertexIndex(other.tableToVertexIndex),
+      tables(other.tables),
+      dominators(other.dominators),
+      emptyFlowGraph(other.emptyFlowGraph),
+      tableToVertex(other.tableToVertex),
+      path_finder(g)
+    { }
+
     /// Maps each table to its associated graph vertex.
     std::map<const IR::MAU::Table*, typename Graph::vertex_descriptor> tableToVertex;
 

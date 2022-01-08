@@ -81,6 +81,32 @@ void PHV::Allocation::addMetaInitPoints(
         init_writes_i[act].insert(slice.field());
 }
 
+void PHV::Allocation::addARAedge(gress_t grs, const IR::MAU::Table* src,
+                                 const IR::MAU::Table* dst) const {
+    ara_edges[grs][src].insert(dst);
+
+    LOG5("Adding ARA edge from table " << src->name << " to table " << dst->name << " in gress " <<
+         grs);
+}
+
+std::string PHV::Allocation::printARAedges() const{
+    std::stringstream ss;
+
+    for (auto grs_entry : ara_edges) {
+        ss << std::endl << "  ARA EDGES : " << grs_entry.first;
+
+        for (auto src_entry : grs_entry.second) {
+            auto* src_tbl = src_entry.first;
+            ss << std::endl << src_tbl->name << "  --> ";
+            int num_dst = 0;
+
+            for (auto* dst_entry : src_entry.second) {
+                ss << ++num_dst << "." << dst_entry->name << " ";
+            }
+        }
+    }
+    return ss.str();
+}
 
 void PHV::Allocation::addSlice(PHV::Container c, PHV::AllocSlice slice) {
     // Get the current status in container_status_i, or its ancestors, if any.
@@ -421,6 +447,18 @@ cstring PHV::Allocation::commit(Transaction& view) {
         }
     }
 
+    for (auto map_entry : view.getARAedges()) {
+        gress_t grs = map_entry.first;
+
+        for (auto src2dsts : map_entry.second) {
+            auto* src_tbl = src2dsts.first;
+
+            for (auto* dst_tbl : src2dsts.second) {
+                addARAedge(grs, src_tbl, dst_tbl);
+            }
+        }
+    }
+
     // Merge the metadata initialization points from the view.
     for (const auto& kv : view.getMetaInitPoints())
         this->addMetaInitPoints(kv.first, kv.second);
@@ -474,6 +512,18 @@ PHV::Transaction* PHV::Allocation::clone(const Allocation& parent) const {
 
     for (auto kv : init_writes_i)
         rv->init_writes_i[kv.first].insert(kv.second.begin(), kv.second.end());
+
+    for (auto map_entry : parent.getARAedges()) {
+        auto grs = map_entry.first;
+
+        for (auto src2dsts : map_entry.second) {
+            auto* src_tbl = src2dsts.first;
+
+            for (auto* dst_tbl : src2dsts.second) {
+                rv->addARAedge(grs, src_tbl, dst_tbl);
+            }
+        }
+    }
 
     return rv;
 }

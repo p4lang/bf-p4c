@@ -5,10 +5,7 @@
 
 using namespace boost;
 
-bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
-    FindFlowGraphs find_flow_graphs(flowGraph);
-    pipe->apply(find_flow_graphs);
-
+void BuildDominatorTree::setupDomTree() {
     // Generate dominator tree for each gress.
     for (const auto& entry : flowGraph) {
         const auto& gress = entry.first;
@@ -27,12 +24,23 @@ bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
         iDominator.emplace(gress, new ImmediateDominatorMap());
         generateDominatorTree(fg, indexMap, *(iDominator.at(gress)));
     }
-    if (!LOGGING(1)) return false;
-    for (gress_t gress : Range(INGRESS, GHOST)) {
-        if (iDominator.count(gress) == 0) continue;
-        LOG1("\tPrinting dominator tree for " << gress);
-        printDominatorTree(*(iDominator.at(gress)));
+
+    if (LOGGING(1)) {
+        for (gress_t gress : Range(INGRESS, GHOST)) {
+            if (iDominator.count(gress) == 0) continue;
+            LOG1("\tPrinting dominator tree for " << gress);
+            printDominatorTree(*(iDominator.at(gress)));
+        }
     }
+}
+
+bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
+    FindFlowGraphs find_flow_graphs(flowGraph);
+    pipe->apply(find_flow_graphs);
+
+    // Generate dominator tree for each gress.
+    setupDomTree();
+
     return false;
 }
 

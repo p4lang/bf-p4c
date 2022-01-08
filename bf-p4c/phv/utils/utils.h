@@ -185,6 +185,11 @@ class Allocation {
     /// Initialization information about allocating to dark containers during certain stages.
     mutable DarkInitMap init_map_i;
 
+    /// For each gress keep track of potential control flow edges
+    /// implied from/to AlwaysRunAction tables
+    mutable ordered_map<gress_t, ordered_map<const IR::MAU::Table*,
+                                             std::set<const IR::MAU::Table*>>> ara_edges;
+
     Allocation(const PhvInfo& phv, const PhvUse& uses) : phv_i(&phv), uses_i(&uses) { }
 
     /// @returns the meta_init_points_i map for the current allocation object.
@@ -408,6 +413,16 @@ class Allocation {
     /// object.
     virtual void addMetadataInitialization(AllocSlice slice, LiveRangeShrinkingMap initNodes);
 
+    /// Add a pair of tables in the ara_edges for a new ARA table
+    void addARAedge(gress_t grs, const IR::MAU::Table* src, const IR::MAU::Table* dst) const;
+
+    /// @returns the map of source tables to the set of target tables
+    /// connected through the ARA overlays
+    const ordered_map<gress_t, ordered_map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>>
+    getARAedges() const { return ara_edges; }
+
+    std::string printARAedges() const;
+
     /// @returns a pretty-printed representation of this Allocation.
     virtual cstring toString() const;
 
@@ -510,6 +525,18 @@ class Transaction : public Allocation {
     explicit Transaction(const Allocation& parent)
     : Allocation(*parent.phv_i, *parent.uses_i), parent_i(&parent) {
         BUG_CHECK(&parent != this, "Creating transaction with self as parent");
+
+        for (auto map_entry : parent.getARAedges()) {
+            auto grs = map_entry.first;
+
+            for (auto src2dsts : map_entry.second) {
+                auto* src_tbl = src2dsts.first;
+
+                for (auto* dst_tbl : src2dsts.second) {
+                    this->addARAedge(grs, src_tbl, dst_tbl);
+                }
+            }
+        }
     }
 
     /// Pretty print all the metadata initialization actions for the current transaction (including
@@ -592,6 +619,17 @@ class Transaction : public Allocation {
         return rs;
     }
 
+    /// @returns the map of source tables to the set of target tables
+    /// connected through the ARA overlays
+    const ordered_map<gress_t, ordered_map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>>
+    getARAedges() const {
+        // if (ara_edges.count(grs)) return ara_edges.at(grs);
+        return ara_edges;
+
+        // ordered_map<IR::MAU::Table*, std::set<IR::MAU::Table*>> empty_map;
+        // return empty_map;
+    }
+
     /// @returns false if a dark container is used for the read half cycle in between stages
     /// minStage and maxStage for either this transaction or its parent.
     bool isDarkReadAvailable(PHV::Container c, unsigned minStage,
@@ -619,6 +657,7 @@ class Transaction : public Allocation {
         init_map_i.clear();
         state_to_containers_i.clear();
         count_by_status_i = parent_i->count_by_status_i;
+        ara_edges.clear();
     }
 
     /// Returns the allocation that this transaction is based on.

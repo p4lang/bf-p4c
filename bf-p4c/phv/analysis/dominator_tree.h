@@ -55,6 +55,10 @@ class BuildDominatorTree : public Inspector {
         return flowGraph;
     }
 
+    /* setup dominator tree using flowGraph
+     */
+    void setupDomTree();
+
     /** @returns the immediate dominator table for @p t with @p gress.
      * @returns boost::none if there is no immediate dominator. If @p t is nullptr,
      * then it indicates the deparser, in which case the @p gress needs to be specified.
@@ -106,5 +110,4 @@ class BuildDominatorTree : public Inspector {
       */
     bool isDominator(cstring t1, gress_t gress, cstring t2) const;
 };
-
 #endif  /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_ */

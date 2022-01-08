@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/utils/liverange_opti_utils.h"
 #include "ir/ir.h"
+#include "bf-p4c/phv/utils/utils.h"
 
 /// @returns true if any of the dominator units in @doms is a parser node.
 bool hasParserUse(ordered_set<const IR::BFN::Unit*> doms) {
@@ -109,4 +110,68 @@ void getTrimmedDominators(ordered_set<const IR::BFN::Unit*>& candidates,
     }
     for (const auto* u : dominatedNodes)
         candidates.erase(u);
+}
+
+/// Update flowgraph with ARA edges
+ordered_map<gress_t, FlowGraph>
+update_flowgraph(const ordered_set<const IR::BFN::Unit*>& g_units,
+                 const ordered_set<const IR::BFN::Unit*>& f_units,
+                 const ordered_map<gress_t, FlowGraph>& flgraphs,
+                 const PHV::Transaction& transact,
+                 bool& canUseAra) {
+    ordered_map<gress_t, FlowGraph> new_flowgraphs(flgraphs);
+    // Set of table pairs that will be connected through new control flow edges
+    ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> new_edges;
+    gress_t grs = INGRESS;
+
+    // Collect unit pairs for new control flow edges
+    for (auto* g_u : g_units) {
+        if (!g_u->is<IR::MAU::Table>()) continue;
+
+        for (auto* f_u : f_units) {
+            if (!f_u->is<IR::MAU::Table>()) continue;
+            // If fields used in the same unit init should not be done with ARA
+            if (f_u == g_u) canUseAra = false;
+
+            BUG_CHECK(g_u->thread() == f_u->thread(),
+                      "Attempting to overlay fields of different gress");
+
+            grs = f_u->thread();
+            new_edges.insert(std::make_pair(g_u, f_u));
+        }
+
+        if (!canUseAra) {
+            new_edges.clear();
+            break;
+        }
+    }
+
+    // Update Transaction's ARA control-flow edges
+    for (auto u_pair : new_edges) {
+        const IR::MAU::Table* g_t = u_pair.first->to<IR::MAU::Table>();
+        const IR::MAU::Table* f_t = u_pair.second->to<IR::MAU::Table>();
+
+        // Adding new ARA flow edges
+        // *TODO* *ALEX* Identify dominated tables to skip addition of control flow edges
+        transact.addARAedge(grs, g_t, f_t);
+        LOG5("\tAdding ARA edge to transaction ( " << grs << "): " <<
+             g_t->name << " --> " << f_t->name);
+    }
+
+    // Update FlowGraph with ARA edges in transaction
+    for (auto map_entry : transact.getARAedges()) {
+        FlowGraph& fg = new_flowgraphs[map_entry.first];
+
+        for (auto src2dsts : map_entry.second) {
+            auto* src_tbl = src2dsts.first;
+
+            for (auto* dst_tbl : src2dsts.second) {
+                auto edge_descriptor = fg.add_edge(src_tbl, dst_tbl, "always_run");
+                LOG5("   Added edge " << edge_descriptor.first << " : " << edge_descriptor.second <<
+                     "(gress: " << map_entry.first << ")");
+            }
+        }
+    }
+
+    return new_flowgraphs;
 }
