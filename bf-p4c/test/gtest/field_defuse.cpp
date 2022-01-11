@@ -351,4 +351,184 @@ TEST_F(FieldDefUseTest, ComplexSliceTest6) {
         ASSERT_TRUE(tbl->name.startsWith("tbl_field_defuse"));
     }
 }
+
+TEST_F(FieldDefUseTest, ComplexUseSlice1) {
+    auto test = createFieldDefUseTestCase(
+            P4_SOURCE(P4Headers::NONE,
+                      R"(
+                         bit<16> foo = 1;
+                         if (sm.ingress_port == 1) {
+                             foo[15:10] = 2;
+                         } else {
+                             foo[15:10] = 3;
+                         }
+                         if (foo[15:10] != 1) {
+                             sm.egress_port = 1;
+                         } else {
+                             sm.egress_port = 2;
+                         }
+                         )"));
+    ASSERT_TRUE(test);
+    PhvInfo phv;
+    FieldDefUse defuse(phv);
+    runMockPasses(test->pipe, phv, defuse);
+    auto field = phv.field("ingress::foo_0");
+    ASSERT_TRUE(field);
+    auto uses = defuse.getAllUses(field->id);
+    ASSERT_EQ(uses.size(), 1U);
+    auto use = uses.front();
+    auto defs = defuse.getDefs(use);
+    ASSERT_EQ(defs.size(), 2U);
+    for (auto def : defs) {
+        auto tbl = def.first->to<IR::MAU::Table>();
+        ASSERT_TRUE(tbl);
+        ASSERT_TRUE(tbl->name.startsWith("tbl_field_defuse"));
+    }
+}
+
+TEST_F(FieldDefUseTest, ComplexUseSlice2) {
+    auto test = createFieldDefUseTestCase(
+            P4_SOURCE(P4Headers::NONE,
+                      R"(
+                         bit<16> foo = 1;
+                         if (sm.ingress_port == 1) {
+                             foo[15:8] = 2;
+                         } else {
+                             foo [7:0] = 3;
+                         }
+                         if (foo[7:0] != 1) {
+                             sm.egress_port = 1;
+                         } else {
+                             sm.egress_port = 2;
+                         }
+                         )"));
+    ASSERT_TRUE(test);
+    PhvInfo phv;
+    FieldDefUse defuse(phv);
+    runMockPasses(test->pipe, phv, defuse);
+    auto field = phv.field("ingress::foo_0");
+    ASSERT_TRUE(field);
+    auto uses = defuse.getAllUses(field->id);
+    ASSERT_EQ(uses.size(), 1U);
+    auto use = uses.front();
+    auto defs = defuse.getDefs(use);
+    ASSERT_EQ(defs.size(), 2U);
+    for (auto def : defs) {
+        auto tbl = def.first->to<IR::MAU::Table>();
+        ASSERT_TRUE(tbl);
+        ASSERT_TRUE(tbl->name.startsWith("tbl_field_defuse"));
+    }
+}
+TEST_F(FieldDefUseTest, ComplexUseSlice3) {
+    auto test = createFieldDefUseTestCase(
+            P4_SOURCE(P4Headers::NONE,
+                      R"(
+                         bit<16> foo = 1;
+                         if (sm.ingress_port == 1) {
+                             foo[15:8] = 2;
+                         } else {
+                             foo[7:0] = 3;
+                         }
+                         if (foo[10:5] != 1) {
+                             sm.egress_port = 1;
+                         } else {
+                             sm.egress_port = 2;
+                         }
+                         )"));
+    ASSERT_TRUE(test);
+    PhvInfo phv;
+    FieldDefUse defuse(phv);
+    runMockPasses(test->pipe, phv, defuse);
+    auto field = phv.field("ingress::foo_0");
+    ASSERT_TRUE(field);
+    auto uses = defuse.getAllUses(field->id);
+    ASSERT_EQ(uses.size(), 1U);
+    auto use = uses.front();
+    auto defs = defuse.getDefs(use);
+    ASSERT_EQ(defs.size(), 3U);
+    for (auto def : defs) {
+        auto tbl = def.first->to<IR::MAU::Table>();
+        ASSERT_TRUE(tbl);
+        ASSERT_TRUE(tbl->name.startsWith("tbl_field_defuse"));
+    }
+}
+
+TEST_F(FieldDefUseTest, ComplexUseSlice4) {
+    auto test = createFieldDefUseTestCase(
+            P4_SOURCE(P4Headers::NONE,
+                      R"(
+                         bit<16> foo = 1;
+                         if (sm.ingress_port == 1) {
+                             foo[15:10] = 2;
+                         } else {
+                             foo[15:10] = 3;
+                         }
+                         foo[13:11] = 4;
+                         foo[12:9] = 5;
+                         foo[7:2] = 6;
+                         foo[3:3] = 0;
+                         foo[5:5] = 1;
+                         if (foo[5:0] != 1) {
+                             sm.egress_port = 1;
+                         } else {
+                             sm.egress_port = 2;
+                         }
+                         )"));
+    ASSERT_TRUE(test);
+    PhvInfo phv;
+    FieldDefUse defuse(phv);
+    runMockPasses(test->pipe, phv, defuse);
+    auto field = phv.field("ingress::foo_0");
+    ASSERT_TRUE(field);
+    auto uses = defuse.getAllUses(field->id);
+    ASSERT_EQ(uses.size(), 1U);
+    auto use = uses.front();
+    auto defs = defuse.getDefs(use);
+    ASSERT_EQ(defs.size(), 4U);
+    for (auto def : defs) {
+        auto tbl = def.first->to<IR::MAU::Table>();
+        ASSERT_TRUE(tbl);
+        ASSERT_TRUE(tbl->name.startsWith("tbl_field_defuse"));
+    }
+}
+
+TEST_F(FieldDefUseTest, ComplexUseSlice5) {
+    auto test = createFieldDefUseTestCase(
+            P4_SOURCE(P4Headers::NONE,
+                      R"(
+                         bit<16> foo = 1;
+                         if (sm.ingress_port == 1) {
+                             foo[15:10] = 2;
+                         } else {
+                             foo[15:10] = 3;
+                         }
+                         foo[13:11] = 4;
+                         foo[12:9] = 5;
+                         foo[7:2] = 6;
+                         foo[3:3] = 0;
+                         foo[5:5] = 1;
+                         if (foo[10:3] != 1) {
+                             sm.egress_port = 1;
+                         } else {
+                             sm.egress_port = 2;
+                         }
+                         )"));
+    ASSERT_TRUE(test);
+    PhvInfo phv;
+    FieldDefUse defuse(phv);
+    runMockPasses(test->pipe, phv, defuse);
+    auto field = phv.field("ingress::foo_0");
+    ASSERT_TRUE(field);
+    auto uses = defuse.getAllUses(field->id);
+    ASSERT_EQ(uses.size(), 1U);
+    auto use = uses.front();
+    auto defs = defuse.getDefs(use);
+    ASSERT_EQ(defs.size(), 5U);
+    for (auto def : defs) {
+        auto tbl = def.first->to<IR::MAU::Table>();
+        ASSERT_TRUE(tbl);
+        ASSERT_TRUE(tbl->name.startsWith("tbl_field_defuse"));
+    }
+}
+
 }  // namespace Test

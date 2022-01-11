@@ -83,8 +83,9 @@ FieldDefUse::info &FieldDefUse::field(const PHV::Field *f) {
     return info;
 }
 
-void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
-                       const IR::Expression *e, bool needsIXBar) {
+void FieldDefUse::read(const PHV::Field *f, boost::optional<le_bitrange> range,
+    const IR::BFN::Unit *unit, const IR::Expression *e, bool needsIXBar) {
+    // If range is boost::none, then it means the whole field is read.
     if (!f) return;
     auto &info = field(f);
     LOG3("defuse: " << DBPrint::Brief << *unit << " reading " << f->name);
@@ -94,9 +95,21 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
     located_uses[f->id].emplace(use);
     check_conflicts(info, unit->stage());
     for (auto def : info.def) {
-        LOG4("  " << use << " uses " << def);
-        uses[def].emplace(use);
-        defs[use].emplace(def); }
+        if (!range) {
+            LOG4("  " << use << " uses " << def);
+            uses[def].emplace(use);
+            defs[use].emplace(def);
+        } else {
+            const auto &covered_ranges = info.def_covered_ranges_map[def];
+            for (const auto &covered_range : covered_ranges) {
+                if (covered_range.overlaps(*range)) {
+                    LOG4("  " << use << " uses " << def);
+                    uses[def].emplace(use);
+                    defs[use].emplace(def);
+                }
+            }
+        }
+    }
     ixbar_refs[use] |= needsIXBar;
 
     LOG5("\t Adding IXBar " << needsIXBar << " for use  " << use <<
@@ -107,9 +120,9 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
-        read(phv.field(id), unit, e, needsIXBar);
+        read(phv.field(id),boost::none, unit, e, needsIXBar);
     if (!info.metadata)
-        read(phv.field(hr->toString() + ".$valid"), unit, e, needsIXBar);
+        read(phv.field(hr->toString() + ".$valid"), boost::none, unit, e, needsIXBar);
 }
 
 void FieldDefUse::shadow_previous_ranges(FieldDefUse::info &info, le_bitrange &bit_range) {
@@ -163,12 +176,13 @@ void FieldDefUse::shadow_previous_ranges(FieldDefUse::info &info, le_bitrange &b
     }
 }
 
-void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit, const IR::Expression *e,
-                        bool needsIXBar, boost::optional<le_bitrange> partial) {
+void FieldDefUse::write(const PHV::Field *f, boost::optional<le_bitrange> range,
+                        const IR::BFN::Unit *unit, const IR::Expression *e, bool needsIXBar) {
+    // If range is boost::none, then it means that the whole field is written.
     if (!f) return;
     auto &info = field(f);
     LOG3("defuse: " << DBPrint::Brief << *unit <<
-         " writing " << f->name << (partial ? " (partial)" : ""));
+         " writing " << f->name << (range ? " (partial)" : ""));
 
     // Update output_deps with the new def.
     locpair def(unit, e);
@@ -177,16 +191,16 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit, const IR
         output_deps[def].insert(old_def);
     }
     le_bitrange bit_range;
-    if (!partial) {
+    if (!range) {
         bit_range.lo = 0;
         bit_range.hi = f->size - 1;
     } else {
-        bit_range = *partial;
+        bit_range = *range;
     }
     if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
-        if (!partial) {
+        if (!range) {
             info.use.clear();
             // Though parser do OR value into phv, as long as it is not partial, the zero-init
             // def should be remove, because this def will override the 0.
@@ -209,7 +223,7 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit, const IR
             LOG4("  " << e << " in " << *unit << " combines with " <<
                  def.second << " from " << *def.first);
     } else {
-        if (!partial) {
+        if (!range) {
             info.def.clear();
             info.def_covered_ranges_map.clear();
         }
@@ -228,9 +242,9 @@ void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
-        write(phv.field(id), unit, e, needsIXBar);
+        write(phv.field(id), boost::none, unit, e, needsIXBar);
     if (!info.metadata)
-        write(phv.field(hr->toString() + ".$valid"), unit, e, needsIXBar);
+        write(phv.field(hr->toString() + ".$valid"), boost::none, unit, e, needsIXBar);
 }
 
 bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
@@ -375,21 +389,21 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
                 break;
             }
         }
+        bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
         if (isWrite()) {
-           /* this is a temporary fix to make sure that we dont overwrite the
-            * previous assignment. This needs to be enhanced to deal with range
-            * being non-contiguous and overwrite if the range is contiguous
-            */
-            bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
             if (partial) {
-                write(f, unit, e, needsIXBar, bits);
+                write(f, bits, unit, e, needsIXBar);
             } else {
-                write(f, unit, e, needsIXBar, boost::none);
+                write(f, boost::none, unit, e, needsIXBar);
             }
             write(hr, unit, e, needsIXBar);
             LOG3("  write at unit : " << unit);
         } else {
-            read(f, unit, e, needsIXBar);
+            if (partial) {
+                read(f, bits, unit, e, needsIXBar);
+            } else {
+                read(f, boost::none, unit, e, needsIXBar);
+            }
             read(hr, unit, e, needsIXBar);
             LOG3("  read at unit : " << unit);
         }
