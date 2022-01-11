@@ -48,6 +48,7 @@ header udp_t {
     bit<16> checksum;
 }
 
+@flexible
 header resubmit_h {
     PortId_t port_id; // 9 bits - uses 16 bit container
     bit<48> _pad2;
