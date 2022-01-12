@@ -185,11 +185,11 @@ struct DependencyGraph {
 
     // Work happens after map
     ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_after_work_map;
+                std::vector<const IR::MAU::Table*>> happens_after_work_map;
 
     // Work happens before map
     ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_before_work_map;
+                std::vector<const IR::MAU::Table*>> happens_before_work_map;
 
     // For a given table t, happens_phys_after_map[t] is the set of tables that must be placed in an
     // earlier stage than t---i.e. there is a data dependence between t and any table in the
@@ -579,7 +579,7 @@ struct DependencyGraph {
         return stage_info.at(t).min_stage;
     }
 
-    ordered_set<const IR::MAU::Table*>
+    const std::vector<const IR::MAU::Table*>&
     happens_before_dependences(const IR::MAU::Table* t) const {
         check_finalized();
         return happens_before_work_map.at(t);

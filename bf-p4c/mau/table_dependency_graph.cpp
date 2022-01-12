@@ -1478,17 +1478,25 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
     if (curr_dg.has_cycle())
         LOG7("The graph has a cycle");
 
-    auto &happens_after_work_map = curr_dg.happens_after_work_map;
-    auto &happens_before_work_map = curr_dg.happens_before_work_map;
-    happens_after_work_map.clear();
-    happens_before_work_map.clear();
+    std::vector<const IR::MAU::Table*> id_to_table;
+    std::unordered_map<const IR::MAU::Table *, int> table_to_id;
+    ordered_map<const IR::MAU::Table*, bitvec> happens_after_work_map;
+
+    curr_dg.happens_after_work_map.clear();
+    curr_dg.happens_before_work_map.clear();
 
     for (boost::tie(v, v_end) = boost::vertices(dep_graph); v != v_end; ++v) {
         n_depending_on[*v] = 0;
 
         const IR::MAU::Table* label_table = curr_dg.get_vertex(*v);
+        if (!table_to_id.count(label_table)) {
+            int new_id = table_to_id.size();
+            table_to_id[label_table] = new_id;
+            id_to_table.push_back(label_table);
+        }
         happens_after_work_map[label_table] = {};
-        happens_before_work_map[label_table] = {};
+        curr_dg.happens_after_work_map[label_table] = {};
+        curr_dg.happens_before_work_map[label_table] = {};
     }
 
     for (boost::tie(out, out_end) = boost::edges(dep_graph); out != out_end; ++out) {
@@ -1567,10 +1575,8 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
                     auto vertex_later = boost::target(*out, dep_graph);
                     const auto* table_later = curr_dg.get_vertex(vertex_later);
 
-                    happens_after_work_map[table_later].insert(table);
-                    happens_after_work_map[table_later].insert(
-                        happens_after_work_map[table].begin(),
-                        happens_after_work_map[table].end());
+                    happens_after_work_map[table_later].setbit(table_to_id.at(table));
+                    happens_after_work_map[table_later] |= happens_after_work_map[table];
                     n_depending_on[vertex_later]--;
                     auto &vertex_later_edges = n_depending_on_with_edges[vertex_later];
                     auto rm_edge = std::find(vertex_later_edges.begin(),
@@ -1584,11 +1590,15 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
         rst.emplace_back(std::move(this_generation));
     }
 
-
     for (const auto& kv : happens_after_work_map) {
-        auto* table = kv.first;
-        for (const auto* prev : kv.second) {
-            happens_before_work_map[prev].insert(table); } }
+        auto* table_later = kv.first;
+        for (int tbl_id : kv.second) {
+            auto* table_earlier = id_to_table.at(tbl_id);
+            curr_dg.happens_after_work_map[table_later].push_back(table_earlier);
+            curr_dg.happens_before_work_map[table_earlier].push_back(table_later);
+        }
+    }
+
     return rst;
 }
 
@@ -2166,10 +2176,16 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         }
     }
     // Construct the maps
-    for (auto kv : dg.happens_before_work_map)
-        dg.happens_logi_before_map[kv.first].insert(kv.second.begin(), kv.second.end());
-    for (auto kv : dg.happens_after_work_map)
-        dg.happens_logi_after_map[kv.first].insert(kv.second.begin(), kv.second.end());
+    for (auto kv : dg.happens_before_work_map) {
+        auto& map = dg.happens_logi_before_map[kv.first];
+        for (auto* tbl : kv.second)
+            map.insert(tbl);
+    }
+    for (auto kv : dg.happens_after_work_map) {
+        auto& map = dg.happens_logi_after_map[kv.first];
+        for (auto* tbl : kv.second)
+            map.insert(tbl);
+    }
 
     if (LOGGING(4)) {
         std::stringstream ss;
@@ -2270,10 +2286,16 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 
     calc_topological_stage();
     // Use this final computation to create the happens_physical maps
-    for (auto kv : dg.happens_before_work_map)
-        dg.happens_phys_before_map[kv.first].insert(kv.second.begin(), kv.second.end());
-    for (auto kv : dg.happens_after_work_map)
-        dg.happens_phys_after_map[kv.first].insert(kv.second.begin(), kv.second.end());
+    for (auto kv : dg.happens_before_work_map) {
+        auto& map = dg.happens_phys_before_map[kv.first];
+        for (auto* tbl : kv.second)
+            map.insert(tbl);
+    }
+    for (auto kv : dg.happens_after_work_map) {
+        auto& map = dg.happens_phys_after_map[kv.first];
+        for (auto* tbl : kv.second)
+            map.insert(tbl);
+    }
 
     // If A happens logically before B, and B happens physically before C, then A happens
     // physically before C.  The original maps created from these happens_work_maps did not
