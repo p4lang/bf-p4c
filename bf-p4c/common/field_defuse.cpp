@@ -378,17 +378,22 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     LOG6("FieldDefUse preorder : " << e);
 
     if (auto unit = findContext<IR::BFN::Unit>()) {
-        bool needsIXBar = true;
+        bool needsIXBar = true, ok = false;
         for (auto c = getContext(); c; c = c->parent) {
             if (c->node->is<IR::MAU::IXBarExpression>() || c->node->is<IR::MAU::StatefulCall>() ||
                 c->node->is<IR::MAU::StatefulAlu>() || c->node->is<IR::MAU::Table>() ||
                 c->node->is<IR::MAU::Meter>())
+                needsIXBar = true;
+                ok = true;
                 break;
-            if (c->node->is<IR::MAU::Action>()) {
+            if (c->node->is<IR::MAU::Action>() || c->node->is<IR::BFN::ParserState>() ||
+                c->node->is<IR::BFN::Deparser>()) {
                 needsIXBar = false;
+                ok = true;
                 break;
             }
         }
+        BUG_CHECK(ok, "FieldDefUse expression in unexpected context");
         bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
         if (isWrite()) {
             if (partial) {
