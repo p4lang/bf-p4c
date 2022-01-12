@@ -1149,7 +1149,7 @@ p4c_add_ptf_test_with_ptfdir (
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c-3876" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876/p4c_3876.p4"
-    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
+    "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 -Xp4c=--disable-parse-min-depth-limit" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
 p4c_add_test_label("tofino" "need_scapy" "p4c-3876")
 
 p4c_add_ptf_test_with_ptfdir (
