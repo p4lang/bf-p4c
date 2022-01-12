@@ -780,9 +780,10 @@ class AddParserPad : public Modifier {
             auto *th = pe->type->to<IR::Type_Header>();
             if (th && hdrNameToNewTypeHdr.count(th->name)) {
                 pe->type = hdrNameToNewTypeHdr.at(th->name);
+            return false;
             }
         }
-        return false;
+        return true;
     }
 
     void postorder(IR::Type_Parser *tp) override {
