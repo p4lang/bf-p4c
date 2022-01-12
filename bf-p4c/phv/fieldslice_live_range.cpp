@@ -274,7 +274,7 @@ FieldSliceLiveRangeDB::DBSetter::to_location(const PHV::Field* field,
     } else if (unit->is<IR::MAU::Table>()) {
         const auto* t = unit->to<IR::MAU::Table>();
         loc.u = Location::TABLE;
-        loc.stages = backtracker->stage(t);
+        loc.stages = backtracker->stage(t, true);
     } else {
         BUG("unknown use unit: %1%, field: %2%", unit, field);
     }

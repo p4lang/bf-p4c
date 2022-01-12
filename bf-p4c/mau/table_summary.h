@@ -125,8 +125,10 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, ordered_set<int>> internalTableAlloc;
     /// Map of table name to the name of the gateway merged with it
     ordered_map<cstring, cstring> mergedGateways;
-    /// Map of table pointers to the names used for communicating table placement information
+    /// Map of table names to the external names used for communicating table placement information
     ordered_map<cstring, cstring> tableNames;
+    /// Map of table names to the internal names used for communicating table placement information
+    ordered_map<cstring, cstring> tableINames;
 
     // Map of Global ID -> Table
     std::map<int, const IR::MAU::Table *> order;
@@ -178,6 +180,11 @@ class TableSummary: public MauInspector {
 
  public:
     explicit TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo &phv);
+
+    /// @returns the compiler-generated internal name for tables. Other passes should
+    /// use this name, instead of  externalName returned by getTableName(),
+    /// to track tables.
+    static cstring getTableIName(const IR::MAU::Table* tbl);
 
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.

@@ -16,7 +16,7 @@ bool MemoizeStage::preorder(const IR::MAU::Table* tbl) {
     PhvInfo::addMinStageEntry(tbl, dg.min_stage(tbl));
 
     if (backtracker.hasTablePlacement()) {
-        const auto& stages = backtracker.stage(tbl);
+        const auto& stages = backtracker.stage(tbl, true);
         PhvInfo::setPhysicalStages(tbl, {stages.begin(), stages.end()});
     }
     return true;

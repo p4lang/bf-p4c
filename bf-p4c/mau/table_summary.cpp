@@ -91,6 +91,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     tableAlloc.clear();
     internalTableAlloc.clear();
     tableNames.clear();
+    tableINames.clear();
     mergedGateways.clear();
     ixbarBytes.clear();
     maxStage = 0;
@@ -153,9 +154,12 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     LOG3("Table " << t->name << ", id: " << logical_ids[t->name]
             << ", global id : " << t->global_id() << " stage: " << t->stage());
     tableNames[t->name] = getTableName(t);
+    tableINames[t->name] = getTableIName(t);
     if (t->gateway_name) {
         mergedGateways[t->name] = t->gateway_name;
-        tableNames[t->gateway_name] = t->gateway_name; }
+        tableNames[t->gateway_name] = t->gateway_name;
+        tableINames[t->gateway_name] = t->gateway_name;
+    }
     if (t->resources) {
         if (!ixbar[t->stage()]) ixbar[t->stage()].reset(IXBar::create());
         ixbar[t->stage()]->update(t);
@@ -175,21 +179,30 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
+cstring TableSummary::getTableIName(const IR::MAU::Table* tbl) {
+    // For split gateways, refer to the original name.
+    if (!tbl->match_table && tbl->name.endsWith("$split")) {
+        cstring newName = tbl->name.before(tbl->name.find('$'));
+        return newName;
+    }
+    return tbl->name;
+}
+
 cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
     if (tbl->match_table) {
         BUG_CHECK(tbl->match_table->externalName(), "Table %1% does not have a P4 name", tbl->name);
         return tbl->match_table->externalName();
-    } else {
-        // For split gateways, refer to the original name.
-        if (tbl->name.endsWith("$split")) {
-            cstring newName = tbl->name.before(tbl->name.find('$'));
-            return newName;
-        }
-        // For gateways, return the compiler generated name
-        return tbl->name; }
+    }
+    // For split gateways, refer to the original name.
+    if (tbl->name.endsWith("$split")) {
+        cstring newName = tbl->name.before(tbl->name.find('$'));
+        return newName;
+    }
+    // For gateways, return the compiler generated name
+    return tbl->name;
 }
 
-void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
+void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
     LOG7(pipe);
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
@@ -208,7 +221,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         if (max_stages[entry.second->gress] < stage)
             max_stages[entry.second->gress] = stage;
         tableAlloc[tableNames[entry.second->name]].insert(entry.first);
-        internalTableAlloc[entry.second->name].insert(entry.first);
+        internalTableAlloc[tableINames[entry.second->name]].insert(entry.first);
     }
     // maxStage is counted from 0 to n-1
     ++maxStage;
@@ -230,7 +243,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
             int minStage = std::accumulate(stages.begin(), stages.end(),
                     (maxStage + 1) * NUM_LOGICAL_TABLES_PER_STAGE, min);
             tableAlloc[tableNames[entry.second]].insert(minStage);
-            internalTableAlloc[entry.second].insert(minStage);
+            internalTableAlloc[tableINames[entry.second]].insert(minStage);
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 

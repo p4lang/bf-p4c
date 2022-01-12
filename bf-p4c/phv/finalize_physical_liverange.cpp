@@ -47,7 +47,7 @@ void FinalizePhysicalLiverange::update_liverange(const safe_vector<AllocSlice>& 
 bool FinalizePhysicalLiverange::preorder(const IR::MAU::Table* t) {
     tables_i.insert(t);
     for (const auto& stage : table_summary_i.stages(t)) {
-        table_stages_i[TableSummary::getTableName(t)].insert(stage);
+        table_stages_i[TableSummary::getTableIName(t)].insert(stage);
     }
     return true;
 }
@@ -183,9 +183,9 @@ void FinalizePhysicalLiverange::end_apply() {
     // update physical stage info.
     PhvInfo::clearPhysicalStageInfo();
     for (const auto* table : tables_i) {
-        BUG_CHECK(table_stages_i.count(TableSummary::getTableName(table)),
+        BUG_CHECK(table_stages_i.count(TableSummary::getTableIName(table)),
                   "cannot find stage info of table: %1%", table);
-        PhvInfo::setPhysicalStages(table, table_stages_i.at(TableSummary::getTableName(table)));
+        PhvInfo::setPhysicalStages(table, table_stages_i.at(TableSummary::getTableIName(table)));
     }
 
     if (LOGGING(3)) {

@@ -646,9 +646,8 @@ std::set<int> PhvInfo::minStages(const IR::MAU::Table *table) {
 }
 
 std::set<int> PhvInfo::physicalStages(const IR::MAU::Table *table) {
-    return ::get(table_to_physical_stages, TableSummary::getTableName(table));
+    return ::get(table_to_physical_stages, TableSummary::getTableIName(table));
 }
-
 
 void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remove_prev_stages) {
     auto tableName = TableSummary::getTableName(table);
@@ -664,8 +663,11 @@ void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remo
 }
 
 void PhvInfo::setPhysicalStages(const IR::MAU::Table *table, const std::set<int>& stages) {
-    auto tableName = TableSummary::getTableName(table);
+    auto tableName = TableSummary::getTableIName(table);
     table_to_physical_stages[tableName] = stages;
+    if (table->gateway_name && table->gateway_name != tableName) {
+        table_to_physical_stages[table->gateway_name] = stages;
+    }
 }
 
 bool PhvInfo::hasMinStageEntry(const IR::MAU::Table *table) {

@@ -113,8 +113,9 @@ ordered_set<int> MauBacktracker::stage(const IR::MAU::Table* t, bool internal) c
     ordered_set<int> rs;
     if (internal) {
         if (internalTables.size() == 0) return rs;
-        if (!internalTables.count(t->name)) return rs;
-        for (auto logical_id : internalTables.at(t->name))
+        auto tbl_name = TableSummary::getTableIName(t);
+        if (!internalTables.count(tbl_name)) return rs;
+        for (auto logical_id : internalTables.at(tbl_name))
             rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
     } else {
         if (tables.size() == 0) return rs;

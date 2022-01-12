@@ -618,6 +618,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
                 auto padding_size = ROUNDUP(sum_bits, 32) * 32 - sum_bits;
                 if (padding_size != 0) {
                     auto* padding = phv_i.create_dummy_padding(padding_size, list->front().gress());
+                    padding->set_ignore_alloc(true);
                     padding->set_exact_containers(list->front().field()->exact_containers());
                     padding->set_deparsed(list->front().field()->deparsed());
                     auto padding_fs = PHV::FieldSlice(padding);

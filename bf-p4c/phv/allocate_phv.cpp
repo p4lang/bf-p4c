@@ -647,7 +647,12 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
     std::vector<PHV::AllocSlice> rst;
     for (auto& slice : slices) {
         const auto* info = liverange_db.get_liverange(PHV::FieldSlice(slice.field()));
-        BUG_CHECK(info != nullptr, "missing physical liverange info: %1%", slice);
+        if (!info) {
+            if (slice.field()->is_ignore_alloc()) {
+                continue;  // skip dummy padding slices.
+            }
+            BUG("missing physical liverange info: %1%", slice);
+        }
         auto ranges = info->disjoint_ranges();
         if (ranges.empty()) {
             // TODO(yumin): some fields do not have live range because they were never used
