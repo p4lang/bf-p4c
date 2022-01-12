@@ -247,6 +247,12 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
     if (stage >= stageResources.size()) stageResources.resize(stage + 1);
     auto logicalTableId = *table->global_id();  // table name is 'name'
     const TableResourceAlloc *alloc = table->resources;
+#if HAVE_FLATROCK
+    // FIXME -- on flatrock, ingress and egress have independent ids, so the gids are
+    // not unique.  To work around this, we or egress ids with 0x10000 to make them distinct
+    if (Device::currentDevice() == Device::FLATROCK && table->gress == EGRESS)
+        logicalTableId |= 0x10000;
+#endif
 
     if (stageResources[stage].logicalIds.count(logicalTableId)) {
         BUG("Logical id: %d is used twice in stage: %d", logicalTableId, stage);

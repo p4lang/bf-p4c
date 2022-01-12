@@ -1960,9 +1960,18 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
                     parser->apply(ExtractParser(refMap, typeMap, rv, arch));
                 }
             }
-            if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
+            if (auto dprsr = dynamic_cast<const IR::BFN::TnaDeparser *>(thread->deparser)) {
                 dprsr->apply(ExtractDeparser(refMap, typeMap, rv, collect_pragma));
                 dprsr->apply(ExtractChecksum(rv));
+            } else {
+#if HAVE_FLATROCK
+                // need a dummy (ingress) deparser to track metadata used at end of ingress
+                BUG_CHECK(gress == INGRESS && Device::currentDevice() == Device::FLATROCK,
+                          "missing deparser");
+                rv->thread[gress].deparser = new IR::BFN::Deparser(gress);
+#else
+                BUG("missing deparser");
+#endif
             }
         }
 

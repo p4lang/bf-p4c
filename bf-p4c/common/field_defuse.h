@@ -87,6 +87,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
+    void end_apply() override;
     void check_conflicts(const info &read, int when);
     void read(const PHV::Field *, boost::optional<le_bitrange>, const IR::BFN::Unit *,
               const IR::Expression *, bool);

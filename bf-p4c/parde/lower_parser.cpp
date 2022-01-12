@@ -1811,6 +1811,11 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     }
 
     bool preorder(const IR::BFN::Deparser* deparser) override {
+#if HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
+            // FLATROCK does not have a real ingress deparser
+            return false; }
+#endif
         auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser
                                                            : egLoweredDeparser;
 
@@ -2068,9 +2073,14 @@ struct ReplaceDeparserIR : public DeparserTransform {
         egLoweredDeparser(egLoweredDeparser) { }
 
  private:
-    const IR::BFN::LoweredDeparser*
+    const IR::BFN::AbstractDeparser*
     preorder(IR::BFN::Deparser* deparser) override {
         prune();
+#if HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
+            // FLATROCK does not have a real ingress deparser
+            return deparser; }
+#endif
         return deparser->gress == INGRESS ? igLoweredDeparser : egLoweredDeparser;
     }
 

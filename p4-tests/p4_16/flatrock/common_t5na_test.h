@@ -9,7 +9,7 @@ parser ingressParser(packet_in packet, out headers hdrs,
     }
 }
 
-control ingress(inout headers hdrs, inout metadata meta,
+control ingress(in headers hdrs, inout metadata meta,
                 in ingress_intrinsic_metadata_t ig_intr_md,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {

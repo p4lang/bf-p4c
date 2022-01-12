@@ -139,7 +139,7 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
                     parser->apply(collectBridgedFields);
                 }
             }
-            if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
+            if (auto dprsr = dynamic_cast<const IR::BFN::TnaDeparser *>(thread->deparser)) {
                 dprsr->apply(collectBridgedFields);
             }
         }

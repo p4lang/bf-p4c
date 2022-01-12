@@ -315,11 +315,11 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
 
 void Table::setup_logical_id() {
     if (logical_id >= 0) {
-        if (Table *old = stage->logical_id_use[logical_id]) {
+        if (Table *old = stage->logical_id_use[logical_id_set(gress)][logical_id]) {
             error(lineno, "table %s wants logical id %d:%d", name(),
                   stage->stageno, logical_id);
             error(old->lineno, "already in use by %s", old->name()); }
-        stage->logical_id_use[logical_id] = this; }
+        stage->logical_id_use[logical_id_set(gress)][logical_id] = this; }
 }
 
 void Table::setup_maprams(value_t &v) {
@@ -845,9 +845,9 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
             n->logical_id >= 0 && n->logical_id <= max_id) {
             max_id = n->logical_id - 1; } });
     for (int id = min_id; id <= max_id; ++id) {
-        if (!stage->logical_id_use[id]) {
+        if (!stage->logical_id_use[logical_id_set(gress)][id]) {
             logical_id = id;
-            stage->logical_id_use[id] = this;
+            stage->logical_id_use[logical_id_set(gress)][id] = this;
             return true; } }
     error(lineno, "Can't find a logcial id for table %s", name());
     return false;

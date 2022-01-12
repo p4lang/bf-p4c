@@ -133,6 +133,12 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParamRename(d, tmMeta, "level1_exclusion_id", "xid");
     addDeparserParamRename(d, tmMeta, "level2_exclusion_id", "yid");
     addDeparserParam(d, tmMeta, "rid");
+#if HAVE_FLATROCK
+    // flatrock does not really have an ingress deparser, so does not have
+    // ingress_intrinsic_metadata_for_deparser
+    if (Device::currentDevice() == Device::FLATROCK)
+        return;
+#endif
 
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl");

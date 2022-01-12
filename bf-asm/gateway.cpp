@@ -302,8 +302,12 @@ void GatewayTable::verify_format() {
 void GatewayTable::pass1() {
     LOG1("### Gateway table " << name() << " pass1 " << loc());
     Table::pass1();
+#if 0
+    // redundant with (and supercedes) choose_logical_id in pass2.  That function is much
+    // better, taking dependencies into account, so logical_id should not be allocated here
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+                 LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use[logical_id_set(gress)]);
+#endif
     /* in a gateway, the layout has one or two rows -- layout[0] specifies the gateway, and
      * layout[1] specifies the payload. There will be no columns in either row */
     if (layout.empty() || layout[0].row < 0)

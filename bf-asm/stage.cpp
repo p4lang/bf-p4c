@@ -18,6 +18,14 @@ extern std::string asmfile_name;
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
+int logical_id_set(gress_t gress) {
+#if HAVE_FLATROCK
+    if (options.target == FLATROCK)
+        return gress % 2;
+#endif
+    return 0;
+}
+
 class AsmStage : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);

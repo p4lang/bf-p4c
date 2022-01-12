@@ -9,6 +9,11 @@
 #include "bitvec.h"
 #include "input_xbar.h"
 
+// Tofino shares logical IDS between all threads, while flatrock only shares ingress/ghost;
+// egress has its own distinct ids.
+#define MAX_LOGICAL_ID_SETS     2
+int logical_id_set(gress_t);
+
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
      * generation of the move construtor properly */
@@ -26,7 +31,7 @@ class Stage_data {
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_unit_use;
     Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
-    Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
+    Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use[MAX_LOGICAL_ID_SETS];
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     ordered_map<InputXbar::Group, std::vector<InputXbar *>>     ixbar_use;
     Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;

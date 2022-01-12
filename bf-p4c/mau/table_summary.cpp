@@ -146,10 +146,17 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         if (no_errors_before_summary)
             addPlacementError(t->toString() + " not placed");
         return true; }
-    BUG_CHECK(order.count(*t->global_id()) == 0,
+    int gid = *t->global_id();
+#if HAVE_FLATROCK
+    // FIXME -- on flatrock, ingress and egress have independent ids, so the gids are
+    // not unique.  To work around this, we or egress ids with 0x10000 to make them distinct
+    if (Device::currentDevice() == Device::FLATROCK && t->gress == EGRESS)
+        gid |= 0x10000;
+#endif
+    BUG_CHECK(order.count(gid) == 0,
               "Encountering table multiple times in IR traversal");
-    assert(order.count(*t->global_id()) == 0);
-    order[*t->global_id()] = t;
+    assert(order.count(gid) == 0);
+    order[gid] = t;
     logical_ids[t->name] = *t->logical_id;
     LOG3("Table " << t->name << ", id: " << logical_ids[t->name]
             << ", global id : " << t->global_id() << " stage: " << t->stage());
@@ -215,13 +222,14 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
     const bool criticalPlacementFailure =
         std::any_of(tablePlacementErrors.begin(), tablePlacementErrors.end(),
                     [](const std::pair<cstring, bool> &kv) { return kv.second; });
-    for (auto entry : order) {
-        int stage = static_cast<int>(entry.first / NUM_LOGICAL_TABLES_PER_STAGE);
+    for (auto tbl : Values(order)) {
+        // FIXME -- should just use tbl->stage() here?
+        int stage = static_cast<int>(*tbl->global_id() / NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
-        if (max_stages[entry.second->gress] < stage)
-            max_stages[entry.second->gress] = stage;
-        tableAlloc[tableNames[entry.second->name]].insert(entry.first);
-        internalTableAlloc[tableINames[entry.second->name]].insert(entry.first);
+        if (max_stages[tbl->gress] < stage)
+            max_stages[tbl->gress] = stage;
+        tableAlloc[tableNames[tbl->name]].insert(*tbl->global_id());
+        internalTableAlloc[tableINames[tbl->name]].insert(*tbl->global_id());
     }
     // maxStage is counted from 0 to n-1
     ++maxStage;

@@ -238,8 +238,10 @@ class ElimUnused::Headers : public PardeTransform {
 };
 
 ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse) : phv(phv), defuse(defuse) {
+    static int counter;
     addPasses({
         LOGGING(4) ? new DumpParser("before_elim_unused") : nullptr,
+        [](){ LOG3("ElimUnused start pass #" << ++counter << IndentCtl::indent); },
         new PassRepeated({
             new Instructions(*this),
             &defuse,
@@ -247,6 +249,7 @@ ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse) : phv(phv), defu
             &defuse,
             new Headers(*this),
             &defuse}),
-        LOGGING(4) ? new DumpParser("after_elim_unused") : nullptr
+        LOGGING(4) ? new DumpParser("after_elim_unused") : nullptr,
+        [](){ LOG3("ElimUnused end pass #" << counter << IndentCtl::unindent); },
     });
 }

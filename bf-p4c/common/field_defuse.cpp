@@ -49,7 +49,7 @@ class FieldDefUse::CollectAliasDestinations : public Inspector {
 
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
-    LOG2("FieldDefUse starting");
+    LOG2("FieldDefUse starting" << IndentCtl::indent);
     conflict.clear();
     defs.clear();
     uses.clear();
@@ -253,7 +253,7 @@ bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
 }
 
 bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
-    LOG6("FieldDefUse preorder " << p->gress << " Parser");
+    LOG6("FieldDefUse preorder " << p->gress << " Parser" << IndentCtl::indent);
     if (p->gress == EGRESS) {
         /* after processing the ingress pipe, before proceeding to the egress pipe, we
          * clear everything mentioned in the egress parser.  We want to ensure that nothing
@@ -290,7 +290,7 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             le_bitrange(0, f_p->size - 1));
         located_defs[f.id].emplace(parser_begin, dummy_expr);
     }
-
+    LOG6_UNINDENT;
     return true;
 }
 
@@ -305,7 +305,7 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
     // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
     // not all of them.
     // Only multistage_fifo.p4 needs visit stateful call before the action code runs.
-    LOG6("FieldDefUse preorder Action : " << act);
+    LOG6("FieldDefUse preorder Action : " << act << IndentCtl::indent);
     visit(act->stateful_calls, "stateful");
     if (act->parallel) {
         mode = VisitJustReads;
@@ -315,6 +315,7 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
         mode = VisitAll;
     } else {
         visit(act->action, "action"); }
+    LOG6_UNINDENT;
     return false;
 }
 
@@ -326,7 +327,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
     // TODO(yumin): The long-term fix for this is to change the order of visiting when
     // visiting IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
-    LOG6("FieldDefUse preorder Primitive : " << prim);
+    LOG6("FieldDefUse preorder Primitive : " << prim << IndentCtl::indent);
     if (prim->operands.size() > 0) {
         if (mode != VisitJustWrites) {
             for (size_t i = 1; i < prim->operands.size(); ++i) {
@@ -334,6 +335,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
         if (mode != VisitJustReads) {
             visit(prim->operands[0], "dest", 0); }
     }
+    LOG6_UNINDENT;
     return false;
 }
 
@@ -348,7 +350,7 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
  * This ensures only the actions relevant to the current thread are visited.
  */
 bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
-    LOG6("FieldDefUse preorder Stateful : " << salu);
+    LOG6("FieldDefUse preorder Stateful : " << salu << IndentCtl::indent);
     visitAgain();
     std::set<cstring> salu_actions_to_visit;
     if (auto tbl = findContext<IR::MAU::Table>()) {
@@ -363,6 +365,7 @@ bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
             visit(salu->instruction.at(sv));
         }
     }
+    LOG6_UNINDENT;
     return false;
 }
 
@@ -375,7 +378,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     // $valid fields before allocatePOV.
     if (!f && e->is<IR::Member>()) return false;
     if (!f && !hr) return true;
-    LOG6("FieldDefUse preorder : " << e);
+    LOG6("FieldDefUse preorder : " << e << IndentCtl::indent);
 
     if (auto unit = findContext<IR::BFN::Unit>()) {
         bool needsIXBar = true, ok = false;
@@ -414,6 +417,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
         }
     } else {
         assert(0); }
+    LOG6_UNINDENT;
     return false;
 }
 
@@ -510,6 +514,12 @@ std::ostream &operator<<(std::ostream &out, const code &c) {
         return out << "??"; }
 }
 
+std::string to_string(const code &a) {
+    std::stringstream tmp;
+    tmp << a;
+    return tmp.str();
+}
+
 bool FieldDefUse::isUsedInParser(const PHV::Field* f) const {
     for (const FieldDefUse::locpair def : getAllDefs(f->id))
         if (def.first->is<IR::BFN::ParserState>() || def.first->is<IR::BFN::Parser>())
@@ -544,44 +554,51 @@ void FieldDefUse::end_apply(const IR::Node *) {
     }
 
     if (!LOGGING(2)) return;
-    LOG2("FieldDefUse result:");
+    LOG2("FieldDefUse conflicts result:" << IndentCtl::indent);
     int count = phv.num_fields();
     if (count >= 40) {
         for (auto& f : phv)
-            std::clog << code{f.id} << " " << f.name << std::endl; }
-    std::clog << "  ";
+            LOG2(code{f.id} << " " << f.name); }
+    std::string tmp = "\\/ ";
     for (int i = 0; i < count; i++)
-        std::clog << char('a' + i/26);
-    std::clog << "\n  ";
+        tmp += char('a' + i/26);
+    LOG2(tmp);
+    tmp = "/\\";
     for (int i = 0; i < count; i++)
-        std::clog << char('a' + i%26);
+        tmp += char('a' + i%26);
     for (int i = 0; i < count; i++) {
-        std::clog << '\n' << code{i};
+        LOG2(tmp);
+        tmp = to_string(code{i});
         for (int j = 0; j < count; j++)
-            std::clog << (conflict[i][j] ? '1' : '0');
-        if (count < 40)
-            std::clog << " " << phv.field(i)->name; }
-    std::clog << std::endl;
+            tmp += (conflict[i][j] ? '1' : '0');
+        if (count < 40) {
+            tmp += " ";
+            tmp += phv.field(i)->name; } }
+    LOG2(tmp << IndentCtl::unindent);
 
     LOG2("The number of uninitialized fields: " << uninitialized_fields.size());
     for (const auto* f : uninitialized_fields) {
-        LOG2("---------------------------------");
-        LOG2("uninitialized field: " << f);
+        LOG2("  ---------------------------------");
+        LOG2("  uninitialized field: " << f);
         LocPairSet defs = getAllDefs(f->id);
-        LOG2(".......Defs: ");
+        LOG2("  .......Defs: ");
         for (const auto& kv : defs) {
             auto* unit = kv.first;
             auto* expr = kv.second;
-            LOG2("unit name, unit->name = " << DBPrint::Brief << *unit);
-            LOG2("in expression, expr = " << expr);
+            LOG2("    unit name, unit->name = " << DBPrint::Brief << *unit);
+            LOG2("    in expression, expr = " << expr);
         }
         LocPairSet uses = getAllUses(f->id);
-        LOG2("......Uses: ");
+        LOG2("  ......Uses: ");
         for (const auto& kv : uses) {
             auto* unit = kv.first;
             auto* expr = kv.second;
-            LOG2("unit name, unit->name = " << DBPrint::Brief << *unit);
-            LOG2("in expression, expr = " << expr);
+            LOG2("    unit name, unit->name = " << DBPrint::Brief << *unit);
+            LOG2("    in expression, expr = " << expr);
         }
     }
+}
+
+void FieldDefUse::end_apply() {
+    LOG2_UNINDENT;  // indent from init_apply
 }

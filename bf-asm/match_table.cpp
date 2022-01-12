@@ -144,8 +144,12 @@ METER_ACCESS_TYPE MatchTable::default_meter_access_type(bool for_stateful) {
 
 void MatchTable::pass0() {
     LOG1("### match table " << name() << " pass0 " << loc());
+#if 0
+    // redundant with (and supercedes) choose_logical_id in pass2.  That function is much
+    // better, taking dependencies into account, so logical_id should not be allocated here
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use[logical_id_set(gress)]);
+#endif
     if (action.check() && action->set_match_table(this, !action.is_direct_call()) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     attached.pass0(this);

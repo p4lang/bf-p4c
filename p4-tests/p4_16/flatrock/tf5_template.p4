@@ -202,7 +202,7 @@ parser SwitchIngressParser(packet_in pkt, out header_t hdr, out metadata_t ig_md
     }
 }
 
-control SwitchIngress(inout header_t hdr, inout metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+control SwitchIngress(in header_t hdr, inout metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     bit<10> vrf;
     action hit(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
