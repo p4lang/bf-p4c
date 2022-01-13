@@ -566,6 +566,7 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
                 mapram_config.mapram_color_bus_select = MapRam::ColorBus::OVERFLOW;
             mapram_config.mapram_type = MapRam::COLOR;
             mapram_config.mapram_logical_table = logical_id;
+            BUG_CHECK(vpn != row.vpns.end(), "vpn not found!");
             mapram_config.mapram_vpn = *vpn;
             // These two registers must be programmed for meter-color map rams in this way as a
             // work-around for hardware issue as described in TOF-1944

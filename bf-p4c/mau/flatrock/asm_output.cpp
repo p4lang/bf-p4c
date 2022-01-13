@@ -13,6 +13,7 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
         int size = type == EXACT_MATCH && b.loc.group == 1 ? 32 : 8;
         for (auto &fi : b.field_bytes) {
             auto field = phv.field(fi.get_use_name());
+            CHECK_NULL(field);
             le_bitrange field_bits = { fi.lo, fi.hi };
             field->foreach_alloc(field_bits, tbl, &f_use, [&](const PHV::AllocSlice &sl) {
                 Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);

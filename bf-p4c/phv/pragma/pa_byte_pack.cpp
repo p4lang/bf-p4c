@@ -137,6 +137,7 @@ PragmaBytePack::AddConstraintResult PragmaBytePack::add_packing_constraint(
         if (slice.is_fs()) {
             const auto& fs = slice.fs();
             auto* field = phv_i.field(fs.first->id);
+            CHECK_NULL(field);
             const auto alignment =
                 FieldAlignment(le_bitrange(StartLen(offset + fs.second.lo, fs.second.size())));
             if (field->alignment) {
@@ -164,7 +165,9 @@ PragmaBytePack::AddConstraintResult PragmaBytePack::add_packing_constraint(
     } else {
         // revert partially updated alignment
         for (const auto& field : rv.alignment_added) {
-            phv_i.field(field->id)->eraseAlignment();
+            auto* fld = phv_i.field(field->id);
+            CHECK_NULL(fld);
+            fld->eraseAlignment();
         }
     }
     return rv;

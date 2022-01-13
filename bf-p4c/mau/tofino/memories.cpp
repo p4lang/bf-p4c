@@ -1259,6 +1259,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                 // Store stash rows per hash group which need stash allocation
                 std::map<int, std::vector<int>> stash_map;
                 for (auto mem_way : alloc.ways) {
+                    BUG_CHECK(ixbar_way != match_ixbar->way_use.end(), "No ixbar_way found!");
                     LOG5("way group : " << ixbar_way->group
                             << " - way: " << wayno << " - size : " << mem_way.size
                             << " - mem way: " << mem_way);

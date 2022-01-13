@@ -485,6 +485,7 @@ Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
 
 Instruction *genNoop(StatefulTable *tbl, Table::Actions::Action *act) {
     VECTOR(value_t) args = EMPTY_VECTOR_INIT;
+    BUG_CHECK(tbl->format->begin() != tbl->format->end(), "No tbl->format!");
     args.add("or").add("lo").add(0).add(tbl->format->begin()->first.c_str());
     auto *rv = Instruction::decode(tbl, act, args);
     VECTOR_fini(args);

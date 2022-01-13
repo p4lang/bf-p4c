@@ -103,7 +103,9 @@ void ActionSourceTracker::end_apply() {
             bounds.insert(range.lo);
             bounds.insert(range.hi + 1);
         }
-        for (auto itr = bounds.begin(); std::next(itr) != bounds.end(); itr++) {
+        for (auto itr = bounds.begin();
+             itr != bounds.end() && std::next(itr) != bounds.end();
+             itr++) {
             // convert half open range back to closed range.
             auto new_range = le_bitrange(FromTo(*itr, *std::next(itr) - 1));
             fine_sliced[f][new_range] = get_sources(PHV::FieldSlice(f, new_range));
