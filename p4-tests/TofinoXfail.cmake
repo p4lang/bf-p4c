@@ -1097,6 +1097,7 @@ p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
   ../glass/testsuite/p4_tests/mau/COMPILER-728/ipu.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
+  ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   )
 
 # Failed after bridged packing, fix with a follow-up PR
@@ -2018,12 +2019,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-dpdk-varbit.p4
 )
 
-# Driver update - https://github.com/intel-restricted/networking.switching.barefoot.bf-drivers/commit/5badd66ca8e3d2b84c34c2bb3257959ba2c22782 , Vlad doesn't want the test to be updated yet
-p4c_add_xfail_reason("tofino"
-  "ERROR: You requested to run the test on 'tf1'"
-  ba102_simple_l3_mirror
-)
-
 # p4_14_nightly_tofino
 p4c_add_xfail_reason("tofino"
   "error: add: action spanning multiple stages."
@@ -2040,10 +2035,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "mismatch from expected"
   extensions/p4_tests/p4_14/stf/stateful6.p4
-)
-p4c_add_xfail_reason("tofino"
-  "Extracting or assigning values with different in-byte alignments within packet to the same field is not supported in the parser."
-  ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
 )
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
@@ -2099,7 +2090,7 @@ p4c_add_xfail_reason("tofino"
 # needs switchd and/or compiler fix, more details in
 # https://github.com/intel-restricted/networking.switching.barefoot.bf-p4c-compilers/pull/5617#issuecomment-999475972
 p4c_add_xfail_reason("tofino"
-  "Timed out while waiting for switchd to be ready"
+  "Switchd is not running"
   t2na_static_entry
 )
 
