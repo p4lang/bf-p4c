@@ -1,0 +1,44 @@
+add test1 0 f1:0x01010101 h1:0x0303 setb1(v:0, port:2)
+
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 00 ff ff ff ff ff
+wait
+
+add test1 1 f1:0x01010101 h1:0x0303 setb1(v:1, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 01 ff ff ff ff ff
+wait
+
+add test1 2 f1:0x01010101 h1:0x0303 setb1(v:2, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 02 ff ff ff ff ff
+wait
+
+add test1 3 f1:0x01010101 h1:0x0303 setb1(v:3, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 03 ff ff ff ff ff
+wait
+
+add test1 4 f1:0x01010101 h1:0x0303 setb1(v:4, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 04 ff ff ff ff ff
+wait
+
+add test1 5 f1:0x01010101 h1:0x0303 setb1(v:5, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 05 ff ff ff ff ff
+wait
+
+add test1 6 f1:0x01010101 h1:0x0303 setb1(v:6, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 06 ff ff ff ff ff
+wait
+
+add test1 7 f1:0x01010101 h1:0x0303 setb1(v:7, port:2)
+packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+expect 2 01010101 02020202 0303 07 ff ff ff ff ff
+wait
+
+#add test1 8 f1:0x01010101 h1:0x0303 setb1(v:8, port:2)
+#packet 0 01010101 02020202 0303 ff ff ff ff ff ff
+#expect 2 01010101 02020202 0303 08 ff ff ff ff ff
