@@ -1473,6 +1473,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_constant_extract.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_enforce_depth_req.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/payload_gateway.cpp
