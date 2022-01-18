@@ -23,7 +23,7 @@ class IndirectMeterBase(P4RuntimeTest):
         self.port = self.swports(1)
 
     def send_and_check_cnt(self, idx):
-        pkt = "\xab" * 512
+        pkt = b"\xab" * 512
         for i in range(50):
             testutils.send_packet(self, self.port, pkt)
 

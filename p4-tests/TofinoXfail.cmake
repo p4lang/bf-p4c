@@ -2065,11 +2065,6 @@ p4c_add_xfail_reason("tofino"
   tor.p4
   extensions/p4_tests/p4_14/ptf/sful_split1.p4
 )
-# P4C-3922 - Would require fixing glass (p4c-tofino)
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device"
-  COMPILER-1186
-)
 
 # P4C update 2021-10-19
 p4c_add_xfail_reason("tofino"

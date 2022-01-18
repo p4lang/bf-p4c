@@ -560,6 +560,12 @@ def main():
             warn("Some interfaces referenced in the port mapping file don't exist")
 
     PTF = findbin(top_builddir, 'PTF')
+    if os.environ.get("PKTPY", "True").lower() in ("true", "1"):
+        info("Using bf_pktpy.")
+        extra_ptf_args.extend(["-pmm", "bf_pktpy.ptf.packet_pktpy"])
+    else:
+        info("Using scapy.")
+
     BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
     HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL')
 

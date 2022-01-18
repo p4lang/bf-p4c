@@ -857,7 +857,7 @@ foreach(t IN LISTS ba102_tests)
   get_filename_component(__td ${t} DIRECTORY)
   set (ptfdir "${__td}/../ptf-tests")
   if (EXISTS ${ptfdir})
-    p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna -Xp4c=\"--disable-parse-max-depth-limit\"" ${ptfdir})
+    p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\"" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
     p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}"

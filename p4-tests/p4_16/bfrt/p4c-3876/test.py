@@ -660,7 +660,6 @@ class IPv4ToCpuIng(IngMirrorCpuGroup):
         # Note that we didn't set don't care on padding -- they should be 0
         exp_pkt.set_do_not_care_scapy(ToCpu, "enq_qdepth")
         exp_pkt.set_do_not_care_scapy(ToCpu, "enq_congest_stat")
-        exp_pkt.set_do_not_care_scapy(ToCpu, "enq_tstamp")
         exp_pkt.set_do_not_care_scapy(ToCpu, "deq_qdepth")
         exp_pkt.set_do_not_care_scapy(ToCpu, "deq_congest_stat")
         exp_pkt.set_do_not_care_scapy(ToCpu, "app_pool_congest_stat")
@@ -751,7 +750,6 @@ class IPv4ToCpuEgr(EgrMirrorCpuGroup):
         # Note that we didn't set don't care on padding -- they should be 0
         exp_pkt.set_do_not_care_scapy(ToCpu, "enq_qdepth")
         exp_pkt.set_do_not_care_scapy(ToCpu, "enq_congest_stat")
-        exp_pkt.set_do_not_care_scapy(ToCpu, "enq_tstamp")
         exp_pkt.set_do_not_care_scapy(ToCpu, "deq_qdepth")
         exp_pkt.set_do_not_care_scapy(ToCpu, "deq_congest_stat")
         exp_pkt.set_do_not_care_scapy(ToCpu, "app_pool_congest_stat")
