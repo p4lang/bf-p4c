@@ -397,8 +397,8 @@ struct ParserChecksumAllocator : public Visitor {
     /// may have multiple end states, e.g. IPv4 with variable length options where
     /// each option length is its own parser state. A state is an end state is no
     /// other state is its descendant.
-    ordered_set<const IR::BFN::ParserState*>
-    get_end_states(const IR::BFN::Parser* parser, cstring decl) {
+    ordered_set<const IR::BFN::ParserState*> get_end_states(const IR::BFN::Parser* parser,
+                                                            cstring decl) {
         ordered_set<const IR::BFN::ParserState*> end_states;
 
         auto& calc_states = checksum_info.decl_name_to_states.at(parser).at(decl);
@@ -714,9 +714,9 @@ struct DuplicateStates : public ParserTransform {
 
     // Finds the path that needs to be duplicated.
     bool add_state_to_duplicate(const IR::BFN::ParserState* state,
-                            const ordered_set<const IR::BFN::ParserState*>& start_states,
-                            const IR::BFN::Parser* parser,
-                            ordered_set<const IR::BFN::ParserState*>& path) {
+                                const ordered_set<const IR::BFN::ParserState*>& start_states,
+                                const IR::BFN::Parser* parser,
+                                ordered_set<const IR::BFN::ParserState*>& path) {
         if (start_states.count(state)) {
             return false;
         }
@@ -767,8 +767,11 @@ struct DuplicateStates : public ParserTransform {
                 auto first = *path_to_duplicate.begin();
                 path_to_duplicate.erase(first);
                 duplicate_path[first->name][decl].insert(path_to_duplicate.begin(),
-                                                      path_to_duplicate.end());
+                                                         path_to_duplicate.end());
             }
+            // P4C-4158: Clearing this set is required or else the pass does not work properly when
+            // 1 checksum has 2 or more paths to duplicate.
+            path_to_duplicate.clear();
         }
         return;
     }
@@ -834,7 +837,8 @@ struct DuplicateStates : public ParserTransform {
             for (auto decl_state : duplicate_path.at(state->name)) {
                 for (auto &next_state : decl_state.second) {
                     if (transition->next->equiv(*next_state)) {
-                        transition->next = make_path(next_state, decl_state.first,
+                        transition->next = make_path(next_state,
+                                                     decl_state.first,
                                                      decl_state.second);
                     }
                 }
