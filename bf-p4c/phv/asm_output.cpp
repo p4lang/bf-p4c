@@ -238,21 +238,30 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field, const LiveRangeR
         for (auto& alloc : kv.second) {
             ++alloc_num;
             int min_stage, max_stage;
-            if (alloc.getEarliestLiveness().first == -1)
-                min_stage = 0;
-            else if (alloc.getEarliestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE))
-                min_stage = alloc.getEarliestLiveness().first + 1;
-            else
-                min_stage = alloc.getEarliestLiveness().first;
+            // For Tofino no need to look in slice's Liveness because
+            // we do not support dark overlay (split liverange into
+            // smaller liveranges) and also because liveness has not
+            // been translated to placed-table stages.
+            if (Device::currentDevice() != Device::TOFINO) {
+                if (alloc.getEarliestLiveness().first == -1)
+                    min_stage = 0;
+                else if (alloc.getEarliestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE))
+                    min_stage = alloc.getEarliestLiveness().first + 1;
+                else
+                    min_stage = alloc.getEarliestLiveness().first;
 
-            if (alloc.getLatestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
-                alloc.getLatestLiveness().first != lr_report->get_max_stages())
-                max_stage = alloc.getLatestLiveness().first + 1;
-            else
-                max_stage = alloc.getLatestLiveness().first;
-            if (min_stage < lr_min) min_stage = lr_min;
-            if (max_stage > lr_max) max_stage = ((lr_max == -1) ? 0 :
-                                                 ((lr_max < lr_min) ? lr_min : lr_max));
+                if (alloc.getLatestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
+                    alloc.getLatestLiveness().first != lr_report->get_max_stages())
+                    max_stage = alloc.getLatestLiveness().first + 1;
+                else
+                    max_stage = alloc.getLatestLiveness().first;
+                if (min_stage < lr_min) min_stage = lr_min;
+                if (max_stage > lr_max) max_stage = ((lr_max == -1) ? 0 :
+                                                     ((lr_max < lr_min) ? lr_min : lr_max));
+            } else {   // TOFINO device
+                min_stage = ((lr_min == -1) ? 0 : lr_min);
+                max_stage = ((lr_max == -1) ? 0 : ((lr_max < lr_min) ? lr_min : lr_max));
+            }
 
             if (min_stage != 0 || max_stage != lr_report->get_max_stages()) {
                 stageAllocReqd = true;
@@ -293,9 +302,7 @@ void emit_phv_field(
         emit_stage_phv_field(out, field, lrr);
 #endif /* HAVE_FLATROCK */
     } else if (Device::currentDevice() == Device::TOFINO) {
-        field->foreach_alloc([&](const PHV::AllocSlice& slice) {
-            emit_alloc(out, slice, field);
-        });
+        emit_stage_phv_field(out, field, lrr);
     }
 }
 

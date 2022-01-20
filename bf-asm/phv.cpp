@@ -306,7 +306,7 @@ int Phv::get_position_offset(gress_t gress, std::string name) {
 void Phv::output(json::map &ctxt_json) {
     bool warn_once = false;
     json::vector &phv_alloc = ctxt_json["phv_allocation"];
-    for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
+    for (int i = 0; i <= Target::NUM_MAU_STAGES(); i++) {
         json::map phv_alloc_stage;
         json::vector &phv_alloc_stage_ingress = phv_alloc_stage["ingress"] = json::vector();
         json::vector &phv_alloc_stage_egress = phv_alloc_stage["egress"] = json::vector();
@@ -451,10 +451,10 @@ void Phv::output(json::map &ctxt_json) {
     //     phv_alloc.push_back(std::move(phv_alloc_stage.clone())); }
 }
 
-#include "tofino/phv.cpp"
+#include "tofino/phv.cpp"     // NOLINT(build/include)
 #if HAVE_JBAY
-#include "jbay/phv.cpp"
+#include "jbay/phv.cpp"       // NOLINT(build/include)
 #endif  /* HAVE_JBAY */
 #if HAVE_FLATROCK
-#include "flatrock/phv.cpp"
+#include "flatrock/phv.cpp"   // NOLINT(build/include)
 #endif  /* HAVE_FLATROCK */
