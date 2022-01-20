@@ -6,6 +6,8 @@
 class Target::Flatrock::Phv : public Target::Phv {
     friend class ::Phv;
     struct Register : public ::Phv::Register {
+        // 'uid' will be the flatrock PHE address of the first (lowest) byte of the PHE.
+        // see https://wiki.ith.intel.com/display/ITS51T/Frame+Processing+Pipeline#FrameProcessingPipeline-PHVNumbering    (NOLINT)
         int parser_id() const override { return uid; }
         int mau_id() const override { return uid; }
         int ixbar_id() const override { return uid; }

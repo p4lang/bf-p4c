@@ -2,6 +2,7 @@
 #define BF_ASM_DEPARSER_H_
 
 #include <vector>
+#include "ordered_set.h"
 #include "bitops.h"
 #include "sections.h"
 #include "phv.h"
@@ -19,16 +20,17 @@ class Deparser : public Section {
  public:
     struct Val {
         /* a phv or clot reference with optional associated POV phv reference */
-        Phv::Ref   val;
-        int        tag = -1;
-        Phv::Ref   pov;
+        Phv::Ref                val;
+        int                     tag = -1;
+        ordered_set<Phv::Ref>   pov;
         const int &lineno = val.lineno;
         Val() {}
         virtual ~Val() {}
         Val(gress_t gr, const value_t &v) : val(gr, DEPARSER_STAGE, v) {}
         Val(gress_t gr, const value_t &v, const value_t &p)
-        : val(gr, DEPARSER_STAGE, v), pov(gr, DEPARSER_STAGE, p) {}
-        Val(gress_t gr, int tag, const value_t &p) : tag(tag), pov(gr, DEPARSER_STAGE, p) {}
+        : val(gr, DEPARSER_STAGE, v) { pov.emplace(gr, DEPARSER_STAGE, p); }
+        Val(gress_t gr, int tag, const value_t &p) : tag(tag) {
+            pov.emplace(gr, DEPARSER_STAGE, p); }
         Val &operator=(const Val &a) { val = a.val; tag = a.tag; pov = a.pov; return *this; }
         explicit operator bool() const { return is_phv() || is_clot(); }
         Phv::Slice operator*() const { return *val; }
@@ -42,7 +44,7 @@ class Deparser : public Section {
             if (is_phv()) {
                 return val.check();
             } else if (is_clot()) {
-                if (!static_cast<bool>(pov)) {
+                if (pov.empty()) {
                     error(lineno, "Clot requires a pov bit");
                     return false;
                 }
@@ -65,8 +67,8 @@ class Deparser : public Section {
             if (CHECKTYPE(m, tMAP)) {
                 for (auto &kv : m.map) {
                     if (kv.key == "pov") {
-                        if (pov) error(kv.value.lineno, "Duplicate POV");
-                        pov = ::Phv::Ref(gr, DEPARSER_STAGE, kv.value);
+                        if (!pov.empty()) error(kv.value.lineno, "Duplicate POV");
+                        pov.emplace_back(gr, DEPARSER_STAGE, kv.value);
                     } else if (kv.key == "swap" && CHECKTYPE(kv.value, tINT)) {
                         swap = kv.value.i;
                     } else {
@@ -186,8 +188,8 @@ class Deparser : public Section {
 
     // Writes POV information in json used for field dictionary logging
     // and deparser resources
-    static void write_pov_in_json(json::map& fd, json::map& fd_entry,
-            const Phv::Register* phv, int bit, int offset) {
+    static void write_pov_in_json(json::map& fd, json::map& fd_entry, const Phv::Register* phv,
+                                  int bit, int offset) {
         auto povName = Phv::get_pov_name(phv->uid, offset);
         // Field dictionary logging
         fd["POV PHV"] = phv->uid;

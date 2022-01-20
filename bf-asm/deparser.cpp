@@ -20,7 +20,7 @@ struct Deparser::FDEntry {
     struct Base {
         virtual void check(bitvec &phv_use) = 0;
         virtual unsigned encode() = 0;
-        virtual unsigned size() = 0;
+        virtual unsigned size() = 0;    // size in bytes;
         template<class T> bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
         template<class T> T *to() { return dynamic_cast<T*>(this); }
     };
@@ -74,7 +74,7 @@ struct Deparser::FDEntry {
         int                                     length = -1;
         std::map<unsigned, ::Phv::Ref>          phv_replace;
         std::map<unsigned, Checksum>            csum_replace;
-        Clot(gress_t gr, const value_t &tag, const value_t &data, ::Phv::Ref &pov)
+        Clot(gress_t gr, const value_t &tag, const value_t &data, ordered_set<::Phv::Ref> &pov)
         : lineno(tag.lineno), gress(gr) {
             if (CHECKTYPE2(tag, tINT, tSTR)) {
                 if (tag.type == tSTR)
@@ -84,8 +84,7 @@ struct Deparser::FDEntry {
             if (data.type == tMAP) {
                 for (auto &kv : data.map) {
                     if (kv.key == "pov") {
-                        if (pov) error(kv.value.lineno, "Duplicate POV");
-                        pov = ::Phv::Ref(gress, DEPARSER_STAGE, kv.value);
+                        pov.emplace(gress, DEPARSER_STAGE, kv.value);
                     } else if (kv.key == "max_length" || kv.key == "length") {
                         if (length >= 0)
                             error(kv.value.lineno, "Duplicate length");
@@ -105,7 +104,9 @@ struct Deparser::FDEntry {
                     } else {
                         error(kv.value.lineno, "Unknown key for clot: %s", value_desc(kv.key)); } }
             } else {
-                pov = ::Phv::Ref(gress, DEPARSER_STAGE, data); } }
+                pov.emplace(gress, DEPARSER_STAGE, data); }
+            if (pov.size() > Target::DEPARSER_MAX_POV_PER_USE())
+                error(data.lineno, "Too many POV bits for CLOT"); }
         void check(bitvec &phv_use) override {
             if (length < 0) length = Parser::clot_maxlen(gress, tag);
             if (length < 0) error(lineno, "No length for clot %s", tag.c_str());
@@ -127,22 +128,22 @@ struct Deparser::FDEntry {
         unsigned encode() override { BUG(); return -1; }
     };
 
-    int         lineno;
-    Base        *what;
-    ::Phv::Ref  pov;
+    int                         lineno;
+    Base                        *what;
+    ordered_set<::Phv::Ref>     pov;
     FDEntry(gress_t gress, const value_t &v, const value_t &p) {
         lineno = v.lineno;
         if (v.type == tCMD && v.vec.size == 2 && v == "clot") {
             what = new Clot(gress, v.vec[1], p, pov);
         } else if (v.type == tCMD && v.vec.size == 2 && v == "full_checksum") {
             what = new Checksum(gress, v.vec[1]);
-            pov = ::Phv::Ref(gress, DEPARSER_STAGE, p);
+            pov.emplace(gress, DEPARSER_STAGE, p);
         } else if (v.type == tINT) {
             what = new Constant(gress, v);
-            pov = ::Phv::Ref(gress, DEPARSER_STAGE, p);
+            pov.emplace(gress, DEPARSER_STAGE, p);
         } else {
             what = new Phv(gress, v);
-            pov = ::Phv::Ref(gress, DEPARSER_STAGE, p); } }
+            pov.emplace(gress, DEPARSER_STAGE, p); } }
     void check(bitvec &phv_use) { what->check(phv_use); }
 };
 
@@ -332,13 +333,14 @@ void Deparser::process() {
                 phv_use[gress][ent->reg.uid] = 1; }
         for (auto &ent : dictionary[gress]) {
             ent.check(phv_use[gress]);
-            if (ent.pov.check()) {
-                phv_use[gress][ent.pov->reg.uid] = 1;
-                if (ent.pov->lo != ent.pov->hi)
-                    error(ent.pov.lineno, "POV bits should be single bits");
-                if (!pov_use[gress][ent.pov->reg.uid]) {
-                    pov_order[gress].emplace_back(ent.pov->reg, gress);
-                    pov_use[gress][ent.pov->reg.uid] = 1; } } }
+            for (auto &pov : ent.pov) {
+                if (!pov.check()) continue;
+                phv_use[gress][pov->reg.uid] = 1;
+                if (pov->lo != pov->hi)
+                    error(pov.lineno, "POV bits should be single bits");
+                if (!pov_use[gress][pov->reg.uid]) {
+                    pov_order[gress].emplace_back(pov->reg, gress);
+                    pov_use[gress][pov->reg.uid] = 1; } } }
         for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
             for (auto &ent : full_checksum_unit[gress][i].entries) {
                 for (auto entry : ent.second) {
@@ -349,13 +351,14 @@ void Deparser::process() {
         for (auto &el : intrin.vals) {
             if (el.check())
                 phv_use[intrin.type->gress][el->reg.uid] = 1;
-            if (el.pov.check()) {
-                phv_use[intrin.type->gress][el.pov->reg.uid] = 1;
-                if (el.pov->lo != el.pov->hi)
-                    error(el.pov.lineno, "POV bits should be single bits");
-                if (!pov_use[intrin.type->gress][el.pov->reg.uid]) {
-                    pov_order[intrin.type->gress].emplace_back(el.pov->reg, intrin.type->gress);
-                    pov_use[intrin.type->gress][el.pov->reg.uid] = 1; } } }
+            for (auto &pov : el.pov) {
+                if (pov.check()) {
+                    phv_use[intrin.type->gress][pov->reg.uid] = 1;
+                    if (pov->lo != pov->hi)
+                        error(pov.lineno, "POV bits should be single bits");
+                    if (!pov_use[intrin.type->gress][pov->reg.uid]) {
+                        pov_order[intrin.type->gress].emplace_back(pov->reg, intrin.type->gress);
+                        pov_use[intrin.type->gress][pov->reg.uid] = 1; } } } }
         if (intrin.vals.size() > (size_t)intrin.type->max)
             error(intrin.lineno, "Too many values for %s", intrin.type->name.c_str()); }
     if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
@@ -367,14 +370,14 @@ void Deparser::process() {
             if (digest.select->lo > 0 && !digest.type->can_shift)
                 error(digest.select.lineno, "%s digest selector must be in bottom bits of phv",
                       digest.type->name.c_str()); }
-        if (digest.select.pov.check()) {
-            phv_use[digest.type->gress][digest.select.pov->reg.uid] = 1;
-            if (digest.select.pov->lo != digest.select.pov->hi)
-                error(digest.select.pov.lineno, "POV bits should be single bits");
-            if (!pov_use[digest.type->gress][digest.select.pov->reg.uid]) {
-                pov_order[digest.type->gress].emplace_back(digest.select.pov->reg,
-                                                           digest.type->gress);
-                pov_use[digest.type->gress][digest.select.pov->reg.uid] = 1; } }
+        for (auto &pov : digest.select.pov) {
+            if (pov.check()) {
+                phv_use[digest.type->gress][pov->reg.uid] = 1;
+                if (pov->lo != pov->hi)
+                    error(pov.lineno, "POV bits should be single bits");
+                if (!pov_use[digest.type->gress][pov->reg.uid]) {
+                    pov_order[digest.type->gress].emplace_back(pov->reg, digest.type->gress);
+                    pov_use[digest.type->gress][pov->reg.uid] = 1; } } }
         for (auto &set : digest.layout)
             for (auto &reg : set.second)
                 if (reg.check())

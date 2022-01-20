@@ -5,9 +5,10 @@
 #define NO(X)
 
 #define CLOUDBREAK_POV(GRESS, VAL, REG)                                                         \
-    if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
+    if (VAL.pov.size() == 1)                                                                    \
+        REG.pov = deparser.pov[GRESS].at(&VAL.pov.front()->reg) + VAL.pov.front()->lo;          \
     else                                                                                        \
-        error(VAL.val.lineno, "POV bit required for Tofino2");                                  \
+        error(VAL.val.lineno, "one POV bit required for Tofino3");                              \
 
 #define CLOUDBREAK_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                   \
     REG.phv = VAL.val->reg.deparser_id();                                                       \

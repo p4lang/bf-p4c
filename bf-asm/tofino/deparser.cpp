@@ -7,8 +7,8 @@
     DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                                           \
         PFX.NAME.phv = intrin.vals[0].val->reg.deparser_id();                           \
         IF_SHIFT(PFX.NAME.shft = intrin.vals[0].val->lo;)                               \
-        if (intrin.vals[0].pov)                                                         \
-            error(intrin.vals[0].pov.lineno, "No POV support in tofino "#NAME);         \
+        if (!intrin.vals[0].pov.empty())                                                \
+            error(intrin.vals[0].pov.front().lineno, "No POV support in tofino "#NAME); \
         PFX.NAME.valid = 1; }
 #define SIMPLE_INTRINSIC_RENAME(GR, PFX, NAME, REGNAME, IF_SHIFT)                       \
     DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                                           \
@@ -65,8 +65,8 @@ HER_INTRINSIC(ecos, YES)
         CFG.phv = data.select->reg.deparser_id();                                             \
         IFSHIFT(CFG.shft = data.shift + data.select->lo;)                                     \
         CFG.valid = 1;                                                                        \
-        if (data.select.pov)                                                                  \
-            error(data.select.pov.lineno, "No POV bit support in tofino %s digest",           \
+        if (!data.select.pov.empty())                                                         \
+            error(data.select.pov.front().lineno, "No POV bit support in tofino %s digest",   \
                   #NAME);                                                                     \
         for (auto &set : data.layout) {                                                       \
             int id = set.first >> data.shift;                                                 \
@@ -140,7 +140,7 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     for (auto &ent : dict) {
         unsigned size = ent.what->size();
         total_bytes += size;
-        int pov_bit = pov[ent.pov->reg.deparser_id()] + ent.pov->lo;
+        int pov_bit = pov[ent.pov.front()->reg.deparser_id()] + ent.pov.front()->lo;
 
         if (options.match_compiler) {
             if (ent.what->is<Deparser::FDEntry::Checksum>()) {
@@ -397,8 +397,8 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
             int mask = reg.mask;
             int swap = reg.swap;
             int idx = reg->reg.deparser_id();
-            if (reg.pov)
-                error(reg.pov.lineno, "No POV support in tofino checksum");
+            if (!reg.pov.empty())
+                error(reg.pov.front().lineno, "No POV support in tofino checksum");
             auto cksum_idx0 = tofino_phv2cksum[idx][0];
             auto cksum_idx1 = tofino_phv2cksum[idx][1];
             BUG_CHECK(cksum_idx0 >= 0);

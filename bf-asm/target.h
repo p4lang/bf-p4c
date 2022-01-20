@@ -68,6 +68,7 @@
     M(int, DEPARSER_CONSTANTS) \
     M(int, DEPARSER_MAX_FD_ENTRIES) \
     M(int, DEPARSER_MAX_POV_BYTES) \
+    M(int, DEPARSER_MAX_POV_PER_USE) \
     M(int, END_OF_PIPE) \
     M(int, GATEWAY_PAYLOAD_GROUPS) \
     M(bool, HAS_MPR) \
@@ -199,6 +200,7 @@ class Target::Tofino : public Target {
         DEPARSER_CHECKSUM_UNITS = 6,
         DEPARSER_CONSTANTS = 0,
         DEPARSER_MAX_POV_BYTES = 32,
+        DEPARSER_MAX_POV_PER_USE = 1,
         DEPARSER_MAX_FD_ENTRIES = 192,
         END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 1,
@@ -323,6 +325,7 @@ class Target::JBay : public Target {
         DEPARSER_CHECKSUM_UNITS = 8,
         DEPARSER_CONSTANTS = 8,
         DEPARSER_MAX_POV_BYTES = 16,
+        DEPARSER_MAX_POV_PER_USE = 1,
         DEPARSER_CHUNKS_PER_GROUP = 8,
         DEPARSER_CHUNK_SIZE = 8,
         DEPARSER_CHUNK_GROUPS = 16,
@@ -496,6 +499,7 @@ class Target::Cloudbreak : public Target {
         DEPARSER_CHECKSUM_UNITS = 8,
         DEPARSER_CONSTANTS = 8,
         DEPARSER_MAX_POV_BYTES = 16,
+        DEPARSER_MAX_POV_PER_USE = 1,
         DEPARSER_CHUNKS_PER_GROUP = 8,
         DEPARSER_CHUNK_SIZE = 8,
         DEPARSER_CHUNK_GROUPS = 16,
@@ -586,10 +590,11 @@ class Target::Flatrock : public Target {
         ::Flatrock::regs_pipe                           reg_pipe;
     };
 
-    // no parser/deparser defined (yet) in CSR
-    struct                                              parser_regs { };
+    // parser/deparser regs are currently in the pipe regs directly rather
+    // using a register_reference<> to a separate object.
+    typedef ::Flatrock::regs_pipe::_prsr                parser_regs;
     typedef ::Flatrock::regs_match_action_stage_        mau_regs;
-    struct                                              deparser_regs { };
+    typedef ::Flatrock::regs_pipe::_dprsr               deparser_regs;
     enum {
         PARSER_CHECKSUM_UNITS = 0,
         PARSER_EXTRACT_BYTES = true,
@@ -606,6 +611,7 @@ class Target::Flatrock : public Target {
         DEPARSER_CHECKSUM_UNITS = 4,
         DEPARSER_CONSTANTS = 0,
         DEPARSER_MAX_POV_BYTES = 16,
+        DEPARSER_MAX_POV_PER_USE = 2,
         DEPARSER_CLOTS_PER_GROUP = 0,
         DEPARSER_MAX_FD_ENTRIES = 256,  // actuall up to 32 "strings", each up to 16 bytes
         END_OF_PIPE = 0xfff,

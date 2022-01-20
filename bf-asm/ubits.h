@@ -77,7 +77,7 @@ template<int N> struct ubits : ubits_base {
     const ubits &operator|=(uint64_t v) override {
         if (disabled_)
             LOG1("ERROR: Writing disabled register value in " << this);
-        if (write)
+        if (write && (v & value) != 0)
             LOG1("WARNING: Overwriting " << value << " with " << (v|value) << " in " << this);
         value |= v;
         write = true;

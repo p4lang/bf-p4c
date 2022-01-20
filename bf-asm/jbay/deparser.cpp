@@ -4,7 +4,8 @@
 #define NO(X)
 
 #define JBAY_POV(GRESS, VAL, REG)                                                               \
-    if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
+    if (VAL.pov.size() == 1)                                                                    \
+        REG.pov = deparser.pov[GRESS].at(&VAL.pov.front()->reg) + VAL.pov.front()->lo;          \
     else                                                                                        \
         error(VAL.val.lineno, "POV bit required for Tofino2");                                  \
 
@@ -304,7 +305,7 @@ void output_jbay_field_dictionary_helper(int lineno,
 
         // Finish the current chunk if needed.
         if (byte && (clot || byte + size > CHUNK_SIZE ||
-                     (prev_pov && *ent.pov != prev_pov))) {
+                     (prev_pov && *ent.pov.front() != prev_pov))) {
             if (!check_chunk(lineno, ch)) break;
             finish_chunk(ch++, entry_n++, prev_pov, byte);
             byte = 0;
@@ -327,17 +328,17 @@ void output_jbay_field_dictionary_helper(int lineno,
                 error(clot->lineno, "--tof2lab44-workaround incompatible with clot >56 bytes");
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
-            write_clot(ch, entry_n, seg_tag, clot_tag, ent.pov, clot);
+            write_clot(ch, entry_n, seg_tag, clot_tag, ent.pov.front(), clot);
 
             prev = -1;
         } else {
             // Phv, Constant, or Checksum
             if (!check_chunk(lineno, ch)) break;
-            write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov, ent.what, byte, size);
+            write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov.front(), ent.what, byte, size);
             byte += size;
             prev = ent.what->encode();
         }
-        prev_pov = *ent.pov;
+        prev_pov = *ent.pov.front();
     }
 
     if (byte > 0) {
@@ -642,19 +643,19 @@ void set_jbay_pov_cfg(POV &pov_cfg, std::map<unsigned, unsigned> &pov_map,
                       unsigned *prev_byte) {
     for (auto &unit_entry : full_csum.entries) {
         for (auto val : unit_entry.second) {
-            if (!val.pov) {
-                error(val.val.lineno, "POV bit required for Tofino2");
+            if (val.pov.size() != 1) {
+                error(val.val.lineno, "one POV bit required for Tofino2");
                 continue;
             }
-            jbay_csum_pov_config(val.pov, pov_cfg, pov, pov_map, prev_byte);
+            jbay_csum_pov_config(val.pov.front(), pov_cfg, pov, pov_map, prev_byte);
         }
     }
     for (auto &val : full_csum.clot_entries) {
-        if (!val.pov) {
-            error(val.val.lineno, "POV bit required for Tofino2");
+        if (val.pov.size() != 1) {
+            error(val.val.lineno, "one POV bit required for Tofino2");
             continue;
         }
-        jbay_csum_pov_config(val.pov, pov_cfg, pov, pov_map, prev_byte);
+        jbay_csum_pov_config(val.pov.front(), pov_cfg, pov, pov_map, prev_byte);
     }
     for (auto &checksum_pov : full_csum.pov) {
         jbay_csum_pov_config(checksum_pov.second, pov_cfg, pov, pov_map, prev_byte);
@@ -673,8 +674,8 @@ void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
         if (visited.count(unit_entry.first)) continue;
         visited.insert(unit_entry.first);
         for (auto val : unit_entry.second) {
-            if (!val.pov) continue;
-            int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
+            if (val.pov.size() != 1) continue;
+            int povbit = pov_map.at(pov.at(&val.pov.front()->reg) + val.pov.front()->lo);
             int mask = val.mask;
             int swap = val.swap;
             auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
@@ -691,7 +692,8 @@ void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
     }
     int tag_idx = 0;
     for (auto &val : full_csum.clot_entries) {
-        int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
+        if (val.pov.size() != 1) continue;
+        int povbit = pov_map.at(pov.at(&val.pov.front()->reg) + val.pov.front()->lo);
         if (tag_idx == 16)
                 error(-1, "Ran out of clot entries in deparser checksum unit %d", unit);
         csum.clot_entry[tag_idx].pov = povbit;
