@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
 #define EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
 
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "mau_backtracker.h"
 #include "lib/safe_vector.h"
 #include "bf-p4c/common/field_defuse.h"
@@ -137,6 +138,7 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
             ordered_set<int> stages;
         };
         const PhvInfo& phv;
+        const ClotInfo& clot;
         const MauBacktracker *backtracker;
         const FieldDefUse *defuse;
         const MapFieldSliceToAction *fs_action_map;
@@ -173,10 +175,11 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
         void end_apply() override;
 
      public:
-        DBSetter(const PhvInfo &phv, const MauBacktracker *backtracker, const FieldDefUse *defuse,
-                 const MapFieldSliceToAction *fs_action_map, FieldSliceLiveRangeDB &self,
-                 const PHV::Pragmas &pragmas)
+        DBSetter(const PhvInfo &phv, const ClotInfo &clot, const MauBacktracker *backtracker,
+                 const FieldDefUse *defuse, const MapFieldSliceToAction *fs_action_map,
+                 FieldSliceLiveRangeDB &self, const PHV::Pragmas &pragmas)
             : phv(phv),
+              clot(clot),
               backtracker(backtracker),
               defuse(defuse),
               fs_action_map(fs_action_map),
@@ -195,10 +198,10 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
 
  public:
     FieldSliceLiveRangeDB(const MauBacktracker *backtracker, const FieldDefUse *defuse,
-                          const PhvInfo &phv, const PHV::Pragmas &pragmas)
+                          const PhvInfo &phv, const ClotInfo& clot, const PHV::Pragmas &pragmas)
         : pragmas(pragmas) {
         fs_action_map = new MapFieldSliceToAction(phv);
-        setter = new DBSetter(phv, backtracker, defuse, fs_action_map, *this, pragmas);
+        setter = new DBSetter(phv, clot, backtracker, defuse, fs_action_map, *this, pragmas);
         addPasses({fs_action_map, setter});
     }
     // return a const pointer to live range info, nullptr if not exist.

@@ -378,6 +378,15 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
             const auto use_loc = to_location(field, use, true);
             BUG_CHECK(use_loc, "use cannot be ignored");
 
+            // Ignore deparser reads for clot-allocated, unused or read_only, and non-digested
+            // fields. Deparser can directly read from clot instead of PHV unless they are packed
+            // with modified fields in a container. In that case, caller need to extend
+            // physical live ranges of packed header fields to deparser.
+            if (use_loc->u == Location::DEPARSER && clot.allocated_unmodified_undigested(field)) {
+                LOG3("ignore clot-allocated unmodified " << field->name << " read: " << use.second);
+                continue;
+            }
+
             // update table access logs.
             if (use_loc->u == Location::unit::TABLE) {
                 for (const auto& s : use_loc->stages) {
@@ -415,7 +424,14 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
         // set (w) for tailing writes (write without read)
         for (const FieldDefUse::locpair& def : defuse->getAllDefs(fs.field()->id)) {
             const auto& uses_of_def = defuse->getUses(def);
-            if (!uses_of_def.empty()) {
+            // TODO(yumin): There is a bug in field_defuse and IR::BFN::GhostParser that because
+            // ghost parser write all ghost metadata in one expression, later uses of
+            // ghost metadata are paired with this def. For example, in many ghost tests,
+            // although ghost::gh_intr_md.pipe_id has no read, and only one def, if you invoke
+            // defuse->getUses(def) on the only def of IR::BFN::GhostParser, you will get
+            // some uses from other ghost metadata like qid, being incorrectly paired with this
+            // def. To fix this, we should change IR::BFN::GhostParser to write individual fields.
+            if (!uses_of_def.empty() && !def.first->is<IR::BFN::GhostParser>()) {
                 continue;
             }
             // implicit parser init, is not an actual write. If there is no paired

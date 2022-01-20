@@ -265,6 +265,14 @@ class ClotInfo {
     // result if the given slice were unused.
     std::set<const Clot*, Clot::Less>* fully_allocated(const PHV::FieldSlice* slice) const;
 
+    /// @return true if @p field is (1) fully allocated to clot, (2) not modified by MAUs, and
+    /// (3) not digested. For these fields, it is safe to ignore deparser read to shrink their
+    /// live ranges, because deparser can emit them directly from clot.
+    bool allocated_unmodified_undigested(const PHV::Field* field) const {
+        return whole_field_clot(field) && (is_readonly(field) || is_unused(field)) &&
+               !field->is_digest();
+    }
+
     /// Adjusts all allocated CLOTs so that they neither start nor end with an overwritten field
     /// slice. See
     /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5

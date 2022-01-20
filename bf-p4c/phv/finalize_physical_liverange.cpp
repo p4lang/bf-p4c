@@ -55,17 +55,22 @@ bool FinalizePhysicalLiverange::preorder(const IR::MAU::Table* t) {
 void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bits,
                                             const IR::BFN::Unit* unit, bool is_write,
                                             bool allow_unallocated) {
-    // skip clot-allocated fields.
+    // skip clot-allocated unused fields.
     if (clot_i.fully_allocated(FieldSlice(f, bits))) {
         return;
     }
     const auto alloc_slices =
         find_all_overlapping_alloc_slices(f, bits, AllocContext::of_unit(unit), is_write);
+    // Safe to ignore access in deparser when clot_i.allocated_unmodified_undigested(f) is true.
+    // It means that the live range of the field is shrunken due to clot allocation.
     // XXX(yumin): we did not handle digest type field perfectly so that there might be
     // duplicated padding fields added, although allocation are still correct.
     // An example case:
-    // remove `|| (f->padding && f->is_digest())` and run p4_16_samples/issue1043-bmv2.p4
-    BUG_CHECK(allow_unallocated || alloc_slices.size() > 0 || (f->padding && f->is_digest()),
+    // remove `(f->padding && f->is_digest())` and run p4_16_samples/issue1043-bmv2.p4
+    BUG_CHECK(allow_unallocated ||
+              (unit->is<IR::BFN::Deparser>() && clot_i.allocated_unmodified_undigested(f)) ||
+              alloc_slices.size() > 0 ||
+              (f->padding && f->is_digest()),
               "cannot find corresponding slice, field: %1%, range: %2%, is_write: %3%.\n unit: %4%",
               f, bits, is_write, unit);
     if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>() ||

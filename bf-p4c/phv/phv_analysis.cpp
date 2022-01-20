@@ -56,7 +56,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), pragmas.pa_byte_pack(),
                  action_constraints),
       strided_headers(phv),
-      physical_liverange_db(&alloc, &defuse, phv, pragmas),
+      physical_liverange_db(&alloc, &defuse, phv, clot, pragmas),
       source_tracker(phv),
       utils(phv, clot, clustering, uses, defuse, action_constraints, meta_init, dark_live_range,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,

@@ -8,6 +8,7 @@
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/optimize_phv.h"
@@ -642,8 +643,17 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
 // make_alloc_slices_with_physical_liverange returns a new vector of AllocSlices
 // that each slice will have physical liverange. For fieldslices with multiple
 // disjoint liveranges, copies for each live range will be add.
+// this function also handles the clot-adjustment issue that when there is a modified
+// field in slices, all physical live ranges will be extend to from parser to deparser.
 std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
-    const PHV::FieldSliceLiveRangeDB& liverange_db, const std::vector<PHV::AllocSlice>& slices) {
+    const ClotInfo& clot, const PHV::FieldSliceLiveRangeDB& liverange_db,
+    const std::vector<PHV::AllocSlice>& slices) {
+    const bool deparsed_cannot_read_clot =
+        std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& slice) {
+            const auto* f = slice.field();
+            return f->deparsed() && (!clot.whole_field_clot(f) || clot.is_modified(f));
+        });
+
     std::vector<PHV::AllocSlice> rst;
     for (auto& slice : slices) {
         const auto* info = liverange_db.get_liverange(PHV::FieldSlice(slice.field()));
@@ -653,28 +663,18 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
             }
             BUG("missing physical liverange info: %1%", slice);
         }
-        auto ranges = info->disjoint_ranges();
-        if (ranges.empty()) {
-            // TODO(yumin): some fields do not have live range because they were never used
-            // in the program. For example, paadding fields added by make_clusters for digested
-            // field's byte alignment requirement.
-            // The overlay of those fields are usually handled through mutex, padding
-            // and overlayble properties on field.
-            // We need to further verify the whether we have handled them correctly. Here, we
-            // conservatively set their live range to be default.
-            const auto default_lr = liverange_db.default_liverange()->disjoint_ranges().front();
+
+        const auto* field = slice.field();
+        // overwrite live range to whole pipe when there is a deparsed and modified field
+        // packed in this slice list.
+        if (deparsed_cannot_read_clot && clot.allocated_unmodified_undigested(field)) {
+            info = liverange_db.default_liverange();
+        }
+        for (const auto& r : info->disjoint_ranges()) {
             PHV::AllocSlice clone = slice;
             clone.setIsPhysicalStageBased(true);
-            clone.setLiveness(default_lr.first, default_lr.second);
+            clone.setLiveness(r.first, r.second);
             rst.emplace_back(clone);
-            LOG1("fieldslice with default live range: " << slice.field());
-        } else {
-            for (const auto& r : ranges) {
-                PHV::AllocSlice clone = slice;
-                clone.setIsPhysicalStageBased(true);
-                clone.setLiveness(r.first, r.second);
-                rst.emplace_back(clone);
-            }
         }
     }
     return rst;
@@ -701,9 +701,26 @@ bool PHV::AllocUtils::can_physical_liverange_be_overlaid(
     if (never_overlay(a.field()) || never_overlay(b.field())) {
         return false;
     }
-    if (a.container().size() > 8 || b.container().size() > 8) {
-        if (a.getLatestLiveness().first == Device::numStages() ||
-            b.getLatestLiveness().first == Device::numStages()) {
+    BUG_CHECK(a.container() == b.container(),
+              "checking overlay on different container: %1% and %2%",
+              a.container(), b.container());
+    const auto& cont = a.container();
+    const bool is_a_deparsed = a.getLatestLiveness().first == Device::numStages();
+    const bool is_b_deparsed = b.getLatestLiveness().first == Device::numStages();
+    const bool both_deparsed = is_a_deparsed && is_b_deparsed;
+    // XXX(yumin): The better and less constrainted checks are
+    // `may be checksummed together` and `may be deparsed together`,
+    // instead of will be both be deparsed. But since it is very likely that
+    // the less constrainted checks will not give us any benefits (because
+    // we are likely to have enough containers for those read-only fields),
+    // we will just check whether they are both deparsed.
+    if (both_deparsed) {
+        // checksum engine cannot read a container multiple times.
+        if (a.field()->is_checksummed() && b.field()->is_checksummed()) {
+            return false;
+        }
+        // deparser cannot emit a non-8-bit container multiple times.
+        if (cont.size() != 8) {
             return false;
         }
     }
@@ -2390,7 +2407,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         // set live range info for all candidate slices.
         if (utils_i.settings.physical_liverange_overlay && utils_i.settings.no_code_change) {
             candidate_slices = make_alloc_slices_with_physical_liverange(
-                utils_i.physical_liverange_db, candidate_slices);
+                utils_i.clot, utils_i.physical_liverange_db, candidate_slices);
             if (LOGGING(5)) {
                 LOG_DEBUG5("updated physical live range: ");
                 for (const auto& slice : candidate_slices) {
@@ -4004,7 +4021,7 @@ boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
             }
             if (utils_i.settings.physical_liverange_overlay) {
                 candidate_slices = make_alloc_slices_with_physical_liverange(
-                    utils_i.physical_liverange_db, candidate_slices);
+                    utils_i.clot, utils_i.physical_liverange_db, candidate_slices);
                 // XXX(yumin): do not overlay with deparser-zero optimization slices, because
                 // they rely on parser to init the container to zero and use them in deparser
                 // for emitting zeros.
