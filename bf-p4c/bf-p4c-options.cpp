@@ -582,6 +582,7 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
         { "--disable-parse-depth-limit", false },
         { "--disable-parse-min-depth-limit", true },  // brig only
         { "--disable-parse-max-depth-limit", true },  // brig only
+        { "--num-stages-override", true },  // brig only
     };
 
     boost::optional<CommandLineOptions> newOptions;

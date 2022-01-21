@@ -291,7 +291,10 @@ void WalkPowerGraph::compute_mpr() {
                   // In addition, if this table is in an action-dependent stage, we can't
                   // use the mpr_next_table unless we can also set mpr_stage to this stage.
                   // Otherwise we need to mark it always run.  See P4C-3469
-                  if (t->stage() != mpr->get_mpr_stage(stage) && mpr_stage_required) {
+                  if (t->stage() < mpr->get_mpr_stage(stage)) {
+                      always_run |= (1 << *tbl->logical_id);
+                      break;
+                  } else if (t->stage() != mpr->get_mpr_stage(stage) && mpr_stage_required) {
                       always_run |= (1 << *tbl->logical_id);
                       break; }
                   mpr->set_mpr_stage(stage, t->stage());
@@ -376,10 +379,10 @@ bool WalkPowerGraph::check_mpr_conflict() {
           (ig_mpr->long_branch_use[stage-1] & eg_mpr->long_branch_use[stage-1]) != 0) {
         change = true;
         if (ig_dep == DEP_MATCH) {
-          mau_features_->stage_dep_to_previous_[EGRESS][stage] = DEP_MATCH;
+          mau_features_->set_dependency_for_gress_stage(EGRESS, stage, DEP_MATCH);
         } else if (eg_dep == DEP_MATCH) {
-          mau_features_->stage_dep_to_previous_[INGRESS][stage] = DEP_MATCH;
-          mau_features_->stage_dep_to_previous_[GHOST][stage] = DEP_MATCH;
+          mau_features_->set_dependency_for_gress_stage(INGRESS, stage, DEP_MATCH);
+          mau_features_->set_dependency_for_gress_stage(GHOST, stage, DEP_MATCH);
         } else {
           BUG("impossible gress dep combo ig=%d eg=%d", ig_dep, eg_dep);
         }

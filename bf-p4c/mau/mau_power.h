@@ -68,10 +68,12 @@ class MauFeatures {
   // Maps UniqueId back to the table
   std::map<UniqueId, const IR::MAU::Table*> uid_to_table_;
 
+ private:
   // Maps stage number to its dependency type to previous stage.
   // Note the encoding is as described above.
   std::map<int, mau_dep_t> stage_dep_to_previous_[kNumberGress];
 
+ public:
   /**
     * @param gress The thread of compute.
     * @param stage The MAU stage number, running 0 to n-1.
@@ -93,6 +95,7 @@ class MauFeatures {
     * @return Stage dependency type to the previous MAU stage.
     */
   mau_dep_t get_dependency_for_gress_stage(gress_t g, int stage) const;
+  void set_dependency_for_gress_stage(gress_t g, int stage, mau_dep_t dep);
   /**
     * Attempts to convert a MAU stage dependency to match dependent.
     * If a stage can be changed, the change is performed and this function returns true.
@@ -150,6 +153,11 @@ class MauFeatures {
     * register configuration.  Currently, this is the MAU stage dependencies.
     */
   std::ostream& emit_dep_asm(std::ostream& out, gress_t g, int stage) const;
+  /**
+    * Return true if some asm code is required for the stage for correct behavior,
+    * even if no tables are present
+    */
+  bool requires_dep_asm(gress_t g, int stage) const;
   /**
     * Returns true if there are tables remaining in a particular gress
     * in the start stage until the last MAU stage.

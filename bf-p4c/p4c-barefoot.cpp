@@ -343,13 +343,6 @@ int main(int ac, char **av) {
     options.setInputFile();
     Device::init(options.target);
 
-    if (options.num_stages_override) {
-        Device::overrideNumStages(options.num_stages_override);
-        if (::errorCount() > 0) {
-            return INVOCATION_ERROR;
-        }
-    }
-
     // Initialize EventLogger
     if (BackendOptions().debugInfo) {
         // At least skeleton of events.json should be emitted alongside with other JSON files
@@ -364,6 +357,13 @@ int main(int ac, char **av) {
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
     auto* program = run_frontend();
+
+    if (options.num_stages_override) {
+        Device::overrideNumStages(options.num_stages_override);
+        if (::errorCount() > 0) {
+            return INVOCATION_ERROR;
+        }
+    }
 
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.

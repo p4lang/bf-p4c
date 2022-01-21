@@ -357,11 +357,13 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     }
 
     int maxStages[3] = { -1, -1, -1 };
-    for (auto &stage : mauasm.by_stage)
-        if (stage.first.second > maxStages[stage.first.first])
-            maxStages[stage.first.first] = stage.first.second;
-
     for (auto &stage : mauasm.by_stage) {
+        if (stage.first.second > maxStages[stage.first.first]) {
+            for (int st = maxStages[stage.first.first] + 1; st < stage.first.second; ++st) {
+                if (mauasm.power_and_mpr->requires_stage_asm(stage.first.first, st)) {
+                    out << "stage " << st << ' ' << stage.first.first << ':' << std::endl;
+                    mauasm.power_and_mpr->emit_stage_asm(out, stage.first.first, st); } }
+            maxStages[stage.first.first] = stage.first.second; }
         if (!phase0OutputAsm || stage.first.second != 0 || stage.first.first != INGRESS) {
             out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
             mauasm.power_and_mpr->emit_stage_asm(out, stage.first.first, stage.first.second);

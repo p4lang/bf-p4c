@@ -51,4 +51,9 @@ FinalizeMauPredDepsPower::emit_stage_asm(std::ostream &out, gress_t g, int stage
   return out;
 }
 
+bool FinalizeMauPredDepsPower::requires_stage_asm(gress_t g, int stage) const {
+  return mau_features_->requires_dep_asm(g, stage);
+}
+
+
 };  // end namespace MauPower

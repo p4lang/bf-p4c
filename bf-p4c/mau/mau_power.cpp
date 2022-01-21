@@ -61,23 +61,35 @@ std::ostream& MauFeatures::emit_dep_asm(std::ostream& out, gress_t g, int stage)
   }
   return out;
 }
+bool MauFeatures::requires_dep_asm(gress_t g, int stage) const {
+  if ((g != GHOST) && (stage > 0)) {
+    mau_dep_t dep = get_dependency_for_gress_stage(g, stage);
+    if (Device::currentDevice() == Device::TOFINO)
+        return dep != DEP_CONCURRENT;
+    else
+        return dep != DEP_ACTION; }
+  return false;
+}
 
 mau_dep_t MauFeatures::get_dependency_for_gress_stage(gress_t g, int stage) const {
   return ::get(stage_dep_to_previous_[g], stage, DEP_MATCH);
+}
+void MauFeatures::set_dependency_for_gress_stage(gress_t g, int stage, mau_dep_t dep) {
+  stage_dep_to_previous_[g][stage] = dep;
 }
 
 bool MauFeatures::try_convert_to_match_dep() {
   for (gress_t gress : Device::allGresses()) {
     for (int s=0; s < Device::numStages(); ++s) {
-      mau_dep_t dep = stage_dep_to_previous_[gress][s];
+      mau_dep_t dep = get_dependency_for_gress_stage(gress, s);
       if (dep != DEP_MATCH) {
         LOG4("Convert " << gress << " stage " << s << " to match dependent.");
-        stage_dep_to_previous_[gress][s] = DEP_MATCH;
+        set_dependency_for_gress_stage(gress, s, DEP_MATCH);
         // Ingress and Ghost have to have the same dependency types.
         if (gress == INGRESS) {
-          stage_dep_to_previous_[GHOST][s] = DEP_MATCH;
+          set_dependency_for_gress_stage(GHOST, s, DEP_MATCH);
         } else if (gress == GHOST) {
-          stage_dep_to_previous_[INGRESS][s] = DEP_MATCH;
+          set_dependency_for_gress_stage(INGRESS, s, DEP_MATCH);
         }
         return true;
       }
@@ -91,19 +103,19 @@ void MauFeatures::update_deps_for_device() {
   if (Device::currentDevice() != Device::TOFINO) {
     for (gress_t gress : Device::allGresses()) {
       for (int stage=0; stage < Device::numStages(); ++stage) {
-        if (stage_dep_to_previous_[gress][stage] == DEP_CONCURRENT)
-          stage_dep_to_previous_[gress][stage] = DEP_ACTION;
+        if (get_dependency_for_gress_stage(gress, stage) == DEP_CONCURRENT)
+          set_dependency_for_gress_stage(gress, stage, DEP_ACTION);
       }
     }
 
     // Ingress and Ghost have to have the same timing, which requires them
     // to have the same dependency type.
     for (int stage=0; stage < Device::numStages(); ++stage) {
-      mau_dep_t i_dep = stage_dep_to_previous_[INGRESS][stage];
-      mau_dep_t g_dep = stage_dep_to_previous_[GHOST][stage];
+      mau_dep_t i_dep = get_dependency_for_gress_stage(INGRESS, stage);
+      mau_dep_t g_dep = get_dependency_for_gress_stage(GHOST, stage);
       if (i_dep != g_dep) {
-        stage_dep_to_previous_[INGRESS][stage] = DEP_MATCH;
-        stage_dep_to_previous_[GHOST][stage] = DEP_MATCH; } }
+        set_dependency_for_gress_stage(INGRESS, stage, DEP_MATCH);
+        set_dependency_for_gress_stage(GHOST, stage, DEP_MATCH); } }
   }
 }
 

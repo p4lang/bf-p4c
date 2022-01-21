@@ -16,4 +16,4 @@ done
 docker pull amr-registry.caas.intel.com/bxd-sw/jarvis:$tag
 docker system prune -f
 docker images -f "dangling=true" -q | xargs -r docker rmi
-exec docker run --privileged -w /mnt -v $(pwd):/mnt -v $HOME:/root -it amr-registry.caas.intel.com/bxd-sw/jarvis:$tag /bin/bash
+exec docker run --privileged -w /mnt -v $(pwd):/mnt -v $HOME:/root -p 8080:80 -it amr-registry.caas.intel.com/bxd-sw/jarvis:$tag /bin/bash

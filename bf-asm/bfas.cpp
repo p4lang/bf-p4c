@@ -88,7 +88,11 @@ std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     if (p >= end) {
         std::cerr << "File name too long: " << namebuf << "..." << std::endl;
         snprintf(namebuf, sizeof(namebuf), "/dev/null"); }
-    return std::unique_ptr<std::ostream>(new std::ofstream(namebuf));
+    auto rv = std::unique_ptr<std::ostream>(new std::ofstream(namebuf));
+    if (!*rv) {
+        std::cerr << "Failed to open " << namebuf << " for writing: "
+                  << strerror(errno) << std::endl; }
+    return rv;
 }
 
 std::string usage(std::string tfas) {

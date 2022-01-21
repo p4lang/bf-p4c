@@ -32,6 +32,7 @@ class FinalizeMauPredDepsPower : public PassManager {
                            const NextTable* next_table_properties,
                            const BFN_Options& options);
   std::ostream& emit_stage_asm(std::ostream &out, gress_t g, int stage) const;
+  bool requires_stage_asm(gress_t g, int stage) const;
 
  private:
   // inputs

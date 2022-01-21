@@ -27,19 +27,19 @@ void DeterminePowerUsage::find_stage_dependencies() {
   for (gress_t gress : Device::allGresses()) {
     for (int stage=0; stage < Device::numStages(); ++stage) {
       if (force_match_dependency_) {
-        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_MATCH;
+        mau_features_->set_dependency_for_gress_stage(gress, stage, DEP_MATCH);
         continue;
       }
       if (stage == 0) {
         // stage 0 considered match dependent
-        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_MATCH;
+        mau_features_->set_dependency_for_gress_stage(gress, stage, DEP_MATCH);
       } else if (Device::currentDevice() == Device::TOFINO && stage == Device::numStages() / 2) {
         // Forced match dependency between stages 5 and 6 for Tofino.
-        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_MATCH;
+        mau_features_->set_dependency_for_gress_stage(gress, stage, DEP_MATCH);
       } else {
         // Start all stages off as concurrent.
         // For Tofino2+, this will be converted to action prior to output.
-        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_CONCURRENT;
+        mau_features_->set_dependency_for_gress_stage(gress, stage, DEP_CONCURRENT);
       }
     }
   }
@@ -100,7 +100,7 @@ void DeterminePowerUsage::find_stage_dependencies() {
           break;  // can stop looking if found match dependent stage
         --prev_stage;
       }  // end while
-      mau_features_->stage_dep_to_previous_[gress][stage] = worst_dep;
+      mau_features_->set_dependency_for_gress_stage(gress, stage, worst_dep);
       LOG4("Setting " << gress << " stage " << stage << " dependency to " << worst_dep);
     }
   }
@@ -457,7 +457,7 @@ void DeterminePowerUsage::update_stage_dependencies_for_min_latency() {
            && egress_stage < Device::numStages()) {
       mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(EGRESS, egress_stage);
       if (dep != DEP_MATCH) {
-        mau_features_->stage_dep_to_previous_[EGRESS][egress_stage] = DEP_MATCH;
+        mau_features_->set_dependency_for_gress_stage(EGRESS, egress_stage, DEP_MATCH);
         LOG4("Converted egress stage " << egress_stage << " to match dependent.");
       }
       ++egress_stage;
