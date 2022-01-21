@@ -1435,6 +1435,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/check_uninitialized_read.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/clot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/constrained_field_map_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp

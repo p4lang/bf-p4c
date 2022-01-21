@@ -271,13 +271,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 
-        // Putting CheckUninitializedRead at the end of backend is that there is a pass named
-        // ReinstateAliasSources will break the program's semantic correctness. Namely, some uses
-        // will lose track of their defs, because variable names have been changed by some passes,
-        // e.g., ReinstateAliasSources. So CheckUninitializedRead should be put at a place that is
-        // most correct semantically.
-        new CheckUninitializedRead(defuse, phv, PHV_Analysis->get_pragmas()),
-
         // Two different allocation flow:
         // (1) Normal allocation:
         //                                if failed
@@ -323,6 +316,15 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             },
         }),
         PHV_Analysis,
+
+        // Not Putting CheckUninitializedRead at the end of backend is because there is a pass named
+        // ReinstateAliasSources will break the program's semantic correctness. Namely, some uses
+        // will lose track of their defs, because variable names have been changed by some passes,
+        // e.g., ReinstateAliasSources. So CheckUninitializedRead should be put at a place that is
+        // most correct semantically. In addition, this pass has to be placed after PHV_Analysis,
+        // since pragmas information in PHV_Analysis is needed.
+        new CheckUninitializedRead(defuse, phv, PHV_Analysis->get_pragmas()),
+
         allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
         new ValidateActions(phv, false, true, false),
         new PHV::AddAliasAllocation(phv),

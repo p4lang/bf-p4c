@@ -10,12 +10,19 @@ class CheckUninitializedRead : public Inspector {
     const FieldDefUse &defuse;
     const PhvInfo &phv;
     const PHV::Pragmas &pragmas;
+    static bool printed;
  public:
     CheckUninitializedRead(
          const FieldDefUse &defuse,
          const PhvInfo &phv,
          const PHV::Pragmas &pragmas) :
          defuse(defuse), phv(phv), pragmas(pragmas) {}
+    static void set_printed() {printed = true;}
+
+    // unset_printed is intended to be only used in gtest unit test, the reason to unset printed is
+    // because gtest may call CheckUninitializedRead multiple times, but warning message will only
+    // presented once. Therefore, gtest may not capture the warning message.
+    static void unset_printed() {printed = false;}
     void end_apply() override;
 };
 
