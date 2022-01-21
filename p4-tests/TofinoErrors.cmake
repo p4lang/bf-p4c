@@ -53,3 +53,8 @@ p4c_add_xfail_reason("tofino"
   "Parser EgressParser: longest path through parser .* exceeds maximum parse depth"
   extensions/p4_tests/p4_16/errors/parse_depth_length.p4
 )
+
+p4c_add_xfail_reason("tofino"
+   "error: .*: too many actions try to access the register"
+   extensions/p4_tests/p4_16/errors/stateful_read_write_5actions.p4
+)

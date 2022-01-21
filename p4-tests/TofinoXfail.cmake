@@ -1863,11 +1863,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-   "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*|Internal compiler error."
-   extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
-)
-
 # P4C-3720 - PTF tests to be fixed and removed from Xfails
 p4c_add_xfail_reason("tofino"
   "ERROR:PTF runner:Error when running PTF tests"

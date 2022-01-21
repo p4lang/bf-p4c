@@ -115,13 +115,13 @@ class ActionSynthesisPolicy : public P4::ActionSynthesisPolicy {
                     const IR::StatOrDecl *stmt_decl) {
         auto *blk_stmt = blk->components.back()->to<IR::Statement>();
         if (!blk_stmt) return false;
-        auto read_rv = BFN::RegisterReadWrite::checkSupportedReadWriteForm(blk_stmt);
+        auto read_rv = BFN::RegisterReadWrite::extractRegisterReadWrite(blk_stmt);
         auto *read_mce = read_rv.first;
         if (!read_mce) return false;
 
         auto *stmt = stmt_decl->to<IR::Statement>();
         if (!stmt) return false;
-        auto write_rv = BFN::RegisterReadWrite::checkSupportedReadWriteForm(stmt);
+        auto write_rv = BFN::RegisterReadWrite::extractRegisterReadWrite(stmt);
         auto *write_mce = write_rv.first;
         if (!write_mce) return false;
 

@@ -1,18 +1,10 @@
 #include "frontends/p4/methodInstance.h"
 #include "register_read_write.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/mau/stateful_alu.h"
+#include "bf-p4c/device.h"
 
 namespace BFN {
-
-#define FATAL_ERROR_UNSUPPORTED_READ_WRITE_FORM(reg_stmt) \
-    ::fatal_error(ErrorType::ERR_UNSUPPORTED, \
-        "%1%: Registers support only calls or assignments of the following forms:\n" \
-        "  register.write(index, source);\n" \
-        "  destination = register.read(index);\n" \
-        "  destination = register.read(index)[M:N];\n" \
-        "  destination = (cast)register.read(index);\n" \
-        "If more complex calls or assignments are required, try to use " \
-        "the RegisterAction extern.", (reg_stmt))
 
 /**
  * The method checks whether the form of the read/write register call is correct,
@@ -22,7 +14,7 @@ namespace BFN {
  *                   2. the left-hand side of the assignment statement of the register read method.
  */
 std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
-RegisterReadWrite::checkSupportedReadWriteForm(const IR::Statement *reg_stmt) {
+RegisterReadWrite::extractRegisterReadWrite(const IR::Statement *reg_stmt) {
     const IR::MethodCallExpression *call = nullptr;
     const IR::Expression *read_expr = nullptr;
 
@@ -43,60 +35,77 @@ RegisterReadWrite::checkSupportedReadWriteForm(const IR::Statement *reg_stmt) {
                      const IR::Expression * /*read_expr*/>(call, read_expr);
 }
 
+/*
+ * The execute call is placed at the position of the read call with assignment or,
+ * if only the write call is present, at the end of the action.
+ */
 IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::P4Action* act) {
     LOG1(" P4 Action: " << act);
 
     auto orig_act = getOriginal<IR::P4Action>();
     if (self.action_register_calls.count(orig_act) == 0) return act;
 
-    auto calls = self.action_register_calls[orig_act];
-    auto body = new IR::BlockStatement();
+    // Temporary body being updated; iteratively being updated for each register used in the action
+    auto src_body = orig_act->body;
 
-    const IR::AssignmentStatement *assign_stmt = nullptr;
-    // Remove register read & write calls in action
-    int reg_action_index = 0;
-    for (auto inst : orig_act->body->components) {
-        LOG1(" P4 Action Statement: " << inst);
-        if (assign_stmt) break;
-        reg_action_index++;
-        if (calls.count(inst->to<IR::Statement>()) > 0) {
-            if (!assign_stmt)
+    // Iterate over registers used in the action
+    for (auto reg : self.action_register_calls[orig_act]) {
+        auto calls = reg.second;
+        // Temporary body
+        auto body = new IR::BlockStatement();
+        // The read assignment statement to be remembered
+        // The execute call is placed on its position.
+        const IR::AssignmentStatement *assign_stmt = nullptr;
+
+        auto src_body_it = src_body->components.begin();
+
+        // Remove register read & write calls in action and remember the read assignment
+        while (src_body_it != src_body->components.end() && assign_stmt == nullptr) {
+            auto inst = *src_body_it;
+            LOG1(" P4 Action Statement: " << inst);
+            if (calls.count(inst->to<IR::Statement>()) == 0) {
+                // Add non-read & write statements
+                body->push_back(inst);
+            } else if (assign_stmt == nullptr) {
+                // Skip read & write statements and remember the read assignment
                 assign_stmt = inst->to<IR::AssignmentStatement>();
-            continue;
+            }
+            src_body_it++;
         }
-        body->push_back(inst);
-    }
 
-    // Add register exec call to action at index
-    BUG_CHECK(self.action_register_exec_calls.count(orig_act) > 0,
-                " No register execution call generated for register read/write in action %1%"
-                , orig_act);
-    auto reg_exec_call = self.action_register_exec_calls[orig_act];
-    IR::Statement *stmt = nullptr;
-    if (assign_stmt) {
-        if (auto *slice = assign_stmt->right->to<IR::Slice>()) {
-            stmt = new IR::AssignmentStatement(assign_stmt->left,
-                new IR::Slice(reg_exec_call, slice->e1, slice->e2));
+        BUG_CHECK(self.action_register_exec_calls.count(orig_act) > 0
+            && self.action_register_exec_calls[orig_act].count(reg.first) > 0,
+            "No register execution call generated for register read/write in action %1%", orig_act);
+
+        auto reg_exec_call = self.action_register_exec_calls[orig_act][reg.first];
+
+        // Add register execute call in appropriate form
+        IR::Statement *stmt = nullptr;
+        if (assign_stmt) {
+            if (auto *slice = assign_stmt->right->to<IR::Slice>()) {
+                stmt = new IR::AssignmentStatement(assign_stmt->left,
+                    new IR::Slice(reg_exec_call, slice->e1, slice->e2));
+            } else {
+                stmt = new IR::AssignmentStatement(assign_stmt->left, reg_exec_call);
+            }
         } else {
-            stmt = new IR::AssignmentStatement(assign_stmt->left, reg_exec_call);
+            stmt = new IR::MethodCallStatement(reg_exec_call);
         }
-    } else {
-        stmt = new IR::MethodCallStatement(reg_exec_call);
-    }
-    body->push_back(stmt);
+        body->push_back(stmt);
 
-    // Update action body with remaining non register read/write instructions if
-    // any
-    auto orig_act_body_itr = orig_act->body->components.begin() + reg_action_index;
-    for (; orig_act_body_itr != orig_act->body->components.end(); orig_act_body_itr++) {
-        auto inst = *orig_act_body_itr;
-        if (calls.count(inst->to<IR::Statement>()) > 0) continue;
-        body->push_back(inst);
+        // Update temporary body with remaining non-register read/write instructions
+        while (src_body_it != src_body->components.end()) {
+            auto inst = *src_body_it;
+            if (calls.count(inst->to<IR::Statement>()) == 0)
+                body->push_back(inst);
+            src_body_it++;
+        }
+
+        // Operate on updated body in the next iteration
+        src_body = body;
     }
 
-    auto new_act = new IR::P4Action(act->srcInfo, act->name, act->annotations,
-                                    act->parameters, body);
-    return new_act;
+    return new IR::P4Action(act->srcInfo, act->name, act->annotations, act->parameters, src_body);
 }
 
 IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR::P4Control* ctrl) {
@@ -171,12 +180,9 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
                                         const IR::P4Action *act) {
     BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - %1%", act);
 
-    auto rv = checkSupportedReadWriteForm(reg_stmt);
+    auto rv = extractRegisterReadWrite(reg_stmt);
     auto *call = rv.first;
-
-    if (!call) {
-        FATAL_ERROR_UNSUPPORTED_READ_WRITE_FORM(reg_stmt);
-    }
+    if (!call) return nullptr;
 
     LOG1(" MethodCallExpression: " << call);
 
@@ -247,11 +253,10 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
                                             const IR::P4Action *act) {
     BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - ", act);
 
-    auto rv = checkSupportedReadWriteForm(reg_stmt);
+    auto rv = extractRegisterReadWrite(reg_stmt);
     auto *call = rv.first;
-    if (!call) {
-        FATAL_ERROR_UNSUPPORTED_READ_WRITE_FORM(reg_stmt);
-    }
+    if (!call) return RegInfo();
+
     if (!reg_info.read_expr) {
         // Do not overwrite with returned nullptr if the read expression is already stored
         reg_info.read_expr = rv.second;
@@ -380,27 +385,56 @@ bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::P4Act
 
     if (self.action_register_calls.count(act) == 0) return false;
 
-    RegInfo reg_info;
-    for (auto call : self.action_register_calls[act]) {
-        reg_info = createRegisterAction(reg_info, call, act);
-        reg_info.reg_execute = createRegisterExecute(reg_info.reg_execute, call, act);
-    }
-
-    auto reg_action = reg_info.reg_action;
-    auto reg_execute = reg_info.reg_execute;
-    BUG_CHECK(reg_action, "Cannot create register action for register reads or "
-                          "writes within P4 Action %1%", act);
-    BUG_CHECK(reg_execute, "Cannot create register execute call for register reads or "
-                          "writes within P4 Action %1%", act);
-
     auto control = findContext<IR::P4Control>();
     BUG_CHECK(control, "No control found for P4 Action ", act);
 
-    self.control_register_actions[control].push_back(reg_action);
+    for (auto reg : self.action_register_calls[act]) {
+        RegInfo reg_info;
+        for (auto call : reg.second) {
+            reg_info = createRegisterAction(reg_info, call, act);
+            reg_info.reg_execute = createRegisterExecute(reg_info.reg_execute, call, act);
+        }
 
-    self.action_register_exec_calls[act] = reg_execute;
+        auto reg_action = reg_info.reg_action;
+        auto reg_execute = reg_info.reg_execute;
+        BUG_CHECK(reg_action, "Cannot create register action for register reads or "
+                            "writes within P4 Action %1%", act);
+        BUG_CHECK(reg_execute, "Cannot create register execute call for register reads or "
+                            "writes within P4 Action %1%", act);
+
+        self.control_register_actions[control].push_back(reg_action);
+
+        LOG3(" Adding execute in " << act->name << " for " << reg.first->toString() << ": "
+            << reg_execute);
+
+        self.action_register_exec_calls[act][reg.first] = reg_execute;
+    }
 
     return false;
+}
+
+/*
+ * Check the number of register actions attached to registers. It cannot exceed 4.
+ * This is a Tofino 1/2/3 HW restriction.
+ */
+void RegisterReadWrite::AnalyzeActionWithRegisterCalls::end_apply() {
+    std::map<const IR::Declaration_Instance *, int> count;
+    for (auto act_map : self.action_register_exec_calls) {
+        for (auto reg_map : act_map.second) {
+            auto reg = reg_map.first;
+            if (count.count(reg) == 0)
+                count[reg] = 1;
+            else
+                count[reg]++;
+        }
+    }
+    for (auto count_item : count) {
+        if (count_item.second > Device::statefulAluSpec().MaxInstructions)
+            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "%1%: too many actions try to access the register. The target limits the number "
+                "of actions accessing a single register to %2%. Reorganize your code to meet "
+                "this restriction.", count_item.first, Device::statefulAluSpec().MaxInstructions);
+    }
 }
 
 bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
@@ -431,15 +465,78 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
     if (typeEx->name != "Register") return false;
 
     auto stmt = findContext<IR::Statement>();
-    if (member->member == "read") {
-        LOG1(" Register extern found: " << member << " in action : " << act->name);
-        self.action_register_calls[act].insert(stmt);
-    }
-    if (member->member == "write") {
-        LOG1(" Register extern found: " << member << " in action : " << act->name);
-        self.action_register_calls[act].insert(stmt);
+    if (auto em = method->to<P4::ExternMethod>()) {
+        auto reg = em->object->to<IR::Declaration_Instance>();
+        if (member->member == "read") {
+            LOG1(" Register extern found: " << member << " in action : " << act->name);
+            self.action_register_calls[act][reg].insert(stmt);
+        }
+        if (member->member == "write") {
+            LOG1(" Register extern found: " << member << " in action : " << act->name);
+            self.action_register_calls[act][reg].insert(stmt);
+        }
     }
     return false;
+}
+
+/*
+ * Check that all uses of a register within a single action use the same addressing.
+ * This is a Tofino 1/2/3 HW restriction.
+ */
+void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
+#if HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) return;
+#endif  // HAVE_FLATROCK
+
+    for (auto act_map : self.action_register_calls) {
+        auto act = act_map.first;
+        const IR::Expression *first_addr = nullptr;
+        auto first_reg = act_map.second.begin()->first;
+        auto first_reg_type_spec = first_reg->type->to<IR::Type_Specialized>();
+        // When compiling for the v1model, type information seems to be a bit different than
+        // for PSA and T*NA architectures. With v1model, the template parameters are of the
+        // type IR::Type_Name. Type_Name::width_bits() suggests to use getTypeType. It gives
+        // correct result for all archs.
+        auto first_reg_type_type = self.typeMap->getTypeType(
+            first_reg_type_spec->arguments->at(0)->getNode(), true);
+        auto first_width = first_reg_type_type->width_bits();
+        for (auto reg_map : act_map.second) {
+            auto reg = reg_map.first;
+            auto reg_type_spec = first_reg->type->to<IR::Type_Specialized>();
+            // See above.
+            auto reg_type_type = self.typeMap->getTypeType(
+                reg_type_spec->arguments->at(0)->getNode(), true);
+            auto width = reg_type_type->width_bits();
+            if (first_width != width)
+                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "%1%: widths of all registers used within a single action have to "
+                    "be the same. Widths of the following registers differ:\n%2%%3%",
+                    act, first_reg, reg);
+            for (auto reg_set : reg_map.second) {
+                auto mce = RegisterReadWrite::extractRegisterReadWrite(reg_set).first;
+                if (!mce) {
+                    ::fatal_error(ErrorType::ERR_UNSUPPORTED,
+                        "%1%: Registers support only calls or assignments of the following forms:\n"
+                        "  register.write(index, source);\n"
+                        "  destination = register.read(index);\n"
+                        "  destination = register.read(index)[M:N];\n"
+                        "  destination = (cast)register.read(index);\n"
+                        "If more complex calls or assignments are required, try to use "
+                        "the RegisterAction extern.", reg_set);
+                }
+                if (first_addr == nullptr) {
+                    first_addr = mce->arguments->at(0)->expression;
+                } else {
+                    auto *addr = mce->arguments->at(0)->expression;
+                    if (!first_addr->equiv(*addr))
+                        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                            "%1%: uses of all registers within a single action have to "
+                            "use the same addressing. The following uses differ:\n%2%%3%",
+                            act, first_addr, addr);
+                }
+            }
+        }
+    }
 }
 
 bool RegisterReadWrite::MoveRegisterParameters::preorder(IR::P4Control *c) {

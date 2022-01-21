@@ -476,11 +476,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
 )
 
-p4c_add_xfail_reason("tofino3"
-   "Compiler Bug.*: An stateful instruction.*is outside the bounds of the stateful memory.*"
-   extensions/p4_tests/p4_16/stf/stateful_read_write_5actions.p4
-)
-
 # This is really expected to fail (with this particular error message)
 p4c_add_xfail_reason("tofino3"
    "error: Inferred incompatible container alignments for field egress::eg_md.field:[\r\n\t ]*.*p4c-3431.p4.77.: alignment = 6 .*[\r\n\t ]*.*eg_md.field = parse_1_md.field.*[\r\n\t ]*.*[\r\n\t ]*Previously inferred alignments:[\r\n\t ]*.*p4c-3431.p4.68.: alignment = 0 .*[\r\n\t ]*.*eg_md.field = hdr.field"

@@ -22,11 +22,13 @@ class SearchAndReplaceExpr: public Transform {
         replace(replace), search(search) {}
 };
 
-typedef ordered_set<const IR::MethodCallExpression *> RegisterCalls;
+// Action -> register -> read/write statements
 typedef std::unordered_map<const IR::P4Action *,
-        ordered_set<const IR::Statement*>> RegisterCallsByAction;
+            std::unordered_map<const IR::Declaration_Instance *,  // Register declaration
+                ordered_set<const IR::Statement*>>> RegisterCallsByAction;
 typedef std::unordered_map<const IR::P4Action *,
-        IR::MethodCallExpression*> RegisterExecuteCallByAction;
+            std::unordered_map<const IR::Declaration_Instance *,  // Register declaration
+                IR::MethodCallExpression*>> RegisterExecuteCallByAction;
 typedef std::unordered_map<const IR::P4Control*,
         ordered_set<IR::Declaration_Instance *>> RegisterActionsByControl;
 
@@ -83,6 +85,7 @@ class RegisterReadWrite : public PassManager {
             const IR::Expression *read_expr = nullptr;
         };
         bool preorder(const IR::P4Action*) override;
+        void end_apply() override;
 
         IR::MethodCallExpression*
         createRegisterExecute(IR::MethodCallExpression *reg_execute,
@@ -104,6 +107,7 @@ class RegisterReadWrite : public PassManager {
     class CollectRegisterReadsWrites : public Inspector {
         RegisterReadWrite &self;
         bool preorder(const IR::MethodCallExpression*) override;
+        void end_apply() override;
 
      public:
         explicit CollectRegisterReadsWrites(RegisterReadWrite &self) :
@@ -149,7 +153,7 @@ class RegisterReadWrite : public PassManager {
 
     static
     std::pair<const IR::MethodCallExpression * /*call*/, const IR::Expression * /*read_expr*/>
-    checkSupportedReadWriteForm(const IR::Statement *reg_stmt);
+    extractRegisterReadWrite(const IR::Statement *reg_stmt);
 };
 
 }  // namespace BFN
