@@ -55,9 +55,8 @@ COPY . /bfn/bf-p4c-compilers/
 RUN chmod a+x /bfn/bf-p4c-compilers/docker/docker_build.sh
 RUN /bfn/bf-p4c-compilers/docker/docker_build.sh
 
-# Setup PTF environment (Use bf-ptf with bf-pktpy by default)
+# Setup PTF environment (Use bf-pktpy by default)
 ENV PKTPY='True'
-RUN echo ". /bfn/ptf_env_setup.sh" >> /etc/bash.bashrc
 
 WORKDIR /bfn/bf-p4c-compilers
 CMD ["/bin/bash"]

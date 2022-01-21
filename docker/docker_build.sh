@@ -238,7 +238,6 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   {
     cd "${BF_P4C_COMPILERS}"
     cp scripts/ptf_hugepage_setup.sh \
-       scripts/ptf_env_setup.sh \
        p4-tests/p4testutils/veth_setup.sh \
        docker/docker_entry_point.sh \
        "${BFN}"

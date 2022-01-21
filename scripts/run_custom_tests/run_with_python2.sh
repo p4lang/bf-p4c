@@ -26,23 +26,7 @@ sed -i 's/pip /pip2 /g' \
 python2 /p4factory/release/target-toplevel-files/p4studio/dependencies/source/install_thrift.py \
             -os Ubuntu -ver 16.04 -si /usr/local -k apt -j8
 
-# Remove scapy for python3
-rm -rf /usr/local/lib/python3.5/site-packages/scapy*
-# Install scapy for python2
-git clone --recursive https://github.com/secdev/scapy.git
-cd scapy
-python2 setup.py install
-cd ..
-rm -rf scapy
-
-# Remove ptf (and bf-ptf) for python3
-rm -rf /usr/local/lib/python3.5/site-packages/*ptf*
-# Install p4lang/ptf for python2
-git clone https://github.com/p4lang/ptf.git
-mkdir -p /usr/local/lib/python2.7/dist-packages/
-cp -rf ptf/src/* /usr/local/lib/python2.7/dist-packages/
-yes | cp -rf ptf/ptf /usr/local/bin/
-rm -rf ptf
+pip2 install ptf scapy
 
 if [ "$1" != "install-deps" ]; then
         # Run test
