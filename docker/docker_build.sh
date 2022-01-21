@@ -226,25 +226,6 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
     rm -rf "${BOOST}" "${BOOST_TARBALL}"
   fi
 
-  # Download and install Z3.
-  WORKDIR /tmp
-  {
-    Z3='z3-4.8.7-x64-ubuntu-16.04'
-    Z3_ZIP="${Z3}.zip"
-    curl -L --noproxy "*" -o "${Z3_ZIP}" \
-      https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3_ZIP}"
-    unzip "${Z3_ZIP}"
-
-    cd "${Z3}"
-    cp bin/libz3.a /usr/local/lib/
-    cp bin/libz3.so /usr/local/lib/
-    cp bin/z3 /usr/local/bin/
-    cp include/*.h /usr/local/include/
-
-    cd /tmp
-    rm -rf "${Z3}" "${Z3_ZIP}"
-  }
-
   # Dependencies for testing.
   apt-get install -y net-tools
 
