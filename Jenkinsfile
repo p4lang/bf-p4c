@@ -306,7 +306,7 @@ node ('compiler-travis') {
 
                         echo 'Running remaining customer must passes that are excluded in Travis jobs'
                         runInDocker(
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 2,
                             "ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
                         )
                     },
@@ -372,7 +372,7 @@ node ('compiler-travis') {
                         echo 'Running tofino part 2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 1,
                             '''
                                 ctest \
                                     -R '^tofino/(.*programs|.*internal_p4_14)' \
@@ -394,7 +394,7 @@ node ('compiler-travis') {
                         )
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 8,
                             '''
                                 ctest \
                                     -R '^tofino2|gtest' \
@@ -409,7 +409,7 @@ node ('compiler-travis') {
                         echo 'Running tofino2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 1,
                             '''
                                 ctest \
                                     -R '^tofino2' \
@@ -424,7 +424,7 @@ node ('compiler-travis') {
                         echo 'Running tofino3 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 2,
                             "ctest -R '^tofino3' -LE 'ptf'"
                         )
                     },

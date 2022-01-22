@@ -357,6 +357,10 @@ set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/arista/p4c-2661.
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
     "${testExtraArgs} -arch v1model" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+# FIXME: tofino/tor.p4 and tor-archive share output directory.
+# Instead of acquiring a resource, we could set different output directories
+# for these two tests.
+set_tests_properties("tofino/tor.p4" PROPERTIES RESOURCE_LOCK tor_output_dir)
 
 # this tests conversion from Tofino-specific P4Info to "standard" P4Info
 p4c_add_ptf_test_with_ptfdir (
@@ -864,7 +868,7 @@ foreach(t IN LISTS ba102_tests)
 	    "-arch tna -bfrt -force-link -Xp4c=\"--disable-parse-max-depth-limit\"")
   endif()
   p4c_add_test_label("tofino" "BA-102" ba102_${testname})
-  set_tests_properties("tofino/ba102_${testname}" PROPERTIES RUN_SERIAL 1)
+  set_tests_properties("tofino/ba102_${testname}" PROPERTIES RESOURCE_LOCK ptf_test_environment)
 endforeach()
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_wred")
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_lpf")
@@ -911,6 +915,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4 ""
   "-norun --arch v1model --create-graphs --archive --validate-manifest")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
+set_tests_properties("tofino/tor-archive" PROPERTIES RESOURCE_LOCK tor_output_dir)
 
 set (P4FACTORY_INTERNAL_PROGRAMS_PATH "extensions/p4_tests/p4-programs/internal_p4_14")
 

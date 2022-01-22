@@ -144,7 +144,7 @@ macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
   if (PTF_REQUIREMENTS_MET)
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
       ${p4test} "" "${args} -ptfdir ${ptfdir}")
-    set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
+    set_tests_properties(${__testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
     p4c_add_test_label(${device} "ptf" ${alias})
   else()
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
@@ -262,8 +262,8 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   endforeach()
 
   if (PTF_REQUIREMENTS_MET)
-    # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
-    # property for them
+    # PTF tests cannot be run in parallel with other PTF tests, so every PTF tests need to
+    # acquire the "ptf_test_environment" resource
     set (__ptfCounter 0)
     foreach (ts "${tests}")
       file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
@@ -281,7 +281,7 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
         endif()
         if (${__havePTF})
           p4c_test_set_name(__testname ${device} ${__p4file})
-          set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
+          set_tests_properties(${__testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
           p4c_add_test_label(${device} "ptf" ${__p4file})
           math (EXPR __ptfCounter "${__ptfCounter} + 1")
         endif()

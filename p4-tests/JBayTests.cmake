@@ -202,48 +202,48 @@ p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_873")
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_1585")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1585")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_3043" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043/p4c_3043.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 3000 -Xp4c=\"--disable-power-check\"" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_3043")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_3043")
 p4c_add_test_label("tofino2" "UNSTABLE" "p4c_3043")
 set_tests_properties("tofino2/p4c_3043" PROPERTIES TIMEOUT 3000)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585_a" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a/p4c_1585_a.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_1585_a")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1585_a")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585_b" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b/p4c_1585_b.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_1585_b")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1585_b")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1587" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587/p4c_1587.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1200" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587")
 set_tests_properties("tofino2/p4c_1587" PROPERTIES TIMEOUT 1200)
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_1587")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1587")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_2527" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1200" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c_2527")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_2527")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3033" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033")
 set_tests_properties("tofino2/p4c-3033" PROPERTIES TIMEOUT 2400)
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3033")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c-3033")
 p4c_add_test_label("tofino2" "need_scapy" "p4c-3033")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3614" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614/npb/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614")
 set_tests_properties("tofino2/p4c-3614" PROPERTIES TIMEOUT 2400)
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3614")
+p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c-3614")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3171" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3171/npb.p4"
