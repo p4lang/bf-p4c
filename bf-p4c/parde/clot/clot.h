@@ -74,16 +74,16 @@ class Clot final : public LiftCompare<Clot> {
     /// by this CLOT, or if the CLOT contains a larger slice of the field).
     unsigned byte_offset(const PHV::FieldSlice* slice) const;
 
-    /// @return true when @arg f is a PHV-allocated field, and this CLOT has (a slice of) @arg f.
+    /// @return true when @p f is a PHV-allocated field, and this CLOT has (a slice of) @p f.
     bool is_phv_field(const PHV::Field* f) const;
 
-    /// @return true when @arg f is a checksum field, and this CLOT has (a slice of) @arg f.
+    /// @return true when @p f is a checksum field, and this CLOT has (a slice of) @p f.
     bool is_csum_field(const PHV::Field* f) const;
 
-    /// @return true when this CLOT has the exact @arg slice.
+    /// @return true when this CLOT has the exact @p slice.
     bool has_slice(const PHV::FieldSlice* slice) const;
 
-    /// @return true when the first slice in this CLOT is part of the given field @arg f.
+    /// @return true when the first slice in this CLOT is part of the given field @p f.
     bool is_first_field_in_clot(const PHV::Field* f) const;
 
     /// Indicates the checksum engine (if any) that will deposit in this CLOT

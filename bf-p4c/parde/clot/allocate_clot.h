@@ -12,7 +12,7 @@ class AllocateClot : public PassManager {
 
 /**
  * Adjusts allocated CLOTs to avoid PHV containers that straddle the CLOT boundary. See
- * https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
+ * \ref clot_alloc_adjust "CLOT allocation adjustment" (README.md).
  */
 class ClotAdjuster : public Visitor {
     ClotInfo& clotInfo;

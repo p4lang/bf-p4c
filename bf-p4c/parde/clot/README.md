@@ -1,4 +1,4 @@
-# CLOT allocator and metric
+# CLOT allocator and metric {#clot_alloc_and_metric}
 
 This documents the design of the CLOT allocator and the metric associated with
 CLOT allocation.
@@ -129,7 +129,7 @@ following sequence of phases.
    used to find corresponding contiguous sequences of field extracts that satisfy
    the requirements for CLOT candidacy.
 
-## Allocation algorithm
+## Allocation algorithm {#clot_alloc}
 
 The CLOT allocator uses a greedy algorithm to allocate CLOTs in each gress
 independently. For each gress, it identifies CLOT candidates and allocates them
@@ -194,7 +194,7 @@ adjustments is computed to be the smallest amount needed to achieve the
 required inter-CLOT gap separation between C and C’ on all paths through the
 parser.
 
-## Allocation adjustment
+## Allocation adjustment {#clot_alloc_adjust}
 
 Once %PHV allocation is complete, the allocated CLOTs are adjusted to account
 for %PHV container packing. Consider the example shown below. The CLOT begins

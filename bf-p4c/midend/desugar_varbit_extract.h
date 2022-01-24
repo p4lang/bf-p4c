@@ -67,7 +67,7 @@
  *
  *
  * Each compiler-added varbit state extracts multiple small size headers. The total number of
- * header extracted in that state will be propotional to length calculated in
+ * header extracted in that state will be proportional to length calculated in
  * compile time for state.  The sizes of the small headers can differ with the pattern of
  * varbit lengths:
  *

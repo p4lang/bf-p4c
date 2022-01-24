@@ -274,8 +274,8 @@ class ExcludeMAUOverlays : public MauInspector {
     bool preorder(const IR::MAU::Instruction* inst) override;
     void end_apply() override;
 
-    // Given map of action to fields @arg, mark all fields corresponding to the same action as
-    // mutually non-exclusive.
+    /// Given map of action to fields @p arg, mark all fields corresponding to the same action as
+    /// mutually non-exclusive.
     void markNonMutex(const ActionToFieldsMap& arg);
 
  public:

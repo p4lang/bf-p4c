@@ -5,7 +5,8 @@
 #include "header_removal_analysis.h"
 /**
  * This implements a greedy CLOT-allocation algorithm, as described in
- * https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+ * \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
+ * 
  */
 class GreedyClotAllocator : public Visitor {
     ClotInfo& clotInfo;
@@ -27,15 +28,15 @@ class GreedyClotAllocator : public Visitor {
                      Pseudoheader::Less> FieldSliceExtractInfoMap;
     typedef std::set<const ClotCandidate*, ClotCandidate::Greater> ClotCandidateSet;
 
-    /// Generates a FieldSliceExtractInfo object for each field that is (1) extracted in the
+    /// Generates a FieldExtractInfo object for each field that is (1) extracted in the
     /// subgraph rooted at the given state and (2) can be part of a clot (@see
     /// ClotInfo::can_be_in_clot).
     ///
-    /// Returns @arg result.
+    /// @return The FieldExtractInfo object.
     ///
     /// This method assumes the graph is an unrolled DAG.
-    //
-    // Invariant: `state` is not an element of `visited`.
+    ///
+    /// @invariant @p state is not an element of  @p visited
     FieldExtractInfo* group_extracts(
             const IR::BFN::ParserGraph* graph,
             const IR::BFN::ParserState* state = nullptr,
@@ -123,7 +124,7 @@ class GreedyClotAllocator : public Visitor {
         }
     }
 
-    /// A helper. Adds to the given @arg result any CLOT candidates that can be made from a given
+    /// A helper. Adds to the given @p result any CLOT candidates that can be made from a given
     /// set of extracts into field slices that all belong to a given pseudoheader.
     void add_clot_candidates(
             ClotCandidateSet* result,

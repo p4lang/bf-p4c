@@ -29,22 +29,22 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
     std::vector<unsigned> can_end_indices_;
 
     /// Indicates which bits in the candidate are checksums, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU. The first
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
     /// element corresponds to the first bit of the first field slice in the candidate.
     bitvec checksum_bits;
 
     /// Indicates which bits in the candidate are modified, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU. The first
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
     /// element corresponds to the first bit of the first field slice in the candidate.
     bitvec modified_bits;
 
     /// Indicates which bits in the candidate are unused, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU. The first
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
     /// element corresponds to the first bit of the first field slice in the candidate.
     bitvec unused_bits;
 
     /// Indicates which bits in the candidate are read-only, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU. The first
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
     /// element corresponds to the first bit of the first field slice in the candidate.
     bitvec readonly_bits;
 
@@ -98,7 +98,7 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
     /// Produces a map wherein the keys are all possible gap sizes, in bytes, between the end of
     /// this candidate and the start of another candidate when this candidate is parsed before the
     /// other candidate in the input packet. This key set corresponds to the GAPS function, as
-    /// defined in https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// defined in \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     ///
     /// Each possible gap size is mapped to the set of parser states that realize that gap. Each
     /// set member is a pair, wherein the first component is the state containing this candidate,

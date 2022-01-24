@@ -1744,7 +1744,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     }
 
     // Lowers full checksum unit
-    // First lower @arg emitChecksum then lower emitChecksum->nestedChecksum
+    // First lower @p emitChecksum then lower emitChecksum->nestedChecksum
     IR::BFN::FullChecksumUnitConfig* lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum,
                                                    gress_t gress) {
         auto fullChecksumUnit = new IR::BFN::FullChecksumUnitConfig();

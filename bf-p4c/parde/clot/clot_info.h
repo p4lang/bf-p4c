@@ -202,24 +202,24 @@ class ClotInfo {
     bool is_checksum(const PHV::FieldSlice* slice) const;
 
     /// Determines whether a field is modified, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     bool is_modified(const PHV::Field* field) const;
     bool is_modified(const PHV::FieldSlice* slice) const;
 
     /// Determines whether a field is read-only, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     bool is_readonly(const PHV::Field* field) const;
     bool is_readonly(const PHV::FieldSlice* slice) const;
 
     /// Determines whether a field is unused, as defined in
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     bool is_unused(const PHV::Field* field) const;
     bool is_unused(const PHV::FieldSlice* slice) const;
 
     /// Produces the set of CLOT-eligible fields.
     const std::set<const PHV::Field*>* clot_eligible_fields() const;
 
-    /// @return nullptr if the @arg field is read-only or modified. Otherwise, if the @arg field is
+    /// @return nullptr if the @p field is read-only or modified. Otherwise, if the @p field is
     /// unused, returns a map from each CLOT-allocated slice for the field to its corresponding
     /// CLOT.
     std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
@@ -232,9 +232,9 @@ class ClotInfo {
     bool is_slice_below_min_offset(const PHV::FieldSlice* slice,
                                    int max_packet_bit_offset) const;
 
-    /// @return nullptr if the field containing the @arg slice is read-only or modified. Otherwise,
-    /// if the field containing the @arg slice is unused, returns each CLOT-allocated slice that
-    /// overlaps with the given @arg slice, mapped to its corresponding CLOT.
+    /// @return nullptr if the field containing the @p slice is read-only or modified. Otherwise,
+    /// if the field containing the @p slice is unused, returns each CLOT-allocated slice that
+    /// overlaps with the given @p slice, mapped to its corresponding CLOT.
     //
     // If we had more precise slice-level usage information, we could instead return a non-null
     // result if the given slice were unused.
@@ -274,18 +274,17 @@ class ClotInfo {
     }
 
     /// Adjusts all allocated CLOTs so that they neither start nor end with an overwritten field
-    /// slice. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
+    /// slice. See \ref clot_alloc_adjust "CLOT allocation adjustment" (README.md).
     void adjust_clots(const PhvInfo& phv);
 
  private:
     /// Adjusts a CLOT so that it neither starts nor ends with an overwritten field slice. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
+    /// \ref clot_alloc_adjust "CLOT allocation adjustment" (README.md).
     ///
     /// @return true if the CLOT is non-empty as a result of the adjustment.
     bool adjust(const PhvInfo& phv, Clot* clot);
 
-    /// Removes bits from the start and end of the given @arg clot.
+    /// Removes bits from the start and end of the given @p clot.
     void crop(Clot* clot, unsigned start_bits, unsigned end_bits);
 
     void crop(Clot* clot, unsigned num_bits, bool from_start);
@@ -293,9 +292,9 @@ class ClotInfo {
  public:
     /// Determines whether a field slice in a CLOT will be overwritten by a PHV container or a
     /// checksum calculation when deparsed. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     ///
-    /// @return true when @arg f is a field slice covered by @arg clot and at least part of @arg f
+    /// @return true when @p f is a field slice covered by @p clot and at least part of @p f
     ///         will be overwritten by a PHV container or a checksum calculation when deparsed.
     bool slice_overwritten(const PhvInfo& phvInfo,
                            const Clot* clot,
@@ -303,31 +302,31 @@ class ClotInfo {
 
     /// Determines whether a field slice in a CLOT will be overwritten by a PHV container when
     /// deparsed. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     ///
-    /// @return true when @arg f is a field slice covered by @arg clot and at least part of @arg f
+    /// @return true when @p f is a field slice covered by @p clot and at least part of @p f
     ///         will be overwritten by a PHV container when deparsed.
     bool slice_overwritten_by_phv(const PhvInfo& phvInfo,
                                   const Clot* clot,
                                   const PHV::FieldSlice* f) const;
 
  private:
-    /// Determines which bits in the given field slice @arg f will be overwritten by a PHV
+    /// Determines which bits in the given field slice @p f will be overwritten by a PHV
     /// container or a checksum calculation when deparsed. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     ///
-    /// @return a bit vector with the given @arg Order, indicating those bits in @arg f that
+    /// @return a bit vector with the given @p Order, indicating those bits in @p f that
     ///         will be overwritten.
     template<Endian Order = Endian::Network>
     bitvec bits_overwritten(const PhvInfo& phvInfo,
                             const Clot* clot,
                             const PHV::FieldSlice* f) const;
 
-    /// Determines which bits in the given field slice @arg f will be overwritten by a PHV
+    /// Determines which bits in the given field slice @p f will be overwritten by a PHV
     /// container when deparsed. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
     ///
-    /// @return a bit vector with the given @arg Order, indicating those bits in @arg f that
+    /// @return a bit vector with the given @p Order, indicating those bits in @p f that
     ///         will be overwritten.
     template<Endian Order = Endian::Network>
     bitvec bits_overwritten_by_phv(const PhvInfo& phvInfo,
@@ -335,15 +334,15 @@ class ClotInfo {
                                    const PHV::FieldSlice* f) const;
 
  public:
-    /// Determines whether @arg h is a header that might be added by MAU.
+    /// Determines whether @p h is a header that might be added by MAU.
     bool is_added_by_mau(cstring h) const;
 
-    /// @return the CLOT-allocated slices that overlap with the given @arg slice, mapped to the
+    /// @return the CLOT-allocated slices that overlap with the given @p slice, mapped to the
     /// corresponding CLOTs.
     std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
     slice_clots(const PHV::FieldSlice* slice) const;
 
-    /// @return the CLOT-allocated slices of the given @arg field, mapped to the CLOTs containing
+    /// @return the CLOT-allocated slices of the given @p field, mapped to the CLOTs containing
     /// those slices.
     std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
     slice_clots(const PHV::Field* field) const {
@@ -354,7 +353,7 @@ class ClotInfo {
     /// exists.
     Clot* whole_field_clot(const PHV::Field* field) const;
 
-    /// @return true if the given @arg slice is covered by the given @arg clot.
+    /// @return true if the given @p slice is covered by the given @p clot.
     bool clot_covers_slice(const Clot* clot, const PHV::FieldSlice* slice) const;
 
     std::string print(const PhvInfo* phvInfo = nullptr) const;
@@ -366,10 +365,10 @@ class ClotInfo {
 
     /// Finds the paths with the largest number of CLOTs allocated.
     ///
-    /// @arg memo is a memoization table that maps each visited parser state to the corresponding
+    /// @param memo is a memoization table that maps each visited parser state to the corresponding
     ///     result of the recursive call.
     ///
-    /// @return the maximum number of CLOTs allocated on paths starting at the given @arg state,
+    /// @return the maximum number of CLOTs allocated on paths starting at the given @p state,
     ///     paired with the aggregate set of nodes on those maximal paths.
     //
     // DANGER: This function assumes the parser graph is a DAG.
@@ -409,8 +408,8 @@ class CollectClotInfo : public Inspector {
 
     /// Helper.
     ///
-    /// Does nothing if @arg fields is empty. Otherwise, adds a new pseudoheader with the given
-    /// @arg pov_bits and @arg fields, if one hasn't already been allocated.
+    /// Does nothing if @p fields is empty. Otherwise, adds a new pseudoheader with the given
+    /// @p pov_bits and @p fields, if one hasn't already been allocated.
     void add_pseudoheader(const PovBitSet pov_bits,
                           const std::vector<const PHV::Field*> fields,
                           std::map<std::pair<const PovBitSet,

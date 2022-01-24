@@ -157,7 +157,7 @@ class ParserGraphImpl : public DirectedGraph {
         return false;
     }
 
-    /// Determines whether @arg src and @arg dst are mutually exclusive states on all paths through
+    /// Determines whether @p src and @p dst are mutually exclusive states on all paths through
     /// the parser graph.
     bool is_mutex(const State* a, const State* b) const {
         return a != b &&
@@ -504,8 +504,8 @@ class CollectParserInfoImpl : public PardeInspector {
                      std::map<const State*, const std::set<int>*>> all_shift_amounts_;
 
  public:
-    /// @return all possible shift amounts, in bits, for all paths from the start state to @arg
-    ///   dst. If @arg dst is the start state, then a singleton 0 is returned.
+    /// @return all possible shift amounts, in bits, for all paths from the start state to @p dst .
+    /// If @p dst is the start state, then a singleton 0 is returned.
     //
     // DANGER: This method assumes the parser graph is a DAG.
     const std::set<int>* get_all_shift_amounts(const State* dst) const {
@@ -513,17 +513,17 @@ class CollectParserInfoImpl : public PardeInspector {
     }
 
     /// @return the maximum possible shift amount, in bits, of all paths from the start state to
-    ///    @arg dst.
+    ///    @p dst.
     //
     // DANGER: This method assumes the parser graph is a DAG.
     int get_max_shift_amount(const State* dst) const {
         return *get_all_shift_amounts(dst)->rbegin();
     }
 
-    /// @return all possible shift amounts, in bits, for all paths from @arg src to @arg dst. If
+    /// @return all possible shift amounts, in bits, for all paths from @p src to @p dst. If
     ///   the two states are the same, then a singleton 0 is returned. If the states are mutually
-    ///   exclusive, an empty set is returned. If @arg src is an ancestor of @arg dst, then the
-    ///   shift amounts will be positive; otherwise, if @arg src is a descendant of @arg dst, then
+    ///   exclusive, an empty set is returned. If @p src is an ancestor of @p dst, then the
+    ///   shift amounts will be positive; otherwise, if @p src is a descendant of @p dst, then
     ///   the shift amounts will be negative.
     //
     // DANGER: This method assumes the parser graph is a DAG.

@@ -8,6 +8,50 @@
 #include "bf-p4c/parde/match_register.h"
 #include "bf-p4c/bf-p4c-options.h"
 
+/**
+ * \defgroup parde Parser & deparser
+ * \brief Content related to parser and deparser
+ *
+ * # %Deparser
+ *
+ * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission
+ * via the MAC (all chips).
+ *
+ *
+ * ## Midend passes
+ *
+ * Midend passes related to deparsing:
+ *  - BFN::CheckHeaderAlignment (in BFN::PadFlexibleField) - Ensures that headers are byte aligned.
+ *  - DesugarVarbitExtract - Generates emit statements for variable-length headers.
+ *  - BFN::ParserEnforceDepthReq - Adds emit statements for padding headers to ensure the minimum
+ *                                 parse depth.
+ *  - P4::SimplifyNestedIf - Simplifies nested if statements into simple if statements that the
+ *                           deparser can process.
+ *
+ * ## Backend
+ *
+ * Backend passes related to deparsing:
+ *  - AddDeparserMetadata - Adds deparser metadata parameters.
+ *  - AddJBayMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2/3). Tofino 1
+ *                         uses the valid bit associated with each %PHV; Tofino 2+ use POV bits
+ *                         instead.
+ *  - BFN::AsmOutput - Outputs the deparser assembler. Uses DeparserAsmOutput and the passes it
+ *                     invokes.
+ *  - CollectClotInfo - Collects information for generating CLOTs.
+ *  - DeparserCopyOpt - Optimize copy assigned fields prior to deparsing.
+ *  - BFN::ExtractChecksum - Replaces EmitField with EmitChecksum emits in deparser. (Invoked from
+ *                           BFN::BackendConverter.)
+ *  - BFN::ExtractDeparser - Convert IR::BFN::TnaDeparser objects to IR::BFN::Deparser objects. The pass
+ *                           generates emit and digest objects as part of this process.
+ *  - GreedyClotAllocator - CLOT allocation. Enforces deparser CLOT rules during allocation.
+ *  - InsertParserClotChecksums - Identifies CLOT fields used in deparser checksums to allow the
+ *                                checksum to be calculated in the parser (Tofino 2/3).
+ *  - LowerParser - Replaces high-level parser and deparser %IR that operate on fields with low-level
+ *                  parser and deparser %IR that operate on %PHV containers.
+ *  - ResetInvalidatedChecksumHeaders - Reset fields that are used in deparser checksum operations
+ *                                      and that are invalidated in the MAU (Tofino 1).
+ */
+
 class PardeSpec {
  public:
     /// @return the size in bytes of the ingress intrinsic metadata header
