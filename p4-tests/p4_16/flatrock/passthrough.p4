@@ -22,4 +22,4 @@ control egress(inout headers hdrs, inout metadata meta,
     apply { }
 }
 
-#include "common_t5na_test.h"
+#include "common_t5na_test.p4h"
