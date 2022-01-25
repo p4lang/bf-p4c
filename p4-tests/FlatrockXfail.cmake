@@ -14,6 +14,21 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "package Pipeline"
+  "Invalid match key half"
   extensions/p4_tests/p4_16/flatrock/tf5_template.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "hdrs.data.b1 misaligned on input_xbar"
+  extensions/p4_tests/p4_16/flatrock/direct1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/flatrock/exact1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/flatrock/passthrough.p4
   )
