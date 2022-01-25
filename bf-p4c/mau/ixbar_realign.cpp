@@ -36,10 +36,12 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
             bool single_byte = true;
             PHV::FieldUse use(PHV::FieldUse::READ);
             auto slicesToProcess =
-                field->get_combined_alloc_bytes(PHV::AllocContext::of_unit(currentTable), &use);
+                field->get_combined_alloc_bytes(PHV::AllocContext::of_unit(currentTable), &use,
+                                                false);
             //  early check to make debugging incorrect PHV live range easier.
-            BUG_CHECK(!slicesToProcess.empty(), "cannot find allocation of %1%, read in %2% ",
-                      field, currentTable->externalName());
+            BUG_CHECK(!slicesToProcess.empty(),
+                      "cannot find allocation of %1%, read in %2% (%3%)",
+                      field, currentTable->name, currentTable->externalName());
             for (const auto &alloc : slicesToProcess) {
                 if (fi.lo < alloc.field_slice().lo || fi.hi > alloc.field_slice().hi) continue;
                 size_t potential_mod4_offset = alloc.container_slice().lo / 8;

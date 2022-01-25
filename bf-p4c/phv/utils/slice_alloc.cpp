@@ -7,9 +7,9 @@
 
 namespace PHV {
 
-PHV::AllocSlice::AllocSlice(
-        const PHV::Field* f,
-        PHV::Container c,
+AllocSlice::AllocSlice(
+        const Field* f,
+        Container c,
         int field_bit_lo,
         int container_bit_lo,
         int width)
@@ -24,13 +24,13 @@ PHV::AllocSlice::AllocSlice(
     BUG_CHECK(field_range.contains(slice_range),
               "Trying to slice field %1% at [%2%:%3%] but it's only %4% bits wide",
               cstring::to_cstring(f), slice_range.lo, slice_range.hi, f->size);
-    min_stage_i = std::make_pair(-1, PHV::FieldUse(PHV::FieldUse::READ));
-    max_stage_i = std::make_pair(PhvInfo::getDeparserStage(), PHV::FieldUse(PHV::FieldUse::WRITE));
+    min_stage_i = std::make_pair(-1, FieldUse(FieldUse::READ));
+    max_stage_i = std::make_pair(PhvInfo::getDeparserStage(), FieldUse(FieldUse::WRITE));
 }
 
-PHV::AllocSlice::AllocSlice(
-        const PHV::Field* f,
-        PHV::Container c,
+AllocSlice::AllocSlice(
+        const Field* f,
+        Container c,
         int field_bit_lo,
         int container_bit_lo,
         int width,
@@ -39,9 +39,9 @@ PHV::AllocSlice::AllocSlice(
     init_points_i = action;
 }
 
-PHV::AllocSlice::AllocSlice(
-        const PHV::Field* f,
-        PHV::Container c,
+AllocSlice::AllocSlice(
+        const Field* f,
+        Container c,
         le_bitrange field_slice,
         le_bitrange container_slice)
 : AllocSlice(f, c, field_slice.lo, container_slice.lo, field_slice.size()) {
@@ -52,11 +52,11 @@ PHV::AllocSlice::AllocSlice(
               cstring::to_cstring(container_slice));
 }
 
-PHV::AllocSlice::AllocSlice(const AllocSlice& other) {
+AllocSlice::AllocSlice(const AllocSlice& other) {
     *this = other;
 }
 
-PHV::AllocSlice& PHV::AllocSlice::operator=(const AllocSlice& other) {
+AllocSlice& AllocSlice::operator=(const AllocSlice& other) {
     field_i = other.field();
     container_i = other.container();
     field_bit_lo_i = other.field_slice().lo;
@@ -69,14 +69,15 @@ PHV::AllocSlice& PHV::AllocSlice::operator=(const AllocSlice& other) {
     physical_deparser_stage_i = other.physical_deparser_stage_i;
     init_i = other.init_i;
     this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
+    this->addRefs(other.getRefs(), true);
     return *this;
 }
 
-void PHV::AllocSlice::setInitPrimitive(DarkInitPrimitive* prim) {
+void AllocSlice::setInitPrimitive(DarkInitPrimitive* prim) {
     init_i = *prim;
 }
 
-bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
+bool AllocSlice::operator==(const AllocSlice& other) const {
     return field_i                   == other.field_i
         && container_i               == other.container_i
         && field_bit_lo_i            == other.field_bit_lo_i
@@ -88,11 +89,19 @@ bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
         && physical_deparser_stage_i == other.physical_deparser_stage_i;
 }
 
-bool PHV::AllocSlice::operator!=(const PHV::AllocSlice& other) const {
+bool AllocSlice::same_alloc_fieldslice(const AllocSlice& other) const {
+    return field_i             == other.field_i
+        && container_i         == other.container_i
+        && field_bit_lo_i      == other.field_bit_lo_i
+        && container_bit_lo_i  == other.container_bit_lo_i
+        && width_i             == other.width_i;
+}
+
+bool AllocSlice::operator!=(const AllocSlice& other) const {
     return !this->operator==(other);
 }
 
-bool PHV::AllocSlice::operator<(const PHV::AllocSlice& other) const {
+bool AllocSlice::operator<(const AllocSlice& other) const {
     if (field_i->id != other.field_i->id)
         return field_i->id < other.field_i->id;
     if (container_i != other.container_i)
@@ -118,7 +127,7 @@ bool PHV::AllocSlice::operator<(const PHV::AllocSlice& other) const {
     return false;
 }
 
-boost::optional<PHV::AllocSlice> PHV::AllocSlice::sub_alloc_by_field(int start, int len) const {
+boost::optional<AllocSlice> AllocSlice::sub_alloc_by_field(int start, int len) const {
     BUG_CHECK(start >= 0 && len > 0,
               "sub_alloc slice with invalid start or len arguments: [%1%:%2%]", start, len);
 
@@ -128,14 +137,14 @@ boost::optional<PHV::AllocSlice> PHV::AllocSlice::sub_alloc_by_field(int start, 
     if (overlap.empty() || overlap.size() != len)
         return boost::none;
 
-    PHV::AllocSlice clone = *this;
+    AllocSlice clone = *this;
     clone.container_bit_lo_i += (start - field_bit_lo_i);
     clone.field_bit_lo_i = start;
     clone.width_i = len;
     return clone;
 }
 
-bool PHV::AllocSlice::isLiveAt(int stage, const PHV::FieldUse& use) const {
+bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
     if (is_physical_stage_based_i) {
         // physical live range, all AllocSlice live range starts with read or write
         // and must end with read. Also, no AllocSlice will have overlapped live range.
@@ -160,25 +169,26 @@ bool PHV::AllocSlice::isLiveAt(int stage, const PHV::FieldUse& use) const {
     }
 }
 
-bool PHV::AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
+bool AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
     return LiveRange(min_stage_i, max_stage_i)
         .is_disjoint(LiveRange(other.min_stage_i, other.max_stage_i));
 }
 
-bool PHV::AllocSlice::hasInitPrimitive() const {
+bool AllocSlice::hasInitPrimitive() const {
     if (init_i.isEmpty()) return false;
     return true;
 }
 
-bool PHV::AllocSlice::isUsedParser() const {
+bool AllocSlice::isUsedParser() const {
     return min_stage_i.first == parser_stage_idx();
 }
 
-bool PHV::AllocSlice::isUsedDeparser() const {
+bool AllocSlice::isUsedDeparser() const {
     return max_stage_i.first == deparser_stage_idx();
 }
 
-bool PHV::AllocSlice::isReferenced(const PHV::AllocContext* ctxt, const PHV::FieldUse* use) const {
+bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
+                              bool useRefs) const {
     if (ctxt == nullptr) return true;
 
     // TODO(yumin): it should be safe to remove this guard. Still keeping it here
@@ -201,7 +211,27 @@ bool PHV::AllocSlice::isReferenced(const PHV::AllocContext* ctxt, const PHV::Fie
 
         case AllocContext::Type::TABLE: {
             std::set<int> stages;
-            if (is_physical_stage_based_i) {
+            if (useRefs) {
+                cstring tblName(ctxt->table->name);
+                cstring gwName(ctxt->table->gateway_name);
+                LOG1("  tblName: " << tblName << "  gwName: " << gwName);
+                for (auto refEntry : refs) LOG1("    " << refEntry.first << "  gw(" <<
+                                                refEntry.second << ")");
+                bool ref_match = false;
+                if (refs.count(tblName)) {
+                    if (use)
+                        ref_match = !bool(refs.at(tblName) & *use);
+                    else
+                        ref_match = true;
+                }
+                if (!ref_match && gwName.size() && refs.count(gwName)) {
+                    if (use && use->isRead())
+                        ref_match = !bool(refs.at(gwName) & *use);
+                    else
+                        ref_match = true;
+                }
+                return ref_match;
+            } else if (is_physical_stage_based_i) {
                 stages = PhvInfo::physicalStages(ctxt->table);
             } else {
                 stages = PhvInfo::minStages(ctxt->table);
@@ -226,25 +256,50 @@ bool PHV::AllocSlice::isReferenced(const PHV::AllocContext* ctxt, const PHV::Fie
 
     return false;
 }
-int PHV::AllocSlice::parser_stage_idx() const {
+int AllocSlice::parser_stage_idx() const {
     return -1;
 }
 
-int PHV::AllocSlice::deparser_stage_idx() const {
+int AllocSlice::deparser_stage_idx() const {
     return (is_physical_stage_based_i || physical_deparser_stage_i) ? Device::numStages()
         : PhvInfo::getDeparserStage();
+}
+
+// Add table access if it hasn't been already added
+bool AllocSlice::addRef(cstring u_name, FieldUse f_use) const {
+    if (refs.count(u_name)) {
+        if (refs[u_name] != f_use) {
+            refs[u_name] |= f_use;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        refs[u_name] = f_use;
+        return true;
+    }
+}
+
+// Set/Update Latest liveness of Source slice of dark primitive
+bool DarkInitPrimitive::setSourceLatestLiveness(StageAndAccess max) {
+    if (sourceSlice) {
+        sourceSlice->setLatestLiveness(max);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 DarkInitPrimitive::DarkInitPrimitive(ActionSet initPoints)
     : assignZeroToDestination(true), nop(false),
     alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) {}
 
-DarkInitPrimitive::DarkInitPrimitive(PHV::AllocSlice& src)
-     : assignZeroToDestination(false), nop(false), sourceSlice(new PHV::AllocSlice(src)),
+DarkInitPrimitive::DarkInitPrimitive(AllocSlice& src)
+     : assignZeroToDestination(false), nop(false), sourceSlice(new AllocSlice(src)),
      alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
 
-DarkInitPrimitive::DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
-     : assignZeroToDestination(false), nop(false), sourceSlice(new PHV::AllocSlice(src)),
+DarkInitPrimitive::DarkInitPrimitive(AllocSlice& src, ActionSet initPoints)
+     : assignZeroToDestination(false), nop(false), sourceSlice(new AllocSlice(src)),
      alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
 
 DarkInitPrimitive::DarkInitPrimitive(const DarkInitPrimitive& other)
@@ -259,16 +314,16 @@ DarkInitPrimitive::DarkInitPrimitive(const DarkInitPrimitive& other)
      postPrims(other.postPrims)
 {
      if (other.getSourceSlice()) {
-        sourceSlice.reset(new PHV::AllocSlice(*other.getSourceSlice()));
+        sourceSlice.reset(new AllocSlice(*other.getSourceSlice()));
      }
 }
 
 void DarkInitPrimitive::addSource(const AllocSlice& sl) {
     assignZeroToDestination = false;
-    sourceSlice.reset(new PHV::AllocSlice(sl));
+    sourceSlice.reset(new AllocSlice(sl));
 }
 
-bool DarkInitPrimitive::operator==(const PHV::DarkInitPrimitive& other) const {
+bool DarkInitPrimitive::operator==(const DarkInitPrimitive& other) const {
     bool zero2dest = (assignZeroToDestination == other.assignZeroToDestination);
     bool isNop = (nop == other.nop);
     bool srcSlc = false;
@@ -307,31 +362,37 @@ DarkInitPrimitive& DarkInitPrimitive::operator=(const DarkInitPrimitive& other) 
     return *this;
 }
 
-std::string PHV::AllocSlice::toString() const {
+std::string AllocSlice::toString() const {
     std::stringstream ss;
     ss << this;
     return ss.str();
 }
 
-std::ostream& operator<<(std::ostream& out, const PHV::AllocSlice& slice) {
+std::ostream& operator<<(std::ostream& out, const AllocSlice& slice) {
     out << slice.container() << " " << slice.container_slice() << " <-- "
-        << PHV::FieldSlice(slice.field(), slice.field_slice());
+        << FieldSlice(slice.field(), slice.field_slice());
     out << " live at " << (slice.isPhysicalStageBased() ? "P" : "") << "[";
     out << slice.getEarliestLiveness() << ", " << slice.getLatestLiveness() << "]";
     if (!slice.getInitPrimitive().isEmpty()) {
         if (slice.getInitPrimitive().isNOP())
             out << " { NOP }";
         else if (slice.getInitPrimitive().mustInitInLastMAUStage())
-            out << " { always_run; " << slice.getInitPrimitive().getInitPoints().size()
+            out << " { last stage ara; " << slice.getInitPrimitive().getInitPoints().size()
                 << " actions }";
         else if (slice.getInitPrimitive().getInitPoints().size() > 0)
-            out << " { " << slice.getInitPrimitive().getInitPoints().size() << " actions }";
+            out << " { " << slice.getInitPrimitive().getInitPoints().size() << " dark actions }";
     }
+
+    auto units = slice.getRefs();
+    out << units.size() << " units {";
+    for (auto u_entry : units)
+        out << u_entry.first << " (" << u_entry.second << "); ";
+    out << "}";
 
     return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const PHV::AllocSlice* slice) {
+std::ostream& operator<<(std::ostream& out, const AllocSlice* slice) {
     if (slice)
         out << *slice;
     else
@@ -340,19 +401,19 @@ std::ostream& operator<<(std::ostream& out, const PHV::AllocSlice* slice) {
 }
 
 std::ostream &operator<<(std::ostream &out,
-                         const std::vector<PHV::AllocSlice> &sl_vec) {
+                         const std::vector<AllocSlice> &sl_vec) {
     for (auto &sl : sl_vec) out << sl << "\n";
     return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const PHV::DarkInitEntry& entry) {
+std::ostream& operator<<(std::ostream& out, const DarkInitEntry& entry) {
     out << "\t\t" << entry.getDestinationSlice();
-    const PHV::DarkInitPrimitive& prim = entry.getInitPrimitive();
+    const DarkInitPrimitive& prim = entry.getInitPrimitive();
     out << prim;
     return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const PHV::DarkInitPrimitive& prim) {
+std::ostream& operator<<(std::ostream& out, const DarkInitPrimitive& prim) {
     if (prim.isNOP()) {
         out << " NOP";
         return out;

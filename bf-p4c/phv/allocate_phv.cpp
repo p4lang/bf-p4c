@@ -3298,6 +3298,74 @@ void PHV::AllocUtils::bind_slices(const PHV::ConcreteAllocation& alloc, PhvInfo&
     }
 }
 
+bool PHV::AllocUtils::update_refs(PHV::AllocSlice& slc, const PhvInfo& p,
+                                  const FieldDefUse::LocPairSet& refs,
+                                  PHV::FieldUse fuse) {
+    bool updated = false;
+    LOG_DEBUG5(" Updating table " << (fuse.isWrite() ? "defs" : "uses") <<
+               " for " << slc);
+
+    for (auto ref : refs) {
+        if (ref.first->is<IR::BFN::Parser>() || ref.first->is<IR::BFN::ParserState>() ||
+            ref.first->is<IR::BFN::GhostParser>()) {
+            LOG_DEBUG5("  Parser ref : not recording");
+            continue;
+        } else if (ref.first->is<IR::BFN::Deparser>()) {
+            LOG_DEBUG5("  Deparser ref : not recorded");
+        } else if (ref.first->is<IR::MAU::Table>()) {
+            auto* tbl = ref.first->to<IR::MAU::Table>();
+            le_bitrange bits;
+            p.field(ref.second, &bits);
+            if (bits.overlaps(slc.field_slice())) {
+                updated |= slc.addRef(tbl->name, fuse);
+            }
+        } else {
+            BUG("Found a reference %s in unit %s that is not the parser, deparser, or table",
+                ref.second->toString(), ref.first->toString());
+        }
+    }
+
+    return updated;
+}
+
+void PHV::AllocUtils::update_slice_refs(PhvInfo& phv, const FieldDefUse& defuse) {
+    for (auto& f : phv) {
+        // Find which field slices have multiple AllocSlices (i.e. are
+        // dark overlaid and thus have updated refs)
+        // *NOTE*: We don't want to update those because update_refs
+        //         uses field-granularity defs/uses rather than field-slice granularity.
+        std::map<le_bitrange, int> num_slices_per_range;
+        for (auto slc : f.get_alloc()) {
+            if (!num_slices_per_range.count(slc.field_slice())) {
+                num_slices_per_range[slc.field_slice()] = 1;
+            } else {
+                num_slices_per_range[slc.field_slice()]++;
+            }
+        }
+
+        for (auto &slc : f.get_alloc()) {
+            if (!slc.getRefs().size()) {
+                LOG_DEBUG5("  0-ref slice: " << slc);
+            }
+
+            // Do not update AllocSlices that have common bitranges
+            // (dark overlaid slices)
+            if (num_slices_per_range[slc.field_slice()] > 1) {
+                LOG_DEBUG5("\t ... not updating refs for slice " << slc);
+                continue;
+            }
+
+            bool updated = PHV::AllocUtils::update_refs(slc, phv,
+                                                        defuse.getAllDefs(slc.field()->id),
+                                                        PHV::FieldUse(PHV::FieldUse::WRITE));
+
+            updated |= PHV::AllocUtils::update_refs(slc, phv, defuse.getAllUses(slc.field()->id),
+                                                    PHV::FieldUse(PHV::FieldUse::READ));
+            LOG_DEBUG5("  Slice " << slc << " got its refs updated : " << updated);
+        }
+    }
+}
+
 void merge_slices(
     safe_vector<PHV::AllocSlice> &slices, safe_vector<PHV::AllocSlice> &merged_alloc) {
     boost::optional<PHV::AllocSlice> last = boost::none;
@@ -3330,6 +3398,15 @@ void merge_slices(
             new_slice.setIsPhysicalStageBased(slice.isPhysicalStageBased());
             if (last->hasMetaInit() || slice.hasMetaInit()) new_slice.setMetaInit();
             new_slice.setInitPrimitive(&slice.getInitPrimitive());
+
+            new_slice.addRefs(slice.getRefs());
+            for (auto unitAcc : last->getRefs()) {
+                bool newUnit = new_slice.addRef(unitAcc.first, unitAcc.second);
+                if (newUnit)
+                    LOG_DEBUG4("\t\tMerged slices:\n\t\t\t" << *last << "  and\n\t\t\t" <<
+                               slice << "\n\t\t do not have the same units");
+            }
+
             BUG_CHECK(new_slice.field_slice().contains(last->field_slice()),
                         "Merged alloc slice %1% does not contain hi slice %2%",
                         cstring::to_cstring(new_slice), cstring::to_cstring(*last));
@@ -3594,6 +3671,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     bool allocationDone = (result.status == AllocResultCode::SUCCESS);
     if (allocationDone) {
         PHV::AllocUtils::bind_slices(alloc, phv_i);
+        PHV::AllocUtils::update_slice_refs(phv_i, utils_i.defuse);
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
         phv_i.set_done(false);
     } else {

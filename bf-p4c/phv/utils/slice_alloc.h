@@ -28,8 +28,8 @@ class DarkInitPrimitive {
      ActionSet actions;
      ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
      ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
-     std::vector<PHV::DarkInitEntry*> priorPrims;  // Hold prior ARA prims
-     std::vector<PHV::DarkInitEntry*> postPrims;  // Hold post ARA prims
+     std::vector<DarkInitEntry*> priorPrims;  // Hold prior ARA prims
+     std::vector<DarkInitEntry*> postPrims;  // Hold post ARA prims
 
  public:
      DarkInitPrimitive(void)
@@ -37,12 +37,12 @@ class DarkInitPrimitive {
          alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
 
     explicit DarkInitPrimitive(ActionSet initPoints);
-    explicit DarkInitPrimitive(PHV::AllocSlice& src);
-    explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints);
+    explicit DarkInitPrimitive(AllocSlice& src);
+    explicit DarkInitPrimitive(AllocSlice& src, ActionSet initPoints);
     explicit DarkInitPrimitive(const DarkInitPrimitive& other);
     DarkInitPrimitive& operator=(const DarkInitPrimitive& other);
 
-    bool operator==(const PHV::DarkInitPrimitive& other) const;
+    bool operator==(const DarkInitPrimitive& other) const;
 
      bool isEmpty() const {
          if (!nop && !sourceSlice && !assignZeroToDestination)
@@ -71,13 +71,13 @@ class DarkInitPrimitive {
          postUnits.insert(units.begin(), units.end());
      }
 
-     void addPriorPrims(PHV::DarkInitEntry* prims, bool append = true) {
+     void addPriorPrims(DarkInitEntry* prims, bool append = true) {
          if (!append) {
              priorPrims.clear();
          }
          priorPrims.push_back(prims);
      }
-     void addPostPrims(PHV::DarkInitEntry* prims, bool append = true) {
+     void addPostPrims(DarkInitEntry* prims, bool append = true) {
          if (!append) {
              postPrims.clear();
          }
@@ -93,22 +93,24 @@ class DarkInitPrimitive {
      AllocSlice* getSourceSlice() const {
          return sourceSlice.get();
      }
+     bool setSourceLatestLiveness(StageAndAccess max);
      const ActionSet& getInitPoints() const { return actions; }
      const ordered_set<const IR::BFN::Unit*>& getARApriorUnits() const { return priorUnits; }
      const ordered_set<const IR::BFN::Unit*>& getARApostUnits() const { return postUnits; }
-     const std::vector<PHV::DarkInitEntry*> getARApriorPrims() const { return priorPrims; }
-     const std::vector<PHV::DarkInitEntry*> getARApostPrims() const { return postPrims; }
+     const std::vector<DarkInitEntry*> getARApriorPrims() const { return priorPrims; }
+     const std::vector<DarkInitEntry*> getARApostPrims() const { return postPrims; }
 };
 
 class AllocSlice {
-    const PHV::Field* field_i;
-    PHV::Container container_i;
+    const Field* field_i;
+    Container container_i;
     int field_bit_lo_i;
     int container_bit_lo_i;
     int width_i;
     ActionSet init_points_i;
-    PHV::StageAndAccess min_stage_i;
-    PHV::StageAndAccess max_stage_i;
+    StageAndAccess min_stage_i;
+    StageAndAccess max_stage_i;
+    mutable ordered_map<cstring, FieldUse> refs;
     DarkInitPrimitive init_i;
 
     // true if the alloc is copied from an alias destination alloc that requires an always run
@@ -125,11 +127,11 @@ class AllocSlice {
     bool physical_deparser_stage_i = false;
 
  public:
-    AllocSlice(const PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo,
+    AllocSlice(const Field* f, Container c, int f_bit_lo, int container_bit_lo,
                int width);
-    AllocSlice(const PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo, int width,
+    AllocSlice(const Field* f, Container c, int f_bit_lo, int container_bit_lo, int width,
                ActionSet action);
-    AllocSlice(const PHV::Field* f, PHV::Container c, le_bitrange f_slice,
+    AllocSlice(const Field* f, Container c, le_bitrange f_slice,
                le_bitrange container_slice);
 
     AllocSlice(const AllocSlice& a);
@@ -140,6 +142,7 @@ class AllocSlice {
     bool operator==(const AllocSlice& other) const;
     bool operator!=(const AllocSlice& other) const;
     bool operator<(const AllocSlice& other) const;
+    bool same_alloc_fieldslice(const AllocSlice& other) const;
 
     // returns a cloned AllocSlice split by field[start:start+ len - 1].
     // by_field indicates that @p start and @p len are applied on field.
@@ -149,20 +152,20 @@ class AllocSlice {
     // alloc_slice: container[8:13] <= f1[3:8]
     boost::optional<AllocSlice> sub_alloc_by_field(int start, int len) const;
 
-    const PHV::Field* field() const         { return field_i; }
-    PHV::Container container() const        { return container_i; }
+    const Field* field() const              { return field_i; }
+    Container container() const             { return container_i; }
     le_bitrange field_slice() const         { return StartLen(field_bit_lo_i, width_i); }
     le_bitrange container_slice() const     { return StartLen(container_bit_lo_i, width_i); }
     int width() const                       { return width_i; }
     const DarkInitPrimitive& getInitPrimitive() const { return init_i; }
     DarkInitPrimitive& getInitPrimitive() { return init_i; }
-    const PHV::StageAndAccess& getEarliestLiveness() const { return min_stage_i; }
-    const PHV::StageAndAccess& getLatestLiveness() const { return max_stage_i; }
+    const StageAndAccess& getEarliestLiveness() const { return min_stage_i; }
+    const StageAndAccess& getLatestLiveness() const { return max_stage_i; }
 
     bool hasInitPrimitive() const;
 
     // @returns true is this alloc slice is live at @p stage for @p use.
-    bool isLiveAt(int stage, const PHV::FieldUse& use) const;
+    bool isLiveAt(int stage, const FieldUse& use) const;
 
     // @returns true if @p other and this AllocSlice have disjoint live ranges.
     bool isLiveRangeDisjoint(const AllocSlice& other) const;
@@ -206,6 +209,16 @@ class AllocSlice {
     void setInitPoints(const ActionSet init_points) { init_points_i = init_points; }
     void setShadowAlwaysRun(bool val) { shadow_always_run_i = val; }
     bool getShadowAlwaysRun() const { return shadow_always_run_i; }
+    const ordered_map<cstring, FieldUse>& getRefs() const { return refs; }
+    void clearRefs() { refs.clear(); }
+    void addRefs(ordered_map<cstring, FieldUse> sl_refs, bool clear_refs = false) {
+        if (clear_refs)
+            refs.clear();
+        for (auto ref_entry : sl_refs)
+            addRef(ref_entry.first, ref_entry.second);
+    }
+
+    bool addRef(cstring, FieldUse f_use) const;
 
     bool isUsedDeparser() const;
     bool isUsedParser() const;
@@ -217,7 +230,8 @@ class AllocSlice {
     void setPhysicalDeparserStage(bool v) { physical_deparser_stage_i = v; }
 
     // @returns true if this alloc slice is referenced within @p ctxt for @p use.
-    bool isReferenced(const PHV::AllocContext* ctxt, const PHV::FieldUse* use) const;
+    bool isReferenced(const AllocContext* ctxt, const FieldUse* use,
+                      bool useRefs = false) const;
     std::string toString() const;
 
  private:
@@ -240,7 +254,7 @@ class DarkInitEntry {
          : destinationSlice(dest), initInfo(src) { }
      explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src, ActionSet init)
          : destinationSlice(dest), initInfo(src, init) { }
-     explicit DarkInitEntry(AllocSlice dest, DarkInitPrimitive &src)
+     explicit DarkInitEntry(const AllocSlice& dest, const DarkInitPrimitive &src)
          : destinationSlice(dest), initInfo(src) { }
 
      void addSource(AllocSlice sl) { initInfo.addSource(sl); }
@@ -259,10 +273,10 @@ class DarkInitEntry {
          initInfo.addPostUnits(units, append);
      }
 
-     void addPriorPrims(PHV::DarkInitEntry* prims, bool append = true) {
+     void addPriorPrims(DarkInitEntry* prims, bool append = true) {
          initInfo.addPriorPrims(prims, append);
      }
-     void addPostPrims(PHV::DarkInitEntry* prims, bool append = true) {
+     void addPostPrims(DarkInitEntry* prims, bool append = true) {
          initInfo.addPostPrims(prims, append);
      }
 
@@ -271,14 +285,22 @@ class DarkInitEntry {
     AllocSlice getDestinationSlice() { return destinationSlice; }
     const DarkInitPrimitive& getInitPrimitive() const { return initInfo; }
     DarkInitPrimitive& getInitPrimitive() { return initInfo; }
-     void setDestinationLatestLiveness(const PHV::StageAndAccess& max) {
-         destinationSlice.setLatestLiveness(max);
-     }
-     void setDestinationEarliestLiveness(const PHV::StageAndAccess& min) {
-         destinationSlice.setEarliestLiveness(min);
-     }
+    void setDestinationLatestLiveness(const StageAndAccess& max) {
+        destinationSlice.setLatestLiveness(max);
+    }
+    void setDestinationEarliestLiveness(const StageAndAccess& min) {
+        destinationSlice.setEarliestLiveness(min);
+    }
 
-    bool operator<(const PHV::DarkInitEntry& other) const {
+    void addRefs(ordered_map<cstring, FieldUse> sl_refs, bool clear_refs = false) {
+        destinationSlice.addRefs(sl_refs, clear_refs);
+    }
+
+    void addDestinationUnit(cstring tName, FieldUse tRef) {
+        destinationSlice.addRef(tName, tRef);
+    }
+
+    bool operator<(const DarkInitEntry& other) const {
         if (destinationSlice != other.getDestinationSlice())
             return destinationSlice < other.getDestinationSlice();
         if (getSourceSlice() && other.getSourceSlice() &&
@@ -289,7 +311,7 @@ class DarkInitEntry {
         return false;
     }
 
-    bool operator==(const PHV::DarkInitEntry& other) const {
+    bool operator==(const DarkInitEntry& other) const {
         LOG4("DarkInitEntry == : " << &destinationSlice << " <-> ");
 
         return
@@ -297,14 +319,14 @@ class DarkInitEntry {
             (initInfo == other.getInitPrimitive());
     }
 
-    bool operator!=(const PHV::DarkInitEntry& other) const {
+    bool operator!=(const DarkInitEntry& other) const {
         return !this->operator==(other);
     }
 };
 
 std::ostream &operator<<(std::ostream &out, const AllocSlice&);
 std::ostream &operator<<(std::ostream &out, const AllocSlice*);
-std::ostream &operator<<(std::ostream &out, const std::vector<PHV::AllocSlice>&);
+std::ostream &operator<<(std::ostream &out, const std::vector<AllocSlice>&);
 std::ostream &operator<<(std::ostream &out, const DarkInitEntry&);
 std::ostream &operator<<(std::ostream &out, const DarkInitPrimitive&);
 

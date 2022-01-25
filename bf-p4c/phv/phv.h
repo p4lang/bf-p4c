@@ -252,7 +252,7 @@ class FieldUse {
     bool operator >=(FieldUse u) const { return use_ >= u.use_; }
     explicit operator bool() const { return use_ == 0; }
 
-    FieldUse operator|(const FieldUse& u) {
+    FieldUse operator|(const FieldUse& u) const {
         FieldUse ru;
         ru.use_ = use_ | u.use_;
         return ru;
@@ -261,6 +261,12 @@ class FieldUse {
     FieldUse& operator|=(const FieldUse& u) {
         use_ |= u.use_;
         return *this;
+    }
+
+    FieldUse operator&(const FieldUse& u) const {
+        FieldUse ru;
+        ru.use_ = use_ & u.use_;
+        return ru;
     }
 
     cstring toString(unsigned dark = 0) const;

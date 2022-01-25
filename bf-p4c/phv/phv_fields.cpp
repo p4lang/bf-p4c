@@ -776,15 +776,15 @@ const PHV::AllocSlice &PHV::Field::for_bit(int bit) const {
 
 const std::vector<PHV::AllocSlice> PHV::Field::get_combined_alloc_bytes(
         const PHV::AllocContext* ctxt,
-        const PHV::FieldUse* use) const {
+        const PHV::FieldUse* use,
+        bool useTblRefs) const {
     std::vector<PHV::AllocSlice> slicesToProcess;
     // Map of container to byte within the container to the set of alloc slices in that container
     // byte.
     ordered_map<PHV::Container, ordered_map<int, std::vector<PHV::AllocSlice>>> containerBytesMap;
     foreach_byte(ctxt, use, [&](const PHV::AllocSlice& alloc) {
         int byte = alloc.container_slice().lo / 8;
-        containerBytesMap[alloc.container()][byte].push_back(alloc);
-    });
+        containerBytesMap[alloc.container()][byte].push_back(alloc); }, useTblRefs);
     for (auto container_and_byte : containerBytesMap) {
         LOG3("  Container: " << container_and_byte.first);
         for (auto byte_and_slices : container_and_byte.second) {
@@ -872,7 +872,8 @@ void PHV::Field::foreach_byte(
         le_bitrange range,
         const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use,
-        std::function<void(const PHV::AllocSlice &)> fn) const {
+        std::function<void(const PHV::AllocSlice &)> fn,
+        bool useTblRefs) const {
     // Iterate in reverse order, because alloc_i slices are ordered from field
     // MSB to LSB, but foreach_byte iterates from LSB to MSB.
     for (const auto& slice : boost::adaptors::reverse(alloc_slice_i)) {
@@ -894,7 +895,7 @@ void PHV::Field::foreach_byte(
             continue;
 
         // ignore other stage alloc slices
-        if (!slice.isReferenced(ctxt, use)) {
+        if (!slice.isReferenced(ctxt, use, useTblRefs)) {
             continue;
         }
 

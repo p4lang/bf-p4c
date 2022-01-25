@@ -112,7 +112,7 @@ class ComputeDarkInitialization : public Inspector {
     // Create new MOVE instruction and place it into new Action which
     // is added into new AlwaysRunAction Table. Use prior and post
     // Tables from @alloc_sl to set the minStage for the new AlwaysRunAction Table
-    void createAlwaysRunTable(PHV::AllocSlice alloc_sl);
+    void createAlwaysRunTable(const PHV::AllocSlice& alloc_sl);
 
     cstring getKey(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const {
         return (tbl->name + "." + act->name);

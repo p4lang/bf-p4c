@@ -96,8 +96,9 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     ss << "\t Written by tables:" << std::endl;
     for (auto& kv : writeTables) {
         ss << "\t  " << kv.first << " : ";
-        for (auto& kv1 : kv.second)
+        for (auto& kv1 : kv.second) {
             ss << kv1.first->name << " ";
+        }
         ss << std::endl;
     }
     ss << "\t Read by tables:" << std::endl;
@@ -202,6 +203,25 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                     if (!foundFieldBits) continue;
                     int physStage = kv.first->stage();
                     LOG3("\t\t  Read table: " << kv.first->name << ", Phys stage: " << physStage);
+                    bool foundTblRef = false;
+                    for (auto refEntry : alloc.getRefs()) {
+                        if (refEntry.first == kv.first->name) {
+                            foundTblRef = true;
+                            break;
+                        }
+                        if (!kv.first->gateway_name.isNullOrEmpty() &&
+                            (kv.first->name != kv.first->gateway_name.c_str())) {
+                            if (refEntry.first == kv.first->gateway_name.c_str()) {
+                                foundTblRef = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!foundTblRef) {
+                        LOG3("  Not updating physical min/max stages");
+                        continue;
+                    }
                     if (minPhysicalRead == NOTSET && maxPhysicalRead == NOTSET) {
                         // Initial value not set.
                         minPhysicalRead = physStage;

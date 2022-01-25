@@ -258,7 +258,7 @@ bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
     return share_both_containers;
 }
 
-void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
+void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& alloc_sl) {
     std::set<UniqueId> prior_tables;
     std::set<UniqueId> post_tables;
     bool use_existing_ara = false;
@@ -412,6 +412,25 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     act->action.push_back(prim);
     ara_tbl->actions[act_name] = act;
     bool no_existing_cnstrs = phv.add_table_constraints(ara_gress, ara_tbl, constraints);
+
+    // Update units of relevant dest and (optionally) source AllocSlices
+    LOG5("\t  F. Add unit " << ara_tbl->name.c_str() << " to slice " << alloc_sl);
+    alloc_sl.addRef(ara_tbl->name, PHV::FieldUse(PHV::FieldUse::WRITE));
+    auto src_sl = alloc_sl.getInitPrimitive().getSourceSlice();
+    if (src_sl) {
+        auto *fld = phv.field(alloc_sl.field()->id);
+        for (auto& fsl : fld->get_alloc()) {
+            LOG5("  src_sl = " << *src_sl);
+            LOG5("  fsl    = " << fsl);
+
+            if (fsl.same_alloc_fieldslice(*src_sl) &&
+                alloc_sl.getEarliestLiveness().first == fsl.getLatestLiveness().first) {
+                LOG5("\t  G. Add unit " << ara_tbl->name.c_str() << " to slice " << fsl);
+                fsl.addRef(ara_tbl->name, PHV::FieldUse(PHV::FieldUse::READ));
+                break;
+            }
+        }
+    }
 
     // 3. Insert ARA table and constraints into alwaysRunTables
     // ---

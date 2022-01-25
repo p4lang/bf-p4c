@@ -536,17 +536,21 @@ class Field : public LiftLess<Field> {
      *  C8 [3:0]    <— f [14:11]
      */
     void foreach_byte(le_bitrange r, const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
-            std::function<void(const PHV::AllocSlice&)> fn) const;
+            std::function<void(const PHV::AllocSlice&)> fn,
+            bool useTblRefs = false) const;
     void foreach_byte(le_bitrange r, const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
-            std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn); }
+            std::function<void(const PHV::AllocSlice&)> fn,
+            bool useTblRefs = false) const {
+        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
 
     void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
-            std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(StartLen(0, this->size), ctxt, use, fn); }
+            std::function<void(const PHV::AllocSlice&)> fn,
+            bool useTblRefs = false) const {
+        foreach_byte(StartLen(0, this->size), ctxt, use, fn, useTblRefs); }
     void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
-            std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn); }
+            std::function<void(const PHV::AllocSlice&)> fn,
+            bool useTblRefs = false) const {
+        foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
 
     /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
      * this->size), fn)` when @p r is null.
@@ -555,11 +559,13 @@ class Field : public LiftLess<Field> {
      */
 
     void foreach_byte(const le_bitrange* r, const PHV::AllocContext* ctxt,
-            const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn); }
+            const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn,
+            bool useTblRefs = false) const {
+        foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn, useTblRefs); }
     void foreach_byte(const le_bitrange* r, const IR::MAU::Table* ctxt,
-            const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn); }
+            const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn,
+            bool useTblRefs = false) const {
+        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
 
     /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
     /// byte of the same container are combined into the same new PHV::AllocSlice.
@@ -567,7 +573,8 @@ class Field : public LiftLess<Field> {
     /// of the same field in the same container into a single Use object.
     const std::vector<PHV::AllocSlice> get_combined_alloc_bytes(
             const PHV::AllocContext* ctxt,
-            const PHV::FieldUse* use) const;
+            const PHV::FieldUse* use,
+            bool useTblRefs = false) const;
 
     /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
     /// container are combined into the same new PHV::AllocSlice, if the ranges of the two
@@ -1313,7 +1320,6 @@ class PhvInfo {
     /// Mapping of gress to map of AlwaysRun tables to tableSeq  placement constraints
     ordered_map<gress_t, ConstraintMap> alwaysRunTables;
 
- private:
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
     bool                                trivial_alloc_ = false;  // MAU group constraints not met

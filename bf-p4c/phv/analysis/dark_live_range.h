@@ -103,7 +103,7 @@ class DarkLiveRange : public Inspector {
 
  public:
     struct OrderedFieldInfo {
-        const PHV::AllocSlice& field;
+        PHV::AllocSlice field;
         StageAndAccess minStage;
         StageAndAccess maxStage;
         ordered_set<const IR::BFN::Unit*> units;
@@ -116,8 +116,14 @@ class DarkLiveRange : public Inspector {
             // Initial access means that minStage = maxStage.
             minStage = std::make_pair(acc.first, acc.second);
             maxStage = std::make_pair(acc.first, acc.second);
-            for (const auto* u : a.first)
+            field.clearRefs();
+            for (const auto* u : a.first) {
                 units.insert(u);
+                const auto* tbl = u->to<IR::MAU::Table>();
+                if (!tbl) continue;
+                LOG_DEBUG5("\t  D. Add unit " << tbl->name.c_str() << " to slice " << field);
+                field.addRef(tbl->name, acc.second);
+            }
         }
 
         void addAccess(StageAndAccess s, const AccessInfo& a) {
@@ -132,7 +138,13 @@ class DarkLiveRange : public Inspector {
                      "New access must be greater than max access.");
             maxStage.first = s.first;
             maxStage.second = s.second;
-            units.insert(a.first.begin(), a.first.end());
+            for (const auto* u : a.first) {
+                units.insert(u);
+                const auto* tbl = u->to<IR::MAU::Table>();
+                if (!tbl) continue;
+                LOG_DEBUG5("\t  E. Add unit " << tbl->name.c_str() << " to slice " << field);
+                field.addRef(tbl->name, s.second);
+            }
         }
 
         bool operator == (const OrderedFieldInfo& other) const {

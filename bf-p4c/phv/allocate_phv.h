@@ -158,6 +158,13 @@ struct AllocUtils {
     /// MUST run this after allocation because later passes assume that
     /// phv alloc info is sorted in field bit order, msb first.
     static void sort_and_merge_alloc_slices(PhvInfo& phv);
+
+    /// Update table references of AllocSlices by using the FieldDefUse data
+    /// Table references will be used to replace the static min_stage_i/max_stage_i
+    /// for determining the AllocSlice liverange in both min-stage and placed-table domain
+    static bool update_refs(AllocSlice& slc, const PhvInfo& p, const FieldDefUse::LocPairSet& refs,
+                            FieldUse fuse);
+    static void update_slice_refs(PhvInfo& phv, const FieldDefUse& defuse);
 };
 
 }  // namespace PHV

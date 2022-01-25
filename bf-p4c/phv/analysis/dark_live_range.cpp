@@ -549,7 +549,7 @@ bool DarkLiveRange::isGroupDominatorEarlierThanFirstUseOfCurrentField(
     // XXX(Deep): This is too conservative. This check is necessary only if we actually need to
     // initialize the field.
     if (currentField.minStage.first == dg.min_stage(groupDominator) &&
-            currentField.minStage.second == PHV::FieldUse(PHV::FieldUse::READ)) {
+            currentField.minStage.second == PHV::FieldUse(READ)) {
         LOG_DEBUG5(TAB4 "Initialization at group dominator will happen later than the first "
                    "use of currentField " << currentField.field);
         return false;
@@ -603,6 +603,13 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             lastField = &info;
             PHV::AllocSlice dest(info.field);
             dest.setLiveness(info.minStage, info.maxStage);
+            if (LOGGING(5)) {
+                LOG_DEBUG5("\t  A. Adding units to slice " << dest);
+                for (auto entry : info.field.getRefs())
+                    LOG_DEBUG5("\t\t " << entry.first << " (" << entry.second << ")");
+            }
+
+            dest.addRefs(info.field.getRefs());
             firstDarkInitEntry = new PHV::DarkInitEntry(dest);
             firstDarkInitEntry->setNop();
             LOG_DEBUG3(TAB3 "Creating dark init primitive (not pushed): " << *firstDarkInitEntry);
@@ -936,6 +943,9 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
 
                 firstDarkInitEntry->setDestinationLatestLiveness(
                         std::make_pair(firstDarkInitMaxStage, PHV::FieldUse(READ)));
+                if (!ARAspill)
+                    firstDarkInitEntry->addDestinationUnit(groupDominator->name,
+                                                           PHV::FieldUse(READ));
                 LOG_DEBUG3("New dark primitive: " << *firstDarkInitEntry);
                 rv.insert(rv.begin(), *firstDarkInitEntry);
             }
@@ -1052,7 +1062,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
                         (*darkFieldInit)->getDestinationSlice().getEarliestLiveness().first,
                         PHV::FieldUse(READ));
                 lastSlice->setDestinationLatestLiveness(newLatestStage);
-                LOG_DEBUG3(TAB3 "Extending latest liveness of " << *lastSlice);
+                lastSlice->addRefs(srcSlice->getRefs());
+                LOG_DEBUG3(TAB3 "Updating latest liveness and refs of " << *lastSlice);
 
                 // Also update the lifetime of prior/post prims related to the source slice
                 for (auto *prim : lastSlice->getInitPrimitive().getARApostPrims()) {
@@ -1266,10 +1277,15 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
     LOG_DEBUG5(TAB4 "Created destination slice " << dstSlice);
 
     // ALEX: Use actions only for non-ARA primitives
-    if (useARA)
+    if (useARA) {
+        // Don't have an ARA table yet to add to the slice's units
         return new PHV::DarkInitEntry(dstSlice, srcSlice);
-    else
+    } else {
+        LOG_DEBUG5("\t  A. Add unit " << t->name << " to slice " << dstSlice);
+        dstSlice.addRef(t->name, PHV::FieldUse(WRITE));
+        srcSlice.addRef(t->name, PHV::FieldUse(READ));
         return new PHV::DarkInitEntry(dstSlice, srcSlice, *moveActions);
+    }
 }
 
 boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZero(
@@ -1303,9 +1319,24 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     LOG_DEBUG5(TAB4 "Created destination slice " << dstSlice);
     // ALEX: Use initAction for non-ARA primitives
     if (useARA) {
+        if (LOGGING(5)) {
+            // Don't have an ARA table yet to add to the slice's units.
+            LOG_DEBUG5("\t  B. Adding units to slice " << dstSlice);
+            for (auto entry : field.field.getRefs())
+                LOG_DEBUG5("\t\t " << entry.first << " (" << entry.second << ")");
+        }
+        dstSlice.addRefs(field.field.getRefs());
         return new PHV::DarkInitEntry(dstSlice, PHV::Allocation::ActionSet());
     } else {
         BUG_CHECK((initActions->size() > 0), "No actions found to zero init dark overlay!");
+        LOG_DEBUG5("\t  B. Add unit " << t->name << " to slice " << dstSlice);
+        dstSlice.addRef(t->name, PHV::FieldUse(WRITE));
+        if (LOGGING(5)) {
+            LOG_DEBUG5("\t  C. Adding units to slice " << dstSlice);
+            for (auto entry : field.field.getRefs())
+                LOG_DEBUG5("\t\t " << entry.first << " (" << entry.second << ")");
+        }
+        dstSlice.addRefs(field.field.getRefs());
         return new PHV::DarkInitEntry(dstSlice, *initActions);
     }
 }
@@ -1320,6 +1351,12 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
         : (prvField->maxStage.first + 1);
     dstSlice.setLiveness(std::make_pair(fromDarkStage, PHV::FieldUse(WRITE)),
             field.maxStage);
+    if (LOGGING(5)) {
+        LOG_DEBUG5("\t  D. Adding units to slice " << dstSlice << " (Clear previous units)");
+        for (auto entry : field.field.getRefs())
+            LOG_DEBUG5("\t\t " << entry.first << " (" << entry.second << ")");
+    }
+    dstSlice.addRefs(field.field.getRefs(), /*replace*/true);
     PHV::DarkInitEntry rv(dstSlice);
     for (auto it = darkInitMap.rbegin(); it != darkInitMap.rend(); ++it) {
         PHV::AllocSlice dest = it->getDestinationSlice();
@@ -1354,6 +1391,16 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDa
     // matches the field slice for the current field.
     PHV::AllocSlice dstSlice(field.field);
     dstSlice.setLiveness(std::make_pair(dg.min_stage(t), PHV::FieldUse(WRITE)), field.maxStage);
+    // Add the dominator table used for the move from dark into units
+    LOG_DEBUG5("\t  C. Add unit " << t->name << " to slice " << dstSlice);
+    dstSlice.addRef(t->name, PHV::FieldUse(WRITE));
+    // Add the remaining use/def tables that reference this OrderedFieldInfo into units
+    if (LOGGING(5)) {
+        LOG_DEBUG5("\t  E. Adding units to slice " << dstSlice);
+        for (auto entry : field.field.getRefs())
+            LOG_DEBUG5("\t\t " << entry.first << " (" << entry.second << ")");
+    }
+    dstSlice.addRefs(field.field.getRefs());
     auto *rv = new PHV::DarkInitEntry(dstSlice, *initActions);
     for (auto it = initMap.rbegin(); it != initMap.rend(); ++it) {
         PHV::AllocSlice dest = it->getDestinationSlice();
@@ -1368,8 +1415,10 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDa
             // Current initialization point becomes start of liveness of new slice and end of
             // liveness of source slice.
             it->setDestinationLatestLiveness(newReadStage);
+            it->addDestinationUnit(t->name, PHV::FieldUse(READ));
             rv->setDestinationEarliestLiveness(newWriteStage);
             dest.setLatestLiveness(newReadStage);
+            dest.addRef(t->name, PHV::FieldUse(READ));
             rv->addSource(dest);
             LOG_DEBUG3(TAB3 "Adding initialization from dark: " << *rv);
             return rv;
