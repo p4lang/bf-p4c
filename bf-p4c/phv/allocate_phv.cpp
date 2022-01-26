@@ -626,7 +626,53 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
                 std::stringstream ss;
                 bool diagnosed = utils.actions.diagnoseSuperCluster(
                     diagnose_info.sliceListsOfInterest, diagnose_info.fieldAlignments, ss);
-                if (diagnosed) ::error("%1%", ss.str());
+                if (diagnosed) {
+                    ::error("%1%", ss.str());
+                } else {
+                    // SuperCluster can't be split any further, but it's not because
+                    // of field type or packing in actions (since diagnoseSuperCluster
+                    // returned false).
+                    //
+                    // If one of the slice lists contains a field that contains a number
+                    // of no_split bits that exceeds the size of the largest PHV container (32b),
+                    // then there's nothing the compiler can do to overcome that limitation
+                    // and the P4 code can't be compiled as-is.
+                    for (const auto& list : sc->slice_lists()) {
+                        int no_split_size = 0;
+                        int alignment_bits = 0;
+                        boost::optional<PHV::FieldSlice> prev_slice = boost::none;
+
+                        for (const auto& slice : *list) {
+                            if (!prev_slice || (prev_slice->field() != slice.field())) {
+                                // First slice or new field in slice list.
+                                no_split_size = 0;
+                                if (slice.field()->exact_containers()){
+                                    alignment_bits = 0;
+                                } else {
+                                    if (slice.alignment())
+                                        alignment_bits = slice.alignment()->align;
+                                }
+                            }
+
+                            if (slice.field()->no_split()) {
+                                no_split_size += slice.size();
+
+                                if ((no_split_size + alignment_bits) > int(PHV::Size::b32)) {
+                                    // Slice list too large for PHV container.
+                                    std::stringstream ss;
+                                    ss << "The slice list below contains " << no_split_size << " "
+                                          "bits, the no_split attribute prevents it from being "
+                                          "split any further, and it is too large to fit in the "
+                                          "largest PHV containers." << "\n\n\t" << *list;
+                                    LOG_DEBUG3(ss);
+                                    ::error("%1%", ss.str());
+                                    return;
+                                }
+                            }
+                            prev_slice = slice;
+                        }
+                    }
+                }
             }
             BUG("invalid SuperCluster was formed");
         }

@@ -1617,7 +1617,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
-  testdata/p4_16_samples/issue1607-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
 )
 

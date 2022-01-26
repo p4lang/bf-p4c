@@ -69,3 +69,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/stf/parser_multi_write_7.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: The slice list below contains .* bits, the no_split attribute prevents it from being split any further, and it is too large to fit in the largest PHV containers."
+  testdata/p4_16_samples/issue1607-bmv2.p4
+)
