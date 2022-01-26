@@ -49,6 +49,9 @@ class LayoutOption {
     }
     friend std::ostream &operator<<(std::ostream &, const LayoutOption &);
 };
+inline std::ostream &operator<<(std::ostream &out, const LayoutOption *lo) {
+    if (lo) return out << *lo;
+    return out << "(null LayoutOption)"; }
 
 class LayoutChoices {
     PhvInfo &phv;                       // may need to add TempVars as part of action/table

@@ -1330,12 +1330,13 @@ bool TablePlacement::pick_layout_option(Placed *next) {
         bool ixbar_fit = try_alloc_ixbar(next);
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
-            return false; }
-        if (!next->use.format_type.matchThisStage()) {
+            return false;
+        } else if (!next->use.format_type.matchThisStage()) {
             // if post-split, there's no match in this stage (just a gateway running the
             // attached table(s), so no need for match formatting
-            return true; }
-        if (!next->table->conditional_gateway_only() && !next->table->is_always_run_action()) {
+            table_format = true;
+        } else if (!next->table->conditional_gateway_only() &&
+                   !next->table->is_always_run_action()) {
             table_format = try_alloc_format(next, next->gw);
         }
 
@@ -1348,6 +1349,8 @@ bool TablePlacement::pick_layout_option(Placed *next) {
                 return false; }
         }
     } while (!table_format);
+    LOG2("picked layout for " << next->name << " " << next->use.format_type << " " <<
+         next->use.preferred());
     if (auto *lo = next->use.preferred()) {
         if (auto entries = lo->entries) {
             /* There's some confusion here as to exactly what 'entries == 0' means
@@ -1604,7 +1607,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 }
 
 bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
-    LOG5("try_alloc_format: " << *next->use.preferred());
+    LOG6("try_alloc_format(" << next->name << "): " << *next->use.preferred());
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
     gw_linked |= next->use.preferred()->layout.gateway_match;
@@ -2043,7 +2046,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
 safe_vector<TablePlacement::Placed *>
     TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current, GatewayMergeChoices& gmc) {
-    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
+    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")" <<
+         IndentCtl::indent);
     safe_vector<Placed *> rv_vec;
     // Place and save a placement, as a lambda
     auto try_place = [&](Placed* rv) {
@@ -2056,19 +2060,19 @@ safe_vector<TablePlacement::Placed *>
     if (!t->uses_gateway() || t->match_table || gmc.size() == 0) {
         auto *rv = new Placed(*this, t, done);
         try_place(rv);
-        return rv_vec;
+    } else {
+        // Otherwise, we are a gateway, so we need to iterate through all tables it can possibly be
+        // merged with
+        for (auto mc : gmc) {
+            auto *rv = new Placed(*this, t, done);
+            // Merge
+            LOG1("  Merging with match table " << mc.first->name);
+            rv->gateway_merge(mc.first, mc.second);
+            // Get a placement
+            try_place(rv);
+        }
     }
-
-    // Otherwise, we are a gateway, so we need to iterate through all tables it can possibly be
-    // merged with
-    for (auto mc : gmc) {
-        auto *rv = new Placed(*this, t, done);
-        // Merge
-        LOG1("  Merging with match table " << mc.first->name);
-        rv->gateway_merge(mc.first, mc.second);
-        // Get a placement
-        try_place(rv);
-    }
+    LOG1_UNINDENT;
     return rv_vec;
 }
 

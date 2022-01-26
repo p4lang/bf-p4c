@@ -251,6 +251,10 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MA
 
     if (auto *sc = act->stateful_call(at->name)) {
         const IR::Expression *index = sc->index;
+        if (index->is<IR::MAU::StatefulCounter>()) {
+            // if the index is coming from a stateful counter, use the counter in the
+            // first SALU stage, not the match stage
+            return nullptr; }
         const IR::Expression *dest = split_index(at, tbl);
         int index_width = index->type->width_bits();
         if (index_width > addr_bits)
@@ -424,8 +428,12 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
     for (auto it = rv->stateful_calls.begin(); it != rv->stateful_calls.end();) {
         auto instr = *it;
         instr->apply(this_stage);
+        instr->apply(earlier_stage);
         if (this_stage.found()) {
-            if (!format_type.matchThisStage()) {
+            if (instr->index->is<IR::MAU::StatefulCounter>() && !earlier_stage.found()) {
+                // first SALU stage using stateful counter, so use the counter in this
+                // stage (don't rewrite to use $index set in earlier stage)
+            } else if (!format_type.matchThisStage()) {
                 for (auto *at : this_stage) {
                     BUG_CHECK(this_stage.found(at), "Inconsistent stateful calls in %s", act);
                     if (auto *tv = split_index(at, tbl)) {

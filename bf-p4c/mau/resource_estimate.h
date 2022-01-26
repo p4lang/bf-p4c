@@ -28,6 +28,15 @@ struct StageUseEstimate {
     int meter_alus = 0;
     int stats_alus = 0;
 
+    // This struct is a confusing mix.  The fields above the comment are the real
+    // "stage use estimate"; the estimate of resources needed for one or more table in
+    // a stage.  The fields below this comment are really the "table layout"; the choices
+    // about how to split and lay out a table in memory that influences the resources
+    // needed.  These really are two not-really related things and should be in different
+    // objects.  Their combination here makes a lot of things confusing.  Some places
+    // use this object really as just the estimate and ignore the table layout related
+    // fields.  Other places depend greatly on the table layout.
+
     ActionData::FormatType_t             format_type;
     safe_vector<LayoutOption>            layout_options;
     safe_vector<ActionData::Format::Use> action_formats;
