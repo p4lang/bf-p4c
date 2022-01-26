@@ -99,35 +99,17 @@ struct InferWriteMode : public ParserTransform {
 
     ordered_set<const IR::BFN::Extract*>
     get_previous_writes(const IR::BFN::Extract* p,
-                       const ordered_set<const IR::BFN::Extract*>& extracts) {
+                        const ordered_set<const IR::BFN::Extract*>& extracts) {
         ordered_set<const IR::BFN::Extract*> rv;
 
         auto ps = field_to_states.extract_to_state.at(p);
         auto parser = field_to_states.state_to_parser.at(ps);
 
         for (auto q : extracts) {
-            if (p == q)
-                continue;
-
             auto qs = field_to_states.extract_to_state.at(q);
 
-            if (parser_info.graph(parser).is_ancestor(qs, ps)) {
-                bool is_prev = true;
-
-                for (auto o : extracts) {
-                    if (o == p || o == q)
-                        continue;
-
-                    auto os = field_to_states.extract_to_state.at(o);
-
-                    if (parser_info.graph(parser).is_ancestor(os, ps) &&
-                        parser_info.graph(parser).is_ancestor(qs, os)) {
-                        is_prev = false;
-                        break;
-                    }
-                }
-
-                if (is_prev && !same_const_source(p, q))
+            if (parser_info.graph(parser).is_reachable(qs, ps)) {
+                if (!same_const_source(p, q))
                     rv.insert(q);
             } else if (ps == qs) {
                 bool is_prev = false;
@@ -159,21 +141,38 @@ struct InferWriteMode : public ParserTransform {
     struct CounterExample {
         ordered_set<const IR::BFN::Extract*> prev;
         const IR::BFN::Extract* curr = nullptr;
+        const bool is_error = false;
 
-        CounterExample(ordered_set<const IR::BFN::Extract*> p, const IR::BFN::Extract* c) :
-            prev(p), curr(c) { }
+        CounterExample(ordered_set<const IR::BFN::Extract*> prev,
+                       const IR::BFN::Extract* curr)
+            : prev(prev), curr(curr), is_error(false) { }
+        CounterExample(ordered_set<const IR::BFN::Extract*> prev,
+                       const IR::BFN::Extract* curr,
+                       const bool is_error)
+            : prev(prev), curr(curr), is_error(is_error) { }
     };
 
-    void print(const CounterExample* example) {
+    void print(CounterExample* example) {
+        bool found_err = false;
         for (auto p : example->prev) {
             auto ps = field_to_states.extract_to_state.at(p);
 
             // This should be error instead, but downgraded because of P4C-1995
-            ::warning("%1% has previous assignment in parser state %2%.",
-                      example->curr->dest->field, ps->name);
+            if (!example->is_error)
+                ::warning("%1% has previous assignment in parser state %2%.",
+                            example->curr->dest->field, ps->name);
+            else {
+                ::error("%1% has previous assignment in parser state %2%. "
+                        "This is an error because the field will either always be assigned "
+                        "multiple times or there is a loopback in the parser that "
+                        "always reassigns the field. Check previous warnings to see more "
+                        "and remove it.",
+                        example->curr->dest->field, ps->name);
+                found_err = true;
+            }
         }
-
-        // throw Util::CompilationError("Compilation failed!");
+        if (found_err)
+            throw Util::CompilationError("Compilation failed! (multi-assignment in parser)");
     }
 
     bool is_single_write(const ordered_set<const IR::BFN::Extract*>& writes) {
@@ -201,26 +200,83 @@ struct InferWriteMode : public ParserTransform {
        return false;
     }
 
+    /// Determines whether extract @p write is postdominated by extract of the same
+    /// field (from @p writes).
+    /// Essentially we want to check 2 separate things:
+    ///   1. A state/extract is postdominated by extracts of a same field as is (without loopbacks)
+    ///      Example: A->B
+    ///                ->C
+    ///      if A, B, C extract the same field x
+    ///         then is_postdominated_by_extract = true
+    ///      if A, B extract the same field x, but C does not
+    ///         then is_postdominated_by_extract = false
+    ///   2. There is a loopback in which the same field is always extracted
+    ///      (loop start is postdominate by extracts within that loop).
+    ///      In this case we also have to take into account the fact that
+    ///      the "loop from" state needs to be dominated by the set, otherwise
+    ///      the loop might make sense when we reach this state without extracting
+    ///      the field and then take the loopback once.
+    ///      Example: A->B->D->A    (loopback from D to A)
+    ///                ->C->
+    ///      if B, C extract the same field x
+    ///         then is_postdominated_by_extract = true
+    ///      if A or D extract the field x
+    ///         then is_postdominated_by_extract = true
+    ///      if A, D does not extract x and only one of B, C extract the field x
+    ///         then is_postdominated_by_extract = false
+    bool is_postdominated_by_extract(const IR::BFN::Extract* write,
+                                     const ordered_set<const IR::BFN::Extract*>& writes) {
+        // Get states, parser, graph
+        auto state = field_to_states.extract_to_state.at(write);
+        auto parser = field_to_states.state_to_parser.at(state);
+        auto graph = parser_info.graph(parser);
+        ordered_set<const IR::BFN::ParserState*> states;
+        for (auto w : writes) {
+            auto ws = field_to_states.extract_to_state.at(w);
+            states.insert(ws);
+        }
+
+        // Check if the state is directly postdominated by the extracts
+        if (graph.is_postdominated_by_set(state, states)) {
+            ::warning("Extract %1% in state %2% is postdominated by extracts of the same field.",
+                      write->dest->field, state->name);
+            return true;
+        }
+        // Check all of the loops if they have a postdomination inside
+        // and also the "loop from" state is dominated by the same set
+        auto lb = graph.is_loopback_reassignment(state, states);
+        if (lb.first && lb.second) {
+            ::warning("Extract %1% in state %2% is postdominated by extracts of the same field "
+                      "within a loopback from %3% to %4%.",
+                      write->dest->field, state->name, lb.second->name, lb.first->name);
+            return true;
+        }
+        return false;
+    }
+
     CounterExample* is_bitwise_or(const PHV::Field* dest,
                                   const ordered_set<const IR::BFN::Extract*>& writes) {
         if (dest->name.endsWith("$stkvalid"))
             return nullptr;
 
-        auto inits = find_inits(writes);
+        CounterExample* counter_example = nullptr;
 
         for (auto e : writes) {
-            if (inits.count(e))
-                continue;
-
             auto prev = get_previous_writes(e, writes);
 
             for (auto p : prev) {
-                if (e->write_mode != IR::BFN::ParserWriteMode::BITWISE_OR && !can_absorb(p, e))
-                    return new CounterExample(prev, e);
+                if (e->write_mode != IR::BFN::ParserWriteMode::BITWISE_OR && !can_absorb(p, e)) {
+                    if (Device::currentDevice() == Device::TOFINO &&
+                        is_postdominated_by_extract(p, writes)) {
+                        return new CounterExample(prev, e, true);
+                    } else {
+                        counter_example = new CounterExample(prev, e, false);
+                    }
+                }
             }
         }
 
-        return nullptr;
+        return counter_example;
     }
 
     CounterExample* is_clear_on_write(const ordered_set<const IR::BFN::Extract*>& writes) {
@@ -265,7 +321,10 @@ struct InferWriteMode : public ParserTransform {
 
             // This should be error instead, but downgraded because of P4C-1995
             ::warning("Tofino does not support clear-on-write semantic on "
-                    "re-assignment to field %1% in parser state %2%.", dest->name, ps->name);
+                    "re-assignment to field %1% in parser state %2%. "
+                    "This may lead to a runtime-error. Try to use advance() to skip "
+                    "over the re-assigned values and only extract them once.",
+                    dest->name, ps->name);
             print(counter_example);
             return;
         }
@@ -280,7 +339,7 @@ struct InferWriteMode : public ParserTransform {
 
             // This should be error instead, but downgraded because of P4C-1995
             ::warning("Inconsistent parser write semantic for field %1% in parser state %2%.",
-                     dest->name, ps->name);
+                      dest->name, ps->name);
             print(counter_example);
         }
     }

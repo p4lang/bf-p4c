@@ -157,6 +157,155 @@ class ParserGraphImpl : public DirectedGraph {
         return false;
     }
 
+
+    /// Determines whether @p dst can be reached from @p src.
+    /// It can be reached directly (without taking any loops,
+    /// essentially is_ancestor) or via loops.
+    /// This function is essentially a recursive DFS.
+    ///
+    /// First the function checks if @p dst is reachable from @p src
+    /// directly. If it is not it tries to take any loop available.
+    /// To take the loop we need to be able to (directly) reach the state that
+    /// the loop loops from. Also the state that the loop takes us to should
+    /// be some new state that we could not otherwise reach (without taking the loop).
+    /// If we could reach the state directly then taking the loop does not make sense.
+    /// Also it might create infinite recursion (see example below).
+    /// Once we have found some new state that can be reached via a loop we just check
+    /// (recursively) reachability from this new state (once again we can take
+    /// another loop).
+    ///
+    /// Example why we need to do this recursively and why we need to check
+    /// if the loop takes us somewhere new follows.
+    /// Let's assume the following part of a parse graph:
+    ///   ┌───────────────┐
+    ///   │               │
+    ///   ▼               │
+    /// ┌───┐   ┌───┐   ┌───┐   ┌───┐
+    /// │ A │──▶│ B │──▶│ C │──▶│ D │
+    /// └───┘   └───┘   └───┘   └───┘
+    ///           ▲               │
+    ///           │               │
+    ///           └───────────────┘
+    ///
+    /// Recursion example:
+    /// Let's try is_reachable(D,A). It is not directly reachable, but we can take
+    /// the D to B loopback (recurse into is_reacheable(B,A)). Still we cannot directly
+    /// reach A from B, but we can do so by taking another loopback, this time C to A.
+    ///
+    /// Infinite recursion example:
+    /// Let's try is_reacheable(C,E). Let's assume that E is some state that is outside
+    /// of the subparser shown and E is not directly reachable from any of the shown
+    /// states (it is for example reachable only via loop from A).
+    /// We could take the loopback from C to A (recurse into is_reacheable(A,E)).
+    /// Now we could take the loopback from D to B, even though it does not take
+    /// us anywhere new (recurse into is_reacheable(B,E)), where we would take
+    /// the loopback from C to A again (recurse into is_reacheable(A,E) again).
+    /// Now we would get stuck between A->D->B->C->A. This is one of the reasons
+    /// why we never take a loop that does not take us somewhere new. Since
+    /// we DO check if loop takes us somewhere new we would nrecursionloop does not happen).
+    bool is_reachable(const State* src, const State* dst) const {
+        // One way is that src is an ancestor of dst
+        if (is_ancestor(src, dst))
+            return true;
+        // Otherwise we must check all possible loopbacks
+        for (auto &kv : _loopbacks) {
+            auto loop_from = kv.first.first;
+            auto loop_to = get_state(kv.first.second);
+            // Can we get to this loopback from source (without any other loopbacks)?
+            if (src == loop_from || is_ancestor(src, loop_from)) {
+                // If the loopback goes to dst we are done
+                if (loop_to == dst)
+                    return true;
+                // Loopback needs to get us somewhere new
+                // (where we couldn't directly reach from src)
+                // And we need to be able to reach the dst from this new state
+                // (possibly via more loops)
+                if (src != loop_to && !is_ancestor(src, loop_to) &&
+                    is_reachable(loop_to, dst))
+                    return true;
+            }
+        }
+        // We didn't find anything => state dst is not reacheable from src
+        return false;
+    }
+
+    /// Determines whether @p s is dominated by the set of states @p set.
+    /// This means that every path from start to @p s leads through (at least) one of
+    /// the states from @p set.
+    bool is_dominated_by_set(const State* s,
+                             const ordered_set<const State*>& set) {
+        // If there are no predecessors domination is false
+        if (!predecessors().count(s) || predecessors().at(s).empty())
+            return false;
+        // Otherwise we need every predecessor to be from the set or recursively
+        // dominated by the set
+        for (auto ns : predecessors().at(s)) {
+            if (!set.count(ns) && !is_dominated_by_set(ns, set)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// Determines whether @p s is postdominated by the set of states @p set.
+    /// This means that every path from @p s to exit leads through (at least) one of
+    /// the states from @p set.
+    bool is_postdominated_by_set(const State* s,
+                                 const ordered_set<const State*>& set) {
+        // If there are no successors postdomination is false
+        if (!successors().count(s) || successors().at(s).empty())
+            return false;
+        // Otherwise we need every successor to be from the set or recursively
+        // postdominated by the set
+        for (auto ns : successors().at(s)) {
+            if (!set.count(ns) && !is_postdominated_by_set(ns, set)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// Determines whether @p s is postdominated by the set of states @p set within any
+    /// loopback and also the loop exit state of that loopback is dominated by the set
+    /// of states @p set (or alternatively the loopback is reflexive on a state from set).
+    /// This means that every path from start of the loop to loop exit
+    /// leads through (at least) one of the states from @p set and also @p s is part of this
+    /// loop and also every path from the start (of parsing) to loop exit leads through
+    /// one of the states from @p set.
+    /// More specifically this means that there is a loopback for which we are certain the
+    /// following is always satisfied:
+    ///     * To even reach/take this loopback we had to go through one of the states from the set
+    ///       = loop exit is dominated by the set
+    ///     * After taking the loopback we will go through at least one the states again
+    ///       = loop start is postdominated by the set within the loop boundaries
+    /// If the set of states is for example a set of all states extracting a given field
+    /// this means that taking this loopback under any circumstances forces a reassignment of
+    /// the given field.
+    /// Loop start in this case is the first state within the loopback (the state the loopback
+    /// transition goes to) and loop exit is the last state in the loopback (state that the
+    /// loopback transition goes from).
+    std::pair<const State*, const State*> is_loopback_reassignment(
+            const State* s,
+            const ordered_set<const State*>& set) {
+        for (auto &kv : _loopbacks) {
+            auto le = kv.first.first;
+            auto ls = get_state(kv.first.second);
+            // Is this state even within this loopback?
+            if (s == le || s == ls ||
+                (is_ancestor(ls, s) && is_ancestor(s, le))) {
+                // If it is check this particular loopback
+                // Check if the loopback has postdomination happening inside
+                // And also that loop exit is dominated (or the loopback is reflexive)
+                if (_is_loopback_postdominated_by_set_impl(ls, le, set) &&
+                    ((le == ls && set.count(le)) || is_dominated_by_set(le, set))) {
+                    return std::make_pair(ls, le);
+                }
+            }
+        }
+
+        return std::make_pair(nullptr, nullptr);
+    }
+
     /// Determines whether @p src and @p dst are mutually exclusive states on all paths through
     /// the parser graph.
     bool is_mutex(const State* a, const State* b) const {
@@ -284,6 +433,34 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
  private:
+    /// Determines whether a loopback given by a state in the loopback @p s
+    /// and @p loop_exit is postdominated by the set of states @p set within itself.
+    /// This means that every path from @p s to @p loop_exit
+    /// (or any parser exit state) leads through (at least) one of the states from @p set.
+    bool _is_loopback_postdominated_by_set_impl(const State* s,
+                                                const State* loop_exit,
+                                                const ordered_set<const State*>& set) {
+        // Check if we are at the loop_exit
+        if (s == loop_exit) {
+            if (set.count(loop_exit)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        // If there are no successors postdomination is false
+        if (!successors().count(s) || successors().at(s).empty())
+            return false;
+        // Otherwise we need every successor to be from the set or recursively
+        // postdominated by the set
+        for (auto ns : successors().at(s)) {
+            if (!set.count(ns) && !_is_loopback_postdominated_by_set_impl(ns, loop_exit, set)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     std::vector<const State*> longest_or_shortest_path_states_impl(const State* src,
             std::map<const State*, std::vector<const State*>>& path_map, bool longest) const {
         if (path_map.count(src))

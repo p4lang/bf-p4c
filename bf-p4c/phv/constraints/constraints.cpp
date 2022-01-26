@@ -16,6 +16,8 @@ std::ostream &operator<<(std::ostream &out, const SolitaryConstraint& cons) {
         out << "pragma_solitary ";
     if (cons.isPragmaContainerSize())
         out << "pragma_container_size ";
+    if (cons.isClearOnWrite())
+        out << "clear_on_write ";
     out << ")";
     return out;
 }

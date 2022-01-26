@@ -1717,8 +1717,21 @@ class CollectPardeConstraints : public Inspector {
             // TODO(zma): this constraint can be refined, if the multi-write
             // happens before other writes, it can still be packed.
             if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
-                f->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
-                LOG3("Marking parser multi-write field " << f << " as no_pack");
+                // Keep POVs as simply solitary - compiler can handle it
+                if (f->pov) {
+                    f->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
+                    LOG3("Marking parser multi-write field " << f << " as no_pack");
+                // Non POVs can at least be grouped among themselves (ones that
+                // are extracted together)
+                // Otherwise invalid superclusters are created for any field that is not
+                // 8 bit aligned
+                // Essentially this allows something like vlan.pcp (3b), vlan.cfi (1b)
+                // and vlan.vlan_id (12b) to be packed together (since the clear-on-write
+                // rewrites all of the together anyway)
+                } else {
+                    f->set_solitary(PHV::SolitaryReason::CLEAR_ON_WRITE);
+                    LOG3("Marking parser multi-write field " << f << " no_pack(clear_on_write)");
+                }
             }
         }
 

@@ -58,3 +58,14 @@ p4c_add_xfail_reason("tofino"
    "error: .*: too many actions try to access the register"
    extensions/p4_tests/p4_16/errors/stateful_read_write_5actions.p4
 )
+
+# P4C-2293
+p4c_add_xfail_reason("tofino"
+  "error: .* has previous assignment in parser state .*This is an error because the field will"
+  extensions/p4_tests/p4_16/compile_only/p4c-2293-simple-rec.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2293-rec.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2293-no-rec-fail.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_7.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
+)

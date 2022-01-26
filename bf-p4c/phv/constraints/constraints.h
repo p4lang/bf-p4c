@@ -42,8 +42,10 @@ class SolitaryConstraint : BooleanConstraint {
         DIGEST = (1 << 3),                  // solitary constraint due to use in digest
         PRAGMA_SOLITARY = (1 << 4),         // solitary constraint due to pa_solitary pragma
         PRAGMA_CONTAINER_SIZE = (1 << 5),   // solitary constraint due to pa_container_size
-        CONFLICT_ALIGNMENT = (1 << 6)       // solitary constraint due to conflicting alignment
+        CONFLICT_ALIGNMENT = (1 << 6),      // solitary constraint due to conflicting alignment
                                             // in bridge packing
+        CLEAR_ON_WRITE = (1 << 7)           // solitary constraint due to the field being
+                                            // cleared-on-write
     };
 
     bool hasConstraint() const { return (reason != 0); }
@@ -55,6 +57,8 @@ class SolitaryConstraint : BooleanConstraint {
     bool isDigest() const { return reason & DIGEST; }
     bool isPragmaSolitary() const { return reason & PRAGMA_SOLITARY; }
     bool isPragmaContainerSize() const { return reason & PRAGMA_CONTAINER_SIZE; }
+    bool isClearOnWrite() const { return reason & CLEAR_ON_WRITE; }
+    bool isOnlyClearOnWrite() const { return reason == CLEAR_ON_WRITE; }
 };
 
 std::ostream &operator<<(std::ostream &out, const SolitaryConstraint& cons);

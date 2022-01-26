@@ -983,24 +983,63 @@ std::vector<PHV::SuperCluster::SliceList*> break_slicelist_by(
     return rst;
 }
 
+// pre-break: [other][clear-on-write]
+// post-break: [clear-on-write+][padding*][other]
+bool break_cond_clear_on_write(const BreakSliceListCtx& ctx) {
+    if (!ctx.next)
+        return false;
+    auto next = ctx.next.get();
+    // pre-break
+    bool next_is_clear_on_write = next->field()->is_solitary() &&
+        (next->field()->getSolitaryConstraint().isClearOnWrite());
+    bool curr_is_clear_on_write = ctx.curr->field()->is_solitary() &&
+        (ctx.curr->field()->getSolitaryConstraint().isClearOnWrite());
+    if (!curr_is_clear_on_write) {
+        if (next_is_clear_on_write)
+            return true;
+    // post-break without padding
+    } else {
+        if (!next_is_clear_on_write &&
+            !next->field()->padding)
+            return true;
+    }
+    // post-break with padding
+    if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
+        bool prev_is_clear_on_write = ctx.prev.get()->field()->is_solitary() &&
+            (ctx.prev.get()->field()->getSolitaryConstraint().isClearOnWrite());
+        // if current field is the padding of the prev clear-on-write field
+        if (prev_is_clear_on_write &&
+            ctx.curr->field()->padding &&
+            ctx.curr->size() % 8 != 0 &&
+            ctx.offset % 8 == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // pre-break: [][solitary]
 // post-break: [solitary][padding*][other]
 bool break_cond_solitary(const BreakSliceListCtx& ctx) {
     if (ctx.next && ctx.next.get()->field() != ctx.curr->field()) {
         auto next = ctx.next.get();
-        if (next->field()->is_solitary()) {
+        if (next->field()->is_solitary() &&
+            !next->field()->getSolitaryConstraint().isOnlyClearOnWrite()) {
             return true;
         }
         // post-break without padding
-        if (ctx.curr->field()->is_solitary() && !next->field()->padding) {
+        if (ctx.curr->field()->is_solitary() &&
+            !ctx.curr->field()->getSolitaryConstraint().isOnlyClearOnWrite() &&
+            !next->field()->padding) {
             return true;
         }
     }
     // post-break with padding
     if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
         // if current field is the padding of the prev solitary field, break.
-        if (ctx.prev.get()->field()->is_solitary() && ctx.curr->size() % 8 != 0 &&
-            ctx.offset % 8 == 0) {
+        if (ctx.prev.get()->field()->is_solitary() &&
+            !ctx.prev.get()->field()->getSolitaryConstraint().isOnlyClearOnWrite() &&
+            ctx.curr->size() % 8 != 0 && ctx.offset % 8 == 0) {
             return true;
         }
     }
@@ -1132,6 +1171,10 @@ void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constrain
     // break at conflicting alignments.
     LOG1("break slice list of conflicting alignments");
     candidates = break_slicelist_by(candidates, "alignment", break_cond_alignment_conflict);
+
+    // break by clear-on-write.
+    LOG1("break slice list to separate clear-on-write fields");
+    candidates = break_slicelist_by(candidates, "clear-on-write", break_cond_clear_on_write);
 
     // break by solitary.
     LOG1("break slice list of mixed solitary/non-solitary fields");

@@ -1205,14 +1205,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1025-bmv2.p4
 )
 
-# These should be compilation errors due to Tofino's lack of support
-# of clear-on-write semantic in the parser. We give warnings for now.
-p4c_add_xfail_reason("tofino"
-  ".* expected packet on port .* not seen"
-  extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
-)
-
 # P4C-1753
 p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
