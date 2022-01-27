@@ -1,4 +1,5 @@
 #include "bfruntime.h"
+#include "bf-p4c/common/utils.h"
 
 namespace BFN {
 
@@ -728,6 +729,15 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             std::regex hdrStackRegex(R"(\[([0-9]+)\])");
             keyName = std::regex_replace(keyName, hdrStackRegex, "$$$1");
 
+            // Add 'mask' parameter for exact match key type if a mask is present
+            cstring keyMask = "";
+            if (keyName == mf.name() &&
+                (*matchType == "Exact")) {
+                    auto km = get_key_and_mask(mf.name());
+                    keyName = km.first;
+                    keyMask = km.second;
+            }
+
             // Control plane requires there's no duplicate key in one table.
             if (dupKey.count(keyName) != 0) {
               ::error("Key \"%s\" is duplicate in Table \"%s\". It doesn't meet BFRT's "
@@ -742,7 +752,7 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             // driver initialized default value (0).
             addKeyField(keyJson, mf.id(), keyName,
                         false /* mandatory */, *matchType,
-                        makeTypeBytes(mf.bitwidth(), boost::none),
+                        makeTypeBytes(mf.bitwidth(), boost::none, keyMask),
                         annotations);
         }
         if (needsPriority) {

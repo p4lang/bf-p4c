@@ -9,6 +9,7 @@
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/asm_output.h"
@@ -224,6 +225,7 @@ class ExtractKeyDetails {
                     cstring::to_cstring(canon_name(plainName))) {
                 return use_name? plainName : nullptr;
             }
+            annName = get_key_and_mask(annName).first;
             return annName;
         }
         cstring match_type() const {

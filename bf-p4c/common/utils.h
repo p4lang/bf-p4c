@@ -35,4 +35,8 @@ inline void fatal_error(int kind, const char* format, T... args) {
 /// by pipe_id argument
 bool ghost_only_on_other_pipes(int pipe_id);
 
+/// Separate out key and mask from an input key string
+/// Input: "vrf & 0xff0f", Output: std::pair<"vrf", "0xff0f">
+std::pair<cstring, cstring> get_key_and_mask(const cstring &input);
+
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

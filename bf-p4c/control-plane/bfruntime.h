@@ -149,17 +149,21 @@ static const p4configv1::DirectMeter* findDirectMeter(const p4configv1::P4Info& 
 
 }  // namespace Standard
 
-static Util::JsonObject* makeTypeInt(cstring type) {
+static Util::JsonObject* makeTypeInt(cstring type, cstring mask = "") {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", type);
+    if (!mask.isNullOrEmpty())
+        typeObj->emplace("mask", mask);
     return typeObj;
 }
 
 template <typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
-static Util::JsonObject* makeTypeInt(cstring type, T defaultValue) {
+static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask = "") {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", type);
     typeObj->emplace("default_value", defaultValue);
+    if (!mask.isNullOrEmpty())
+        typeObj->emplace("mask", mask);
     return typeObj;
 }
 
@@ -172,12 +176,15 @@ static Util::JsonObject* makeTypeBool(boost::optional<bool> defaultValue = boost
 }
 
 static Util::JsonObject* makeTypeBytes(int width,
-                                       boost::optional<int64_t> defaultValue = boost::none) {
+                                       boost::optional<int64_t> defaultValue = boost::none,
+                                       cstring mask = "") {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "bytes");
     typeObj->emplace("width", width);
     if (defaultValue != boost::none)
         typeObj->emplace("default_value", *defaultValue);
+    if (!mask.isNullOrEmpty())
+        typeObj->emplace("mask", mask);
     return typeObj;
 }
 
@@ -492,7 +499,6 @@ class BFRuntimeGenerator {
 };
 
 }  // namespace BFRT
-
 }  // namespace BFN
 
 #endif /* EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_H_ */
