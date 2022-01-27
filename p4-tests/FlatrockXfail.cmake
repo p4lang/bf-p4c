@@ -32,3 +32,10 @@ p4c_add_xfail_reason("tofino5"
   "Assembler BUG"
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
   )
+
+p4c_add_xfail_reason("tofino5"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  extensions/p4_tests/p4_16/flatrock/exact2.p4
+  )
+
+
