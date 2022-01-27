@@ -238,11 +238,13 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field, const LiveRangeR
         for (auto& alloc : kv.second) {
             ++alloc_num;
             int min_stage, max_stage;
-            // For Tofino no need to look in slice's Liveness because
+            // For Tofino (if alt-phv-alloc not enabled),
+            // no need to look in slice's Liveness because
             // we do not support dark overlay (split liverange into
             // smaller liveranges) and also because liveness has not
             // been translated to placed-table stages.
-            if (Device::currentDevice() != Device::TOFINO) {
+            if (Device::currentDevice() != Device::TOFINO ||
+                BFNContext::get().options().alt_phv_alloc) {
                 if (alloc.getEarliestLiveness().first == -1)
                     min_stage = 0;
                 else if (alloc.getEarliestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE))
@@ -256,9 +258,9 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field, const LiveRangeR
                 else
                     max_stage = alloc.getLatestLiveness().first;
                 if (min_stage < lr_min) min_stage = lr_min;
-                if (max_stage > lr_max) max_stage = ((lr_max == -1) ? 0 :
-                                                     ((lr_max < lr_min) ? lr_min : lr_max));
-            } else {   // TOFINO device
+                if (max_stage > lr_max)
+                    max_stage = ((lr_max == -1) ? 0 : ((lr_max < lr_min) ? lr_min : lr_max));
+            } else {  // TOFINO device
                 min_stage = ((lr_min == -1) ? 0 : lr_min);
                 max_stage = ((lr_max == -1) ? 0 : ((lr_max < lr_min) ? lr_min : lr_max));
             }

@@ -13,7 +13,7 @@
  * on individual pipes in the program, not the entire program at once.
  * This means that the input of the back-end is a back-end IR
  * of a pipe and the output is a assembly file for this pipe.
- * 
+ *
  * There are currently two top-level flows. Changing between them
  * can be done by setting options.alt_phv_alloc. These two flows are:
  * - Main flow:
@@ -93,6 +93,7 @@
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/add_alias_allocation.h"
+#include "bf-p4c/phv/allocate_temps_and_finalize_liverange.h"
 #include "bf-p4c/phv/auto_init_metadata.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
@@ -100,7 +101,6 @@
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/trivial_alloc.h"
-#include "bf-p4c/phv/finalize_physical_liverange.h"
 
 namespace BFN {
 
@@ -340,14 +340,14 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // ranges output in the assembly.
         &defuse,
         options.alt_phv_alloc
-            ? new PHV::FinalizePhysicalLiverange(phv, clot, table_summary) : nullptr,
+            ? new PHV::AllocateTempsAndFinalizeLiverange(phv, clot) : nullptr,
         liveRangeReport,
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
-        // we need to run CheckForUnallocatedTemps even when alt-phv-alloc is on, because we
-        // have to backtrack to mau_backtracker to avoid aliasing issue, and after backtracking
-        // temp vars are lost.
-        new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
+        // DO NOT run CheckForUnallocatedTemps in table-first pass because temp vars has been
+        // allocated in above AllocateTempsAndFinalizeLiverange.
+        !options.alt_phv_alloc
+            ? new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis) : nullptr,
         new InstructionAdjustment(phv),
         &nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),

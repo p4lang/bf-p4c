@@ -28,6 +28,22 @@ safe_vector<AllocSlice> find_all_overlapping_alloc_slices(
     return rst;
 }
 
+StageAndAccess to_stage_and_access(const IR::BFN::Unit* unit,
+                                   const bool is_write,
+                                   const PHV::Field* f) {
+    if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>() ||
+        unit->is<IR::BFN::GhostParser>()) {
+        return {-1, FieldUse(FieldUse::WRITE)};
+    } else if (unit->is<IR::BFN::Deparser>()) {
+        return {Device::numStages(), FieldUse(FieldUse::READ)};
+    } else if (unit->is<IR::MAU::Table>()) {
+        const auto* t = unit->to<IR::MAU::Table>();
+        return {t->stage(), FieldUse(is_write ? FieldUse::WRITE : FieldUse::READ)};
+    } else {
+        BUG("unknown unit: %1%, field: %2%", unit, f);
+    }
+}
+
 }  // namespace
 
 void FinalizePhysicalLiverange::update_liverange(const safe_vector<AllocSlice>& slices,
@@ -46,9 +62,7 @@ void FinalizePhysicalLiverange::update_liverange(const safe_vector<AllocSlice>& 
 /// collect table to stage.
 bool FinalizePhysicalLiverange::preorder(const IR::MAU::Table* t) {
     tables_i.insert(t);
-    for (const auto& stage : table_summary_i.stages(t)) {
-        table_stages_i[TableSummary::getTableIName(t)].insert(stage);
-    }
+    table_stages_i[TableSummary::getTableIName(t)].insert(t->stage());
     return true;
 }
 
@@ -59,34 +73,35 @@ void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bit
     if (clot_i.fully_allocated(FieldSlice(f, bits))) {
         return;
     }
+    const StageAndAccess access = to_stage_and_access(unit, is_write, f);
     const auto alloc_slices =
         find_all_overlapping_alloc_slices(f, bits, AllocContext::of_unit(unit), is_write);
-    // Safe to ignore access in deparser when clot_i.allocated_unmodified_undigested(f) is true.
-    // It means that the live range of the field is shrunken due to clot allocation.
-    // XXX(yumin): we did not handle digest type field perfectly so that there might be
-    // duplicated padding fields added, although allocation are still correct.
-    // An example case:
-    // remove `(f->padding && f->is_digest())` and run p4_16_samples/issue1043-bmv2.p4
-    BUG_CHECK(allow_unallocated ||
-              (unit->is<IR::BFN::Deparser>() && clot_i.allocated_unmodified_undigested(f)) ||
-              alloc_slices.size() > 0 ||
-              (f->padding && f->is_digest()),
-              "cannot find corresponding slice, field: %1%, range: %2%, is_write: %3%.\n unit: %4%",
-              f, bits, is_write, unit);
-    if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>() ||
-        unit->is<IR::BFN::GhostParser>()) {
-        update_liverange(alloc_slices, {-1, FieldUse(FieldUse::WRITE)});
-    } else if (unit->is<IR::BFN::Deparser>()) {
-        update_liverange(alloc_slices, {Device::numStages(), FieldUse(FieldUse::READ)});
-    } else if (unit->is<IR::MAU::Table>()) {
-        const auto* t = unit->to<IR::MAU::Table>();
-        for (const auto& stage : table_summary_i.stages(t)) {
-            update_liverange(alloc_slices,
-                             {stage, FieldUse(is_write ? FieldUse::WRITE : FieldUse::READ)});
+    if (alloc_slices.empty() && !allow_unallocated) {
+        // (1) Temp vars will be allocated later.
+        // (2) It is safe to ignore access in deparser when
+        //     clot_i.allocated_unmodified_undigested(f) is true.
+        //     It means that the live range of the field is shrunken due to clot allocation.
+        // (3) We did not handle digest type field perfectly so that there might be
+        //     duplicated padding fields added, although allocation are still correct.
+        //     An example case:
+        //     remove `(f->padding && f->is_digest())` and run p4_16_samples/issue1043-bmv2.p4
+        BUG_CHECK(
+            phv_i.isTempVar(f) ||
+            (unit->is<IR::BFN::Deparser>() && clot_i.allocated_unmodified_undigested(f)) ||
+            (f->padding && f->is_digest()),
+            "cannot find corresponding slice, field: %1%, range: %2%, is_write: %3%.\n unit: %4%",
+            f, bits, is_write, unit);
+        // memorize live range of unallocated temp vars.
+        if (phv_i.isTempVar(f)) {
+            if (temp_var_live_ranges_i.count(f)) {
+                temp_var_live_ranges_i.at(f).extend(access);
+            } else {
+                temp_var_live_ranges_i.emplace(f, LiveRange(access, access));
+            }
         }
-    } else {
-        BUG("unknown unit: %1%, field: %2%", unit, f);
+        return;
     }
+    update_liverange(alloc_slices, access);
 }
 
 bool FinalizePhysicalLiverange::preorder(const IR::Expression* e) {
@@ -213,6 +228,10 @@ void FinalizePhysicalLiverange::end_apply() {
                 sep = ", ";
             }
             LOG3(ss.str());
+        }
+        // log temp var physical liveranges
+        for (const auto& kv : temp_var_live_ranges_i) {
+            LOG3("liverange of temp var " << kv.first << ":" << kv.second);
         }
     }
 }

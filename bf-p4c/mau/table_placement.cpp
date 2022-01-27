@@ -88,12 +88,12 @@ bool TablePlacement::backtrack(trigger &trig) {
     // container conflicts. This gives the "idealized" resource-sensitive table placement that is
     // then used by PHV allocation to minimize the number of container conflicts seen in the final
     // allocation.
-    if (trig.is<NoContainerConflictTrigger::failure>()) {
-        auto t = dynamic_cast<NoContainerConflictTrigger::failure *>(&trig);
+    if (trig.is<RerunTablePlacementTrigger::failure>()) {
+        auto t = dynamic_cast<RerunTablePlacementTrigger::failure *>(&trig);
         ignoreContainerConflicts = t->ignoreContainerConflicts;
         return true; }
     ignoreContainerConflicts = false;
-    if (trig.is<RedoTablePlacement>()) {
+    if (trig.is<FinalRerunTablePlacementTrigger>()) {
         summary.FinalizePlacement();
         return true; }
     return false;
@@ -2903,6 +2903,29 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
     saved_placements.clear();
     backtrack_count = 0;
     resource_mode = false;
+
+    if (BFNContext::get().options().alt_phv_alloc) {
+        switch (self.summary.getActualState()) {
+            case TableSummary::ALT_INITIAL:
+                // first round of table placement does not enable backtracking.
+                MaxBacktracksPerPipe = -1;
+                break;
+            case TableSummary::ALT_RETRY_ENHANCED_TP:
+                // retry table placement with resource-based allocation and backtracking ON.
+                resource_mode = true;
+                MaxBacktracksPerPipe = 32;
+                break;
+            case TableSummary::ALT_FINALIZE_TABLE:
+                // final round, enable both resource-based allocation and backtracking.
+                resource_mode = true;
+                MaxBacktracksPerPipe = 32;
+                break;
+            default:
+                MaxBacktracksPerPipe = -1;
+                break;
+        }
+        return;
+    }
 
     // This is to balance compile time with benefit from backtracking
     switch (self.summary.getActualState()) {

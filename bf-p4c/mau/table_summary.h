@@ -31,7 +31,7 @@ struct PHVTrigger {
     };
 };
 
-struct NoContainerConflictTrigger {
+struct RerunTablePlacementTrigger {
     struct failure : public Backtrack::trigger {
         bool ignoreContainerConflicts = false;
         explicit failure(bool ig) : trigger(OTHER), ignoreContainerConflicts(ig) {}
@@ -68,9 +68,15 @@ struct NoContainerConflictTrigger {
  * In the alternative PHV allocation, AKA table placement first allocation, the workflow is
  * different.
  *
- *  ALT_INITIAL --->  ALT_FINALIZE_TABLE--->  SUCCESS
- *      \                     \
- *    FAILURE               FAILURE
+ *  ALT_INITIAL --->  ALT_FINALIZE_TABLE  --->  SUCCESS or FAILURE
+ *       \                    ^
+ *    (failed)                |
+ *       \                    |
+ *       |------------> ALT_TRY_ENHANCED_TP
+ *                            \
+ *                         (failed)
+ *                            \
+ *                            \--> FAILURE
  *
  ************************/
 
@@ -87,6 +93,7 @@ class TableSummary: public MauInspector {
         FAILURE,
         SUCCESS,
         ALT_INITIAL,
+        ALT_RETRY_ENHANCED_TP,
         ALT_FINALIZE_TABLE,
     };
 
@@ -209,7 +216,8 @@ class TableSummary: public MauInspector {
     void FinalizePlacement();
     const ordered_map<cstring, bool> &getPlacementError() { return tablePlacementErrors; }
     void setPlacementError(const ordered_map<cstring, bool> &tpe) { tablePlacementErrors = tpe; }
-    void resetPlacement() { state = INITIAL; }
+    /// set state to INITIAL, or ALT_INITIAL if alt-phv-alloc is enabled.
+    void resetPlacement();
     state_t getActualState() const { return state; }
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
     StageUseEstimate getAllStagesResources() const { return allStages; }

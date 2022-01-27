@@ -79,8 +79,8 @@ class TablePlacement : public PassManager {
                    const TablesMutuallyExclusive &, PhvInfo &, LayoutChoices &,
                    const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &);
 
-    struct RedoTablePlacement : public Backtrack::trigger {
-        RedoTablePlacement() : Backtrack::trigger(OK) {}
+    struct FinalRerunTablePlacementTrigger : public Backtrack::trigger {
+        FinalRerunTablePlacementTrigger() : Backtrack::trigger(OK) {}
     };
 
     using GatewayMergeChoices = ordered_map<const IR::MAU::Table *, cstring>;

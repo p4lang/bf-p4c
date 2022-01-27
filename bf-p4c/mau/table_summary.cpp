@@ -13,10 +13,10 @@
  *   SUCCESS [color=springgreen3,fillcolor=springgreen3]
  *   FAILURE [color=red,fillcolor=red]
  *   INITIAL -> NOCC_TRY1
- *     [label="placementFailure\nthrow NoContainerConflictTrigger::failure(true);"]
+ *     [label="placementFailure\nthrow RerunTablePlacementTrigger::failure(true);"]
  *   INITIAL -> NOCC_TRY1
  *     [label="!placementFailure || (maxStage > deviceStages ||\nmaxStage > criticalPathLengt \
- * + CRITICAL_PATH_THRESHOLD)\nthrow NoContainerConflictTrigger::failure(true);"]
+ * + CRITICAL_PATH_THRESHOLD)\nthrow RerunTablePlacementTrigger::failure(true);"]
  *   INITIAL -> SUCCESS
  *     [label="maxStage <= deviceStages &&\nmaxStage <= \
  * criticalPathLength + CRITICAL_PATH_THRESHOLD"]
@@ -29,7 +29,7 @@
  *     [label="!placementFailure && maxStage <= deviceStages"]
  *   REDO_PHV1 -> NOCC_TRY2
  *     [label="placementFailure || \
- * maxStage > deviceStages\nthrow NoContainerConflictTrigger::failure(true);"]
+ * maxStage > deviceStages\nthrow RerunTablePlacementTrigger::failure(true);"]
  *   NOCC_TRY2 -> REDO_PHV2
  *     [label="maxStage <= deviceStages\nthrow PHVTrigger::failure(tableAlloc, firstRoundFit);"]
  *   NOCC_TRY2 -> REDO_PHV2
@@ -37,7 +37,7 @@
  * false / * ignorePackConflicts * /, true / * metaInitDisable * /);"]
  *   REDO_PHV2 -> FAILURE [label="placementFailure || maxStage > deviceStages"]
  *   REDO_PHV2 -> SUCCESS [label="!placementFailure && maxStage <= deviceStages"]
- *   SUCCESS -> FINAL_PLACEMENT [label="throw TablePlacement::RedoTablePlacement()"]
+ *   SUCCESS -> FINAL_PLACEMENT [label="throw TablePlacement::FinalRerunTablePlacementTrigger()"]
  *   FINAL_PLACEMENT -> FAILURE [label="placementFailure || maxStage > deviceStages"]
  *   FINAL_PLACEMENT -> SUCCESS;
  * }
@@ -54,17 +54,24 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/mau/resource_estimate.h"
+#include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/ir/gress.h"
 
 #include "lib/hex.h"
 #include "lib/map.h"
 #include "lib/safe_vector.h"
 
-const char *state_name[] = { "INITIAL", "NOCC_TRY1", "REDO_PHV1", "NOCC_TRY2", "REDO_PHV2",
-    "FINAL_PLACEMENT", "FAILURE", "SUCCESS", "ALT_INITIAL", "ALT_FINALIZE_TABLE" };
+const char *state_name[] = {
+    "INITIAL",           "NOCC_TRY1", "REDO_PHV1", "NOCC_TRY2",   "REDO_PHV2",
+    "FINAL_PLACEMENT",   "FAILURE",   "SUCCESS",   "ALT_INITIAL", "ALT_RETRY_ENHANCED_TP",
+    "ALT_FINALIZE_TABLE"};
 
 void TableSummary::FinalizePlacement() {
     state = BFNContext::get().options().alt_phv_alloc ? ALT_FINALIZE_TABLE : FINAL_PLACEMENT;
+}
+
+void TableSummary::resetPlacement() {
+    state = BFNContext::get().options().alt_phv_alloc ? ALT_INITIAL : INITIAL;
 }
 
 TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo& phv)
@@ -273,8 +280,24 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 state = ALT_FINALIZE_TABLE;
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
             } else {
-                // Trivial PHV alloc should yield the best possible table placement. No need to
-                // retry if we're not fitting.
+                if (maxStage > deviceStages) {
+                    // retry with table backtrack and resource-based allocation enabled.
+                    // DO NOT ignore container conflict conflict.
+                    state = ALT_RETRY_ENHANCED_TP;
+                    throw RerunTablePlacementTrigger::failure(false);
+                } else {
+                    // critical failures, do not retry.
+                    state = FAILURE;
+                }
+            }
+            break;
+        }
+        case ALT_RETRY_ENHANCED_TP: {
+            // table placement succeeded, backtrack to run actual PHV allocation.
+            if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                state = ALT_FINALIZE_TABLE;
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+            } else {
                 state = FAILURE;
             }
             break;
@@ -310,7 +333,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         // conflicts.
         if (placementFailure) {
             state = NOCC_TRY1;
-            throw NoContainerConflictTrigger::failure(true); }
+            throw RerunTablePlacementTrigger::failure(true); }
         // If maxStage <= criticalPathLength + CRITICAL_PATH_THRESHOLD, then OK. No backtracking.
         if (maxStage <= deviceStages && maxStage <= criticalPathLength + CRITICAL_PATH_THRESHOLD) {
             state = SUCCESS;
@@ -326,11 +349,11 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             LOG1("Invoking table placement without container conflicts to generate a more "
                  "compact placement.");
             firstRoundFit = true;
-            throw NoContainerConflictTrigger::failure(true);
+            throw RerunTablePlacementTrigger::failure(true);
         }
         LOG1("Invoking table placement without container conflicts because first round of table "
              "placement required " << maxStage << " stages.");
-        throw NoContainerConflictTrigger::failure(true);
+        throw RerunTablePlacementTrigger::failure(true);
 
     case NOCC_TRY1:
     case NOCC_TRY2:
@@ -373,7 +396,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
              "table placement took " << maxStage << " stages.");
         PhvInfo::darkSpillARA = false;
         state = NOCC_TRY2;
-        throw NoContainerConflictTrigger::failure(true);
+        throw RerunTablePlacementTrigger::failure(true);
 
     case FINAL_PLACEMENT:
     case REDO_PHV2:

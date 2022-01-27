@@ -562,6 +562,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/add_initialization.cpp
   phv/add_special_constraints.cpp
   phv/allocate_phv.cpp
+  phv/allocate_temps_and_finalize_liverange.cpp
   phv/asm_output.cpp
   phv/auto_init_metadata.cpp
   phv/cluster_phv_operations.cpp
@@ -634,6 +635,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/add_initialization.h
   phv/add_special_constraints.h
   phv/allocate_phv.h
+  phv/allocate_temps_and_finalize_liverange.h
   phv/error.h
   phv/asm_output.h
   phv/auto_init_metadata.h
