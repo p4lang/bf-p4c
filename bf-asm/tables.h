@@ -1783,9 +1783,6 @@ struct TMatchInfo {
 };
 
 Instruction *genNoop(StatefulTable *tbl, Table::Actions::Action *act);
-// P4C-4138 is actually a hardware bug that we need to avoid tripping over.  Workaround
-// involves adding some stuff with no effect to the SALU action to avoid it
-Instruction *p4c4138_workaround(StatefulTable *tbl, Table::Actions::Action *act);
 }
 
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",

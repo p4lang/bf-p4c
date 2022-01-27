@@ -1782,22 +1782,8 @@ void Table::Actions::stateful_pass2(Table *tbl) {
             code_use[act.code] = true; }
         if (act.code == 3 && stbl->clear_value)
             error(act.lineno, "Can't use SALU action 3 with a non-zero clear value");
-        bool may_need_p4c4138_workaround = false, dont_need_p4c4138_workaround = false;
-        for (auto *inst : act.instr) {
-            if (inst->phvRead()) {
-                if (inst->salu_output())
-                    may_need_p4c4138_workaround = true;
-                else
-                    dont_need_p4c4138_workaround = true; }
-            inst->pass2(tbl, &act); }
-        if (may_need_p4c4138_workaround && !dont_need_p4c4138_workaround) {
-            /* P4C-4138  If there is no ALU instruction, the hardware will power off the SALU
-             * and it won't produce any output.  So we need to insert an instruction with no
-             * net effect to avoid that */
-            if (Instruction *tmp = StatefulAlu::p4c4138_workaround(stbl, &act)) {
-                tmp->pass1(tbl, &act);
-                tmp->pass2(tbl, &act);
-                act.instr.push_back(tmp); } }
+        for (auto *inst : act.instr)
+            inst->pass2(tbl, &act);
     }
     if (stbl->clear_value)
         code_use[3] = true;

@@ -229,7 +229,8 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     if (*v == "phv_lo" || *v == "phv_hi") {
         op = new PhvRaw(tbl->gress, *v);
         return; }
-    op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
+    if (::Phv::Ref(tbl->gress, tbl->stage->stageno, *v).check(false))
+        op = new PhvReg(tbl->gress, tbl->stage->stageno, *v);
 }
 
 enum salu_slot_use {
@@ -787,21 +788,19 @@ struct OutOP : public SaluInstruction {
                             const VECTOR(value_t) &op) const override;
     };
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
+    operand src;
     int output_mux = -1;
 #if HAVE_JBAY
     bool lmatch = false;
     int lmatch_pred = 0;
 #endif  /* HAVE_JBAY */
-    operand::Phv *output_operand = 0;
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void decode_output_mux, (register_type, value_t &op))
-    void decode_output_mux(value_t &op) {
-        SWITCH_FOREACH_TARGET(options.target, decode_output_mux(TARGET(), op);); }
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void decode_output_mux,
+                            (register_type, Table *tbl, value_t &op))
+    void decode_output_mux(Table *tbl, value_t &op) {
+        SWITCH_FOREACH_TARGET(options.target, decode_output_mux(TARGET(), tbl, op);); }
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, int decode_output_option, (register_type, value_t &op))
     int decode_output_option(value_t &op) {
         SWITCH_FOREACH_TARGET(options.target, return decode_output_option(TARGET(), op);); }
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, bool output_mux_is_phv, (register_type))
-    bool output_mux_is_phv() {
-        SWITCH_FOREACH_TARGET(options.target, return output_mux_is_phv(TARGET());); }
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
@@ -809,10 +808,7 @@ struct OutOP : public SaluInstruction {
     bool salu_output() const override { return true; }
     bool equiv(Instruction *a_) override;
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
-        bool rv = output_mux_is_phv();
-        if (output_operand)
-            rv |= output_operand->phvRead(fn);
-        return rv; }
+        return src ? src->phvRead(fn) : false; }
     void dbprint(std::ostream &out) const override {
         out << "INSTR: output " << "pred=0x" << hex(predication_encode)
 #if HAVE_JBAY
@@ -869,14 +865,15 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 #endif  /* HAVE_JBAY */
     // Check mux operand
     if (idx < op.size) {
-        rv->decode_output_mux(op[idx]);
-        if (rv->output_mux < 0) {
-            operand src(tbl, act, op[idx], true);
-            if ((rv->output_operand = src.to<operand::Phv>()))
-                src.op = nullptr;
-            else
-                error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
-                      value_desc(op[idx]), op[0].s); }
+        rv->src = operand(tbl, act, op[idx], false);
+        // DANGER -- decoding the output mux here (as part of input parsing) requires that
+        // the phv section be before the section we're currently parsing in the .bfa file.
+        // That's always the case with compiler output, but do we want to require it for
+        // hand-written code?  Could reorg stuff to do this in pass1 instead.
+        rv->decode_output_mux(tbl, op[idx]);
+        if (rv->output_mux < 0)
+            error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
+                  value_desc(op[idx]), op[0].s);
         idx++;
     } else {
         error(rv->lineno, "too few operands for %s instruction", op[0].s);
@@ -892,8 +889,8 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
 Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    if (output_operand)
-        output_operand->pass1(tbl);
+    if (src)
+        src->pass1(tbl);
     if (output_mux == STATEFUL_PREDICATION_OUTPUT) {
         if (tbl->pred_comb_sel >= 0 && tbl->pred_comb_sel != slot - ALUOUT0)
             error(lineno, "Only one output of predication allowed");
@@ -908,31 +905,6 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
         tbl->output_lmatch = this; }
 #endif  /* HAVE_JBAY */
     return this; }
-
-/* There's a problem in the SALU hardware where, if the output from the SALU is reading
- * from the phv input to the SALU, but the phv input is not otherwise used (in any CMP
- * or regular ALU), then the SALU outputs 0 instead of the correct value.  This was identified
- * as P4C-4138 and we're guessing that the hardware is incorrectly turning off some bus to
- * save power in this case.  For now, we have a workaround where when we detect this case,
- * we insert an extra comparison with phv_lo (which is unused) that avoids the problem.
- * If there are no spare CMP ALUs, we'll fail here -- we could probably do something with
- * a spare regular ALU in that case, if there was one */
-Instruction *p4c4138_workaround(StatefulTable *tbl, Table::Actions::Action *act) {
-    unsigned avail_cmp = (1U << Target::STATEFUL_CMP_UNITS()) - 1;
-    for (auto *inst : act->instr)
-        if (auto *cmp = dynamic_cast<CmpOP *>(inst))
-            avail_cmp &= ~(1U << (cmp->slot - CMP0));
-    if (avail_cmp) {
-        char pred[8];
-        snprintf(pred, sizeof(pred), "cmp%d", ffs(avail_cmp) - 1);
-        VECTOR(value_t) args = EMPTY_VECTOR_INIT;
-        args.add("geq.u").add(pred).add("phv_lo").add(0);
-        auto *rv = Instruction::decode(tbl, act, args);
-        VECTOR_fini(args);
-        return rv; }
-    error(act->lineno, "Can't find an available cmp ALU for hardware SALU workaround");
-    return nullptr;
-}
 
 #include "tofino/salu_inst.cpp"         // NOLINT(build/include)
 #if HAVE_JBAY

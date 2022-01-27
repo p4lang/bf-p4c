@@ -180,13 +180,13 @@ class Phv : public Section {
             if (name_ == a.name_ && lo == a.lo && hi == a.hi)
                 return true;
             return **this == *a; }
-        bool check() const {
+        bool check(bool err = true) const {
             if (auto *s = phv.get(gress_, stage, name_)) {
                 if (hi >= 0 && !Slice(*s, lo, hi).valid) {
                     error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
                 return true;
-            } else if (lineno >= 0) {
+            } else if (lineno >= 0 && err) {
                 error(lineno, "No phv record %s", name_.c_str());
             }
             return false; }

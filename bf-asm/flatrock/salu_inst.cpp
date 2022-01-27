@@ -59,16 +59,11 @@ void OutOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
     write_regs<Target::Flatrock::mau_regs>(regs, tbl, act); }
 
-void OutOP::decode_output_mux(Target::Flatrock, value_t &op) {
+void OutOP::decode_output_mux(Target::Flatrock, Table *tbl, value_t &op) {
     BUG("TBD");
 }
 
 int OutOP::decode_output_option(Target::Flatrock, value_t &op) {
     BUG("TBD");
     return 0;
-}
-
-bool OutOP::output_mux_is_phv(Target::Flatrock) {
-    BUG("TBD");
-    return false;
 }

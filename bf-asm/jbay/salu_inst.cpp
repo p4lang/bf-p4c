@@ -375,7 +375,7 @@ void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Acti
 void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
     write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 
-void OutOP::decode_output_mux(Target::JBay, value_t &op) {
+void OutOP::decode_output_mux(Target::JBay, Table *tbl, value_t &op) {
     static const std::map<std::string, int> ops_mux_lookup = {
         { "mem_hi", 1 }, { "mem_lo", 0 },
         { "memory_hi", 1 }, { "memory_lo", 0 },
@@ -390,6 +390,13 @@ void OutOP::decode_output_mux(Target::JBay, value_t &op) {
         output_mux = ops_mux_lookup.at(op.s);
     else
         output_mux = -1;
+    if (src) {
+        int tmp = output_mux;
+        if (auto *phv = src.to<operand::Phv>())
+            output_mux = 2 + phv->phv_index(tbl->to<StatefulTable>());
+        else if (auto *mem = src.to<operand::Memory>())
+            output_mux = mem->field->bit(0) > 0 ? 1 : 0;
+        BUG_CHECK(tmp < 0 || tmp == output_mux, "inconsistent output mux decode"); }
 }
 int OutOP::decode_output_option(Target::JBay, value_t &op) {
     if (op == "lmatch") {
@@ -403,7 +410,6 @@ int OutOP::decode_output_option(Target::JBay, value_t &op) {
     }
     return 0;
 }
-bool OutOP::output_mux_is_phv(Target::JBay) { return output_mux == 2 || output_mux == 3; }
 
 template<>
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
@@ -416,7 +422,7 @@ void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         salu.salu_output_cmpfn = predication_encode;
     } else {
         salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
-    salu.salu_output_asrc = output_operand ? 2 + output_operand->phv_index(tbl) : output_mux;
+    salu.salu_output_asrc = output_mux;
     if ((salu.salu_lmatch_adr_bit_enable = lmatch))
         meter_group.stateful.salu_mathtable[0] = lmatch_pred;
     if (output_mux == STATEFUL_PREDICATION_OUTPUT)

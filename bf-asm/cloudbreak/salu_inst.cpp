@@ -271,35 +271,12 @@ void TMatchOP::write_regs(Target::Cloudbreak::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
     write_regs<Target::Cloudbreak::mau_regs>(regs, tbl, act); }
 
-void OutOP::decode_output_mux(Target::Cloudbreak, value_t &op) {
-    static const std::map<std::string, int> ops_mux_lookup = {
-        { "mem_hi", 1 }, { "mem_lo", 0 },
-        { "memory_hi", 1 }, { "memory_lo", 0 },
-        { "phv_hi", 3 }, { "phv_lo", 2 },
-        { "alu_hi", 5 }, { "alu_lo", 4 },
-        { "minmax_index", 5 }, { "minmax_post", 4 },
-        { "predicate", 6 }, { "address", 7 },
-        { "div", 8 }, { "mod", 9 }, { "minmax", 10 } };
-    if (op.type == tCMD && ops_mux_lookup.count(op[0].s))
-        output_mux = ops_mux_lookup.at(op[0].s);
-    else if (op.type == tSTR && ops_mux_lookup.count(op.s))
-        output_mux = ops_mux_lookup.at(op.s);
-    else
-        output_mux = -1;
+void OutOP::decode_output_mux(Target::Cloudbreak, Table *tbl, value_t &op) {
+    decode_output_mux(Target::JBay(), tbl, op);
 }
 int OutOP::decode_output_option(Target::Cloudbreak, value_t &op) {
-    if (op == "lmatch") {
-        lmatch = true;
-        if (op.type == tCMD)
-            lmatch_pred = decode_predicate(op[1]);
-        else
-            lmatch_pred = STATEFUL_PREDICATION_ENCODE_UNCOND;
-    } else {
-        return -1;
-    }
-    return 0;
+    return decode_output_option(Target::JBay(), op);
 }
-bool OutOP::output_mux_is_phv(Target::Cloudbreak) { return output_mux == 2 || output_mux == 3; }
 
 template<>
 void OutOP::write_regs(Target::Cloudbreak::mau_regs &regs, Table *tbl_,
@@ -313,7 +290,7 @@ void OutOP::write_regs(Target::Cloudbreak::mau_regs &regs, Table *tbl_,
         salu.salu_output_cmpfn = predication_encode;
     } else {
         salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
-    salu.salu_output_asrc = output_operand ? 2 + output_operand->phv_index(tbl) : output_mux;
+    salu.salu_output_asrc = output_mux;
     if ((salu.salu_lmatch_adr_bit_enable = lmatch))
         meter_group.stateful.salu_mathtable[0] = lmatch_pred;
     if (output_mux == STATEFUL_PREDICATION_OUTPUT)
