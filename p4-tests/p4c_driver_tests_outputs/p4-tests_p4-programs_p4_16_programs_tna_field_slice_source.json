@@ -835,5 +835,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_field_slice"
+    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_field_slice"
 }

@@ -2,7 +2,7 @@
 ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 
 # p4factory docker image to use (p4factory:<tag> or p4factory@sha256:<hash>)
-ARG P4FACTORY_IMAGE=p4factory@sha256:b386b4859d2c0fdd2545be00658c058924928dd049b3137238466c37534b1bbb
+ARG P4FACTORY_IMAGE=p4factory@sha256:65da62ed73a5521e96ac8285d6116ef11950f719cfebd0aaf9fb6af8c6c34d6e
 
 FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE}
 

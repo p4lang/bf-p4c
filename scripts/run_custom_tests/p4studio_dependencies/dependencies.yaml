@@ -1,0 +1,493 @@
+# Packages for all the supported OS.
+# Supported OS are Ubuntu(16.04, 18.04, 20.04), Debian(8, 9, 10) and Centos (7, 8).
+
+OS_based:
+    # Default packages to be installed on all supported OS.
+    defaults:
+        minimal:
+            os_packages:
+                - autoconf
+                - cpp
+                - curl
+                - ethtool
+                - flex
+                - git
+                - libtool
+                - make
+                - cmake
+                - net-tools
+                - unzip
+                - wget
+
+            pip3_packages:
+                - PyYAML
+                - Tenjin
+                - crc16
+                - crcmod
+                - ctypesgen==1.0.1
+                - getmac==0.8.2
+                - ipaddress
+                - ipython~=5.10.0
+                - jsl
+                - jsonschema==2.6.0
+                - netifaces
+                - packaging==20.9
+                - ply
+                - psutil
+                - pysubnettree
+                - scapy-helper
+                - setuptools==44.1.1
+                - simplejson
+                - six>=1.12.0
+                - xmlrunner
+
+        optional_packages:
+            os_packages:
+                - cscope
+                - doxygen
+            pip3_packages:
+                - doxypy
+        source_packages:
+            grpc:
+                version: '1.17.0'
+                mode: 'git clone'
+                url: 'https://github.com/google/grpc.git'
+                protobuf:
+                    mode: 'wget'
+                    url: 'https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protobuf-cpp-3.6.1.tar.gz'
+                    version: '3.6.1'
+            thrift:
+                mode: 'wget'
+                url: 'http://archive.apache.org/dist/thrift'
+                flags: '--without-csharp
+                        --without-d
+                        --without-erlang
+                        --without-go
+                        --without-haskell
+                        --without-java
+                        --without-lua
+                        --without-nodejs
+                        --without-perl
+                        --without-php
+                        --without-php_extension
+                        --with-qt5=no
+                        --without-ruby'
+            boost:
+                version: '1.67.0'
+                mode: 'wget'
+                url: 'http://downloads.sourceforge.net/project/boost/boost'
+            bridge:
+                version: '1.6'
+                mode: 'wget'
+                url: 'https://www.kernel.org/pub/linux/utils/net/bridge-utils/bridge-utils-1.6.tar.xz'
+            pi:
+                mode: 'git clone'
+                url: 'https://github.com/p4lang/PI.git'
+                default_sha: 4546038f5770e84dc0d2bba90f1ee7811c9955df
+            libcli:
+                mode: 'git clone '
+                url: 'https://github.com/dparrish/libcli'
+                default_sha: V1.10.4
+
+    Ubuntu:
+        keyword: 'apt-get'
+        # Default packages to be installed for all supported versions of Ubuntu.
+        defaults:
+            minimal:
+                os_packages:
+                    - aspell
+                    - build-essential
+                    - bridge-utils
+                    - libbz2-dev
+                    - libc6-dev
+                    - libelf-dev
+                    - libgmp10
+                    - libgoogle-perftools-dev
+                    - pkg-config
+                    - libffi-dev
+                    - libsqlite3-dev
+            thrift:
+                os_packages:
+                    - bison
+                    - libevent-dev
+                    - libssl-dev
+            bf_platforms:
+                os_packages:
+                    - libcurl4-gnutls-dev
+                    - libusb-1.0-0-dev
+            switch_p4_16:
+                os_packages:
+                    - aspell-en
+                    - libnl-route-3-dev
+                    - libnl-genl-3-dev
+                    - libxml-simple-perl
+            bf_diags:
+                os_packages:
+                    - libpcap-dev
+            pi:
+                os_packages:
+                    - libjudy-dev
+
+        # Packages to be installed for Ubuntu 16.04.
+        16.04:
+            p4i:
+                os_packages:
+                    - firefox
+                    - libasound2
+                    - libatk1.0-0
+                    - libatk-bridge2.0-0
+                    - libatspi2.0-0
+                    - libavahi-client3
+                    - libavahi-common3
+                    - libblkid1
+                    - libbsd0
+                    - libc6
+                    - libcairo2
+                    - libcairo-gobject2
+                    - libcomerr2
+                    - libcups2
+                    - libdatrie1
+                    - libdbus-1-3
+                    - libdrm2
+                    - libepoxy0
+                    - libexpat1
+                    - libffi6
+                    - libfontconfig1
+                    - libfreetype6
+                    - libgbm1
+                    - libgcc1
+                    - libgcc-5-dev
+                    - libgcrypt20
+                    - libgdk-pixbuf2.0-0
+                    - libglib2.0-0
+                    - libgnutls30
+                    - libgpg-error0
+                    - libgraphite2-3
+                    - libgssapi-krb5-2
+                    - libgtk-3-0
+                    - libharfbuzz0b
+                    - libhogweed4
+                    - libidn2-0
+                    - libk5crypto3
+                    - libkeyutils1
+                    - libkrb5-3
+                    - libkrb5support0
+                    - liblz4-1
+                    - liblzma5
+                    - libmount1
+                    - libnettle6
+                    - libnspr4
+                    - libnss3
+                    - libp11-kit0
+                    - libpango-1.0-0
+                    - libpangocairo-1.0-0
+                    - libpangoft2-1.0-0
+                    - libpcre3
+                    - libpixman-1-0
+                    - libpng16-16
+                    - libselinux1
+                    - libstdc++6
+                    - libsystemd0
+                    - libtasn1-6
+                    - libthai0
+                    - libunistring0
+                    - libuuid1
+                    - libwayland-client0
+                    - libwayland-cursor0
+                    - libwayland-egl1
+                    - libx11-6
+                    - libx11-xcb1
+                    - libxau6
+                    - libxcb1
+                    - libxcb-dri3-0
+                    - libxcb-render0
+                    - libxcb-shm0
+                    - libxcomposite1
+                    - libxcursor1
+                    - libxdamage1
+                    - libxdmcp6
+                    - libxext6
+                    - libxfixes3
+                    - libxi6
+                    - libxinerama1
+                    - libxkbcommon0
+                    - libxrandr2
+                    - libxrender1
+                    - libxtst6
+                    - zlib1g
+
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+
+        # Packages to be installed for Ubuntu 18.04.
+        18.04:
+            minimal:
+                os_packages:
+                    - iproute2
+                    - libboost-dev
+                    - libboost-filesystem-dev
+                    - libboost-graph-dev
+                    - libboost-iostreams-dev
+                    - libboost-program-options-dev
+                    - libboost-system-dev
+                    - libboost-test-dev
+                    - libboost-thread-dev
+            p4i:
+                os_packages:
+                    - firefox
+                    - libasound2
+                    - libatk1.0-0
+                    - libatk-bridge2.0-0
+                    - libatspi2.0-0
+                    - libavahi-client3
+                    - libavahi-common3
+                    - libblkid1
+                    - libbsd0
+                    - libc6
+                    - libcairo2
+                    - libcairo-gobject2
+                    - libcom-err2
+                    - libcups2
+                    - libdatrie1
+                    - libdbus-1-3
+                    - libdrm2
+                    - libepoxy0
+                    - libexpat1
+                    - libffi6
+                    - libfontconfig1
+                    - libfreetype6
+                    - libgbm1
+                    - libgcc1
+                    - libgcc-7-dev
+                    - libgcrypt20
+                    - libgdk-pixbuf2.0-0
+                    - libglib2.0-0
+                    - libgnutls30
+                    - libgpg-error0
+                    - libgraphite2-3
+                    - libgssapi-krb5-2
+                    - libgtk-3-0
+                    - libharfbuzz0b
+                    - libhogweed4
+                    - libidn2-0
+                    - libk5crypto3
+                    - libkeyutils1
+                    - libkrb5-3
+                    - libkrb5support0
+                    - liblz4-1
+                    - liblzma5
+                    - libmount1
+                    - libnettle6
+                    - libnspr4
+                    - libnss3
+                    - libp11-kit0
+                    - libpango-1.0-0
+                    - libpangocairo-1.0-0
+                    - libpangoft2-1.0-0
+                    - libpcre3
+                    - libpixman-1-0
+                    - libpng16-16
+                    - libselinux1
+                    - libstdc++6
+                    - libsystemd0
+                    - libtasn1-6
+                    - libthai0
+                    - libunistring2
+                    - libuuid1
+                    - libwayland-client0
+                    - libwayland-cursor0
+                    - libwayland-egl1
+                    - libx11-6
+                    - libx11-xcb1
+                    - libxau6
+                    - libxcb1
+                    - libxcb-dri3-0
+                    - libxcb-render0
+                    - libxcb-shm0
+                    - libxcomposite1
+                    - libxcursor1
+                    - libxdamage1
+                    - libxdmcp6
+                    - libxext6
+                    - libxfixes3
+                    - libxi6
+                    - libxinerama1
+                    - libxkbcommon0
+                    - libxrandr2
+                    - libxrender1
+                    - libxtst6
+                    - zlib1g
+            thrift:
+                os_packages:
+                    - python3-distutils
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+
+        20.04:
+            minimal:
+                os_packages:
+                    - iproute2
+            thrift:
+                os_packages:
+                    - python3-thrift
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+
+    Debian:
+        keyword: 'apt-get'
+        # Default packages to be installed for all supported versions of Debian.
+        defaults:
+            minimal:
+                os_packages:
+                    - aspell
+                    - build-essential
+                    - bridge-utils
+                    - g++
+                    - libbz2-dev
+                    - libc6-dev
+                    - libelf-dev
+                    - libgmp10
+                    - libgoogle-perftools-dev
+                    - pkg-config
+                    - systemd
+                    - libffi-dev
+                    - libsqlite3-dev
+            p4i:
+                os_packages:
+                    - libgtk-3-0
+                    - libnotify4
+                    - libnss3
+                    - libxss1
+                    - libxtst6
+                    - xdg-utils
+                    - libatspi2.0-0
+                    - libuuid1
+                    - libsecret-1-0
+
+            thrift:
+                os_packages:
+                    - bison
+                    - libevent-dev
+                    - libssl-dev
+            bf_platforms:
+                os_packages:
+                    - libcurl4-gnutls-dev
+                    - libusb-1.0-0-dev
+            switch_p4_16:
+                os_packages:
+                    - aspell-en
+                    - libnl-route-3-dev
+                    - libnl-genl-3-dev
+                    - libxml-simple-perl
+            bf_diags:
+                os_packages:
+                    - libpcap-dev
+            pi:
+                os_packages:
+                    - libjudy-dev
+                    - python-dev
+        # Packages to be installed for Debian 9.
+        9:
+            minimal:
+                os_packages:
+                    - libgc-dev
+                    - zlib1g-dev
+            thrift:
+                os_packages:
+                    - python3.5-dev
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+
+        # Packages to be installed for Debian 10.
+        10:
+            minimal:
+                os_packages:
+                    - procps
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+
+        # Packages to be installed for Debian 11.
+        11:
+            minimal:
+                os_packages:
+                    - procps
+                    - iproute2
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+
+    CentOS:
+        keyword: 'yum'
+        # Default packages to be installed for all supported versions of CentOS.
+        defaults:
+            minimal:
+                os_packages:
+                    - bzip2
+                    - bzip2-devel
+                    - gc
+                    - glibc-devel
+                    - gmp
+                    - glib2-devel
+                    - gperftools-devel
+                    - iproute
+                    - openssl-devel
+                    - openssl-libs
+                    - pkgconfig
+                    - scl-utils
+                    - which
+                    - yum-utils
+                    - libffi-devel
+                    - libsqlite3x-devel
+            p4i:
+                os_packages:
+                    - at-spi2-core
+                    - gtk3
+                    - libXScrnSaver
+                    - libXtst
+                    - libnotify
+                    - libuuid
+                    - nss
+                    - xdg-utils
+
+            thrift:
+                os_packages:
+                    - byacc
+                    - libevent-devel
+            bf_platforms:
+                os_packages:
+                    - libcurl-devel
+                    - libusb-devel
+                    - libusbx-devel
+            switch_p4_16:
+                os_packages:
+                    - aspell
+                    - aspell-en
+                    - libnl3-devel
+                    - perl-XML-Simple
+            bf_diags:
+                os_packages:
+                    - libpcap-devel
+     
+        8:
+            minimal:
+                os_packages:
+                    - gcc
+                    - gcc-c++
+                    - redhat-rpm-config
+                    - python2-devel
+                    - python3-devel
+                    - patch
+                    - diffutils
+                    - http://mirror.centos.org/centos/8/PowerTools/x86_64/os/Packages/Judy-devel-1.0.5-18.module_el8.3.0+757+d382997d.x86_64.rpm
+
+            source_packages:
+                thrift:
+                    version: '0.14.1'
+                          
+       
+     

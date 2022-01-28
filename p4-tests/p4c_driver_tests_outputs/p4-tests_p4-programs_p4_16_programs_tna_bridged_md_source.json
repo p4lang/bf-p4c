@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 256,
+                    "line": 258,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 254,
+                "line": 256,
                 "column": 32
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -21,30 +21,30 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 117,
+                    "line": 119,
                     "column": 13
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 122,
+                    "line": 124,
                     "column": 26
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 130,
+                    "line": 132,
                     "column": 9,
-                    "end_line": 132
+                    "end_line": 134
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 130,
+                    "line": 132,
                     "column": 20,
-                    "end_line": 131
+                    "end_line": 133
                 }
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/mnt/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/home/ubuntu/bf-p4c-compilers2/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -54,14 +54,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 119,
+                    "line": 121,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.bridge_add_example_hdr",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 107,
+                "line": 109,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -70,14 +70,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 118,
+                    "line": 120,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.bridge_add_ig_intr_md",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 102,
+                "line": 104,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -86,33 +86,17 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 131,
+                    "line": 133,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 125,
+                "line": 127,
                 "column": 12
             },
             "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 136,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.bridge_md_ctrl",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 115,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
         },
         {
             "references": [
@@ -122,31 +106,27 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngress.output_port",
+            "symbol_name": "SwitchIngress.bridge_md_ctrl",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 129,
+                "line": 117,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
-            "references": [],
-            "symbol_name": "tbl_tna_bridged_md225",
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 140,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.output_port",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 225,
-                "column": 13
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [],
-            "symbol_name": "tbl_tna_bridged_md225_0",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 225,
-                "column": 13
+                "line": 131,
+                "column": 11
             },
             "symbol_type": "P4Table"
         },
@@ -166,17 +146,37 @@
             "declaration": {
                 "file": "tna_bridged_md.p4",
                 "line": 227,
-                "column": 13,
-                "end_line": 228
+                "column": 13
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_bridged_md228",
+            "symbol_name": "tbl_tna_bridged_md229",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 228,
+                "line": 229,
+                "column": 13
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_bridged_md229_0",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 229,
+                "column": 13,
+                "end_line": 230
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_bridged_md230",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 230,
                 "column": 13
             },
             "symbol_type": "P4Table"
@@ -185,14 +185,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 227,
+                    "line": 229,
                     "column": 47
                 }
             ],
             "symbol_name": "SwitchEgress.eg_md.example_bridge_hdr.dst_mac_addr_low",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 217,
+                "line": 219,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -201,14 +201,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 228,
+                    "line": 230,
                     "column": 47
                 }
             ],
             "symbol_name": "SwitchEgress.eg_md.example_bridge_hdr.src_mac_addr_low",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 217,
+                "line": 219,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -217,14 +217,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 225,
+                    "line": 227,
                     "column": 47
                 }
             ],
             "symbol_name": "SwitchEgress.eg_md.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 217,
+                "line": 219,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -233,19 +233,19 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 224,
+                    "line": 226,
                     "column": 13
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 226,
+                    "line": 228,
                     "column": 15
                 }
             ],
             "symbol_name": "SwitchEgress.eg_md.internal_hdr.header_type",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 217,
+                "line": 219,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -254,19 +254,19 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 225,
+                    "line": 227,
                     "column": 13
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 227,
+                    "line": 229,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchEgress.hdr.ethernet.dst_addr",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 216,
+                "line": 218,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -275,14 +275,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 228,
+                    "line": 230,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchEgress.hdr.ethernet.src_addr",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 216,
+                "line": 218,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -291,14 +291,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 237,
+                "line": 239,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -307,14 +307,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 237,
+                "line": 239,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -323,14 +323,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 237,
+                "line": 239,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -339,14 +339,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 237,
+                "line": 239,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -355,14 +355,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 237,
+                "line": 239,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -371,14 +371,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 237,
+                "line": 239,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -387,14 +387,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 244,
+                    "line": 246,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchEgressDeparser.pkt",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 236,
+                "line": 238,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -408,14 +408,14 @@
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 171,
+                    "line": 173,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_intr_md",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 166,
+                "line": 168,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -424,14 +424,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 171,
+                    "line": 173,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_intr_md.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 166,
+                "line": 168,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -440,14 +440,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 193,
+                    "line": 195,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_md.example_bridge_hdr",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 165,
+                "line": 167,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -456,14 +456,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 178,
+                    "line": 180,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_md.example_bridge_hdr.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 165,
+                "line": 167,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -472,46 +472,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 188,
+                    "line": 190,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchEgressParser.eg_md.ig_intr_md",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 165,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 177,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchEgressParser.eg_md.ig_intr_md.$valid",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 165,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 176,
-                    "column": 21
-                }
-            ],
-            "symbol_name": "SwitchEgressParser.eg_md.internal_hdr",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 165,
+                "line": 167,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -521,13 +489,13 @@
                 {
                     "file": "tna_bridged_md.p4",
                     "line": 179,
-                    "column": 27
+                    "column": 9
                 }
             ],
-            "symbol_name": "SwitchEgressParser.eg_md.internal_hdr.header_type",
+            "symbol_name": "SwitchEgressParser.eg_md.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 165,
+                "line": 167,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -536,14 +504,46 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 198,
+                    "line": 178,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_md.internal_hdr",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 167,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 181,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_md.internal_hdr.header_type",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 167,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 200,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchEgressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 164,
+                "line": 166,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -552,14 +552,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 199,
+                    "line": 201,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchEgressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 164,
+                "line": 166,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -568,14 +568,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 206,
+                    "line": 208,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchEgressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 164,
+                "line": 166,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -589,39 +589,39 @@
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 171,
+                    "line": 173,
                     "column": 29
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 176,
+                    "line": 178,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 188,
+                    "line": 190,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 193,
+                    "line": 195,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 198,
+                    "line": 200,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 206,
+                    "line": 208,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchEgressParser.pkt",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 163,
+                "line": 165,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -630,14 +630,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 111,
+                    "line": 113,
                     "column": 53
                 }
             ],
             "symbol_name": "SwitchIngress.bridge_add_example_hdr.dst_mac_addr_low",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 107,
+                "line": 109,
                 "column": 43
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -646,14 +646,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 112,
+                    "line": 114,
                     "column": 53
                 }
             ],
             "symbol_name": "SwitchIngress.bridge_add_example_hdr.src_mac_addr_low",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 108,
+                "line": 110,
                 "column": 43
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -662,19 +662,19 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 26
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -683,14 +683,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md._pad1",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -699,14 +699,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md._pad2",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -715,14 +715,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_mac_tstamp",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -731,14 +731,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -747,14 +747,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.packet_version",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -763,49 +763,17 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 97,
+                "line": 99,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 110,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_md.example_bridge_hdr.$valid",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 96,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 111,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_md.example_bridge_hdr.dst_mac_addr_low",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 96,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
         },
         {
             "references": [
@@ -815,10 +783,10 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngress.ig_md.example_bridge_hdr.src_mac_addr_low",
+            "symbol_name": "SwitchIngress.ig_md.example_bridge_hdr.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -827,19 +795,51 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 113,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.example_bridge_hdr.dst_mac_addr_low",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 98,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 114,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.example_bridge_hdr.src_mac_addr_low",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 98,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 106,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 26
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -848,14 +848,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md._pad1",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -864,14 +864,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md._pad2",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -880,14 +880,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md.ingress_mac_tstamp",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -896,14 +896,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -912,14 +912,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md.packet_version",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -928,14 +928,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -944,19 +944,19 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 103,
+                    "line": 105,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 109,
+                    "line": 111,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.internal_hdr.header_type",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 96,
+                "line": 98,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -965,14 +965,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 126,
+                    "line": 128,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 100,
+                "line": 102,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -981,14 +981,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 126,
+                    "line": 128,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port.port_id",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 125,
+                "line": 127,
                 "column": 37
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -997,14 +997,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 146,
+                "line": 148,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1013,14 +1013,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 146,
+                "line": 148,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1029,14 +1029,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 146,
+                "line": 148,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1045,14 +1045,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 146,
+                "line": 148,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1061,14 +1061,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 146,
+                "line": 148,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1077,15 +1077,47 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 146,
+                "line": 148,
                 "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 156,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.ig_md.example_bridge_hdr",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 149,
+                "column": 45
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 155,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.ig_md.ig_intr_md",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 149,
+                "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
         },
@@ -1097,58 +1129,16 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.ig_md.example_bridge_hdr",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 147,
-                "column": 45
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 153,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.ig_md.ig_intr_md",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 147,
-                "column": 45
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 152,
-                    "column": 18
-                }
-            ],
             "symbol_name": "SwitchIngressDeparser.ig_md.internal_hdr",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 147,
+                "line": 149,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
         },
         {
             "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 152,
-                    "column": 9
-                },
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 153,
-                    "column": 9
-                },
                 {
                     "file": "tna_bridged_md.p4",
                     "line": 154,
@@ -1158,12 +1148,22 @@
                     "file": "tna_bridged_md.p4",
                     "line": 155,
                     "column": 9
+                },
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 156,
+                    "column": 9
+                },
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 157,
+                    "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 145,
+                "line": 147,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1172,14 +1172,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 78,
+                    "line": 80,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 63,
+                "line": 65,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1188,14 +1188,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 79,
+                    "line": 81,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 63,
+                "line": 65,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1204,14 +1204,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 86,
+                    "line": 88,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 63,
+                "line": 65,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1225,14 +1225,14 @@
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 73,
+                    "line": 75,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 65,
+                "line": 67,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -1241,14 +1241,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 73,
+                    "line": 75,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 65,
+                "line": 67,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -1262,17 +1262,33 @@
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 73,
+                    "line": 75,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 65,
+                "line": 67,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 74,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_md.example_bridge_hdr.$valid",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 66,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
         },
         {
             "references": [
@@ -1282,26 +1298,10 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngressParser.ig_md.example_bridge_hdr.$valid",
-            "declaration": {
-                "file": "tna_bridged_md.p4",
-                "line": 64,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_bridged_md.p4",
-                    "line": 70,
-                    "column": 9
-                }
-            ],
             "symbol_name": "SwitchIngressParser.ig_md.internal_hdr.$valid",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 64,
+                "line": 66,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1310,14 +1310,14 @@
             "references": [
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 71,
+                    "line": 73,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_md.internal_hdr.header_type",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 64,
+                "line": 66,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1336,24 +1336,24 @@
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 73,
+                    "line": 75,
                     "column": 29
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 78,
+                    "line": 80,
                     "column": 9
                 },
                 {
                     "file": "tna_bridged_md.p4",
-                    "line": 86,
+                    "line": 88,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 62,
+                "line": 64,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1363,7 +1363,7 @@
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 224,
+                "line": 226,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1373,7 +1373,7 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 226,
+                "line": 228,
                 "column": 11
             },
             "symbol_type": "IfStatement"
@@ -1383,7 +1383,7 @@
             "symbol_name": "cond-3",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 224,
+                "line": 226,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1393,11 +1393,11 @@
             "symbol_name": "cond-4",
             "declaration": {
                 "file": "tna_bridged_md.p4",
-                "line": 226,
+                "line": 228,
                 "column": 11
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_bridged_md"
+    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_bridged_md"
 }

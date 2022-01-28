@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 128,
+                    "line": 130,
                     "column": 39
                 }
             ],
             "symbol_name": "SwitchIngress.hash1",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 105,
+                "line": 107,
                 "column": 50
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -21,14 +21,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 132,
+                    "line": 134,
                     "column": 39
                 }
             ],
             "symbol_name": "SwitchIngress.hash2",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 115,
+                "line": 117,
                 "column": 50
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -37,14 +37,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 105,
+                    "line": 107,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.poly1",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 104,
+                "line": 106,
                 "column": 30
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -53,14 +53,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 115,
+                    "line": 117,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.poly2",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 114,
+                "line": 116,
                 "column": 30
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -69,14 +69,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 169,
+                    "line": 171,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 167,
+                "line": 169,
                 "column": 31
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -85,20 +85,20 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 122,
+                    "line": 124,
                     "column": 9,
-                    "end_line": 124
+                    "end_line": 126
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 122,
+                    "line": 124,
                     "column": 20,
-                    "end_line": 123
+                    "end_line": 125
                 }
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/mnt/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/home/ubuntu/bf-p4c-compilers2/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -108,19 +108,19 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 137,
+                    "line": 139,
                     "column": 13
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 139,
+                    "line": 141,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress.apply_hash1",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 127,
+                "line": 129,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -129,19 +129,19 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 144,
+                    "line": 146,
                     "column": 13
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 146,
+                    "line": 148,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress.apply_hash2",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 131,
+                "line": 133,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -150,14 +150,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 123,
+                    "line": 125,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 117,
+                "line": 119,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -166,14 +166,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 150,
+                    "line": 152,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.output_port",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 121,
+                "line": 123,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -182,14 +182,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 154,
+                    "line": 156,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.tbl_hash1",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 135,
+                "line": 137,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -198,24 +198,24 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 155,
+                    "line": 157,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.tbl_hash2",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 142,
+                "line": 144,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_custom_hash158",
+            "symbol_name": "tbl_tna_custom_hash160",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 158,
+                "line": 160,
                 "column": 32
             },
             "symbol_type": "P4Table"
@@ -224,19 +224,19 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 128,
+                    "line": 130,
                     "column": 9
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 128,
+                    "line": 130,
                     "column": 50
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 89,
+                "line": 91,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -245,19 +245,19 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 132,
+                    "line": 134,
                     "column": 9
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 132,
+                    "line": 134,
                     "column": 50
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 89,
+                "line": 91,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -266,14 +266,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 158,
+                    "line": 160,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 94,
+                "line": 96,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -282,14 +282,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 118,
+                    "line": 120,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 94,
+                "line": 96,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -298,14 +298,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 118,
+                    "line": 120,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port.port_id",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 117,
+                "line": 119,
                 "column": 37
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -314,14 +314,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 77,
+                "line": 79,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -330,14 +330,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 77,
+                "line": 79,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -346,14 +346,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 77,
+                "line": 79,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -362,14 +362,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 77,
+                "line": 79,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -378,14 +378,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 77,
+                "line": 79,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -394,14 +394,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 77,
+                "line": 79,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -410,14 +410,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 84,
+                    "line": 86,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 76,
+                "line": 78,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -426,14 +426,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 52,
+                    "line": 54,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -442,14 +442,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 53,
+                    "line": 55,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -458,14 +458,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 60,
+                    "line": 62,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -474,14 +474,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 61,
+                    "line": 63,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4.protocol",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -490,14 +490,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 68,
+                    "line": 70,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.udp",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -511,14 +511,14 @@
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 42,
+                "line": 44,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -527,14 +527,14 @@
             "references": [
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 42,
+                "line": 44,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -548,14 +548,14 @@
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 42,
+                "line": 44,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -574,33 +574,33 @@
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 29
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 52,
+                    "line": 54,
                     "column": 9
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 60,
+                    "line": 62,
                     "column": 9
                 },
                 {
                     "file": "tna_custom_hash.p4",
-                    "line": 68,
+                    "line": 70,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_custom_hash.p4",
-                "line": 39,
+                "line": 41,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_custom_hash"
+    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_custom_hash"
 }

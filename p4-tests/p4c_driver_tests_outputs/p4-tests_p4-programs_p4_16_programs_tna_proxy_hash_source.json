@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 150,
+                    "line": 152,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 148,
+                "line": 150,
                 "column": 31
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -21,28 +21,28 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 103,
+                    "line": 105,
                     "column": 13
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 107,
+                    "line": 109,
                     "column": 26
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 121,
+                    "line": 123,
                     "column": 13
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 125,
+                    "line": 127,
                     "column": 32
                 }
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/mnt/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/home/ubuntu/bf-p4c-compilers2/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -52,19 +52,19 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 104,
+                    "line": 106,
                     "column": 13
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 122,
+                    "line": 124,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 89,
+                "line": 91,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -73,14 +73,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 136,
+                    "line": 138,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ipv4_match_proxy_hash",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 112,
+                "line": 114,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -89,69 +89,27 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 135,
+                    "line": 137,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ipv4_match_regular",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 94,
+                "line": 96,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_proxy_hash139",
+            "symbol_name": "tbl_tna_proxy_hash141",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 139,
+                "line": 141,
                 "column": 32
             },
             "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_proxy_hash.p4",
-                    "line": 96,
-                    "column": 13
-                },
-                {
-                    "file": "tna_proxy_hash.p4",
-                    "line": 114,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
-            "declaration": {
-                "file": "tna_proxy_hash.p4",
-                "line": 82,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_proxy_hash.p4",
-                    "line": 97,
-                    "column": 13
-                },
-                {
-                    "file": "tna_proxy_hash.p4",
-                    "line": 115,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
-            "declaration": {
-                "file": "tna_proxy_hash.p4",
-                "line": 82,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
         },
         {
             "references": [
@@ -166,10 +124,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
+            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 82,
+                "line": 84,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -187,10 +145,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 82,
+                "line": 84,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -199,14 +157,56 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 139,
+                    "line": 100,
+                    "column": 13
+                },
+                {
+                    "file": "tna_proxy_hash.p4",
+                    "line": 118,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "tna_proxy_hash.p4",
+                "line": 84,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_proxy_hash.p4",
+                    "line": 101,
+                    "column": 13
+                },
+                {
+                    "file": "tna_proxy_hash.p4",
+                    "line": 119,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_proxy_hash.p4",
+                "line": 84,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_proxy_hash.p4",
+                    "line": 141,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 87,
+                "line": 89,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -215,14 +215,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 90,
+                    "line": 92,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 87,
+                "line": 89,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -231,14 +231,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 90,
+                    "line": 92,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port.port_id",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 89,
+                "line": 91,
                 "column": 37
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -247,14 +247,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 70,
+                "line": 72,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -263,14 +263,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 70,
+                "line": 72,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -279,14 +279,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 70,
+                "line": 72,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -295,14 +295,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 70,
+                "line": 72,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -311,14 +311,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 70,
+                "line": 72,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -327,14 +327,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 70,
+                "line": 72,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -343,14 +343,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 77,
+                    "line": 79,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 69,
+                "line": 71,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -359,14 +359,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 52,
+                    "line": 54,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -375,14 +375,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 53,
+                    "line": 55,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -391,14 +391,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 60,
+                    "line": 62,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 40,
+                "line": 42,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -412,14 +412,14 @@
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 42,
+                "line": 44,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -428,14 +428,14 @@
             "references": [
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 42,
+                "line": 44,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -449,14 +449,14 @@
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 42,
+                "line": 44,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -475,28 +475,28 @@
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 47,
+                    "line": 49,
                     "column": 29
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 52,
+                    "line": 54,
                     "column": 9
                 },
                 {
                     "file": "tna_proxy_hash.p4",
-                    "line": 60,
+                    "line": 62,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_proxy_hash.p4",
-                "line": 39,
+                "line": 41,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/mnt/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_proxy_hash"
+    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_proxy_hash"
 }
