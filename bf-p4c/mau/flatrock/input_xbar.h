@@ -9,16 +9,18 @@ namespace Flatrock {
 
 class IXBar : public ::IXBar {
  public:
-    static constexpr int GATEWAY_BYTES = 6;
-    static constexpr int GATEWAY_ROWS = 32;
+    static constexpr int GATEWAY_FIXED_BYTES = 5;
+    static constexpr int GATEWAY_VEC_BYTES = 8;
+    static constexpr int GATEWAY_ROWS = 24;
     static constexpr int EXACT_BYTES = 20;
     static constexpr int EXACT_WORDS = 5;
+    static constexpr int XCMP_BYTES = 16;
+    static constexpr int XCMP_WORDS = 12;
     static constexpr int BYTES_PER_WORD = 4;
     static constexpr int EXACT_MATCH_UNITS = 8;  /* 4 STM + 4 LAMB */
     static constexpr int EXACT_MATCH_STM_UNITS = 4;  /* first 4 units */
     static constexpr int TERNARY_GROUPS = 16;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
-    static constexpr int ACTION_BYTES = 64;
 
     using Loc = ::IXBar::Loc;
     using FieldInfo = ::IXBar::FieldInfo;
@@ -51,29 +53,31 @@ class IXBar : public ::IXBar {
     };
     static Use &getUse(autoclone_ptr<::IXBar::Use> &ac);
     static const Use &getUse(const autoclone_ptr<::IXBar::Use> &ac);
+    IXBar();
 
  private:
     /** IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
-     * to record the name of the field it will be getting and the bit offset within the field.
-     * cstrings here are field names as used in PhvInfo (so PhvInfo::field can be used to find
-     * out details about the field)
+     * to record the container it will be getting and the bit offset within the container.
+     * Word use are set to just the (first) container as the bit offset is always 0.
      * NOTE: Changes here require changes to .gdbinit pretty printer */
-    Alloc1D<std::pair<PHV::Container, int>, GATEWAY_BYTES>                      gateway_use;
+    Alloc1D<std::pair<PHV::Container, int>, GATEWAY_VEC_BYTES>                  gateway_use;
     // FIXME -- maybe allocate gateway rows as part of memory alloc (as was done for
     // gateway units on tofino1/2/3) rather than here?
     Alloc1D<std::pair<PHV::Container, int>, GATEWAY_ROWS>                       gateway_rows;
     // FIXME -- each exact/ternary can select between 8 sources based on gateway output
     Alloc1D<std::pair<PHV::Container, int>, EXACT_BYTES>                        exact_byte_use;
-    Alloc1D<std::pair<PHV::Container, int>, EXACT_WORDS>                        exact_word_use;
+    Alloc1D<PHV::Container, EXACT_WORDS>                                        exact_word_use;
+    Alloc1D<std::pair<PHV::Container, int>, XCMP_BYTES>                         xcmp_byte_use;
+    Alloc1D<PHV::Container, XCMP_WORDS>                                         xcmp_word_use;
     Alloc2D<std::pair<PHV::Container, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>
                                                                                 ternary_use;
-    // FIXME -- action PHV xbar can select between 4? sources based on gateway output
-    Alloc1D<std::pair<PHV::Container, int>, ACTION_BYTES>                       action_use;
-    /* reverse maps of the above -- for exact, group 0 = bytes, group 1 = words */
+    /* reverse maps of the above -- the 'group' encoding is a bit weird.  exact and xcmp
+     * use 0 for bytes groups and 1 for word groups.  gateway uses 0 for vector group and
+     * 1 for the fixed bytes.  Ternary groups correspond to the SCM inputs */
     std::multimap<PHV::Container, Loc>          gateway_fields;
     std::multimap<PHV::Container, Loc>          exact_fields;
     std::multimap<PHV::Container, Loc>          ternary_fields;
-    std::multimap<PHV::Container, Loc>          action_fields;
+    std::multimap<PHV::Container, Loc>          xcmp_fields;
 
     Alloc1D<cstring, EXACT_MATCH_UNITS>         exact_hash_use;    // 1:1 mapping between hash
     unsigned                                    exact_hash_inuse;  // and exact match units
@@ -83,9 +87,12 @@ class IXBar : public ::IXBar {
                     safe_vector<IXBar::Use::Byte *> &alloced,
                     std::multimap<PHV::Container, Loc> &fields,
                     Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                    bool allow_word = false);
+                    bool allow_word);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
                   Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use);
+    bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
+                  Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                  Alloc1Dbase<PHV::Container> &word_use);
     bool gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
     bool exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
@@ -94,8 +101,8 @@ class IXBar : public ::IXBar {
     bool exact_find_hash(IXBar::Use &alloc, const LayoutOption *lo);
     bool ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
-    bool action_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                           safe_vector<IXBar::Use::Byte *> &alloced);
+    bool xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
+                         safe_vector<IXBar::Use::Byte *> &alloced);
 
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
     Use *setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &);

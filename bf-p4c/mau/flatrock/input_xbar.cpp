@@ -59,11 +59,19 @@ void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &sta
     }
 }
 
+IXBar::IXBar() {
+    // Initialize the fixed gateway inputs as preallocated fields;
+    for (int i = 0; i < GATEWAY_FIXED_BYTES; ++i)
+        gateway_fields.emplace(PHV::Container(PHV::Type::B, i), Loc(1, i));
+}
+
 void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        std::multimap<PHV::Container, Loc> &fields,
                        Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
                        bool allow_word) {
+    // for gateways, 'allow_word' allows use of the fixed bytes as they are set up
+    // as group 1 (no actual word inputs to gateway)
     for (auto &byte : alloc_use) {
         for (auto &l : ValuesForKey(fields, byte.container)) {
             if (l.group == 0 && byte_use[l.byte].second == byte.lo) {
@@ -82,51 +90,60 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
     auto next = std::find_if(byte_use.begin(), byte_use.end(),
             [](std::pair<PHV::Container, int> &a) { return !a.first; } );
     for (auto *byte : to_alloc) {
+        BUG_CHECK(byte->lo % 8U == 0, "misaligned byte for ixbar %s", *byte);
+        byte->search_bus = 0;  // not relevant for flatrock
         if (next == byte_use.end()) return false;
         byte->loc = Loc(0, next - byte_use.begin());
         while (++next != byte_use.end() && next->first) {} }
     return true;
 }
 
+bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
+                     Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                     Alloc1Dbase<PHV::Container> &word_use) {
+    if (to_alloc.empty()) return true;
+    std::map<PHV::Container, std::set<IXBar::Use::Byte *>> by_word;
+    for (auto *byte : to_alloc) {
+        BUG_CHECK(byte->lo % 8U == 0, "misaligned byte for ixbar %s", *byte);
+        by_word[word_base(byte->container)].insert(byte);
+        byte->search_bus = 0;  // not relevant for flatrock
+    }
+    // Find the first free byte and word slots
+    auto byte = std::find_if(byte_use.begin(), byte_use.end(),
+            [](std::pair<PHV::Container, int> &a) { return !a.first; } );
+    auto word = std::find_if(word_use.begin(), word_use.end(),
+            [](PHV::Container &a) { return !a; } );
+    for (auto &grp : Values(by_word)) {
+        if ((grp.size() > 1 && word != word_use.end()) || byte == byte_use.end()) {
+            // needs 2+ bytes in the word, or ran out of byte slots, so use a word slot
+            if (word == word_use.end()) return false;
+            for (auto *b : grp)
+                b->loc = Loc(1, word - word_use.begin());
+            while (++word != word_use.end() && *word) {}
+        } else {
+            for (auto *b : grp) {
+                if (byte == byte_use.end()) return false;
+                b->loc = Loc(0, byte - byte_use.begin());
+                while (++byte != byte_use.end() && byte->first) {} } } }
+    return true;
+}
+
 bool IXBar::gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                                safe_vector<IXBar::Use::Byte *> &alloced) {
-    find_alloc(alloc_use, alloced, gateway_fields, gateway_use);
+    find_alloc(alloc_use, alloced, gateway_fields, gateway_use, true);
     return do_alloc(alloced, gateway_use);
 }
 
 bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                              safe_vector<IXBar::Use::Byte *> &alloced,
                              int exact_unit) {
-    find_alloc(alloc_use, alloced, exact_fields, exact_byte_use,
-               exact_unit < EXACT_MATCH_STM_UNITS);  // only STM can use word slots
-    if (alloced.empty()) return true;
-    std::map<PHV::Container, std::set<IXBar::Use::Byte *>> by_word;
-    for (auto *byte : alloced) {
-        BUG_CHECK(byte->lo % 8U == 0, "misaligned byte for ixbar %s", *byte);
-        by_word[word_base(byte->container)].insert(byte);
-        byte->search_bus = 0;  // not relevant for flatrock
-    }
-    // Find the first free byte and word slots
-    auto byte = std::find_if(exact_byte_use.begin(), exact_byte_use.end(),
-            [](std::pair<PHV::Container, int> &a) { return !a.first; } );
-    auto word = std::find_if(exact_word_use.begin(), exact_word_use.end(),
-            [](std::pair<PHV::Container, int> &a) { return !a.first; } );
-    if (exact_unit >= EXACT_MATCH_STM_UNITS) {
-        // LAMB can't access word slots
-        word = exact_word_use.end(); }
-    for (auto &grp : Values(by_word)) {
-        if ((grp.size() > 1 && word != exact_word_use.end()) || byte == exact_byte_use.end()) {
-            // needs 2+ bytes in the word, or ran out of byte slots, so use a word slot
-            if (word == exact_word_use.end()) return false;
-            for (auto *b : grp)
-                b->loc = Loc(1, word - exact_word_use.begin());
-            while (++word != exact_word_use.end() && word->first) {}
-        } else {
-            for (auto *b : grp) {
-                if (byte == exact_byte_use.end()) return false;
-                b->loc = Loc(0, byte - exact_byte_use.begin());
-                while (++byte != exact_byte_use.end() && byte->first) {} } } }
-    return true;
+    if (exact_unit < EXACT_MATCH_STM_UNITS) {  // only STM can use word slots
+        find_alloc(alloc_use, alloced, exact_fields, exact_byte_use, true);
+        return do_alloc(alloced, exact_byte_use, exact_word_use);
+    } else {
+        // LAMB match can't access the word slots
+        find_alloc(alloc_use, alloced, exact_fields, exact_byte_use, false);
+        return do_alloc(alloced, exact_byte_use); }
 }
 
 bool IXBar::ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
@@ -143,10 +160,10 @@ bool IXBar::ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
     return it == alloc_use.end();;
 }
 
-bool IXBar::action_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                              safe_vector<IXBar::Use::Byte *> &alloced) {
-    find_alloc(alloc_use, alloced, action_fields, action_use);
-    return do_alloc(alloced, action_use);
+bool IXBar::xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
+                            safe_vector<IXBar::Use::Byte *> &alloced) {
+    find_alloc(alloc_use, alloced, xcmp_fields, xcmp_byte_use, true);
+    return do_alloc(alloced, xcmp_byte_use, xcmp_word_use);
 }
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -372,10 +389,10 @@ void IXBar::update(cstring /* table_name */, const ::IXBar::Use &use_) {
         for (auto &byte : use.use) {
             BUG_CHECK((byte.loc.group|1) == 1, "invalid exact match group %d", byte.loc.group);
             if (byte.loc.group) {
-                if (word_base(byte.container) == exact_word_use[byte.loc.byte].first) continue;
-                if (exact_word_use[byte.loc.byte].first)
+                if (word_base(byte.container) == exact_word_use[byte.loc.byte]) continue;
+                if (exact_word_use[byte.loc.byte])
                     BUG("conflicting ixbar allocation at exact match word %d", byte.loc.byte);
-                exact_word_use[byte.loc.byte].first = word_base(byte.container);
+                exact_word_use[byte.loc.byte] = word_base(byte.container);
             } else {
                 if (byte == exact_byte_use[byte.loc.byte]) continue;
                 if (exact_byte_use[byte.loc.byte].first)
@@ -392,6 +409,28 @@ void IXBar::update(cstring /* table_name */, const ::IXBar::Use &use_) {
             ternary_use[byte.loc] = byte;
             ternary_fields.emplace(byte.container, byte.loc); }
         break;
+    case Use::TRIE_MATCH:
+        // FIXME -- trie needs input both via ternary xbar and xcmp xbar?  How do we
+        // track which is which in and IXBar::Use?
+    case Use::PROXY_HASH:
+    case Use::SELECTOR:
+    case Use::METER:
+    case Use::STATEFUL_ALU:
+    case Use::HASH_DIST:
+        for (auto &byte : use.use) {
+            BUG_CHECK((byte.loc.group|1) == 1, "invalid exact match group %d", byte.loc.group);
+            if (byte.loc.group) {
+                if (word_base(byte.container) == xcmp_word_use[byte.loc.byte]) continue;
+                if (xcmp_word_use[byte.loc.byte])
+                    BUG("conflicting ixbar allocation at exact match word %d", byte.loc.byte);
+                xcmp_word_use[byte.loc.byte] = word_base(byte.container);
+            } else {
+                if (byte == xcmp_byte_use[byte.loc.byte]) continue;
+                if (xcmp_byte_use[byte.loc.byte].first)
+                    BUG("conflicting ixbar allocation at exact match byte %d", byte.loc.byte);
+                xcmp_byte_use[byte.loc.byte] = byte; }
+            xcmp_fields.emplace(byte.container, byte.loc); }
+        break;
     case Use::GATEWAY:
         for (auto &byte : use.use) {
             BUG_CHECK(byte.loc.group == 0, "invalid gateway group %d", byte.loc.group);
@@ -400,19 +439,6 @@ void IXBar::update(cstring /* table_name */, const ::IXBar::Use &use_) {
                 BUG("conflicting ixbar allocation at gateway byte %d", byte.loc.byte);
             gateway_use[byte.loc.byte] = byte;
             gateway_fields.emplace(byte.container, byte.loc); }
-        break;
-    case Use::PROXY_HASH:
-    case Use::SELECTOR:
-    case Use::METER:
-    case Use::STATEFUL_ALU:
-    case Use::HASH_DIST:
-        for (auto &byte : use.use) {
-            BUG_CHECK(byte.loc.group == 0, "invalid action ixbar group %d", byte.loc.group);
-            if (byte == action_use[byte.loc.byte]) continue;
-            if (action_use[byte.loc.byte].first)
-                BUG("conflicting ixbar allocation at action byte %d", byte.loc.byte);
-            action_use[byte.loc.byte] = byte;
-            action_fields.emplace(byte.container, byte.loc); }
         break;
     default:
         BUG("Unhandled use type %d (%s)", use.type, use.used_for());

@@ -47,11 +47,11 @@ const Device::GatewaySpec &CloudbreakDevice::getGatewaySpec() const {
 #if HAVE_FLATROCK
 const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
     static const Device::GatewaySpec spec = {
-        /* .PhvBytes = */       6,
+        /* .PhvBytes = */       8,
         /* .HashBits = */       0,
-        /* .PredicateBits = */  32,
-        /* .MaxRows = */        32,
-        /* .SupportXor = */     false,
+        /* .PredicateBits = */  0,  // gone?
+        /* .MaxRows = */        24,
+        /* .SupportXor = */     true,
         /* .SupportRange = */   false,
         /* .ExactShifts = */    1,
     };
