@@ -643,6 +643,62 @@ def runOneTest(test_runner, test_name, args, xfail_msg, file_list, ref_src_json,
     if rc == "PASS" or rc == "XFAIL": return 0
     else: return 1
 
+def createDummyTarget(directory):
+    """
+    Creates dummy p4_16 and p4_14 folder and empty files
+    :param directory Directory in which to create structure
+    :return None
+    """
+    # P4_16 files
+    os.mkdir(os.path.join(directory, "pipe"))
+    os.mkdir(os.path.join(directory, "pipe", "logs"))
+    with open(os.path.join(directory, "pipe", "test.bfa"), "w") as _: pass
+    with open(os.path.join(directory, "test.conf"), "w") as _: pass
+    with open(os.path.join(directory, "test.p4pp"), "w") as _: pass
+    # Create also possible P4_14 files and folders
+    os.mkdir(os.path.join(directory, "logs"))
+    with open(os.path.join(directory, "logs/test.log"), "w") as _: pass
+    os.mkdir(os.path.join(directory, "graphs"))
+    with open(os.path.join(directory, "graphs/test.dot"), "w") as _: pass
+    with open(os.path.join(directory, "test.bin"), "w") as _: pass
+    with open(os.path.join(directory, "frontend-ir.json"), "w") as _: pass
+    with open(os.path.join(directory, "source.json"), "w") as _: pass
+
+def setupTestStructure(parent_dir):
+    """
+    Creates a dummy output folders to test out structure changing functions
+    such as the precleaner.
+    These folders are needed to test out precleaner in 
+    precleaner_test and skip_precleaner_test in p4c_driver_tests.py
+    :param parent_dir Directory into which will be structure placed
+    :return None
+    """
+    precl_path = os.path.join(parent_dir, "precleaner_test")
+    skip_path = os.path.join(parent_dir, "skip_precleaner_test")
+    # Create test directories
+    try:
+        os.mkdir(precl_path)
+    except FileExistsError:
+        # Remove previous version and create again
+        shutil.rmtree(precl_path)
+        os.mkdir(precl_path)
+
+    try:
+        os.mkdir(skip_path)
+    except FileExistsError:
+        # Remove previous version and create again
+        shutil.rmtree(skip_path)
+        os.mkdir(skip_path)
+
+    # Fill folders
+    createDummyTarget(precl_path)
+    createDummyTarget(skip_path)
+
+
+# Tests are run in the current folder
+# Create dummy P4 output folders to test out precleaner - skip_precleaner_test
+# and precleaner_test in p4c_driver_tests.py
+setupTestStructure(os.path.abspath(os.path.dirname("./")))
 # ---------- Filter which tests need to run
 filter = None
 if args.filter: filter = re.compile(args.filter)

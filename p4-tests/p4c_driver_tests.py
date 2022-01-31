@@ -138,6 +138,18 @@ test_matrix = {
                                          '-o', 'override_too_many', '--num-stages-override', '30', t2na_program],
                                          'Trying to override mau stages count to 30 but device is capped to 20', None),
     'p4_16_jbay_v1model': (['--target', 'tofino2', '--arch', 'v1model', v1model_program], None, None),
+
+    # Precleaner tests
+    # Uses folder structure created in test_p4c_driver.py to test out precleaner.
+    # p4c_3078_program is used here since any correct p4 program can be used and this one is already used.
+    'skip_precleaner_test': (['--target', 'tofino', '--arch', 'tna', '-o', 'skip_precleaner_test', '--skip-precleaner',
+                              '-I', p4_16_includes_dir, p4c_3078_program], None, ['bfrt.json', 'manifest.json', 'p4c-3078.conf',
+                              'test.conf', 'test.p4pp', 'logs/test.log', 'graphs/test.dot', 'test.bin', 'frontend-ir.json', 'source.json']),
+    'precleaner_test': (['--target', 'tofino', '--arch', 'tna', '-o', 'precleaner_test',
+                        '-I', p4_16_includes_dir, p4c_3078_program],
+                        None, ['bfrt.json', 'manifest.json', 'p4c-3078.conf',
+                        '!test.conf', '!test.p4pp', '!logs/test.log', '!graphs/test.dot', '!test.bin', '!frontend-ir.json', '!source.json']),
+
     # 'p4_16_jbay_tna': (['--target', 'tofino2', '--arch', 'tna', tna_program], None, None),
 
     # tofino2* tests fail with "resources.json schema validation failed"

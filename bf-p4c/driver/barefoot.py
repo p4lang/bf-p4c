@@ -64,6 +64,9 @@ class BarefootBackend(BackendDriver):
         self.program_name = None
 
         # commands
+        self.add_command('preclean-dirs', 'find')
+        self.add_command('preclean-files', 'find')
+        self.add_command('preclean-runtime', 'rm')
         self.add_command('preprocessor', 'cc')
         self.add_command('compiler',
                          os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
@@ -83,8 +86,8 @@ class BarefootBackend(BackendDriver):
                 self.runVerifiers = True
 
         # order of commands
-        self.enable_commands(['preprocessor', 'compiler', 'assembler',
-                              'summary_logging', 'p4c-gen-conf', 'cleaner'])
+        self.enable_commands(['preclean-dirs', 'preclean-files', 'preclean-runtime', 'preprocessor', 
+                              'compiler', 'assembler', 'summary_logging', 'p4c-gen-conf', 'cleaner'])
 
         # additional options
         self.add_command_line_options()
@@ -121,11 +124,14 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--skip-compilation",
                                     action="store", help="Skip compiling pipes whose name contains one of the"
                                                          "'pipeX' substring")
+        self._argGroup.add_argument("--skip-precleaner", action="store_true", default=False, dest="skip_precleaner",
+                                    help="Skips precleaning phase which deletes all directory"
+                                         " content before compilation.")
         self._argGroup.add_argument("--auto-init-metadata",
                                     action="store_true", default=False,
                                     help="Automatically initialize metadata to false or 0. This "
                                     "is always enabled for P4_14. Initialization of individual "
-                                    "fields can be disabled by using the pa_no_init annotation.");
+                                    "fields can be disabled by using the pa_no_init annotation.")
         self._argGroup.add_argument("--disable-egress-latency-padding",
                                     action="store_true", help="Disables adding match"
                                     " dependent stages to the egress pipeline to "
@@ -168,10 +174,10 @@ class BarefootBackend(BackendDriver):
                                     help=argparse.SUPPRESS)  # Ignore all dependencies placement
         self._argGroup.add_argument("--log-hashes",
                                     action="store_true", default=False,
-                                    help="Log hash functions in use to mau.hashes.log.");
+                                    help="Log hash functions in use to mau.hashes.log.")
         self._argGroup.add_argument("--quick-phv-alloc",
                                     action="store_true", default=False,
-                                    help="Reduce PHV allocation search space for faster compilation.");
+                                    help="Reduce PHV allocation search space for faster compilation.")
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--gdb", action="store_true", default=False,
                                         help="run the backend compiler under gdb")
@@ -191,6 +197,76 @@ class BarefootBackend(BackendDriver):
                                     help="Program name overriding the default name derived from source file name.",
                                     action="store", default=None, type=str,
                                     dest="program_name", required=False)
+
+    def configPrecleaner(self, opts, output_dir):
+        """
+        Configures precleaners command to remove possible previous 
+        build artifacts.
+        Use directory and file delete lists since PTF usually uses the output
+        directory for its files and this helps the user not delete their
+        files if for some reason . is used as output directory.
+        :param opts Options object
+        :param output_dir Output directory (will be cleaned)
+        """
+        # List of directory patterns to delete in the output folder
+        # Folder graphs and logs might not be located within pipe folder in
+        # case of P4_14 code.
+        dir_delete_list = [
+            "pipe*",
+            "graphs",
+            "logs",
+            "visualization"
+        ]
+        # List of file patterns to delete in the output folder.
+        file_delete_list = [
+            "*.json",
+            "*.conf",
+            "*.p4pp",
+            "*.bfa",
+            "*.log",
+            "*.bin",
+            "*.txt"
+        ]
+        # Pipe might have different name and there can be multiple of them
+        # the names can be extracted from manifest.json
+        manifest_path = os.path.join(self._output_directory, 'manifest.json')
+        if os.path.isfile(manifest_path):
+            manifest = dict()
+            with open(manifest_path, "r") as manifest_json:
+                try:
+                    manifest = json.load(manifest_json)
+                except json.decoder.JSONDecodeError:
+                    pass # Json was not correct
+            if "programs" in manifest:
+                for program in manifest["programs"]:
+                    if "pipes" in program:
+                        for pipe in program["pipes"]:
+                            # Find all pipe names and add it to delete list
+                            if "pipe_name" in pipe:
+                                dir_delete_list.append(pipe["pipe_name"])
+        # Delete previous build directories
+        self.add_command_option("preclean-dirs", output_dir+" \\(")
+        first = True
+        for d in dir_delete_list:
+            if not first:
+                self.add_command_option("preclean-dirs", "-or")
+            self.add_command_option("preclean-dirs", "-name " + d)
+            first = False
+        self.add_command_option("preclean-dirs", "\\) -type d -exec rm -rf {} +")
+        # Delete all files in output directory created by previous builds
+        self.add_command_option("preclean-files", output_dir+" \\(")
+        first = True
+        for f in file_delete_list:
+            if not first:
+                self.add_command_option("preclean-files", "-or")
+            self.add_command_option("preclean-files", "-path " + f)
+            first = False
+        self.add_command_option("preclean-files", "\\) -type f -exec rm -f {} +")
+        # Delete --p4runtime-files if existent on new path
+        if opts.p4runtime_files is not None:
+            self.add_command_option("preclean-runtime", "-f "+opts.p4runtime_files)
+        else:
+            self.disable_commands(["preclean-runtime"])
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x assembler-with-cpp")
@@ -282,6 +358,14 @@ class BarefootBackend(BackendDriver):
             self._output_directory = "{}.{}".format(self.program_name, self._target)
         output_dir = self._output_directory
         basepath = "{}/{}".format(output_dir, self.program_name)
+
+        # Make precleaner delete artifacts from previous builds if
+        # enabled and there is a folder to cleanup
+        # It deletes everything in the output folder
+        if not opts.skip_precleaner and os.path.isdir(output_dir):
+            self.configPrecleaner(opts, output_dir)
+        else:
+            self.disable_commands(['preclean-files', 'preclean-dirs', 'preclean-runtime'])
 
         if not opts.run_preprocessor_only:
             self.add_command_option('preprocessor', "-o")
@@ -748,13 +832,13 @@ class BarefootBackend(BackendDriver):
         filesToRemove.append('.prim.json')
         filesToRemove.append('resources_deparser.json')
 
-        self.add_command_option('cleaner', '-f');
+        self.add_command_option('cleaner', '-f')
         filesFound = 0
         for root, dirs, files in os.walk(self._output_directory):
             for f in files:
                 for rFile in filesToRemove:
                     if f.endswith(rFile):
-                        self.add_command_option('cleaner', os.path.join(root, f));
+                        self.add_command_option('cleaner', os.path.join(root, f))
                         filesFound += 1
 
         if filesFound == 0:
