@@ -1,13 +1,6 @@
 #ifndef TOFINO5_P4_
 #define TOFINO5_P4_
 
-//XXX Open issues:
-// Meter color
-// Math unit
-// Action selector
-// Digest
-// Coalesce mirroring
-
 #define PACK_VERSION(a, b, c) (((a) << 24) + ((b) << 12) + (c))
 #define COMPILER_VERSION PACK_VERSION(__p4c_major__, __p4c_minor__, __p4c_patchlevel)
 
@@ -16,7 +9,9 @@
 // ----------------------------------------------------------------------------
 // COMMON TYPES
 // ----------------------------------------------------------------------------
-#define PORT_ID_WIDTH                  11
+#define PIPE_ID_WIDTH                  4
+typedef bit<PIPE_ID_WIDTH>             PipeId_t;            // Pipe id
+#define PORT_ID_WIDTH                  7
 typedef bit<PORT_ID_WIDTH>             PortId_t;            // Port id -- ingress or egress port
 #define MULTICAST_GROUP_ID_WIDTH       16
 typedef bit<MULTICAST_GROUP_ID_WIDTH>  MulticastGroupId_t;  // Multicast group id
@@ -107,18 +102,16 @@ error {
 // -----------------------------------------------------------------------------
 // INGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
+// THIS NEEDS UPDATE FOR FLATROCK
 @__intrinsic_metadata
 header ingress_intrinsic_metadata_t {
-    bit<1> resubmit_flag;               // Flag distinguishing original packets
-                                        // from resubmitted packets.
+    bit<1> pktgen_flag;                 // Flag distinguishing original packets
+                                        // from PktGen packets.
     @padding bit<1> _pad1;
-
-    bit<2> packet_version;              // Read-only Packet version.
-
-    @padding bit<(4 - PORT_ID_WIDTH % 8)> _pad2;
 
     PortId_t ingress_port;              // Ingress physical port id.
                                         // this field is passed to the deparser
+    @padding bit<8> _pad2;
 
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
@@ -129,12 +122,15 @@ struct ingress_intrinsic_metadata_for_tm_t {
     PortId_t ucast_egress_port;         // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
-    bit<1> bypass_egress;               // Request flag for the warp mode
-                                        // (egress bypass).
+    bit<1> ucast_egress_port_valid;     // valid bit for ucast_egress_port, 0 means
+                                        // no unicast.
 
     bit<1> deflect_on_drop;             // Request for deflect on drop. must be
                                         // presented to TM to enable deflection
                                         // upon drop.
+
+    PipeId_t ingress_pipe;              // Incoming pipe, forwarded to egress.
+    PortId_t ingress_port;              // Incoming port, forwarded to egress.
 
     bit<3> ingress_cos;                 // Ingress cos (iCoS) for PG mapping,
                                         // ingress admission control, PFC,
@@ -146,6 +142,9 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<3> icos_for_copy_to_cpu;        // Ingress cos for the copy to CPU. must
                                         // be presented to TM if copy_to_cpu ==
                                         // 1.
+
+    QueueId_t qid_for_copy_to_cpu;      // Qid for the copy to cpu. must be
+                                        // presented to TM if copy_to_cpu == 1.
 
     bit<1> copy_to_cpu;                 // Request for copy to cpu.
 
@@ -163,8 +162,12 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // a tree can have two levels. must be
                                         // presented to TM for multicast.
 
+    bit<1> mcast_grp_a_valid;           // valid bit for mcast_grp_a;
+
     MulticastGroupId_t  mcast_grp_b;    // 2nd multicast group (i.e., tree) id;
                                         // a tree can have two levels.
+
+    bit<1> mcast_grp_b_valid;           // valid bit for mcast_grp_b;
 
     bit<13> level1_mcast_hash;          // Source of entropy for multicast
                                         // replication-tree level1 (i.e., L3
@@ -182,62 +185,23 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // replication-tree level1. used for
                                         // pruning.
 
-    bit<9> level2_exclusion_id;         // Exclusion id for multicast
+    bit<10> level2_exclusion_id;        // Exclusion id for multicast
                                         // replication-tree level2. used for
                                         // pruning.
 
+    bit<1> perfect_hash_table_id;       // The ingress perfect hash table ID
+                                        // for L1 ECMP selection.
+
     bit<16> rid;                        // L3 replication id for multicast.
+
+    bit<16> mirror_bitmap;              // Mirror session bitmap. Set to 0 if not valid.
+
+    bit<3> mirror_cos;                  // class-of-service for mirror packet.
+
+    bit<14> packet_length;              // Packet length in bytes, valid at the end of
+                                        // packet. Does not include 64B bridged metadata.
 }
 
-@__intrinsic_metadata
-struct ingress_intrinsic_metadata_from_parser_t {
-    bit<48> global_tstamp;              // Global timestamp (ns) taken upon
-                                        // arrival at ingress.
-
-    bit<32> global_ver;                 // Global version number taken upon
-                                        // arrival at ingress.
-
-    bit<16> parser_err;                 // Error flags indicating error(s)
-                                        // encountered at ingress parser.
-}
-
-@__intrinsic_metadata
-struct ingress_intrinsic_metadata_for_deparser_t {
-
-    bit<3> drop_ctl;                    // Disable packet replication:
-                                        //    - bit 0 disables unicast,
-                                        //      multicast, and resubmit
-                                        //    - bit 1 disables copy-to-cpu
-                                        //    - bit 2 disables mirroring
-    DigestType_t digest_type;
-
-    MirrorType_t mirror_type;           // The user-selected mirror field list
-                                        // index.
-
-    bit<1> mirror_io_select;            // Mirror incoming or outgoing packet
-
-    // Setting the following metadata will override the value in mirror table
-    bit<13> mirror_hash;                // Mirror hash field.
-    bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
-    bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
-    bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
-    PortId_t mirror_egress_port;        // Mirror packet egress port.
-    QueueId_t mirror_qid;               // Mirror packet qid.
-    bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
-                                        // length. Unit is quad bytes.
-    bit<32> adv_flow_ctl;               // Advanced flow control for TM
-    bit<14> mtu_trunc_len;              // MTU for truncation check
-    bit<1> mtu_trunc_err_f;             // MTU truncation error flag
-
-    bit<3> learn_sel;                   // Learn quantum table selector
-    bit<1> pktgen;                      // trigger packet generation
-                                        // This is ONLY valid if resubmit_type
-                                        // is not valid.
-    bit<14> pktgen_address;             // Packet generator buffer address.
-    bit<10> pktgen_length;              // Length of generated packet.
-
-    // also need an extern for PacketGen
-}
 // -----------------------------------------------------------------------------
 // GHOST INTRINSIC METADATA
 // -----------------------------------------------------------------------------
@@ -253,18 +217,12 @@ header ghost_intrinsic_metadata_t {
 // EGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
-header egress_intrinsic_metadata_t {
-    @padding bit<(8 - PORT_ID_WIDTH % 8)> _pad0;
-
+struct egress_intrinsic_metadata_t {
     PortId_t egress_port;               // Egress port id.
                                         // this field is passed to the deparser
 
-    @padding bit<5> _pad1;
-
     bit<19> enq_qdepth;                 // Queue depth at the packet enqueue
                                         // time.
-
-    @padding bit<6> _pad2;
 
     bit<2> enq_congest_stat;            // Queue congestion status at the packet
                                         // enqueue time.
@@ -272,17 +230,13 @@ header egress_intrinsic_metadata_t {
     bit<32> enq_tstamp;                 // Time snapshot taken when the packet
                                         // is enqueued (in nsec).
 
-    @padding bit<5> _pad3;
-
     bit<19> deq_qdepth;                 // Queue depth at the packet dequeue
                                         // time.
-
-    @padding bit<6> _pad4;
 
     bit<2> deq_congest_stat;            // Queue congestion status at the packet
                                         // dequeue time.
 
-    bit<8> app_pool_congest_stat;       // Dequeue-time application-pool
+    bit<16> app_pool_congest_stat;       // Dequeue-time application-pool
                                         // congestion status. 2bits per
                                         // pool.
 
@@ -292,42 +246,28 @@ header egress_intrinsic_metadata_t {
     bit<16> egress_rid;                 // L3 replication id for multicast
                                         // packets.
 
-    @padding bit<7> _pad5;
-
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
-
-    @padding bit<(8 - QUEUE_ID_WIDTH % 8)> _pad6;
 
     QueueId_t egress_qid;               // Egress (physical) queue id within a MAC via which
                                         // this packet was served.
 
-    @padding bit<5> _pad7;
-
     bit<3> egress_cos;                  // Egress cos (eCoS) value.
 
-    @padding bit<7> _pad8;
 
-    bit<1> deflection_flag;             // Flag indicating whether a packet is
-                                        // deflected due to deflect_on_drop.
+    bit<14> pkt_length;                 // Packet length, in bytes. zero for cut-through mode.
 
-    bit<16> pkt_length;                 // Packet length, in bytes
+    PipeId_t ingress_pipe;              // Ingress pipe forwarded from ingress
 
-    @padding bit<8> _pad9;              // Pad to 4-byte alignment for egress
-                                        // intrinsic metadata (HW constraint)
-}
+    PortId_t ingress_port;              // Ingress port forwarded from ingress
 
+    bit<1> redir;                       // Negative mirror. TM redirect dropped packet to a SW specified eport
 
-@__intrinsic_metadata
-struct egress_intrinsic_metadata_from_parser_t {
-    bit<48> global_tstamp;              // Global timestamp (ns) taken upon
-                                        // arrival at egress.
+    bit<1> mirror;                      // Flag indicating whether a packet is mirror packet.
 
-    bit<32> global_ver;                 // Global version number taken upon
-                                        // arrival at ingress.
+    bit<2> minpkt;                      // Packet was dequeued from TM "min BW" shaper bucket
 
-    bit<16> parser_err;                 // Error flags indicating error(s)
-                                        // encountered at ingress parser.
+    bit<12> ba_tag;                     // byte adjust tag
 }
 
 @__intrinsic_metadata
