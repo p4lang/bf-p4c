@@ -6,13 +6,8 @@ if [ "$TRAVIS" = true ]; then
     sudo /bfn/ptf_hugepage_setup.sh >&2
 fi
 
-# p4factory installs ptf + bf_pktpy packages into global site-packages, which
-# are not part of default search path
-pythonpath_prefix="/usr/local/lib/python3.5/site-packages"
-if [[ "$PYTHONPATH:" != "$pythonpath_prefix:"* ]]; then
-    [ -z "$PYTHONPATH" ] && delim='' || delim=':'
-    export PYTHONPATH="${pythonpath_prefix}${delim}${PYTHONPATH}"
-fi
+export PYTHONPATH="/usr/local/lib/python3.5/site-packages${PYTHONPATH+":"}${PYTHONPATH-}"
+export PYTHON=python3
 
 # Setup veths (run as root)
 sudo /bfn/veth_setup.sh 34 >&2
