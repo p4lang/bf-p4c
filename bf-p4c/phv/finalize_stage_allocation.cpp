@@ -1,4 +1,3 @@
-#include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 
 bool CalcMaxPhysicalStages::preorder(const IR::MAU::Table* tbl) {
@@ -388,10 +387,9 @@ void UpdateFieldAllocation::end_apply() {
 FinalizeStageAllocation::FinalizeStageAllocation(
         PhvInfo& p,
         const FieldDefUse& u,
-        const DependencyGraph& d,
-        const TableSummary& t) {
+        const DependencyGraph& d) {
     addPasses({
         &depStages,
-        new UpdateFieldAllocation(p, u, d, t, depStages)
+        new UpdateFieldAllocation(p, u, d, depStages)
     });
 }

@@ -367,7 +367,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // DO NOT NEED to do it in alternative phv allocation because AllocSlices are already
         // physical stage based.
         Device::currentDevice() != Device::TOFINO && !options.alt_phv_alloc
-            ? new FinalizeStageAllocation(phv, defuse, deps, table_summary) : nullptr,
+            ? new FinalizeStageAllocation(phv, defuse, deps) : nullptr,
 
         // Must be called as last pass.  If the power budget is exceeded,
         // we cannot produce a binary file.

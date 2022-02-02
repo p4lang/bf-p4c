@@ -4,7 +4,6 @@
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/mau/table_summary.h"
 
 /** Calculate the maximum number of physical stages after table allocation.
   */
@@ -39,7 +38,6 @@ class UpdateFieldAllocation : public Inspector {
     PhvInfo& phv;
     const FieldDefUse& defuse;
     const DependencyGraph& dg;
-    // const TableSummary& tables;
     const CalcMaxPhysicalStages& depStages;
 
     // Map of field to its allocated slices.
@@ -62,7 +60,7 @@ class UpdateFieldAllocation : public Inspector {
 
  public:
     explicit UpdateFieldAllocation(PhvInfo& p, const FieldDefUse& u,
-            const DependencyGraph& d, const TableSummary&, const CalcMaxPhysicalStages& s)
+            const DependencyGraph& d, const CalcMaxPhysicalStages& s)
         : phv(p), defuse(u), dg(d), depStages(s) { }
 };
 
@@ -86,7 +84,7 @@ class FinalizeStageAllocation : public PassManager {
             bool usePhysicalStages = true);
 
     explicit FinalizeStageAllocation(PhvInfo& p, const FieldDefUse& u,
-            const DependencyGraph& d, const TableSummary& t);
+            const DependencyGraph& d);
 };
 
 #endif  /*  EXTENSIONS_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_  */

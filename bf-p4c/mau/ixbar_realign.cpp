@@ -37,7 +37,7 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
             PHV::FieldUse use(PHV::FieldUse::READ);
             auto slicesToProcess =
                 field->get_combined_alloc_bytes(PHV::AllocContext::of_unit(currentTable), &use,
-                                                false);
+                                                PHV::SliceMatch::REF_PHYS_LR);
             //  early check to make debugging incorrect PHV live range easier.
             BUG_CHECK(!slicesToProcess.empty(),
                       "cannot find allocation of %1%, read in %2% (%3%)",

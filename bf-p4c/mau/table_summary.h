@@ -136,6 +136,8 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, cstring> tableNames;
     /// Map of table names to the internal names used for communicating table placement information
     ordered_map<cstring, cstring> tableINames;
+    /// Map of table name to the IR pointer of the table
+    static ordered_map<cstring, std::set<const IR::MAU::Table*>> tblName2IRptr;
 
     // Map of Global ID -> Table
     std::map<int, const IR::MAU::Table *> order;
@@ -196,6 +198,15 @@ class TableSummary: public MauInspector {
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.
     static cstring getTableName(const IR::MAU::Table* tbl);
+
+    /// Reset the the tblName2IRptr map
+    static void clearTblName2IRptr() { TableSummary::tblName2IRptr.clear(); }
+
+    /// @returns the IR pointer to the table named as @t_name
+    static std::set<const IR::MAU::Table*> getTablePtr(const cstring t_name);
+
+    /// Add table pointer into tblName2IRptr map
+    static void addTablePtr(const IR::MAU::Table* ptr);
 
     /// @return the set of stages to which table @p t has been allocated. optional internal flag
     /// can be used to retrieve the information from the internalTableAlloc map.

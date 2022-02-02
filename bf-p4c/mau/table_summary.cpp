@@ -82,6 +82,8 @@ TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo
     ids_seen.insert(pipe_id);
 }
 
+ordered_map<cstring, std::set<const IR::MAU::Table*>> TableSummary::tblName2IRptr;
+
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     if (BackendOptions().verbose > 0) {
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
@@ -99,6 +101,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     internalTableAlloc.clear();
     tableNames.clear();
     tableINames.clear();
+    TableSummary::clearTblName2IRptr();
     mergedGateways.clear();
     ixbarBytes.clear();
     maxStage = 0;
@@ -145,6 +148,7 @@ void TableSummary::end_apply() {
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
+    TableSummary::addTablePtr(t);
     if (t->is_always_run_action()) {
         if (t->stage() == -1 && no_errors_before_summary)
             addPlacementError(t->toString() + " not placed");
@@ -214,6 +218,25 @@ cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
     }
     // For gateways, return the compiler generated name
     return tbl->name;
+}
+
+void TableSummary::addTablePtr(const IR::MAU::Table* tbl) {
+    cstring ref_name = tbl->name;
+    if (ref_name.endsWith("$split"))
+        ref_name = tbl->name.before(tbl->name.find('$'));
+    tblName2IRptr[ref_name].insert(tbl);
+    LOG1("   Adding table " << tbl->name << " as " << ref_name <<" to pointer " << tbl);
+    if (tbl->gateway_name.size() && (tbl->gateway_name != ref_name.c_str())) {
+        tblName2IRptr[tbl->gateway_name].insert(tbl);
+        LOG1("   Adding gw table " << tbl->gateway_name <<" to pointer " << tbl);
+    }
+}
+
+std::set<const IR::MAU::Table*> TableSummary::getTablePtr(const cstring t_name){
+    std::set<const IR::MAU::Table*> empty;
+    if (tblName2IRptr.count(t_name))
+        return tblName2IRptr.at(t_name);
+    return empty;
 }
 
 void TableSummary::postorder(const IR::BFN::Pipe *pipe) {

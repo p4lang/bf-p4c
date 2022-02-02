@@ -4,6 +4,7 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
+#include "bf-p4c/mau/table_summary.h"
 
 namespace PHV {
 
@@ -127,6 +128,24 @@ bool AllocSlice::operator<(const AllocSlice& other) const {
     return false;
 }
 
+/// Check if the references of the slice are earlier than the @other refs
+bool AllocSlice::isEarlierFieldslice(const AllocSlice& other) const {
+    if ((field_i->id == other.field_i->id) &&
+        field_slice().overlaps(other.field_slice())) {
+        for (auto sl_ref : getRefs()) {
+            for (const auto *ref_tbl : TableSummary::getTablePtr(sl_ref.first)) {
+                for (auto other_ref : other.getRefs()) {
+                    for (const auto *other_tbl : TableSummary::getTablePtr(other_ref.first)) {
+                        if (other_tbl->stage() < ref_tbl->stage()) return false;
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
 boost::optional<AllocSlice> AllocSlice::sub_alloc_by_field(int start, int len) const {
     BUG_CHECK(start >= 0 && len > 0,
               "sub_alloc slice with invalid start or len arguments: [%1%:%2%]", start, len);
@@ -142,6 +161,77 @@ boost::optional<AllocSlice> AllocSlice::sub_alloc_by_field(int start, int len) c
     clone.field_bit_lo_i = start;
     clone.width_i = len;
     return clone;
+}
+
+// Get reference-based liverange for AllocSlice
+// *TODO* Replace calls to isEarlierFieldslice() with parser/deparser
+//        instances in AllocSlice's refs
+void AllocSlice::get_ref_lr(StageAndAccess &lr_min, StageAndAccess &lr_max) const {
+    int min_stg = NOTSET, max_stg = NOTSET;
+    FieldUse min_fu, max_fu;
+    bool first_ref = true;
+    bool earliest_slice = true;
+    bool latest_slice = true;
+
+    for (const auto& slc : field_i->get_alloc()) {
+        if ((*this != slc) && !isEarlierFieldslice(slc))
+            earliest_slice = false;
+    }
+
+    for (const auto& slc : field_i->get_alloc()) {
+        if ((*this != slc) && isEarlierFieldslice(slc))
+            latest_slice = false;
+    }
+
+    if (field_i->parsed() && earliest_slice) {
+        first_ref = false;
+        min_stg = max_stg = -1;
+        min_fu = max_fu = FieldUse(FieldUse::WRITE);
+    }
+
+    if (field_i->deparsed() && latest_slice) {
+        if (first_ref) {
+            min_stg = Device::numStages();
+            min_fu = FieldUse(FieldUse::READ);
+            first_ref = false;
+        }
+        max_stg = Device::numStages();
+        max_fu = FieldUse(FieldUse::READ);
+    }
+
+    if (!field_i->parsed() && !field_i->deparsed()) {
+        for (auto ref : refs) {
+            // If there are no stages for the ref table go to the next
+            std::set<const IR::MAU::Table*> tblPtrs = TableSummary::getTablePtr(ref.first);
+            BUG_CHECK(tblPtrs.size(), "Could not find IR Tables for ref %1%", ref.first);
+            LOG1("   get_ref_lr - ref : " << ref.first << " (" << ref.second << ") min_stg : " <<
+                 min_stg << " max_stg : " << max_stg << " #tables:" << tblPtrs.size());
+
+            for (auto *tbl : tblPtrs) {
+                if (first_ref) {
+                    first_ref = false;
+                    min_stg = tbl->stage();
+                    min_fu = ref.second;
+                    max_stg = tbl->stage();
+                    max_fu = ref.second;
+                } else {
+                    int refStg = tbl->stage();
+                    if (refStg < min_stg) {
+                        min_stg = refStg;
+                    }
+
+                    if (refStg > max_stg) {
+                        max_stg = refStg;
+                    }
+                }
+            }
+        }
+    }
+
+    lr_min.first = min_stg;
+    lr_min.second = min_fu;
+    lr_max.first = max_stg;
+    lr_max.second = max_fu;
 }
 
 bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
@@ -188,8 +278,13 @@ bool AllocSlice::isUsedDeparser() const {
 }
 
 bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
-                              bool useRefs) const {
-    if (ctxt == nullptr) return true;
+                              SliceMatch useTblRefs) const {
+    LOG5("    Checking isReference for unit: ");
+
+    if (ctxt == nullptr) {
+        LOG5("\t\t null");
+        return true;
+    }
 
     // TODO(yumin): it should be safe to remove this guard. Still keeping it here
     // for backward compatibility.
@@ -201,21 +296,34 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
         // min_stage_i.first == 0 && min_stage_i.second.isRead() represents a parser ref.
         // is from legacy codes, only need to check it when not physical-stage-based.
         case AllocContext::Type::PARSER:
+            LOG5("\t\t Parser");
             return min_stage_i.first == parser_stage_idx() ||
                    (!is_physical_stage_based_i && min_stage_i.first == 0 &&
                     min_stage_i.second.isRead());
 
         // deparser can only read, so @p use does not matter here.
         case AllocContext::Type::DEPARSER:
+            LOG5("\t\t Deparser");
             return max_stage_i.first == deparser_stage_idx();
 
         case AllocContext::Type::TABLE: {
+            LOG5("\t\t Table " << ctxt->table->name);
             std::set<int> stages;
-            if (useRefs) {
+            if (is_physical_stage_based_i) {
+                stages = PhvInfo::physicalStages(ctxt->table);
+            } else if ((int)useTblRefs) {
                 cstring tblName(ctxt->table->name);
+                const char *tblSplit = tblName.find("$split");
+                if (tblSplit != nullptr)
+                    tblName = tblName.before(tblSplit);
+
                 cstring gwName(ctxt->table->gateway_name);
-                LOG1("  tblName: " << tblName << "  gwName: " << gwName);
-                for (auto refEntry : refs) LOG1("    " << refEntry.first << "  gw(" <<
+                const char *gwSplit = gwName.find("$split");
+                if (gwSplit != nullptr)
+                    gwName = gwName.before(gwSplit);
+
+                LOG1("\ttblName: " << tblName << "  gwName: " << gwName);
+                for (auto refEntry : refs) LOG1("\t  " << refEntry.first << " (" <<
                                                 refEntry.second << ")");
                 bool ref_match = false;
                 if (refs.count(tblName)) {
@@ -230,12 +338,28 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
                     else
                         ref_match = true;
                 }
+
+                if (!ref_match && (useTblRefs == SliceMatch::REF_PHYS_LR)) {
+                    int ctx_stage = ctxt->table->stage();
+                    for (auto ref : refs) {
+                        std::set<const IR::MAU::Table*> tblPtrs =
+                            TableSummary::getTablePtr(ref.first);
+                        for (auto *tbl : tblPtrs) {
+                            if (tbl->stage() != ctx_stage) continue;
+                            if (use)
+                                ref_match |= !bool(ref.second & *use);
+                            else
+                                ref_match |= true;
+                            LOG5("\t REF_PHYS_LR: Found other table ref at stage " << ctx_stage <<
+                                 " : " << tbl);
+                        }
+                    }
+                }
                 return ref_match;
-            } else if (is_physical_stage_based_i) {
-                stages = PhvInfo::physicalStages(ctxt->table);
             } else {
                 stages = PhvInfo::minStages(ctxt->table);
             }
+
             for (auto stage : stages) {
                 if (use) {
                     if (isLiveAt(stage, *use)) {

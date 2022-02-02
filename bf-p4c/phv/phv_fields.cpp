@@ -648,7 +648,10 @@ std::set<int> PhvInfo::minStages(const IR::MAU::Table *table) {
 }
 
 std::set<int> PhvInfo::physicalStages(const IR::MAU::Table *table) {
-    return ::get(table_to_physical_stages, TableSummary::getTableIName(table));
+    std::set<int> rv;
+    if (table_to_physical_stages.count(TableSummary::getTableIName(table)))
+        rv = ::get(table_to_physical_stages, TableSummary::getTableIName(table));
+    return rv;
 }
 
 void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remove_prev_stages) {
@@ -779,10 +782,11 @@ const PHV::AllocSlice &PHV::Field::for_bit(int bit) const {
 const std::vector<PHV::AllocSlice> PHV::Field::get_combined_alloc_bytes(
         const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use,
-        bool useTblRefs) const {
+        SliceMatch useTblRefs) const {
     std::vector<PHV::AllocSlice> slicesToProcess;
     // Map of container to byte within the container to the set of alloc slices in that container
     // byte.
+    LOG3("   get_combined_alloc_bytes for " << name);
     ordered_map<PHV::Container, ordered_map<int, std::vector<PHV::AllocSlice>>> containerBytesMap;
     foreach_byte(ctxt, use, [&](const PHV::AllocSlice& alloc) {
         int byte = alloc.container_slice().lo / 8;
@@ -875,7 +879,7 @@ void PHV::Field::foreach_byte(
         const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use,
         std::function<void(const PHV::AllocSlice &)> fn,
-        bool useTblRefs) const {
+        PHV::SliceMatch useTblRefs) const {
     // Iterate in reverse order, because alloc_i slices are ordered from field
     // MSB to LSB, but foreach_byte iterates from LSB to MSB.
     for (const auto& slice : boost::adaptors::reverse(alloc_slice_i)) {
@@ -939,14 +943,15 @@ void PHV::Field::foreach_alloc(
         le_bitrange range,
         const PHV::AllocContext* ctxt,
         const PHV::FieldUse* use,
-        std::function<void(const PHV::AllocSlice &)> fn) const {
+        std::function<void(const PHV::AllocSlice &)> fn,
+        SliceMatch useTblRefs) const {
     // XXX(Deep): Maintain all the candidate alloc slices here. I am going to filter later based on
     // context and use on this vector during stage based allocation.
     std::vector<PHV::AllocSlice> candidate_slices;
     // Sort from hi to lo.
     for (auto it = alloc_slice_i.rbegin(); it != alloc_slice_i.rend(); ++it) {
         // ignore other stage alloc slices
-        if (!it->isReferenced(ctxt, use)) {
+        if (!it->isReferenced(ctxt, use, useTblRefs)) {
             continue;
         }
 

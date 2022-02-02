@@ -5305,6 +5305,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
     } else {
         PHV::AllocUtils::clear_slices(phv_i);
         PHV::AllocUtils::bind_slices(alloc, phv_i);
+        PHV::AllocUtils::update_slice_refs(phv_i, utils_i.defuse);
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
     }
 

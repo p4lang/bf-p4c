@@ -537,19 +537,19 @@ class Field : public LiftLess<Field> {
      */
     void foreach_byte(le_bitrange r, const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
-            bool useTblRefs = false) const;
+            SliceMatch useTblRefs = SliceMatch::DFLT) const;
     void foreach_byte(le_bitrange r, const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
-            bool useTblRefs = false) const {
+            SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
 
     void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
-            bool useTblRefs = false) const {
+            SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(StartLen(0, this->size), ctxt, use, fn, useTblRefs); }
     void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
-            bool useTblRefs = false) const {
+            SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
 
     /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
@@ -560,11 +560,11 @@ class Field : public LiftLess<Field> {
 
     void foreach_byte(const le_bitrange* r, const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn,
-            bool useTblRefs = false) const {
+            SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn, useTblRefs); }
     void foreach_byte(const le_bitrange* r, const IR::MAU::Table* ctxt,
             const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn,
-            bool useTblRefs = false) const {
+            SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
 
     /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
@@ -574,7 +574,7 @@ class Field : public LiftLess<Field> {
     const std::vector<PHV::AllocSlice> get_combined_alloc_bytes(
             const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use,
-            bool useTblRefs = false) const;
+            SliceMatch useTblRefs = SliceMatch::DFLT) const;
 
     /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
     /// container are combined into the same new PHV::AllocSlice, if the ranges of the two
@@ -590,15 +590,18 @@ class Field : public LiftLess<Field> {
     /// null for no filter. @p use can be READ or WRITE. For now, the context is the
     /// entire pipeline, as PHV allocation is global.
     void foreach_alloc(le_bitrange r, const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const PHV::AllocSlice&)> fn) const;
+                       std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const;
 
     void foreach_alloc(le_bitrange r, const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn);
+                       std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs);
     }
 
-    void foreach_alloc(le_bitrange r, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc(r, (PHV::AllocContext*) nullptr, nullptr, fn);
+    void foreach_alloc(le_bitrange r, std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc(r, (PHV::AllocContext*) nullptr, nullptr, fn, useTblRefs);
     }
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, fn)`.
@@ -607,17 +610,20 @@ class Field : public LiftLess<Field> {
      *                    std::function<void(const PHV::AllocSlice&)>).
      */
     void foreach_alloc(const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc(StartLen(0, this->size), ctxt, use, fn);
+                       std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc(StartLen(0, this->size), ctxt, use, fn, useTblRefs);
     }
 
     void foreach_alloc(const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc(PHV::AllocContext::of_unit(ctxt), use, fn);
+                       std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc(PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs);
     }
 
-    void foreach_alloc(std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc((PHV::AllocContext*) nullptr, nullptr, fn);
+    void foreach_alloc(std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc((PHV::AllocContext*) nullptr, nullptr, fn, useTblRefs);
     }
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, use, fn)`, or to
@@ -628,14 +634,16 @@ class Field : public LiftLess<Field> {
      */
     void foreach_alloc(const le_bitrange *r, const PHV::AllocContext *ctxt,
                        const PHV::FieldUse* use,
-                       std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc(r ? *r : StartLen(0, this->size), ctxt, use, fn);
+                       std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc(r ? *r : StartLen(0, this->size), ctxt, use, fn, useTblRefs);
     }
 
     void foreach_alloc(const le_bitrange *r, const IR::MAU::Table *ctxt,
                        const PHV::FieldUse* use,
-                       std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn);
+                       std::function<void(const PHV::AllocSlice&)> fn,
+                       SliceMatch useTblRefs = SliceMatch::DFLT) const {
+        foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs);
     }
 
     /// @returns the number of distinct container bytes that contain slices of

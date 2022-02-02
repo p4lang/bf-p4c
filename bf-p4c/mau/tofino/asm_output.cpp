@@ -732,7 +732,7 @@ void emit_ixbar_gather_bytes(const PhvInfo &phv,
                     auto n = sort[b.loc.group].emplace(b.loc.byte*8 + asm_sl.bytealign(), asm_sl);
                     BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
-            });
+                                                          }, PHV::SliceMatch::REF_PHYS_LR);
         }
     }
 

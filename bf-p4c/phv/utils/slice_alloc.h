@@ -17,6 +17,7 @@ class DarkInitEntry;
 class Field;
 class AllocContext;
 class AllocSlice;
+enum class SliceMatch {  DFLT = 0, REF = 1, REF_DG_LR = 2, REF_PHYS_LR = 4 };
 
 class DarkInitPrimitive {
  private:
@@ -134,6 +135,8 @@ class AllocSlice {
     AllocSlice(const Field* f, Container c, le_bitrange f_slice,
                le_bitrange container_slice);
 
+    static const int NOTSET = -2;
+
     AllocSlice(const AllocSlice& a);
     AllocSlice& operator=(const AllocSlice& a);
     AllocSlice(AllocSlice&&) = default;
@@ -142,6 +145,7 @@ class AllocSlice {
     bool operator==(const AllocSlice& other) const;
     bool operator!=(const AllocSlice& other) const;
     bool operator<(const AllocSlice& other) const;
+    bool isEarlierFieldslice(const AllocSlice& other) const;
     bool same_alloc_fieldslice(const AllocSlice& other) const;
 
     // returns a cloned AllocSlice split by field[start:start+ len - 1].
@@ -163,6 +167,9 @@ class AllocSlice {
     const StageAndAccess& getLatestLiveness() const { return max_stage_i; }
 
     bool hasInitPrimitive() const;
+
+    // Get the physical liverange of a slice based on its refs
+    void get_ref_lr(StageAndAccess& minStg, StageAndAccess& maxStg) const;
 
     // @returns true is this alloc slice is live at @p stage for @p use.
     bool isLiveAt(int stage, const FieldUse& use) const;
@@ -231,7 +238,7 @@ class AllocSlice {
 
     // @returns true if this alloc slice is referenced within @p ctxt for @p use.
     bool isReferenced(const AllocContext* ctxt, const FieldUse* use,
-                      bool useRefs = false) const;
+                      SliceMatch match = SliceMatch::DFLT) const;
     std::string toString() const;
 
  private:
