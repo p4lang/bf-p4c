@@ -343,6 +343,8 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
             return rv;
         } else {
             BUG("Padding %s not in PhvInfo", pad->name); } }
+    if (auto *neg = e->to<IR::Neg>())
+        return field(neg->expr, bits);
     return 0;
 }
 

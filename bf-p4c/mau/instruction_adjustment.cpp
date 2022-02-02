@@ -1481,7 +1481,12 @@ bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *
         const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
         bool &is_hi) {
     for (auto &exp : mah.computed_expressions) {
-        if (exp.second->equiv(*expr)) {
+        const IR::Expression *pos_expr;
+        if (auto *neg = exp.second->to<IR::Neg>())
+            pos_expr = neg->expr;
+        else
+            pos_expr = exp.second;
+        if (pos_expr->equiv(*expr)) {
             is_hi = exp.first != 0;
             return true; } }
 
@@ -1515,6 +1520,15 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
 
     auto *salu_ixbar = dynamic_cast<const Tofino::IXBar::Use *>(tbl->resources->salu_ixbar.get());
     bool is_hi = false;
+    const IR::Expression *pos_expr;
+    cstring name = "";
+    if (auto *neg = expr->to<IR::Neg>()) {
+        pos_expr = neg->expr;
+        name += "-phv";
+    } else {
+        pos_expr = expr;
+        name += "phv";
+    }
     if (!salu_ixbar) {
         prune();
         return expr;
@@ -1524,13 +1538,12 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
             return expr;
         }
     } else {
-        if (!verify_on_hash_bus(salu, salu_ixbar->meter_alu_hash, expr, is_hi)) {
+        if (!verify_on_hash_bus(salu, salu_ixbar->meter_alu_hash, pos_expr, is_hi)) {
             prune();
             return expr;
         }
     }
 
-    cstring name = "phv";
     if (is_hi)
         name += "_hi";
     else
@@ -1540,7 +1553,7 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
         = new IR::MAU::SaluReg(expr->srcInfo, IR::Type::Bits::get(salu->source_width()), name,
                                is_hi);
     int phv_width = ((bits.size() + 7) / 8) * 8;
-    salu_reg->phv_src = expr;
+    salu_reg->phv_src = pos_expr;
     const IR::Expression *rv = salu_reg;
     // Sets the byte_mask for the input for the stateful alu
     if (phv_width < salu->source_width()) {
