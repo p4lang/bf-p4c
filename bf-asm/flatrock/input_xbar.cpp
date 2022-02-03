@@ -9,13 +9,14 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
                     em_key_cfg.key32[input.lo/32U] = input.what->reg.ixbar_id()/4U;
             } else {
                 for (auto &input : group.second)
-                    em_key_cfg.key32[input.lo/8U] = input.what->reg.ixbar_id();
+                    em_key_cfg.key8[input.lo/8U] = input.what->reg.ixbar_id();
             }
             break; }
         case Group::TERNARY: {
-            auto &scm_key_cfg = regs.ppu_minput_rspec.minput_scm_key_cfg[0][group.first.index];
+            auto &scm_key_cfg = regs.ppu_minput_rspec.minput_scm_key_cfg[0];
+            int base = group.first.index * 5;  // first byte for the group
             for (auto &input : group.second)
-                scm_key_cfg.sel[input.lo/8U] = input.what->reg.ixbar_id();
+                scm_key_cfg.sel[base + input.lo/8U] = input.what->reg.ixbar_id();
             break; }
         case Group::GATEWAY: {
             auto &gw_key_cfg = regs.ppu_minput_rspec.minput_gw_phv_cfg;
