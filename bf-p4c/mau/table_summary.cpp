@@ -225,10 +225,10 @@ void TableSummary::addTablePtr(const IR::MAU::Table* tbl) {
     if (ref_name.endsWith("$split"))
         ref_name = tbl->name.before(tbl->name.find('$'));
     tblName2IRptr[ref_name].insert(tbl);
-    LOG1("   Adding table " << tbl->name << " as " << ref_name <<" to pointer " << tbl);
+    LOG6("   Adding table " << tbl->name << " as " << ref_name <<" to pointer " << tbl);
     if (tbl->gateway_name.size() && (tbl->gateway_name != ref_name.c_str())) {
         tblName2IRptr[tbl->gateway_name].insert(tbl);
-        LOG1("   Adding gw table " << tbl->gateway_name <<" to pointer " << tbl);
+        LOG6("   Adding gw table " << tbl->gateway_name <<" to pointer " << tbl);
     }
 }
 

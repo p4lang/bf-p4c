@@ -204,7 +204,7 @@ void AllocSlice::get_ref_lr(StageAndAccess &lr_min, StageAndAccess &lr_max) cons
             // If there are no stages for the ref table go to the next
             std::set<const IR::MAU::Table*> tblPtrs = TableSummary::getTablePtr(ref.first);
             BUG_CHECK(tblPtrs.size(), "Could not find IR Tables for ref %1%", ref.first);
-            LOG1("   get_ref_lr - ref : " << ref.first << " (" << ref.second << ") min_stg : " <<
+            LOG5("   get_ref_lr - ref : " << ref.first << " (" << ref.second << ") min_stg : " <<
                  min_stg << " max_stg : " << max_stg << " #tables:" << tblPtrs.size());
 
             for (auto *tbl : tblPtrs) {
@@ -322,8 +322,8 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
                 if (gwSplit != nullptr)
                     gwName = gwName.before(gwSplit);
 
-                LOG1("\ttblName: " << tblName << "  gwName: " << gwName);
-                for (auto refEntry : refs) LOG1("\t  " << refEntry.first << " (" <<
+                LOG5("\ttblName: " << tblName << "  gwName: " << gwName);
+                for (auto refEntry : refs) LOG5("\t  " << refEntry.first << " (" <<
                                                 refEntry.second << ")");
                 bool ref_match = false;
                 if (refs.count(tblName)) {

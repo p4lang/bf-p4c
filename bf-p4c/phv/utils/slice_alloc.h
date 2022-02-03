@@ -17,7 +17,11 @@ class DarkInitEntry;
 class Field;
 class AllocContext;
 class AllocSlice;
-enum class SliceMatch {  DFLT = 0, REF = 1, REF_DG_LR = 2, REF_PHYS_LR = 4 };
+// Enum for selecting how to match AllocSlices
+enum class SliceMatch {  DFLT = 0,            // Use min/max_stage_i
+                         REF = 1,             // Use refs
+                         REF_DG_LR = 2,       // Use d-graph stage of refs
+                         REF_PHYS_LR = 4 };   // Use physical stage of refs
 
 class DarkInitPrimitive {
  private:

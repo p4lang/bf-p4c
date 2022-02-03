@@ -786,7 +786,7 @@ const std::vector<PHV::AllocSlice> PHV::Field::get_combined_alloc_bytes(
     std::vector<PHV::AllocSlice> slicesToProcess;
     // Map of container to byte within the container to the set of alloc slices in that container
     // byte.
-    LOG3("   get_combined_alloc_bytes for " << name);
+    LOG6("   get_combined_alloc_bytes for " << name);
     ordered_map<PHV::Container, ordered_map<int, std::vector<PHV::AllocSlice>>> containerBytesMap;
     foreach_byte(ctxt, use, [&](const PHV::AllocSlice& alloc) {
         int byte = alloc.container_slice().lo / 8;
