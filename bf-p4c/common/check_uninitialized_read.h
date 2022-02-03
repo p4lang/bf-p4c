@@ -11,12 +11,13 @@ class CheckUninitializedRead : public Inspector {
     const PhvInfo &phv;
     const PHV::Pragmas &pragmas;
     static bool printed;
+    ordered_set<const PHV::Field*> pov_protected_fields;
  public:
     CheckUninitializedRead(
-         const FieldDefUse &defuse,
-         const PhvInfo &phv,
-         const PHV::Pragmas &pragmas) :
-         defuse(defuse), phv(phv), pragmas(pragmas) {}
+        const FieldDefUse &defuse,
+        const PhvInfo &phv,
+        const PHV::Pragmas &pragmas) :
+        defuse(defuse), phv(phv), pragmas(pragmas) {}
     static void set_printed() {printed = true;}
 
     // unset_printed is intended to be only used in gtest unit test, the reason to unset printed is
@@ -24,6 +25,8 @@ class CheckUninitializedRead : public Inspector {
     // presented once. Therefore, gtest may not capture the warning message.
     static void unset_printed() {printed = false;}
     void end_apply() override;
+    bool preorder(const IR::BFN::DeparserParameter *) override;
+    bool preorder(const IR::BFN::Digest *) override;
 };
 
 
