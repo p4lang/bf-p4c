@@ -136,31 +136,37 @@ struct metadata_t {
 
 parser TofinoIngressParser(packet_in pkt, out ingress_intrinsic_metadata_t ig_intr_md) {
     state start {
-        pkt.extract(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
-            1: parse_resubmit;
-            0: parse_port_metadata;
-        }
+        transition accept;
+        // FIXME: update for Tofino5
+        //pkt.extract(ig_intr_md);
+        //transition select(ig_intr_md.resubmit_flag) {
+        //    1: parse_resubmit;
+        //    0: parse_port_metadata;
+        //}
     }
     state parse_resubmit {
         transition reject;
     }
     state parse_port_metadata {
+        // FIXME: update for Tofino5
         pkt.advance(PORT_METADATA_SIZE);
         transition accept;
     }
 }
 
+/*
 parser TofinoEgressParser(packet_in pkt, out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         pkt.extract(eg_intr_md);
         transition accept;
     }
 }
+*/
 
 control BypassEgress(inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
     action set_bypass_egress() {
-        ig_tm_md.bypass_egress = 1w1;
+        // FIXME: update for Tofino5
+        //ig_tm_md.bypass_egress = 1w1;
     }
     table bypass_egress {
         actions = {
@@ -202,7 +208,7 @@ parser SwitchIngressParser(packet_in pkt, out header_t hdr, out metadata_t ig_md
     }
 }
 
-control SwitchIngress(in header_t hdr, inout metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+control SwitchIngress(in header_t hdr, inout metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     bit<10> vrf;
     action hit(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;

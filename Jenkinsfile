@@ -429,6 +429,15 @@ node ('compiler-travis') {
                         )
                     },
 
+                    "Travis - Tofino 5": {
+                        echo 'Running tofino5 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 2,
+                            "ctest -R '^tofino5' -LE 'ptf'"
+                        )
+                    },
+
                     "Travis - python2 & scapy": {
                         runInDocker(
                             extraArgs: '--privileged -e PKTPY=False',
