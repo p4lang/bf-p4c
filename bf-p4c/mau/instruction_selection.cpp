@@ -608,6 +608,17 @@ class DoInstructionSelection::SplitInstructions : public Transform {
 // metadata PHV will have the same "const_to_phv_16w10" name but will be part of two different
 // table "ingress_assign_const_to_phv_0" vs "ingress_assign_const_to_phv_1". Ultimately the
 // metadata PHV selected should be the same because of overlay.
+
+// TODO(wuc): potential optimization:
+// consider a IR tree like this:
+//                (TableSeq a)
+//                  /     \
+//       (TableSeq b)      (TableSeq c)
+//         /    \             /    \
+//      SubSat1 ...          ...   SubSat2
+// In current solution, an action will be inserted into TableSeq b and an action will be inserted
+// into TableSeq C to initialize SubSat1 and SubSat2 respectively. However, it can be more optimal
+// if we only insert one action in TableSeq a to initialize SubSat1 and SubSat2 together.
 const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts) {
     static int id = 0;
 
@@ -633,14 +644,8 @@ const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts
 
         ts->tables.insert(ts->tables.begin(), t);
         const_to_phv.clear();
+        this->ts = nullptr;
     }
-
-    return ts;
-}
-
-const IR::MAU::TableSeq *DoInstructionSelection::preorder(IR::MAU::TableSeq *ts) {
-    if (const_to_phv.empty())
-        this->ts = ts;
 
     return ts;
 }
@@ -886,6 +891,9 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
     //    value of 0 to conditionally execute the subtract or not
     // Both these solutions require program transformations
     if (bits && !bits->isSigned && eRight->to<IR::Constant>()) {
+        if (this->ts == nullptr) {
+            this->ts = findContext<IR::MAU::TableSeq>();
+        }
         cstring temp_name = "const_to_phv_" + cstring::to_cstring(bits->width_bits()) + "w" +
                             cstring::to_cstring(eRight->to<IR::Constant>()->asLong());
 

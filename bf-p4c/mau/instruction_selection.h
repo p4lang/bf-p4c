@@ -164,14 +164,13 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     IR::MAU::Action                     *af = nullptr;
     class SplitInstructions;
     int                                 synth_arg_num = 0;
-    IR::MAU::TableSeq                   *ts = nullptr;
+    const IR::MAU::TableSeq                   *ts = nullptr;
     ordered_map<cstring, const IR::MAU::Instruction *> const_to_phv;
 
     profile_t init_apply(const IR::Node *root) override;
     const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override { prune(); return hd; }
     const IR::GlobalRef *preorder(IR::GlobalRef *) override;
     const IR::MAU::TableSeq *postorder(IR::MAU::TableSeq *) override;
-    const IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *) override;
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
     const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *a) override { prune(); return a; }

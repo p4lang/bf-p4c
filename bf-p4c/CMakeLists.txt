@@ -1458,6 +1458,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/instruction_selection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/initialize_mirror_io_select.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
