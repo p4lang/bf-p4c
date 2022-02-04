@@ -10,15 +10,13 @@ parser IngressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M ig_md,
-    @optional out ingress_intrinsic_metadata_t ig_intr_md,
-    @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+    out ingress_intrinsic_metadata_t ig_intr_md,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
 
 control IngressT<H, M>(
     in H hdr,
     inout M ig_md,
     @optional in ingress_intrinsic_metadata_t ig_intr_md,
-    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
 
 control EgressT<H, M>(

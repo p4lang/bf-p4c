@@ -708,6 +708,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
   arch/arch.cpp
+  arch/arch_spec.cpp
   arch/add_t2na_meta.cpp
   arch/intrinsic_metadata.cpp
   arch/bridge_metadata.cpp
@@ -751,6 +752,7 @@ build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/arch.h
+  arch/arch_spec.h
   arch/add_t2na_meta.h
   arch/intrinsic_metadata.h
   arch/bridge_metadata.h

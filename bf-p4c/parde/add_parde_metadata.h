@@ -21,6 +21,9 @@ class AddParserMetadata : public ParserModifier {
     void addIngressMetadata(IR::BFN::Parser *d);
     void addEgressMetadata(IR::BFN::Parser *d);
 
+    void addTofinoIngressParserEntryPoint(IR::BFN::Parser *);
+    void addTofinoEgressParserEntryPoint(IR::BFN::Parser *);
+
     const IR::BFN::Pipe* pipe;
     bool isV1;
 };

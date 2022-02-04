@@ -26,9 +26,6 @@ typedef bit<DIGEST_TYPE_WIDTH>         DigestType_t;        // Digest type
 #define REPLICATION_ID_WIDTH           16
 typedef bit<REPLICATION_ID_WIDTH>      ReplicationId_t;     // Replication id
 
-// CloneId_t will be deprecated in 9.4. Adding a typedef for any old references.
-typedef MirrorType_t CloneId_t;
-
 typedef error ParserError_t;
 
 const bit<32> PORT_METADATA_SIZE = 32w192;
@@ -104,15 +101,11 @@ error {
 // -----------------------------------------------------------------------------
 // THIS NEEDS UPDATE FOR FLATROCK
 @__intrinsic_metadata
-header ingress_intrinsic_metadata_t {
+struct ingress_intrinsic_metadata_t {
     bit<1> pktgen_flag;                 // Flag distinguishing original packets
                                         // from PktGen packets.
-    @padding bit<1> _pad1;
-
     PortId_t ingress_port;              // Ingress physical port id.
                                         // this field is passed to the deparser
-    @padding bit<8> _pad2;
-
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
 }
@@ -1075,13 +1068,6 @@ extern ActionSelector {
                    Register<bit<1>, _> reg,
                    bit<32> max_group_size,
                    bit<32> num_groups);
-
-    /// Construct a selection table for action profile of 'size' entries.
-    @deprecated("ActionSelector must be specified with an associated ActionProfile")
-    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
-
-    @deprecated("ActionSelector must be specified with an associated ActionProfile")
-    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
 }
 
 extern SelectorAction {
@@ -1092,10 +1078,6 @@ extern SelectorAction {
 }
 
 extern Mirror {
-    /// Constructor
-    @deprecated("Mirror must be specified with the value of the mirror_type instrinsic metadata")
-    Mirror();
-
     /// Constructor
     Mirror(MirrorType_t mirror_type);
 
@@ -1108,10 +1090,6 @@ extern Mirror {
 }
 
 extern Digest<T> {
-    /// define a digest stream to the control plane
-    @deprecated("Digest must be specified with the value of the digest_type instrinsic metadata")
-    Digest();
-
     /// constructor.
     Digest(DigestType_t digest_type);
 

@@ -14,7 +14,7 @@ bool AddParserMetadata::preorder(IR::BFN::Parser *parser) {
     return true;
 }
 
-void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
+void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser) {
     // This state initializes some special metadata and serves as an entry
     // point.
     auto *igParserMeta =
@@ -51,7 +51,17 @@ void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
+void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
+    if (Device::currentDevice() == Device::TOFINO ||
+        Device::currentDevice() == Device::JBAY ||
+        Device::currentDevice() == Device::CLOUDBREAK) {
+        addTofinoIngressParserEntryPoint(parser);
+    } else if (Device::currentDevice() == Device::FLATROCK) {
+        ::warning("Parser metadata not implemented for %1%", Device::name());
+    }
+}
+
+void AddParserMetadata::addTofinoEgressParserEntryPoint(IR::BFN::Parser* parser) {
     auto* egParserMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
 
@@ -82,17 +92,24 @@ void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
+void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
+    if (Device::currentDevice() == Device::TOFINO ||
+        Device::currentDevice() == Device::JBAY ||
+        Device::currentDevice() == Device::CLOUDBREAK) {
+        addTofinoEgressParserEntryPoint(parser);
+    } else if (Device::currentDevice() == Device::FLATROCK) {
+        ::warning("Parser metadata not implemented for %1%", Device::name());
+    }
+}
+
 bool AddDeparserMetadata::preorder(IR::BFN::Deparser *d) {
     switch (d->gress) {
         case INGRESS: addIngressMetadata(d); break;
         case EGRESS:  addEgressMetadata(d);  break;
         default: break;  // Nothing for Ghost
     }
-
     return false;
 }
-
-namespace {
 
 void addDeparserParamRename(IR::BFN::Deparser* deparser,
                       const IR::HeaderOrMetadata* meta,
@@ -103,102 +120,33 @@ void addDeparserParamRename(IR::BFN::Deparser* deparser,
     deparser->params.push_back(param);
 }
 
-// Use this method if field name is same as param (assembly) name
-// FIXME(zma) move renaming to assembler; having multiple names for
-// same thing is never a good idea ...
-void addDeparserParam(IR::BFN::Deparser* deparser,
-                      const IR::HeaderOrMetadata* meta,
-                      cstring field) {
-    addDeparserParamRename(deparser, meta, field, field);
-}
-
-}  // namespace
-
 void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
-    auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-    addDeparserParamRename(d, tmMeta, "ucast_egress_port", "egress_unicast_port");
-    addDeparserParamRename(d, tmMeta, "bypass_egress", "bypss_egr");
-    addDeparserParam(d, tmMeta, "deflect_on_drop");
-    addDeparserParamRename(d, tmMeta, "ingress_cos", "icos");
-    addDeparserParam(d, tmMeta, "qid");
-    addDeparserParamRename(d, tmMeta, "icos_for_copy_to_cpu", "copy_to_cpu_cos");
-    addDeparserParam(d, tmMeta, "copy_to_cpu");
-    addDeparserParamRename(d, tmMeta, "packet_color", "meter_color");
-    addDeparserParamRename(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
-    addDeparserParamRename(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
-    addDeparserParam(d, tmMeta, "mcast_grp_a");
-    addDeparserParam(d, tmMeta, "mcast_grp_b");
-    addDeparserParam(d, tmMeta, "level1_mcast_hash");
-    addDeparserParam(d, tmMeta, "level2_mcast_hash");
-    addDeparserParamRename(d, tmMeta, "level1_exclusion_id", "xid");
-    addDeparserParamRename(d, tmMeta, "level2_exclusion_id", "yid");
-    addDeparserParam(d, tmMeta, "rid");
-#if HAVE_FLATROCK
-    // flatrock does not really have an ingress deparser, so does not have
-    // ingress_intrinsic_metadata_for_deparser
-    if (Device::currentDevice() == Device::FLATROCK)
-        return;
-#endif
-
-    auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
-    addDeparserParam(d, dpMeta, "drop_ctl");
-#if HAVE_JBAY || HAVE_CLOUDBREAK
-    if (Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-        || Device::currentDevice() == Device::CLOUDBREAK
-#endif
-    ) {
-        addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
-        addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
-        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_epipe_port");
-        addDeparserParamRename(d, dpMeta, "mirror_qid", "mirr_qid");
-        addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
-        addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
-        addDeparserParamRename(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl");
-        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
-        // addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
-        addDeparserParamRename(d, dpMeta, "adv_flow_ctl", "afc");
-        addDeparserParam(d, dpMeta, "mtu_trunc_len");
-        addDeparserParam(d, dpMeta, "mtu_trunc_err_f");
-        addDeparserParamRename(d, dpMeta, "pktgen", "pgen");
-        addDeparserParamRename(d, dpMeta, "pktgen_length", "pgen_len");
-        addDeparserParamRename(d, dpMeta, "pktgen_address", "pgen_addr");
-        addDeparserParam(d, dpMeta, "learn_sel");
+    for (auto f : Device::archSpec().getIngressInstrinicMetadataForTM()) {
+        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+        addDeparserParamRename(d, tmMeta, f.name, f.asm_name);
     }
-#endif
+
+    for (auto f : Device::archSpec().getIngressInstrinicMetadataForDeparser()) {
+        auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+        addDeparserParamRename(d, dpMeta, f.name, f.asm_name);
+    }
 }
 
 void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
-    auto* outputMeta =
-      getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
-    addDeparserParamRename(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
-    addDeparserParamRename(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
-
-    auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
-    addDeparserParam(d, dpMeta, "drop_ctl");
-#if HAVE_JBAY || HAVE_CLOUDBREAK
-    if (Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-        || Device::currentDevice() == Device::CLOUDBREAK
-#endif
-    ) {
-        addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
-        addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
-        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_epipe_port");
-        addDeparserParamRename(d, dpMeta, "mirror_qid", "mirr_qid");
-        addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
-        addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
-        addDeparserParamRename(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl");
-        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
-        // addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
-        addDeparserParamRename(d, dpMeta, "adv_flow_ctl", "afc");
-        addDeparserParam(d, dpMeta, "mtu_trunc_len");
-        addDeparserParam(d, dpMeta, "mtu_trunc_err_f");
+    for (auto f : Device::archSpec().getEgressIntrinsicMetadataForOutputPort()) {
+        auto* outputMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
+        addDeparserParamRename(d, outputMeta, f.name, f.asm_name);
     }
-#endif
+
+    for (auto f : Device::archSpec().getEgressIntrinsicMetadataForDeparser()) {
+        auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
+        addDeparserParamRename(d, dpMeta, f.name, f.asm_name);
+    }
     /* egress_port is how the egress deparser knows where to push
      * the reassembled header and is absolutely necessary
      */
-    auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
-    addDeparserParamRename(d, egMeta, "egress_port", "egress_unicast_port");
+    for (auto f : Device::archSpec().getEgressIntrinsicMetadata()) {
+        auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
+        addDeparserParamRename(d, egMeta, f.name, f.asm_name);
+    }
 }

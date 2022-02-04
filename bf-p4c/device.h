@@ -8,6 +8,7 @@
 #include "mau/power_spec.h"
 #include "parde/parde_spec.h"
 #include "phv/phv_spec.h"
+#include "arch/arch_spec.h"
 
 class Device {
  public:
@@ -42,6 +43,7 @@ class Device {
     static const GatewaySpec& gatewaySpec() { return Device::get().getGatewaySpec(); }
     struct StatefulAluSpec;
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
+    static const ArchSpec& archSpec() { return Device::get().getArchSpec(); }
     static const MauPowerSpec& mauPowerSpec() { return Device::get().getMauPowerSpec(); }
     static int numPipes() { return Device::get().getNumPipes(); }
     static int numStages() {
@@ -87,6 +89,7 @@ class Device {
     virtual const GatewaySpec& getGatewaySpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
     virtual const MauPowerSpec& getMauPowerSpec() const = 0;
+    virtual const ArchSpec& getArchSpec() const = 0;
     virtual int getNumPipes() const = 0;
     virtual int getNumPortsPerPipe() const = 0;
     virtual int getNumChannelsPerPort() const = 0;
@@ -123,6 +126,7 @@ class TofinoDevice : public Device {
     const TofinoPhvSpec phv_;
     const TofinoPardeSpec parde_;
     const TofinoMauPowerSpec mau_power_;
+    const TofinoArchSpec arch_;
 
  public:
     TofinoDevice() : Device("Tofino"), parde_() {}
@@ -157,6 +161,7 @@ class TofinoDevice : public Device {
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
+    const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return false; }
     bool getHasCompareInstructions() const override { return false; }
     int getNumLogTablesPerStage() const override { return 16; }
@@ -171,6 +176,7 @@ class JBayDevice : public Device {
     const JBayPhvSpec phv_;
     const JBayPardeSpec parde_;
     const JBayMauPowerSpec mau_power_;
+    const JBayArchSpec arch_;
 
  protected:
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -206,6 +212,7 @@ class JBayDevice : public Device {
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
+    const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return true; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
@@ -250,6 +257,7 @@ class CloudbreakDevice : public Device {
     const CloudbreakPhvSpec phv_;
     const CloudbreakPardeSpec parde_;
     const CloudbreakMauPowerSpec mau_power_;
+    const CloudbreakArchSpec arch_;
 
  protected:
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -285,6 +293,7 @@ class CloudbreakDevice : public Device {
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
+    const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return true; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
@@ -301,6 +310,7 @@ class FlatrockDevice : public Device {
     const FlatrockPhvSpec phv_;
     const FlatrockPardeSpec parde_;
     const FlatrockMauPowerSpec mau_power_;
+    const FlatrockArchSpec arch_;
 
  protected:
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -336,6 +346,7 @@ class FlatrockDevice : public Device {
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
+    const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return true; }
     bool getHasCompareInstructions() const override { return true; }
     int getNumLogTablesPerStage() const override { return 16; }
