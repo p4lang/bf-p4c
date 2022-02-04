@@ -844,7 +844,11 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
     out << std::endl << "Worst case " << toString(g) << " table flow" << std::endl;
     std::stringstream heading;
     std::stringstream sep;
+#ifdef BAREFOOT_INTERNAL
+    size_t dashes = longest_table_name_ + 118;
+#else
     size_t dashes = longest_table_name_ + 68;
+#endif
     for (size_t i = 0; i < dashes; i++)
       sep << "-";
     sep << std::endl;
@@ -856,6 +860,11 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
     heading << "|" << boost::format("%=10s") % "Stage"
       << "|" << boost::format(sl.str()) % "Table Name"
       << "|" << boost::format("%=16s") % "Always Run"
+#ifdef BAREFOOT_INTERNAL
+      << "|" << boost::format("%=16s") % "Sram (rd)"
+      << "|" << boost::format("%=16s") % "Sram (wr)"
+      << "|" << boost::format("%=16s") % "Tcam (search)"
+#endif
       << "|" << boost::format("%=16s") % "Weight"
       << "|" << boost::format("%=16s") % "Percentage"
       << "|" << std::endl;
@@ -866,9 +875,16 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
     PowerMemoryAccess dummy = PowerMemoryAccess();
     double total_weight = dummy.compute_table_weight(total_power, Device::numPipes());
 
+#ifdef BAREFOOT_INTERNAL
+    int itot_sramr = 0, itot_sramw = 0, itot_tcams = 0;
+#endif
+
     for (int stage=0; stage < Device::numStages(); ++stage) {
       for (UniqueId id : in_stages[g][stage]) {
         std::stringstream st, n, always, wt, pcent;
+#ifdef BAREFOOT_INTERNAL
+        std::stringstream sramr, sramw, tcams;
+#endif
         st << boost::format("%2d") % stage;
         n << external_names_.at(id);
         if (always_powered_on_.find(id) != always_powered_on_.end()) {
@@ -886,11 +902,24 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
           pcent << "0";
         }
         pcent << "%";
+#ifdef BAREFOOT_INTERNAL
+        sramr << pma.ram_read;
+        sramw << pma.ram_write;
+        tcams << pma.tcam_read;
+        itot_sramr += pma.ram_read;
+        itot_sramw += pma.ram_write;
+        itot_tcams += pma.tcam_read;
+#endif
 
         std::stringstream line;
         line << "|" << boost::format("%=10s") % st.str()
           << "|" << boost::format(sl.str()) % n.str()
           << "|" << boost::format("%=16s") % always.str()
+#ifdef BAREFOOT_INTERNAL
+          << "|" << boost::format("%=16s") % sramr.str()
+          << "|" << boost::format("%=16s") % sramw.str()
+          << "|" << boost::format("%=16s") % tcams.str()
+#endif
           << "|" << boost::format("%=16s") % wt.str()
           << "|" << boost::format("%=16s") % pcent.str()
           << "|" << std::endl;
@@ -903,12 +932,22 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
     itotal << "|" << boost::format("%=10s") % "Total"
       << "|" << boost::format(sl.str()) % " "
       << "|" << boost::format("%=16s") % " "
+#ifdef BAREFOOT_INTERNAL
+      << "|" << boost::format("%=16s") % std::to_string(itot_sramr).c_str()
+      << "|" << boost::format("%=16s") % std::to_string(itot_sramw).c_str()
+      << "|" << boost::format("%=16s") % std::to_string(itot_tcams).c_str()
+#endif
       << "|" << boost::format("%=16s") % itot_wt.str()
       << "|" << boost::format("%=16s") % "100%"
       << "|" << std::endl;
 
      blank << "|" << boost::format("%=10s") % " "
        << "|" << boost::format(sl.str()) % " "
+#ifdef BAREFOOT_INTERNAL
+       << "|" << boost::format("%=16s") % " "
+       << "|" << boost::format("%=16s") % " "
+       << "|" << boost::format("%=16s") % " "
+#endif
        << "|" << boost::format("%=16s") % " "
        << "|" << boost::format("%=16s") % " "
        << "|" << boost::format("%=16s") % " "
