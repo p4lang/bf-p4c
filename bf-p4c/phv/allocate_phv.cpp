@@ -56,6 +56,7 @@ const MetricName n_set_gress = "n_set_gress";
 const MetricName n_set_parser_group_gress = "n_set_parser_group_gress";
 const MetricName n_set_deparser_group_gress = "n_set_deparser_group_gress";
 const MetricName n_overlay_bits = "n_overlay_bits";
+const MetricName n_field_packing_score = "n_field_packing_score";
 // how many wasted bits in partial container get used.
 const MetricName n_packing_bits = "n_packing_bits";
 // smaller, better.
@@ -230,6 +231,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             // suspicious why true?
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], true},
         };
@@ -249,6 +251,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             // suspicious why true?
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], true},
         };
@@ -288,6 +291,7 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
         };
     } else {
@@ -315,6 +319,7 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
         };
     }
@@ -796,6 +801,7 @@ const std::vector<MetricName> AllocScore::g_by_kind_metrics = {
     n_wasted_bits,
     n_inc_small_containers,
     n_clot_bits,
+    n_field_packing_score,
     n_mismatched_deparser_gress,
 };
 
@@ -825,6 +831,8 @@ AllocScore AllocScore::operator-(const AllocScore& right) const {
  *     number of containers which set their gress
  *     to ingress/egress from boost::none.
  * + n_overlay_bits: container bits already used in parent alloc get overlaid.
+ * + n_field_packing_score: container bits that share the same byte for two or
+ *     more slices used as a condition in a match table.
  * + n_packing_bits: use bits that ContainerAllocStatus is PARTIAL in parent.
  * + n_inc_containers: the number of container used that was EMPTY.
  * + n_wasted_bits: if field is solitary, container.size() - slice.width().
@@ -836,6 +844,7 @@ AllocScore::AllocScore(
         const PhvUse& uses,
         const MapFieldToParserStates& field_to_parser_states,
         const CalcParserCriticalPath& parser_critical_path,
+        const TableFieldPackOptimization& tablePackOpt,
         FieldPackingOpportunity* packing_opportunities,
         const int bitmasks) {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
@@ -943,6 +952,9 @@ AllocScore::AllocScore(
                 by_kind[kind][n_inc_small_containers]++;
             }
         }
+
+        int pack_score = tablePackOpt.getPackScore(parent->slices(container), slices);
+        by_kind[kind][n_field_packing_score] += pack_score;
 
         if (parent_status == ContainerAllocStatus::PARTIAL) {
             // calc n_packing_bits
@@ -1114,9 +1126,10 @@ AllocScore ScoreContext::make_score(
     const PhvUse& uses,
     const MapFieldToParserStates& f_ps,
     const CalcParserCriticalPath& cp,
+    const TableFieldPackOptimization& tp_opt,
     const int bitmasks) const {
     return AllocScore(
-        alloc, phv, clot, uses, f_ps, cp, packing_opportunities_i, bitmasks);
+        alloc, phv, clot, uses, f_ps, cp, tp_opt, packing_opportunities_i, bitmasks);
 }
 
 
@@ -2663,7 +2676,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
 
         auto score = score_ctx.make_score(
             perContainerAlloc, utils_i.phv, utils_i.clot, utils_i.uses,
-            utils_i.field_to_parser_states, utils_i.parser_critical_path, num_bitmasks);
+            utils_i.field_to_parser_states, utils_i.parser_critical_path,
+            utils_i.tablePackOpt, num_bitmasks);
         LOG_DEBUG5(TAB1 "SLICE LIST score for container " << c << ": " << score);
 
         // update the best
@@ -3156,7 +3170,8 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
                 if (failed) continue;
                 auto score = score_ctx.make_score(
                     this_alloc, utils_i.phv, utils_i.clot, utils_i.uses,
-                    utils_i.field_to_parser_states, utils_i.parser_critical_path);
+                    utils_i.field_to_parser_states, utils_i.parser_critical_path,
+                    utils_i.tablePackOpt);
                 if (!best_alloc || score_ctx.is_better(score, best_score)) {
                     best_alloc = std::move(this_alloc);
                     best_score = score;
@@ -3269,7 +3284,8 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
         if (this_alloc) {
             auto score =
                 score_ctx.make_score(*this_alloc, utils_i.phv, utils_i.clot, utils_i.uses,
-                                     utils_i.field_to_parser_states, utils_i.parser_critical_path);
+                                     utils_i.field_to_parser_states, utils_i.parser_critical_path,
+                                     utils_i.tablePackOpt);
             if (!best_alloc || score_ctx.is_better(score, best_score)) {
                 best_alloc = std::move(this_alloc);
                 best_score = score;
@@ -4810,7 +4826,8 @@ BruteForceAllocationStrategy::tryAllocSlicing(
                 AllocScore score = score_ctx.make_score(*partial_alloc,
                         utils_i.phv, utils_i.clot, utils_i.uses,
                         utils_i.field_to_parser_states,
-                        utils_i.parser_critical_path);
+                        utils_i.parser_critical_path,
+                        utils_i.tablePackOpt);
                 LOG_DEBUG4("Allocation score: " << score);
                 if (!best_slice_alloc || score_ctx.is_better(score, best_slice_score)) {
                     best_slice_score = score;
@@ -4893,7 +4910,8 @@ BruteForceAllocationStrategy::tryAllocStride(
                 AllocScore score = score_ctx.make_score(*leader_alloc,
                         utils_i.phv, utils_i.clot, utils_i.uses,
                         utils_i.field_to_parser_states,
-                        utils_i.parser_critical_path);
+                        utils_i.parser_critical_path,
+                        utils_i.tablePackOpt);
 
                 if (!best_alloc || score_ctx.is_better(score, best_score)) {
                     best_score = score;
@@ -5082,7 +5100,8 @@ BruteForceAllocationStrategy::tryVariousSlicing(
             slicing_alloc,
             utils_i.phv, utils_i.clot, utils_i.uses,
             utils_i.field_to_parser_states,
-            utils_i.parser_critical_path);
+            utils_i.parser_critical_path,
+            utils_i.tablePackOpt);
         if (LOGGING(4)) {
             LOG_FEATURE("alloc_progress", 4, "Best SUPERCLUSTER score for this slicing: " <<
                         slicing_score);
@@ -5314,11 +5333,17 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
         LOG1("PHV ALLOCATION SUCCESSFUL");
         LOG2(alloc);
     } else {
-        ::error("failed to allocate temp vars created by table placement");
-        for (const auto* sc : result.remaining_clusters) {
-            sc->forall_fieldslices([](const PHV::FieldSlice& fs) {
-                ::error("unallocated: %1%", cstring::to_cstring(fs));
-            });
+        // Did we already tried without temporary creation during table allocation? If so, fail.
+        if (settings_i.limit_tmp_creation) {
+            ::error("failed to allocate temp vars created by table placement");
+            for (const auto* sc : result.remaining_clusters) {
+                sc->forall_fieldslices([](const PHV::FieldSlice& fs) {
+                    ::error("unallocated: %1%", cstring::to_cstring(fs));
+                });
+            }
+        } else {
+            LOG1("PHV ALLOCATION FAIL, try without intermediate temp");
+            settings_i.limit_tmp_creation = true;
         }
     }
     Logging::FileLog::close(logfile);

@@ -60,7 +60,7 @@ struct StageUseEstimate {
         stats_alus += a.stats_alus;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, attached_entries_t &, LayoutChoices *lc,
-                     bool prev_placed, bool gateway_attached, bool table_placement = false);
+                     bool prev_placed, bool gateway_attached, bool disable_split);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
@@ -87,15 +87,14 @@ struct StageUseEstimate {
     cstring ran_out() const;
 
     void options_to_ways(const IR::MAU::Table *tbl, int entries);
-    void options_to_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
-                         bool table_placement);
+    void options_to_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries);
     void select_best_option(const IR::MAU::Table *tbl);
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int entries);
     void select_best_option_ternary();
     void options_to_atcam_entries(const IR::MAU::Table *tbl, int entries);
     void options_to_dleft_entries(const IR::MAU::Table *tbl, const attached_entries_t &att_entries);
     void calculate_attached_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
-                                 LayoutOption *lo, bool table_placement);
+                                 LayoutOption *lo);
     void fill_estimate_from_option(int &entries);
     const LayoutOption *preferred() const {
     if (layout_options.empty())
@@ -115,7 +114,7 @@ struct StageUseEstimate {
     }
 
     void determine_initial_layout_option(const IR::MAU::Table *tbl, int &entries,
-                                         attached_entries_t &, bool table_placement);
+                                         attached_entries_t &);
     bool adjust_choices(const IR::MAU::Table *tbl, int &entries, attached_entries_t &);
 
     bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int &srams_left,

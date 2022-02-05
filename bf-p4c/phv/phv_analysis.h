@@ -91,9 +91,10 @@ class PHV_AnalysisPass : public Logging::PassManager {
     PHV::FieldSliceLiveRangeDB physical_liverange_db;
     // sources of any field slices classified by actions.
     PHV::ActionSourceTracker source_tracker;
-
     // allocation settings.
     PHV::AllocSetting settings;
+    // Collect field packing that table/ixbar would benefit from.
+    TableFieldPackOptimization tablePackOpt;
 
     // a collection class of above passe.
     PHV::AllocUtils utils;
@@ -118,6 +119,7 @@ class PHV_AnalysisPass : public Logging::PassManager {
     void set_physical_liverange_overlay(bool enable) {
         settings.physical_liverange_overlay = enable;
     }
+    const bool& get_limit_tmp_creation() { return settings.limit_tmp_creation; }
     const PHV::Pragmas& get_pragmas() {
         return pragmas;
     }

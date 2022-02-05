@@ -1462,7 +1462,7 @@ control Daisytown(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsi
         Osyka.LaUnion.Level = Earling;
         Osyka.LaUnion.Algoa = Udall;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Crannell") table Crannell {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(1) @name(".Crannell") table Crannell {
         actions = {
             Balmorhea();
         }
@@ -2233,7 +2233,7 @@ control Lindy(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
     @name(".Olcott") action Olcott() {
         Osyka.Arvada.Tilton = Skillman.get<tuple<bit<128>, bit<128>, bit<20>, bit<8>>>({ Gotham.Moose.Hackett, Gotham.Moose.Kaluaaha, Gotham.Moose.Levittown, Gotham.Moose.Norwood });
     }
-    @disable_atomic_modify(1) @name(".Westoak") table Westoak {
+    @disable_atomic_modify(1) @stage(1) @name(".Westoak") table Westoak {
         actions = {
             Emden();
         }
@@ -2629,7 +2629,7 @@ control Campo(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
         Osyka.McAllen.Hammond = Hammond;
         Osyka.McAllen.Blencoe = Blencoe;
     }
-    @disable_atomic_modify(1) @name(".Forepaugh") table Forepaugh {
+    @disable_atomic_modify(1) @stage(1) @name(".Forepaugh") table Forepaugh {
         actions = {
             SanPablo();
         }

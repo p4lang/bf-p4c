@@ -7,6 +7,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
+#include "bf-p4c/phv/utils/slice_alloc.h"
 
 /** This class enforces the following constraints related to match key sizes for ternary match
   * tables:
@@ -71,6 +72,36 @@ class TablePhvConstraints : public PassManager {
             new CollectForceImmediateFields(p, a, c)
         });
     }
+};
+/** This class gather match field information to optimize XBar, SRAM and TCAM resources. The idea is
+  * to share match bytes as much as possible among fields. Small field or flags are the one that
+  * should benefit the most from this optimization. On typical compilation mode, scoring is used to
+  * compare various super cluster allocation and find the solution that is the most optimal from
+  * the match resource perspective. Table size is also part of the score compute such that bigger
+  * table that would benefit the most from a specific packing are prioritize over smaller one.
+  *
+  * This pass is also used by table first approach to get pack candidate when doing trivial PHV
+  * allocation. The idea in this case is to find small field or flag that can be combined on the
+  * same match byte to reduce pressure on XBar, SRAM and TCAM.
+  */
+class TableFieldPackOptimization : public MauInspector {
+ private:
+    const PhvInfo &phv;
+    ordered_map<PHV::FieldSlice, ordered_map<PHV::FieldSlice, int>> candidate;
+    ordered_map<const PHV::Field*, ordered_set<PHV::FieldSlice>> f_to_fs;
+
+    profile_t init_apply(const IR::Node* root) override;
+    void end_apply() override;
+    bool preorder(const IR::MAU::Table* tbl) override;
+    int getNumberOfEntriesInTable(const IR::MAU::Table* tbl);
+    int getFieldSlicePackScore(const PHV::AllocSlice &slice, const PHV::AllocSlice &slice2) const;
+
+ public:
+    explicit TableFieldPackOptimization(PhvInfo& p) : phv(p) { }
+
+    int getPackScore(const ordered_set<PHV::AllocSlice> &parent,
+                     const ordered_set<PHV::AllocSlice> &slices) const;
+    std::list<PHV::FieldSlice> getPackCandidate(const PHV::FieldSlice &fs) const;
 };
 
 #endif  /* BF_P4C_PHV_TABLE_PHV_CONSTRAINTS_H_ */

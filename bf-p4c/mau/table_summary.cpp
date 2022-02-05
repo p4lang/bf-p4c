@@ -294,8 +294,8 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         }
     };
 
+    prev_state = state;
     if (BFNContext::get().options().alt_phv_alloc) {
-        auto prev_state = state;
         switch (state) {
         case ALT_INITIAL: {
             // table placement succeeded, backtrack to run actual PHV allocation.

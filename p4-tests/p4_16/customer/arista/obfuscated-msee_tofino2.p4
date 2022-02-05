@@ -11,6 +11,7 @@
 @pa_container_size("ingress" , "Peoria.Masontown.Lapoint" , 32)
 @pa_container_size("ingress" , "Peoria.Belmore.Tornillo" , 32)
 @pa_container_size("ingress" , "Peoria.Belmore.Pajaros" , 32)
+@pa_container_size("egress" , "Wanamassa.Basco.Almedia" , 32)
 @pa_container_size("egress" , "Wanamassa.PeaRidge.Chugwater" , 32)
 @pa_container_size("egress" , "Wanamassa.PeaRidge.Charco" , 32)
 @pa_container_size("ingress" , "Wanamassa.PeaRidge.Chugwater" , 32)
@@ -3837,7 +3838,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
     @name(".DeBeque") action DeBeque() {
         Peoria.Belmore.Kenney = (bit<1>)1w0x1;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Coalton") table Coalton {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(7) @name(".Coalton") table Coalton {
         actions = {
             Issaquah();
         }
@@ -3847,7 +3848,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
         const default_action = Issaquah(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Cavalier") table Cavalier {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(6) @name(".Cavalier") table Cavalier {
         actions = {
             Issaquah();
         }
@@ -3857,7 +3858,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
         const default_action = Issaquah(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Plush") table Plush {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(6) @name(".Plush") table Plush {
         actions = {
             Issaquah();
         }

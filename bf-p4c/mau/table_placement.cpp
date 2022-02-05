@@ -93,8 +93,21 @@ bool TablePlacement::backtrack(trigger &trig) {
         ignoreContainerConflicts = t->ignoreContainerConflicts;
         return true; }
     ignoreContainerConflicts = false;
+    // If temporary variable was added during placement we have two possibilities:
+    // 1 - PHV was able to allocate these variable incrementally and a new table allocation run is
+    //     needed to properly fill the actions that make uses of these temporary metadata field.
+    //
+    // 2 - PHV was not able to allocate these variable. In this case, we try to re-run table
+    //     allocation by disabling features that create temporary variable during placement and
+    //     hope that a solution would be found. Currently the only feature disabled is the split
+    //     attach that carry indexes and flag from stage to stage.
     if (trig.is<FinalRerunTablePlacementTrigger>()) {
-        summary.FinalizePlacement();
+        auto t = dynamic_cast<FinalRerunTablePlacementTrigger *>(&trig);
+        limit_tmp_creation = t->limit_tmp_creation;
+        if (!limit_tmp_creation)
+            summary.FinalizePlacement();
+        else
+            summary.setPrevState();
         return true; }
     return false;
 }
@@ -1297,6 +1310,26 @@ void TablePlacement::filter_layout_options(Placed *pl) {
     pl->use.layout_options = ok;
 }
 
+bool TablePlacement::disable_split_layout(const IR::MAU::Table *tbl) {
+    if (BackendOptions().disable_split_attached || limit_tmp_creation)
+        return true;
+
+    if (count_sful_actions(tbl) > 1)
+        return true;
+
+    for (auto *ba : tbl->attached) {
+        // Stateful actions that don't require any indexes and are not supported by the actual
+        // split attach framework.
+        if (ba->use == IR::MAU::StatefulUse::FAST_CLEAR ||
+            ba->use == IR::MAU::StatefulUse::STACK_PUSH ||
+            ba->use == IR::MAU::StatefulUse::STACK_POP ||
+            ba->use == IR::MAU::StatefulUse::FIFO_PUSH ||
+            ba->use == IR::MAU::StatefulUse::FIFO_POP)
+            return true;
+    }
+    return false;
+}
+
 /**
  * The estimates for potential layout options are determined before all information is possibly
  * known:
@@ -1315,16 +1348,10 @@ bool TablePlacement::pick_layout_option(Placed *next) {
     int req_entries = next->entries;
 
     if (!next->use.format_type.valid()) {
+        bool disable_split = disable_split_layout(next->table);
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
-                                     next->stage_split > 0, next->gw != nullptr);
+                                     next->stage_split > 0, next->gw != nullptr, disable_split);
         if (next->stage_flags) filter_layout_options(next); }
-
-    if (next->use.format_type.anyAttachedLaterStage() && count_sful_actions(next->table) > 1) {
-        // FIXME -- currently can't split a stateful table that require meter_type to select
-        // which action to run
-        error_message = next->name + " requires a meter_type, so can't split the attached "
-                        "stateful table as a result";
-        return false; }
 
     do {
         bool ixbar_fit = try_alloc_ixbar(next);
@@ -1803,7 +1830,7 @@ bool TablePlacement::can_split(const IR::MAU::Table *tbl, const IR::MAU::Attache
     if (Device::currentDevice() == Device::TOFINO) {
         // Tofino not supported yet -- need vpn check in gateway
         return false; }
-    if (BackendOptions().disable_split_attached)
+    if (disable_split_layout(tbl))
         return false;
     if (att->is<IR::MAU::Selector>())
         return false;
@@ -2935,7 +2962,7 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
             break;
         case TableSummary::NOCC_TRY1:
         case TableSummary::NOCC_TRY2:
-            MaxBacktracksPerPipe = 4;
+            MaxBacktracksPerPipe = 12;
             break;
         case TableSummary::REDO_PHV1:
         case TableSummary::REDO_PHV2:

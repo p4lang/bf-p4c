@@ -51,7 +51,6 @@
 @pa_container_size("ingress" , "ig_intr_md_for_tm.ingress_cos" , 8)
 @pa_container_size("ingress" , "ig_intr_md_for_tm.qid" , 8)
 @pa_container_size("ingress" , "Boonsboro.Earling.Mystic" , 16)
-@pa_container_size("ingress" , "Boonsboro.Empire.$valid" , 16)
 @pa_container_size("egress" , "Boonsboro.Millhaven.$valid" , 16)
 @pa_atomic("ingress" , "Talco.Emida.Lathrop")
 @pa_atomic("ingress" , "Talco.Sopris.Goulds")

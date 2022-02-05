@@ -58,9 +58,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       strided_headers(phv),
       physical_liverange_db(&alloc, &defuse, phv, clot, pragmas),
       source_tracker(phv),
+      tablePackOpt(phv),
       utils(phv, clot, clustering, uses, defuse, action_constraints, meta_init, dark_live_range,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
-            physical_liverange_db, source_tracker, pragmas, settings) {
+            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
         addPasses({
             // Identify uses of fields in MAU, PARDE
@@ -131,6 +132,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &physical_liverange_db,
             &source_tracker,
             new PhvInfo::DumpPhvFields(phv, uses),
+            &tablePackOpt,
             // From this point on, we are starting to transform the PHV related data structures.
             // Before this is all analysis that collected constraints for PHV allocation to use.
             // &table_friendly_packing_backtracker,    // <---
@@ -193,6 +195,6 @@ Visitor* PHV_AnalysisPass::make_incremental_alloc_pass(
              this->set_no_code_change(true);
              this->set_physical_liverange_overlay(false);
          },
-         new IncrementalPHVAllocation(temp_vars, utils, phv_i)
+         new IncrementalPHVAllocation(temp_vars, utils, phv_i, settings)
         });
 }

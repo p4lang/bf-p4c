@@ -1344,6 +1344,7 @@ struct switch_egress_ebridge_metadata_t {
     switch_lif_t           l2oif;
 }
 
+@pa_atomic("egress", "eg_md.route.local_l3_encap_id")
 struct switch_egress_route_metadata_t {
     bit<13> vrf;
     bool    ipv4_unicast_enable;

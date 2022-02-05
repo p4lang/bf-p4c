@@ -63,7 +63,7 @@ class TablePlacement : public PassManager {
 
     static int placement_round;
     static bool can_duplicate(const IR::MAU::AttachedMemory *);
-    static bool can_split(const IR::MAU::Table *, const IR::MAU::AttachedMemory *);
+    bool can_split(const IR::MAU::Table *, const IR::MAU::AttachedMemory *);
 
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     std::vector<struct TableInfo *> tblByUid;
@@ -80,7 +80,9 @@ class TablePlacement : public PassManager {
                    const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &);
 
     struct FinalRerunTablePlacementTrigger : public Backtrack::trigger {
-        FinalRerunTablePlacementTrigger() : Backtrack::trigger(OK) {}
+        bool limit_tmp_creation;
+        explicit FinalRerunTablePlacementTrigger(bool l) : Backtrack::trigger(OK),
+            limit_tmp_creation(l) {}
     };
 
     using GatewayMergeChoices = ordered_map<const IR::MAU::Table *, cstring>;
@@ -121,6 +123,7 @@ class TablePlacement : public PassManager {
     std::array<bool, 3> table_in_gress = { { false, false, false } };
     cstring error_message;
     bool ignoreContainerConflicts = false;
+    bool limit_tmp_creation = false;
     std::array<const IR::MAU::Table *, 2> starter_pistol = { { nullptr, nullptr } };
     bool alloc_done = false;
 
@@ -134,6 +137,7 @@ class TablePlacement : public PassManager {
     bool try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage);
     void setup_detached_gateway(IR::MAU::Table *tbl, const Placed *placed);
     void filter_layout_options(Placed *pl);
+    bool disable_split_layout(const IR::MAU::Table *tbl);
     bool pick_layout_option(Placed *next);
     bool shrink_estimate(Placed *next, int &srams_left, int &tcams_left, int min_entries,
                          bool &update_whole_stage);

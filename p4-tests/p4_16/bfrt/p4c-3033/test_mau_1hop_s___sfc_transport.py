@@ -141,54 +141,7 @@ class test(BfRuntimeTest):
 
 		# -----------------
 
-#		time.sleep(1)
-
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (GRE)
-		# -----------------------------------------------------------
-                '''
-#		base_pkt_inner = testutils.simple_tcp_packet(eth_dst=dmac)
-#		base_pkt_inner = testutils.simple_udp_packet(eth_dst=dmac)
-		base_pkt_inner = testutils.simple_ip_only_packet()
-
-		base_pkt = testutils.simple_gre_packet(eth_dst=dmac, inner_frame=base_pkt_inner)
-		print(type(base_pkt))
-
-		base_pkt_inner_exp = testutils.simple_tcp_packet(eth_dst=0, eth_src=0, pktlen=14+100) # add 14, because original packet didn't have an l2 on it
-		print(type(base_pkt_inner_exp))
-
-		# -----------------
-
-		src_pkt = \
-			base_pkt
-		print(type(src_pkt))
-
-		# -----------------
-
-		exp_pkt = \
-			testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x894f) / \
-			scapy.NSH(MDType=1, NextProto=3, NSP=spi, NSI=si-(popcount(sf_bitmask)), TTL=63, \
-				NPC=((2<<24)|(0<<16)|(sap)), \
-				NSC=((vpn+1<<16)|(0)), \
-				SPC=0, \
-				SSC=0, \
-			) / \
-			base_pkt_inner_exp
-		print(type(exp_pkt))
-
-		# -----------------------------------------------------------
-
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
-
-		# -----------------------------------------------------------
-
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
-
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
-                '''
+		time.sleep(1)
 		# -----------------------------------------------------------
 		# Create / Send / Verify the packet (ERSPAN)
 		# -----------------------------------------------------------

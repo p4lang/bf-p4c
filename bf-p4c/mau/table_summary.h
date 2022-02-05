@@ -104,6 +104,8 @@ class TableSummary: public MauInspector {
     bool firstRoundFit = false;
     Logging::FileLog *tsLog = nullptr;
     state_t state = INITIAL;
+    // Save the previous state in case we have to rollback to this one.
+    state_t prev_state = INITIAL;
 
     /// The total number of stages allocated by Table Placement
     int maxStage;
@@ -230,6 +232,7 @@ class TableSummary: public MauInspector {
     /// set state to INITIAL, or ALT_INITIAL if alt-phv-alloc is enabled.
     void resetPlacement();
     state_t getActualState() const { return state; }
+    void setPrevState() { state = prev_state; }
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
     StageUseEstimate getAllStagesResources() const { return allStages; }
 

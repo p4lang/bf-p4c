@@ -23,6 +23,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/slicing/types.h"
+#include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -40,6 +41,7 @@ struct AllocSetting {
     bool trivial_alloc = false;
     bool no_code_change = false;              // true if disable metadata and dark init.
     bool physical_liverange_overlay = false;  // true if allow physical liverange overlay.
+    bool limit_tmp_creation = false;          // true if intermediate tmp value are limited.
 };
 
 /// AllocUtils is a collection of const references to misc passes that PHV allocation depends on.
@@ -84,6 +86,9 @@ struct AllocUtils {
     // misc allocation settings.
     const AllocSetting& settings;
 
+    // Collect field packing that table/ixbar would benefit from.
+    const TableFieldPackOptimization& tablePackOpt;
+
     AllocUtils(const PhvInfo& phv, const ClotInfo& clot, const Clustering& clustering,
                const PhvUse& uses, const FieldDefUse& defuse, const ActionPhvConstraints& actions,
                const LiveRangeShrinking& meta_init,
@@ -94,7 +99,8 @@ struct AllocUtils {
                const PHV::FieldSliceLiveRangeDB& physical_liverange_db,
                const ActionSourceTracker& source_tracker,
                const PHV::Pragmas& pragmas,
-               const AllocSetting& settings)
+               const AllocSetting& settings,
+               const TableFieldPackOptimization& tablePackOpt)
         : phv(phv),
           clot(clot),
           clustering(clustering),
@@ -111,7 +117,8 @@ struct AllocUtils {
           strided_headers(strided_headers),
           physical_liverange_db(physical_liverange_db),
           pragmas(pragmas),
-          settings(settings) {}
+          settings(settings),
+          tablePackOpt(tablePackOpt){}
 
     const SymBitMatrix& mutex() const {
         return phv.field_mutex();
@@ -254,6 +261,7 @@ struct AllocScore {
             const PhvUse& uses,
             const MapFieldToParserStates& field_to_parser_states,
             const CalcParserCriticalPath& parser_critical_path,
+            const TableFieldPackOptimization& tablePackOpt,
             FieldPackingOpportunity* packing,
             const int bitmasks);
 
@@ -300,6 +308,7 @@ class ScoreContext {
         const PhvUse& uses,
         const MapFieldToParserStates& field_to_parser_states,
         const CalcParserCriticalPath& parser_critical_path,
+        const TableFieldPackOptimization& tablePackOpt,
         const int bitmasks = 0) const;
 
     bool is_better(const AllocScore& left, const AllocScore& right) const {
@@ -907,6 +916,7 @@ class IncrementalPHVAllocation : public Visitor {
     const PHV::AllocUtils& utils_i;
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
+    PHV::AllocSetting &settings_i;
 
     // fields to be allocated.
     const ordered_set<PHV::Field*>& temp_vars_i;
@@ -916,8 +926,10 @@ class IncrementalPHVAllocation : public Visitor {
 
  public:
     explicit IncrementalPHVAllocation(const ordered_set<PHV::Field*>& temp_vars,
-                                      const PHV::AllocUtils& utils, PhvInfo& phv)
-        : utils_i(utils), core_alloc_i(utils, true), phv_i(phv), temp_vars_i(temp_vars) {}
+                                      const PHV::AllocUtils& utils, PhvInfo& phv,
+                                      PHV::AllocSetting &settings)
+        : utils_i(utils), core_alloc_i(utils, true), phv_i(phv), settings_i(settings),
+          temp_vars_i(temp_vars) {}
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

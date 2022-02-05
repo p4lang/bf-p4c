@@ -4,6 +4,7 @@ CheckForUnallocatedTemps::CheckForUnallocatedTemps(const PhvInfo& phv, PhvUse& u
                                                    const ClotInfo& clot,
                                                    PHV_AnalysisPass* phv_alloc)
     : phv(phv), uses(uses), clot(clot) {
+    const bool& limit = phv_alloc->get_limit_tmp_creation();
     addPasses({
             &uses,
             new VisitFunctor([this]() { collect_unallocated_fields(); }),
@@ -14,8 +15,8 @@ CheckForUnallocatedTemps::CheckForUnallocatedTemps(const PhvInfo& phv, PhvUse& u
                         // a container conflict, the table layout does not have the
                         // correct action data as this temp var was not allocated during last TP.
                         // So we need to redo table placement.
-                        new VisitFunctor([]() {
-                            throw TablePlacement::FinalRerunTablePlacementTrigger(); })
+                        new VisitFunctor([&]() {
+                            throw TablePlacement::FinalRerunTablePlacementTrigger(limit); })
                     })
         });
 }

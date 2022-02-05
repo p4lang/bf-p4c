@@ -4644,7 +4644,7 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         const default_action = Starkey();
         size = 128;
     }
-    @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
+    @disable_atomic_modify(1) @stage(4) @name(".Nicollet") table Nicollet {
         actions = {
             Advance();
             @defaultonly NoAction();
@@ -5152,7 +5152,7 @@ control Talkeetna(inout Westbury Jayton, inout McCracken Millstone, in egress_in
         Franktown = Quivero.get<tuple<bit<9>, bit<5>>>({ Sumner.egress_port, Sumner.egress_qid[4:0] });
         Gorum.count((bit<12>)Franktown);
     }
-    @disable_atomic_modify(1) @name(".Holyoke") table Holyoke {
+    @disable_atomic_modify(1) @stage(4) @name(".Holyoke") table Holyoke {
         actions = {
             Eucha();
         }
@@ -6281,7 +6281,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
     @name(".Forman") action Forman() {
         Jayton.Udall.Mackville = ~Jayton.Udall.Mackville;
     }
-    @disable_atomic_modify(1) @name(".WestLine") table WestLine {
+    @disable_atomic_modify(1) @stage(4) @name(".WestLine") table WestLine {
         actions = {
             Forman();
         }
@@ -6347,7 +6347,7 @@ control Newburgh(inout Westbury Jayton, inout McCracken Millstone, in egress_int
     @name(".Tusculum") action Tusculum() {
         Millstone.Mickleton.Brainard = Benitez.get<tuple<bit<8>, bit<16>>>({ 8w0, Millstone.Kamrar.Altus });
     }
-    @disable_atomic_modify(1) @name(".Laney") table Laney {
+    @disable_atomic_modify(1) @stage(5) @name(".Laney") table Laney {
         actions = {
             Tusculum();
         }

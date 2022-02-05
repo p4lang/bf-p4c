@@ -768,8 +768,7 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
    provided from the table placment */
 void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                                                const attached_entries_t &att_entries,
-                                               LayoutOption *lo,
-                                               bool table_placement) {
+                                               LayoutOption *lo) {
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         int per_word = 0;
@@ -797,15 +796,14 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
             // FIXME: in theory, the table should not have an action data table,
             // as that is decided after the table layout is picked
-            if (!table_placement && ad->direct)
+            if (ad->direct)
                 BUG("Direct Action Data table exists before table placement occurs");
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
         } else if (at->is<IR::MAU::Selector>()) {
             // TODO(cdodd)
         } else if (at->is<IR::MAU::TernaryIndirect>()) {
-            if (!table_placement)
-                BUG("Ternary Indirect Data table exists before table placement occurs");
+            BUG("Ternary Indirect Data table exists before table placement occurs");
             per_word = TernaryIndirectPerWord(&lo->layout, tbl);
         } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
             need_srams = false;
@@ -824,7 +822,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
     }
     // Before table placment, tables do not have attached Ternary Indirect or
     // Action Data Tables
-    if (lo->layout.direct_ad_required() && !table_placement) {
+    if (lo->layout.direct_ad_required()) {
         int width = 1;
         int per_word = ActionDataPerWord(&lo->layout, &width);
         int attached_entries = lo->entries;
@@ -832,7 +830,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
         lo->srams += units * width;
     }
-    if (lo->layout.ternary_indirect_required() && !table_placement) {
+    if (lo->layout.ternary_indirect_required()) {
         int per_word = TernaryIndirectPerWord(&lo->layout, tbl);
         int attached_entries = lo->entries;
         int entries_per_sram = 1024 * per_word;
@@ -843,9 +841,9 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
 
 /* Calculate the number of attached rams for every single potential layout option */
 void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl,
-            const attached_entries_t &attached_entries, bool table_placement) {
+            const attached_entries_t &attached_entries) {
     for (auto &lo : layout_options) {
-        calculate_attached_rams(tbl, attached_entries, &lo, table_placement);
+        calculate_attached_rams(tbl, attached_entries, &lo);
     }
 }
 
@@ -930,7 +928,7 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 }
 
 void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl,
-        int &entries, attached_entries_t &attached_entries, bool table_placement) {
+        int &entries, attached_entries_t &attached_entries) {
     if (tbl->for_dleft()) {
         BUG_CHECK(layout_options.size() == 1, "Should only be one layout option for dleft "
                   "hash tables");
@@ -939,18 +937,18 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
         preferred_index = 0;
     } else if (tbl->layout.atcam) {
         options_to_atcam_entries(tbl, entries);
-        options_to_rams(tbl, attached_entries, table_placement);
+        options_to_rams(tbl, attached_entries);
         select_best_option(tbl);
         fill_estimate_from_option(entries);
     } else if (tbl->layout.ternary) {  // ternary
         options_to_ternary_entries(tbl, entries);
-        options_to_rams(tbl, attached_entries, table_placement);
+        options_to_rams(tbl, attached_entries);
         select_best_option_ternary();
         fill_estimate_from_option(entries);
     } else if (!tbl->conditional_gateway_only()) {  // exact_match
         /* assuming all ways have the same format and width (only differ in depth) */
         options_to_ways(tbl, entries);
-        options_to_rams(tbl, attached_entries, table_placement);
+        options_to_rams(tbl, attached_entries);
         select_best_option(tbl);
         fill_estimate_from_option(entries);
     } else {  // gw
@@ -962,13 +960,16 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         attached_entries_t &attached_entries, LayoutChoices *lc, bool prev_placed,
-        bool gateway_attached, bool table_placement) {
+        bool gateway_attached, bool disable_split) {
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();
     int initial_entries = entries;
     format_type.initialize(tbl, entries, prev_placed, attached_entries);
     if (!tbl->created_during_tp) {
-        layout_options = lc->get_layout_options(tbl, format_type);
+        if (disable_split && format_type.anyAttachedLaterStage())
+            LOG3("Pruning split layout with format type:" << format_type);
+        else
+            layout_options = lc->get_layout_options(tbl, format_type);
         if (layout_options.empty()) {
             // no layouts available?  Fall back to NORMAL for now.  TablePlacement will flag
             // an error if it needs to split this table.
@@ -1003,7 +1004,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         }
     }
     BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
-    determine_initial_layout_option(tbl, entries, attached_entries, table_placement);
+    determine_initial_layout_option(tbl, entries, attached_entries);
     // FIXME: This is a quick hack to handle tables with only a default action
 
     // FIXME if the initial_entries was 0, we can't set it non-zero as that will cause
@@ -1055,7 +1056,7 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
     for (auto &lo : layout_options) {
         lo.clear_mems();
     }
-    determine_initial_layout_option(tbl, entries, attached_entries, false);
+    determine_initial_layout_option(tbl, entries, attached_entries);
     return true;
 }
 

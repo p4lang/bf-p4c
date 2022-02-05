@@ -126,7 +126,8 @@ AllocateTempsAndFinalizeLiverange::AllocateTempsAndFinalizeLiverange(
             // a container conflict, the table layout does not have the
             // correct action data as this temp var was not allocated during last TP.
             // So we need to redo table placement.
-            new VisitFunctor([]() { throw TablePlacement::FinalRerunTablePlacementTrigger(); }),
+            new VisitFunctor([]() {
+                throw TablePlacement::FinalRerunTablePlacementTrigger(false); }),
         })
     });
 }

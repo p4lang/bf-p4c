@@ -67,11 +67,12 @@ p4c_add_test_label("tofino" "p414_nightly" "switch_l3_heavy_int_leaf")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_generic_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-max-depth-limit\"")
+    "switch_generic_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -to 1200 -Xp4c=\"--disable-power-check --disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "p414_nightly" "switch_generic_int_leaf")
 
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
 set_tests_properties("tofino/switch_ent_dc_general" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/switch_generic_int_leaf" PROPERTIES TIMEOUT 1200)
 
 # Switch P4-16
 set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
