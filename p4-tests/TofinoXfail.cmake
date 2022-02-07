@@ -2076,8 +2076,14 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "No phv record"
+  "not enough operands for .* instruction"
   extensions/p4_tests/p4_14/compile_only/p4c-4090.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "multi-assignment in parser"
+  ../glass/testsuite/p4_tests/phv/COMPILER-737/classifier.p4
+  testdata/p4_14_samples/11-MultiTags.p4
 )
 
 
