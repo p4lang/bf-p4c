@@ -1240,16 +1240,26 @@ struct MergeLoweredParserStates : public ParserTransform {
         if (computed.dontMergeStates.count(state)) {
             return match;
         }
-        if (match->next && !match->next->name.find("$") && !is_loopback_state(match->next->name)) {
-            if (auto next = get_unconditional_match(match->next)) {
-                if (can_merge(match, next)) {
-                    LOG3("merge " << match->next->name << " with "
-                            << state->name << " (" << match->value << ")");
 
-                    // Clot update must run first because do_merge changes match->next
-                    if (Device::numClots() > 0 && BackendOptions().use_clot)
-                        clot.merge_parser_states(state->thread(), state->name, match->next->name);
-                    do_merge(match, next);
+        if (match->next) {
+            // Attempt merging states if the next state is not loopback
+            // and not a compiler-generated stall state.
+            std::string next_name(match->next->name.c_str());
+            if (!is_loopback_state(match->next->name) &&
+                !((next_name.find("$") != std::string::npos) &&
+                  (next_name.find("stall") != std::string::npos) &&
+                  (next_name.find("$") < next_name.rfind("stall")))) {
+                if (auto next = get_unconditional_match(match->next)) {
+                    if (can_merge(match, next)) {
+                        LOG3("merge " << match->next->name << " with "
+                                << state->name << " (" << match->value << ")");
+
+                        // Clot update must run first because do_merge changes match->next
+                        if (Device::numClots() > 0 && BackendOptions().use_clot)
+                            clot.merge_parser_states(state->thread(), state->name,
+                                                     match->next->name);
+                        do_merge(match, next);
+                    }
                 }
             }
         }

@@ -150,15 +150,40 @@ TEST(ParserEnforceDepthReqTest, PadStates) {
     EXPECT_TRUE(blk.CreateBackend());
     EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
 
+    // Check that the min_parse_depth_access states are present in the output file.
     auto res =
         blk.match(TestCode::CodeBlock::ParserEAsm,
-                  CheckList{"parser egress: start", "`.*`", "min_parse_depth_accept_initial:"});
+                  CheckList{"parser egress: start",
+                            "`.*`", "min_parse_depth_accept_initial:",
+                            "`.*`", "min_parse_depth_accept_loop.$split_0:",
+                            "`.*`", "min_parse_depth_accept_loop.$it1.$split_0:",
+                            "`.*`", "min_parse_depth_accept_loop.$it2.$split_0:"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
                              << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
 
     res = blk.match(TestCode::CodeBlock::ParserEAsm,
-                    CheckList{"parser egress: start", "`.*`", "next: min_parse_depth_accept_loop"});
+                    CheckList{"parser egress: start",
+                                "`.*`", "next: min_parse_depth_accept_loop.$split_0",
+                                "`.*`", "next: min_parse_depth_accept_loop.$it1.$split_0",
+                                "`.*`", "next: min_parse_depth_accept_loop.$it2.$split_0"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
+
+    // Check that the following states are not present anymore, since they
+    // should have been merged.
+    res = blk.match(TestCode::CodeBlock::ParserEAsm,
+                    CheckList{"parser egress: start", "`.*`", "min_parse_depth_accept_loop:"});
+    EXPECT_FALSE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::ParserEAsm,
+                    CheckList{"parser egress: start", "`.*`", "min_parse_depth_accept_loop.$it1:"});
+    EXPECT_FALSE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
+
+    res = blk.match(TestCode::CodeBlock::ParserEAsm,
+                    CheckList{"parser egress: start", "`.*`", "min_parse_depth_accept_loop.$it2:"});
+    EXPECT_FALSE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
                              << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
 }
 
