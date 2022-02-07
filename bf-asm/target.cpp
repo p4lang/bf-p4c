@@ -393,7 +393,6 @@ void Target::OVERRIDE_NUM_MAU_STAGES(int num) {
 #define DEFINE_PER_TARGET_CONSTANT(TYPE, NAME)                          \
 TYPE Target::NAME() {                                                   \
     SWITCH_FOREACH_TARGET(options.target, return TARGET::NAME; )        \
-    BUG_CHECK(!"invalid target");                                       \
     return (TYPE){};                   /* NOLINT(readability/braces) */ \
 }
 PER_TARGET_CONSTANTS(DEFINE_PER_TARGET_CONSTANT)

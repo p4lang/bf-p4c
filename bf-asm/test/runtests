@@ -40,7 +40,7 @@ for mflag in $MAKEFLAGS; do
             TOKEN_READ=${vec[0]}
             TOKEN_WRITE=${vec[1]}
         else
-            echo >&2 "invalid --jobserver -- must use '+' in Makefile rule"
+            echo >&2 "invalid --jobserver, assuming -j1 -- must use '+' in Makefile rule"
         fi
         ;;
     esac
@@ -122,13 +122,6 @@ echo -n "Test run started at " >$FAILLOG
 date >> $FAILLOG
 
 TRY_BINDIRS="
-    $PWD
-    $PWD/..
-    $PWD/../..
-    $PWD/../../..
-    $PWD/../../../..
-    $TESTDIR/..
-    $TESTDIR/../..
 "
 
 function searchdir () {
@@ -161,6 +154,9 @@ function searchdir () {
         fi
     done
     if [ -z "$found" ]; then
+        found=$(which $1)
+    fi
+    if [ -z "$found" ]; then
         echo >&2 "Can't find $1 executable"
         echo false
     else
@@ -187,7 +183,9 @@ function findexec () {
 #FINDFUNC  PARAM        EXECUTABLE              NAME                    OPTIONAL SEARCH DIR PREFIX
 findexec GLSC           "shell.py"              "glass"                 ""
 findexec BRIG           "p4c-barefoot"          "brig"                  ""
-findexec STF            "tofino_test_harness"   "tofino_test_harness"   "model"
+findexec STF1           "tofino_test_harness"   "tofino_test_harness"   "model"
+findexec STF2           "jbay_test_harness"     "jbay_test_harness"   "model"
+findexec STF3           "cb_test_harness"       "cb_test_harness"   "model"
 findexec BFAS           "bfas"                  "bfas"                  ""
 findexec BFLINK         "bflink"                "bflink"                ""
 findexec REFLOW         "reflow"                "reflow"                ""
@@ -451,9 +449,12 @@ function test_p4() {
 }
 
 function test_bfa() {
-    tfafile="$1"
-    target=${2:-tofino}
-    msg="$tfafile"
+    if [ -z "$2" ]; then
+        target=""
+    else
+        target="-t $2"
+    fi
+    msg="$1"
     pushd $(dirname $1) >/dev/null
     srcfile=$(basename $1)
     name=${srcfile%.*}
@@ -463,7 +464,8 @@ function test_bfa() {
     ok=true
     rv=0
     start=`date +%s`
-    if not run $BFAS -g -t $target -Mvvvvl $name.out/bfas.config.log $srcfile >$name.out/bfas.log 2>&1; then
+    # added -Tcrash:0 to disable stack trace on crash as it seems unreasonably slow
+    if not run $BFAS --partial -g $target -Tcrash:0 -Mvvvvl $name.out/bfas.config.log $srcfile >$name.out/bfas.log 2>&1; then
         msg="$msg bfas failed"
         fail_type="bfas"
         if [ $count -eq 1 ] || [ "$expect_fail" != "bfas" ]; then
@@ -512,61 +514,43 @@ function test_bfa() {
 }
 
 function test_stf() {
-    if [ ! -x $STF ]; then
-        echo "$msg simple_test_framework not available"
-        return 4
-    fi
     msg="$1"
     pushd $(dirname $1) >/dev/null
     name=$(basename $1 .stf)
     rv=0
-    #if [[ ( ! -f `pwd`/$name.out/$name.tfa || $fast = false ) && ! -d $outdir ]]; then
-    if ! $outdir; then
-        test_p4 $name.p4
-    fi
-    #if [[ -r `pwd`/$name.out/$name.tfa && ( ! -r `pwd`/$name.out/$name.out/tofino-bin || $fast = false ) ]]; then
-    #    mkdir -p $name.out
-    #    if not run $BFAS -g -Mvvvvl $name.out/bfas.config.log $name.out/$name.tfa >$name.out/bfas.log 2>&1; then
-    #        msg="$msg bfas failed"
-    #        flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/bfas.log >>$FAILLOG"
-    #        rv=1
-    #    fi
-    #fi
     if [[ $rv == 0 && -d $name.out ]]; then
         bindir=$name.out
-        jsondir=$name.out/cfg
+        rm -f $name.out/stf.txt
         if [ -d "$bindir/$name.out" ]; then
             bindir="$bindir/$name.out"
-            jsondir=$bindir
         fi
-        if [ -d outdir ]; then
+        if [ -d $outdir ]; then
             bindir=$outdir
-            jsondir=$bindir
+        fi
+        if [ -r $bindir/tofino.bin -o -r $bindir/tofino.bin.gz ]; then
+            STF=$STF1
+        elif [ -r $bindir/tofino2.bin -o -r $bindir/tofino2.bin.gz ]; then
+            STF=$STF2
+        elif [ -r $bindir/tofino3.bin -o -r $bindir/tofino3.bin.gz ]; then
+            STF=$STF3
+        else
+            STF=
+            echo "$msg not built"
+            popd >/dev/null
+            return 4
+        fi
+        if [ ! -x $STF ]; then
+            echo "$msg simple_test_framework not available"
+            popd >/dev/null
+            return 4
         fi
         start=`date +%s`
-        linked=false
-        if [ -r $bindir/tofino.bin ]; then
-            linked=true
-            for f in $bindir/*.cfg.json*; do
-                if [ $f -nt $bindir/tofino.bin ]; then
-                    linked=false
-                    break
-                fi
-            done
-        fi
-        if $linked || run $BFLINK -o $bindir/tofino.bin $jsondir/*.cfg.json* >/dev/null 2>&1; then
-            export TOFINO_BIN=$bindir/tofino.bin
-            export TABLE_CONFIG=$bindir/context.json
-            if run "$STF" -l $bindir $name.stf >$name.out/stf.txt 2>&1; then
-                msg="$msg pass"
-            else
-                msg="$msg fail"
-                rv=1
-                flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/  /' $name.out/stf.txt >>$FAILLOG"
-            fi
+        if run "$STF" -l $bindir $name.stf >$name.out/stf.txt 2>&1; then
+            msg="$msg pass"
         else
-            msg="$msg failed"
+            msg="$msg fail"
             rv=1
+            flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/  /' $name.out/stf.txt >>$FAILLOG"
         fi
         if $TIME; then
             let elapsed=`date +%s`-start
@@ -663,6 +647,9 @@ for file in "$@"; do
     elif [ "${file##*.}" == "p4" ]; then
         let running++
         test_p4 $file &
+    elif [ "${file##*.}" == "bfa" ]; then
+        let running++
+        test_bfa $file &
     elif [ "${file##*.}" == "tfa" ]; then
         let running++
         test_bfa $file tofino &

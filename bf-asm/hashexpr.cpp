@@ -456,22 +456,14 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             rv->poly[0] = 1;
             int i = 2;
 
-            if (what.vec.size > 2) {
-                rv->init = get_bitvec(what[2]);
-                ++i;
-                if (what.vec.size > 3) {
-                    rv->final_xor = get_bitvec(what[3]);
-                    ++i;
-                }
-                if (what.vec.size > 4) {
-                    if (what[4].type == tINT) {
-                        rv->total_input_bits = what[4].i;
-                        i++;
-                    }
-                }
-            }
+            if (what.vec.size > i && (what[i].type == tINT || what[i].type == tBIGINT))
+                rv->init = get_bitvec(what[i++]);
+            if (what.vec.size > i && (what[i].type == tINT || what[i].type == tBIGINT))
+                rv->final_xor = get_bitvec(what[i++]);
+            if (what.vec.size > i && what[i].type == tINT)
+                rv->total_input_bits = what[i++].i;
 
-            if (what.vec.size >= i+1 && what[i].type == tMAP) {
+            if (what.vec.size > i && what[i].type == tMAP) {
                 for (auto &kv : what[i].map) {
                     if (CHECKTYPE(kv.key, tINT)) {
                         rv->what.emplace(kv.key.i, Phv::Ref(gress, stage, kv.value)); } }

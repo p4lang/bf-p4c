@@ -24,6 +24,9 @@ void Phv::init_phv(target_t target_type) {
 }
 
 void Phv::start(int lineno, VECTOR(value_t) args) {
+    if (options.target == NO_TARGET) {
+        error(lineno, "No target specified prior to PHV section");
+        return; }
     init_phv(options.target);
     // The only argument to phv is the thread.  We allow phv section with no thread argument
     // which defines aliases for all threads.  Does that really make sense when threads can't

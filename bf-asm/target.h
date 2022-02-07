@@ -667,9 +667,9 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
 /** Macro to buid a switch table switching on a target_t, expanding to the same
  *  code for each target, with TARGET being a typedef for the target type */
 #define SWITCH_FOREACH_TARGET(VAR, ...)                         \
-        switch (VAR) {                                           \
+        switch (VAR) {                                          \
         FOR_ALL_TARGETS(DO_SWITCH_FOREACH_TARGET, __VA_ARGS__)  \
-        default: BUG(); }
+        default: BUG("invalid target"); }
 
 #define DO_SWITCH_FOREACH_TARGET(TARGET_, ...)                  \
         case Target::TARGET_::tag: {                            \

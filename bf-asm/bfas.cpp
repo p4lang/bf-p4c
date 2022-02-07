@@ -31,6 +31,7 @@ option_t options = {
     .high_availability_enabled = true,
     .match_compiler = false,
     .multi_parsers = true,  // TODO Remove option after testing
+    .partial_input = false,
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     .singlewrite = true,
 #else
@@ -230,6 +231,8 @@ int main(int ac, char **av) {
         } else if (!strcmp(av[i], "--old_json")) {
             std::cerr << "Old context json is no longer supported" << std::endl;
             error_count++;
+        } else if (!strcmp(av[i], "--partial")) {
+            options.partial_input = true;
         } else if (sscanf(av[i], "--pipe%d%n", &val, &len) > 0 && !av[i][len] && val >= 0) {
             pipe_id = val;
         } else if (!strcmp(av[i], "--singlepipe")) {
@@ -423,7 +426,7 @@ int main(int ac, char **av) {
         gfm_out = open_output("mau.gfm.log");
     }
 
-    if (error_count == 0) {
+    if (error_count == 0 && !options.partial_input) {
         // Check if file has no sections
         no_sections_error_exit();
         // Check if mandatory sections are present in assembly
@@ -433,6 +436,8 @@ int main(int ac, char **av) {
         no_section |= no_section_error("phv");
         no_section |= no_section_error("stage");
         if (no_section) exit(1);
+    }
+    if (error_count == 0) {
         Section::process_all();
     }
     if (error_count == 0) {
