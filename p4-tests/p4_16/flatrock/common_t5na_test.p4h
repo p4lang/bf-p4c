@@ -1,3 +1,4 @@
+#ifndef PRSR_OVERRIDE
 parser ingressParser(packet_in packet, out headers hdrs,
                      out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md)
 {
@@ -5,10 +6,13 @@ parser ingressParser(packet_in packet, out headers hdrs,
         // FIXME: update this for Tofino5
         //packet.extract(ig_intr_md);
         //packet.advance(PORT_METADATA_SIZE);
+#ifndef PRSR_SKIP_HDR_EXTRACT
         packet.extract(hdrs.data);
+#endif
         transition accept;
     }
 }
+#endif  // ifndef PRSR_OVERRIDE
 
 control ingress(in headers hdrs, inout metadata meta,
                 in ingress_intrinsic_metadata_t ig_intr_md,
@@ -26,6 +30,5 @@ control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
     }
 }
 
-Pipeline(ingressParser(), ingress(), egress(), egressDeparser()
-) pipe;
+Pipeline(ingressParser(), ingress(), egress(), egressDeparser()) pipe;
 Switch(pipe) main;

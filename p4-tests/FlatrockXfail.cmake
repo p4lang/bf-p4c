@@ -39,3 +39,20 @@ p4c_add_xfail_reason("tofino5"
   )
 
 
+# PAC test cases
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
+  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Invalid match key half"
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "invalid gateway group"
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch.p4
+  extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
+  )
