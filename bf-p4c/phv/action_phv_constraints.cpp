@@ -3757,12 +3757,17 @@ CanPackErrorCode ActionPhvConstraints::check_read_action_move_constraints(
     for (const auto& stage : action_stages) {
         // Gather all containers read from any newly allocated slice.
         ordered_set<PHV::Container> write_containers;
-        for (const auto& slice : slices)
-            for (const auto& write : constraint_tracker.destinations(slice, action))
+        for (const auto& slice : slices) {
+            for (const auto& write : constraint_tracker.destinations(slice, action)) {
+                // if destination has been allocated, save their containers.
                 for (const auto& writeSlice :
-                     alloc.slices(write.field(), write.range(), stage, use))
+                     alloc.slices(write.field(), write.range(), stage, use)) {
                     if (writeSlice.container()) write_containers.emplace(writeSlice.container());
-
+                }
+                // if destination was not allocated but was in slice lists and their alignment
+                // is fixed, we can make pseudo allocation to run early checks.
+            }
+        }
         // Walk through the destination containers one-by-one and check their validity
         for (const auto& c : write_containers) {
             const auto& live_slices = alloc.slices(c, stage, use);

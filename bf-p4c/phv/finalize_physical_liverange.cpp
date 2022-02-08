@@ -134,7 +134,7 @@ void FinalizePhysicalLiverange::end_apply() {
         // written. In this case, table could be arbitrarily reordered and we may see
         // overlapped live ranges for one field slices, which will break the compilation.
         // This is a very rare case and it is likely a bug of the P4 program.
-        ordered_map<le_bitrange, safe_vector<AllocSlice>> read_only_slices;
+        ordered_map<le_bitrange, safe_vector<AllocSlice*>> read_only_slices;
         for (auto& slice : f.get_alloc()) {
             BUG_CHECK(
                 slice.isPhysicalStageBased(),
@@ -147,15 +147,15 @@ void FinalizePhysicalLiverange::end_apply() {
             // passed to fieldslice-level.
             if (!live_ranges_i.count(slice)) {
                 LOG1("Found allocated but unreferenced AllocSlice: " << slice);
-                continue;
+            } else {
+                const auto old = LiveRange(slice.getEarliestLiveness(), slice.getLatestLiveness());
+                const auto& updated = live_ranges_i.at(slice);
+                LOG3("Finalizing " << old << " => " << updated << " : " << slice);
+                slice.setLiveness(updated.start, updated.end);
             }
-            const auto old = LiveRange(slice.getEarliestLiveness(), slice.getLatestLiveness());
-            const auto& updated = live_ranges_i.at(slice);
-            LOG3("Finalizing " << old << " => " << updated << " : " << slice);
-            slice.setLiveness(updated.start, updated.end);
             if (slice.getEarliestLiveness().second.isRead() &&
                 slice.getLatestLiveness().second.isRead()) {
-                read_only_slices[slice.field_slice()].push_back(slice);
+                read_only_slices[slice.field_slice()].push_back(&slice);
             }
         }
         if (!read_only_slices.empty()) {
@@ -163,25 +163,27 @@ void FinalizePhysicalLiverange::end_apply() {
             ordered_map<AllocSlice, int> to_remove;
             for (auto& slices : Values(read_only_slices)) {
                 // sort by the start of live range.
-                sort(slices.begin(), slices.end(), [](AllocSlice& a, AllocSlice& b) {
-                    return a.getEarliestLiveness() < b.getEarliestLiveness();
+                sort(slices.begin(), slices.end(), [](AllocSlice* a, AllocSlice* b) {
+                    return a->getEarliestLiveness() < b->getEarliestLiveness();
                 });
                 // DE-duplicate overlapped live ranges.
-                int latest_lr = slices.front().getLatestLiveness().first;
+                int latest_lr = slices.front()->getLatestLiveness().first;
                 for (auto itr = slices.begin() + 1; itr != slices.end(); itr++) {
-                    if (itr->getLatestLiveness().first <= latest_lr) {
+                    auto* slice = *itr;
+                    if (slice->getLatestLiveness().first <= latest_lr) {
                         LOG3("Removing duplicated : " << *itr);
-                        to_remove[*itr]++;
+                        to_remove[*slice]++;
                     } else {
-                        if (itr->getEarliestLiveness().first <= latest_lr) {
+                        if (slice->getEarliestLiveness().first <= latest_lr) {
                             const auto old =
-                                LiveRange(itr->getEarliestLiveness(), itr->getLatestLiveness());
-                            itr->setEarliestLiveness({latest_lr + 1, FieldUse(FieldUse::READ)});
+                                LiveRange(slice->getEarliestLiveness(), slice->getLatestLiveness());
+                            slice->setEarliestLiveness({latest_lr + 1, FieldUse(FieldUse::READ)});
                             const auto updated =
-                                LiveRange(itr->getEarliestLiveness(), itr->getLatestLiveness());
-                            LOG3("Finalizing " << old << " => " << updated << " : " << *itr);
+                                LiveRange(slice->getEarliestLiveness(), slice->getLatestLiveness());
+                            LOG3("After removing duplicated, finalize " << old << " => " << updated
+                                                                        << " : " << *slice);
                         }
-                        latest_lr = itr->getLatestLiveness().first;
+                        latest_lr = slice->getLatestLiveness().first;
                     }
                 }
             }

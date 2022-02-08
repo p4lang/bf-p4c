@@ -337,12 +337,14 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             BUG("incorrect current state when alt_phv_alloc is enabled: %1%", state_name[state]);
         }
         if (state == FAILURE) {
-            ::fatal_error(
-                "table allocation (alt-phv-alloc enabled) failed to allocate tables "
-                "within %1% stages. Allocation state: %2%, "
-                "stage used: %3%, table placement warnings and errors seen: %4%",
-                deviceStages, state_name[prev_state], maxStage, tablePlacementErrors.size());
             print_table_placement_errors();
+            if (maxStage > deviceStages || criticalPlacementFailure) {
+                ::fatal_error(
+                    "table allocation (alt-phv-alloc enabled) failed to allocate tables "
+                    "within %1% stages. Allocation state: %2%, "
+                    "stage used: %3%, table placement warnings and errors seen: %4%",
+                    deviceStages, state_name[prev_state], maxStage, tablePlacementErrors.size());
+            }
         } else if (state == SUCCESS) {
             // only warnings will be printed.
             print_table_placement_errors();

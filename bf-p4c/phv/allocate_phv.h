@@ -587,6 +587,19 @@ class CoreAllocation {
 
     bool hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidate_slices,
                                ordered_set<PHV::AllocSlice> alloc_slices) const;
+
+    /// Generate pseudo AllocSlices for field slices that have not been allocated, but their
+    /// allocation can be speculated upfront: when there is only one valid starting position.
+    /// @returns a transaction that contains the pseudo AllocSlices.
+    /// we can infer that field slices will be allocated to a container with corresponding
+    /// starting positions. This will allow can_pack function to
+    /// check constraints from action reading side, even if destination has not been allocated yet.
+    /// This is enabled only when utils_i.settings_.trivial_alloc is true, otherwise, it simply
+    /// returns @p alloc.
+    PHV::Transaction make_speculated_alloc(const PHV::Transaction& alloc,
+                                           const PHV::SuperCluster& sc,
+                                           const std::vector<PHV::AllocSlice>& candidates,
+                                           const PHV::Container& c) const;
 };
 
 enum class AllocResultCode {

@@ -8,6 +8,8 @@
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/fieldslice_live_range.h"
@@ -1755,6 +1757,94 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
     return cntr_bits.is_contiguous();
 }
 
+PHV::Transaction CoreAllocation::make_speculated_alloc(
+    const PHV::Transaction& alloc,
+    const PHV::SuperCluster& sc,
+    const std::vector<PHV::AllocSlice>& candidates,
+    const PHV::Container& candidates_cont) const {
+    // enabled only for trivial alloc mode.
+    if (!utils_i.settings.trivial_alloc) return alloc;
+    if (candidates.empty()) return alloc;
+    const auto gress = candidates.front().field()->gress;
+    // returns true when the field slice has been allocated, or allocation is proposed.
+    const auto is_allocated = [&](const PHV::FieldSlice fs) {
+        const auto* f = fs.field();
+        for (const auto& alloc_slice : alloc.getStatus(f)) {
+            if (alloc_slice.field_slice() == fs.range()) {
+                return true;
+            }
+        }
+        for (const auto& alloc_slice : candidates) {
+            if (f == alloc_slice.field() && alloc_slice.field_slice() == fs.range()) {
+                return true;
+            }
+        }
+        return false;
+    };
+    ordered_set<PHV::Container> empty_containers;
+    for (const auto& group : Device::phvSpec().mauGroups(candidates_cont.type().size())) {
+        for (const auto cid : group) {
+            const PHV::Container c = Device::phvSpec().idToContainer(cid);
+            if (c.type().kind() != PHV::Kind::normal) continue;
+            if ((gress == INGRESS && Device::phvSpec().egressOnly()[cid]) ||
+                (gress == EGRESS && Device::phvSpec().ingressOnly()[cid])) {
+                continue;
+            }
+            if (alloc.parserGroupGress(c) && *alloc.parserGroupGress(c) != gress) continue;
+            if (alloc.deparserGroupGress(c) && *alloc.deparserGroupGress(c) != gress) continue;
+            const auto EMPTY = PHV::Allocation::ContainerAllocStatus::EMPTY;
+            if (!alloc.getStatus(c) || alloc.getStatus(c)->alloc_status == EMPTY) {
+                empty_containers.insert(c);
+            }
+        }
+    }
+    empty_containers.erase(candidates_cont);
+
+    bool pseudo_slice_added = false;
+    std::stringstream ss;
+    auto speculated_tx = alloc.makeTransaction();
+    for (const auto* sl : sc.slice_lists()) {
+        // skip allocated slice list.
+        if (is_allocated(sl->front())) continue;
+        // cannot find empty containers to safely generate pseudo allocation.
+        if (empty_containers.empty()) return speculated_tx;
+        // we can only guess allocation when there is only one possible
+        // starting position, because of the size of slice list and alignment.
+        const int total_bits = PHV::SuperCluster::slice_list_total_bits(*sl);
+        const int alignment = sl->front().alignment() ? sl->front().alignment()->align : 0;
+        if (total_bits < int(candidates_cont.size())) {
+            // no bit-in-byte alignment constraint
+            if (!sl->front().alignment()) continue;
+            // with bit-in-byte but has multiple stating positions.
+            if (alignment + total_bits + 8 <= int(candidates_cont.size())) continue;
+        }
+        PHV::Container c = empty_containers.front();
+        empty_containers.erase(c);
+        // make pseudo allocation.
+        std::vector<PHV::AllocSlice> speculated_alloc_slices;
+        int offset = alignment;
+        for (const auto& fs : *sl) {
+            PHV::AllocSlice alloc_slice =
+                PHV::AllocSlice(fs.field(), c, fs.range(), StartLen(offset, fs.size()));
+            speculated_alloc_slices.emplace_back(alloc_slice);
+            offset += fs.size();
+        }
+        if (utils_i.settings.physical_liverange_overlay && utils_i.settings.no_code_change) {
+            speculated_alloc_slices = make_alloc_slices_with_physical_liverange(
+                utils_i.clot, utils_i.physical_liverange_db, speculated_alloc_slices);
+        }
+        pseudo_slice_added = true;
+        for (const auto& alloc_slice : speculated_alloc_slices) {
+            speculated_tx.allocate(alloc_slice);
+            ss << "pseudo allocate: " << alloc_slice << "\n";
+        }
+    }
+    if (pseudo_slice_added) {
+        LOG5("CanPack validation pseudo alloc:\n" << ss.str());
+    }
+    return speculated_tx;
+}
+
 bool CoreAllocation::try_pack_slice_list(
     std::vector<PHV::AllocSlice> &candidate_slices,
     PHV::Transaction &perContainerAlloc,
@@ -1830,9 +1920,12 @@ bool CoreAllocation::try_pack_slice_list(
         for (auto& slice : candidate_slices) LOG_DEBUG6(TAB2 << slice);
     }
 
-    std::tie(canPackErrorCode, action_constraints) =
-        utils_i.actions.can_pack(perContainerAlloc, candidate_slices,
-                actual_container_state, initActions);
+    // use speculated alloc to enable more can pack verification of action reads.
+    const auto speculated_alloc =
+        make_speculated_alloc(perContainerAlloc, super_cluster, candidate_slices, c);
+    std::tie(canPackErrorCode, action_constraints) = utils_i.actions.can_pack(
+        speculated_alloc, candidate_slices, actual_container_state, initActions);
+
     bool creates_new_container_conflicts =
         utils_i.actions.creates_container_conflicts(actual_container_state, initActions,
                 utils_i.meta_init.getTableActionsMap());
@@ -2384,7 +2477,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         slices.push_back(kv.first);
 
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
-    int container_size = int(group.width());
+    const int container_size = int(group.width());
 
     // Set previous_container to the container provided as part of start_positions, if any.
     PHV::Container previous_container;
@@ -5406,7 +5499,7 @@ TrivialAllocStrategy::PartialAllocResult TrivialAllocStrategy::alloc_clusters(
     const std::list<PHV::ContainerGroup*>& container_groups,
     const std::list<PHV::SuperCluster*>& clusters) const {
     // we cannot use stop at first here because allocator might pack two fields in one
-    // container at first. We need to use score to select allocation without packing.
+    // container at first. We need to use score to select allocation without packing, if exists.
     ScoreContext score_ctx("trivial", false, trivial_alloc_score_is_better);
     std::vector<PHV::AllocSlice> alloc_slices;
     auto empty_alloc = rst.makeTransaction();
