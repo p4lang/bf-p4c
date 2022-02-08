@@ -53,11 +53,16 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
 
 void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     if (Device::currentDevice() == Device::TOFINO ||
-        Device::currentDevice() == Device::JBAY ||
-        Device::currentDevice() == Device::CLOUDBREAK) {
+        Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+        || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+    ) {
         addTofinoIngressParserEntryPoint(parser);
+#if HAVE_FLATROCK
     } else if (Device::currentDevice() == Device::FLATROCK) {
         ::warning("Parser metadata not implemented for %1%", Device::name());
+#endif
     }
 }
 
@@ -94,11 +99,16 @@ void AddParserMetadata::addTofinoEgressParserEntryPoint(IR::BFN::Parser* parser)
 
 void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
     if (Device::currentDevice() == Device::TOFINO ||
-        Device::currentDevice() == Device::JBAY ||
-        Device::currentDevice() == Device::CLOUDBREAK) {
+        Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+        || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+    ) {
         addTofinoEgressParserEntryPoint(parser);
+#if HAVE_FLATROCK
     } else if (Device::currentDevice() == Device::FLATROCK) {
         ::warning("Parser metadata not implemented for %1%", Device::name());
+#endif
     }
 }
 
