@@ -546,7 +546,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 continue;
 
             for (auto& slice : slicesForField)
-                for (int idx = slice.container_slice().lo; idx < slice.width(); ++idx)
+                for (int idx = slice.container_slice().lo; idx <= slice.container_slice().hi; ++idx)
                     bits_to_fields[idx].insert(slice.field());
 
             allocatedBitsForContainer |= allocatedBitsForField;
