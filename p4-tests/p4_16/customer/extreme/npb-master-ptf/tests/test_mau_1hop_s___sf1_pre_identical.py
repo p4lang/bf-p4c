@@ -23,7 +23,7 @@
 ###############################################################################
 
 import sys
-sys.path.append("/npb-dp/p4_pipelines/tst/basic/mau")
+#sys.path.append("/npb-dp/tst/basic/mau")
 from test_mau_tb_top import *
 from test_mau_tb_tbl_wrap import *
 from test_mau_tb_pkt_gen import *
@@ -41,7 +41,7 @@ class test(BfRuntimeTest):
 		self.target = gc.Target(self.dev, pipe_id=0xffff, direction=0xff, prsr_id=0xff)
 		BfRuntimeTest.setUp(self, self.client_id, self.p4_name)
 		self.bfrt_info = self.interface.bfrt_info_get(self.p4_name)
-
+		cleanUpGlobal(self)
 	# -------------------------------------------------------------
 
 	def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
@@ -61,109 +61,102 @@ class test(BfRuntimeTest):
 
 	def runTest(self):
 
-		# -------------------------------------------------------------
+		for ig_pipe in ig_pipes:
 
-		ig_port = swports[1]
-		eg_port = swports[1]
-		eg_port1= swports[2]
-		eg_port2= swports[3]
+			# -------------------------------------------------------------
 
-		# -----------------------
-		# Packet values to use
-		# -----------------------
+			ig_port = ig_swports[ig_pipe][1]
+			eg_port = eg_swports[1]
+			eg_port1 = eg_swports[2]
+			eg_port2 = eg_swports[3]
 
-		smac = '11:11:11:11:11:11'
-		dmac = '22:22:22:22:22:22'
-		sip = "0.0.0.3"
-		dip = "0.0.0.4"
+			# -----------------------
+			# Packet values to use
+			# -----------------------
 
-		rmac = '33:33:22:33:33:33'
+			smac = '11:11:11:11:11:11'
+			dmac = '22:22:22:22:22:22'
+			sip = "0.0.0.3"
+			dip = "0.0.0.4"
 
-		# -----------------------
-		# NSH values to use
-		# -----------------------
+			rmac = '33:33:22:33:33:33'
 
-		sap                     = 0 # Arbitrary value
-		vpn                     = 1 # Arbitrary value
-		flow_class_acl          = 2 # Arbitrary value
-		flow_class_sfp          = 3 # Arbitrary value
-		spi                     = 4 # Arbitrary value
-		si                      = 5 # Arbitrary value (ttl)
-		sfc                     = 6 # Arbitrary value
-		dsap                    = 7 # Arbitrary value
+			# -----------------------
+			# NSH values to use
+			# -----------------------
 
-		sf_bitmask              = 2 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+			sap                     = 0 # Arbitrary value
+			vpn                     = 1 # Arbitrary value
+			flow_class_acl          = 2 # Arbitrary value
+			flow_class_sfp          = 3 # Arbitrary value
+			spi                     = 4 # Arbitrary value
+			si                      = 5 # Arbitrary value (ttl)
+			sfc                     = 6 # Arbitrary value
+			dsap                    = 7 # Arbitrary value
 
-		nexthop_ptr             = 1 # Arbitrary value
-		bd                      = 2 # Arbitrary value
-		ig_lag_ptr              = 3 # Arbitrary value
-		eg_lag_ptr              = 4 # Arbitrary value
-		tunnel_encap_ptr        = 5 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
-		tunnel_encap_bd         = 7 # Arbitrary value
-		tunnel_encap_smac_ptr   = 8 # Arbitrary value
+			sf_bitmask              = 2 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		mgid                    = 8 # Arbitrary value
-		node                    = 7 # Arbitrary value
-		rid                     = 9 # Arbitrary value
+			nexthop_ptr             = 1 # Arbitrary value
+			bd                      = 2 # Arbitrary value
+			ig_lag_ptr              = 3 # Arbitrary value
+			eg_lag_ptr              = 4 # Arbitrary value
+			tunnel_encap_ptr        = 5 # Arbitrary value
+			tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+			tunnel_encap_bd         = 7 # Arbitrary value
+			tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
-		# -----------------------------------------------------------
-		# Insert Table Entries
-		# -----------------------------------------------------------
+			mgid                    = 8 # Arbitrary value
+			node                    = 7 # Arbitrary value
+			rid                     = 9 # Arbitrary value
 
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, mgid, dsap,
-			#tunnel
-			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
-			#egress
-		)
+			# -----------------------------------------------------------
+			# Insert Table Entries
+			# -----------------------------------------------------------
 
-		npb_pre_node_add(self, self.target, node=node, rid=rid, lags=[], ports=[eg_port1, eg_port2]) # lower
-		npb_pre_mgid_add(self, self.target, mgid=mgid, nodes=[node])                                  # upper
-		npb_mult_rid_identical_add(self, self.target, rid=rid, bd=0)
+			npb_nsh_chain_start_add(self, self.target, ig_pipe,
+				#ingress
+				[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, mgid, dsap,
+				#tunnel
+				tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
+				#egress
+			)
 
-		# -----------------
+			npb_pre_node_add(self, self.target, ig_pipe, node=node, rid=rid, lags=[], ports=[eg_port1, eg_port2]) # lower
+			npb_pre_mgid_add(self, self.target, ig_pipe, mgid=mgid, nodes=[node])                                  # upper
+			npb_mult_rid_identical_add(self, self.target, ig_pipe, rid=rid, bd=0)
 
-#		time.sleep(1)
+			# -----------------
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet
-		# -----------------------------------------------------------
+#			time.sleep(1)
 
-		src_pkt, exp_pkt = npb_simple_1lyr_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
-		)
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet
+			# -----------------------------------------------------------
 
-		# -----------------------------------------------------------
+			src_pkt, exp_pkt = npb_simple_1lyr_udp(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			)
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+			# -----------------------------------------------------------
 
-		# -----------------------------------------------------------
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
-		logger.info("Verify packet on port %d", eg_port)
-		logger.info("Verify packet on port %d", eg_port1)
-		logger.info("Verify packet on port %d", eg_port2)
-		testutils.verify_packets(self, exp_pkt, [eg_port, eg_port1, eg_port2])
+			# -----------------------------------------------------------
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			logger.info("Verify packet on port %d", eg_port)
+			logger.info("Verify packet on port %d", eg_port1)
+			logger.info("Verify packet on port %d", eg_port2)
+			testutils.verify_packets(self, exp_pkt, [eg_port, eg_port1, eg_port2])
 
-		# -----------------------------------------------------------
-		# Delete Table Entries
-		# -----------------------------------------------------------
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port],
-			#tunnel
-			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
-			#egress
-		)
-
-		npb_pre_mgid_del(self, self.target, mgid=mgid) # upper
-		npb_pre_node_del(self, self.target, node=node)  # lower
-		npb_mult_rid_identical_del(self, self.target, rid=rid)
+			# -----------------------------------------------------------
+			# Delete Table Entries
+			# -----------------------------------------------------------
+			npb_pre_node_del(self, self.target, ig_pipe, node=node) # lower
+			npb_pre_mgid_del(self, self.target, ig_pipe, mgid=mgid)                                 # upper
+			cleanUpGlobal(self)

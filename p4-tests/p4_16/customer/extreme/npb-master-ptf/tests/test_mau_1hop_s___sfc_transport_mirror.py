@@ -23,7 +23,7 @@
 ###############################################################################
 
 import sys
-sys.path.append("/npb-dp/p4_pipelines/tst/basic/mau")
+#sys.path.append("/npb-dp/tst/basic/mau")
 from test_mau_tb_top import *
 from test_mau_tb_tbl_wrap import *
 from test_mau_tb_pkt_gen import *
@@ -41,7 +41,7 @@ class test(BfRuntimeTest):
 		self.target = gc.Target(self.dev, pipe_id=0xffff, direction=0xff, prsr_id=0xff)
 		BfRuntimeTest.setUp(self, self.client_id, self.p4_name)
 		self.bfrt_info = self.interface.bfrt_info_get(self.p4_name)
-
+		cleanUpGlobal(self)
 	# -------------------------------------------------------------
 
 	def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
@@ -61,183 +61,166 @@ class test(BfRuntimeTest):
 
 	def runTest(self):
 
-		# -------------------------------------------------------------
+		for ig_pipe in ig_pipes:
 
-		ig_port = swports[1]
-		eg_port = swports[1]
-		ig_port2 = swports[2]
-		eg_port2 = swports[2]
+			# -------------------------------------------------------------
 
-		# -----------------------
-		# Packet values to use
-		# -----------------------
+			ig_port = ig_swports[ig_pipe][1]
+			eg_port = eg_swports[1]
+			ig_port2 = ig_swports[ig_pipe][2]
+			eg_port2 = eg_swports[2]
 
-		smac = '11:11:11:11:11:11'
-		dmac = '22:22:22:22:22:22'
-#		sip = "0.0.0.3"
-#		dip = "0.0.0.4"
-		sip = '192.168.0.1'
-		dip = '192.168.0.2'
 
-		rmac = dmac
+			# -----------------------
+			# Packet values to use
+			# -----------------------
 
-		# -----------------------
-		# NSH values to use
-		# -----------------------
+			smac = '11:11:11:11:11:11'
+			dmac = '22:22:22:22:22:22'
+#			sip = "0.0.0.3"
+#			dip = "0.0.0.4"
+			sip = '192.168.0.1'
+			dip = '192.168.0.2'
 
-		sap                     = 0 # Arbitrary value
-		vpn                     = 1 # Arbitrary value
-		flow_class_acl          = 2 # Arbitrary value
-		flow_class_sfp          = 3 # Arbitrary value
-		spi                     = 4 # Arbitrary value
-		si                      = 5 # Arbitrary value (ttl)
-		sfc                     = 6 # Arbitrary value
-		dsap                    = 7 # Arbitrary value
+			rmac = dmac
 
-		sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+			# -----------------------
+			# NSH values to use
+			# -----------------------
 
-		nexthop_ptr             = 1 # Arbitrary value
-		bd                      = 2 # Arbitrary value
-		ig_lag_ptr              = 3 # Arbitrary value
-		eg_lag_ptr              = 4 # Arbitrary value
-		tunnel_encap_ptr        = 5 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
-		tunnel_encap_bd         = 7 # Arbitrary value
-		tunnel_encap_smac_ptr   = 8 # Arbitrary value
+			sap                     = 0 # Arbitrary value
+			vpn                     = 1 # Arbitrary value
+			flow_class_acl          = 2 # Arbitrary value
+			flow_class_sfp          = 3 # Arbitrary value
+			spi                     = 4 # Arbitrary value
+			si                      = 5 # Arbitrary value (ttl)
+			sfc                     = 6 # Arbitrary value
+			dsap                    = 7 # Arbitrary value
 
-		# -----------------------------------------------------------
-		# Insert Table Entries
-		# -----------------------------------------------------------
+			sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap,
-			#tunnel
-			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
-			#egress
-		)
+			nexthop_ptr             = 1 # Arbitrary value
+			bd                      = 2 # Arbitrary value
+			ig_lag_ptr              = 3 # Arbitrary value
+			eg_lag_ptr              = 4 # Arbitrary value
+			tunnel_encap_ptr        = 5 # Arbitrary value
+			tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+			tunnel_encap_bd         = 7 # Arbitrary value
+			tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
-		# -----------------
-		# Ingress Tunnel
-		# -----------------
+			# -----------------------------------------------------------
+			# Insert Table Entries
+			# -----------------------------------------------------------
+			print("Starting test on Ingress pipe", ig_pipe)
 
-		npb_pre_mirror_add(self, self.target, 5, "INGRESS", eg_port2)
+			npb_nsh_chain_start_add(self, self.target,ig_pipe,
+				#ingress
+				[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap,
+				#tunnel
+				tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
+				#egress
+			)
 
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+2, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+4, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+5, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+6, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+7, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
-		npb_tunnel_network_dst_vtep_add(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf, sap=sap, vpn=vpn+8, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			# -----------------
+			# Ingress Tunnel
+			# -----------------
 
-		# -----------------
+			npb_pre_mirror_add(self, self.target,ig_pipe, 5, "INGRESS", eg_port2)
 
-#		time.sleep(1)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+2, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf, sap=sap, vpn=vpn+4, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+5, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf, sap=sap, vpn=vpn+6, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf, sap=sap, vpn=vpn+7, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
+			npb_tunnel_network_dst_vtep_add(self, self.target, ig_pipe,l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf, sap=sap, vpn=vpn+8, port_lag_ptr=ig_lag_ptr, drop=0, mirror_enable=1, mirror_id=5)
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (VXLAN)
-		# -----------------------------------------------------------
+			# -----------------
 
-		src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			dmac=dmac, smac=smac,
-			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
-		)
+#			time.sleep(1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (VXLAN)
+			# -----------------------------------------------------------
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+			src_pkt, exp_pkt = npb_simple_2lyr_vxlan_udp(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				dmac=dmac, smac=smac,
+				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+			)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
 
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packet (self, exp_pkt, eg_port)
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
-		logger.info("Verify packet on port %d", eg_port2)
-		testutils.verify_packet (self, src_pkt, eg_port2)
+			# -----------------------------------------------------------
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			logger.info("Verify packet on port %d", eg_port)
+			testutils.verify_packet (self, exp_pkt, eg_port)
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (ERSPAN)
-		# -----------------------------------------------------------
+			logger.info("Verify packet on port %d", eg_port2)
+			testutils.verify_packet (self, src_pkt, eg_port2)
 
-		src_pkt, exp_pkt = npb_simple_2lyr_erspan_udp(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			dmac=dmac, smac=smac,
-			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+7
-		)
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (ERSPAN)
+			# -----------------------------------------------------------
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+			src_pkt, exp_pkt = npb_simple_2lyr_erspan_udp(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				dmac=dmac, smac=smac,
+				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+7
+			)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
 
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packet (self, exp_pkt, eg_port)
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
-		logger.info("Verify packet on port %d", eg_port2)
-		testutils.verify_packet (self, src_pkt, eg_port2)
+			# -----------------------------------------------------------
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			logger.info("Verify packet on port %d", eg_port)
+			testutils.verify_packet (self, exp_pkt, eg_port)
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (GRE)
-		# -----------------------------------------------------------
+			logger.info("Verify packet on port %d", eg_port2)
+			testutils.verify_packet (self, src_pkt, eg_port2)
 
-		src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			dmac=dmac, smac=smac,
-			transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+8
-		)
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (GRE)
+			# -----------------------------------------------------------
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+			src_pkt, exp_pkt = npb_simple_2lyr_gre_ip(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				dmac=dmac, smac=smac,
+				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+8
+			)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
 
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packet (self, exp_pkt, eg_port)
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
-		logger.info("Verify packet on port %d", eg_port2)
-		testutils.verify_packet (self, src_pkt, eg_port2)
+			# -----------------------------------------------------------
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			logger.info("Verify packet on port %d", eg_port)
+			testutils.verify_packet (self, exp_pkt, eg_port)
 
-		# -----------------------------------------------------------
-		# Delete Table Entries
-		# -----------------------------------------------------------
+			logger.info("Verify packet on port %d", eg_port2)
+			testutils.verify_packet (self, src_pkt, eg_port2)
 
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port],
-			#tunnel
-			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
-			#egress
-		)
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		# -----------------
-		# Ingress Tunnel
-		# -----------------
-
-		npb_pre_mirror_del(self, self.target, 5)
-
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.VXLAN.value,   tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.IPINIP.value,  tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.NVGRE.value,   tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPC.value,    tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GTPU.value,    tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.ERSPAN.value,  tun_type_mask=0xf)
-		npb_tunnel_network_dst_vtep_del(self, self.target, l3_src=sip, l3_src_mask=0xffffffff, l3_dst=dip, l3_dst_mask=0xffffffff, tun_type=IngressTunnelType.GRE.value,     tun_type_mask=0xf)
+			# -----------------------------------------------------------
+			# Delete Table Entries
+			# -----------------------------------------------------------
+			cleanUpGlobal(self)

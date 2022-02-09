@@ -57,7 +57,7 @@ def npb_simple_1lyr_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	vlan2_en       = False,
 	e_en           = False,
 	vn_en          = False,
@@ -92,7 +92,7 @@ def npb_simple_1lyr_udp(
 	qid            = 0, #Dtel report
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	vlan2_en_exp   = None,#vlan2_en_exp should never be set if vlan_en_exp is not set.
 	e_en_exp       = None,
 	vn_en_exp      = None,
@@ -109,7 +109,7 @@ def npb_simple_1lyr_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if vlan_en_exp     is None: vlan2_en_exp     = False
 		if vlan2_en_exp    is None: vlan2_en_exp     = False
 		if e_en_exp        is None: e_en_exp        = e_en
@@ -133,11 +133,11 @@ def npb_simple_1lyr_udp(
 
 		if((vlan_en == True) or (e_en == True) or (vn_en == True)):
 			# use my version, that adds support for e and vn tags
-#			src_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en)
+#			src_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, vlan_vid=vlan_en_vid, vlan_pcp=vlan_en_pcp, dot1br=e_en, vn_tag=vn_en)
 			if(vlan2_en == True):
-				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen+4, dl_vlan_enable=2, dot1br=e_en, vn_tag=vn_en, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
+				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen+4, dl_vlan_enable=2, vlan_vid=vlan_en_vid, vlan_pcp=vlan_en_pcp, dot1br=e_en, vn_tag=vn_en, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 			else:
-				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, dot1br=e_en, vn_tag=vn_en, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
+				src_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, vlan_vid=vlan_en_vid, vlan_pcp=vlan_en_pcp, dot1br=e_en, vn_tag=vn_en, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 		else:
 			# user barefoot's version
 #			src_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen)
@@ -147,11 +147,11 @@ def npb_simple_1lyr_udp(
 
 		if((vlan_en_exp == True) or (e_en_exp == True) or (vn_en_exp == True)):
 			# use my version, that adds support for e and vn tags
-#			exp_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp)
+#			exp_pkt_base = simple_tcp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, vlan_vid=vlan_en_exp_vid, vlan_pcp=vlan_en_exp_pcp, dot1br=e_en_exp, vn_tag=vn_en_exp)
 			if(vlan2_en_exp == True):
-				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp+4, dl_vlan_enable=2, dot1br=e_en_exp, vn_tag=vn_en_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
+				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp+4, dl_vlan_enable=2, vlan_vid=vlan_en_exp_vid, vlan_pcp=vlan_en_exp_pcp, dot1br=e_en_exp, vn_tag=vn_en_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 			else:
-				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, dot1br=e_en_exp, vn_tag=vn_en_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
+				exp_pkt_base = simple_udp_packet2(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, vlan_vid=vlan_en_exp_vid, vlan_pcp=vlan_en_exp_pcp, dot1br=e_en_exp, vn_tag=vn_en_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 		else:
 			# user barefoot's version
 #			exp_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp)
@@ -240,7 +240,7 @@ def npb_simple_1lyr_udpv6(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -270,7 +270,7 @@ def npb_simple_1lyr_udpv6(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -285,7 +285,7 @@ def npb_simple_1lyr_udpv6(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -305,13 +305,13 @@ def npb_simple_1lyr_udpv6(
 
 		# -----------------
 
-#		src_pkt_base = testutils.simple_tcpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en)
-		src_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, ipv6_src=sip, ipv6_dst=dip, ipv6_tc=tos, udp_sport=udp_sport, udp_dport=udp_dport)
+#		src_pkt_base = testutils.simple_tcpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, vlan_vid=vlan_en_vid, vlan_pcp=vlan_en_pcp)
+		src_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen, dl_vlan_enable=vlan_en, vlan_vid=vlan_en_vid, vlan_pcp=vlan_en_pcp, ipv6_src=sip, ipv6_dst=dip, ipv6_tc=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 
 		# -----------------
 
-#		exp_pkt_base = testutils.simple_tcpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp)
-		exp_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, ipv6_src=sip, ipv6_dst=dip, ipv6_tc=tos, udp_sport=udp_sport, udp_dport=udp_dport)
+#		exp_pkt_base = testutils.simple_tcpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, vlan_vid=vlan_en_exp_vid, vlan_pcp=vlan_en_exp_pcp)
+		exp_pkt_base = testutils.simple_udpv6_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, dl_vlan_enable=vlan_en_exp, vlan_vid=vlan_en_exp_vid, vlan_pcp=vlan_en_exp_pcp, ipv6_src=sip, ipv6_dst=dip, ipv6_tc=tos, udp_sport=udp_sport, udp_dport=udp_dport)
 
 		# -----------------
 		# src: add nsh hdr
@@ -394,7 +394,7 @@ def npb_simple_1lyr_gre(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -404,7 +404,6 @@ def npb_simple_1lyr_gre(
 	sf_bitmask     = 0,
 	start_of_chain = True,
 	end_of_chain   = False,
-
 	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
 	transport_encap= EgressTunnelType.NONE.value,
 	bridged_pkt    = False,
@@ -419,7 +418,7 @@ def npb_simple_1lyr_gre(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -434,7 +433,7 @@ def npb_simple_1lyr_gre(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -555,7 +554,7 @@ def npb_simple_2lyr_vxlan_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -579,7 +578,7 @@ def npb_simple_2lyr_vxlan_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -594,7 +593,7 @@ def npb_simple_2lyr_vxlan_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -704,7 +703,7 @@ def npb_simple_2lyr_vxlanv6_udpv6(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -728,7 +727,7 @@ def npb_simple_2lyr_vxlanv6_udpv6(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -743,7 +742,7 @@ def npb_simple_2lyr_vxlanv6_udpv6(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -856,7 +855,7 @@ def npb_simple_2lyr_mpls_sr_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -880,7 +879,7 @@ def npb_simple_2lyr_mpls_sr_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -895,7 +894,7 @@ def npb_simple_2lyr_mpls_sr_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1015,7 +1014,7 @@ def npb_simple_2lyr_nvgre_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1039,7 +1038,7 @@ def npb_simple_2lyr_nvgre_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -1054,7 +1053,7 @@ def npb_simple_2lyr_nvgre_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1174,7 +1173,7 @@ def npb_simple_2lyr_gre_ip(
 	smac           = '00:06:07:08:09:0a',
 	dip            = '192.168.0.2',
 	sip            = '192.168.0.1',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1184,7 +1183,6 @@ def npb_simple_2lyr_gre_ip(
 	sf_bitmask     = 0,
 	start_of_chain = True,
 	end_of_chain   = False,
-
 	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
 	transport_encap= EgressTunnelType.NONE.value,
 	bridged_pkt    = False,
@@ -1199,7 +1197,7 @@ def npb_simple_2lyr_gre_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -1214,7 +1212,7 @@ def npb_simple_2lyr_gre_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1332,7 +1330,7 @@ def npb_simple_2lyr_grev6_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1342,7 +1340,6 @@ def npb_simple_2lyr_grev6_ip(
 	sf_bitmask     = 0,
 	start_of_chain = True,
 	end_of_chain   = False,
-
 	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
 	transport_encap= EgressTunnelType.NONE.value,
 	bridged_pkt    = False,
@@ -1357,7 +1354,7 @@ def npb_simple_2lyr_grev6_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -1372,7 +1369,7 @@ def npb_simple_2lyr_grev6_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1493,7 +1490,7 @@ def npb_simple_2lyr_ipinip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1517,7 +1514,7 @@ def npb_simple_2lyr_ipinip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -1532,7 +1529,7 @@ def npb_simple_2lyr_ipinip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1645,7 +1642,7 @@ def npb_simple_2lyr_gtpc_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1669,7 +1666,7 @@ def npb_simple_2lyr_gtpc_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -1684,7 +1681,7 @@ def npb_simple_2lyr_gtpc_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1806,7 +1803,7 @@ def npb_simple_2lyr_gtpu_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1830,7 +1827,7 @@ def npb_simple_2lyr_gtpu_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -1845,7 +1842,7 @@ def npb_simple_2lyr_gtpu_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -1961,7 +1958,7 @@ def npb_simple_2lyr_erspan_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -1985,7 +1982,7 @@ def npb_simple_2lyr_erspan_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2000,7 +1997,7 @@ def npb_simple_2lyr_erspan_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -2114,7 +2111,7 @@ def npb_simple_3lyr_vxlan_gre_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -2138,7 +2135,7 @@ def npb_simple_3lyr_vxlan_gre_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2153,7 +2150,7 @@ def npb_simple_3lyr_vxlan_gre_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -2276,7 +2273,7 @@ def npb_simple_3lyr_erspan_vxlan_udp(
 	smac           = '00:06:07:08:09:0a',
 	dip            = '192.168.0.1',
 	sip            = '192.168.0.2',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -2300,7 +2297,7 @@ def npb_simple_3lyr_erspan_vxlan_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2315,7 +2312,7 @@ def npb_simple_3lyr_erspan_vxlan_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -2443,7 +2440,7 @@ def npb_simple_3lyr_erspan_gre_ip(
 	smac           = '00:06:07:08:09:0a',
 	dip            = '192.168.0.3',
 	sip            = '192.168.0.4',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -2467,7 +2464,7 @@ def npb_simple_3lyr_erspan_gre_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2482,7 +2479,7 @@ def npb_simple_3lyr_erspan_gre_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -2601,7 +2598,7 @@ def npb_simple_3lyr_vxlanv6_gre_ip(
 	smac           = '00:06:07:08:09:0a',
 	dip            = '192.168.0.1',
 	sip            = '192.168.0.2',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -2625,7 +2622,7 @@ def npb_simple_3lyr_vxlanv6_gre_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2640,7 +2637,7 @@ def npb_simple_3lyr_vxlanv6_gre_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -2757,7 +2754,7 @@ def npb_simple_3lyr_vxlan_gtpc_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -2781,7 +2778,7 @@ def npb_simple_3lyr_vxlan_gtpc_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2796,7 +2793,7 @@ def npb_simple_3lyr_vxlan_gtpc_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -2922,7 +2919,7 @@ def npb_simple_3lyr_vxlan_gtpu_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -2946,7 +2943,7 @@ def npb_simple_3lyr_vxlan_gtpu_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -2961,7 +2958,7 @@ def npb_simple_3lyr_vxlan_gtpu_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -3081,7 +3078,7 @@ def npb_simple_3lyr_nvgre_gre_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -3105,7 +3102,7 @@ def npb_simple_3lyr_nvgre_gre_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -3120,7 +3117,7 @@ def npb_simple_3lyr_nvgre_gre_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -3235,7 +3232,7 @@ def npb_simple_3lyr_nvgrev6_gre_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -3259,7 +3256,7 @@ def npb_simple_3lyr_nvgrev6_gre_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -3274,7 +3271,7 @@ def npb_simple_3lyr_nvgrev6_gre_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -3391,7 +3388,7 @@ def npb_simple_3lyr_nvgre_gtpc_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -3415,7 +3412,7 @@ def npb_simple_3lyr_nvgre_gtpc_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -3430,7 +3427,7 @@ def npb_simple_3lyr_nvgre_gtpc_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -3556,7 +3553,7 @@ def npb_simple_3lyr_nvgre_gtpu_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -3580,7 +3577,7 @@ def npb_simple_3lyr_nvgre_gtpu_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -3595,7 +3592,7 @@ def npb_simple_3lyr_nvgre_gtpu_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -3719,7 +3716,7 @@ def npb_simple_3lyr_gre_ip_ip(
 	smac           = '00:06:07:08:09:0a',
 	dip            = '192.168.0.1',
 	sip            = '192.168.0.2',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -3743,7 +3740,7 @@ def npb_simple_3lyr_gre_ip_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -3758,7 +3755,7 @@ def npb_simple_3lyr_gre_ip_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -3883,7 +3880,7 @@ def npb_simple_3lyr_grev6_ip_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -3907,7 +3904,7 @@ def npb_simple_3lyr_grev6_ip_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -3922,7 +3919,7 @@ def npb_simple_3lyr_grev6_ip_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -4044,7 +4041,7 @@ def npb_simple_3lyr_gre_ipv6_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -4068,7 +4065,7 @@ def npb_simple_3lyr_gre_ipv6_ip(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -4083,7 +4080,7 @@ def npb_simple_3lyr_gre_ipv6_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -4203,7 +4200,7 @@ def npb_simple_3lyr_grev6_ipv6_ip(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -4221,13 +4218,13 @@ def npb_simple_3lyr_grev6_ipv6_ip(
 	vlan_en_nsh_exp= None,
 	spi_exp        = None,
 	si_exp         = None,
-	nshtype_exp    = None,
 	ta_exp         = None,
+	nshtype_exp    = None,
 	sap_exp        = None,
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -4242,7 +4239,7 @@ def npb_simple_3lyr_grev6_ipv6_ip(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -4364,7 +4361,7 @@ def npb_simple_3lyr_gre_ip_ipv6(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -4382,13 +4379,13 @@ def npb_simple_3lyr_gre_ip_ipv6(
 	vlan_en_nsh_exp= None,
 	spi_exp        = None,
 	si_exp         = None,
-	nshtype_exp    = None,
 	ta_exp         = None,
+	nshtype_exp    = None,
 	sap_exp        = None,
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -4398,12 +4395,12 @@ def npb_simple_3lyr_gre_ip_ipv6(
 		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
 		if spi_exp         is None: spi_exp         = spi
 		if si_exp          is None: si_exp          = si
-		if nshtype_exp     is None: nshtye_exp      = nshtype
 		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -4523,7 +4520,7 @@ def npb_simple_3lyr_grev6_ip_ipv6(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -4547,7 +4544,7 @@ def npb_simple_3lyr_grev6_ip_ipv6(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -4562,7 +4559,7 @@ def npb_simple_3lyr_grev6_ip_ipv6(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -4683,7 +4680,7 @@ def npb_simple_3lyr_gre_ip_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -4707,7 +4704,7 @@ def npb_simple_3lyr_gre_ip_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -4722,7 +4719,7 @@ def npb_simple_3lyr_gre_ip_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -4859,7 +4856,7 @@ def npb_simple_3lyr_gre_gre_udp(
 	#outer source variables
 	dmac           = '00:01:02:03:04:05',
 	smac           = '00:06:07:08:09:0a',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -4883,7 +4880,7 @@ def npb_simple_3lyr_gre_gre_udp(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -4898,7 +4895,7 @@ def npb_simple_3lyr_gre_gre_udp(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -5026,7 +5023,7 @@ def npb_simple_3lyr_gre_vxlan(
 	smac_outer           = '00:06:07:08:09:0a',
 	dip_outer            = '192.168.0.1',
 	sip_outer            = '192.168.0.2',
-	vlan_en        = False,
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
 	e_en           = False,
 	vn_en          = False,
 	pktlen         = 100,
@@ -5050,7 +5047,7 @@ def npb_simple_3lyr_gre_vxlan(
 	vpn_exp        = None,
 
 	#outer expected variables
-	vlan_en_exp    = None,
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
 	e_en_exp       = None,
 	vn_en_exp      = None,
 	pktlen_exp     = None):
@@ -5065,7 +5062,7 @@ def npb_simple_3lyr_gre_vxlan(
 		if sap_exp         is None: sap_exp         = sap
 		if vpn_exp         is None: vpn_exp         = vpn
 
-		if vlan_en_exp     is None: vlan_en_exp     = vlan_en
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
 		if e_en_exp        is None: e_en_exp        = e_en
 		if vn_en_exp       is None: vn_en_exp       = vn_en
 		if pktlen_exp      is None: pktlen_exp      = pktlen
@@ -5469,11 +5466,11 @@ def simple_vxlan_packet_no_l2(pktlen=300,
     Generates a simple VXLAN packet. Users shouldn't assume anything about
     this packet other than that it is a valid IP/UDP/VXLAN frame.
     """
-    if testutils.packet.VXLAN is None:
-        logging.error(
-            "A VXLAN packet was requested but VXLAN is not supported "
-            "by your Scapy. See README for more information")
-        return None
+    #if testutils.scapy.VXLAN is None:
+    #    logging.error(
+    #        "A VXLAN packet was requested but VXLAN is not supported "
+    #        "by your Scapy. See README for more information")
+    #    return None
 
     if testutils.MINSIZE > pktlen:
         pktlen = MINSIZE

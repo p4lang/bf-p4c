@@ -23,7 +23,7 @@
 ###############################################################################
 
 import sys
-sys.path.append("/npb-dp/p4_pipelines/tst/basic/mau")
+#sys.path.append("/npb-dp/tst/basic/mau")
 from test_mau_tb_top import *
 from test_mau_tb_tbl_wrap import *
 from test_mau_tb_pkt_gen import *
@@ -41,7 +41,7 @@ class test(BfRuntimeTest):
 		self.target = gc.Target(self.dev, pipe_id=0xffff, direction=0xff, prsr_id=0xff)
 		BfRuntimeTest.setUp(self, self.client_id, self.p4_name)
 		self.bfrt_info = self.interface.bfrt_info_get(self.p4_name)
-
+		cleanUpGlobal(self)
 	# -------------------------------------------------------------
 
 	def send_and_verify_packet(self, ingress_port, egress_port, pkt, exp_pkt):
@@ -61,222 +61,208 @@ class test(BfRuntimeTest):
 
 	def runTest(self):
 
-		# -------------------------------------------------------------
-
-		ig_port = swports[1]
-		eg_port = swports[1]
-
-		# -----------------------
-		# Packet values to use
-		# -----------------------
+		for ig_pipe in ig_pipes:
 
-		smac = '11:11:11:11:11:11'
-		dmac = '22:22:22:22:22:22'
-		sip = "0.0.0.3"
-		dip = "0.0.0.4"
+			# -------------------------------------------------------------
 
-		rmac = '33:33:33:33:33:33'
+			ig_port = ig_swports[ig_pipe][1]
+			eg_port = eg_swports[1]
 
-		# -----------------------
-		# NSH values to use
-		# -----------------------
 
-		sap                     = 0 # Arbitrary value
-		vpn                     = 1 # Arbitrary value
-		flow_class_acl          = 2 # Arbitrary value
-		flow_class_sfp          = 3 # Arbitrary value
-		spi                     = 4 # Arbitrary value
-		si                      = 5 # Arbitrary value (ttl)
-		sfc                     = 6 # Arbitrary value
-		dsap                    = 7 # Arbitrary value
+			# -----------------------
+			# Packet values to use
+			# -----------------------
 
-		sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+			smac = '11:11:11:11:11:11'
+			dmac = '22:22:22:22:22:22'
+			sip = "0.0.0.3"
+			dip = "0.0.0.4"
 
-		nexthop_ptr             = 1 # Arbitrary value
-		bd                      = 2 # Arbitrary value
-		ig_lag_ptr              = 3 # Arbitrary value
-		eg_lag_ptr              = 4 # Arbitrary value
-		tunnel_encap_ptr        = 5 # Arbitrary value
-		tunnel_encap_nexthop_ptr= 6 # Arbitrary value
-		tunnel_encap_bd         = 7 # Arbitrary value
-		tunnel_encap_smac_ptr   = 8 # Arbitrary value
+			rmac = '33:33:33:33:33:33'
 
-		# -----------------------------------------------------------
-		# Insert Table Entries
-		# -----------------------------------------------------------
+			# -----------------------
+			# NSH values to use
+			# -----------------------
 
-		npb_nsh_chain_start_add(self, self.target,
-			#ingress
-			[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap,
-			#tunnel
-			tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
-			#egress
-		)
+			sap                     = 0 # Arbitrary value
+			vpn                     = 1 # Arbitrary value
+			flow_class_acl          = 2 # Arbitrary value
+			flow_class_sfp          = 3 # Arbitrary value
+			spi                     = 4 # Arbitrary value
+			si                      = 5 # Arbitrary value (ttl)
+			sfc                     = 6 # Arbitrary value
+			dsap                    = 7 # Arbitrary value
 
-		# -----------------
-		# Ingress SF(s)
-		# -----------------
+			sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
-		#Src Port Range
-		npb_npb_sf0_l4_src_port_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
-		npb_npb_sf0_l4_src_port_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
+			nexthop_ptr             = 1 # Arbitrary value
+			bd                      = 2 # Arbitrary value
+			ig_lag_ptr              = 3 # Arbitrary value
+			eg_lag_ptr              = 4 # Arbitrary value
+			tunnel_encap_ptr        = 5 # Arbitrary value
+			tunnel_encap_nexthop_ptr= 6 # Arbitrary value
+			tunnel_encap_bd         = 7 # Arbitrary value
+			tunnel_encap_smac_ptr   = 8 # Arbitrary value
 
-		npb_npb_sf0_policy_l34_v6_add(self, self.target, sap=sap, l4_src_rng=0, l4_src_rng_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
-		npb_npb_sf0_policy_l34_v6_add(self, self.target, sap=sap, l4_src_rng=1, l4_src_rng_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
+			# -----------------------------------------------------------
+			# Insert Table Entries
+			# -----------------------------------------------------------
 
-		# -----------------
+			npb_nsh_chain_start_add(self, self.target, ig_pipe,
+				#ingress
+				[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap,
+				#tunnel
+				tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
+				#egress
+			)
 
-#		time.sleep(1)
+			# -----------------
+			# Ingress SF(s)
+			# -----------------
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (#1, < 8k)
-		# -----------------------------------------------------------
+			#Src Port Range
+			npb_npb_sf0_l4_src_port_rng_add(self, self.target, ig_pipe,    0x0, 0x1fff, 0) # <  8k
+			npb_npb_sf0_l4_src_port_rng_add(self, self.target, ig_pipe, 0x2000, 0xffff, 1) # >= 8k
 
-		src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			udp_sport=4660, udp_dport=2152,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
-		)
+			npb_npb_sf0_policy_l34_v6_add(self, self.target, ig_pipe, sap=sap, l4_src_rng=0, l4_src_rng_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
+			npb_npb_sf0_policy_l34_v6_add(self, self.target, ig_pipe, sap=sap, l4_src_rng=1, l4_src_rng_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
 
-		# -----------------------------------------------------------
+			# -----------------
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+#			time.sleep(1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (#1, < 8k)
+			# -----------------------------------------------------------
 
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
+			src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				udp_sport=4660, udp_dport=2152,
+				sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			)
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			# -----------------------------------------------------------
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (#2, >= 8k)
-		# -----------------------------------------------------------
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
-		src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			udp_sport=34661, udp_dport=2152,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			pktlen_exp=8300,
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
-		)
+			# -----------------------------------------------------------
 
-		# -----------------------------------------------------------
+			logger.info("Verify packet on port %d", eg_port)
+			testutils.verify_packets(self, exp_pkt, [eg_port])
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (#2, >= 8k)
+			# -----------------------------------------------------------
 
-#		logger.info("Verify packet on port %d", eg_port)
-#		testutils.verify_packets(self, exp_pkt, [eg_port])
+			src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				udp_sport=34661, udp_dport=2152,
+				sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				pktlen_exp=8300,
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			)
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			# -----------------------------------------------------------
 
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
+			# -----------------------------------------------------------
 
-		# -----------------
-		# Delete Src Port Entries
-		# -----------------
+#			logger.info("Verify packet on port %d", eg_port)
+#			testutils.verify_packets(self, exp_pkt, [eg_port])
 
-		npb_npb_sf0_l4_src_port_rng_del(self, self.target,    0x0, 0x1fff) # <  8k
-		npb_npb_sf0_l4_src_port_rng_del(self, self.target, 0x2000, 0xffff) # >= 8k
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		npb_npb_sf0_policy_l34_v6_del(self, self.target, sap=sap, l4_src_rng=0, l4_src_rng_mask=0xffff) # don't drop
-		npb_npb_sf0_policy_l34_v6_del(self, self.target, sap=sap, l4_src_rng=1, l4_src_rng_mask=0xffff) # drop
 
-		# -----------------
-		# Ingress SF(s)
-		# -----------------
 
-		#Dest Port Range
-		npb_npb_sf0_l4_dst_port_rng_add(self, self.target,    0x0, 0x1fff, 0) # <  8k
-		npb_npb_sf0_l4_dst_port_rng_add(self, self.target, 0x2000, 0xffff, 1) # >= 8k
+			# -----------------
+			# Delete Src Port Entries
+			# -----------------
 
-		npb_npb_sf0_policy_l34_v6_add(self, self.target, sap=sap, l4_dst_rng=0, l4_dst_rng_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
-		npb_npb_sf0_policy_l34_v6_add(self, self.target, sap=sap, l4_dst_rng=1, l4_dst_rng_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
+			npb_npb_sf0_l4_src_port_rng_del(self, self.target, ig_pipe,    0x0, 0x1fff) # <  8k
+			npb_npb_sf0_l4_src_port_rng_del(self, self.target, ig_pipe, 0x2000, 0xffff) # >= 8k
 
-		# -----------------
+			npb_npb_sf0_policy_l34_v6_del(self, self.target, ig_pipe, sap=sap, l4_src_rng=0, l4_src_rng_mask=0xffff) # don't drop
+			npb_npb_sf0_policy_l34_v6_del(self, self.target, ig_pipe, sap=sap, l4_src_rng=1, l4_src_rng_mask=0xffff) # drop
 
-#		time.sleep(1)
+			# -----------------
+			# Ingress SF(s)
+			# -----------------
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (#1, < 8k)
-		# -----------------------------------------------------------
+			#Dest Port Range
+			npb_npb_sf0_l4_dst_port_rng_add(self, self.target, ig_pipe,    0x0, 0x1fff, 0) # <  8k
+			npb_npb_sf0_l4_dst_port_rng_add(self, self.target, ig_pipe, 0x2000, 0xffff, 1) # >= 8k
 
-		src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			udp_sport=2152, udp_dport=4660,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
-		)
+			npb_npb_sf0_policy_l34_v6_add(self, self.target, ig_pipe, sap=sap, l4_dst_rng=0, l4_dst_rng_mask=0xffff,  flow_class=flow_class_acl, drop=0) # don't drop
+			npb_npb_sf0_policy_l34_v6_add(self, self.target, ig_pipe, sap=sap, l4_dst_rng=1, l4_dst_rng_mask=0xffff,  flow_class=flow_class_acl, drop=1) # drop
 
-		# -----------------------------------------------------------
+			# -----------------
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+#			time.sleep(1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (#1, < 8k)
+			# -----------------------------------------------------------
 
-		logger.info("Verify packet on port %d", eg_port)
-		testutils.verify_packets(self, exp_pkt, [eg_port])
+			src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				udp_sport=2152, udp_dport=4660,
+				sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			)
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			# -----------------------------------------------------------
 
-		# -----------------------------------------------------------
-		# Create / Send / Verify the packet (#2, >= 8k)
-		# -----------------------------------------------------------
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
-		src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
-			dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-			udp_sport=2152, udp_dport=57005,
-			sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-			pktlen_exp=8300,
-			spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
-		)
+			# -----------------------------------------------------------
 
-		# -----------------------------------------------------------
+			logger.info("Verify packet on port %d", eg_port)
+			testutils.verify_packets(self, exp_pkt, [eg_port])
 
-		logger.info("Sending packet on port %d", ig_port)
-		testutils.send_packet(self, ig_port, src_pkt)
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
-		# -----------------------------------------------------------
+			# -----------------------------------------------------------
+			# Create / Send / Verify the packet (#2, >= 8k)
+			# -----------------------------------------------------------
 
-#		logger.info("Verify packet on port %d", eg_port)
-#		testutils.verify_packets(self, exp_pkt, [eg_port])
+			src_pkt, exp_pkt = npb_simple_1lyr_udpv6(
+				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
+				udp_sport=2152, udp_dport=57005,
+				sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
+				pktlen_exp=8300,
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn
+			)
 
-		logger.info("Verify no other packets")
-		testutils.verify_no_other_packets(self, 0, 1)
+			# -----------------------------------------------------------
 
+			logger.info("Sending packet on port %d", ig_port)
+			testutils.send_packet(self, ig_port, src_pkt)
 
+			# -----------------------------------------------------------
 
+#			logger.info("Verify packet on port %d", eg_port)
+#			testutils.verify_packets(self, exp_pkt, [eg_port])
 
+			logger.info("Verify no other packets")
+			testutils.verify_no_other_packets(self, 0, 1)
 
 
-		# -----------------------------------------------------------
-		# Delete Table Entries
-		# -----------------------------------------------------------
 
-		npb_nsh_chain_start_del(self, self.target,
-			#ingress
-			[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port],
-			#tunnel
-			tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
-			#egress
-		)
 
-		# -----------------
-		# Ingress SF(s)
-		# -----------------
 
 
-		npb_npb_sf0_l4_dst_port_rng_del(self, self.target,    0x0, 0x1fff) # <  8k
-		npb_npb_sf0_l4_dst_port_rng_del(self, self.target, 0x2000, 0xffff) # >= 8k
+			# -----------------------------------------------------------
+			# Delete Table Entries
+			# -----------------------------------------------------------
+			cleanUpGlobal(self)
 
-		npb_npb_sf0_policy_l34_v6_del(self, self.target, sap=sap, l4_dst_rng=0, l4_dst_rng_mask=0xffff) # don't drop
-		npb_npb_sf0_policy_l34_v6_del(self, self.target, sap=sap, l4_dst_rng=1, l4_dst_rng_mask=0xffff) # drop

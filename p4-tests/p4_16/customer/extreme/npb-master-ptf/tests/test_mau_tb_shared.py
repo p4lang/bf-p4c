@@ -106,6 +106,7 @@ class EgressTunnelType(Enum):
 	IPV4_UDP    = 12;
 	IPV6_UDP    = 13;
 	DTEL_FLOW_REPORT  = 14;
+	DTEL_QUEUE_REPORT = 15;
 
 #######################################
 

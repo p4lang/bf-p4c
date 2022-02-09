@@ -3,7 +3,6 @@ import sys
 import os
 import random
 import re
-#from pprint import pprint
 
 ##sys.path.append('/usr/local/lib/python3.5/dist-packages/ptf')        
 #sys.path.append('/bf-sde/install/lib/python3.5/site-packages/ptf')
@@ -48,8 +47,8 @@ if not len(logger.handlers):
 import json
 from pprint import pprint
 
-BF_P4C_PATH = os.path.abspath(os.path.dirname(__file__)).replace('/p4c/extensions/p4_tests/p4_16/customer/extreme/npb-master-ptf/tests', '')
-cfile = os.path.join(BF_P4C_PATH, "p4-tests/p4_16/customer/extreme/npb-master-ptf/tests/test.json")
+from config import *
+cfile = os.path.join(TEST_JSON_PATH, "test.json")
 assert os.path.isfile(cfile), \
     "ERROR: Test configuration file (%s) not found." %cfile
 
@@ -64,13 +63,21 @@ pip      = cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines'][0]
 
 for pip in cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines']:
     if pip['inst_idx'] == 0:
-            iprsr_0  = pip['bfrt_prefixes']['iprsr']
-            ictl_0   = pip['bfrt_prefixes']['ictl']
-            idprsr_0 = pip['bfrt_prefixes']['idprsr']
-            eprsr_0  = pip['bfrt_prefixes']['eprsr']
-            ectl_0   = pip['bfrt_prefixes']['ectl']
-            edprsr_0 = pip['bfrt_prefixes']['edprsr']
-            deploy_features_0 = pip['deploy_features']
+            iprsr  = pip['bfrt_prefixes']['iprsr']
+            ictl   = pip['bfrt_prefixes']['ictl']
+            idprsr = pip['bfrt_prefixes']['idprsr']
+            eprsr  = pip['bfrt_prefixes']['eprsr']
+            ectl   = pip['bfrt_prefixes']['ectl']
+            edprsr = pip['bfrt_prefixes']['edprsr']
+            deploy_features = pip['deploy_features']
+            #Non Folded pipe
+            #iprsr_F  = iprsr
+            #ictl_F   = ictl
+            #idprsr_F = idprsr
+            #eprsr_F  = eprsr
+            #ectl_F   = ectl
+            #edprsr_F = edprsr
+            #deploy_features_F = deploy_features
     elif pip['inst_idx'] == 1:
             iprsr_1  = pip['bfrt_prefixes']['iprsr']
             ictl_1   = pip['bfrt_prefixes']['ictl']
@@ -87,6 +94,15 @@ for pip in cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines']:
             ectl_2   = pip['bfrt_prefixes']['ectl']
             edprsr_2 = pip['bfrt_prefixes']['edprsr']
             deploy_features_2 = pip['deploy_features']
+            #Folded pipe
+            iprsr_F  = iprsr_2
+            ictl_F   = ictl_2
+            idprsr_F = idprsr_2
+            eprsr_F  = eprsr_2
+            ectl_F   = ectl_2
+            edprsr_F = edprsr_2
+            deploy_features_F = deploy_features_2
+
     elif pip['inst_idx'] == 3:
             iprsr_3  = pip['bfrt_prefixes']['iprsr']
             ictl_3   = pip['bfrt_prefixes']['ictl']
@@ -100,6 +116,9 @@ for pip in cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines']:
                   "level instance index (%s)" %pip['inst_idx'])
             sys.exit(1)
 
+#Non Folded pipe
+
+
 print("Test Configuration:")
 print("-----------------------------------------------------")
 print("P4_Name: %s" %p4_name)
@@ -108,10 +127,12 @@ print("Top-Level Instance Name: %s" %pip['p4_pipeline_name'])
 print("Top-Level Instance Index: %s" %pip['inst_idx'])
 print("Pipe Scope: %s" %pip['pipe_scope'])
 print("Folded Flag: %s" %pip['folded_flag'])
+print("Egress-Only Flag: %s" %pip['eg_only_flag'])
+print("Egress Pipe(s): %s" %pip['pipes_eg'])
 print("BF-RT Prefixes:")
 pprint(pip['bfrt_prefixes'])
 print("Features:")
-pprint(deploy_features_0)
+pprint(deploy_features)
 
 ################################################################################
 
@@ -183,3 +204,17 @@ print('swports:', swports)
 print('recircports:', recircports)
 
 ################################################################################
+
+BFRT_JSON_PATH = cfg['p4_devices'][0]['p4_programs'][0]['bfrt-config']
+bfrt_file = os.path.join(SDE_INSTALL_PATH, BFRT_JSON_PATH)
+
+print("Loading BF-RT File: (%s)" %bfrt_file)
+assert os.path.isfile(bfrt_file), \
+    "ERROR: BF-RT file (%s) not found." %bfrt_file
+bfrt_dict = json.load(open(bfrt_file))
+
+all_tables = []
+
+for btbl in bfrt_dict['tables']:
+    #print(btbl['name'])
+    all_tables.append(btbl['name'])

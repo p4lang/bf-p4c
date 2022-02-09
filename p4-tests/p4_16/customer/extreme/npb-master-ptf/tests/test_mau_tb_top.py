@@ -3,7 +3,6 @@ import sys
 import os
 import random
 import re
-#from pprint import pprint
 
 ##sys.path.append('/usr/local/lib/python3.5/dist-packages/ptf')        
 #sys.path.append('/bf-sde/install/lib/python3.5/site-packages/ptf')
@@ -43,45 +42,143 @@ if not len(logger.handlers):
 	logger.addHandler(logging.StreamHandler())
 
 ################################################################################
-# Pull-in program and deployment specific details
+# Pull-in program and deployment specific details (via test.json)
 
 import json
 from pprint import pprint
 
-BF_P4C_PATH = os.path.abspath(os.path.dirname(__file__)).replace('/p4c/extensions/p4_tests/p4_16/customer/extreme/npb-master-ptf/tests', '')
-cfile = os.path.join(BF_P4C_PATH, "p4-tests/p4_16/customer/extreme/npb-master-ptf/tests/test.json")
+from config import *
+cfile = os.path.join(TEST_JSON_PATH, "test.json")
 assert os.path.isfile(cfile), \
     "ERROR: Test configuration file (%s) not found." %cfile
 
 print("Loading Generated Test Configuration File: (%s)" %cfile)
 cfg = json.load(open(cfile))
 
-assert len(cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines']) == 1, \
-        "ERROR: test.json contains more than one pipeline definition."
+#assert len(cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines']) == 1, \
+#        "ERROR: test.json contains more than one pipeline definition."
 
 p4_name  = cfg['p4_devices'][0]['p4_programs'][0]['p4_name']
-pip      = cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines'][0]
-iprsr    = pip['bfrt_prefixes']['iprsr']
-ictl     = pip['bfrt_prefixes']['ictl']
-idprsr   = pip['bfrt_prefixes']['idprsr']
-eprsr    = pip['bfrt_prefixes']['eprsr']
-ectl     = pip['bfrt_prefixes']['ectl']
-edprsr   = pip['bfrt_prefixes']['edprsr']
-deploy_features = pip['deploy_features']
 
-print("Test Configuration:")
-print("-----------------------------------------------------")
-print("P4_Name: %s" %p4_name)
-print("Deployment Profile: %s" %pip['deploy_name'])
-print("Top-Level Instance Name: %s" %pip['p4_pipeline_name'])
-print("Top-Level Instance Index: %s" %pip['inst_idx'])
-print("Pipe Scope: %s" %pip['pipe_scope'])
-print("Folded Flag: %s" %pip['folded_flag'])
-print("BF-RT Prefixes:")
-pprint(pip['bfrt_prefixes'])
-print("Features:")
-pprint(deploy_features)
+iprsr_s    = ["","","",""]
+ictl_s     = ["","","",""]
+idprsr_s   = ["","","",""]
+eprsr_s    = ["","","",""]
+ectl_s     = ["","","",""]
+edprsr_s   = ["","","",""]
+#iprsr_s    = []
+#ictl_s     = []
+#idprsr_s   = []
+#eprsr_s    = []
+#ectl_s     = []
+#edprsr_s   = []
+deploy_features_s = []
+ig_pipes = []
+eg_pipes = []
+eg_pipes_idx = []
+ig_swports = []
+eg_swports = []
 
+for pip in cfg['p4_devices'][0]['p4_programs'][0]['p4_pipelines']:
+    pipe = pip['pipe_scope'][0]
+    #print("pipe = ", pipe)
+    iprsr_s[pipe] = pip['bfrt_prefixes']['iprsr']
+    ictl_s[pipe] = pip['bfrt_prefixes']['ictl']
+    idprsr_s[pipe] = pip['bfrt_prefixes']['idprsr']
+    eprsr_s[pipe] = pip['bfrt_prefixes']['eprsr']
+    ectl_s[pipe] = pip['bfrt_prefixes']['ectl']
+    #edprsr_s[pipe] = pip['bfrt_prefixes']['edprsr']
+    #iprsr_s.append(pip['bfrt_prefixes']['iprsr'])
+    #ictl_s.append(pip['bfrt_prefixes']['ictl'])
+    #idprsr_s.append(pip['bfrt_prefixes']['idprsr'])
+    #eprsr_s.append(pip['bfrt_prefixes']['eprsr'])
+    #ectl_s.append(pip['bfrt_prefixes']['ectl'])
+    #edprsr_s.append(pip['bfrt_prefixes']['edprsr'])
+    deploy_features_s.append(pip['deploy_features'])
+    if(not pip['eg_only_flag']):
+        ig_pipes.append(pip['pipe_scope'][0])
+    else:
+        eg_pipes.append(pip['pipe_scope'][0])
+        eg_pipes_idx.append(pip['inst_idx'])
+
+
+    ''' NEED TO WORK ON FOLDED PIPE CONFIG
+    if  pip['folded_flag']: 
+            #Non Folded pipe
+            iprsr_F  = iprsr
+            ictl_F   = ictl
+            idprsr_F = idprsr
+            eprsr_F  = eprsr
+            ectl_F   = ectl
+            edprsr_F = edprsr
+            deploy_features_F = deploy_features
+    '''
+    ''''
+    else:
+            print("ERROR: test.json contains an illegal value for top-"
+                  "level instance index (%s)" %pip['inst_idx'])
+            sys.exit(1)
+    '''
+
+
+#If no egress only pipes then just set the egress pipe to the current pipe_scope
+if(len(eg_pipes)==0):
+   print("No Egress only pipes detected")
+   eg_pipes = ig_pipes
+   eg_pipes_idx.append(pip['inst_idx'])
+   #deploy_features = deploy_features_s[pip['inst_idx']]
+
+deploy_features = deploy_features_s[pip['inst_idx']]
+
+#How do we tell if this is a program test or a pipeline test?
+if(len(ig_pipes) == 1):
+
+    print("Pipeline Test Configuration:")
+    print("-----------------------------------------------------")
+    print("P4_Name: %s" %p4_name)
+    print("Deployment Profile: %s" %pip['deploy_name'])
+    print("Top-Level Instance Name: %s" %pip['p4_pipeline_name'])
+    print("Top-Level Instance Index: %s" %pip['inst_idx'])
+    print("Pipe Scope: %s" %pip['pipe_scope'])
+    print("Folded Flag: %s" %pip['folded_flag'])
+    print("Egress-Only Flag: %s" %pip['eg_only_flag'])
+    print("Ingress Pipe(s): %s" %ig_pipes)
+    print("Egress Pipe(s): %s" %pip['pipes_eg'])
+    print("BF-RT Prefixes:")
+    pprint(pip['bfrt_prefixes'])
+    #print("Features:")
+    #print(deploy_features)
+
+    print ("iprsr", iprsr_s)
+    print ("ictl", ictl_s)
+    print ("idprsr", idprsr_s)
+    print ("eprsr", eprsr_s)
+    print ("ectl", ectl_s)
+    print ("edprsr", edprsr_s)
+    
+else:
+    print("Program Test Configuration:")
+    print("-----------------------------------------------------")
+    print("P4_Name: %s" %p4_name)
+    print("Deployment Profile: %s" %pip['deploy_name'])
+    print("Top-Level Instance Name: %s" %pip['p4_pipeline_name'])
+    print("Top-Level Instance Index: %s" %pip['inst_idx'])
+    print("Pipe Scope: %s" %pip['pipe_scope'])
+    print("Folded Flag: %s" %pip['folded_flag'])
+    print("Ingress Pipe(s): %s" %ig_pipes)
+    print("Egress Pipe(s): %s" %eg_pipes)
+    print("BF-RT Prefixes:")
+    pprint(pip['bfrt_prefixes'])
+    #print("Features:")
+    #pprint(deploy_features_s)
+    
+    print ("iprsr_s", iprsr_s)
+    print ("ictl_s", ictl_s)
+    print ("idprsr_s", idprsr_s)
+    print ("eprsr_s", eprsr_s)
+    print ("ectl_s", ectl_s)
+    print ("edprsr_s", edprsr_s)
+    
 ################################################################################
 
 swports = []
@@ -89,41 +186,12 @@ recircports = []
 for device, port, ifname in config["interfaces"]:
 	swports.append(port)
 	swports.sort()
-# 
-# if swports == []:
-# 	swports = range(9)
-# 
-# def port_to_pipe(port):
-# 	local_port = port & 0x7F
-# 	assert(local_port < 72)
-# 	pipe = (port >> 7) & 0x3
-# 	assert(port == ((pipe << 7) | local_port))
-# 	return pipe
-# 
-# swports_0 = []
-# swports_1 = []
-# swports_2 = []
-# swports_3 = []
-# # the following categorizes the ports in ports.json based on pipe (0, 1, 2, 3)
-# for port in swports:
-# 	pipe = port_to_pipe(port)
-# 	if pipe == 0:
-# 		swports_0.append(port)
-# 	elif pipe == 1:
-# 		swports_1.append(port)
-# 	elif pipe == 2:
-# 		swports_2.append(port)
-# 	elif pipe == 3:
-# 		swports_3.append(port)
-# 
-# print('swports:', swports)
-# print('swports_0:', swports_0)
-# print('swports_1:', swports_1)
-# print('swports_2:', swports_2)
-# print('swports_3:', swports_3)
 
-if len(swports) == 4:  # hw
-    pass  # just use swports loaded from ports.json
+if len(swports) == 4:  # HW
+    recircports = [1] # pipe[0] on HW
+    ig_swports = [swports, [], [], []]
+    eg_swports = swports
+    
 else:            
     # Create a swports array based on pipe
     # Currently this is being carved up as follows for tofino model simultations:
@@ -134,21 +202,61 @@ else:
     # pipe[1]:  swports = [158, 156, 154, 152   ]
     # pipe[2]:  swports = [310, 308, 306, 304   ]
     # pipe[3]:  swports = [414, 412, 410, 408   ]            
-    if pip['pipe_scope'][0] == 0:
-        swports = swports[:-12]
-        recircports = [1]
-    elif pip['pipe_scope'][0] == 1:
-        swports = swports[-12:-8]
-        recircports = [129]
-    elif pip['pipe_scope'][0] == 2:
-        swports = swports[-8:-4]
-        recircports = [257]
-    elif pip['pipe_scope'][0] == 3:
-        swports = swports[-4:]
-        recircports = [385]
-    swports = swports[::-1] # reverse order so cpu port at end
 
-print('swports:', swports)
-print('recircports:', recircports)
+    recircports = [1, 129, 257, 385]
+    swports1 = swports[:-12]
+    swports1 = swports1[::-1] # reverse order so cpu port at end
+    swports2 = swports[-12:-8]
+    swports2 = swports2[::-1] # reverse order so cpu port at end
+    swports3 = swports[-8:-4]
+    swports3 = swports3[::-1] # reverse order so cpu port at end
+    swports4 = swports[-4:]
+    swports4 = swports4[::-1] # reverse order so cpu port at end
+
+    ig_swports = [swports1, swports2, swports3, swports4]
+
+    #Need to reverse order so cpu at end?
+
+    #print("EGPIPES = ", eg_pipes[0])
+#This will need more work if we need to support more than 1 Egress port
+    if eg_pipes[0] == 0:
+        eg_swports = swports[:-12]
+    elif  eg_pipes[0] == 1:
+        eg_swports = swports[-12:-8]
+    elif eg_pipes[0]  == 2:
+        eg_swports = swports[-8:-4]
+    elif eg_pipes[0] == 3:
+        eg_swports = swports[-4:]
+    eg_swports = eg_swports[::-1]
+
+#print("EG_PIPES_IDX = ", eg_pipes_idx[0])
+ectl = ectl_s[ eg_pipes[0]]
+ectl_F = ectl_s[eg_pipes[0]]
+#print("ECTL = ", ectl)
+
+
+
+#print('ig_swports:', ig_swports)
+#print('eg_swports:', eg_swports)
+#print('recircports:', recircports)
+
+
 
 ################################################################################
+# Pull in all table names so they can be clean at test startup
+
+BFRT_JSON_PATH = cfg['p4_devices'][0]['p4_programs'][0]['bfrt-config']
+bfrt_file = os.path.join(SDE_INSTALL_PATH, BFRT_JSON_PATH)
+
+print("Loading BF-RT File: (%s)" %bfrt_file)
+assert os.path.isfile(bfrt_file), \
+    "ERROR: BF-RT file (%s) not found." %bfrt_file
+
+bfrt_dict = json.load(open(bfrt_file))
+
+
+all_tables = []
+
+for btbl in bfrt_dict['tables']:
+    #print(btbl['name'])
+    all_tables.append(btbl['name'])

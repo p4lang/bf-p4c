@@ -302,6 +302,72 @@ def npb_model_dtel_flow_report(
 	return pkt
 
 ################################################################################
+
+def npb_model_dtel_queue_report(
+	# transport ethernet variables
+	dmac     = '00:01:02:03:04:05',
+	smac     = '00:06:07:08:09:0a',
+	vlan_en  = False,
+	vlan_pcp = 0,
+	vlan_vid = 0,
+	#pktlen   = 100,
+	#tos      = 0,
+	#sip      = '11.22.33.44',
+	#dip      = '55.66.77.88',
+	ig_port   = 0,
+	eg_port   = 0,
+	qid       = 0,
+
+	#outer variables
+	src_pkt_base = None
+	):
+
+	# -----------------
+	# build packet
+	# -----------------
+
+#Report Length (8b): Indicates the length of the Individual Report Header in a multiple of 4-byte words, including
+#the Individual Report Main Contents and Individual Report Inner Contents, but excluding the
+#length of the first 4-byte word (RepType, InType, Report Length, MD Length, D, Q, F, I, Rsvd).
+#For RepType codepoint 1 INT, the Report Length includes the lengths of RepMdBits, Domain
+#Specific ID, DSMdBits, DSMdstatus, Variable Optional Baseline Metadata, and Variable
+#Optional Domain Specific Metadata (see Section 3.3.1).
+#The Report Length value 0xFF is a special value that indicates a length greater than or equal
+#to 0xFF, extending to the end of the UDP payload, i.e. there are no subsequent individual
+#reports in this telemetry report.
+#MD Length (8b): Metadata Length
+#Indicates the length of metadata included in this report in a multiple of 4-byte words. This may
+#help the telemetry monitoring system determine where the Individual Report Inner Contents
+#begins. Note that this does not include the length of the fixed portion of the Individual Report
+#Main Contents.
+#For RepType codepoint 1 INT, this includes the length of the Variable Optional Baseline
+#Metadata and Variable Optional Domain Specific Metadata in 4-byte words (see Section 3.3.1).
+#D (1b): Dropped: Indicates that at least one packet matching a watchlist was dropped.
+#Q (1b): Congested Queue Association: Indicates the presence of congestion on a monitored queue.
+#F (1b): Tracked Flow Association :Indicates that this telemetry report is for a tracked flow, i.e. the packet matched a watchlist
+#somewhere (in case of INT-MD, INT-MX or IOAM) or locally (in case of INT-XD). The report
+#might include INT-MD or IOAM metadata in the truncated packet. Other telemetry reports
+#are likely to be received for the same tracked flow, from the same node and (in case of drop
+#reports, INT-MX, INT-XD or path changes) from other nodes.
+
+
+	#pkt = testutils.simple_udp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp, ip_src=sip, ip_dst=dip, ip_tos=tos, udp_sport=udp_sport, udp_dport=udp_dport) / src_pkt_inner 
+	#Hardcode these values until I figure out how the pipe is setting them.
+#	pkt = testutils.simple_udp_packet(pktlen=42, eth_dst=dmac, eth_src=smac, ip_src='11.22.33.44', ip_dst='55.66.77.88', ip_tos=0, udp_sport=0x1234, udp_dport=0x80, ip_flag=2, ip_id=0, with_udp_chksum=0) / \
+	pkt = testutils.simple_udp_packet(pktlen=42, eth_dst=dmac, eth_src=smac,                                             ip_tos=0, udp_sport=0,      udp_dport=0,    ip_flag=2, ip_id=0, with_udp_chksum=0) / \
+		scapy.DTEL(version=2, hw_id=0, seq_number=1, report_length=0x1300, d_q_f=2, ingress_port=ig_port, egress_port=eg_port, queue_id=qid, queue_occupancy=0x1234) / \
+		src_pkt_base 
+
+	# -----------------
+
+	# add a mask to the packet
+	pkt_masked = Mask(pkt)
+
+	# -----------------
+
+	return pkt
+
+################################################################################
 # NPB Model
 ################################################################################
 
@@ -420,6 +486,18 @@ def npb_model(
 	elif(transport_encap == EgressTunnelType.DTEL_FLOW_REPORT.value):
 		# encap with DTelv2_flow_report
 		model_pkt = npb_model_dtel_flow_report(dmac_nsh, smac_nsh, vlan_en_nsh_exp, vlan_pcp_nsh, vlan_vid_nsh,	ig_port, eg_port, qid, model_pkt)
+
+		# add a mask to the packet
+		model_pkt = Mask(model_pkt)
+
+		# are there other fields we can't easily predict?
+		model_pkt.set_do_not_care_scapy(DTEL, 'seq_number')
+		model_pkt.set_do_not_care_scapy(DTEL, 'queue_occupancy')
+		model_pkt.set_do_not_care_scapy(DTEL, 'ingress_timestamp')
+		model_pkt.set_do_not_care_scapy(DTEL, 'egress_timestamp')
+	elif(transport_encap == EgressTunnelType.DTEL_QUEUE_REPORT.value):
+		# encap with DTelv2_flow_report
+		model_pkt = npb_model_dtel_queue_report(dmac_nsh, smac_nsh, vlan_en_nsh_exp, vlan_pcp_nsh, vlan_vid_nsh, ig_port, eg_port, qid, model_pkt)
 
 		# add a mask to the packet
 		model_pkt = Mask(model_pkt)
