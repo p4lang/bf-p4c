@@ -79,12 +79,6 @@ set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
 set (SWITCH_P4_16_INC ${SWITCH_P4_16_ROOT}/p4src/shared)
 set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
 
-set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x0.p4)
-file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
-p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile" ${switch_p4_16} "" "-I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --set-max-power 44.0\" -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
-
 set (SWITCH_P4_16_X1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x1.p4)
 file (RELATIVE_PATH switch_p4_16_x1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X1})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -121,30 +115,23 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
          ^hash
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
-  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x0" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile x0_tofino -to 7200" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x0"
-         "all
-         ^hash
-         ^switch_l3.L3SVITest
-         ^switch_l2.L2LagTest")
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(
   "tofino/smoketest_switch_16_Tests_x1"
+  PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile_x1_profile"
+  )
+set_tests_properties(
   "tofino/smoketest_switch_16_Tests_x2"
-  "tofino/smoketest_switch_16_Tests_x0"
-  PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile"
+  PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile_x2_profile"
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_16_compile_x1_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_x2_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_x3_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 7300)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 7300)
-set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 7300)
 
 # Switch master MSDC_PROFILE tests
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)

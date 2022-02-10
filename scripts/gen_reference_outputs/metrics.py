@@ -108,7 +108,7 @@ class CoreMetrics():
         self.metrics['mau_power'] = Metric('MAU power estimate', ('mau', 'power', 'estimate'), limit = 10.0)
         self.metrics['parser_ingress_tcam_rows'] = Metric('Parser ingress tcam rows', ('parser', 'ingress', 'tcam_rows'), limit = 10.0)
         self.metrics['parser_egress_tcam_rows'] = Metric('Parser egress tcam rows', ('parser', 'egress', 'tcam_rows'), limit = 10.0)
-        self.metrics['compilation_time'] = Metric('Compilation time', ('compilation_time', ), limit = 20.0)
+        self.metrics['compilation_time'] = Metric('Compilation time', ('compilation_time', ), limit = 40.0)
 
     def display(self):
         dt = PrettyTable(['Metric', 'Value'])
