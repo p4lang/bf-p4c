@@ -1241,6 +1241,11 @@ TablePlacement::GatewayMergeChoices
                      "liveness check");
                 continue;
             }
+            if (t->getAnnotation("separate_gateway")) {
+                LOG2("\tCannot merge " << table->name << " with " << t->name << " because of "
+                     "separate_gateway annotation");
+                continue;
+            }
 
             // Check if we have already seen this table
             if (rv.count(t))
@@ -1989,6 +1994,10 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
                 rv->stage_advance_log = "gateway dependency on table " + p->table->name;
+            } else if (p->gw && deps.happens_phys_before(p->gw, rv->table)) {
+                rv->stage++;
+                LOG2("  - dependency between " << p->gw->name << " and table advances stage");
+                rv->stage_advance_log = "separate gateway dependency on table " + p->table->name;
             } else if ((!ignoreContainerConflicts &&
                         deps.container_conflict(p->table, rv->table)) ||
                        (enable_unavoidable_container_conflict && ignoreContainerConflicts &&

@@ -1494,6 +1494,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/post_midend_constant_folding.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_sep_gat.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_stage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/register_read_write.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp

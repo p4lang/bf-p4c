@@ -83,6 +83,7 @@ DEFINE_PRAGMA_CLASS(PragmaUseHashAction);
 DEFINE_PRAGMA_CLASS(PragmaUserAnnotation);
 DEFINE_PRAGMA_CLASS(PragmaWays);
 DEFINE_PRAGMA_CLASS(PragmaNoFieldInits);
+DEFINE_PRAGMA_CLASS(PragmaSeparateGateway);
 // meter
 DEFINE_PRAGMA_CLASS(PragmaRed);
 DEFINE_PRAGMA_CLASS(PragmaYellow);

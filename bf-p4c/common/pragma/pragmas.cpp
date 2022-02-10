@@ -959,6 +959,17 @@ const char *PragmaNoFieldInits::help = "@pragma no_field_initialization \n"
     "Specifies that the associated match table should not allow insertion of "
     "field initialization instructions into its actions.";
 
+const char *PragmaSeparateGateway::name = "separate_gateway";
+const char *PragmaSeparateGateway::description =
+    "Only power up the match table lookup if the gateway conditions are satisfied";
+const char *PragmaSeparateGateway::help = "@pragma separate_gateway \n"
+    "+attached to P4 match tables\n"
+    "\n"
+    "Specifies that the associated match table must not be placed in the same stage as the "
+    "controlling gateway. This is to ensure a lookup on the match table will only occurs if the "
+    "controlling gateway enable it. This pragma can be used to save power but will ultimately "
+    "extend dependency chain leading to potential fitting issues.";
+
 const char *PragmaRed::name = "red";
 const char *PragmaRed::description = "To be documented";  // FIXME
 const char *PragmaRed::help = "To be documented";

@@ -1249,7 +1249,8 @@ void DependencyGraph::fill_dep_stages_from_topo(
                         [&] (int sz, const IR::MAU::Table* later) {
                     int stage_addition = 0;
                     if (dep_type_map.count(table) && dep_type_map.at(table).count(later)
-                        && !(is_ctrl_edge(dep_type_map.at(table).at(later)))
+                        && (!(is_ctrl_edge(dep_type_map.at(table).at(later))) ||
+                            later->getAnnotation("separate_gateway"))
                         && dep_type_map.at(table).at(later) != DependencyGraph::CONT_CONFLICT
                         && dep_type_map.at(table).at(later) != DependencyGraph::REDUCTION_OR_READ
                         && dep_type_map.at(table).at(later) != DependencyGraph::REDUCTION_OR_OUTPUT
@@ -1501,8 +1502,11 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
 
     for (boost::tie(out, out_end) = boost::edges(dep_graph); out != out_end; ++out) {
         auto dep = dep_graph[*out];
+        auto vertex_later = boost::target(*out, dep_graph);
+        const auto* table_later = curr_dg.get_vertex(vertex_later);
         if ((include_anti || !(dg.is_anti_edge(dep)))
-            && (include_control || !(dg.is_ctrl_edge(dep)))
+            && (include_control || !(dg.is_ctrl_edge(dep)) ||
+                table_later->getAnnotation("separate_gateway"))
             && dep != DependencyGraph::CONT_CONFLICT
             && dep != DependencyGraph::REDUCTION_OR_OUTPUT
             && dep != DependencyGraph::REDUCTION_OR_READ) {
@@ -1567,14 +1571,14 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
             const auto* table = curr_dg.get_vertex(v);
             for (; out != out_end; ++out) {
                 auto dep = dep_graph[*out];
+                auto vertex_later = boost::target(*out, dep_graph);
+                const auto* table_later = curr_dg.get_vertex(vertex_later);
                 if ((include_anti || !(dg.is_anti_edge(dep)))
-                    && (include_control || !(dg.is_ctrl_edge(dep)))
+                    && (include_control || !(dg.is_ctrl_edge(dep)) ||
+                        table_later->getAnnotation("separate_gateway"))
                     && dep != DependencyGraph::CONT_CONFLICT
                     && dep != DependencyGraph::REDUCTION_OR_OUTPUT
                     && dep != DependencyGraph::REDUCTION_OR_READ) {
-                    auto vertex_later = boost::target(*out, dep_graph);
-                    const auto* table_later = curr_dg.get_vertex(vertex_later);
-
                     happens_after_work_map[table_later].setbit(table_to_id.at(table));
                     happens_after_work_map[table_later] |= happens_after_work_map[table];
                     n_depending_on[vertex_later]--;
@@ -2251,7 +2255,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 DependencyGraph::dependencies_t dep = dg.g[*edge];
                 if (dep == DependencyGraph::CONT_CONFLICT) continue;
                 if (dep == DependencyGraph::ACTION_READ || dep == DependencyGraph::IXBAR_READ ||
-                    dep == DependencyGraph::OUTPUT) {
+                    dep == DependencyGraph::OUTPUT || tbl->getAnnotation("separate_gateway")) {
                     min_stage_from_src = src_vertex_stage + 1;
                 } else if (dg.is_ctrl_edge(dep) ||
                            dep == DependencyGraph::CONT_CONFLICT ||

@@ -115,6 +115,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaUserAnnotation, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaWays, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaNoFieldInits, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaSeparateGateway, PARSE_EMPTY, extPragma);
 
         BFN_PARSE(PragmaRed,    PARSE, Expression, intPragma);
         BFN_PARSE(PragmaYellow, PARSE, Expression, intPragma);

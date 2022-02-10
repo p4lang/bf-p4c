@@ -72,6 +72,15 @@ void DeterminePowerUsage::find_stage_dependencies() {
               LOG4("    So dependency to previous stage will be set to match.");
               break;
           } }
+          // Force a match dependency on stage with separate_gateway annotation because we want
+          // to lower down the power usage even if predication would resolve it properly.
+          if (t1->getAnnotation("separate_gateway")) {
+            worst_dep = DEP_MATCH;
+            LOG4("  Table " << t1->externalName() << " (stage " << stage
+              << ") uses separate_gateway annotation");
+            LOG4("    So dependency to previous stage will be set to match.");
+            break;
+          }
           auto control_graph = graphs_->get_graph(t1->gress);
           for (auto* t2 : mau_features_->stage_to_tables_[gress][prev_stage]) {
             if (t1->gress == t2->gress &&
