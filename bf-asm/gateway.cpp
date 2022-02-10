@@ -399,7 +399,7 @@ void GatewayTable::pass1() {
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
     if (input_xbar) {
         input_xbar->pass1();
-        if (input_xbar->match_group() < 0)
+        if (Target::GATEWAY_SINGLE_XBAR_GROUP() && input_xbar->match_group() < 0)
             error(input_xbar->lineno, "Gateway match keys must be in a single ixbar group"); }
     check_match_key(this, match, "match", 44);
     check_match_key(this, xor_match, "xor", 32);

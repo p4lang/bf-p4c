@@ -29,8 +29,7 @@ int InputXbar::Group::max_index(Group::type_t t) {
         case EXACT:     return 2;
         case TERNARY:   return 16;
         case GATEWAY:   return 1;
-        case TRIE:      return 1;
-        case ACTION:    return 1;
+        case XCMP:      return 4;
         default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
         break;
 #endif  /* HAVE_FLATROCK */
@@ -57,9 +56,8 @@ int InputXbar::Group::group_size(Group::type_t t) {
         switch (t) {
         case EXACT:     return 20*8;
         case TERNARY:   return 5*8;
-        case GATEWAY:   return 6*8;
-        case TRIE:      return 16*8;
-        case ACTION:    return 64*8;
+        case GATEWAY:   return 8*8;
+        case XCMP:      return 16*8;
         default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
         break;
 #endif  /* HAVE_FLATROCK */
@@ -74,8 +72,7 @@ const char *InputXbar::Group::group_type(Group::type_t t) {
     case TERNARY: return "ternary";
     case BYTE:    return "byte";
     case GATEWAY: return "gateway";
-    case TRIE:    return "trie";
-    case ACTION:  return "action";
+    case XCMP:    return "xcmp";
     default:      return ""; }
 }
 
@@ -106,8 +103,7 @@ InputXbar::Group InputXbar::group_name(bool tern, const value_t &key) const {
     case TOFINO5:
         if (key.type == tSTR) {
             if (key == "gateway") return Group(Group::GATEWAY, 0);
-            if (key == "action") return Group(Group::ACTION, 0);
-            if (key == "trie") return Group(Group::TRIE, 0);
+            if (key == "xcmp") return Group(Group::XCMP, 0);
         } else if (key.type == tCMD && key.vec.size == 2) {
             if (key[0] == "exact") {
                 if (key[1] == "byte") return Group(Group::EXACT, 0);

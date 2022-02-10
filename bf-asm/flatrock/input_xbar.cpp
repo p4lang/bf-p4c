@@ -23,10 +23,7 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
             for (auto &input : group.second)
                 gw_key_cfg[input.lo/8U].sel = input.what->reg.ixbar_id();
             break; }
-        case Group::TRIE:
-            BUG("TBD");
-            break;
-        case Group::ACTION:
+        case Group::XCMP:
             BUG("TBD");
             break;
         default:

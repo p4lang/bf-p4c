@@ -34,7 +34,7 @@ class InputXbar {
  public:
     struct Group {
         unsigned short                          index;
-        enum type_t { INVALID, EXACT, TERNARY, BYTE, GATEWAY, TRIE, ACTION }
+        enum type_t { INVALID, EXACT, TERNARY, BYTE, GATEWAY, XCMP }
                                                 type;
         Group(Group::type_t t, unsigned i) : index(i), type(t) {}
         explicit operator bool() const { return type != INVALID; }

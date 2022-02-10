@@ -77,7 +77,7 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
             if (l.group == 0 && byte_use[l.byte].second == byte.lo) {
                 byte.loc = Loc(0, l.byte);
                 break; }
-            if (allow_word && l.group == 1) {
+            if (allow_word && (byte.flags & IXBar::Use::NeedXor) == 0 && l.group == 1) {
                 byte.loc = l;
                 break; } }
         if (!byte.loc)
@@ -184,10 +184,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     ContByteConversion map_alloc;
 
     for (auto &info : collect->info) {
+        int flags = 0;
         if (!info.second.xor_with.empty()) {
-            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%sTofino5 does not support "
-                  "comparisons of two fields in a condition", tbl->srcInfo);
-            return false;
+            flags |= IXBar::Use::NeedXor;
+            // FIXME -- is this enough for the alloc constraints?  tofino/input_xbar.cpp
+            // has a FIXME here too...
         } else if (info.second.need_range) {
             error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%sTofino5 does not support "
                   "range comparisons in a condition", tbl->srcInfo);
@@ -198,9 +199,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             aliasSourceName = collect->info_to_uses[&info.second];
         }
         if (aliasSourceName)
-            add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName);
+            add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName,
+                    &info.first.range(), flags);
         else
-            add_use(map_alloc, info.first.field(), phv, tbl, boost::none);
+            add_use(map_alloc, info.first.field(), phv, tbl, boost::none,
+                    &info.first.range(), flags);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
     create_alloc(map_alloc, alloc);

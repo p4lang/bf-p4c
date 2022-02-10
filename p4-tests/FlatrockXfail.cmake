@@ -34,6 +34,12 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/flatrock/gateway1.p4
+  extensions/p4_tests/p4_16/flatrock/gateway2.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
   "Compiler Bug: metadata cannot reach here"
   extensions/p4_tests/p4_16/flatrock/t5na_bridged_md.p4
   )

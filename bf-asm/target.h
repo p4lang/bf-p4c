@@ -71,6 +71,7 @@
     M(int, DEPARSER_MAX_POV_PER_USE) \
     M(int, END_OF_PIPE) \
     M(int, GATEWAY_PAYLOAD_GROUPS) \
+    M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
     M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
     M(int, LONG_BRANCH_TAGS) \
@@ -204,6 +205,7 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_FD_ENTRIES = 192,
         END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 1,
+        GATEWAY_SINGLE_XBAR_GROUP = true,
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         LONG_BRANCH_TAGS = 0,
@@ -334,6 +336,7 @@ class Target::JBay : public Target {
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
+        GATEWAY_SINGLE_XBAR_GROUP = true,
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         LONG_BRANCH_TAGS = 8,
@@ -508,6 +511,7 @@ class Target::Cloudbreak : public Target {
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
+        GATEWAY_SINGLE_XBAR_GROUP = true,
         INSTR_SRC2_BITS = 5,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
@@ -616,6 +620,7 @@ class Target::Flatrock : public Target {
         DEPARSER_MAX_FD_ENTRIES = 256,  // actuall up to 32 "strings", each up to 16 bytes
         END_OF_PIPE = 0xfff,
         GATEWAY_PAYLOAD_GROUPS = 4,
+        GATEWAY_SINGLE_XBAR_GROUP = false,
         INSTR_SRC2_BITS = 0,
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
