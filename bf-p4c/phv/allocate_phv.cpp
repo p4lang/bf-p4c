@@ -723,10 +723,10 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
         if (deparsed_cannot_read_clot && clot.allocated_unmodified_undigested(field)) {
             info = liverange_db.default_liverange();
         }
-        for (const auto& r : info->disjoint_ranges()) {
+        for (const auto& r : PHV::LiveRangeInfo::merge_invalid_ranges(info->disjoint_ranges())) {
             PHV::AllocSlice clone = slice;
             clone.setIsPhysicalStageBased(true);
-            clone.setLiveness(r.first, r.second);
+            clone.setLiveness(r.start, r.end);
             rst.emplace_back(clone);
         }
     }
@@ -4264,8 +4264,8 @@ boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
                 const auto default_lr =
                     utils_i.physical_liverange_db.default_liverange()->disjoint_ranges().front();
                 for (auto& slice : candidate_slices) {
-                    slice.setLiveness(default_lr.first, default_lr.second);
-                    LOG5("update deparser-zero slice physical liverange to full pipeline: "
+                    slice.setLiveness(default_lr.start, default_lr.end);
+                    LOG6("update deparser-zero slice physical liverange to full pipeline: "
                          << slice);
                 }
             }

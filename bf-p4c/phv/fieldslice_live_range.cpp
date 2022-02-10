@@ -141,9 +141,8 @@ bool LiveRangeInfo::can_overlay(const LiveRangeInfo& other) const {
     return true;
 }
 
-std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::disjoint_ranges()
-    const {
-    std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> rst;
+std::vector<LiveRange> LiveRangeInfo::disjoint_ranges() const {
+    std::vector<LiveRange> rst;
     boost::optional<int> last_defined_read;
     for (int i = 0; i < int(lives_i.size()); i++) {
         if (lives_i[i] == OpInfo::DEAD) {
@@ -157,7 +156,7 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
         // values from input buffer instead of PHV containers.
         if (i != 0 && (lives_i[i] == OpInfo::READ || lives_i[i] == OpInfo::READ_WRITE)) {
             const auto uninit_read = std::make_pair(i - 1, PHV::FieldUse(PHV::FieldUse::READ));
-            const auto empty_liverange = std::make_pair(uninit_read, uninit_read);
+            const LiveRange empty_liverange{uninit_read, uninit_read};
             if (lives_i[i] == OpInfo::READ) {
                 rst.emplace_back(empty_liverange);
                 LOG6("uninitialized read: " << uninit_read);
@@ -177,19 +176,46 @@ std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> LiveRangeInfo::
         while (j < int(lives_i.size()) && lives_i[j] == OpInfo::LIVE) ++j;
         if (j == int(lives_i.size()) ||
             lives_i[j] == OpInfo::DEAD || lives_i[j] == OpInfo::WRITE) {
-            rst.emplace_back(std::make_pair(start, start));
+            rst.emplace_back(start, start);
             i = j - 1;
             continue;
         }
         BUG_CHECK(lives_i[j] != OpInfo::WRITE, "invalid end of live range: %1% of %2%", j, *this);
         auto end = std::make_pair(j - 1, PHV::FieldUse(PHV::FieldUse::READ));
-        rst.emplace_back(std::make_pair(start, end));
+        rst.emplace_back(start, end);
         i = j;
         // when the end is READ_WRITE, it is also a start of the next live range.
         if (lives_i[j] == OpInfo::READ_WRITE) {
             last_defined_read = i;
             i--;
         }
+    }
+    return rst;
+}
+
+std::vector<LiveRange> LiveRangeInfo::merge_invalid_ranges(const std::vector<LiveRange>& ranges) {
+    // premise bug check.
+    for (auto itr = ranges.begin(); itr != ranges.end() && std::next(itr) != ranges.end(); ++itr) {
+        auto next = std::next(itr);
+        BUG_CHECK((*itr).end < (*next).start,
+                  "live ranges are not sorted or not disjoint: %1%, %2%", *itr, *next);
+    }
+    std::vector<LiveRange> rst;
+    const auto is_invalid = [&](const LiveRange& lr) { return lr.start == lr.end; };
+    for (auto itr = ranges.begin(); itr != ranges.end(); ++itr) {
+        if (!is_invalid(*itr)) {
+            rst.emplace_back(*itr);
+            continue;
+        }
+        // find consecutive invalid range of the same type (read-only or write-only).
+        auto start = (*itr).start;
+        auto next = std::next(itr);
+        while (next != ranges.end() && is_invalid(*next) && start.second == (*next).start.second) {
+            next = std::next(next);
+        }
+        next--;
+        rst.emplace_back(LiveRange{start, (*next).end});
+        itr = next;
     }
     return rst;
 }

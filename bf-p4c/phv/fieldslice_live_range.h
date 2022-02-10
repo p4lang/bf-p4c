@@ -55,40 +55,48 @@ class LiveRangeInfo {
     OpInfo& stage(int i) { return lives_i[i + 1]; }
     const OpInfo& stage(int i) const { return lives_i[i + 1]; }
 
-    // return live info in a vector: [Parser 0 1 ... max_stage Deparser]
+    /// @returns live info in a vector: [Parser 0 1 ... max_stage Deparser]
     const safe_vector<OpInfo>& vec() const { return lives_i; }
 
-    // can_overlay returns true when this and @p other can be overlaid, defined as:
-    // (1) For any stage *s*, at least one of OpInfo at *s* of this or @p other is dead.
-    // (2) Except for the write-after-read case that:
-    //     For example
-    //            P 0 1 2 3 4 D
-    //        A   W L L R D D D
-    //        B   D D D W L L R
-    //    A and B can be overlaid because the Write at stage 2 of B actually happens after
-    //    the Read of A at stage 2, i.e., for write, we require Dead in the next stage, instead
-    //    of the corresponding stage. Note that, we cannot overlay in this case:
-    //            P 0 1 2  3 4 D
-    //        A   W L L R  D D D
-    //        B   D D W RW L L R
-    // XXX(yumin): we do not need to use this function during PHV allocation because
-    // AllocSlices already have the presice live range info already.
-    // This function is kept here for future overlay analysis before PHV allocation.
+    /// @returns true when this and @p other can be overlaid, defined as:
+    /// (1) For any stage *s*, at least one of OpInfo at *s* of this or @p other is dead.
+    /// (2) Except for the write-after-read case that:
+    ///     For example
+    ///            P 0 1 2 3 4 D
+    ///        A   W L L R D D D
+    ///        B   D D D W L L R
+    ///    A and B can be overlaid because the Write at stage 2 of B actually happens after
+    ///    the Read of A at stage 2, i.e., for write, we require Dead in the next stage, instead
+    ///    of the corresponding stage. Note that, we cannot overlay in this case:
+    ///            P 0 1 2  3 4 D
+    ///        A   W L L R  D D D
+    ///        B   D D W RW L L R
+    /// XXX(yumin): we do not need to use this function during PHV allocation because
+    /// AllocSlices already have the presice live range info already.
+    /// This function is kept here for future overlay analysis before PHV allocation.
     bool can_overlay(const LiveRangeInfo& other) const;
 
-    // return a vector of disjoint live ranges. For example
-    //         P 0 1 2 3 4 ... D
-    //   Foo   W R D W L L  L  R
-    //   Foo.disjoint_ranges() = [(-1W, 0R), (2W, 12R)] // if tofino
-    // stage of parse is -1, mau stages starts from 0 and deparser is device::max_stage().
-    // Uninitialized reads, that are not caught by parser implicit init or
-    // when auto-init-metadata are not enabled, will have a short live range [xR, xR].
-    // These short live ranges should be treated as overlayable to any other live ranges.
-    // contract: for every paired def and use, all stages in between are marked as LIVE.
-    // NOTE: Even if IDs of units seem to be using the same schema as min-stage-based
-    // StageAndAccess, they are not. The previous StageAndAccess use max_min_stage + 1
-    // as deparser, which was very error-prone because dependency graph can be changed.
-    std::vector<std::pair<PHV::StageAndAccess, PHV::StageAndAccess>> disjoint_ranges() const;
+    /// @returns a vector of disjoint live ranges. For example
+    ///         P 0 1 2 3 4 ... D
+    ///   Foo   W R D W L L  L  R
+    ///   Foo.disjoint_ranges() = [(-1W, 0R), (2W, 12R)] // if tofino
+    /// stage of parse is -1, mau stages starts from 0 and deparser is device::max_stage().
+    /// Uninitialized reads, that are not caught by parser implicit init or
+    /// when auto-init-metadata are not enabled, will have a short live range [xR, xR].
+    /// These short live ranges should be treated as overlayable to any other live ranges.
+    /// contract: for every paired def and use, all stages in between are marked as LIVE.
+    /// NOTE: Even if IDs of units seem to be using the same schema as min-stage-based
+    /// StageAndAccess, they are not. The previous StageAndAccess use max_min_stage + 1
+    /// as deparser, which was very error-prone because dependency graph can be changed.
+    std::vector<LiveRange> disjoint_ranges() const;
+
+    /// @returns a new vector of live ranges that consecutive invalid live ranges will be
+    /// merged into one. For example,
+    /// {(1R, 1R), (2R, 2R), (5R, 5R), (6W, 10R)} => {(1R, 5R), (6W, 10R)}
+    /// {(1R, 1W), (2W, 2W), (3W, 3W)} => {(1R, 1W), (2W, 3W)}
+    /// premise: @p ranges must be disjoint and sorted in increasing order of LiveRange.
+    /// a compiler BUG will be thrown if not satisfied.
+    static std::vector<LiveRange> merge_invalid_ranges(const std::vector<LiveRange>& ranges);
 };
 
 LiveRangeInfo::OpInfo operator|(const LiveRangeInfo::OpInfo&, const LiveRangeInfo::OpInfo&);
@@ -99,9 +107,9 @@ std::ostream &operator<<(std::ostream &out, const LiveRangeInfo& lr);
 
 class IFieldSliceLiveRangeDB {
  public:
-    // return a const pointer to live range info, nullptr if not exist.
+    /// @returns a const pointer to live range info, nullptr if not exist.
     virtual const LiveRangeInfo* get_liverange(const PHV::FieldSlice &) const = 0;
-    // return a default live range that should live from parser to deparser.
+    /// @returns a default live range that should live from parser to deparser.
     virtual const LiveRangeInfo* default_liverange() const = 0;
 };
 
@@ -145,19 +153,19 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
         FieldSliceLiveRangeDB &self;
         const PHV::Pragmas &pragmas;
 
-        // returns the Location of @p unit.
-        // When is_read is true, then for fields marked as non_deparsed,
-        // locations of deparser units will be boost::none;
-        // When is_read is false, then for fields marked as no_implicit_init,
-        // locations of parser implicit init unit will be boost::none,
-        // and for fields marked as not_parsed_fields(), locations of parser unit will be none.
+        /// @returns the Location of @p unit.
+        /// When is_read is true, then for fields marked as non_deparsed,
+        /// locations of deparser units will be boost::none;
+        /// When is_read is false, then for fields marked as no_implicit_init,
+        /// locations of parser implicit init unit will be boost::none,
+        /// and for fields marked as not_parsed_fields(), locations of parser unit will be none.
         boost::optional<Location> to_location(
                 const PHV::Field *field, const FieldDefUse::locpair& loc, bool is_read) const;
 
-        // update @p liverange based on @p loc and @p is_read.
-        // @returns the range of stages (including parde) that has been updated. Indexes of stages
-        // are following the LiveRangeInfo class:
-        // -1 = parser, numStages() = deparser, mau stages are mapped by stage numbers.
+        /// update @p liverange based on @p loc and @p is_read.
+        /// @returns the range of stages (including parde) that has been updated. Indexes of stages
+        /// are following the LiveRangeInfo class:
+        /// -1 = parser, numStages() = deparser, mau stages are mapped by stage numbers.
         std::pair<int, int> update_live_status(LiveRangeInfo &liverange, const Location &loc,
                                                bool is_read) const;
 
@@ -171,7 +179,7 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
             return pragmas.pa_no_init().getFields();
         }
 
-        // a entry point to calculate the physical live range
+        /// a entry point to calculate the physical live range
         void end_apply() override;
 
      public:
@@ -204,9 +212,9 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
         setter = new DBSetter(phv, clot, backtracker, defuse, fs_action_map, *this, pragmas);
         addPasses({fs_action_map, setter});
     }
-    // return a const pointer to live range info, nullptr if not exist.
+    /// @returns a const pointer to live range info, nullptr if not exist.
     const LiveRangeInfo* get_liverange(const PHV::FieldSlice&) const override;
-    // default liverange that live from parser to deparser.
+    /// @returns default liverange that live from parser to deparser.
     const LiveRangeInfo* default_liverange() const override;
 };
 
