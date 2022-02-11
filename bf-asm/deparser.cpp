@@ -597,7 +597,8 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
             continue;
         if (digest.type->name == "learning")
             learning_table[digest.type->gress] = &digest;
-        else if (digest.type->name == "resubmit")
+        else if (digest.type->name == "resubmit" ||
+                 digest.type->name == "resubmit_preserving_field_list")
             resubmit_table[digest.type->gress] = &digest;
         else if (digest.type->name == "mirror")
             mirror_table[digest.type->gress] = &digest;

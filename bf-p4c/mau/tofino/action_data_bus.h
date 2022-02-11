@@ -7,6 +7,7 @@
 #include "lib/alloc.h"
 #include "lib/autoclone.h"
 #include "lib/safe_vector.h"
+#include "bf-p4c/common/alloc.h"
 
 namespace Tofino {
 
@@ -54,9 +55,9 @@ struct ActionDataBus : public ::ActionDataBus {
     static constexpr int RANDOM_NUMBER_GENERATORS = 2;
 
  private:
-    Alloc2D<cstring, ActionData::SLOT_TYPES, OUTPUTS> cont_use;
-    Alloc1D<cstring /* table name */, ADB_BYTES> total_use;
-    Alloc2D<cstring, RANDOM_NUMBER_GENERATORS, IMMED_SECT> rng_use;
+    BFN::Alloc2D<cstring, ActionData::SLOT_TYPES, OUTPUTS> cont_use;
+    BFN::Alloc1D<cstring /* table name */, ADB_BYTES> total_use;
+    BFN::Alloc2D<cstring, RANDOM_NUMBER_GENERATORS, IMMED_SECT> rng_use;
 
     bitvec cont_in_use[ActionData::SLOT_TYPES];
     bitvec total_in_use;

@@ -97,6 +97,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_14_samples/axon.p4
+  testdata/p4_14_samples/simple_nat.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -233,14 +234,9 @@ p4c_add_xfail_reason("tofino2"
   "error: .*: declaration not found"
   # We fail to translate `generate_digest()`.
   testdata/p4_14_samples/issue1058.p4
-  # We fail to translate `resubmit()`.
-  testdata/p4_14_samples/resubmit.p4
   # Checksum16 is deprecated
   extensions/p4_tests/p4_16/stf/ipv4_options.p4
-  # We fail to translate `standard_metadata.instance_type`.
-  testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
-  testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in jna
   testdata/p4_14_samples/truncate.p4
 )
@@ -529,4 +525,10 @@ p4c_add_xfail_reason("tofino2"
   "Bug: Need to update liveranges"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
+)
+
+# This is tracked in P4C-2829, should be removed once that is fixed
+p4c_add_xfail_reason("tofino2"
+  "error: Multiple matches in .* matcher"
+  testdata/p4_14_samples/copy_to_cpu.p4
 )

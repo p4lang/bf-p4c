@@ -7,6 +7,7 @@
 #include "lib/alloc.h"
 #include "lib/autoclone.h"
 #include "lib/safe_vector.h"
+#include "bf-p4c/common/alloc.h"
 
 namespace Flatrock {
 
@@ -26,9 +27,9 @@ struct ActionDataBus : public ::ActionDataBus {
     static constexpr int XCMP_UNITS = 1;
 
  private:
-    Alloc1D<cstring, MAX_ADB_BYTES> adb_use;
+    BFN::Alloc1D<cstring, MAX_ADB_BYTES> adb_use;
     bitvec total_in_use;  // duplicates adb_use (1 bit per byte)
-    Alloc2D<cstring, ACTION_UNITS, ALUS_PER_ACTION_UNIT> action_alu_use;
+    BFN::Alloc2D<cstring, ACTION_UNITS, ALUS_PER_ACTION_UNIT> action_alu_use;
 
     struct Use : public ::ActionDataBus::Use {
         Use *clone() const override { return new Use(*this); }

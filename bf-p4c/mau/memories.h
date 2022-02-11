@@ -8,6 +8,7 @@
 #include "ir/ir.h"
 #include "lib/alloc.h"
 #include "lib/safe_vector.h"
+#include "bf-p4c/common/alloc.h"
 
 struct Memories {
     /* track memory allocations within a single stage */
@@ -180,6 +181,6 @@ struct Memories {
 };
 
 template<int R, int C>
-std::ostream &operator<<(std::ostream&, const Alloc2D<cstring, R, C>& alloc2d);
+std::ostream &operator<<(std::ostream&, const BFN::Alloc2D<cstring, R, C>& alloc2d);
 
 #endif /* BF_P4C_MAU_MEMORIES_H_ */

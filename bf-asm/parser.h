@@ -292,10 +292,10 @@ class Parser {
     bitvec                              phv_allow_bitwise_or, phv_allow_clear_on_write;
     bitvec                              phv_init_valid;
     int                                 hdr_len_adj = 0, meta_opt = 0;
-    std::vector<Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use;
-    Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init;
+    std::vector<std::array<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use;
+    std::array<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init = {};
     static std::map<gress_t, std::map<std::string, std::vector<State::Match::Clot *>>> clots;
-    static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use;
+    static std::array<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use;
     static unsigned                                                     max_handle;
     int                                                                 parser_handle = -1;
     RateLimit                           rate_limit;

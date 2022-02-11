@@ -245,7 +245,8 @@ CONVERT_PRIMITIVE(invalidate_digest) {
                                        {});
 }
 
-CONVERT_PRIMITIVE(recirculate, 5) {
+static const IR::Statement *
+convertRecirculate(ProgramStructure *structure, const IR::Primitive *primitive) {
     if (primitive->operands.size() != 1) return nullptr;
     if (use_v1model())
         structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
@@ -257,6 +258,14 @@ CONVERT_PRIMITIVE(recirculate, 5) {
     auto recirc = new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw",
                                        { new IR::Argument(port) });
     return recirc;
+}
+
+CONVERT_PRIMITIVE(recirculate, 5) {
+    return convertRecirculate(structure, primitive);
+}
+
+CONVERT_PRIMITIVE(recirculate_preserving_field_list, 5) {
+    return convertRecirculate(structure, primitive);
 }
 
 // This function is identical to the one in frontend in all aspects except that

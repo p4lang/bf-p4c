@@ -173,7 +173,7 @@ void AsmParser::output(json::map &ctxt_json) {
 }
 
 std::map<gress_t, std::map<std::string, std::vector<Parser::State::Match::Clot *>>> Parser::clots;
-Alloc1D<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use;
+std::array<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use;
 unsigned                                                             Parser::max_handle = 0;
 
 static void collect_phv_vector(value_t value, gress_t gress, bitvec& bv) {
@@ -619,7 +619,7 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
 
 void Parser::Checksum::pass1(Parser *parser) {
     if (parser->checksum_use.empty())
-        parser->checksum_use.resize(Target::PARSER_CHECKSUM_UNITS());
+        parser->checksum_use.resize(Target::PARSER_CHECKSUM_UNITS(), {});
     if (addr >= 0) {
         if (addr >= PARSER_CHECKSUM_ROWS) {
             error(lineno, "invalid %sgress parser checksum address %d", gress ? "e" : "in", addr);

@@ -822,9 +822,9 @@ class FindHeaderReference : public Inspector {
             use.setbit(intrinsic_metadata.at("eg_intr_md_for_dprsr"));
         } else if (p->name == "generate_digest") {
             use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
-        } else if (p->name == "recirculate") {
+        } else if (p->name == "recirculate" || p->name == "recirculate_preserving_field_list") {
             use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"));
-        } else if (p->name == "resubmit") {
+        } else if (p->name == "resubmit" || p->name == "resubmit_preserving_field_list") {
             use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
         }
     }
@@ -2658,7 +2658,7 @@ void CollectDigestFields::convertFieldList(const IR::Primitive* prim, size_t fie
 }
 
 bool CollectDigestFields::preorder(const IR::Primitive* prim) {
-    if (prim->name == "resubmit") {
+    if (prim->name == "resubmit" || prim->name == "resubmit_preserving_field_list") {
         convertFieldList(prim, 1, structure->resubmitIndexHashes);
     }
     if (prim->name == "clone_ingress_pkt_to_egress") {
@@ -2670,7 +2670,7 @@ bool CollectDigestFields::preorder(const IR::Primitive* prim) {
     if (prim->name == "generate_digest") {
         convertFieldList(prim, 2, structure->digestIndexHashes);
     }
-    if (prim->name == "recirculate") {
+    if (prim->name == "recirculate" || prim->name == "recirculate_preserving_field_list") {
         // exclude recirculate(68) and recirculate(local_port)
         auto operand = prim->operands.at(0);
         if (operand->is<IR::Constant>() || operand->is<IR::ActionArg>())

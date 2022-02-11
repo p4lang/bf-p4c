@@ -68,7 +68,7 @@ IXBar::IXBar() {
 void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        std::multimap<PHV::Container, Loc> &fields,
-                       Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                       BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
                        bool allow_word) {
     // for gateways, 'allow_word' allows use of the fixed bytes as they are set up
     // as group 1 (no actual word inputs to gateway)
@@ -85,7 +85,7 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 }
 
 bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
-                     Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use) {
+                     BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use) {
     // Find the first free byte slot
     auto next = std::find_if(byte_use.begin(), byte_use.end(),
             [](std::pair<PHV::Container, int> &a) { return !a.first; } );
@@ -99,8 +99,8 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
 }
 
 bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
-                     Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                     Alloc1Dbase<PHV::Container> &word_use) {
+                     BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                     BFN::Alloc1Dbase<PHV::Container> &word_use) {
     if (to_alloc.empty()) return true;
     std::map<PHV::Container, std::set<IXBar::Use::Byte *>> by_word;
     for (auto *byte : to_alloc) {

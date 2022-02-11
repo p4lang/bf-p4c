@@ -74,3 +74,9 @@ p4c_add_xfail_reason("tofino"
   "error: The slice list below contains .* bits, the no_split attribute prevents it from being split any further, and it is too large to fit in the largest PHV containers."
   testdata/p4_16_samples/issue1607-bmv2.p4
 )
+
+p4c_add_xfail_reason("tofino"
+# Fail on purpose due to indirect tables not being mutually exclusive
+  "table .* and table .* cannot share .*"
+  testdata/p4_16_samples/issue2844-enum.p4
+  )

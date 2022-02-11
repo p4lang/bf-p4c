@@ -135,29 +135,29 @@ struct Memories : public ::Memories {
     };
     friend std::ostream &operator<<(std::ostream &, const result_bus_info &);
 
-    Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
+    BFN::Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
-    Alloc2D<cstring, SRAM_ROWS, STASH_UNITS>           stash_use;
-    Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
-    Alloc2D<cstring, SRAM_ROWS, GATEWAYS_PER_ROW>      gateway_use;
-    Alloc2D<search_bus_info, SRAM_ROWS, BUS_COUNT>     sram_search_bus;
-    Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_search_bus;
-    Alloc2D<result_bus_info, SRAM_ROWS, BUS_COUNT>     sram_result_bus;
-    Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_result_bus;
+    BFN::Alloc2D<cstring, SRAM_ROWS, STASH_UNITS>           stash_use;
+    BFN::Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
+    BFN::Alloc2D<cstring, SRAM_ROWS, GATEWAYS_PER_ROW>      gateway_use;
+    BFN::Alloc2D<search_bus_info, SRAM_ROWS, BUS_COUNT>     sram_search_bus;
+    BFN::Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_search_bus;
+    BFN::Alloc2D<result_bus_info, SRAM_ROWS, BUS_COUNT>     sram_result_bus;
+    BFN::Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_result_bus;
     // int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
     int tcam_midbyte_use[TCAM_ROWS/2][TCAM_COLUMNS] = {{-1}};
-    Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
-    Alloc2D<cstring, SRAM_ROWS, PAYLOAD_COUNT>         payload_use;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
-    Alloc1D<cstring, SRAM_ROWS>                        twoport_bus;
-    Alloc1D<std::pair<cstring, int>, SRAM_ROWS - 1>    vert_overflow_bus;
-    Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
+    BFN::Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
+    BFN::Alloc2D<cstring, SRAM_ROWS, PAYLOAD_COUNT>         payload_use;
+    BFN::Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
+    BFN::Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
+    BFN::Alloc1D<cstring, SRAM_ROWS>                        twoport_bus;
+    BFN::Alloc1D<std::pair<cstring, int>, SRAM_ROWS - 1>    vert_overflow_bus;
+    BFN::Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     unsigned                                           mapram_inuse[SRAM_ROWS] = {0};
-    Alloc2D<cstring, 2, NUM_IDLETIME_BUS>              idletime_bus;
+    BFN::Alloc2D<cstring, 2, NUM_IDLETIME_BUS>              idletime_bus;
     bool gw_bytes_reserved[SRAM_ROWS][BUS_COUNT] = {{false}};
-    Alloc1D<cstring, STATS_ALUS>                       stats_alus;
-    Alloc1D<cstring, METER_ALUS>                       meter_alus;
+    BFN::Alloc1D<cstring, STATS_ALUS>                       stats_alus;
+    BFN::Alloc1D<cstring, METER_ALUS>                       meter_alus;
 
     struct mem_info {
         int logical_tables = 0;

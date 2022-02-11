@@ -8,6 +8,7 @@
 #include "alloc.h"
 #include "bitvec.h"
 #include "input_xbar.h"
+#include "bf-p4c/common/alloc.h"
 
 // Tofino shares logical IDS between all threads, while flatrock only shares ingress/ghost;
 // egress has its own distinct ids.
@@ -21,37 +22,36 @@ class Stage_data {
     int                         stageno = -1;
     std::vector<Table *>        tables;
     std::set<Stage **>          all_refs;
-    Alloc2D<Table *, SRAM_ROWS, SRAM_UNITS_PER_ROW>     sram_use;
-    Alloc2D<Table *, SRAM_ROWS, 2>                      sram_search_bus_use;
-    Alloc2D<Table *, SRAM_ROWS, 2>                      match_result_bus_use;
-    Alloc2D<Table *, SRAM_ROWS, MAPRAM_UNITS_PER_ROW>   mapram_use;
-    Alloc2D<Table *, TCAM_ROWS, TCAM_UNITS_PER_ROW>     tcam_use;
-    Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
-    Alloc2D<std::pair<Table *, int>, TCAM_ROWS, 2>      tcam_byte_group_use;
-    Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
-    Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_unit_use;
-    Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
-    Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use[MAX_LOGICAL_ID_SETS];
-    Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
-    ordered_map<InputXbar::Group, std::vector<InputXbar *>>     ixbar_use;
-    Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;
-    Alloc1D<std::vector<InputXbar *>, HASH_TABLES>      hash_table_use;
-    Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;
-    Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
-    Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
-    Alloc1D<unsigned, ACTION_DATA_BUS_SLOTS>            action_bus_use_mask;
-    Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
-                                                        meter_bus_use,
-                                                        stats_bus_use,
-                                                        selector_adr_bus_use,
-                                                        overflow_bus_use;
-    Alloc1D<Table *, IDLETIME_BUSSES>                   idletime_bus_use;
+    BFN::Alloc2D<Table *, SRAM_ROWS, SRAM_UNITS_PER_ROW>     sram_use;
+    BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      sram_search_bus_use;
+    BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      match_result_bus_use;
+    BFN::Alloc2D<Table *, SRAM_ROWS, MAPRAM_UNITS_PER_ROW>   mapram_use;
+    BFN::Alloc2D<Table *, TCAM_ROWS, TCAM_UNITS_PER_ROW>     tcam_use;
+    BFN::Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
+    BFN::Alloc2D<std::pair<Table *, int>, TCAM_ROWS, 2>      tcam_byte_group_use;
+    BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
+    BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_unit_use;
+    BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
+    BFN::Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use[MAX_LOGICAL_ID_SETS];
+    BFN::Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
+    ordered_map<InputXbar::Group, std::vector<InputXbar *>>  ixbar_use;
+    BFN::Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;
+    BFN::Alloc1D<std::vector<InputXbar *>, HASH_TABLES>      hash_table_use;
+    BFN::Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;
+    BFN::Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
+    BFN::Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
+    BFN::Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
+                                                             meter_bus_use,
+                                                             stats_bus_use,
+                                                             selector_adr_bus_use,
+                                                             overflow_bus_use;
+    BFN::Alloc1D<Table *, IDLETIME_BUSSES>                   idletime_bus_use;
     bitvec      action_bus_use_bit_mask;
-    Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
+    BFN::Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX> imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
-    Alloc1D<Table::NextTables *, MAX_LONGBRANCH_TAGS>   long_branch_use;
-    unsigned                                            long_branch_thread[3] = { 0 };
-    unsigned                                            long_branch_terminate = 0;
+    BFN::Alloc1D<Table::NextTables *, MAX_LONGBRANCH_TAGS>  long_branch_use;
+    unsigned                                                long_branch_thread[3] = { 0 };
+    unsigned                                                long_branch_terminate = 0;
 
     // for timing, ghost thread is tied to ingress, so we track ghost as ingress here
     enum { USE_TCAM = 1, USE_STATEFUL = 4, USE_METER = 8, USE_METER_LPF_RED = 16,
@@ -71,11 +71,11 @@ class Stage_data {
     int mpr_bus_dep_glob_exec[3] = { 0 };
     int mpr_bus_dep_long_branch[3] = { 0 };
     // per gress, per logical table
-    Alloc2D<int, 3, LOGICAL_TABLES_PER_STAGE> mpr_next_table_lut;
+    BFN::Alloc2D<int, 3, LOGICAL_TABLES_PER_STAGE> mpr_next_table_lut;
     // per global execute bit
-    Alloc1D<int, LOGICAL_TABLES_PER_STAGE> mpr_glob_exec_lut;
+    BFN::Alloc1D<int, LOGICAL_TABLES_PER_STAGE> mpr_glob_exec_lut;
     // per long branch tag
-    Alloc1D<int, MAX_LONGBRANCH_TAGS> mpr_long_brch_lut;
+    BFN::Alloc1D<int, MAX_LONGBRANCH_TAGS> mpr_long_brch_lut;
 
 
     int pass1_logical_id = -1, pass1_tcam_id = -1;

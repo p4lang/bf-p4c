@@ -61,7 +61,7 @@ get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
 MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
 
 set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
-include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR})
+include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR} ${BFN_P4C_SOURCE_DIR})
 
 # ASAN CHECKS
 if (ASAN_ENABLED)

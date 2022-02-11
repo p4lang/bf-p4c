@@ -40,7 +40,8 @@ struct CollectSpecialPrimitives : public Inspector {
         if (!pa) return;
         if (pa->path->name == "bypass_egress")
             bypass_egress.insert(node);
-        else if (pa->path->name == "clone3" || pa->path->name == "clone")
+        else if (pa->path->name == "clone3" || pa->path->name == "clone" ||
+                 pa->path->name == "clone_preserving_field_list")
             clone.insert(node);
     }
 

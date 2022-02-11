@@ -157,7 +157,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/checksum-l4-bmv2.p4
-  )
+  testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_16_samples/issue1001-1-bmv2.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "Action profile .* does not have any action data"
@@ -360,6 +362,7 @@ p4c_add_xfail_reason("tofino"
   # p4c update 2021-11-08
   testdata/p4_16_samples/invalid-hdr-warnings5.p4
   testdata/p4_16_samples/invalid-hdr-warnings6.p4
+  testdata/p4_16_samples/wrong-warning.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -369,6 +372,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2248.p4
   testdata/p4_16_samples/issue2330-1.p4
   testdata/p4_16_samples/issue2330.p4
+  testdata/p4_16_samples/issue-2123-3-bmv2.p4
+  testdata/p4_16_samples/issue-2123-2-bmv2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1672-1.p4
+  testdata/p4_16_samples/issue512.p4
+  testdata/p4_16_samples/psa-dpdk-errorcode-1.p4
+  testdata/p4_16_samples/hdr_stacks2345.p4
+  testdata/p4_16_samples/xor_test.p4
+  testdata/p4_16_samples/issue2345.p4
+  testdata/p4_16_samples/nested_if_statement.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -434,6 +446,8 @@ p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   # Same Name Conversion Bug
   extensions/p4_tests/p4_14/compile_only/shared_names.p4
+  # Issue with no default branch in switch
+  testdata/p4_16_samples/psa-switch-expression-without-default.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -457,12 +471,6 @@ p4c_add_xfail_reason("tofino"
   "Cannot unify type"
   extensions/p4_tests/p4_16/stf/onlab_packet_io.p4
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
-)
-
-p4c_add_xfail_reason("tofino"
-    "Conditions in an action must be simple comparisons of an action data parameter"
-    testdata/p4_16_samples/issue-2123-3-bmv2.p4
-    testdata/p4_16_samples/issue-2123-2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -902,6 +910,7 @@ p4c_add_xfail_reason("tofino"
   "Currently in p4c, any table using an action profile is required to use the same actions, and the following actions don't appear in all table using the action profile"
   ../glass/testsuite/p4_tests/mau/COMPILER-445/comp_445.p4
   testdata/p4_16_samples/psa-action-profile4.p4
+  testdata/p4_16_samples/psa-example-dpdk-varbit-bmv2.p4
   )
 
 # P4C-1165
@@ -1028,8 +1037,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/issue1058.p4
   # shared register between ingress and egress is not supported
   testdata/p4_16_samples/issue1097-2-bmv2.p4
-  # We fail to translate `resubmit()`.
-  testdata/p4_14_samples/resubmit.p4
   testdata/p4_16_samples/std_meta_inlining.p4
   # no support for checksum verify/update
   testdata/p4_16_samples/checksum2-bmv2.p4
@@ -1041,7 +1048,6 @@ p4c_add_xfail_reason("tofino"
   # We fail to translate `standard_metadata.instance_type`.
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
-  testdata/p4_14_samples/simple_nat.p4
   # truncate is not supported in tna
   testdata/p4_14_samples/truncate.p4
   testdata/p4_16_samples/action_profile_max_group_size_annotation.p4
@@ -1415,11 +1421,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Conditions in an action must be simple comparisons of an action data parameter"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1672-1.p4
-)
-
 # P4C-1862
 p4c_add_xfail_reason("tofino"
   "InvalidTableOperation"
@@ -1634,11 +1635,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Conditions in an action must be simple comparisons of an action data parameter"
-  testdata/p4_16_samples/issue512.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "1 expected packet on port 0 not seen"
   testdata/p4_16_samples/issue2170-bmv2.p4
 )
@@ -1673,6 +1669,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*unexpected statement with call"
   testdata/p4_16_samples/issue2205-1-bmv2.p4
+  testdata/p4_16_samples/issue3001-1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1814,14 +1811,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2614-bmv2.p4
 )
 
-# p4c 1992468c
-p4c_add_xfail_reason("tofino"
-  "Conditions in an action must be simple comparisons of an action data parameter"
-  testdata/p4_16_samples/hdr_stacks2345.p4
-  testdata/p4_16_samples/xor_test.p4
-  testdata/p4_16_samples/issue2345.p4
-)
-
 # p4c 7fbc2a4
 p4c_add_xfail_reason("tofino"
   ".*error: The table .* with no key cannot have the action .*"
@@ -1923,11 +1912,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Conditions in an action must be simple comparisons of an action data parameter"
-  testdata/p4_16_samples/nested_if_statement.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "unexpected statement with call"
   testdata/p4_16_samples/predication_issue_1.p4
 )
@@ -1990,12 +1974,6 @@ p4c_add_xfail_reason("tofino"
   "error: Field '__bfp4c_fields' of 'header __bfp4c_bridged_metadata_header' cannot have type 'struct fields'"
   testdata/p4_16_samples/parser-inline/parser-inline-test13.p4
   parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test13.p4
-)
-
-# P4C update - commit: 8eb012beae5c ("Support of Operation_Ternary for ExpressionEvaluator (#2861)")
-p4c_add_xfail_reason("tofino"
-  "error: packet.lookahead: functions or methods returning structures are not supported on this target"
-  testdata/p4_16_samples/psa-example-dpdk-varbit.p4
 )
 
 # p4_14_nightly_tofino
@@ -2079,4 +2057,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/11-MultiTags.p4
 )
 
-
+# p4c update 01/2022
+p4c_add_xfail_reason("tofino"
+  "Unsupported immediate profile on a gateway payload table"
+  testdata/p4_16_samples/issue2905-bmv2.p4
+)

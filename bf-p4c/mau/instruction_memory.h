@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/ir/gress.h"
 #include "lib/alloc.h"
+#include "bf-p4c/common/alloc.h"
 
 class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
     PhvInfo &phv;
@@ -76,11 +77,11 @@ struct InstructionMemory {
     static constexpr int COLOR_ADDR_SHIFT = 0;
     std::set<cstring> atcam_updates;
 
-    Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> ingress_imem_use;
-    Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> egress_imem_use;
+    BFN::Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> ingress_imem_use;
+    BFN::Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> egress_imem_use;
 
-    Alloc2D<bitvec, IMEM_ROWS, IMEM_COLORS> ingress_imem_slot_inuse;
-    Alloc2D<bitvec, IMEM_ROWS, IMEM_COLORS> egress_imem_slot_inuse;
+    BFN::Alloc2D<bitvec, IMEM_ROWS, IMEM_COLORS> ingress_imem_slot_inuse;
+    BFN::Alloc2D<bitvec, IMEM_ROWS, IMEM_COLORS> egress_imem_slot_inuse;
 
     /** Instruction Memory requires two things:
      *    1. The RAM line position/color of a word
@@ -120,13 +121,13 @@ struct InstructionMemory {
     std::map<const IR::MAU::ActionData *, const Use *> shared_action_profiles;
         // std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
 
-    Alloc2Dbase<cstring> &imem_use(gress_t gress) {
+    BFN::Alloc2Dbase<cstring> &imem_use(gress_t gress) {
         if (gress == INGRESS || gress == GHOST)
             return ingress_imem_use;
         return egress_imem_use;
     }
 
-    Alloc2Dbase<bitvec> &imem_slot_inuse(gress_t gress) {
+    BFN::Alloc2Dbase<bitvec> &imem_slot_inuse(gress_t gress) {
         if (gress == INGRESS || gress == GHOST)
             return ingress_imem_slot_inuse;
         return egress_imem_slot_inuse;
@@ -145,7 +146,6 @@ struct InstructionMemory {
     void update(cstring name, const TableResourceAlloc *alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
     void update(const IR::MAU::Table *tbl);
-    InstructionMemory() { }
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_MEMORY_H_ */

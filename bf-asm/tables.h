@@ -23,6 +23,7 @@
 #include "p4_table.h"
 #include "slist.h"
 #include "target.h"
+#include "bf-p4c/common/alloc.h"
 
 class ActionBus;
 struct ActionBusSource;
@@ -97,13 +98,14 @@ class Table {
     virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) const
     { BUG(); }
     virtual int get_start_vpn() { return 0; }
-    void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
-    void alloc_busses(Alloc2Dbase<Table *> &bus_use);
+    void alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
+                    BFN::Alloc2Dbase<Table *> *bus_use = 0);
+    void alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
-                  bool order, Alloc1Dbase<Table *> &use);
+                  bool order, BFN::Alloc1Dbase<Table *> &use);
     void alloc_maprams();
     virtual void alloc_vpns();
-    void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
+    void need_bus(int lineno, BFN::Alloc1Dbase<Table *> &use, int idx, const char *name);
     static bool allow_ram_sharing(const Table *t1, const Table *t2);
 
  public:
@@ -1886,7 +1888,7 @@ public:
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void gen_tbl_cfg, (target_type, json::map &, json::map &), const)
 #if HAVE_JBAY
-    Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
+    BFN::Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
 #endif  /* HAVE_JBAY */
 )
 

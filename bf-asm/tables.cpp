@@ -655,7 +655,8 @@ bool Table::allow_bus_sharing(Table *t1, Table *t2) {
     return false;
 }
 
-void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use) {
+void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
+                       BFN::Alloc2Dbase<Table *> *bus_use) {
     for (auto &row : layout) {
         for (int col : row.cols) {
             int r = row.row, c = col;
@@ -688,7 +689,7 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
     }
 }
 
-void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
+void Table::alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use) {
     for (auto &row : layout) {
         // If row.cols is empty, we don't really need a bus here (won't use it
         // for anything).
@@ -712,7 +713,7 @@ void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
 }
 
 void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
-                     bool order, Alloc1Dbase<Table *> &use) {
+                     bool order, BFN::Alloc1Dbase<Table *> &use) {
     if (id >= 0) {
         next_id = id;
         return; }
@@ -853,7 +854,7 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
     return false;
 }
 
-void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *busname) {
+void Table::need_bus(int lineno, BFN::Alloc1Dbase<Table *> &use, int idx, const char *busname) {
     if (use[idx] && use[idx] != this) {
         error(lineno, "%s bus conflict on row %d between tables %s and %s", busname, idx,
               name(), use[idx]->name());

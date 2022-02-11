@@ -4335,11 +4335,11 @@ static void add_names(const T &n, std::map<cstring, char> &names) {
     for (auto &a : n) add_names(a, names); }
 // FIXME -- should not be needed, but Alloc2D is missing begin/end
 template<class T, int R, int C>
-static void add_names(const Alloc2D<T, R, C> &n, std::map<cstring, char> &names) {
+static void add_names(const BFN::Alloc2D<T, R, C> &n, std::map<cstring, char> &names) {
     for (int r = 0; r < R; r++) add_names(n[r], names); }
 // FIXME -- should not be needed, but Alloc1D is missing const begin/end
 template<class T, int S>
-static void add_names(const Alloc1D<T, S> &n, std::map<cstring, char> &names) {
+static void add_names(const BFN::Alloc1D<T, S> &n, std::map<cstring, char> &names) {
     for (int i = 0; i < S; i++) add_names(n[i], names); }
 
 static void sort_names(std::map<cstring, char> &names) {

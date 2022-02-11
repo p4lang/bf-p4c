@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_TOFINO_INPUT_XBAR_H_
 
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/common/alloc.h"
 
 namespace Tofino {
 
@@ -78,10 +79,12 @@ struct IXBar : public ::IXBar {
     /** IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
      * to record the container it will be getting and the bit offset within the container.
      * NOTE: Changes here require changes to .gdbinit pretty printer */
-    Alloc2D<std::pair<PHV::Container, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>     exact_use;
-    Alloc2D<std::pair<PHV::Container, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP> ternary_use;
-    Alloc1D<std::pair<PHV::Container, int>, BYTE_GROUPS>                             byte_group_use;
-    Alloc2Dbase<std::pair<PHV::Container, int>> &use(bool ternary) {
+    BFN::Alloc2D<std::pair<PHV::Container, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>
+                                                                                    exact_use;
+    BFN::Alloc2D<std::pair<PHV::Container, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>
+                                                                                    ternary_use;
+    BFN::Alloc1D<std::pair<PHV::Container, int>, BYTE_GROUPS>                       byte_group_use;
+    BFN::Alloc2Dbase<std::pair<PHV::Container, int>> &use(bool ternary) {
         if (ternary) return ternary_use;
         return exact_use; }
     /* reverse maps of the above, mapping containers sets of group+byte */
@@ -97,14 +100,14 @@ struct IXBar : public ::IXBar {
      * strings here are table names
      * NOTE: Changes here require changes to .gdbinit pretty printer */
     unsigned                                    hash_index_inuse[HASH_INDEX_GROUPS] = { 0 };
-    Alloc2D<cstring, HASH_TABLES, HASH_INDEX_GROUPS>    hash_index_use;
-    Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
+    BFN::Alloc2D<cstring, HASH_TABLES, HASH_INDEX_GROUPS>    hash_index_use;
+    BFN::Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
     unsigned                                    hash_single_bit_inuse[HASH_SINGLE_BITS] = { 0 };
-    Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
+    BFN::Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
     unsigned                                    hash_group_use[HASH_GROUPS] = { 0 };
-    Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES>     hash_dist_use;
+    BFN::Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES>     hash_dist_use;
     bitvec                                      hash_dist_inuse[HASH_TABLES] = { bitvec() };
-    Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
+    BFN::Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
     bitvec                                      hash_dist_bit_inuse[HASH_TABLES] = { bitvec() };
     parity_status_t  hash_group_parity_use[HASH_GROUPS] = { PARITY_NONE };
 
@@ -116,9 +119,9 @@ struct IXBar : public ::IXBar {
 
     /* API for unit tests */
  public:
-    Alloc2Dbase<std::pair<PHV::Container, int>> &get_exact_use() { return exact_use; }
-    Alloc2Dbase<std::pair<PHV::Container, int>> &get_ternary_use() { return ternary_use; }
-    Alloc1D<std::pair<PHV::Container, int>, BYTE_GROUPS> &get_byte_group_use() {
+    BFN::Alloc2Dbase<std::pair<PHV::Container, int>> &get_exact_use() { return exact_use; }
+    BFN::Alloc2Dbase<std::pair<PHV::Container, int>> &get_ternary_use() { return ternary_use; }
+    BFN::Alloc1D<std::pair<PHV::Container, int>, BYTE_GROUPS> &get_byte_group_use() {
         return byte_group_use; }
 
     // map (type, group, byte) coordinate to linear xbar output space

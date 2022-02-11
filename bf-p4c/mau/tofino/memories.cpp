@@ -4271,7 +4271,7 @@ bool Memories::allocate_all_idletime() {
 }
 
 void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_type_t)> fn) {
-    Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *gw_use = 0;
+    BFN::Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *gw_use = 0;
     unsigned *inuse = 0, *map_inuse = 0;
     switch (alloc.type) {
     case Use::EXACT:
@@ -4395,7 +4395,7 @@ std::ostream &operator<<(std::ostream &out, const Memories::result_bus_info &rbi
 
 /* MemoriesPrinter in .gdbinit should match this */
 void Memories::printOn(std::ostream &out) const {
-    const Alloc2Dbase<cstring> *arrays[] = { &tcam_use, &sram_print_search_bus,
+    const BFN::Alloc2Dbase<cstring> *arrays[] = { &tcam_use, &sram_print_search_bus,
                 &sram_print_result_bus, &tind_bus, &action_data_bus,
                 &stash_use, &sram_use, &mapram_use, &overflow_bus,
                 &gateway_use, &payload_use };
@@ -4455,7 +4455,7 @@ std::ostream &operator<<(std::ostream &out, const safe_vector<Memories::table_al
 }  // end namespace Tofino
 
 template<int R, int C>
-std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2d) {
+std::ostream &operator<<(std::ostream& out, const BFN::Alloc2D<cstring, R, C>& alloc2d) {
     for (int i = 0; i < R; i++) {
         for (int j = 0; j < C; j++) {
             cstring val = alloc2d[i][j];

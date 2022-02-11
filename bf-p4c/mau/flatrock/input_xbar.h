@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_FLATROCK_INPUT_XBAR_H_
 
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/common/alloc.h"
 
 class Slice;
 
@@ -60,17 +61,17 @@ class IXBar : public ::IXBar {
      * to record the container it will be getting and the bit offset within the container.
      * Word use are set to just the (first) container as the bit offset is always 0.
      * NOTE: Changes here require changes to .gdbinit pretty printer */
-    Alloc1D<std::pair<PHV::Container, int>, GATEWAY_VEC_BYTES>                  gateway_use;
+    BFN::Alloc1D<std::pair<PHV::Container, int>, GATEWAY_VEC_BYTES>                 gateway_use;
     // FIXME -- maybe allocate gateway rows as part of memory alloc (as was done for
     // gateway units on tofino1/2/3) rather than here?
-    Alloc1D<std::pair<PHV::Container, int>, GATEWAY_ROWS>                       gateway_rows;
+    BFN::Alloc1D<std::pair<PHV::Container, int>, GATEWAY_ROWS>                      gateway_rows;
     // FIXME -- each exact/ternary can select between 8 sources based on gateway output
-    Alloc1D<std::pair<PHV::Container, int>, EXACT_BYTES>                        exact_byte_use;
-    Alloc1D<PHV::Container, EXACT_WORDS>                                        exact_word_use;
-    Alloc1D<std::pair<PHV::Container, int>, XCMP_BYTES>                         xcmp_byte_use;
-    Alloc1D<PHV::Container, XCMP_WORDS>                                         xcmp_word_use;
-    Alloc2D<std::pair<PHV::Container, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>
-                                                                                ternary_use;
+    BFN::Alloc1D<std::pair<PHV::Container, int>, EXACT_BYTES>                       exact_byte_use;
+    BFN::Alloc1D<PHV::Container, EXACT_WORDS>                                       exact_word_use;
+    BFN::Alloc1D<std::pair<PHV::Container, int>, XCMP_BYTES>                        xcmp_byte_use;
+    BFN::Alloc1D<PHV::Container, XCMP_WORDS>                                        xcmp_word_use;
+    BFN::Alloc2D<std::pair<PHV::Container, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>
+                                                                                    ternary_use;
     /* reverse maps of the above -- the 'group' encoding is a bit weird.  exact and xcmp
      * use 0 for bytes groups and 1 for word groups.  gateway uses 0 for vector group and
      * 1 for the fixed bytes.  Ternary groups correspond to the SCM inputs */
@@ -79,20 +80,20 @@ class IXBar : public ::IXBar {
     std::multimap<PHV::Container, Loc>          ternary_fields;
     std::multimap<PHV::Container, Loc>          xcmp_fields;
 
-    Alloc1D<cstring, EXACT_MATCH_UNITS>         exact_hash_use;    // 1:1 mapping between hash
+    BFN::Alloc1D<cstring, EXACT_MATCH_UNITS>    exact_hash_use;    // 1:1 mapping between hash
     unsigned                                    exact_hash_inuse;  // and exact match units
 
     // FIXME -- figure out some way to refactor these `find_alloc` routines together
     void find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     safe_vector<IXBar::Use::Byte *> &alloced,
                     std::multimap<PHV::Container, Loc> &fields,
-                    Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                    BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
                     bool allow_word);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
-                  Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use);
+                  BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
-                  Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                  Alloc1Dbase<PHV::Container> &word_use);
+                  BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                  BFN::Alloc1Dbase<PHV::Container> &word_use);
     bool gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
     bool exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,

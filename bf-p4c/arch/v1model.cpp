@@ -868,6 +868,8 @@ class ConstructSymbolTable : public Inspector {
 
     const CollectGlobalPragma &collect_pragma;
 
+    enum CloneFunctionType { CLONE = 0, CLONE3, CLONE_PRESERVING_FIELD_LIST };
+
  public:
     ConstructSymbolTable(ProgramStructure *structure,
                          P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
@@ -1010,7 +1012,7 @@ class ConstructSymbolTable : public Inspector {
      * following extern methods in v1model.p4 need to be converted to an extern instance
      * and a method call on the instance.
      * random, digest, mark_to_drop, hash, verify_checksum, update_checksum, resubmit
-     * recirculate, clone, clone3, truncate
+     * recirculate, clone, clone3, clone_preserving_field_list, truncate
      */
     void cvtDigestFunction(const IR::MethodCallStatement *node) {
         /*
@@ -1194,7 +1196,7 @@ class ConstructSymbolTable : public Inspector {
         return;
     }
 
-    void cvtCloneFunction(const IR::MethodCallStatement *node, bool hasData) {
+    void cvtCloneFunction(const IR::MethodCallStatement *node, CloneFunctionType cloneFuncType) {
         LOG1("cvtCloneFunction: (id= " << node->id << " ) " << node);
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in clone() function");
@@ -1311,24 +1313,13 @@ class ConstructSymbolTable : public Inspector {
         else
             dedupCloneIndex.insert(std::make_pair(gress, cloneId));
 
-        auto *newFieldList = new IR::ListExpression({});
-        if (hasData && mce->arguments->size() > 2) {
-            auto *clonedData = mce->arguments->at(2)->expression;
-            if (auto *originalFieldList = clonedData->to<IR::ListExpression>())
-                newFieldList->components.pushBackOrAppend(&originalFieldList->components);
-            else if (auto *originalFieldList = clonedData->to<IR::StructExpression>())
-                for (auto comp : originalFieldList->components)
-                    newFieldList->components.push_back(comp->expression);
-            else
-                newFieldList->components.push_back(clonedData);
-        }
-
         cstring generatedCloneHeaderTypeName = genUniqueName("__clone");
         cstring cloneHeaderName;
         cstring cloneType = mce->arguments->at(0)->expression->to<IR::Member>()->member;
         auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
-        if (mce->typeArguments->size() > 0 && mce->typeArguments->at(0)->is<IR::Type_BaseList>()) {
-            if (hasData) {
+        // clone3 is depracated
+        if (mce->typeArguments->size() > 0) {
+            if (cloneFuncType == CLONE3) {
                 auto fl = mce->arguments->at(2)->to<IR::Argument>();
                 BUG_CHECK(fl != nullptr, "invalid clone3 method argument");
                 if (auto list = fl->expression->to<IR::ListExpression>()) {
@@ -1367,6 +1358,13 @@ class ConstructSymbolTable : public Inspector {
                     digestFieldsFromSource->push_back(info);
                 }
             }
+        } else if (cloneFuncType == CLONE_PRESERVING_FIELD_LIST) {
+            // Look into the third argument (field list index)
+            auto arg = mce->arguments->at(2)->to<IR::Argument>();
+            BUG_CHECK(arg != nullptr, "invalid clone_preserving_field_list method argument");
+            convertPreservingFieldList(arg, control, "clone",
+                                       generatedCloneHeaderTypeName, &cloneHeaderName,
+                                       digestFieldsFromSource);
         } else {
             // has no data
             cstring hdName = generatedCloneHeaderTypeName + "_header_t";
@@ -1632,7 +1630,9 @@ class ConstructSymbolTable : public Inspector {
         digestFieldsGeneratedByCompiler->push_back(info);
 
         auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
-        if (mce->typeArguments->at(0)->is<IR::Type_BaseList>()) {
+        // resubmit (which is deprecated)
+        if (mce->typeArguments->size() > 0 &&
+            mce->typeArguments->at(0)->is<IR::Type_BaseList>()) {
             if (auto arg = mce->arguments->at(0)->to<IR::Argument>()) {
                 auto fl = arg->expression;   // resubmit field list
                 if (auto list = fl->to<IR::ListExpression>()) {
@@ -1656,6 +1656,16 @@ class ConstructSymbolTable : public Inspector {
                     }
                 }
             }
+        // resubmit_preserving_field_list
+        } else if (mce->arguments->size() > 0 &&
+                   (mce->arguments->at(0)->expression->is<IR::Cast>() ||
+                    mce->arguments->at(0)->expression->is<IR::Constant>())) {
+            // Look into the first argument (field list index)
+            auto arg = mce->arguments->at(0)->to<IR::Argument>();
+            BUG_CHECK(arg != nullptr, "invalid resubmit_preserving_field_list method argument");
+            convertPreservingFieldList(arg, control, "resubmit",
+                                       generatedResubmitHeaderTypeName, nullptr,
+                                       digestFieldsFromSource);
         } else {
             // has no data
             cstring hdName = generatedResubmitHeaderTypeName + "_header_t";
@@ -2175,7 +2185,7 @@ class ConstructSymbolTable : public Inspector {
             cstring name = ef->method->name;
             if (name == "hash") {
                 cvtHashFunction(node);
-            } else if (name == "resubmit") {
+            } else if (name == "resubmit" || name == "resubmit_preserving_field_list") {
                 cvtResubmitFunction(node);
             } else if (name == "mark_to_drop" || name == "drop") {
                 cvtDropFunction(node);
@@ -2184,9 +2194,11 @@ class ConstructSymbolTable : public Inspector {
             } else if (name == "digest") {
                 cvtDigestFunction(node);
             } else if (name == "clone") {
-                cvtCloneFunction(node, /* hasData = */ false);
+                cvtCloneFunction(node, /* cloneFuncType = */ CLONE);
             } else if (name == "clone3") {
-                cvtCloneFunction(node, /* hasData = */ true);
+                cvtCloneFunction(node, /* cloneFuncType = */ CLONE3);
+            } else if (name == "clone_preserving_field_list") {
+                cvtCloneFunction(node, /* cloneFuncType = */ CLONE_PRESERVING_FIELD_LIST);
             } else if (name == "invalidate_digest") {
                 cvtInvalidateDigestFunction(node);
             } else if (name == "update_checksum" ||
@@ -2237,6 +2249,113 @@ class ConstructSymbolTable : public Inspector {
 
  private:
     /**
+     * Check if the argument is constant or cast and extract the
+     * constant out of it
+     */
+    const IR::Constant *getConstantFromArg(const IR::Argument *argument) {
+        auto cast = argument->expression->to<IR::Cast>();
+        const IR::Constant* cst = nullptr;
+        if (cast) {
+            cst = cast->expr->to<IR::Constant>();
+        } else {
+            cst = argument->expression->to<IR::Constant>();
+        }
+        return cst;
+    }
+
+    /**
+     * Extract a field list based on the index. This is needed for
+     * *_preserving_field_list P4 primitives, where the list is not
+     * entirely in the primitive arguments but it is pointed to by an index.
+     * Fields that should be used are annotated with this index.
+     */
+    void findFieldList(const IR::Type_StructLike* st, unsigned index,
+                       std::vector<IR::Expression*>* fl,
+                       IR::Expression* exp) {
+        // Go through the fields
+        for (auto f : st->fields) {
+            // Recursively check the fields themselves
+            if (auto nestedSt = f->type->to<IR::Type_StructLike>()) {
+                auto nexp = new IR::Member(f->type, exp, IR::ID(f->name));
+                findFieldList(nestedSt, index, fl, nexp);
+            } else {
+                // Check the field_list annotation
+                auto anno = f->getAnnotations()->getSingle("field_list");
+                if (anno == nullptr)
+                    continue;
+                for (auto e : anno->expr) {
+                    auto cst = e->to<IR::Constant>();
+                    if (cst == nullptr) {
+                        ::error("%1%: Annotation must be a constant integer", e);
+                        continue;
+                    }
+                    unsigned id = cst->asUnsigned();
+                    // If this is the field_list we are looking for, add the field
+                    if (id == index) {
+                        LOG4("found field " << f << " belonging to a field list " << index);
+                        auto nexp = new IR::Member(f->type, exp, IR::ID(f->name));
+                        fl->push_back(nexp);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * This function encapsulates steps that are the same for
+     * converting *_preserving_field_list primitives.
+     * @arg indexArg IR argument that should hold the field list index value.
+     * @arg control IR control block that invokes the primitive.
+     * @arg primitive Name of the primitive that is converted (for logging purposes).
+     * @arg generatedName Name of the header that should be generated.
+     * @arg headerName Used to return name of the header type created (if not nullptr).
+     * @arg digestFields Adds the fields that should be preserved into this list.
+     */
+    void convertPreservingFieldList(const IR::Argument* indexArg,
+                                    const IR::P4Control* control,
+                                    cstring primitive,
+                                    cstring generatedName,
+                                    cstring* headerName,
+                                    std::vector<DigestFieldInfo>* digestFields) {
+        const IR::Constant* cst = getConstantFromArg(indexArg);
+        BUG_CHECK(cst != nullptr, "invalid %1%_preserving_field_list method argument", primitive);
+        unsigned index = cst->asUnsigned();     // This is the field list index
+        // Go through the metadata of the control block
+        auto params = control->type->getApplyParameters();
+        BUG_CHECK(params->size() == 3, "%1%: expected 3 parameters", control);
+        auto metaParam = params->parameters.at(1);
+        auto metaParamType = typeMap->getType(metaParam, true);
+        BUG_CHECK(metaParamType != nullptr, "could not find type for %1%", metaParamType);
+        auto metaParamSt = metaParamType->to<IR::Type_Struct>();
+        BUG_CHECK(metaParamSt != nullptr, "expected Type_Struct %1%", metaParamSt);
+        // Get all the fields that are annotated with the field list of a given index
+        auto fl = new std::vector<IR::Expression*>();
+        auto pathExp = new IR::PathExpression(metaParamType, new IR::Path(metaParam->name));
+        findFieldList(metaParamSt, index, fl, pathExp);
+        // Generate a header type, used by repacking algorithm
+        auto components = new IR::Vector<IR::Type>();
+        components->push_back(IR::Type::Bits::get(8));  // mirror_source
+        for (auto f : *fl) {
+            components->push_back(f->type);
+        }
+        auto headerType = convertTupleTypeToHeaderType(generatedName,
+                                                       components, true);
+        structure->type_declarations.emplace(headerType->name, headerType);
+        LOG3("create header " << headerType->name.name);
+        if (headerName != nullptr)
+            *headerName = headerType->name;
+        // generate a struct initializer for the header type
+        int i = 1;  // first element was used for mirror_source
+        for (auto f : *fl) {
+            cstring fname = "__field_" + std::to_string(i);
+            LOG3("name " << fname << " type " << f->type << " expr " << f);
+            DigestFieldInfo info = std::make_tuple(fname, f->type, f);
+            digestFields->push_back(info);
+            i++;
+        }
+    }
+
+    /**
      * Find the "first" table in which the action is present
      */
     const IR::P4Table *findTable(const IR::P4Control *control, const IR::P4Action *action) {
@@ -2278,6 +2397,9 @@ class ConstructSymbolTable : public Inspector {
                 for (auto comp : fieldList->components) {
                     fieldListString << comp;
                 }
+            } else {
+                const IR::Constant* cst = getConstantFromArg(argument);
+                fieldListString << cst;
             }
             fieldString += fieldListString.str();
         }
@@ -2367,9 +2489,11 @@ bool skipMethodCallStatement(const Visitor::Context *ctxt, const IR::Expression 
     auto name = c->methodCall->method->to<IR::PathExpression>();
     if (!name) return true;
 
-    if (name->path->name == "clone3" || name->path->name == "resubmit" ||
+    if (name->path->name == "clone3" || name->path->name == "clone_preserving_field_list" ||
+        name->path->name == "resubmit" || name->path->name == "resubmit_preserving_field_list" ||
         name->path->name == "digest" || name->path->name == "hash" ||
-        name->path->name == "recirculate")
+        name->path->name == "recirculate" ||
+        name->path->name == "recirculate_preserving_field_list")
         return false;
 
     return true;

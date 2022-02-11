@@ -34,7 +34,7 @@ bool Memories::Use::separate_search_and_result_bus() const {
 }
 
 template<int R, int C>
-std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2d) {
+std::ostream &operator<<(std::ostream& out, const BFN::Alloc2D<cstring, R, C>& alloc2d) {
     for (int i = 0; i < R; i++) {
         for (int j = 0; j < C; j++) {
             cstring val = alloc2d[i][j];

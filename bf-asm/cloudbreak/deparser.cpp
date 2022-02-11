@@ -371,7 +371,8 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
        0 = Resubmit is allowed.  1 = Resubmit is not allowed */
     bool resubmit = false;
     for (auto &digest : digests) {
-        if (digest.type->name == "resubmit") {
+        if (digest.type->name == "resubmit" ||
+            digest.type->name == "resubmit_preserving_field_list") {
             resubmit = true;
             break;
         }
