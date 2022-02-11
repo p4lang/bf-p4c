@@ -332,7 +332,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "unexpected packet output on port 0"
   extensions/p4_tests/p4_14/stf/egress_port_init.p4
-  extensions/p4_tests/p4_16/stf/extract_slice.p4
 )
 
 p4c_add_xfail_reason("tofino2"

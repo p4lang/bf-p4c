@@ -83,8 +83,14 @@ struct SliceExtracts : public ParserModifier {
     /// @param extract extract to be rewritten.
     /// @param le_low_idx the little-endian index for the low end of the slice.
     /// @param width the width of the slice, in bits.
+    /// @param extract_base The low index of the extract destination ignoring slicing.
+    /// For example, for extract inbuf bit[112..175] to ig_md.f[95:32], assume ig_md.f[95:64] and
+    /// ig_md.f[63:32] are allocated to two 32-bit container. Two make_slice will be called. For
+    /// the first make_slice, le_low_idx is 32, width is 32 and extract_base is 32. For the second
+    /// make_slice, le_low_idx is 64, width is 32 and extract_base is 32.
     template <class Extract>
-    const Extract* make_slice(const IR::BFN::Extract* extract, int le_low_idx, int width) {
+    const Extract* make_slice(const IR::BFN::Extract* extract, int le_low_idx, int width,
+        int extract_base) {
         auto slice_lo = le_low_idx;
         auto slice_hi = slice_lo + width - 1;
 
@@ -98,7 +104,7 @@ struct SliceExtracts : public ParserModifier {
         IR::BFN::ParserRVal* src_slice = nullptr;
 
         if (auto src = extract->source->to<IR::BFN::InputBufferRVal>()) {
-            auto src_hi = src->range.hi - slice_lo;
+            auto src_hi = src->range.hi - slice_lo + extract_base;
             auto src_lo = src_hi - width + 1;
 
             if (src->is<IR::BFN::PacketRVal>())
@@ -108,7 +114,7 @@ struct SliceExtracts : public ParserModifier {
             else
                 BUG("expect source to be from input buffer");
         } else if (auto c = extract->source->to<IR::BFN::ConstantRVal>()) {
-            auto const_slice = *(c->constant) >> slice_lo;
+            auto const_slice = *(c->constant) >> (slice_lo - extract_base);
             const_slice = const_slice & IR::Constant::GetMask(width);
 
             BUG_CHECK(const_slice.fitsUint(), "Constant slice larger than 32-bit?");
@@ -141,11 +147,22 @@ struct SliceExtracts : public ParserModifier {
         // Slice according to the field's PHV allocation.
         le_bitrange range;
         auto field = phv.field(extract->dest->field, &range);
+
+        // extract_base should be used to indicate the base index of extract->dest->field. For a
+        // header field, the base index is always zero, because every part of a header should be
+        // extracted to clot or a phv container. However, consider the following case:
+        // extract inbuf bit[144..175] to ingress::ig_md.ip_dst_addr[95:64], the extract_base of
+        // ig_md.ip_dst_addr[95:64] should be 64, since any other slices in ig_md.ip_dst_addr are
+        // not extracted.
+        int extract_base = range.lo;
+        if (!field->metadata) {
+            BUG_CHECK(extract_base == 0, "header field slice does not start from 0");
+        }
         for (auto slice : phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use)) {
             auto lo = slice.field_slice().lo;
             auto size = slice.width();
 
-            if (auto sliced = make_slice<IR::BFN::ExtractPhv>(extract, lo, size)) {
+            if (auto sliced = make_slice<IR::BFN::ExtractPhv>(extract, lo, size, extract_base)) {
                 rv.push_back(sliced);
                 LOG4("  PHV: " << sliced);
             }
@@ -155,11 +172,13 @@ struct SliceExtracts : public ParserModifier {
 
         // Slice according to the field's CLOT allocation.
         for (auto kv : *clot.slice_clots(field)) {
+            BUG_CHECK(!field->metadata, "metadata should not have clot allocation.");
             auto slice = kv.first;
             auto lo = slice->range().lo;
             auto size = slice->size();
 
-            if (auto sliced = make_slice<IR::BFN::ExtractClot>(extract, lo, size)) {
+            // Only header fields have clot allocation, so extract_base should always be zero.
+            if (auto sliced = make_slice<IR::BFN::ExtractClot>(extract, lo, size, extract_base)) {
                 rv.push_back(sliced);
                 LOG4("  CLOT: " << sliced);
             }

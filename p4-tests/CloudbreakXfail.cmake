@@ -193,11 +193,6 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "unexpected packet output on port 0"
-  extensions/p4_tests/p4_16/stf/extract_slice.p4
-)
-
-p4c_add_xfail_reason("tofino3"
   "./p4c TIMEOUT|condition expression too complex"
   #testdata/p4_14_samples/header-stack-ops-bmv2.p4
 )
