@@ -501,12 +501,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4
 )
 
-# P4C-3774
-p4c_add_xfail_reason("tofino2"
-  "AttributeError: 'str' object has no attribute 'copy'"
-  fabric-DWITH_INT_TRANSIT
-  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
-)
 p4c_add_xfail_reason("tofino2"
   "AssertionError"
   t2na_ghost_dod

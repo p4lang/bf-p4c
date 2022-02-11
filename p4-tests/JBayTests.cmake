@@ -91,7 +91,7 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base\;JENKINS_PART1" "${JBA
 # --parser-inline-opt here, and let the other test be created as part of tests created from variable
 # JBAY_JNA_TEST_SUITES.
 p4c_find_test_names("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2985.p4" P4C_2985_TESTNAME)
-p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
+p4c_add_ptf_test_with_args("tofino2" "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
 p4c_add_test_label("tofino2" "base;JENKINS_PART1;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
 
 set (JBAY_JNA_TEST_SUITES
@@ -136,7 +136,7 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/compile_only/p4c-2490.p4" PROPERTIES TIMEOUT 3600)
 
 #override just created test above adding an extra argument -- remove when P4C-3070 done
-p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE ignore_test_1 extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4 "-tofino2 -arch t2na -Xp4c=--disable_split_attached" "")
+p4c_add_ptf_test_with_args("tofino2" ignore_test_1 extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4 "-tofino2 -arch t2na -Xp4c=--disable_split_attached" "")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4")
 
 p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4")
@@ -307,30 +307,31 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DCPU_PORT=0 -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw ^int")
-p4c_add_test_label("tofino2" "JENKINS_PART2" fabric)
 
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DCPU_PORT=0 -DWITH_SPGW -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^int")
-p4c_add_test_label("tofino2" "JENKINS_PART2" fabric-DWITH_SPGW)
 
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DCPU_PORT=0 -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw")
-p4c_add_test_label("tofino2" "JENKINS_PART2" fabric-DWITH_INT_TRANSIT)
 
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DCPU_PORT=0 -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all")
-p4c_add_test_label("tofino2" "JENKINS_PART2" fabric-DWITH_SPGW-DWITH_INT_TRANSIT)
 
-p4c_add_test_label("tofino2" "need_scapy" "fabric")
-p4c_add_test_label("tofino2" "need_scapy" "fabric-DWITH_SPGW")
-p4c_add_test_label("tofino2" "need_scapy" "fabric-DWITH_INT_TRANSIT")
-p4c_add_test_label("tofino2" "need_scapy" "fabric-DWITH_SPGW-DWITH_INT_TRANSIT")
+bfn_needs_scapy("tofino2" "fabric")
+bfn_needs_scapy("tofino2" "fabric-DWITH_SPGW")
+bfn_needs_scapy("tofino2" "fabric-DWITH_INT_TRANSIT")
+bfn_needs_scapy("tofino2" "fabric-DWITH_SPGW-DWITH_INT_TRANSIT")
+
+set_tests_properties("tofino2/fabric" PROPERTIES TIMEOUT 1800)
+set_tests_properties("tofino2/fabric-DWITH_SPGW" PROPERTIES TIMEOUT 1800)
+set_tests_properties("tofino2/fabric-DWITH_INT_TRANSIT" PROPERTIES TIMEOUT 1800)
+set_tests_properties("tofino2/fabric-DWITH_SPGW-DWITH_INT_TRANSIT" PROPERTIES TIMEOUT 1800)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -406,8 +407,8 @@ bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/
 # bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
 #     "--gen-hitless-ha-test-pd")
 file(RELATIVE_PATH ha_ha_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/ha/ha.p4)
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "extensions/p4_tests/p4-programs/programs/ha/ha.p4" ${ha_ha_path} "${testExtraArgs} -tofino2 -arch ${JBAY_P414_TEST_ARCH}" "")
+p4c_add_ptf_test_with_args ("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
+    ${ha_ha_path} "${testExtraArgs} -tofino2 -arch ${JBAY_P414_TEST_ARCH}" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4")
 
 # Add some tests as compile only (if they take too long to run or cannot be run
@@ -440,8 +441,7 @@ bfn_find_tests ("${TOF2_V1MODEL_COMPILE_ONLY_TESTS}" TOF2_V1MODEL_COMPILE_ONLY_T
 p4c_add_bf_backend_tests("tofino2" "jbay" "${JBAY_P414_TEST_ARCH}" "smoketest_programs\;JENKINS_PART2" "${TOF2_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino2 -arch t2na" "")
+p4c_add_ptf_test_with_args ("tofino2" "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino2 -arch t2na" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" tofino32q-3pipe)
 
 ## P4-16 Programs
@@ -480,65 +480,61 @@ set (P4FACTORY_P4_16_PROGRAMS
 
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_simple_switch" ${p4_16_programs_path}/tna_simple_switch/tna_simple_switch.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_tna_simple_switch")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_programs_tna_32q_multiprogram_a"
+    ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_tna_32q_multiprogram_a")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_programs_tna_32q_multiprogram_b"
+    ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_tna_32q_multiprogram_b")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_resubmit" ${p4_16_programs_path}/tna_resubmit/tna_resubmit.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_resubmit" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_programs_tna_resubmit"
+    ${p4_16_programs_path}/tna_resubmit/tna_resubmit.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_resubmit" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_tna_resubmit")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_pktgen" ${p4_16_programs_path}/tna_pktgen/tna_pktgen.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_pktgen" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_programs_tna_pktgen"
+    ${p4_16_programs_path}/tna_pktgen/tna_pktgen.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_pktgen" "")
 bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_pktgen" "all ^test.PortDownPktgenTest")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_tna_pktgen")
 
 file(RELATIVE_PATH p4_16_internal_p4_16_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16)
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_hwlrn" ${p4_16_internal_p4_16_path}/hwlrn/hwlrn.p4 "${testExtraArgs} -tofino2 -arch t2na --no-bf-rt-schema -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_hwlrn"
+    ${p4_16_internal_p4_16_path}/hwlrn/hwlrn.p4 "${testExtraArgs} -tofino2 -arch t2na --no-bf-rt-schema -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 set_property(TEST "tofino2/extensions/p4_tests/p4_16/jbay/hwlearn1.p4"
   APPEND PROPERTY ENVIRONMENT "CTEST_P4C_ARGS=--no-bf-rt-schema")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_hwlrn")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_ipv4_checksum" ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_ipv4_checksum"
+    ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_ipv4_checksum")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_lrn" ${p4_16_internal_p4_16_path}/lrn/lrn.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_lrn"
+    ${p4_16_internal_p4_16_path}/lrn/lrn.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_lrn")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_t2na_emulation" ${p4_16_internal_p4_16_path}/t2na_emulation/t2na_emulation.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_emulation"
+    ${p4_16_internal_p4_16_path}/t2na_emulation/t2na_emulation.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_emulation")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_t2na_fifo" ${p4_16_internal_p4_16_path}/t2na_fifo/t2na_fifo.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_fifo" 
+    ${p4_16_internal_p4_16_path}/t2na_fifo/t2na_fifo.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_fifo")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_t2na_pgr" ${p4_16_internal_p4_16_path}/t2na_pgr/t2na_pgr.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_pgr"
+    ${p4_16_internal_p4_16_path}/t2na_pgr/t2na_pgr.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_pgr")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_t2na_static_entry" ${p4_16_internal_p4_16_path}/t2na_static_entry/t2na_static_entry.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_static_entry"
+    ${p4_16_internal_p4_16_path}/t2na_static_entry/t2na_static_entry.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_static_entry")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_tna_pvs_multi_states" ${p4_16_internal_p4_16_path}/tna_pvs_multi_states/tna_pvs_multi_states.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_tna_pvs_multi_states" ${p4_16_internal_p4_16_path}/tna_pvs_multi_states/tna_pvs_multi_states.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 bfn_set_ptf_test_spec("tofino2" "p4_16_internal_p4_16_tna_pvs_multi_states" "all")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_tna_pvs_multi_states")
 
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_internal_p4_16_t2na_ghost" ${p4_16_internal_p4_16_path}/t2na_ghost/t2na_ghost.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_ghost"
+    ${p4_16_internal_p4_16_path}/t2na_ghost/t2na_ghost.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_ghost")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod/t2na_ghost_dod.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod")
@@ -568,8 +564,8 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
 endforeach()
 
 # PTF, disable failing tests
-p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_checksum" ${p4_16_programs_path}/tna_checksum/tna_checksum.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_checksum" "")
+p4c_add_ptf_test_with_args ("tofino2" "p4_16_programs_tna_checksum"
+    ${p4_16_programs_path}/tna_checksum/tna_checksum.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_checksum" "")
 bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_checksum"
     "all ^test.Ipv4UdpTranslateSpecialUpdTest")
 bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_snapshot"

@@ -1908,13 +1908,6 @@ Temporary fix: try to apply @pa_container_size pragma to small fields allocated 
   extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
 )
 
-# P4C-3774
-p4c_add_xfail_reason("tofino"
-  "AttributeError: 'str' object has no attribute 'copy'"
-  fabric-DWITH_INT_TRANSIT
-  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
-)
-
 # P4C update 2021-07-12
 # At frontend because there is
 # a MethodCallExpression that is not inside a BlockStatement

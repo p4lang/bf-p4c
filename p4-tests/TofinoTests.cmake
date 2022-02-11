@@ -144,8 +144,8 @@ set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.
 # p4c_add_bf_backend_tests macro when tests are creates from variable v1tests.
 p4c_find_test_names("${P4TESTDATA}/p4_16_samples/parser-inline/*.p4" P4TESTS_PARSER_INLINE)
 foreach (ts ${P4TESTS_PARSER_INLINE})
-  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "parser-inline-opt/${ts}" ${ts} "" "--parser-inline-opt")
-  p4c_add_test_label("tofino" "base;stf" "parser-inline-opt/${ts}")
+  p4c_add_ptf_test_with_args("tofino" "parser-inline-opt/${ts}" ${ts} "" "--parser-inline-opt")
+  p4c_add_test_label("tofino" "base" "parser-inline-opt/${ts}")
 endforeach()
 
 set (TOFINO_V1_TEST_SUITES_P416
@@ -173,16 +173,16 @@ set (P4TESTS_FOR_TOFINO_NO_DEPTH
     "issue1755-1-bmv2.p4"
     )
 foreach (test ${P4TESTS_P4_14_FOR_TOFINO_NO_MAX_DEPTH})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_14_samples/${test}" "testdata/p4_14_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
+    p4c_add_ptf_test_with_args("tofino" "testdata/p4_14_samples/${test}" "testdata/p4_14_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
 endforeach()
 foreach (test ${P4TESTS_P4_16_FOR_TOFINO_NO_MIN_DEPTH})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-min-depth-limit\"")
+    p4c_add_ptf_test_with_args("tofino" "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-min-depth-limit\"")
 endforeach()
 foreach (test ${P4TESTS_P4_16_FOR_TOFINO_NO_MAX_DEPTH})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
+    p4c_add_ptf_test_with_args("tofino" "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-max-depth-limit\"")
 endforeach()
 foreach (test ${P4TESTS_FOR_TOFINO_NO_DEPTH})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-depth-limit\"")
+    p4c_add_ptf_test_with_args("tofino" "testdata/p4_16_samples/${test}" "testdata/p4_16_samples/${test}" "" "-Xp4c=\"--disable-parse-depth-limit\"")
 endforeach()
 
 # P4C-2985
@@ -192,7 +192,7 @@ endforeach()
 # --parser-inline-opt here, and let the other test be created as part of tests created from variable
 # TOFINO_TNA_TEST_SUITES.
 p4c_find_test_names("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2985.p4" P4C_2985_TESTNAME)
-p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
+p4c_add_ptf_test_with_args("tofino" "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
 p4c_add_test_label("tofino" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
 
 set (TOFINO_TNA_TEST_SUITES
@@ -358,10 +358,6 @@ set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/arista/p4c-2661.
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
     "${testExtraArgs} -arch v1model" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
-# FIXME: tofino/tor.p4 and tor-archive share output directory.
-# Instead of acquiring a resource, we could set different output directories
-# for these two tests.
-set_tests_properties("tofino/tor.p4" PROPERTIES RESOURCE_LOCK tor_output_dir)
 
 # this tests conversion from Tofino-specific P4Info to "standard" P4Info
 p4c_add_ptf_test_with_ptfdir (
@@ -390,14 +386,20 @@ p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
     "${testExtraArgs} --auto-init-metadata -DCPU_PORT=320 -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model -Xp4c=\"--disable-parse-depth-limit\""
     ${ONOS_FABRIC_PTF} "all")
-p4c_add_test_label("tofino" "need_scapy" "fabric")
-p4c_add_test_label("tofino" "need_scapy" "fabric-DWITH_SPGW")
-p4c_add_test_label("tofino" "need_scapy" "fabric-DWITH_INT_TRANSIT")
-p4c_add_test_label("tofino" "need_scapy" "fabric-DWITH_SPGW-DWITH_INT_TRANSIT")
+
+bfn_needs_scapy("tofino" "fabric")
+bfn_needs_scapy("tofino" "fabric-DWITH_SPGW")
+bfn_needs_scapy("tofino" "fabric-DWITH_INT_TRANSIT")
+bfn_needs_scapy("tofino" "fabric-DWITH_SPGW-DWITH_INT_TRANSIT")
+
+set_tests_properties("tofino/fabric" PROPERTIES TIMEOUT 1800)
+set_tests_properties("tofino/fabric-DWITH_SPGW" PROPERTIES TIMEOUT 1800)
+set_tests_properties("tofino/fabric-DWITH_INT_TRANSIT" PROPERTIES TIMEOUT 1800)
+set_tests_properties("tofino/fabric-DWITH_SPGW-DWITH_INT_TRANSIT" PROPERTIES TIMEOUT 1800)
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino -arch tna" "")
+p4c_add_ptf_test_with_args ("tofino" "tofino32q-3pipe"
+    ${tofino32q-3pipe_path} "${testExtraArgs} -tofino -arch tna" "")
 
 # subset of p4factory tests that we want to run as part of regressions
 # One # means it fails badly but should get it to run soon
@@ -846,7 +848,7 @@ foreach(t IN LISTS ba101_tests)
     p4c_add_ptf_test_with_ptfdir ("tofino" ba101_${testname} ${t} "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH}" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba101_${testname} ${testfile} "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH}" "")
+    p4c_add_ptf_test_with_args("tofino" ba101_${testname} ${testfile} "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH}" "")
   endif()
   p4c_add_test_label("tofino" "BA-101" ba101_${testname})
   p4c_add_test_label("tofino" "p414_nightly" ba101_${testname})
@@ -865,11 +867,10 @@ foreach(t IN LISTS ba102_tests)
     p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\"" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}"
+    p4c_add_ptf_test_with_args("tofino" ba102_${testname} ${testfile} "${testExtraArgs}"
 	    "-arch tna -bfrt -force-link -Xp4c=\"--disable-parse-max-depth-limit\"")
   endif()
   p4c_add_test_label("tofino" "BA-102" ba102_${testname})
-  set_tests_properties("tofino/ba102_${testname}" PROPERTIES RESOURCE_LOCK ptf_test_environment)
 endforeach()
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_wred")
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_lpf")
@@ -906,17 +907,22 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_faecess_0" ${CMAKE_CURRENT_SOU
 ## Manifest tests
 # test the generation of the compiler archive, for a must pass P4_14 and P4_16 program
 # will run as part of cpplint
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "easy-ternary-archive"
+p4c_add_ptf_test_with_args ("tofino" "easy-ternary-archive"
   extensions/p4_tests/p4_14/ptf/easy_ternary.p4 ""
   "-norun --arch ${TOFINO_P414_TEST_ARCH} --create-graphs --archive --validate-manifest")
 p4c_add_test_label("tofino" "cpplint" "easy-ternary-archive")
 p4c_add_test_label("tofino" "p414_nightly" "easy-ternary-archive")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE "tor-archive"
+p4c_add_ptf_test_with_args ("tofino" "tor-archive"
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4 ""
   "-norun --arch v1model --create-graphs --archive --validate-manifest")
 p4c_add_test_label("tofino" "cpplint" "tor-archive")
-set_tests_properties("tofino/tor-archive" PROPERTIES RESOURCE_LOCK tor_output_dir)
+
+# tor.p4 and tor-archive share output directory
+set_tests_properties(
+  "tofino/tor-archive"
+  PROPERTIES DEPENDS "tofino/tor.p4"
+  )
 
 set (P4FACTORY_INTERNAL_PROGRAMS_PATH "extensions/p4_tests/p4-programs/internal_p4_14")
 
@@ -1036,18 +1042,18 @@ set (P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY
 
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
-  # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_simple_switch" ${p4_16_programs_path}/tna_simple_switch/tna_simple_switch.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs -Xp4c=\"--disable-parse-depth-limit\"" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_ptf_test_with_args ("tofino" "p4_16_programs_tna_32q_multiprogram_a"
+    ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4
+    "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_ptf_test_with_args ("tofino" "p4_16_programs_tna_32q_multiprogram_b"
+    ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4
+    "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 
 # PTF Fails, Compile only
 # tna_snapshot
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_tna_snapshot" ${p4_16_programs_path}/tna_snapshot/tna_snapshot.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
+p4c_add_ptf_test_with_args ("tofino" "p4_16_programs_tna_snapshot"
+    ${p4_16_programs_path}/tna_snapshot/tna_snapshot.p4
+    "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
@@ -1069,8 +1075,8 @@ endforeach()
 # Compile-only P4-16 Programs
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY)
   file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4")
-  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-    "p4_16_programs_${t}" "${testfile}" ""
+  p4c_add_ptf_test_with_args("tofino" "p4_16_programs_${t}"
+    "${testfile}" ""
     "${testExtraArgs} -target tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
 endforeach()
 
@@ -1095,8 +1101,8 @@ p4c_add_test_label("tofino" "need_python2" "p4_16_programs_internal_tna_multi_pr
 # Compile-only internal P4-16 Programs
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY)
   file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/${t}.p4")
-  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-    "p4_16_programs_internal_${t}" "${testfile}" ""
+  p4c_add_ptf_test_with_args("tofino" "p4_16_programs_internal_${t}"
+    "${testfile}" ""
     "${testExtraArgs} -target tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16")
 endforeach()
 
@@ -1197,8 +1203,8 @@ include(TofinoErrors.cmake)
 
 set  (PHASE0_PRAGMA_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/phase0_pragma.p4)
 file (RELATIVE_PATH phase0test ${P4C_SOURCE_DIR} ${PHASE0_PRAGMA_P4})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "phase0_pragma_test" ${phase0test} "${testExtraArgs} -Tphase0:5 -arch ${TOFINO_P414_TEST_ARCH}" "")
+p4c_add_ptf_test_with_args ("tofino" "phase0_pragma_test"
+    ${phase0test} "${testExtraArgs} -Tphase0:5 -arch ${TOFINO_P414_TEST_ARCH}" "")
 p4c_add_test_label("tofino" "p414_nightly" "phase0_pragma_test")
 p4c_add_tofino_success_reason(
   "No phase 0 table found; skipping phase 0 translation"

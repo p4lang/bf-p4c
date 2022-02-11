@@ -27,6 +27,7 @@ def runInDocker(Map namedArgs, String cmd) {
 
     sh """
         docker run --rm \
+            --init \
             -w ${args.workingDir} \
             -e CTEST_PARALLEL_LEVEL=${args.ctestParallelLevel} \
             -e CTEST_OUTPUT_ON_FAILURE='true' \

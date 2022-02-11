@@ -191,11 +191,6 @@ test_matrix = {
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_pvs_source.json', '-I', p4_16_path,
         os.path.join(p4_16_path, 'tna_pvs/tna_pvs.p4'), '-g'], None, None,
         os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_pvs_source.json')),
-    # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
-    'source.json: p4-tests/p4-programs/p4_16_programs/tna_simple_switch' :
-        (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_simple_switch_source.json', '-I', p4_16_path,
-        os.path.join(p4_16_path, 'tna_simple_switch/tna_simple_switch.p4'), '-g', '-Xp4c="--disable-parse-depth-limit"'], None, None,
-        os.path.join(p4c_driver_tests_outputs, 'p4-tests_p4-programs_p4_16_programs_tna_simple_switch_source.json')),
     'source.json: p4-tests/p4-programs/p4_16_programs/tna_register' :
         (['--target', 'tofino', '--arch', 'tna', '-o', 'p4-tests_p4-programs_p4_16_programs_tna_register_source.json', '-I', p4_16_path,
         os.path.join(p4_16_path, 'tna_register/tna_register.p4'), '-g'], None, None,

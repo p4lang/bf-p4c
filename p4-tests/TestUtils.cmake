@@ -132,6 +132,24 @@ function(bfn_set_ptf_test_port tag p4test test_port)
     APPEND PROPERTY ENVIRONMENT "TEST_PORT=${test_port}")
 endfunction()
 
+# run the test with scapy instead of bf_pktpy
+function(bfn_needs_scapy tag p4test)
+  set_property(TEST "${tag}/${p4test}" APPEND PROPERTY ENVIRONMENT "PKTPY=false")
+endfunction()
+
+macro(p4c_add_ptf_test_with_args device alias p4test test_args cmake_args)
+  p4c_test_set_name(__testname ${device} ${alias})
+  if (PTF_REQUIREMENTS_MET)
+    p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
+      ${p4test} "${test_args}" "${cmake_args}")
+    set_property(TEST ${__testname} APPEND PROPERTY RESOURCE_LOCK ptf_test_environment)
+    p4c_add_test_label(${device} "ptf" ${alias})
+  else()
+    p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
+      ${p4test} "${test_args}" "${cmake_args}")
+  endif()
+endmacro(p4c_add_ptf_test_with_args)
+
 # call this macro to register a PTF test with a custom PTF test directory; by
 # default the behavior is to look for a directory with the same name as the P4
 # program and a .ptf extension, which may not always be convenient when adding
@@ -144,7 +162,7 @@ macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
   if (PTF_REQUIREMENTS_MET)
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
       ${p4test} "" "${args} -ptfdir ${ptfdir}")
-    set_tests_properties(${__testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
+    set_property(TEST ${__testname} APPEND PROPERTY RESOURCE_LOCK ptf_test_environment)
     p4c_add_test_label(${device} "ptf" ${alias})
   else()
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
