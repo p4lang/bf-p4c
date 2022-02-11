@@ -198,7 +198,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "the following .* not written in .* will be overwritten illegally"
+  "the following .* not written in .* will be overwritten illegally|slice list is not byte-sized"
   switch_msdc_l3
   )
 

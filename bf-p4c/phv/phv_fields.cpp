@@ -115,6 +115,11 @@ void PhvInfo::add_struct(
         int offset) {
     BUG_CHECK(type, "No type for %1%", name);
     LOG3("PhvInfo adding " << (meta ? " metadata" : "header") << " for struct " << name);
+    // header has its own offset regardless of the offset of struct.
+    if (!meta) {
+        offset = 0;
+        for (auto f : type->fields) offset += f->type->width_bits();
+    }
     int start = by_id.size();
     for (auto f : type->fields) {
         int size = f->type->width_bits();

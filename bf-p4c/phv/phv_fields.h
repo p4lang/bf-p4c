@@ -884,7 +884,7 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     /// byte aligned range for f[0:7] will be [8, 24].
     le_bitrange byteAlignedRangeInBits() const {
         int left_limit = 8 * ((field_i->offset + range_i.lo) / 8);
-        int right_limit = 8 * ROUNDUP(field_i->offset + range_i.hi, 8);
+        int right_limit = 8 * ROUNDUP(field_i->offset + range_i.hi - 1, 8);
         return StartLen(left_limit, right_limit - left_limit);
     }
 
