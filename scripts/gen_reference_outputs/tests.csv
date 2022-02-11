@@ -40,7 +40,6 @@ comp394,glass/testsuite/p4_tests/phv/COMPILER-394/comp394.p4,,"",tofino,p4-14,v1
 switch_comp546,glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4,,"",tofino,p4-14,v1model,skip_P4C
 parser_tcp_ip_option_mul,glass/testsuite/p4_tests/embedway/COMPILER-765/parser_tcp_ip_option_mul.p4,,"",tofino,p4-14,v1model,skip_P4C
 clone_field_list_bug,glass/testsuite/p4_tests/medialinks/COMPILER-1000/clone_field_list_bug.p4,,"--archive",tofino,p4-14,v1model,skip_P4C
-tofino_switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x0.p4,p4-tests/p4_16/switch_16/p4src/shared,-Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
 tofino_switch_16_x1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX1_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
 tofino_switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
 tofino_switch_16_32q,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x3.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX3_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
