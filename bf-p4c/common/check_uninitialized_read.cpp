@@ -65,6 +65,13 @@ void CheckUninitializedRead::end_apply() {
                     }
                 }
             } else {
+#if HAVE_FLATROCK
+                // FIXME: flatrock egress intrinsic is always initialized.
+                if (Device::currentDevice() == Device::FLATROCK) {
+                    ::warning("Checking uninitialized read not implemented");
+                    continue;
+                }
+#endif
                 // metadata in INGRESS and non bridged metadata in EGRESS will have at least a
                 // ImplicitParserInit def.
                 BUG_CHECK(!field.metadata ||

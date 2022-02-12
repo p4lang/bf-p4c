@@ -185,14 +185,16 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 
     for (auto &info : collect->info) {
         int flags = 0;
-        if (!info.second.xor_with.empty()) {
-            flags |= IXBar::Use::NeedXor;
-            // FIXME -- is this enough for the alloc constraints?  tofino/input_xbar.cpp
-            // has a FIXME here too...
-        } else if (info.second.need_range) {
+        if (info.second.need_range) {
             error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%sTofino5 does not support "
                   "range comparisons in a condition", tbl->srcInfo);
             return false; }
+        // if a field is not used in range match and
+        // the field is not used to compare with a constant,
+        // then it is used to compare with another field,
+        // therefore requires XOR operation.
+        if (!info.second.const_eq)
+            flags |= IXBar::Use::NeedXor;
         cstring aliasSourceName;
         if (collect->info_to_uses.count(&info.second)) {
             LOG5("Found gateway alias source name");

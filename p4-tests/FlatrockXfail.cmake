@@ -39,8 +39,9 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 
+# invalid assembly code
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: metadata cannot reach here"
+  "Invalid slice of 7 bit field immediate"
   extensions/p4_tests/p4_16/flatrock/t5na_bridged_md.p4
   )
 
