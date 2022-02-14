@@ -4,6 +4,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitrange.h"
+#include "lib/error.h"
 
 namespace {
 
@@ -461,6 +462,15 @@ bool ActionAnalysis::preorder(const IR::Expression *expr) {
     }
     return false;
 }
+
+bool ActionAnalysis::preorder(const IR::Mux *mux) {
+    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+            "%1%\nConditions in an action must be simple comparisons of an action data "
+            "parameter\nTry moving the test out of the action or making it part of the table key",
+            mux->srcInfo);
+    return false;
+}
+
 bool ActionAnalysis::preorder(const IR::Member *mem) {
     if (mem->expr->is<IR::MAU::AttachedOutput>()) return true;
     return preorder(static_cast<const IR::Expression *>(mem));

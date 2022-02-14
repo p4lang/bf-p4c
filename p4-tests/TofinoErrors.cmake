@@ -76,7 +76,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/psa-conditional_operator.p4
+)
 # Fail on purpose due to indirect tables not being mutually exclusive
+p4c_add_xfail_reason("tofino"
   "table .* and table .* cannot share .*"
   testdata/p4_16_samples/issue2844-enum.p4
   )
