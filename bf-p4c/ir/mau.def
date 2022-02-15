@@ -602,15 +602,21 @@ class IdleTime : AttachedMemory {
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
 // (so must have j < i) */
 class TableSeq {
+    static int                  uid_ctr;
     inline Vector<Table>        tables;
     LTBitMatrix                 deps;
+    int                         seq_uid;  // try to track TableSeq across transforms
 #noconstructor
-    TableSeq() = default;
-    TableSeq(Table a) { if (a) tables.push_back(a); }
+    TableSeq() { seq_uid = ++uid_ctr; }
+    TableSeq(Table a) {
+        seq_uid = ++uid_ctr;
+        if (a) tables.push_back(a); }
     TableSeq(Table a, Table b) {
+        seq_uid = ++uid_ctr;
         if (a) tables.push_back(a);
         if (b) tables.push_back(b); }
     TableSeq(TableSeq a, Table b) {
+        seq_uid = ++uid_ctr;
         if (a) tables.insert(tables.end(), a->tables.begin(), a->tables.end());
         if (b) tables.push_back(b); }
     bool empty() const { return tables.empty(); }
@@ -625,6 +631,10 @@ class TableSeq {
             else if (t->gress != gress) BUG("TableSeq consists of tables of different gress?"); }
     }
 
+    // ignore seq_uid field when comparing
+    // FIXME -- should add irgenerator field modifier to get it ignored in autogen code
+    operator== { return tables == a.tables && deps == a.deps; }
+    equiv { return tables.equiv(a.tables) && deps == a.deps; }
 #apply
 }
 

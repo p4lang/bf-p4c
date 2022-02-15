@@ -4329,7 +4329,7 @@ static void add_names(cstring n, std::map<cstring, char> &names) {
             names.emplace(n, 'A' + names.size()); }
 }
 static void add_names(const std::pair<PHV::Container, int>& c, std::map<cstring, char> &names) {
-    add_names(c.first.toString(), names); }
+    add_names(c.first ? c.first.toString() : cstring(), names); }
 template<class T>
 static void add_names(const T &n, std::map<cstring, char> &names) {
     for (auto &a : n) add_names(a, names); }
@@ -4366,7 +4366,7 @@ static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &nam
 }
 static void write_one(std::ostream &out, const std::pair<PHV::Container, int> &f,
                       std::map<cstring, char> &fields) {
-    write_one(out, std::make_pair(f.first.toString(), f.second), fields);
+    write_one(out, std::make_pair(f.first ? f.first.toString() : cstring(), f.second), fields);
 }
 
 template<class T>

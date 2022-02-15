@@ -887,6 +887,8 @@ void IR::MAU::Table::remove_gateway() {
     gateway_payload.clear();
 }
 
+int IR::MAU::TableSeq::uid_ctr = 0;
+
 cstring IR::MAU::Action::externalName() const {
     if (auto *name_annot = annotations->getSingle("name"))
         return name_annot->getName();
