@@ -735,7 +735,7 @@ typedef bit<32> switch_hash_t;
 typedef bit<128> srv6_sid_t;
 # 239 "/work/srv6/p4factory/submodules/bf-switch/p4src/shared/types.p4"
 typedef bit<16> switch_xid_t;
-typedef bit<9> switch_yid_t;
+typedef L2ExclusionId_t switch_yid_t;
 
 
 

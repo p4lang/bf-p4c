@@ -575,7 +575,7 @@ typedef bit<8> switch_nexthop_t;
 typedef bit<8> switch_outer_nexthop_t;
 
 typedef bit<16> switch_xid_t;
-typedef bit<9> switch_yid_t;
+typedef L2ExclusionId_t switch_yid_t;
 
 typedef bit<8> switch_smac_index_t;
 
@@ -1188,7 +1188,7 @@ struct switch_header_inner_t {
 struct switch_header_t {
 
     // ===========================
-    // misc 
+    // misc
     // ===========================
 
     switch_bridged_metadata_h bridged_md;
@@ -2317,11 +2317,11 @@ control Scoper_l7(
 	inout switch_lookup_fields_t lkp
 ) {
 	// -----------------------------
-		
+
 	action set_udf() {
 #ifdef UDF_ENABLE
 		lkp.udf = hdr_udf.opaque;
-#endif 
+#endif
 	}
 
 	action clear_udf() {
@@ -4280,12 +4280,12 @@ parser NpbIngressParser(
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
-    //  My   L2   MAU                   First   
+    //  My   L2   MAU                   First
     //  MAC  Fwd  Path                  Stack
     //  ----------------------------    ------------
-    //  0    0    SFC Optical-Tap       Outer       
-    //  0    1    Bridging              Outer       
-    //  1    x    SFC Network-Tap       Transport   
+    //  0    0    SFC Optical-Tap       Outer
+    //  0    1    Bridging              Outer
+    //  1    x    SFC Network-Tap       Transport
     //            or SFC Bypass (nsh)   Transport
 
     state check_my_mac_lo {
@@ -4395,7 +4395,7 @@ parser NpbIngressParser(
 
         // ./npb/pipe/npb.bfa:2037: error: Ran out of constant output slots
         // ig_md.lkp_0.tunnel_id[15:0] = pkt.lookahead<vlan_tag_grouped_h>().pcp_cfi_vid;
-        // ig_md.lkp_0.tunnel_id[15:0] = pkt.lookahead<bit<16>>();        
+        // ig_md.lkp_0.tunnel_id[15:0] = pkt.lookahead<bit<16>>();
 
      pkt.extract(hdr.transport.vlan_tag[0]);
 
@@ -4409,7 +4409,7 @@ parser NpbIngressParser(
         // first aren't byte aligned: 77:ingress::ig_md.lkp_1.tunnel_id<32> ^0 ^bit[0..15] meta solitary mocha
         // ig_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.transport.vlan_tag[0].vid;
         // ig_md.lkp_1.tunnel_id[11:0] = hdr.transport.vlan_tag[0].vid;
-        // ig_md.lkp_1.tunnel_id[15:0] = (bit<16>)hdr.transport.vlan_tag[0].vid;        
+        // ig_md.lkp_1.tunnel_id[15:0] = (bit<16>)hdr.transport.vlan_tag[0].vid;
 
         // error: Inferred incompatible container alignments for field ingress::ig_md.lkp_1.tunnel_id:
         // alignment = 5 != alignment = 0 (little endian)
@@ -4446,7 +4446,7 @@ parser NpbIngressParser(
 
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Transport
-    ///////////////////////////////////////////////////////////////////////////    
+    ///////////////////////////////////////////////////////////////////////////
 
     //-------------------------------------------------------------------------
     // GRE - Transport
@@ -4500,7 +4500,7 @@ parser NpbIngressParser(
     //         default: parse_inner_ethernet;
     //     }
     // }
-    // 
+    //
     // state parse_transport_erspan_type3_platform {
     //     pkt.extract(hdr.transport.erspan_platform);
     //     transition parse_outer_ethernet;
@@ -4600,7 +4600,7 @@ parser NpbIngressParser(
      pkt.extract(hdr.outer.e_tag);
 
         ig_md.lkp_1.mac_type = hdr.outer.e_tag.ether_type;
-        ig_md.lkp_1.pcp_0 = hdr.outer.e_tag.pcp; // todo: should we populate pcp here?        
+        ig_md.lkp_1.pcp_0 = hdr.outer.e_tag.pcp; // todo: should we populate pcp here?
 
         transition select(hdr.outer.e_tag.ether_type) {
             0x8100 : parse_outer_vlan_0;
@@ -4650,7 +4650,7 @@ parser NpbIngressParser(
         // first aren't byte aligned: 77:ingress::ig_md.lkp_1.tunnel_id<32> ^0 ^bit[0..15] meta solitary mocha
         // ig_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag[0].vid;
         // ig_md.lkp_1.tunnel_id[11:0] = hdr.outer.vlan_tag[0].vid;
-        // ig_md.lkp_1.tunnel_id[15:0] = (bit<16>)hdr.outer.vlan_tag[0].vid;        
+        // ig_md.lkp_1.tunnel_id[15:0] = (bit<16>)hdr.outer.vlan_tag[0].vid;
 
         // error: Inferred incompatible container alignments for field ingress::ig_md.lkp_1.tunnel_id:
         // alignment = 5 != alignment = 0 (little endian)
@@ -4778,7 +4778,7 @@ parser NpbIngressParser(
 
 
     // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
+    // We're simply over-loading L4-port info for policy via lookahead.
     state parse_outer_icmp_igmp_overload {
 
          ig_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
@@ -5081,7 +5081,7 @@ parser NpbIngressParser(
         // first aren't byte aligned: 77:ingress::ig_md.lkp_2.tunnel_id<32> ^0 ^bit[0..15] meta solitary mocha
         // ig_md.lkp_2.tunnel_id = (bit<switch_tunnel_id_width>)hdr.inner.vlan_tag[0].vid;
         // ig_md.lkp_2.tunnel_id[11:0] = hdr.inner.vlan_tag[0].vid;
-        // ig_md.lkp_2.tunnel_id[15:0] = (bit<16>)hdr.inner.vlan_tag[0].vid;        
+        // ig_md.lkp_2.tunnel_id[15:0] = (bit<16>)hdr.inner.vlan_tag[0].vid;
 
         // error: Inferred incompatible container alignments for field ingress::ig_md.lkp_2.tunnel_id:
         // alignment = 5 != alignment = 0 (little endian)
@@ -5190,7 +5190,7 @@ parser NpbIngressParser(
     }
 
     // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.     
+    // We're simply over-loading L4-port info for policy via lookahead.
     state parse_inner_icmp_igmp_overload {
 
         ig_md.lkp_2.l4_src_port = pkt.lookahead<bit<16>>();
@@ -5608,13 +5608,13 @@ parser NpbEgressParser(
         // -----------------------------
         // packet will always have NSH present
 
-        //  L2   My   MAU                   First   
+        //  L2   My   MAU                   First
         //  Fwd  MAC  Path                  Stack
         //  ----------------------------    ------------
-        //  0    0    SFC Optical-Tap       Outer       
-        //  0    1    SFC Optical-Tap       Outer       
-        //  1    0    Bridging              Outer       
-        //  1    1    SFC Network-Tap       Transport   
+        //  0    0    SFC Optical-Tap       Outer
+        //  0    1    SFC Optical-Tap       Outer
+        //  1    0    Bridging              Outer
+        //  1    1    SFC Network-Tap       Transport
         //            or SFC Bypass (nsh)   Transport
 
         transition select(
@@ -5959,7 +5959,7 @@ parser NpbEgressParser(
 
 
     // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
+    // We're simply over-loading L4-port info for policy via lookahead.
     state parse_outer_icmp_igmp_overload {
 
         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
@@ -6426,7 +6426,7 @@ parser NpbEgressParser(
 
     //-------------------------------------------------------------------------
     // Scope 1
-    //-------------------------------------------------------------------------            
+    //-------------------------------------------------------------------------
 
     state parse_inner_ethernet_scope1 {
         pkt.extract(hdr.inner.ethernet);
@@ -6462,7 +6462,7 @@ parser NpbEgressParser(
 
     //-------------------------------------------------------------------------
     // Scope 0
-    //-------------------------------------------------------------------------            
+    //-------------------------------------------------------------------------
 
     state parse_inner_ipv4_scope0 {
         pkt.extract(hdr.inner.ipv4);
@@ -6569,7 +6569,7 @@ parser NpbEgressParser(
 
 
     // For ICMP and IGMP, we're not actually extracting the header;
-    // We're simply over-loading L4-port info for policy via lookahead.    
+    // We're simply over-loading L4-port info for policy via lookahead.
     state parse_inner_icmp_igmp_overload {
         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
         transition accept;
@@ -6856,24 +6856,24 @@ parser NpbEgressParser(
 // ///////////////////////////////////////////////////////////////////////////////
 // // Transport Encaps
 // ///////////////////////////////////////////////////////////////////////////////
-// 
+//
 // //-----------------------------------------------------------------------------
 // // Encapsulated Remote Switch Port Analyzer (ERSPAN)
 // //-----------------------------------------------------------------------------
-// 
+//
 // state parse_erspan_t1 {
 //     pkt.extract(hdr.erspan_type1);
 //     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T1
 //     transition parse_inner_ethernet;
 // }
-// 
+//
 // state parse_erspan_t2 {
 //     pkt.extract(hdr.erspan_type2);
 //     //verify(hdr.erspan_typeII.version == 1, error.Erspan2VersionNotOne);
 //     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T2
 //     transition parse_inner_ethernet;
 // }
-// 
+//
 // // state parse_erspan_t3 {
 // //     pkt.extract(hdr.erspan_type3);
 // //     //verify(hdr.erspan_typeIII.version == 2, error.Erspan3VersionNotTwo);
@@ -6883,13 +6883,13 @@ parser NpbEgressParser(
 // //         default: parse_inner_ethernet;
 // //     }
 // // }
-// // 
+// //
 // // state parse_erspan_type3_platform {
 // //     pkt.extract(hdr.erspan_platform);
 // //     transition parse_inner_ethernet;
 // // }
-// 
-// 
+//
+//
 
 
 }
@@ -7713,23 +7713,23 @@ control PktValidation(
 //     // -----------------------------
 // 	// L4
 //     // -----------------------------
-// 
+//
 //     action set_udp_ports() {
 //         lkp.l4_src_port = hdr.udp.src_port;
 //         lkp.l4_dst_port = hdr.udp.dst_port;
 //     }
-// 
+//
 //     // Not much of a validation as it only sets the lookup fields.
 //     table validate_other {
 //         key = {
 //             hdr.udp.isValid() : exact;
 //         }
-// 
+//
 //         actions = {
 // 			NoAction;
 //             set_udp_ports;
 //         }
-// 
+//
 //         const default_action = NoAction;
 //         const entries = {
 // /*
@@ -7743,26 +7743,26 @@ control PktValidation(
 //             (true) : set_udp_ports();
 //         }
 //     }
-// 
-// 
+//
+//
 //     // -----------------------------
 // 	   // L4
 //     // -----------------------------
-// 
+//
 //     action set_udp_ports() {
 //     }
-// 
+//
 //     // Not much of a validation as it only sets the lookup fields.
 //     table validate_other {
 //         key = {
 //             hdr.udp.isValid() : exact;
 //         }
-// 
+//
 //         actions = {
 // 			NoAction;
 //             set_udp_ports;
 //         }
-// 
+//
 //         const default_action = NoAction;
 //         const entries = {
 //             (true) : set_udp_ports();
@@ -7817,17 +7817,17 @@ control PktValidation(
     //
     //   Drop the packet if:
     //
-    //        version != 0                     -> Base Header          
-    //              o == 1  (oam)                     :                
-    //            ttl == 0                            :                
-    //            len != 6  (4B words)                :                
-    //        md_type != 1                            :                
-    //     next_proto != 3  (enet)                    :                
-    //             si == 0                     -> Service Path Header      
+    //        version != 0                     -> Base Header
+    //              o == 1  (oam)                     :
+    //            ttl == 0                            :
+    //            len != 6  (4B words)                :
+    //        md_type != 1                            :
+    //     next_proto != 3  (enet)                    :
+    //             si == 0                     -> Service Path Header
     //       md_class != ?  (todo)             -> Variable Length Context Header
-    //           type != ?  (todo)                    :                
-    //         md_len != 8  (bytes)                   :                
-    //           todo == ?  (any checks here?) -> Variable Length Metadata   
+    //           type != ?  (todo)                    :
+    //         md_len != 8  (bytes)                   :
+    //           todo == ?  (any checks here?) -> Variable Length Metadata
 
     table validate_nsh {
 
@@ -7945,9 +7945,9 @@ control PktValidation(
         //                     if (hdr.ipv4.isValid()) {
         //                         validate_ipv4.apply();
         //                     }
-        // 
+        //
         //                     validate_other.apply();
-        // 
+        //
         //                     validate_tunnel.apply();
         //                 }
         //             }
@@ -8484,7 +8484,7 @@ control ParserValidation(
             // when extracting the opaque UDF data. we want to make an
             // exception for this case, and not drop these frame.
             //(false,  1, (PARSER_ERROR_PARTIAL_HDR & PARSER_ERROR_SRC_EXT)) : except();
-            //(false,  1, (0xFFFF &&& PARSER_ERROR_PARTIAL_HDR)) : except(); 
+            //(false,  1, (0xFFFF &&& PARSER_ERROR_PARTIAL_HDR)) : except();
             PARSER_ERROR_PARTIAL_HDR: except();
         }
     }
@@ -9230,13 +9230,13 @@ control TunnelDecapFixEthertype(
    fix_l2_decap;
   }
   const entries = {
-   // a priority encoder 
+   // a priority encoder
 
    // -----------   -----------------------------------------   -------------   -------------
    // Terminates    Hdr 1                                       Hdr 2           Hdr 3
    // -----------   -----------------------------------------   -------------   -------------
    // 0 terminates (fix hdr1's l2 etype, based on hdr1's ip type)
-   (false, false, false, _, _, _, _, true, _, _, _, _ ) : fix_l2_eth (0x0800); // do   check for eth true 
+   (false, false, false, _, _, _, _, true, _, _, _, _ ) : fix_l2_eth (0x0800); // do   check for eth true
    (false, false, false, _, _, _, _, false, _, _, _, _ ) : fix_l2_eth (0x86dd); // do   check for eth true
 
    // 0 terminates (rm  hdr1's l2, since hdr2 has one)
@@ -10403,7 +10403,7 @@ control npb_egr_sf_multicast_top_part2 (
  // =========================================================================
 
  // =========================================================================
- // Table #1: 
+ // Table #1:
  // =========================================================================
 /*
 #ifdef MULTICAST_ENABLE
@@ -11243,7 +11243,7 @@ control npb_egr_sff_top_part1 (
  //
  //   [0:0] sf  #1: ingress basic/advanced
  //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
+ //   [2:2] sf  #3: egress proxy
 
  // =========================================================================
  // Table
@@ -11450,7 +11450,7 @@ control npb_egr_sff_top_part2 (
  //
  //   [0:0] sf  #1: ingress basic/advanced
  //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
+ //   [2:2] sf  #3: egress proxy
 
  // =========================================================================
  // Apply
@@ -12280,7 +12280,7 @@ control MulticastReplication (
  // =========================================================================
 
  // =========================================================================
- // Table #1: 
+ // Table #1:
  // =========================================================================
 
 
@@ -12413,8 +12413,8 @@ control IngressHdrStackCounters(
 
 //         // Cannot have constant entries if we're going to clear counters in our test.
 //         const entries = {
-//             false: bump_cpu_hdr_cntr; 
-//             true:  bump_cpu_hdr_cntr; 
+//             false: bump_cpu_hdr_cntr;
+//             true:  bump_cpu_hdr_cntr;
 //         }
     }
 
@@ -12473,57 +12473,57 @@ control IngressHdrStackCounters(
 //
 // #ifdef ERSPAN_INGRESS_ENABLE
 //
-//             //enet  vlan0   nsh    ipv4   gre    greSeq erspan 
-// 
+//             //enet  vlan0   nsh    ipv4   gre    greSeq erspan
+//
 //             // None
 //             ( false, false, false, false, false, false, false ): bump_transport_stack_hdr_cntr;
-// 
+//
 //             // NSH
-//             ( true,  false, true,  false, false, false, false ): bump_transport_stack_hdr_cntr; 
-//             ( true,  true,  true,  false, false, false, false ): bump_transport_stack_hdr_cntr; 
-// 
+//             ( true,  false, true,  false, false, false, false ): bump_transport_stack_hdr_cntr;
+//             ( true,  true,  true,  false, false, false, false ): bump_transport_stack_hdr_cntr;
+//
 //             // GRE
-//             ( true,  false, false, true,  true,  false, false ): bump_transport_stack_hdr_cntr; 
+//             ( true,  false, false, true,  true,  false, false ): bump_transport_stack_hdr_cntr;
 //             ( true,  true,  false, true,  true,  false, false ): bump_transport_stack_hdr_cntr;
-// 
+//
 //             // ERSPAN-TYPE1
-//             ( true,  false, false, true,  true,  false, true  ): bump_transport_stack_hdr_cntr; 
+//             ( true,  false, false, true,  true,  false, true  ): bump_transport_stack_hdr_cntr;
 //             ( true,  true,  false, true,  true,  false, true  ): bump_transport_stack_hdr_cntr;
-// 
+//
 //             // ERSPAN-TYPE2
-//             ( true,  false, false, true,  true,  true,  true  ): bump_transport_stack_hdr_cntr; 
-//             ( true,  true,  false, true,  true,  true,  true  ): bump_transport_stack_hdr_cntr; 
+//             ( true,  false, false, true,  true,  true,  true  ): bump_transport_stack_hdr_cntr;
+//             ( true,  true,  false, true,  true,  true,  true  ): bump_transport_stack_hdr_cntr;
 //
 // #elif defined(GRE_TRANSPORT_INGRESS_ENABLE)
 //
 //             //enet  vlan0   nsh    ipv4   gre
-// 
+//
 //             // None
 //             ( false, false, false, false, false ): bump_transport_stack_hdr_cntr;
-// 
+//
 //             // NSH
-//             ( true,  false, true,  false, false ): bump_transport_stack_hdr_cntr; 
-//             ( true,  true,  true,  false, false ): bump_transport_stack_hdr_cntr; 
-// 
+//             ( true,  false, true,  false, false ): bump_transport_stack_hdr_cntr;
+//             ( true,  true,  true,  false, false ): bump_transport_stack_hdr_cntr;
+//
 //             // GRE
-//             ( true,  false, false, true,  true  ): bump_transport_stack_hdr_cntr; 
+//             ( true,  false, false, true,  true  ): bump_transport_stack_hdr_cntr;
 //             ( true,  true,  false, true,  true  ): bump_transport_stack_hdr_cntr;
-// 
+//
 // #else
-// 
+//
 //             //enet  vlan0   nsh
-// 
+//
 //             // None
 //             ( false, false, false ): bump_transport_stack_hdr_cntr;
-// 
+//
 //             // NSH
-//             ( true,  false, true  ): bump_transport_stack_hdr_cntr; 
-//             ( true,  true,  true  ): bump_transport_stack_hdr_cntr; 
-// 
+//             ( true,  false, true  ): bump_transport_stack_hdr_cntr;
+//             ( true,  true,  true  ): bump_transport_stack_hdr_cntr;
+//
 //             // GRE
-//             ( true,  false, false ): bump_transport_stack_hdr_cntr; 
+//             ( true,  false, false ): bump_transport_stack_hdr_cntr;
 //             ( true,  true,  false ): bump_transport_stack_hdr_cntr;
-// 
+//
 // #endif // #ifdef ERSPAN_INGRESS_ENABLE
 //         }
     }
@@ -12578,12 +12578,12 @@ control IngressHdrStackCounters(
         // const default_action = bump_outer_stack_hdr_cntr;
         // Cannot have constant entries if we're going to clear counters in our test.
         // const entries = {
-        // 
+        //
         //     //enet   etag   vntag  vlan0  vlan1  ipv4   ipv6   udp    tcp    sctp   gre    vxlan  nvgre  gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // None (invalid)
         //     ( false, false, false, false, false, false, false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2
         //     ( true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12594,7 +12594,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / IPV4
         //     ( true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12605,7 +12605,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / IPV6
         //     ( true,  false, false, false, false, false, true,  false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12616,9 +12616,9 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     //enet   etag   vntag  vlan0  vlan1  ipv4   ipv6   udp    tcp    sctp   gre    vxlan  nvgre  gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // L2 / L3 / UDP
         //     ( true,  false, false, false, false, true,  false, true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12629,7 +12629,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12639,7 +12639,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / TCP
         //     ( true,  false, false, false, false, true,  false, false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12650,7 +12650,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12660,7 +12660,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / SCTP
         //     ( true,  false, false, false, false, true,  false, false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12671,7 +12671,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        //              
+        //
         //     ( true,  false, false, false, false, false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12681,9 +12681,9 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     //enet   etag   vntag  vlan0  vlan1  ipv4   ipv6   udp    tcp    sctp   gre    vxlan  nvgre  gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // L2 / L3 / GRE
         //     ( true,  false, false, false, false, true,  false, false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12694,7 +12694,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12704,9 +12704,9 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     //enet   etag   vntag  vlan0  vlan1  ipv4   ipv6   udp    tcp    sctp   gre    vxlan  nvgre  gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // L2 / L3 / L4 / VXLAN
         //     ( true,  false, false, false, false, true,  false, true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12717,7 +12717,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
@@ -12727,7 +12727,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / L4 / NVGRE
         //     ( true,  false, false, false, false, true,  false, false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
@@ -12738,7 +12738,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
@@ -12748,7 +12748,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / L4 / GTP-U
         //     ( true,  false, false, false, false, true,  false, true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
@@ -12759,7 +12759,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
@@ -12769,7 +12769,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / L4 / GTP-U w/ Sequence Number
         //     ( true,  false, false, false, false, true,  false, true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
@@ -12780,7 +12780,7 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, true,  false, true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, true,  false, true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  true,  false, true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     ( true,  false, false, false, false, false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
@@ -12790,45 +12790,45 @@ control IngressHdrStackCounters(
         //     ( true,  false, true,  false, false, false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  false, false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( true,  false, true,  true,  true,  false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     //enet   etag   vntag  vlan0  vlan1  ipv4   ipv6   udp    tcp    sctp   gre    vxlan  nvgre  gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // IPV4
         //     ( false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // IPV6
         //     ( false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / UDP
         //     ( false, false, false, false, false, true,  false, true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  true,  false, false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / TCP
         //     ( false, false, false, false, false, true,  false, false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  false, true,  false, false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / SCTP
         //     ( false, false, false, false, false, true,  false, false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  false, false, true,  false, false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     //enet   etag   vntag  vlan0  vlan1  ipv4   ipv6   udp    tcp    sctp   gre    vxlan  nvgre  gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // L3 / GRE
         //     ( false, false, false, false, false, true,  false, false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  false, false, false, true,  false, false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / L4 / VXLAN
         //     ( false, false, false, false, false, true,  false, true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  true,  false, false, false, true,  false, false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / L4 / NVGRE
         //     ( false, false, false, false, false, true,  false, false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  false, false, false, true,  false, true,  false, false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / L4 / GTP-U
         //     ( false, false, false, false, false, true,  false, true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  true,  false, false, false, false, false, true,  false ): bump_outer_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / L4 / GTP-U w/ Sequence Number
         //     ( false, false, false, false, false, true,  false, true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
         //     ( false, false, false, false, false, false, true,  true,  false, false, false, false, false, true,  true  ): bump_outer_stack_hdr_cntr;
@@ -12881,86 +12881,86 @@ control IngressHdrStackCounters(
         // const default_action = bump_inner_stack_hdr_cntr;
         // Cannot have constant entries if we're going to clear counters in our test.
         // const entries = {
-        // 
+        //
         //     //enet   vlan0  ipv4   ipv6   udp    tcp    sctp   gre    gtp_v1 gtp_v1_opt
-        // 
+        //
         //     // None (invalid)
         //     ( false, false, false, false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2
         //     ( true,  false, false, false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3
         //     ( true,  false, true,  false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / UDP
         //     ( true,  false, true,  false, true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / TCP
         //     ( true,  false, true,  false, false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / SCTP
         //     ( true,  false, true,  false, false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / GRE
         //     ( true,  false, true,  false, false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / UDP / GTP-U
         //     ( true,  false, true,  false, true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L2 / L3 / UDP / GTP-U w/ Sequence Number
         //     ( true,  false, true,  false, true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  true,  false, true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
         //     ( true,  false, false, true,  true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
         //     ( true,  true,  false, true,  true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3
         //     ( false, false, true,  false, false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  false, false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / UDP
         //     ( false, false, true,  false, true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  true,  false, false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / TCP
         //     ( false, false, true,  false, false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  false, true,  false, false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / SCTP
         //     ( false, false, true,  false, false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  false, false, true,  false, false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / GRE
         //     ( false, false, true,  false, false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  false, false, false, true,  false, false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / UDP / GTP-U
         //     ( false, false, true,  false, true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  true,  false, false, false, true,  false ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         //     // L3 / UDP / GTP-U w/ Sequence Number
         //     ( false, false, true,  false, true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
         //     ( false, false, false, true,  true,  false, false, false, true,  true  ): bump_inner_stack_hdr_cntr;
-        // 
+        //
         // }
     }
 
@@ -12994,8 +12994,8 @@ control IngressHdrStackCounters(
 
 //         // Cannot have constant entries if we're going to clear counters in our test.
 //         const entries = {
-//             false: bump_udf_hdr_cntr; 
-//             true:  bump_udf_hdr_cntr; 
+//             false: bump_udf_hdr_cntr;
+//             true:  bump_udf_hdr_cntr;
 //         }
     }
 
@@ -13017,7 +13017,7 @@ control IngressHdrStackCounters(
 //     hdr_transport_ipv4_isValid = false;
 //     hdr_transport_gre_isValid = false;
 // #endif // defined(GRE_TRANSPORT_INGRESS_ENABLE) || defined(ERSPAN_INGRESS_ENABLE)
-//         
+//
 // #ifdef ERSPAN_INGRESS_ENABLE
 //     hdr_transport_gre_sequence_isValid = hdr.transport.gre_sequence.isValid();
 //     hdr_transport_erspan_type2_isValid = hdr.transport.erspan_type2.isValid();
@@ -13201,7 +13201,7 @@ control SwitchIngress(
 
 
 
-  IngressSetLookup.apply(hdr, ig_md); // set lookup structure fields that parser couldn't        
+  IngressSetLookup.apply(hdr, ig_md); // set lookup structure fields that parser couldn't
 
 
   IngressHdrStackCounters.apply(hdr);
@@ -13323,7 +13323,7 @@ control SwitchEgress(
   eg_intr_md_for_dprsr.drop_ctl = 0;
 //		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
 
-  egress_set_lookup.apply(hdr, eg_md); // set lookup structure fields that parser couldn't                
+  egress_set_lookup.apply(hdr, eg_md); // set lookup structure fields that parser couldn't
 
   egress_port_mapping.apply(hdr, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
 

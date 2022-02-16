@@ -717,7 +717,7 @@ control process_port_forwarding(inout ingress_metadata_t ig_md,
     @name("._set_general_md")
     @brief("Wrapper to set ig_tm_md metadata plus set port to DROP value to inhibit unicast)")
     action _set_general_md(
-      bit<16> rid, bit<16> xid, bit<9> yid, bit<13> h1, bit<13> h2) {
+      bit<16> rid, bit<16> xid, L2ExclusionId_t yid, bit<13> h1, bit<13> h2) {
         ig_tm_md.rid = rid;
         ig_tm_md.level1_exclusion_id = xid;
         ig_tm_md.level2_exclusion_id = yid;
@@ -730,14 +730,14 @@ control process_port_forwarding(inout ingress_metadata_t ig_md,
     @brief("Set packet multicast group id (MGID) and replication id (RID)")
     @feature(name="multicast_action", service_id="multicast_action", display_name="Multicast to ports")
     @description("Mulicast group must be configured in the PRE; RID can be used to perform egress processing")
-    // ORIG - pktgen9    action do_set_mcast1_md(bit<16> mgid, bit<16> rid, bit<16> xid, bit<9> yid, bit<13> h1, bit<13> h2) {
+    // ORIG - pktgen9    action do_set_mcast1_md(bit<16> mgid, bit<16> rid, bit<16> xid, L2ExclusionId_t yid, bit<13> h1, bit<13> h2) {
     action do_set_mcast1_md(
       @Api(label="MGID", type=uint32, format="dec") bit<16> mgid,
       @Api(label="RID", type=uint32, format="dec") bit<16> rid)
     {
         ig_tm_md.mcast_grp_a = mgid;
-        // ORIG: _set_general_md(rid, (bit<16>)xid, (bit<9>)yid, (bit<13>)h1, (bit<13>)h2);
-        _set_general_md(rid, (bit<16>)0, (bit<9>)0, (bit<13>)0, (bit<13>)0);
+        // ORIG: _set_general_md(rid, (bit<16>)xid, (L2ExclusionId_t)yid, (bit<13>)h1, (bit<13>)h2);
+        _set_general_md(rid, (bit<16>)0, (L2ExclusionId_t)0, (bit<13>)0, (bit<13>)0);
     }
 
     @name(".ig_port_tbl")
@@ -2024,7 +2024,7 @@ control process_udf_8x1_tcam_ipv4_dip(inout header_t hdr, inout egress_metadata_
         }
     };
 
-    // set a flag (or not) to tell the next stage to load a new counter value, else increment by default 
+    // set a flag (or not) to tell the next stage to load a new counter value, else increment by default
     @name(".do_udf_8x1_tcam_ipv4_dip_prepare_load")
     action do_udf_8x1_tcam_ipv4_dip_prepare_load(Udf_counter_t next_val) {
         eg_md.udf_8x1_tcam_ipv4_dip.next_val = next_val;
@@ -2055,7 +2055,7 @@ control process_udf_8x1_tcam_ipv4_dip(inout header_t hdr, inout egress_metadata_
         default_action = _nop();
     }
 
-    // increment or load a new counter value      
+    // increment or load a new counter value
     @name(".do_udf_8x1_tcam_ipv4_dip_cntr_incr")
     action do_udf_8x1_tcam_ipv4_dip_cntr_incr() {
         eg_md.udf_8x1_tcam_ipv4_dip.next_val = salu_udf_8x1_tcam_ipv4_dip_cntr_incr.execute(eg_md.g_udf_bank_index);
@@ -2545,7 +2545,7 @@ Pipeline(SwitchIngressParser(),
 @pkginfo(contact="chris.sommers@keysight.com")
 @pkginfo(url="www.keysight.com")
 
-// User-definned pkginfo annotations to main() 
+// User-definned pkginfo annotations to main()
 // merge package-level attributes, conditionally set and/or #included
 
 

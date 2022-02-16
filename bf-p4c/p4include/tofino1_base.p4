@@ -159,11 +159,11 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // for L2 dynamic member selection
                                         // (e.g., LAG) for nested multicast.
 
-    bit<16> level1_exclusion_id;        // Exclusion id for multicast
+    L1ExclusionId_t level1_exclusion_id;  // Exclusion id for multicast
                                         // replication-tree level1. used for
                                         // pruning.
 
-    bit<9> level2_exclusion_id;         // Exclusion id for multicast
+    L2ExclusionId_t level2_exclusion_id;  // Exclusion id for multicast
                                         // replication-tree level2. used for
                                         // pruning.
 

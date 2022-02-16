@@ -803,7 +803,7 @@ const switch_bd_t SWITCH_BD_DEFAULT_VRF = 4097; // bd allocated for default vrf
 typedef bit<16> switch_vrf_t;
 typedef bit<16> switch_nexthop_t;
 typedef bit<16> switch_xid_t;
-typedef bit<9> switch_yid_t;
+typedef L2ExclusionId_t switch_yid_t;
 
 typedef bit<16> switch_port_lag_label_t;
 typedef bit<16> switch_bd_label_t;

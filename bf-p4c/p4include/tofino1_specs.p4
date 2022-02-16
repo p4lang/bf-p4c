@@ -34,6 +34,10 @@ typedef bit<RESUBMIT_TYPE_WIDTH>       ResubmitType_t;      // Resubmit type
 typedef bit<DIGEST_TYPE_WIDTH>         DigestType_t;        // Digest type
 #define REPLICATION_ID_WIDTH           16
 typedef bit<REPLICATION_ID_WIDTH>      ReplicationId_t;     // Replication id
+#define L1_EXCLUSION_ID_WIDTH          16
+typedef bit<L1_EXCLUSION_ID_WIDTH>     L1ExclusionId_t;     // L1 Exclusion id
+#define L2_EXCLUSION_ID_WIDTH          9
+typedef bit<L2_EXCLUSION_ID_WIDTH>     L2ExclusionId_t;     // L2 Exclusion id
 
 typedef error ParserError_t;
 
