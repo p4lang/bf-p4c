@@ -490,8 +490,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 # P4C-3019
+# temporary bug in p4c, should be resolved with next p4c update
 p4c_add_xfail_reason("tofino"
-  "error.*Power worst case estimated budget.*exceeded by.*"
+    #"error.*Power worst case estimated budget.*exceeded by.*"
+  "Function type 'resubmit_preserving_field_list' does not match invocation type '<Method call>'"
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 )
 
@@ -1746,6 +1748,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
 )
 
 # PSA on tofino new failures
@@ -2034,7 +2037,7 @@ p4c_add_xfail_reason("tofino"
 # needs switchd and/or compiler fix, more details in
 # https://github.com/intel-restricted/networking.switching.barefoot.bf-p4c-compilers/pull/5617#issuecomment-999475972
 p4c_add_xfail_reason("tofino"
-  "Switchd is not running"
+  "Timed out while waiting for switchd to be ready"
   t2na_static_entry
 )
 
@@ -2054,3 +2057,4 @@ p4c_add_xfail_reason("tofino"
   "Unsupported immediate profile on a gateway payload table"
   testdata/p4_16_samples/issue2905-bmv2.p4
 )
+

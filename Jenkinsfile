@@ -535,13 +535,13 @@ node ('compiler-travis') {
                     // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
                     'Packaging': {
                         echo 'Packaging build'
-                        sh """
-                            docker run --rm \
-                                -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                bf-p4c-compilers_intermediate_${image_tag} \
-                                /bfn/bf-p4c-compilers/scripts/package_p4c_for_tofino.sh \
-                                --enable-cb -j 4
-                        """
+                        runInDocker(
+                            extraArgs: '-v ~/.ccache_bf-p4c-compilers:/root/.ccache',
+                            workingDir: '/bfn/bf-p4c-compilers',
+                            """
+                                scripts/package_p4c_for_tofino.sh --enable-cb -j 4
+                            """
+                        )
                     },
 
 
