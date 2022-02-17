@@ -246,6 +246,7 @@ bool check_chunk(int lineno, unsigned& chunk) {
     const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
     if (chunk >= TOTAL_CHUNKS) {
         error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
+        // FIXME -- if this error hits, we'll tend to print it many times.  Supress duplicates?
         return false;
     }
     return true;
@@ -306,7 +307,7 @@ void output_jbay_field_dictionary_helper(int lineno,
         // Finish the current chunk if needed.
         if (byte && (clot || byte + size > CHUNK_SIZE ||
                      (prev_pov && *ent.pov.front() != prev_pov))) {
-            if (!check_chunk(lineno, ch)) break;
+            if (!check_chunk(ent.lineno, ch)) break;
             finish_chunk(ch++, entry_n++, prev_pov, byte);
             byte = 0;
         }
@@ -317,13 +318,13 @@ void output_jbay_field_dictionary_helper(int lineno,
             bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
             auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
             bool out_of_chunks_in_group =
-                ch % CHUNKS_PER_GROUP + chunks_in_clot >= CHUNKS_PER_GROUP;
+                ch % CHUNKS_PER_GROUP + chunks_in_clot > CHUNKS_PER_GROUP;
             if (out_of_clots_in_group || out_of_chunks_in_group) {
                 ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
             }
 
             // Write the CLOT to the next segment in the current group.
-            if (!check_chunk(lineno, ch)) break;
+            if (!check_chunk(ent.lineno, ch)) break;
             if (chunks_in_clot == CHUNKS_PER_GROUP && (ch % CHUNKS_PER_GROUP))
                 error(clot->lineno, "--tof2lab44-workaround incompatible with clot >56 bytes");
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
@@ -333,7 +334,7 @@ void output_jbay_field_dictionary_helper(int lineno,
             prev = -1;
         } else {
             // Phv, Constant, or Checksum
-            if (!check_chunk(lineno, ch)) break;
+            if (!check_chunk(ent.lineno, ch)) break;
             write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov.front(), ent.what, byte, size);
             byte += size;
             prev = ent.what->encode();
@@ -360,6 +361,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             pov_layout[byte++] = r.first->deparser_id(); } }
     while (byte < pov_layout.size())
         pov_layout[byte++] = 0xff;
+    LOG5("jbay field dictionary:");
 
     // Declare some callback functions, and then delegate to helper.
     auto write_chunk = [](unsigned ch,
@@ -371,6 +373,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                           unsigned byte,
                           unsigned size) {
         // Just do an error check here. Defer actual writing to finish_chunk.
+        LOG5("  chunk " << ch << ": " << *ent_what);
         if (dynamic_cast<Deparser::FDEntry::Phv *>(ent_what) && prev_pov == *ent_pov &&
             int(ent_what->encode()) == prev && (size & 6))
             error(ent_lineno, "16 and 32-bit container cannot be repeatedly deparsed");
@@ -394,6 +397,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
         const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
         const int group = ch/CHUNKS_PER_GROUP;
         regs.fd_tags[group].segment_tag[seg_tag] = clot_tag;
+        LOG5("  chunk " << ch << ": " << *clot);
         for (int i = 0; i < clot->length; i += 8, ++ch) {
             if (!check_chunk(lineno, ch)) break;
 

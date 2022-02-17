@@ -21,8 +21,12 @@ struct Deparser::FDEntry {
         virtual void check(bitvec &phv_use) = 0;
         virtual unsigned encode() = 0;
         virtual unsigned size() = 0;    // size in bytes;
+        virtual void dbprint(std::ostream &) const = 0;
         template<class T> bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
         template<class T> T *to() { return dynamic_cast<T*>(this); }
+        friend std::ostream &operator<<(std::ostream &out, const Base &b) {
+            b.dbprint(out);
+            return out; }
     };
     struct Phv : Base {
         ::Phv::Ref    val;
@@ -36,6 +40,7 @@ struct Deparser::FDEntry {
         unsigned encode() override { return val->reg.deparser_id(); }
         unsigned size() override { return val->reg.size/8; }
         const ::Phv::Register* reg() { return &val->reg; }
+        void dbprint(std::ostream &out) const override { out << val.desc(); }
     };
     struct Checksum : Base {
         gress_t         gress;
@@ -48,6 +53,8 @@ struct Deparser::FDEntry {
         template<class TARGET> unsigned encode();
         unsigned encode() override;
         unsigned size() override { return 2; }
+        void dbprint(std::ostream &out) const override {
+            out << gress << " checksum " << unit; }
     };
     struct Constant : Base {
         int              lineno;
@@ -66,6 +73,7 @@ struct Deparser::FDEntry {
         template<class TARGET> unsigned encode();
         unsigned encode() override;
         unsigned size() override { return 1; }
+        void dbprint(std::ostream &out) const override { out << val; }
     };
     struct Clot : Base {
         int                                     lineno;
@@ -126,6 +134,8 @@ struct Deparser::FDEntry {
                     prev = &r.second; } } }
         unsigned size() override { return length; }
         unsigned encode() override { BUG(); return -1; }
+        void dbprint(std::ostream &out) const override {
+            out << "clot " << tag; }
     };
 
     int                         lineno;
