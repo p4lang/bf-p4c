@@ -212,6 +212,15 @@ node ('compiler-travis') {
             stage ('Test') {
                 parallel (
 
+                    'Running Extreme PTF tests': {
+                        echo 'Running Extreme PTF tests'
+                        runInDocker(
+                            extraArgs: '--privileged -e PKTPY=False',
+                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
+                            './run_extreme_tests.sh'
+                        )
+                    },
+
                     'Generate switch compile-only metrics': {
                         echo 'Running switch profiles compilation for master'
                         runInDocker(
@@ -227,13 +236,6 @@ node ('compiler-travis') {
                         runInDocker(
                             ctestParallelLevel: 4,
                             "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
-                        )
-
-                        echo 'Running Extreme PTF tests'
-                        runInDocker(
-                            extraArgs: '--privileged -e PKTPY=False',
-                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
-                            './run_extreme_tests.sh'
                         )
 
                         echo 'Running switch-14 and switch-16 tests for METRICS'

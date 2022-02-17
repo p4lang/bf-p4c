@@ -74,6 +74,7 @@ p4info=true
 stf_bin=false
 
 force_link=false
+reverse_pipe_scopes=false
 
 die() {
     if [ $# -gt 0 ]; then
@@ -237,6 +238,9 @@ while [ $# -gt 1 ]; do
         ;;
     -bfrt)
         run_bfrt=true
+        ;;
+    -revpipescopes)
+        reverse_pipe_scopes=true
         ;;
     -profile)
         profile=$2
@@ -867,6 +871,13 @@ if $run_bfrt; then
             model_logs_option=""
             echo "gen_config_opts: ./p4c-gen-bfrt-conf $conf_args"
             run ./p4c-gen-bfrt-conf $conf_args
+
+            # Reverse pipe scopes for some custom programs that have different front panel layout
+            if ${reverse_pipe_scopes}; then
+               scriptsDir=$(dirname "$MANIFEST_CONFIG")
+               run ${scriptsDir}/run_custom_tests/reverse_pipe_scopes.py --conf $testout/${name}.conf
+            fi
+
             PTF_EXTRA_ARGS="$PTF_EXTRA_ARGS --bfrt-test $testout/${name}.conf $model_logs_option"
         fi
 
