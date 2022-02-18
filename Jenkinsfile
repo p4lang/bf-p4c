@@ -112,15 +112,15 @@ node ('compiler-travis') {
                     echo "Initializing bf-p4c-compilers submodules"
                     sh "git submodule update --init --recursive"
 
-                    echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
-                    dir('p4-tests/p4_16/switch_16') {
-                        sh """
-                            git fetch
-                            git checkout ${bf_switch_rev}
-                            git submodule update --init --recursive
-                            git log -1 --stat
-                        """
-                    }
+                    //echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
+                    //dir('p4-tests/p4_16/switch_16') {
+                    //    sh """
+                    //        git fetch
+                    //        git checkout ${bf_switch_rev}
+                    //        git submodule update --init --recursive
+                    //        git log -1 --stat
+                    //    """
+                    //}
                 }
 
                 stage ('Build intermediate') {
