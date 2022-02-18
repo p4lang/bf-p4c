@@ -2231,8 +2231,8 @@ bool CoreAllocation::try_dark_overlay(
                                         new_candidate_slices, perContainerAlloc,
                                         actual_cntr_state)) {
                 LOG_FEATURE("alloc_progress", 5, TAB1
-                            "Failed: New dark primitives extend previously defined "
-                            "slice live ranges; thus skipping container " << c);
+                            "Failed: New dark primitives incompatible with other primitives "
+                            "in container. Skipping container " << c);
                 return false;
             }
 
@@ -2317,6 +2317,72 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
     return try_dark_overlay(dark_slices, perContainerAlloc, c, candidate_slices,
         new_candidate_slices, new_overlay_container, metaInitSlices, group, canDarkInitUseARA);
 }
+
+// Compare properties of existing primitive and new primitive and
+// check if some of them need to be maintained in new slice.
+bool CoreAllocation::update_new_prim(const PHV::AllocSlice &existingSl,
+                                     PHV::AllocSlice& newSl) const {
+    LOG_DEBUG5("\t\t existing Prim:" << existingSl.getInitPrimitive());
+    LOG_DEBUG5("\t\t      new Prim:" << newSl.getInitPrimitive());
+
+    // if existing slice does not have a primitive  then there is nothing to do
+    if (existingSl.getInitPrimitive().isEmpty()) {
+        LOG_DEBUG5(" Existing slice has empty primitive. No further update checks required.");
+        return true;
+    }
+
+    auto& existingPrim = existingSl.getInitPrimitive();
+    auto& newPrim      = newSl.getInitPrimitive();
+
+    // Do not do overlay if slice is already used for overlay with incompatible ARA semantics
+    if ((existingPrim.getInitPoints().size() && newPrim.isAlwaysRunActionPrim()) ||
+        (existingPrim.isAlwaysRunActionPrim() && newPrim.getInitPoints().size())) {
+        LOG_FEATURE("alloc_progress", 5, " Slice can not be both ARA and use regular table!");
+        return false;
+    }
+
+    // Do overlay but no need to change @newSl if @existingSl has a different source
+    if (((existingPrim.getSourceSlice() != nullptr) && newPrim.destAssignedToZero()) ||
+        (existingPrim.destAssignedToZero() && (newPrim.getSourceSlice() != nullptr))) {
+        LOG_DEBUG5(" Incompatible comparison between move and zero init prims");
+        return true;
+    }
+
+    // Check if existing prim has properties that need to be maintained in new prim
+    if (existingPrim.isNOP()) {
+        LOG_DEBUG5(" Existing slice is a NOP. No further update checks required.");
+        return true;
+    }
+
+    // If existing and new primitive use different regular tables then
+    // do not proceed with new overlay
+    if (existingPrim.getInitPoints().size()) {
+        for (const auto act : existingPrim.getInitPoints()) {
+            if (!newPrim.getInitPoints().count(act)) {
+                LOG_DEBUG5(" Existing slice and new slice use different regular tables for "
+                    "initizalization; Dumping new overlay.");
+                return false;
+            }
+        }
+    }
+
+    if (existingPrim.destAssignedToZero()) {
+        newPrim.setAssignZeroToDest();
+        newPrim.addPriorUnits(existingPrim.getARApriorUnits());
+        if (existingSl.getEarliestLiveness().first == newSl.getEarliestLiveness().first) {
+            for (auto *prim : existingPrim.getARApriorPrims())
+                newPrim.addPriorPrims(prim);
+        }
+
+        if (existingPrim.isAlwaysRunActionPrim())
+            newPrim.setAlwaysRunActionPrim();
+        LOG_DEBUG5(" Maintaining zero-init, ARA, prior units/prims from existing prim in slice: "
+                   << newSl);
+    }
+    return true;
+}
+
+
 
 bool CoreAllocation::try_place_wide_arith_hi(
     const PHV::ContainerGroup& group,
@@ -3034,12 +3100,20 @@ bool CoreAllocation::generateNewAllocSlices(
             if (!alreadyAllocatedSlice.representsSameFieldSlice(newSlice)) continue;
             LOG_DEBUG5(TAB3 "Found new slice: " << newSlice);
             if (newSlice.extends_live_range(alreadyAllocatedSlice)) {
-                LOG_DEBUG5(TAB3 "New dark primitive " << newSlice << " extend original slice "
-                           "liverange" << alreadyAllocatedSlice << ";  thus skipping container "
-                           << newSlice.container());
+                LOG_FEATURE("alloc_progress", 5, TAB3 "New dark primitive " << newSlice <<
+                            " extends existing slice liverange" << alreadyAllocatedSlice <<
+                            ";  thus skipping container " << newSlice.container());
                 return false;
             }
             foundAnyNewSliceForThisAllocatedSlice = true;
+
+            // Copy prior units from removed to new slice
+            if (!update_new_prim(alreadyAllocatedSlice, newSlice)) {
+                LOG_FEATURE("alloc_progress", 5, TAB3 "New dark primitive " << newSlice <<
+                            " not compatible with existing slice " << alreadyAllocatedSlice);
+                return false;
+            }
+
             toBeRemovedFromAlloc.insert(alreadyAllocatedSlice);
             toBeAddedToAlloc.insert(newSlice);
         }

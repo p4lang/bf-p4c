@@ -91,6 +91,7 @@ class DarkInitPrimitive {
 
      void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = alwaysRunActionPrim = true; }
      void setAlwaysRunActionPrim() { alwaysRunActionPrim = true; }
+     void setAssignZeroToDest();
      bool isNOP() const { return nop; }
      bool destAssignedToZero() const { return assignZeroToDestination; }
      bool mustInitInLastMAUStage() const { return alwaysInitInLastMAUStage; }

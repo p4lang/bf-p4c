@@ -386,6 +386,8 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         const bool &canDarkInitUseARA) const;
 
+    bool update_new_prim(const PHV::AllocSlice &existingSl, PHV::AllocSlice &newSl) const;
+
     boost::optional<std::vector<PHV::AllocSlice>> prepare_candidate_slices(
             PHV::SuperCluster::SliceList & slices,
             const PHV::Container& c,

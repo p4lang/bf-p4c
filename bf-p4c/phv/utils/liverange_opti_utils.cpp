@@ -119,6 +119,8 @@ update_flowgraph(const ordered_set<const IR::BFN::Unit*>& g_units,
                  const ordered_map<gress_t, FlowGraph>& flgraphs,
                  const PHV::Transaction& transact,
                  bool& canUseAra) {
+    LOG5("   update_flowgraph() with canUseAra: " << canUseAra);
+
     ordered_map<gress_t, FlowGraph> new_flowgraphs(flgraphs);
     // Set of table pairs that will be connected through new control flow edges
     ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> new_edges;
@@ -131,7 +133,10 @@ update_flowgraph(const ordered_set<const IR::BFN::Unit*>& g_units,
         for (auto* f_u : f_units) {
             if (!f_u->is<IR::MAU::Table>()) continue;
             // If fields used in the same unit init should not be done with ARA
-            if (f_u == g_u) canUseAra = false;
+            if (f_u == g_u) {
+                canUseAra = false;
+                LOG5("\t  turn-off canUseAra");
+            }
 
             BUG_CHECK(g_u->thread() == f_u->thread(),
                       "Attempting to overlay fields of different gress");

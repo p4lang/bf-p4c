@@ -404,6 +404,14 @@ bool AllocSlice::addRef(cstring u_name, FieldUse f_use) const {
     }
 }
 
+// Convert NOP slice to assignZeroToDestion
+void DarkInitPrimitive::setAssignZeroToDest() {
+    BUG_CHECK(!sourceSlice,
+              "Trying to set AssignZeroToDestination for slice with source slice...?");
+    nop = false;
+    assignZeroToDestination = true;
+}
+
 // Set/Update Latest liveness of Source slice of dark primitive
 bool DarkInitPrimitive::setSourceLatestLiveness(StageAndAccess max) {
     if (sourceSlice) {
@@ -502,7 +510,7 @@ std::ostream& operator<<(std::ostream& out, const AllocSlice& slice) {
             out << " { NOP }";
         else if (slice.getInitPrimitive().mustInitInLastMAUStage())
             out << " { last stage ara; " << slice.getInitPrimitive().getInitPoints().size()
-                << " actions }";
+                << " dark actions }";
         else if (slice.getInitPrimitive().getInitPoints().size() > 0)
             out << " { " << slice.getInitPrimitive().getInitPoints().size() << " dark actions }";
     }
@@ -565,7 +573,7 @@ std::ostream& operator<<(std::ostream& out, const DarkInitPrimitive& prim) {
     if (!priorUnts.size()) {
         out << "  : No prior units";
     } else {
-        out << "  Prior units:";
+        out << "  : Prior units:";
         for (auto node : priorUnts) {
             const auto* tbl = node->to<IR::MAU::Table>();
             if (!tbl) {out << "\t non-table unit"; continue; }
@@ -576,13 +584,37 @@ std::ostream& operator<<(std::ostream& out, const DarkInitPrimitive& prim) {
     if (!postUnts.size()) {
         out << "  : No post units";
     } else {
-        out << "  Post units:";
+        out << "  : Post units:";
         for (auto node : postUnts) {
             const auto* tbl = node->to<IR::MAU::Table>();
             if (!tbl) {out << "\t non-table unit"; continue; }
             out << "\t " << tbl->name;
         }
     }
+
+    auto priorPrms = prim.getARApriorPrims();
+    auto postPrms  = prim.getARApostPrims();
+
+    if (!priorPrms.size()) {
+        out << "  : No prior prims";
+    } else {
+        out << "  : Prior prims:";
+        for (auto *drkEntry : priorPrms) {
+            if (!drkEntry) {out << "\t null"; continue; }
+            out << "\t " << drkEntry->getDestinationSlice();
+        }
+    }
+
+    if (!postPrms.size()) {
+        out << "  : No post prims";
+    } else {
+        out << "  : Post prims:";
+        for (auto *drkEntry : postPrms) {
+            if (!drkEntry) {out << "\t null"; continue; }
+            out << "\t " << drkEntry->getDestinationSlice();
+        }
+    }
+
     return out;
 }
 

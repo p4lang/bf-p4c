@@ -181,11 +181,10 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Ran out of chunks in field dictionary|PHV allocation was not successful"
+  "error: Ran out of chunks in field dictionary"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
 
   # P4C-2555
-  # P4C-3227 resolve the PHV Allocation to go back to field dictionary chunks
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 

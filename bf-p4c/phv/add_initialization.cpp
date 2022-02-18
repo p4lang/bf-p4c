@@ -277,8 +277,6 @@ void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& allo
     LOG4("\t ARA for slice: " <<  alloc_sl);
 
     LOG4("\tPrior ARAs:" << alloc_sl.getInitPrimitive().getARApriorPrims().size());
-    BUG_CHECK(alloc_sl.getInitPrimitive().getARApriorPrims().size() < 2,
-              "More than one prior prims?");
 
     for (auto *priorARA : alloc_sl.getInitPrimitive().getARApriorPrims()) {
         LOG4("\t\t " << *priorARA);
