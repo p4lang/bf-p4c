@@ -130,8 +130,8 @@ class TablePlacement : public PassManager {
     profile_t init_apply(const IR::Node *root) override;
     void end_apply() override { placement_round++; };
 
-    bool try_alloc_adb(Placed *next);
-    bool try_alloc_imem(Placed *next);
+    bool try_alloc_adb(Placed *next, std::vector<Placed *> whole_stage);
+    bool try_alloc_imem(Placed *next, std::vector<Placed *> whole_stage);
     bool try_alloc_ixbar(Placed *next);
     bool try_alloc_format(Placed *next, bool gw_linked);
     bool try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage);

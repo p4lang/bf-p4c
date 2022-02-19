@@ -19,9 +19,16 @@ void ActionDataBus::clear() {
     ::ActionDataBus::clear();
     cont_use.clear();
     total_use.clear();
+    rng_use.clear();
     for (auto &in_use : cont_in_use)
         in_use.clear();
     total_in_use.clear();
+    for (auto &in_use : rng_in_use)
+        in_use.clear();
+    atcam_updates.clear();
+    for (auto &ri : reserved_immed)
+        ri = false;
+    action_ixbars.clear();
 }
 
 ActionDataBus::Use &ActionDataBus::getUse(autoclone_ptr<::ActionDataBus::Use> &ac) {

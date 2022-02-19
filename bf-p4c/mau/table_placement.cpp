@@ -1666,7 +1666,8 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     return true;
 }
 
-bool TablePlacement::try_alloc_adb(Placed *next) {
+bool TablePlacement::try_alloc_adb(Placed *next,
+                                   std::vector<Placed *> whole_stage) {
     if (next->table->conditional_gateway_only())
         return true;
 
@@ -1677,35 +1678,127 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
     next->resources.action_data_xbar.reset();
     next->resources.meter_xbar.reset();
 
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+    bool done_next = false;
+    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+#if 0  /* see P4C-4322 */
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+        // FIXME -- should not need to redo adb alloc for whole stage here.  Should
+        // just need to call current_adb->update
         current_adb->update(p->name, &p->resources, p->table);
-    }
-    if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_action_format(),
-                                            next->resources)) {
-        error_message = "The table " + next->table->name + " could not fit in within the "
-                        "action data bus";
-        LOG3("    " << error_message);
-        next->resources.action_data_xbar.reset();
-        next->stage_advance_log = "ran out of action data bus space";
-        return false;
+#else
+        if (p->prev == next) {
+            // FIXME -- something is broken between adb alloc and update -- seems like
+            // some temps get changed in the ActionDataBus object when allocing, such that
+            // an additional alloc call won't work right?  Or something needs resetting.
+            // In any case, the result of calling alloc_action_data_bus is not the same
+            // as the result of calling update, so to preserve existing behavior, we
+            // clear the ActionDataBus and call update from all the previous allocations
+            // std::unique_ptr<ActionDataBus> old_alloc = current_adb->clone();
+            current_adb->clear();
+            for (auto *q = next->prev; q && q->stage == next->stage; q = q->prev) {
+                if (!Device::threadsSharePipe(q->table->gress, next->table->gress)) continue;
+                current_adb->update(q->name, &q->resources, q->table); }
+            // BUG_CHECK(*current_adb- == *old_alloc, "inconsistent adb state");
+            if (!current_adb->alloc_action_data_bus(next->table,
+                    next->use.preferred_action_format(), next->resources)) {
+                error_message = "The table " + next->table->name + " could not fit in within "
+                                "the action data bus";
+                LOG3("    " << error_message);
+                next->resources.action_data_xbar.reset();
+                next->stage_advance_log = "ran out of action data bus space";
+                return false;
+            }
+
+            /**
+             * allocate meter output on adb
+             */
+            if (!current_adb->alloc_action_data_bus(next->table,
+                    next->use.preferred_meter_format(), next->resources)) {
+                error_message = "The table " + next->table->name + " could not fit its meter "
+                                " output in within the action data bus";
+                LOG3(error_message);
+                next->resources.meter_xbar.reset();
+                next->stage_advance_log = "ran out of action data bus space for meter output";
+                return false;
+            }
+            done_next = true;
+        }
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+        if (p->table->conditional_gateway_only())
+            continue;
+        // std::unique_ptr<ActionDataBus> old_alloc = current_adb->clone();
+        current_adb->clear();
+        for (auto *q = p->prev; q && q->stage == p->stage; q = q->prev) {
+            if (!Device::threadsSharePipe(q->table->gress, p->table->gress)) continue;
+            current_adb->update(q->name, &q->resources, q->table); }
+        // BUG_CHECK(*current_adb- == *old_alloc, "inconsistent adb state");
+        // auto old_adxbar = p->resources.action_data_xbar;
+        // auto old_mxbar = p->resources.meter_xbar;
+        p->resources.action_data_xbar.reset();
+        p->resources.meter_xbar.reset();
+        BUG_CHECK(p->use.preferred_action_format() != nullptr,
+                  "A non gateway table has a null action data format allocation");
+
+        if (!current_adb->alloc_action_data_bus(p->table,
+                p->use.preferred_action_format(), p->resources)) {
+            error_message = "The table " + p->table->name + " could not fit in within "
+                            "the action data bus";
+            LOG3("    " << error_message);
+            p->resources.action_data_xbar.reset();
+            p->stage_advance_log = "ran out of action data bus space";
+            return false;
+        }
+        // BUG_CHECK(done_next || equiv(p->resources.action_data_xbar, old_adxbar),
+        //           "action_data_xbar alloc changed");
+
+        /**
+         * allocate meter output on adb
+         */
+        if (!current_adb->alloc_action_data_bus(p->table,
+                p->use.preferred_meter_format(), p->resources)) {
+            error_message = "The table " + p->table->name + " could not fit its meter "
+                            " output in within the action data bus";
+            LOG3(error_message);
+            p->resources.meter_xbar.reset();
+            p->stage_advance_log = "ran out of action data bus space for meter output";
+            return false;
+        }
+        // BUG_CHECK(done_next || equiv(p->resources.meter_xbar, old_mxbar),
+        //           "meter_xbar alloc changed");
+#endif
     }
 
-    /**
-     * allocate meter output on adb
-     */
-    if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_meter_format(),
-                                            next->resources)) {
-        error_message = "The table " + next->table->name + " could not fit its meter "
-                        " output in within the action data bus";
-        LOG3(error_message);
-        next->resources.meter_xbar.reset();
-        next->stage_advance_log = "ran out of action data bus space for meter output";
-        return false;
+    if (!done_next) {
+        current_adb->clear();
+        for (auto *q = next->prev; q && q->stage == next->stage; q = q->prev) {
+            if (!Device::threadsSharePipe(q->table->gress, next->table->gress)) continue;
+            current_adb->update(q->name, &q->resources, q->table); }
+        if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_action_format(),
+                                                next->resources)) {
+            error_message = "The table " + next->table->name + " could not fit in within the "
+                            "action data bus";
+            LOG3("    " << error_message);
+            next->resources.action_data_xbar.reset();
+            next->stage_advance_log = "ran out of action data bus space";
+            return false;
+        }
+
+        /**
+         * allocate meter output on adb
+         */
+        if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_meter_format(),
+                                                next->resources)) {
+            error_message = "The table " + next->table->name + " could not fit its meter "
+                            " output in within the action data bus";
+            LOG3(error_message);
+            next->resources.meter_xbar.reset();
+            next->stage_advance_log = "ran out of action data bus space for meter output";
+            return false;
+        }
     }
 
     std::unique_ptr<ActionDataBus> adb_update(ActionDataBus::create());
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+    for (auto p : whole_stage) {
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         adb_update->update(p->name, &p->resources, p->table);
     }
@@ -1713,7 +1806,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
     return true;
 }
 
-bool TablePlacement::try_alloc_imem(Placed *next) {
+bool TablePlacement::try_alloc_imem(Placed *next, std::vector<Placed *> whole_stage) {
     LOG3("Trying to allocate imem for " << next->name);
     if (next->table->conditional_gateway_only())
         return true;
@@ -1721,25 +1814,60 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
     InstructionMemory imem;
     next->resources.instr_mem.clear();
 
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+    bool done_next = false;
+    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+#if 0  /* see P4C-4322 */
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+        // FIXME -- should not need to redo imem alloc for all the tables in the stage;
+        // this entire loop body should be replaced with a call to imem.update
         imem.update(p->name, &p->resources, p->table);
+#else
+        if (p->prev == next) {
+            bool gw_linked = next->gw != nullptr;
+            gw_linked |= next->use.preferred()->layout.gateway_match;
+            if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
+                                    next->use.format_type, att_info)) {
+                error_message = "The table " + next->table->name + " could not fit within the "
+                                "instruction memory";
+                LOG3("    " << error_message);
+                next->resources.instr_mem.clear();
+                next->stage_advance_log = "ran out of imem";
+                return false; }
+            done_next = true; }
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+        if (p->table->conditional_gateway_only()) continue;
+        // FIXME -- should save the previous allocation and check that it is unchanged --
+        // any change represent a latent bug in the compiler that we don't cover
+        // auto old_alloc = p->resources.instr_mem;
+        p->resources.instr_mem.clear();
+        bool gw_linked = p->gw != nullptr;
+        gw_linked |= p->use.preferred()->layout.gateway_match;
+        if (!imem.allocate_imem(p->table, p->resources.instr_mem, phv, gw_linked,
+                                p->use.format_type, att_info)) {
+            // BUG_CHECK(done_next, "imem alloc redo failed when it succeeded before");
+            error_message = "The table " + p->table->name + " could not fit within the "
+                            "instruction memory";
+            LOG3("    " << error_message);
+            next->resources.instr_mem.clear();
+            next->stage_advance_log = "ran out of imem";
+            return false; }
+        // BUG_CHECK(done_next, p->resources.instr_mem == old_alloc, "imem alloc changed");
+#endif
     }
-
-    bool gw_linked = next->gw != nullptr;
-    gw_linked |= next->use.preferred()->layout.gateway_match;
-    if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
-                            next->use.format_type, att_info)) {
-        error_message = "The table " + next->table->name + " could not fit within the "
-                        "instruction memory";
-        LOG3("    " << error_message);
-        next->resources.instr_mem.clear();
-        next->stage_advance_log = "ran out of imem";
-        return false;
-    }
+    if (!done_next) {
+        bool gw_linked = next->gw != nullptr;
+        gw_linked |= next->use.preferred()->layout.gateway_match;
+        if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
+                                next->use.format_type, att_info)) {
+            error_message = "The table " + next->table->name + " could not fit within the "
+                            "instruction memory";
+            LOG3("    " << error_message);
+            next->resources.instr_mem.clear();
+            next->stage_advance_log = "ran out of imem";
+            return false; } }
 
     InstructionMemory verify_imem;
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+    for (auto p : whole_stage) {
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         verify_imem.update(p->name, &p->resources, p->table);
     }
@@ -1763,31 +1891,11 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
         LOG3("    " << what << " ixbar allocation did not fit");
         return false; }
 
-    done_next = false;
-    for (auto *p : boost::adaptors::reverse(whole_stage)) {
-        if (p->prev == next) {
-            if (!try_alloc_adb(next)) {
-                LOG3("    " << what << " of action data bus did not fit");
-                return false; }
-            done_next = true; }
-        if (!try_alloc_adb(p)) {
-            LOG3("    redo of " << p->name << " action data bus did not fit");
-            return false; } }
-    if (!done_next && !try_alloc_adb(next)) {
+    if (!try_alloc_adb(next, whole_stage)) {
         LOG3("    " << what << " of action data bus did not fit");
         return false; }
 
-    done_next = false;
-    for (auto *p : boost::adaptors::reverse(whole_stage)) {
-        if (p->prev == next) {
-            if (!try_alloc_imem(next)) {
-                LOG3("    " << what << " of instruction memory did not fit");
-                return false; }
-            done_next = true; }
-        if (!try_alloc_imem(p)) {
-            LOG3("    redo of " << p->name << " instruction memory did not fit");
-            return false; } }
-    if (!done_next && !try_alloc_imem(next)) {
+    if (!try_alloc_imem(next, whole_stage)) {
         LOG3("    " << what << " of instruction memory did not fit");
         return false; }
 
@@ -2262,11 +2370,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                     LOG2("shrinking table " << rv->name << " can't find layout option");
                     advance_to_next_stage = true;
                     break; }
-                if (!try_alloc_adb(rv)) {
+                if (!try_alloc_adb(rv, whole_stage)) {
                     LOG1("ERROR: Action Data Bus Allocation error after previous allocation?");
                     advance_to_next_stage = true;
                     break; }
-                if (!try_alloc_imem(rv)) {
+                if (!try_alloc_imem(rv, whole_stage)) {
                     LOG1("ERROR: IMem Allocation error after previous allocation?");
                     advance_to_next_stage = true;
                     break; }
