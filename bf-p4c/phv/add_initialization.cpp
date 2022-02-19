@@ -2,7 +2,7 @@
 #include "boost/optional/optional_io.hpp"
 
 bool MapFieldToExpr::preorder(const IR::Expression* expr) {
-    if (expr->is<IR::Cast>() || expr->is<IR::Slice>())
+    if (expr->is<IR::Cast>() || expr->is<IR::Slice>() || expr->is<IR::Neg>())
         return true;
     const auto* f = phv.field(expr);
     if (!f) return true;

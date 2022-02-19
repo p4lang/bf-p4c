@@ -124,6 +124,8 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
         BUG_CHECK(lo >= int(sl->getL()) && hi <= int(sl->getH()),
                   "MakeSlice slice on slice type mismatch");
         e = sl->e0; }
+    if (auto *neg = e->to<IR::Neg>())
+        return new IR::Neg(e->srcInfo, MakeSlice(neg->expr, lo, hi));
     return new IR::Slice(e, hi, lo);
 }
 

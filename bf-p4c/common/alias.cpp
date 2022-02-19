@@ -105,11 +105,11 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
 
     // replacementExpression is the expression corresponding to the alias destination field
     const IR::Member* replacementMember = fieldExpressions.at(replacementField->name);
-    auto* newMember = new IR::BFN::AliasMember(replacementMember, expr);
 
     auto* sl = expr->to<IR::Slice>();
     if (sl) {
         if (f->size == replacementField->size) {
+            auto* newMember = new IR::BFN::AliasMember(replacementMember, sl->e0);
             IR::Slice* newSlice = new IR::Slice(newMember, sl->getH(), sl->getL());
             LOG2("    Replaced A: " << expr << " -> " << newSlice);
             return newSlice;
@@ -121,6 +121,7 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
         }
     } else {
         if (f->size == replacementField->size) {
+            auto* newMember = new IR::BFN::AliasMember(replacementMember, expr);
             LOG2("    Replaced C: " << expr << " -> " << newMember);
             return newMember;
         } else {
