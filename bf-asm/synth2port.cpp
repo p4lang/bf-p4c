@@ -9,7 +9,7 @@ void Synth2Port::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::ty
     setup_layout(layout, data);
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(this, fmt->map); }
+            format.reset(new Format(this, fmt->map)); }
 }
 
 bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {

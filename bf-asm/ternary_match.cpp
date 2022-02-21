@@ -118,7 +118,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     indirect_bus = -1;
     common_init_setup(data, true, P4Table::MatchEntry);
     if (!input_xbar)
-        input_xbar = new InputXbar(this);
+        input_xbar.reset(new InputXbar(this));
     if (auto *m = get(data, "match")) {
         if (CHECKTYPE2(*m, tVEC, tMAP)) {
             if (m->type == tVEC)
@@ -172,7 +172,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     } else if (!action.set() && !actions) {
         error(lineno, "Table %s has no indirect, action table or immediate actions", name());
     }
-    if (action && !action_bus) action_bus = new ActionBus();
+    if (action && !action_bus) action_bus.reset(new ActionBus());
 }
 
 bitvec TernaryMatchTable::compute_reachable_tables() {
@@ -921,7 +921,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         tind["stage_number"] = stage->stageno;
         tind["stage_table_type"] = "ternary_indirection";
         tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
-        indirect->add_pack_format(tind, indirect->format);
+        indirect->add_pack_format(tind, indirect->format.get());
         tind["memory_resource_allocation"] =
             indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
         // Add action formats for actions present in table or attached action table
@@ -984,7 +984,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
+                input_xbar.reset(new InputXbar(this, false, kv.value.map));
         } else if (kv.key == "hash_dist") {
             /* parsed in common_init_setup */
         } else if (kv.key == "selector") {
@@ -1018,7 +1018,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (actions && !action_bus) action_bus = new ActionBus();
+    if (actions && !action_bus) action_bus.reset(new ActionBus());
 }
 
 Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool indirect) {

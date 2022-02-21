@@ -36,7 +36,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                                 initial_value_hi = v.value.i; } } }
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
+                input_xbar.reset(new InputXbar(this, false, kv.value.map));
         } else if (kv.key == "data_bytemask") {
             if (CHECKTYPE(kv.value, tINT))
                 data_bytemask = kv.value.i;
@@ -47,7 +47,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
             /* parsed in common_init_setup */
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(this, kv.value.map);
+                actions.reset(new Actions(this, kv.value.map));
         } else if (kv.key == "selection_table") {
             bound_selector = kv.value;
         } else if (kv.key == "register_params") {
@@ -214,7 +214,7 @@ void StatefulTable::pass1() {
         actions->pass1(this);
         bool stop = false;
         for (auto &act : *actions) {
-            for (auto inst : act.instr) {
+            for (auto &inst : act.instr) {
                 if (inst->salu_output()) {
                     need_bus(layout.at(0).lineno, stage->action_data_use,
                              home_row(), "action data");

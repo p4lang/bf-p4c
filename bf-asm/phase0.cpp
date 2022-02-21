@@ -9,7 +9,7 @@ void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (auto *fmt = get(data, "format")) {
             if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-                format = new Format(this, fmt->map);
+                format.reset(new Format(this, fmt->map));
         } else if (kv.key == "size") {
             if (CHECKTYPE(kv.value, tINT))
                 size = kv.value.i;
@@ -77,7 +77,7 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) const {
     // have a single entry within the pack format.
     bool pad_zeros = false;
     bool print_fields = true;
-    add_pack_format(stage_tbl, format, pad_zeros, print_fields);
+    add_pack_format(stage_tbl, format.get(), pad_zeros, print_fields);
     if (actions)
         actions->gen_tbl_cfg(tbl["actions"]);
     if (context_json)

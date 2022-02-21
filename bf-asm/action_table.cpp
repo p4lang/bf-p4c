@@ -34,8 +34,8 @@ Table::Format::Field
                 if (auto *rv = fmt.second->field(name))
                     return rv;
     } else {
-        if (auto *fmt = get(action_formats, action)) {
-            if (auto *rv = fmt->field(name))
+        if (action_formats.count(action)) {
+            if (auto *rv = action_formats.at(action)->field(name))
                 return rv;
         } else if (auto *rv = format ? format->field(name) : 0) {
             return rv;
@@ -88,11 +88,11 @@ int ActionTable::find_on_actionbus(const char *name, TableOutputModifier mod, in
 void ActionTable::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) {
     if (src.type == ActionBusSource::Field) {
         auto f = src.field;
-        if (f->fmt == format) {
+        if (f->fmt == format.get()) {
             Table::need_on_actionbus(src, lo, hi, size);
             return; }
-        for (auto af : Values(action_formats)) {
-            if (f->fmt == af) {
+        for (auto &af : Values(action_formats)) {
+            if (f->fmt == af.get()) {
                 Table::need_on_actionbus(f, lo, hi, size);
                 return; } }
         for (auto *match_table : match_tables) {
@@ -235,7 +235,7 @@ void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&p
     //  = 256 bits  - +2 - 2, 4, 6, 8, ...
     //  = 512 bits  - +4 - 1, 5, 9, 13, ...
     //  = 1024 bits - +8 - 3, 11, 19, 27, ...
-    for (auto fmt : Values(action_formats))
+    for (auto &fmt : Values(action_formats))
         period = std::max(period, 1 << std::max(static_cast<int>(fmt->log2size) - 7, 0));
     period_name = "action data width";
 }
@@ -257,9 +257,9 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                     fmt->size = 8;
                     fmt->log2size = 3; }
                 if (action)
-                    action_formats[action] = fmt;
+                    action_formats[action].reset(fmt);
                 else
-                    format = fmt; } } }
+                    format.reset(fmt); } } }
     if (!format && action_formats.empty())
         error(lineno, "No format in action table %s", name());
     for (auto &kv : MapIterChecked(data, true)) {
@@ -269,10 +269,10 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
             /* done above to be done before action_bus */
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(this, kv.value.map);
+                actions.reset(new Actions(this, kv.value.map));
         } else if (kv.key == "action_bus") {
             if (CHECKTYPE(kv.value, tMAP))
-                action_bus = new ActionBus(this, kv.value.map);
+                action_bus.reset(new ActionBus(this, kv.value.map));
         } else if (kv.key == "action_id") {
             if (CHECKTYPE(kv.value, tINT))
                 action_id = kv.value.i;
@@ -343,7 +343,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         }
     }
     alloc_rams(true, stage->sram_use, 0);
-    if (!action_bus) action_bus = new ActionBus();
+    if (!action_bus) action_bus.reset(new ActionBus());
 }
 
 void ActionTable::pass1() {
@@ -446,7 +446,7 @@ void ActionTable::pass2() {
     if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
     if (!format)
-        format = new Format(this);
+        format.reset(new Format(this));
     /* Driver does not support formats with different widths. Need all formats
      * to be the same size, so pad them out */
     pad_format_fields();
@@ -474,10 +474,10 @@ void ActionTable::pass3() {
         Actions *tbl_actions = nullptr;
         for (auto mt : get_match_tables()) {
             if (mt->actions) {
-                tbl_actions = mt->actions;
+                tbl_actions = mt->actions.get();
             } else if (auto tern = mt->to<TernaryMatchTable>()) {
                 if (tern->indirect && tern->indirect->actions) {
-                    tbl_actions = tern->indirect->actions;
+                    tbl_actions = tern->indirect->actions.get();
                 }
             }
             BUG_CHECK(tbl_actions);
@@ -552,7 +552,7 @@ void ActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Action table " << name() << " write_regs " << loc());
     unsigned fmt_log2size = format ? format->log2size : 0;
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
-    for (auto fmt : Values(action_formats)) {
+    for (auto &fmt : Values(action_formats)) {
         fmt_log2size = std::max(fmt_log2size, fmt->log2size);
         width = std::max(width, (fmt->size-1)/128U + 1);
     }
@@ -720,8 +720,10 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
     for (auto &act : pack_actions) {
-        auto *fmt = ::get(action_formats, act.first);
-        add_pack_format(stage_tbl, fmt ? fmt : format, true, true, act.second);
+        auto *fmt = format.get();
+        if (action_formats.count(act.first))
+            fmt = action_formats.at(act.first).get();
+        add_pack_format(stage_tbl, fmt, true, true, act.second);
         auto p4Name = p4_name();
         if (!p4Name) {
             error(lineno, "No p4 table name found for table : %s", name());

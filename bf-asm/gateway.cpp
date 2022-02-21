@@ -112,10 +112,10 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             gw_unit = kv.value.i;
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
+                input_xbar.reset(new InputXbar(this, false, kv.value.map));
         } else if (kv.key == "format") {
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
-                format = new Format(this, kv.value.map);
+                format.reset(new Format(this, kv.value.map));
         } else if (kv.key == "always_run") {
             if ((always_run = get_bool(kv.value)) && !Target::SUPPORT_ALWAYS_RUN())
                 error(kv.key.lineno, "always_run not supported on %s", Target::name());

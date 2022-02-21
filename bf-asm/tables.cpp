@@ -477,7 +477,7 @@ void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
     setup_layout(layout, data);
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(this, fmt->map); }
+            format.reset(new Format(this, fmt->map)); }
     if (auto *hd = get(data, "hash_dist"))
         HashDistribution::parse(hash_dist, *hd);
 }
@@ -501,10 +501,10 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
         enable_action_instruction_enable = get_bool(kv.value);
     } else if (kv.key == "actions") {
         if (CHECKTYPE(kv.value, tMAP))
-            actions = new Actions(this, kv.value.map);
+            actions.reset(new Actions(this, kv.value.map));
     } else if (kv.key == "action_bus") {
         if (CHECKTYPE(kv.value, tMAP))
-            action_bus = new ActionBus(this, kv.value.map);
+            action_bus.reset(new ActionBus(this, kv.value.map));
     } else if ((kv.key == "default_action")
             || (kv.key == "default_only_action")) {
         if (kv.key == "default_only_action")
@@ -1363,7 +1363,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
             } else {
                 VECTOR_initcopy(tmp, i.vec); }
             if (auto *p = Instruction::decode(tbl, this, tmp))
-                instr.push_back(p);
+                instr.emplace_back(p);
             else if (tbl->to<MatchTable>() || tbl->to<TernaryIndirectTable>() ||
                      tbl->to<ActionTable>())
                 attached.emplace_back(i, tbl);
@@ -1371,6 +1371,9 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                 error(i.lineno, "Unknown instruction %s", tmp[0].s);
             VECTOR_fini(tmp); } }
 }
+
+Table::Actions::Action::Action(const char *n, int l) : name(n), lineno(l) {}
+Table::Actions::Action::~Action() {}
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
     table = tbl;
@@ -1407,7 +1410,7 @@ AlwaysRunTable::AlwaysRunTable(gress_t gress, Stage *stage, pair_t &init)
 : Table(init.key.lineno, "always run " + to_string(gress) + " stage " + to_string(stage->stageno),
         gress, stage) {
     VECTOR(pair_t)      tmp = { 1, 1, &init };
-    actions = new Actions(this, tmp);
+    actions.reset(new Actions(this, tmp));
     if (actions->count() == 1) {  // unless there was an error parsing the action...
         auto &act = *actions->begin();
         if (act.addr >= 0)
@@ -1505,7 +1508,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
     int iaddr = -1;
     bool shared_VLIW = false;
     for (auto &inst : instr) {
-        inst = inst->pass1(tbl, this);
+        inst.reset(inst.release()->pass1(tbl, this));
         if (inst->slot >= 0) {
             if (slot_use[inst->slot])
                 error(inst->lineno, "instruction slot %d used multiple times in action %s",
@@ -1698,7 +1701,7 @@ void Table::Actions::pass2(Table *tbl) {
     bool code0_is_noop = (code != 0);
 
     for (auto &act : *this) {
-        for (auto *inst : act.instr)
+        for (auto &inst : act.instr)
             inst->pass2(tbl, &act);
         if (act.addr < 0) {
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
@@ -1783,7 +1786,7 @@ void Table::Actions::stateful_pass2(Table *tbl) {
             code_use[act.code] = true; }
         if (act.code == 3 && stbl->clear_value)
             error(act.lineno, "Can't use SALU action 3 with a non-zero clear value");
-        for (auto *inst : act.instr)
+        for (const auto &inst : act.instr)
             inst->pass2(tbl, &act);
     }
     if (stbl->clear_value)
@@ -1801,7 +1804,7 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
     for (auto &act : *this) {
         LOG2("# action " << act.name << " code=" << act.code << " addr=" << act.addr);
         tbl->write_action_regs(regs, &act);
-        for (auto *inst : act.instr)
+        for (const auto &inst : act.instr)
             inst->write_regs(regs, tbl, &act);
         if (options.fill_noop_slot) {
             for (auto slot : Phv::use(tbl->gress) - tbl->stage->imem_use_all()) {
@@ -2277,7 +2280,7 @@ int Table::find_on_actionbus(const char *name, TableOutputModifier mod,
 }
 
 void Table::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) {
-    if (!action_bus) action_bus = new ActionBus();
+    if (!action_bus) action_bus.reset(new ActionBus());
     action_bus->need_alloc(this, att, mod, lo, hi, size);
 }
 
@@ -2286,7 +2289,7 @@ int Table::find_on_actionbus(const ActionBusSource &src, int lo, int hi, int siz
 }
 
 void Table::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) {
-    if (!action_bus) action_bus = new ActionBus();
+    if (!action_bus) action_bus.reset(new ActionBus());
     action_bus->need_alloc(this, src, lo, hi, size);
 }
 

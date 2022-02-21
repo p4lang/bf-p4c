@@ -18,6 +18,7 @@ Deparser::~Deparser() { }
 
 struct Deparser::FDEntry {
     struct Base {
+        virtual ~Base() {}
         virtual void check(bitvec &phv_use) = 0;
         virtual unsigned encode() = 0;
         virtual unsigned size() = 0;    // size in bytes;
@@ -139,20 +140,20 @@ struct Deparser::FDEntry {
     };
 
     int                         lineno;
-    Base                        *what;
+    std::unique_ptr<Base>       what;
     ordered_set<::Phv::Ref>     pov;
     FDEntry(gress_t gress, const value_t &v, const value_t &p) {
         lineno = v.lineno;
         if (v.type == tCMD && v.vec.size == 2 && v == "clot") {
-            what = new Clot(gress, v.vec[1], p, pov);
+            what.reset(new Clot(gress, v.vec[1], p, pov));
         } else if (v.type == tCMD && v.vec.size == 2 && v == "full_checksum") {
-            what = new Checksum(gress, v.vec[1]);
+            what.reset(new Checksum(gress, v.vec[1]));
             pov.emplace(gress, DEPARSER_STAGE, p);
         } else if (v.type == tINT) {
-            what = new Constant(gress, v);
+            what.reset(new Constant(gress, v));
             pov.emplace(gress, DEPARSER_STAGE, p);
         } else {
-            what = new Phv(gress, v);
+            what.reset(new Phv(gress, v));
             pov.emplace(gress, DEPARSER_STAGE, p); } }
     void check(bitvec &phv_use) { what->check(phv_use); }
 };

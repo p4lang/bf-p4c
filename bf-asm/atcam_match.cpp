@@ -405,7 +405,7 @@ void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     // Hash functions not necessary currently for ATCAM matches, as the result comes from
     // the partition_field_name
     stage_tbl["hash_functions"] = json::vector();
-    add_pack_format(stage_tbl, format, false);
+    add_pack_format(stage_tbl, format.get(), false);
     units.push_back(std::move(tbl));
 }
 

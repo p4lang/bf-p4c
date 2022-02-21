@@ -11,7 +11,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
+                input_xbar.reset(new InputXbar(this, false, kv.value.map));
         } else if (kv.key == "mode") {
             mode_lineno = kv.value.lineno;
             if (CHECKTYPEPM(kv.value, tCMD, kv.value.vec.size == 2 && kv.value[1].type == tINT,

@@ -22,7 +22,7 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         if (common_setup(kv, data, P4Table::Meter)) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
+                input_xbar.reset(new InputXbar(this, false, kv.value.map));
         } else if (kv.key == "color_aware") {
             if (kv.value == "per_flow")
                 color_aware = color_aware_per_flow_enable = true;

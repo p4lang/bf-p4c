@@ -226,7 +226,7 @@ void ExactMatchTable::pass2() {
     // use group 0 entry) and all fields except 'version' and 'action' (match
     // overhead). The version bits are set by the driver.
     if (format) {
-        stash_format = new Format(this);
+        stash_format.reset(new Format(this));
         stash_format->size = MEM_WORD_WIDTH;
         stash_format->log2size = ceil_log2(MEM_WORD_WIDTH);
         auto group = 0;
@@ -376,7 +376,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "match", size);
     add_all_reference_tables(tbl);
     json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "exact", "hash_match");
-    add_pack_format(stage_tbl, format, true, false);
+    add_pack_format(stage_tbl, format.get(), true, false);
     stage_tbl["memory_resource_allocation"] = nullptr;
     if (stash_rows.size() > 0) {
         json::map &stash_allocation = stage_tbl["stash_allocation"] = json::map();
@@ -386,7 +386,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
             for (auto f = format->begin(group); f != format->end(group); f++) {
                 if (f->first == "action")
                     stash_format->add_field(f->second, f->first, group); } }
-        add_pack_format(stash_allocation, stash_format, false, true);
+        add_pack_format(stash_allocation, stash_format.get(), false, true);
         auto mem_units_per_word = format ? format->get_mem_units_per_table_word() : 1;
         auto &stash_pack_formats = stash_allocation["pack_format"]->to<json::vector>();
         for (auto &stash_pack_format : stash_pack_formats) {
@@ -437,7 +437,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
             auto fmt_width = get_format_width();
             BUG_CHECK(fmt_width);
             way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
-            add_pack_format(way_tbl, format, false);
+            add_pack_format(way_tbl, format.get(), false);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }
     if (size == 0) {

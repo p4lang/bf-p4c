@@ -135,7 +135,7 @@ void ProxyHashMatchTable::gen_tbl_cfg(json::vector &out) const {
     stage_tbl["memory_resource_allocation"] = nullptr;
     // FIXME: stash_allocation being null is a placeholder until implemented.
     stage_tbl["stash_allocation"] = nullptr;
-    add_pack_format(stage_tbl, format, true, false);
+    add_pack_format(stage_tbl, format.get(), true, false);
     json::map &match_attributes = tbl["match_attributes"];
     match_attributes["uses_dynamic_key_masks"] = false;
     if (ways.size() > 0) {
@@ -149,7 +149,7 @@ void ProxyHashMatchTable::gen_tbl_cfg(json::vector &out) const {
             auto fmt_width = get_format_width();
             BUG_CHECK(fmt_width);
             way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
-            add_pack_format(way_tbl, format, false);
+            add_pack_format(way_tbl, format.get(), false);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl));
         }

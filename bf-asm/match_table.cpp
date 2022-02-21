@@ -22,7 +22,7 @@ void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4T
     setup_logical_id();
     if (auto *ixbar = get(data, "input_xbar")) {
         if (CHECKTYPESIZE(*ixbar, tMAP))
-            input_xbar = new InputXbar(this, ternary, ixbar->map); }
+            input_xbar.reset(new InputXbar(this, ternary, ixbar->map)); }
 }
 
 bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
@@ -242,13 +242,13 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     adrdist.adr_dist_table_thread[timing_thread(gress)][1] |= 1 << logical_id;
 
 
-    Actions *actions = action && action->actions ? action->actions : this->actions;
+    Actions *actions = action && action->actions ? action->actions.get() : this->actions.get();
 
 
     std::set<int> result_buses;
     if (result) {
-        actions = result->action && result->action->actions ? result->action->actions
-                                                            : result->actions;
+        actions = result->action && result->action->actions ? result->action->actions.get()
+                                                            : result->actions.get();
         for (auto &row : result->layout) {
             if (row.result_bus < 0)
                 continue;

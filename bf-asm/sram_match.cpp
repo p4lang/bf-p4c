@@ -596,9 +596,9 @@ void SRamMatchTable::common_sram_checks() {
         error(lineno, "No format specified in table %s", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (actions && !action_bus) action_bus = new ActionBus();
+    if (actions && !action_bus) action_bus.reset(new ActionBus());
     if (!input_xbar)
-        input_xbar = new InputXbar(this);
+        input_xbar.reset(new InputXbar(this));
 }
 
 void SRamMatchTable::pass1() {

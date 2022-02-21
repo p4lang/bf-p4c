@@ -16,6 +16,7 @@ struct Instruction {
     virtual void pass2(Table *, Table::Actions::Action *) = 0;
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;
+    bool equiv(const std::unique_ptr<Instruction> &a) { return equiv(a.get()); }
     virtual bool salu_output() const { return false; }
     virtual bool salu_alu() const { return false; }
     virtual bool phvRead(std::function<void(const Phv::Slice &sl)>) = 0;

@@ -299,7 +299,7 @@ void output_jbay_field_dictionary_helper(int lineno,
     // checked.
 
     for (auto &ent : dict) {
-        auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
+        auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what.get());
         // FIXME -- why does the following give an error from gcc?
         // auto *clot = ent.what->to<Deparser::FDEntry::Clot>();
         unsigned size = ent.what->size();
@@ -335,7 +335,8 @@ void output_jbay_field_dictionary_helper(int lineno,
         } else {
             // Phv, Constant, or Checksum
             if (!check_chunk(ent.lineno, ch)) break;
-            write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov.front(), ent.what, byte, size);
+            write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov.front(), ent.what.get(),
+                        byte, size);
             byte += size;
             prev = ent.what->encode();
         }
