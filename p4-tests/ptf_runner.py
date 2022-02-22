@@ -367,26 +367,6 @@ def poll_device(status_port):
         if s is not None:
             s.close()
 
-def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=30):
-    @timeout(timeout_s)
-    def wait():
-        while True:
-            if model_p.poll() is not None:
-                error("Model is not running")
-                return False
-            if switchd_p.poll() is not None:
-                error("Switchd is not running")
-                return False
-            if poll_device(status_port):
-                return True
-            time.sleep(1)
-    try:
-        return wait()
-    except TimeoutError:
-        error("Timed out while waiting for switchd to be ready")
-        return False
-    return True
-
 def sanitize_args(args):
     if os.path.split(args.name)[1] != args.name:
         error("Invalid 'name' argument in PTF runner")
@@ -623,6 +603,39 @@ def main():
                         debug("{0} still running as defunct: {1}".format(process_name, process))
                         debug("Timing out!")
                         return
+
+    def model_log_to_err():
+        with open(model_log_path) as f:
+            error("model log:\n----------\n{}\n----------\n".format(f.read()))
+
+    def switchd_log_to_err():
+        with open(switchd_log_path) as f:
+            error("switchd log:\n----------\n{}\n----------\n".format(f.read()))
+
+    def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=30):
+        @timeout(timeout_s)
+        def wait():
+            while True:
+                if model_p.poll() is not None:
+                    error("Model is not running")
+                    model_log_to_err()
+                    return False
+                if switchd_p.poll() is not None:
+                    error("Switchd is not running")
+                    switchd_log_to_err()
+                    return False
+                if poll_device(status_port):
+                    return True
+                time.sleep(1)
+        try:
+            return wait()
+        except TimeoutError:
+            error("Timed out while waiting for switchd to be ready")
+            logerr_switchd_log()
+            logerr_model_log()
+            return False
+        return True
+
 
     # Ensure clean environment before starting the test
     def run_setup():

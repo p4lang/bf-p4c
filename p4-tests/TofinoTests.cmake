@@ -929,7 +929,6 @@ set (P4FACTORY_INTERNAL_PROGRAMS_PATH "extensions/p4_tests/p4-programs/internal_
 set (P4FACTORY_REGRESSION_TESTS_INTERNAL
   # action_spec_format.p4                     # PTF failure
   atomic_mod
-  clpm
   dyn_hash
   ecc
   emulation

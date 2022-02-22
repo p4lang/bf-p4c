@@ -292,14 +292,7 @@ node ('compiler-travis') {
                         """
                     },
 
-                    'Switch MSDC and DC_BASIC, stful, meters, hash-driven, other customer tests': {
-                        echo 'Running switch PD tests for MSDC_PROFILE_BRIG and DC_BASIC_PROFILE_BRIG'
-                        runInDocker(
-                            extraArgs: '--privileged -e PKTPY=False',
-                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
-                            "./run_with_python2.sh \"ctest -R '^tofino/.*smoketest_switch_msdc|^tofino/.*smoketest_switch_dc_basic' -LE 'UNSTABLE'\""
-                        )
-
+                    'stful, meters, hash-driven, other customer tests': {
                         echo 'Running stful, meters and hash_driven tests'
                         // Disable stful test (DRV-4189)
                         runInDocker(

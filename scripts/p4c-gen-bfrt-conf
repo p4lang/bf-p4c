@@ -28,6 +28,11 @@ template="""
             ],
             "agent0": "lib/libpltfm_mgr.so"
         }
+    ],
+    "switch_options": [
+        {
+            "device-id": 0
+        }
     ]
 }
 """
@@ -62,6 +67,7 @@ def main():
     p4_info = p4_device["p4_programs"][0]
     p4_info["program-name"] = args.name
     p4_pipelines=p4_info['p4_pipelines']
+    switch_info = base_conf["switch_options"][0]
     npipes = len(args.pipe)
     for index, pipe in zip(list(range(npipes)),args.pipe):
         pipe_config = {}
@@ -85,8 +91,8 @@ def main():
     if 'switch_16' in args.testdir:
         p4_info["switchapi"] = os.path.join(args.testdir, "lib", "libbf_switch.so")
         p4_info["bfrt-config"] = os.path.join(args.testdir, 'share', args.name, 'bf-rt.json')
-        p4_info["model_json_path"] = os.path.join(args.testdir, 'share', args.name, 'aug_model.json')
-        p4_info["cpu_port"] = "veth251"
+        switch_info["model_json_path"] = os.path.join(args.testdir, 'share', args.name, 'aug_model.json')
+        switch_info["cpu_port"] = "veth251"
     else:
         p4_info["bfrt-config"] = os.path.join(args.installdir, 'bf-rt.json')
 

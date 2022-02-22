@@ -210,7 +210,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2378.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   # extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
@@ -1048,7 +1047,6 @@ p4c_add_xfail_reason("tofino"
   # Checksum16 is deprecated
   extensions/p4_tests/p4_16/stf/ipv4_options.p4
   # We fail to translate `standard_metadata.instance_type`.
-  testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
   # truncate is not supported in tna
   testdata/p4_14_samples/truncate.p4
@@ -1391,6 +1389,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Ran out of parser match registers"
   testdata/p4_16_samples/pvs-struct-3-bmv2.p4
+  testdata/p4_14_samples/copy_to_cpu.p4
 )
 
 p4c_add_xfail_reason("tofino"
