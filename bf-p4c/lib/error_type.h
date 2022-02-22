@@ -13,6 +13,8 @@ class ErrorType: public ::ErrorType {
     static const int WARN_SUBSTITUTION    = 1503;
     static const int WARN_PHV_ALLOCATION  = 1504;
 
+    static const int FIRST_BACKEND_WARNING = WARN_TABLE_PLACEMENT;
+
     /// in case we need to
     static ErrorType &getErrorTypes() {
         static ErrorType instance;

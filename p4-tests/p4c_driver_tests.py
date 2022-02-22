@@ -18,7 +18,8 @@ p4c_driver_tests_outputs = os.path.join(tests_dir, 'p4c_driver_tests_outputs')
 p4c_3078_program = os.path.join(tests_dir, 'p4_16/compile_only/p4c-3078.p4')
 multipipe_program = os.path.join(tests_dir, 'p4_16/compile_only/multipipe.p4')
 
-# A map of test name to: (compiler args, xfail_msg, files to check for (non)existence)
+# A map of test name to: (compiler args, xfail_msg, files to check for (non)existence,
+# ref_src_json, ref_prg_conf, expected string in stdout)
 # **** Note *****
 #  that when run with -j, tests will run in parallel, so please ensure the output goes to
 #  different directories
@@ -168,6 +169,8 @@ test_matrix = {
     # Following test checks whether compiler can deal with comma separated list of values
     'some_warnings_to_errors': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program, '--Werror=unused,uninitialized_out_param'],
                             "error: out parameter 'ig_md' may be uninitialized when 'SwitchIngressParser' terminates", None),
+    # Test checks if --help-warnings does not crash with new warning types
+    'help_warnings': (['--help-warnings'], None, None, None, None, "These are supported warning types for --Werror and --Wdisable:"),
 
     # source.json regression tests
     # If needed, use "test_p4c_driver.py --gen-src-json" to (re)generate reference source jsons

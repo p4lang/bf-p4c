@@ -65,12 +65,13 @@ class Test:
         self._print_on_failure = args.print_on_failure
         self.defineCompilerArgs()
 
-    def runCompiler(self, options, xfail_msg):
+    def runCompiler(self, options, xfail_msg, ref_out):
         """Run the compiler with the given options"
 
         If unsuccessful, but expected to fail (xfail_msg is not None)
         check that xfail_msg is in stderr. If it is, then return
-        success.
+        success. If ref_out is not None, check that stdout contains
+        ref_out and if yes, return success.
 
         """
         if self._dry_run:
@@ -94,6 +95,11 @@ class Test:
         if xfail_msg is not None:
             if errlog.find(bytearray(xfail_msg, 'utf-8')) == -1:
                 return p.returncode
+            else:
+                return 0
+        if ref_out is not None:
+            if outlog.find(bytearray(ref_out, 'utf-8')) == -1:
+                return 1 # could be any non zero value
             else:
                 return 0
         if p.returncode != 0 and self._print_on_failure:
@@ -509,18 +515,24 @@ class Test:
         return 0
 
 
-    def runTest(self, options, xfail_msg = None, file_list = None, ref_src_json = None, ref_prg_conf = None):
+    def runTest(self, options, xfail_msg = None, file_list = None, ref_src_json = None, ref_prg_conf = None, ref_out = None):
         """Run an individual test using the options and if the run is
-        successful check the outputs.
+        successful check the outputs. If `ref_out` is not None, the possible
+        output files are not checked and the standard output of the test is
+        expected to contain that message.
 
         Returns a string with the test result: PASS, FAIL, XFAIL, XPASS.
 
         """
-        rcCode = self.runCompiler(options, xfail_msg)
+        rcCode = self.runCompiler(options, xfail_msg, ref_out)
 
         if xfail_msg is not None:
             if rcCode == 0: return "XFAIL"
             else: return "XPASS"
+
+        if ref_out is not None:
+            if rcCode == 0: return "PASS"
+            else: return "FAIL"
 
         ctCode = self.checkTest(options, file_list, ref_src_json, ref_prg_conf)
         if rcCode == 0 and ctCode == 0 and xfail_msg is None:
@@ -533,9 +545,11 @@ def load_test_file(testfile):
     """Load a test file.
 
     It needs to define test_matrix as a map of test names to a tuple
-    of (compiler options, xfail message, file_list). If `xfail message` is not
-    None, the test is expected to fail with that message. The `file_list` is the
-    list of files to check for the existence.
+    of (compiler options, xfail message, file_list, ref_src_json, ref_prg_conf,
+    ref_out). If `xfail message` is not None, the test is expected to fail with
+    that message. If `ref_out` is not None, the possible output files are not
+    checked and the standard output of the test is expected to contain that
+    message. The `file_list` is the list of files to check for the existence.
 
     """
     data = None
@@ -600,7 +614,7 @@ def generateReferenceSourceJson(test_runner, test_name, options, ref_src_json):
     """
     if ref_src_json != None:
         print('Generating reference source json for', test_name, '......')
-        rc = test_runner.runCompiler(options, None)
+        rc = test_runner.runCompiler(options, None, None)
         if rc != 0:
             print('FAIL:', test_name)
             return 1
@@ -619,7 +633,7 @@ def generateReferenceProgramConf(test_runner, test_name, options, ref_prg_conf):
     """
     if ref_prg_conf != None:
         print('Generating reference program conf for', test_name, '......')
-        rc = test_runner.runCompiler(options, None)
+        rc = test_runner.runCompiler(options, None, None)
         if rc != 0:
             print('FAIL:', test_name)
             return 1
@@ -633,12 +647,12 @@ def generateReferenceProgramConf(test_runner, test_name, options, ref_prg_conf):
         print('SUCC:', test_name)
     return 0
 
-def runOneTest(test_runner, test_name, args, xfail_msg, file_list, ref_src_json, ref_prg_conf):
+def runOneTest(test_runner, test_name, args, xfail_msg, file_list, ref_src_json, ref_prg_conf, ref_out):
     """Run a test and print the status
 
     """
     print('Starting', test_name, '......')
-    rc = test_runner.runTest(args, xfail_msg, file_list, ref_src_json, ref_prg_conf)
+    rc = test_runner.runTest(args, xfail_msg, file_list, ref_src_json, ref_prg_conf, ref_out)
     print(rc, ':', test_name)
     if rc == "PASS" or rc == "XFAIL": return 0
     else: return 1
@@ -729,7 +743,8 @@ def worker(test_name):
         rc = runOneTest(test_runner, test_name,
                 test_matrix[test_name][0], test_matrix[test_name][1], test_matrix[test_name][2],
                 test_matrix[test_name][3] if len(test_matrix[test_name]) > 3 else None,
-                test_matrix[test_name][4] if len(test_matrix[test_name]) > 4 else None)
+                test_matrix[test_name][4] if len(test_matrix[test_name]) > 4 else None,
+                test_matrix[test_name][5] if len(test_matrix[test_name]) > 5 else None)
     if rc != 0:
         failed.put(test_name)
     else:
