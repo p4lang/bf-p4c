@@ -792,7 +792,7 @@ template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
 
 #if HAVE_FLATROCK
 template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock gateway not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

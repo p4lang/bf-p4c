@@ -14,5 +14,5 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &) {
 }
 
 void AlwaysRunTable::write_regs(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock always run not implemented yet!", __FILE__, __LINE__);
 }

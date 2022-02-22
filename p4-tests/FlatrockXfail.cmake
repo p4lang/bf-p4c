@@ -24,18 +24,22 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Assembler BUG"
+  "Flatrock .* not implemented yet!"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Assembler BUG"
+  "Flatrock .* not implemented yet!"
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Assembler BUG"
+  "Flatrock .* not implemented yet!"
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 
@@ -53,7 +57,7 @@ p4c_add_xfail_reason("tofino5"
 
 # PAC test cases
 p4c_add_xfail_reason("tofino5"
-  "Assembler BUG"
+  "Flatrock .* not implemented yet!"
   extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
   extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
   )

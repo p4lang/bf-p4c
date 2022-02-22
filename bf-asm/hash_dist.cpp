@@ -124,7 +124,7 @@ void HashDistribution::pass1(Table *tbl, delay_type_t delay_type, bool non_linea
 
 #if HAVE_FLATROCK
 template<> void HashDistribution::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock hash dist not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

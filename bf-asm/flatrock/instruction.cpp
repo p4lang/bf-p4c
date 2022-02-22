@@ -4,5 +4,5 @@
 
 void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &regs,
         Table *tbl, Table::Actions::Action *act) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock instruction not implemented yet!", __FILE__, __LINE__);
 }

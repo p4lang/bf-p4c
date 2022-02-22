@@ -66,7 +66,7 @@ static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
 
 #if HAVE_FLATROCK
 template<> void IdletimeTable::write_merge_regs_vt(Target::Flatrock::mau_regs &, int, int) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock idletime not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>
@@ -89,7 +89,7 @@ int IdletimeTable::direct_shiftcount() const { return 67 - precision_bits[precis
 
 #if HAVE_FLATROCK
 template<> void IdletimeTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock idletime not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

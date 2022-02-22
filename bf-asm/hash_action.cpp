@@ -87,7 +87,7 @@ void HashActionTable::write_merge_regs_vt(REGS &regs, int type, int bus) {
 
 #if HAVE_FLATROCK
 template<> void HashActionTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock hash_action not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

@@ -335,7 +335,7 @@ template<class REGS> void AlgTcamMatchTable::write_regs_vt(REGS &regs) {
 }
 #if HAVE_FLATROCK
 template<> void AlgTcamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock atcam not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 

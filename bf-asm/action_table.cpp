@@ -544,7 +544,7 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
 
 #if HAVE_FLATROCK
 template<> void ActionTable::write_regs_vt(Target::Flatrock::mau_regs &) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock action data not implemented yet!", __FILE__, __LINE__);
 }
 #endif /* HAVE_FLATROCK */
 template<class REGS>

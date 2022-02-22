@@ -397,7 +397,7 @@ static void set_tcam_mode_logical_table(ubits<8> &reg, int tcam_id, int logical_
 
 #if HAVE_FLATROCK
 template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock ternary match not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
@@ -1085,7 +1085,7 @@ void TernaryIndirectTable::pass3() {
 
 #if HAVE_FLATROCK
 template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock ternary indirect not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {

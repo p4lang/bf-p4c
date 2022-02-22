@@ -5,9 +5,9 @@ int StatefulTable::parse_counter_mode(Target::Flatrock target, const value_t &v)
 }
 
 void StatefulTable::set_counter_mode(Target::Flatrock target, int mode) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", __FILE__, __LINE__);
 }
 
 void StatefulTable::gen_tbl_cfg(Target::Flatrock, json::map&, json::map&) const {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", __FILE__, __LINE__);
 }

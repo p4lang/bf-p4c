@@ -393,7 +393,7 @@ action_for_table_action(const MatchTable *tbl, const Actions::Action *act) const
 #if HAVE_FLATROCK
 template<> void StatefulTable::write_action_regs_vt(Target::Flatrock::mau_regs &regs,
             const Actions::Action *act) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>
@@ -415,7 +415,7 @@ void StatefulTable::write_action_regs_vt(REGS &regs, const Actions::Action *act)
 #if HAVE_FLATROCK
 template<> void StatefulTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
             MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
@@ -436,7 +436,7 @@ template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTa
 
 #if HAVE_FLATROCK
 template<> void StatefulTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {

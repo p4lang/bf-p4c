@@ -24,7 +24,7 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
                 gw_key_cfg[input.lo/8U].sel = input.what->reg.ixbar_id();
             break; }
         case Group::XCMP:
-            BUG("TBD");
+            error(lineno, "%s:%d: Flatrock xcmp ixbar not implemented yet!", __FILE__, __LINE__);
             break;
         default:
             BUG("invalid InputXbar::Group::Type(%d)", group.first.type);

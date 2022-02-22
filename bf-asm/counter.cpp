@@ -172,7 +172,7 @@ unsigned CounterTable::determine_shiftcount(Table::Call &call, int group, unsign
 #if HAVE_FLATROCK
 template<> void CounterTable::write_merge_regs_vt(Target::Flatrock::mau_regs &, MatchTable *,
                 int, int, const std::vector<Call::Arg> &) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock counter not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void CounterTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
@@ -212,7 +212,7 @@ template<class REGS> void CounterTable::write_merge_regs_vt(REGS &regs, MatchTab
 
 #if HAVE_FLATROCK
 template<> void CounterTable::write_regs_vt(Target::Flatrock::mau_regs &) {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock counter not implemented yet!", __FILE__, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {

@@ -5,11 +5,11 @@ DEPARSER_INTRINSIC(Flatrock, EGRESS, egress_unicast_port, 1) { }
 DEPARSER_INTRINSIC(Flatrock, INGRESS, egress_unicast_port, 1) { }
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Flatrock>() {
-    BUG("TBD");
+    error(-1, "%s:%d: Flatrock deparser not implemented yet!", __FILE__, __LINE__);
 }
 
 template<> unsigned Deparser::FDEntry::Constant::encode<Target::Flatrock>() {
-    BUG("TBD");
+    error(lineno, "%s:%d: Flatrock deparser not implemented yet!", __FILE__, __LINE__);
 }
 
 struct ftr_str_info_t {
