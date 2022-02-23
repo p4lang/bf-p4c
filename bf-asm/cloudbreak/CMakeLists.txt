@@ -27,5 +27,10 @@ set_source_files_properties(
   ${GEN_CLOUDBREAK_SRCS} ${GEN_CLOUDBREAK_HDRS}
   PROPERTIES GENERATED TRUE)
 
+set (BFAS_CLOUDBREAK_SRCS
+  cloudbreak/input_xbar.cpp
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/cloudbreak)
 add_library (regs_cb ${GEN_CLOUDBREAK_SRCS} ${GEN_CLOUDBREAK_HDRS})

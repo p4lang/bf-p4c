@@ -1,3 +1,5 @@
+#include "input_xbar.h"
+
 template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
     for (auto &group : groups) {
@@ -32,3 +34,4 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
     }
 }
 
+template void InputXbar::write_regs(Target::Flatrock::mau_regs &regs);

@@ -10,6 +10,12 @@
 #include "stage.h"
 #include "range.h"
 
+// template specialization declarations
+#include "tofino/input_xbar.h"
+#include "jbay/input_xbar.h"
+#include "cloudbreak/input_xbar.h"
+#include "flatrock/input_xbar.h"
+
 int InputXbar::Group::max_index(Group::type_t t) {
     switch (options.target) {
     case TOFINO:
@@ -277,8 +283,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
     }
 }
 
-InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
-: table(t), lineno(data[0].key.lineno) {
+void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
     for (auto &kv : data) {
         if ((kv.key.type == tSTR) && (kv.key == "random_seed")) {
             random_seed = kv.value.i;
@@ -708,21 +713,6 @@ void InputXbar::pass2() {
     }
 }
 
-// tofino template specializations
-#include <tofino/input_xbar.cpp>        // NOLINT(build/include)
-#if HAVE_JBAY
-//  jbay template specializations
-#include <jbay/input_xbar.cpp>          // NOLINT(build/include)
-#endif  /* HAVE_JBAY */
-#if HAVE_CLOUDBREAK
-// cloudbreak template specializations
-#include <cloudbreak/input_xbar.cpp>    // NOLINT(build/include)
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-// flatrock template specializations
-#include <flatrock/input_xbar.cpp>    // NOLINT(build/include)
-#endif  /* HAVE_FLATROCK */
-
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
@@ -887,6 +877,14 @@ void InputXbar::write_regs(REGS &regs) {
         }
     }
 }
+
+template void InputXbar::write_regs(Target::Tofino::mau_regs &);
+#if HAVE_JBAY
+template void InputXbar::write_regs(Target::JBay::mau_regs &);
+#endif  /* HAVE_JBAY */
+#if HAVE_CLOUDBREAK
+template void InputXbar::write_regs(Target::Cloudbreak::mau_regs &);
+#endif  /* HAVE_CLOUDBREAK */
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     InputXbar::Input *rv = nullptr;

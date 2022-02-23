@@ -27,5 +27,10 @@ set_source_files_properties(
   ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS}
   PROPERTIES GENERATED TRUE)
 
+set (BFAS_JBAY_SRCS
+  jbay/input_xbar.cpp
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/jbay)
 add_library (regs_jbay ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS})

@@ -100,11 +100,18 @@ class InputXbar {
         std::vector<Input *> find_all(Phv::Slice sl) const;
     };
 
+    InputXbar() = delete;
+    InputXbar(const InputXbar &) = delete;
+
+ protected:
+    void input(Table *table, bool ternary, const VECTOR(pair_t) &data);
+
  public:
     const int   lineno;
     int random_seed = -1;
     explicit InputXbar(Table *table) : table(table), lineno(-1) {}
-    InputXbar(Table *table, bool ternary, const VECTOR(pair_t) &data);
+    InputXbar(Table *table, bool ternary, const VECTOR(pair_t) &data)
+    : table(table), lineno(data[0].key.lineno) { input(table, ternary, data); }
     void pass1();
     void pass2();
     template<class REGS> void write_regs(REGS &regs);

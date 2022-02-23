@@ -21,5 +21,10 @@ set_source_files_properties(
   ${GEN_FLATROCK_SRCS} ${GEN_FLATROCK_HDRS}
   PROPERTIES GENERATED TRUE)
 
+set (BFAS_FLATROCK_SRCS
+  flatrock/input_xbar.cpp
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/flatrock)
 add_library (regs_ftr ${GEN_FLATROCK_SRCS} ${GEN_FLATROCK_HDRS})

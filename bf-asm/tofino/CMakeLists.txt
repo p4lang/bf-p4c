@@ -27,5 +27,10 @@ add_custom_command(OUTPUT ${GEN_TOFINO_HDRS} ${GEN_TOFINO_SRCS}
   DEPENDS template_objects.yaml chip.schema ${WALLE_SOURCES}
   COMMENT "Generating cpp code for tofino from tofino/chip.schema")
 
+set (BFAS_TOFINO_SRCS
+  tofino/input_xbar.cpp
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/tofino)
 add_library (regs_tofino ${GEN_TOFINO_SRCS} ${GEN_TOFINO_HDRS})
