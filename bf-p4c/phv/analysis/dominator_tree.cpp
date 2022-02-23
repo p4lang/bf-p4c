@@ -41,6 +41,13 @@ bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
     // Generate dominator tree for each gress.
     setupDomTree();
 
+    return true;
+}
+
+bool BuildDominatorTree::preorder(const IR::MAU::Table* tbl) {
+    BUG_CHECK(!tbl->is_always_run_action(),
+              "BuildDomintorTree cannot be run after always-run action tables are inserted. ARA "
+              "table: %1%", tbl->name);
     return false;
 }
 

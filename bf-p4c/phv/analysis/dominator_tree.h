@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_flow_graph.h"
 
 /** This class builds an immediate dominator tree using separate table flow graphs for ingress and
@@ -10,7 +11,7 @@
   * created (e.g. through gateway merge) and the associated flow graphs must be re-computed
   * accordingly.
   */
-class BuildDominatorTree : public Inspector {
+class BuildDominatorTree : public MauInspector {
  public:
     /// map[x] = y, means that table y is the immediate dominator for table x.
     using ImmediateDominatorMap = ordered_map<const IR::MAU::Table*, const IR::MAU::Table*>;
@@ -27,6 +28,7 @@ class BuildDominatorTree : public Inspector {
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const IR::MAU::Table* tbl) override;
 
     /** Generates a map of indexes to a table pointer. Used as a helper function for building the
       * dominator tree.
