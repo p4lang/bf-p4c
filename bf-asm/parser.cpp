@@ -1954,3 +1954,54 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
         }
     }
 }
+
+// WARNING: This function will print all parser paths. In some programs based on
+// the complexity of parser graphs, this can result in a path explosion as it
+// visits all possible paths and can lead to the function taking an unreasonably
+// large amount of time to execute.
+//
+// The intention for this function is for DEBUG purposes only and should not be
+// checked in with it being called from anywhere for logging due to above
+// potential worst case issue.
+// NOTE: P4C-4306 exhibits this behavior
+//
+// Function also checks for cycles in the parser graph.
+// For debug, call function on a parser object and run assembler with -Tparser:1
+void Parser::print_all_paths() {
+    // Check for cycles in states
+    ordered_set<std::string> vstates;
+    int count = 0;
+    std::function<void(State *, std::string)> visit_states = [&](State *s, std::string sstr) {
+        count++;
+        // To limit execution uncomment and set variable
+        // if (count > COUNT_STATE_PATHS) exit(1);
+        if (s == nullptr) {
+            LOG1("State Path : " << sstr << " => END");
+            return;
+        }
+        // Check for previously visited states to show cycles in parser state
+        // graph
+        if (vstates.count(s->name)) {
+            LOG1("****Revisiting " << s->name << " through path : " << sstr
+                 << ". Parser graph has a cycle");
+            return;
+        }
+        if (!sstr.empty()) sstr += " => ";
+        sstr += s->name;
+        vstates.insert(s->name);
+
+        LOG1("State Path (" << count << ") : depth (" << vstates.size() << ") :" << sstr);
+
+        for (auto m : s->match) {
+            std::stringstream ss;
+            ss << m->match;
+            std::string sstr2 = sstr + ("(" + ss.str() + ")");
+            for (auto ns : m->next) {
+                visit_states(ns, sstr2);
+            }
+        }
+        vstates.erase(s->name);
+    };
+    visit_states(states.begin()->second, "");
+}
+

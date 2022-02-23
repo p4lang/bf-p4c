@@ -360,6 +360,9 @@ class Parser {
 
     int get_prsr_max_dph();
 
+    // Debug
+    void print_all_paths();
+
  private:
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
     void define_state(gress_t gress, pair_t &kv);

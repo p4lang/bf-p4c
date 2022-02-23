@@ -7,6 +7,8 @@
 #include <string>
 #include <sstream>
 
+#include "ordered_set.h"
+
 #include "misc.h"
 
 // ----------------------------------------------------------------------------
@@ -128,7 +130,7 @@ class TwoLevelCache {
  * @brief This class is used for internal tracking of Tofino output map
  * extractor allocation. It is beneficial during the debugging process of this
  * functionality because it can provid the answer to question:
- * "What is alloacted into this extractor slot?" 
+ * "What is alloacted into this extractor slot?"
  */
 class MatchSlotTracker {
     using SetMap  =
@@ -149,7 +151,7 @@ class MatchSlotTracker {
 
     /**
      * @brief Get the db slots object
-     * 
+     *
      * @param match Match line to dump
      * @param slot_idx Passed index of slot which needs to be dumped
      * @return std::string object with dumped data
@@ -675,6 +677,19 @@ class PaddingInfoCollector {
         bool hasPadInfo() {
             return m_padding.size() != 0;
         }
+
+        void print() {
+            std::stringstream message;
+            message << " Pad State Info : " << std::endl;
+            for (auto &m : m_padding) {
+                message << " \t State(match) : " << m.first->state->name
+                    << "(" << m.first->match << ")"
+                    << " -> { m_count8 : " << m.second->m_count8
+                    << ", m_count16 : " << m.second->m_count16
+                    << " }" << std::endl;
+            }
+            LOG1(message.str());
+        }
     };
 
     PadState* getPadState(Parser::State::Match* match) {
@@ -811,7 +826,7 @@ int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &re
 /**
  * @brief Dump the occupancy of extraction slots in output map
  *
- * @param match Current match which is being processed 
+ * @param match Current match which is being processed
  * @param indexes Indexes to inspect
  * @param prefix Prefix to add before the print
  */
@@ -1144,8 +1159,9 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
 /// @param pstate
 template<bool use_8bit>
 void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int node_count,
-                            Parser::State::Match* match, std::set<Parser::State*> &visited,
-                            PaddingInfoCollector::PadState* pstate) {
+                        Parser::State::Match* match, std::set<Parser::State*> &visited,
+                        PaddingInfoCollector::PadState* pstate,
+                        std::map<Parser::State::Match*, int> &cache) {
     if (node_count == 0 || !match) {
         LOG4("Node count or nullptr match was reached");
         return;
@@ -1160,6 +1176,19 @@ void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int n
     visited.insert(match->state);
     LOG3("Padding " << log_pad << " extracts - state = " << match->state->name << ", " <<
          "remaining " << log_pad << " states to pad is " << node_count);
+
+    pstate->print();
+    // Memoization to minimize path visits
+    // If state is visited before with the same or higher node count dont visit it
+    // again. Cache holds a map from state to node count
+    if (cache[match] >= node_count && node_count > 0) {
+        LOG5(" Using cached state(match) : " << match->state->name
+                << "(" << match->match << ") -> node count " << cache[match]);
+        return;
+    }
+    cache[match] = node_count;
+    LOG5(" Caching state(match) : " << match->state->name
+            << "(" << match->match << ") -> node count " << cache[match]);
 
     // We need to be sure that we will not be passing data to 2x16bit busses. Therefore, we have
     // to pad the bus entirely for 16bit extractions. In addition, we need to see node_cout 16bit
@@ -1178,10 +1207,12 @@ void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int n
 
         new_node_count--;
     }
+    if (LOGGING(5)) pstate->print();
 
     for (auto state : match->next) {
         for (auto next_match : state->match) {
-            pad_nodes_extracts<use_8bit>(parser, regs, new_node_count, next_match, visited, pstate);
+            pad_nodes_extracts<use_8bit>(parser, regs, new_node_count,
+                                         next_match, visited, pstate, cache);
         }
     }
 
@@ -1261,8 +1292,12 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
         // Pad extracts: 8b extracts should be padded based on the number of states to flush 16b
         // narrow-to-wide extracts, and 16b extracts should be padded based on the number
         // of states to flush 8b narrow-to-wide extracts.
-        pad_nodes_16b_extracts(parser, regs, pass_8b_nodes, m, visited_states, pstate);
-        pad_nodes_8b_extracts(parser, regs, pass_16b_nodes, m, visited_states, pstate);
+        std::map<Parser::State::Match*, int> cacheNodeCount;
+        pad_nodes_16b_extracts(parser, regs, pass_8b_nodes, m,
+                               visited_states, pstate, cacheNodeCount);
+        cacheNodeCount.clear();
+        pad_nodes_8b_extracts(parser, regs, pass_16b_nodes, m,
+                              visited_states, pstate, cacheNodeCount);
     }
 
     if (LOGGING(1)) {
