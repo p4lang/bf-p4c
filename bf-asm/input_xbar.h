@@ -41,12 +41,9 @@ class InputXbar {
         bool operator==(const Group &a) const { return type == a.type && index == a.index; }
         bool operator<(const Group &a) const {
             return (type << 16) + index < (a.type << 16) + a.index; }
-        static int max_index(Group::type_t t);
-        static int group_size(Group::type_t t);
-        static const char *group_type(Group::type_t t);
     };
 
- private:
+ protected:
     struct Input {
         Phv::Ref        what;
         int             lo, hi;
@@ -75,7 +72,10 @@ class InputXbar {
     uint64_t hash_columns_used(unsigned hash);
     bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
-    Group group_name(bool ternary, const value_t &value) const;
+    virtual int group_max_index(Group::type_t t) const;
+    virtual Group group_name(bool ternary, const value_t &value) const;
+    virtual int group_size(Group::type_t t) const;
+    const char *group_type(Group::type_t t) const;
     void parse_group(Table *t, Group gr, const value_t &value);
     void parse_hash_group(HashGrp &hash_group, const value_t &value);
     void parse_hash_table(Table *t, unsigned index, const value_t &value);
@@ -102,16 +102,14 @@ class InputXbar {
 
     InputXbar() = delete;
     InputXbar(const InputXbar &) = delete;
-
- protected:
     void input(Table *table, bool ternary, const VECTOR(pair_t) &data);
+    InputXbar(Table *table, int lineno) : table(table), lineno(lineno) {}
 
  public:
     const int   lineno;
     int random_seed = -1;
-    explicit InputXbar(Table *table) : table(table), lineno(-1) {}
-    InputXbar(Table *table, bool ternary, const VECTOR(pair_t) &data)
-    : table(table), lineno(data[0].key.lineno) { input(table, ternary, data); }
+    static std::unique_ptr<InputXbar> create(Table *table, int lineno = -1);
+    static std::unique_ptr<InputXbar> create(Table *table, bool tern, const VECTOR(pair_t) &data);
     void pass1();
     void pass2();
     template<class REGS> void write_regs(REGS &regs);

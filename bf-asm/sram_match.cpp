@@ -598,7 +598,7 @@ void SRamMatchTable::common_sram_checks() {
         error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (actions && !action_bus) action_bus.reset(new ActionBus());
     if (!input_xbar)
-        input_xbar.reset(new InputXbar(this));
+        input_xbar = InputXbar::create(this);
 }
 
 void SRamMatchTable::pass1() {

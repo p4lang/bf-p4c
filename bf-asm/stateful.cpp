@@ -36,7 +36,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                                 initial_value_hi = v.value.i; } } }
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar.reset(new InputXbar(this, false, kv.value.map));
+                input_xbar = InputXbar::create(this, false, kv.value.map);
         } else if (kv.key == "data_bytemask") {
             if (CHECKTYPE(kv.value, tINT))
                 data_bytemask = kv.value.i;

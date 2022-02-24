@@ -22,7 +22,7 @@ void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4T
     setup_logical_id();
     if (auto *ixbar = get(data, "input_xbar")) {
         if (CHECKTYPESIZE(*ixbar, tMAP))
-            input_xbar.reset(new InputXbar(this, ternary, ixbar->map)); }
+            input_xbar = InputXbar::create(this, ternary, ixbar->map); }
 }
 
 bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {

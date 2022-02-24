@@ -118,7 +118,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     indirect_bus = -1;
     common_init_setup(data, true, P4Table::MatchEntry);
     if (!input_xbar)
-        input_xbar.reset(new InputXbar(this));
+        input_xbar = InputXbar::create(this);
     if (auto *m = get(data, "match")) {
         if (CHECKTYPE2(*m, tVEC, tMAP)) {
             if (m->type == tVEC)
@@ -984,7 +984,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar.reset(new InputXbar(this, false, kv.value.map));
+                input_xbar = InputXbar::create(this, false, kv.value.map);
         } else if (kv.key == "hash_dist") {
             /* parsed in common_init_setup */
         } else if (kv.key == "selector") {

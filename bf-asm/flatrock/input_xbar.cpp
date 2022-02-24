@@ -1,5 +1,40 @@
 #include "input_xbar.h"
 
+int Flatrock::InputXbar::group_max_index(Group::type_t t) const {
+    switch (t) {
+    case Group::EXACT:   return 2;
+    case Group::TERNARY: return 16;
+    case Group::GATEWAY: return 1;
+    case Group::XCMP:    return 4;
+    default:
+       BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+    return 0;
+}
+
+InputXbar::Group Flatrock::InputXbar::group_name(bool tern, const value_t &key) const {
+    if (key.type == tSTR) {
+        if (key == "gateway") return Group(Group::GATEWAY, 0);
+        if (key == "xcmp") return Group(Group::XCMP, 0);
+    } else if (key.type == tCMD && key.vec.size == 2) {
+        if (key[0] == "exact") {
+            if (key[1] == "byte") return Group(Group::EXACT, 0);
+            if (key[1] == "word") return Group(Group::EXACT, 1);
+        } else if (key[0] == "ternary" && CHECKTYPE(key[1], tINT)) {
+            return Group(Group::TERNARY, key[1].i); } }
+    return Group(Group::INVALID, 0);
+}
+
+int Flatrock::InputXbar::group_size(Group::type_t t) const {
+    switch (t) {
+    case Group::EXACT:   return 20*8;
+    case Group::TERNARY: return 5*8;
+    case Group::GATEWAY: return 8*8;
+    case Group::XCMP:    return 16*8;
+    default:
+        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+    return 0;
+}
+
 template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
     for (auto &group : groups) {

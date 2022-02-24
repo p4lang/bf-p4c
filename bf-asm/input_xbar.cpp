@@ -16,111 +16,52 @@
 #include "cloudbreak/input_xbar.h"
 #include "flatrock/input_xbar.h"
 
-int InputXbar::Group::max_index(Group::type_t t) {
-    switch (options.target) {
-    case TOFINO:
-    case TOFINO2: case TOFINO2H: case TOFINO2U: case TOFINO2M: case TOFINO2A0:
-#ifdef HAVE_CLOUDBREAK
-    case TOFINO3:
-#endif  /* HAVE_CLOUDBREAK */
-        switch (t) {
-        case EXACT:     return EXACT_XBAR_GROUPS;
-        case TERNARY:   return TCAM_XBAR_GROUPS;
-        case BYTE:      return BYTE_XBAR_GROUPS;
-        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
-        break;
-#ifdef HAVE_FLATROCK
-    case TOFINO5:
-        switch (t) {
-        case EXACT:     return 2;
-        case TERNARY:   return 16;
-        case GATEWAY:   return 1;
-        case XCMP:      return 4;
-        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
-        break;
-#endif  /* HAVE_FLATROCK */
-    default:
-        break; }
-    return 0;
-}
-
-int InputXbar::Group::group_size(Group::type_t t) {
-    switch (options.target) {
-    case TOFINO:
-    case TOFINO2: case TOFINO2H: case TOFINO2U: case TOFINO2M: case TOFINO2A0:
-#ifdef HAVE_CLOUDBREAK
-    case TOFINO3:
-#endif  /* HAVE_CLOUDBREAK */
-        switch (t) {
-        case EXACT:     return EXACT_XBAR_GROUP_SIZE;
-        case TERNARY:   return TCAM_XBAR_GROUP_SIZE;
-        case BYTE:      return BYTE_XBAR_GROUP_SIZE;
-        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
-        break;
-#ifdef HAVE_FLATROCK
-    case TOFINO5:
-        switch (t) {
-        case EXACT:     return 20*8;
-        case TERNARY:   return 5*8;
-        case GATEWAY:   return 8*8;
-        case XCMP:      return 16*8;
-        default:        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
-        break;
-#endif  /* HAVE_FLATROCK */
-    default:
-        break; }
-    return 0;
-}
-
-const char *InputXbar::Group::group_type(Group::type_t t) {
+int InputXbar::group_max_index(Group::type_t t) const {
     switch (t) {
-    case EXACT:   return "exact";
-    case TERNARY: return "ternary";
-    case BYTE:    return "byte";
-    case GATEWAY: return "gateway";
-    case XCMP:    return "xcmp";
-    default:      return ""; }
+    case Group::EXACT:   return EXACT_XBAR_GROUPS;
+    case Group::TERNARY: return TCAM_XBAR_GROUPS;
+    case Group::BYTE:    return BYTE_XBAR_GROUPS;
+    default:
+        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+    return 0;
 }
 
 InputXbar::Group InputXbar::group_name(bool tern, const value_t &key) const {
-    int index = 1;
-    switch (options.target) {
-    case TOFINO:
-    case TOFINO2: case TOFINO2H: case TOFINO2U: case TOFINO2M: case TOFINO2A0:
-#ifdef HAVE_CLOUDBREAK
-    case TOFINO3:
-#endif  /* HAVE_CLOUDBREAK */
-        if (key.type != tCMD) break;
+    if (CHECKTYPE(key, tCMD)) {
+        int index = 1;
         if (key[0] != "group" && (key[1] == "group" || key[1] == "table"))
             ++index;
-        if (!PCHECKTYPE(key.vec.size == index+1, key[index], tINT))
-            break;
-        index = key[index].i;
-        if (key[0] == "group")
-            return Group(tern ? Group::TERNARY : Group::EXACT, index);
-        if (key[0] == "exact" && key[1] == "group")
-            return Group(Group::EXACT, index);
-        if (key[0] == "ternary" && key[1] == "group")
-            return Group(Group::TERNARY, index);
-        if (key[0] == "byte" && key[1] == "group")
-            return Group(Group::BYTE, index);
-        break;
-#ifdef HAVE_FLATROCK
-    case TOFINO5:
-        if (key.type == tSTR) {
-            if (key == "gateway") return Group(Group::GATEWAY, 0);
-            if (key == "xcmp") return Group(Group::XCMP, 0);
-        } else if (key.type == tCMD && key.vec.size == 2) {
-            if (key[0] == "exact") {
-                if (key[1] == "byte") return Group(Group::EXACT, 0);
-                if (key[1] == "word") return Group(Group::EXACT, 1);
-            } else if (key[0] == "ternary" && CHECKTYPE(key[1], tINT)) {
-                return Group(Group::TERNARY, key[1].i); } }
-        break;
-#endif  /* HAVE_FLATROCK */
-    default:
-        break; }
+        if (PCHECKTYPE(key.vec.size == index+1, key[index], tINT)) {
+            index = key[index].i;
+            if (key[0] == "group")
+                return Group(tern ? Group::TERNARY : Group::EXACT, index);
+            if (key[0] == "exact" && key[1] == "group")
+                return Group(Group::EXACT, index);
+            if (key[0] == "ternary" && key[1] == "group")
+                return Group(Group::TERNARY, index);
+            if (key[0] == "byte" && key[1] == "group")
+                return Group(Group::BYTE, index); } }
     return Group(Group::INVALID, 0);
+}
+
+int InputXbar::group_size(Group::type_t t) const {
+    switch (t) {
+    case Group::EXACT:   return EXACT_XBAR_GROUP_SIZE;
+    case Group::TERNARY: return TCAM_XBAR_GROUP_SIZE;
+    case Group::BYTE:    return BYTE_XBAR_GROUP_SIZE;
+    default:
+        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
+    return 0;
+}
+
+const char *InputXbar::group_type(Group::type_t t) const {
+    switch (t) {
+    case Group::EXACT:   return "exact";
+    case Group::TERNARY: return "ternary";
+    case Group::BYTE:    return "byte";
+    case Group::GATEWAY: return "gateway";
+    case Group::XCMP:    return "xcmp";
+    default:             return ""; }
 }
 
 void InputXbar::parse_group(Table *t, Group gr, const value_t &value) {
@@ -137,9 +78,8 @@ void InputXbar::parse_group(Table *t, Group gr, const value_t &value) {
             } else {
                 lo = reg.key.lo;
                 hi = reg.key.hi; }
-            if (lo < 0 || lo >= Group::group_size(gr.type)) {
-                error(reg.key.lineno, "Invalid offset for %s group",
-                      Group::group_type(gr.type));
+            if (lo < 0 || lo >= group_size(gr.type)) {
+                error(reg.key.lineno, "Invalid offset for %s group", group_type(gr.type));
             } else if (gr.type == Group::TERNARY && lo >= 40) {
                 if (hi >= lo) hi -= 40;
                 groups[Group(Group::BYTE, gr.index/2)].emplace_back(
@@ -294,7 +234,7 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
             // or maybe the compiler should be generating a random hash here?
             continue; }
         if (auto grp = group_name(tern, kv.key)) {
-            if (grp.index >= Group::max_index(grp.type)) {
+            if (grp.index >= group_max_index(grp.type)) {
                 error(kv.key.lineno, "invalid group descriptor");
                 continue; }
             parse_group(t, grp, kv.value);
@@ -318,6 +258,20 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
         } else {
             error(kv.key.lineno, "expecting a group or hash descriptor"); }
     }
+}
+
+std::unique_ptr<InputXbar> InputXbar::create(Table *table, int lineno) {
+#ifdef HAVE_FLATROCK
+    if (options.target == TOFINO5)
+        return std::unique_ptr<InputXbar>(new Flatrock::InputXbar(table, lineno));
+#endif /* HAVE_FLATROCK */
+    return std::unique_ptr<InputXbar>(new InputXbar(table, lineno));
+}
+
+std::unique_ptr<InputXbar> InputXbar::create(Table *table, bool tern, const VECTOR(pair_t) &data) {
+    auto rv = create(table, data[0].key.lineno);
+    rv->input(table, tern, data);
+    return rv;
 }
 
 unsigned InputXbar::tcam_width() {
@@ -564,7 +518,7 @@ void InputXbar::pass1() {
                         error(input.what.lineno, "Input xbar size doesn't match register size");
                 } else {
                     input.hi = input.lo + input.what->size() - 1; }
-                if (input.lo >= Group::group_size(group.first.type))
+                if (input.lo >= group_size(group.first.type))
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); }
                 if (group.first.type != Group::EXACT)
@@ -685,7 +639,7 @@ void InputXbar::pass2() {
                         add_use(bytes_in_use, other->groups[group.first]);
             int need = input.what->hi/8U - input.what->lo/8U + 1;
             unsigned mask = (1U << need)-1;
-            int max = (Group::group_size(group.first.type)+7)/8 - need;
+            int max = (group_size(group.first.type)+7)/8 - need;
             for (int i = 0; i <= max; i++, mask <<= 1)
                 if (!(bytes_in_use & mask)) {
                     input.lo = i*8 + input.what->lo%8U;
@@ -696,8 +650,7 @@ void InputXbar::pass2() {
                     break; }
             if (input.lo < 0) {
                 error(input.what.lineno, "No space in input xbar %s group %d for %s",
-                      Group::group_type(group.first.type), group.first.index,
-                      input.what.name());
+                      group_type(group.first.type), group.first.index, input.what.name());
                 LOG1("Failed to put " << input.what << " into " << group.first <<
                      " in stage " << table->stage->stageno);
                 LOG1("  inuse: " << GroupSet(use, group.first));

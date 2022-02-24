@@ -112,7 +112,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             gw_unit = kv.value.i;
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar.reset(new InputXbar(this, false, kv.value.map));
+                input_xbar = InputXbar::create(this, false, kv.value.map);
         } else if (kv.key == "format") {
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
                 format.reset(new Format(this, kv.value.map));
