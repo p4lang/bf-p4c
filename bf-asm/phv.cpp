@@ -95,7 +95,7 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
                 user_defined[&sl->reg].second[i].insert(name);
               }
             } else {
-              for (int i=0; i < Target::NUM_MAU_STAGES(); i++) {
+              for (int i=0; i <= Target::NUM_MAU_STAGES(); i++) {
                 user_defined[&sl->reg].second[i].insert(name);
               }
             }
