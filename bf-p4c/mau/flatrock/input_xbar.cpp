@@ -49,6 +49,17 @@ static PHV::Container word_base(PHV::Container c) {
     }
 }
 
+// bitmasks to separate the properly aligned slots for things in even and odd bytes
+// of 16- and 32-bit PHEs.  64 bits is bigger than any set of bytes we need here.
+static bitvec halfword_align[2] = { bitvec(0x5555555555555555ULL), bitvec(0xaaaaaaaaaaaaaaaaULL) };
+
+static int find_free_byte(bitvec free, IXBar::Use::Byte *byte) {
+    if (byte->container.size() != 8) {
+        // 16 and 32 bit PHEs need to be halfword aligned
+        free &= halfword_align[(byte->lo / 8U) & 1]; }
+    return free.ffs();
+}
+
 void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &stageResource) const {
     LOG_FEATURE("resources", 2, "add_xbar_bytes_usage (stage=" << stage <<
                                 "), table: " << used_by);
@@ -86,15 +97,19 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 
 bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
                      BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use) {
-    // Find the first free byte slot
-    auto next = std::find_if(byte_use.begin(), byte_use.end(),
-            [](std::pair<PHV::Container, int> &a) { return !a.first; } );
+    // Find the free byte slots
+    bitvec byte_free;
+    int i = 0;
+    for (auto &b : byte_use) {
+        if (!b.first) byte_free[i] = 1;
+        ++i; }
     for (auto *byte : to_alloc) {
         BUG_CHECK(byte->lo % 8U == 0, "misaligned byte for ixbar %s", *byte);
         byte->search_bus = 0;  // not relevant for flatrock
-        if (next == byte_use.end()) return false;
-        byte->loc = Loc(0, next - byte_use.begin());
-        while (++next != byte_use.end() && next->first) {} }
+        int i = find_free_byte(byte_free, byte);
+        if (i < 0) return false;
+        byte_free[i] = 0;
+        byte->loc = Loc(0, i); }
     return true;
 }
 
@@ -108,23 +123,31 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
         by_word[word_base(byte->container)].insert(byte);
         byte->search_bus = 0;  // not relevant for flatrock
     }
-    // Find the first free byte and word slots
-    auto byte = std::find_if(byte_use.begin(), byte_use.end(),
-            [](std::pair<PHV::Container, int> &a) { return !a.first; } );
+    // Find the free byte slots, and the first free word slot
+    bitvec byte_free;
+    int i = 0;
+    for (auto &b : byte_use) {
+        if (!b.first) byte_free[i] = 1;
+        ++i; }
     auto word = std::find_if(word_use.begin(), word_use.end(),
             [](PHV::Container &a) { return !a; } );
     for (auto &grp : Values(by_word)) {
-        if ((grp.size() > 1 && word != word_use.end()) || byte == byte_use.end()) {
-            // needs 2+ bytes in the word, or ran out of byte slots, so use a word slot
-            if (word == word_use.end()) return false;
-            for (auto *b : grp)
-                b->loc = Loc(1, word - word_use.begin());
-            while (++word != word_use.end() && *word) {}
-        } else {
+        if (grp.size() == 1 || word == word_use.end()) {
+            // try to allocate byte slot(s)
+            bool ok = true;
             for (auto *b : grp) {
-                if (byte == byte_use.end()) return false;
-                b->loc = Loc(0, byte - byte_use.begin());
-                while (++byte != byte_use.end() && byte->first) {} } } }
+                int i = find_free_byte(byte_free, b);
+                if (i < 0) {
+                    ok = false;
+                    break; }
+                b->loc = Loc(0, i);
+                byte_free[i] = 0; }
+            if (ok) continue; }
+        // needs 2+ bytes in the word, or ran out of byte slots, so use a word slot
+        if (word == word_use.end()) return false;
+        for (auto *b : grp)
+            b->loc = Loc(1, word - word_use.begin());
+        while (++word != word_use.end() && *word) {} }
     return true;
 }
 

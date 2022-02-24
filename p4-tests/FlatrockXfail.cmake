@@ -19,7 +19,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "hdrs.data.b1 misaligned on input_xbar"
+  "Flatrock .* not implemented yet!"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
