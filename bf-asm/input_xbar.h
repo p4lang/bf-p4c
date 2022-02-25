@@ -85,7 +85,7 @@ class InputXbar {
        std::map<int, std::pair<const Input &, int>>     tcam_use;
        std::set<InputXbar *>                            ixbars_added;
     };
-    void check_tcam_input_conflict(Group group, Input &input, TcamUseCache &tcam_use);
+    virtual void check_input(Group group, Input &input, TcamUseCache &tcam_use);
     int tcam_input_use(int out_byte, int phv_byte, int phv_size);
     void tcam_update_use(TcamUseCache &use);
     void gen_hash_column(std::pair<const int, HashCol> &col,

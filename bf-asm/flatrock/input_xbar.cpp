@@ -35,6 +35,28 @@ int Flatrock::InputXbar::group_size(Group::type_t t) const {
     return 0;
 }
 
+void Flatrock::InputXbar::check_input(Group group, Input &input, TcamUseCache &tcam_use) {
+    if (group.type == Group::TERNARY) {
+        // all ternary are byte organized, but concatenated in groups of 5 bytes
+        unsigned align = input.what->reg.size == 8 ? 8 : 16;
+        unsigned bit = input.lo + 40 * group.index;
+        if (bit % align != input.what->lo % align)
+            error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+    } else if (group.index == 0) {
+        // a byte organized group -- 8 bit alignment for 8 bit PHEs, 16 bit for 16/32 PHEs
+        unsigned align = input.what->reg.size == 8 ? 8 : 16;
+        if (input.lo % align != input.what->lo % align)
+            error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+    } else if (group.index == 1) {
+        // a word group -- needs 32-bit alignment
+        unsigned bit = input.what->reg.index * input.what->reg.size + input.what->lo;
+        if (input.lo % 32U != bit % 32U)
+            error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+    } else {
+        BUG("unexpected group %s %d for %s", group_type(group.type), group.index, Target::name());
+    }
+}
+
 template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
     for (auto &group : groups) {

@@ -437,7 +437,11 @@ void InputXbar::tcam_update_use(TcamUseCache &use) {
     }
 }
 
-void InputXbar::check_tcam_input_conflict(InputXbar::Group group, Input &input, TcamUseCache &use) {
+void InputXbar::check_input(InputXbar::Group group, Input &input, TcamUseCache &use) {
+    if (group.type == Group::EXACT) {
+        if (input.lo % input.what->reg.size != input.what->lo)
+            error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+        return; }
     unsigned bit_align_mask = input.lo >= 40 ? 3 : 7;
     unsigned byte_align_mask = (input.what->reg.size-1) >> 3;
     int group_base = (group.index * 11 + 1)/2U;
@@ -521,10 +525,7 @@ void InputXbar::pass1() {
                 if (input.lo >= group_size(group.first.type))
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); }
-                if (group.first.type != Group::EXACT)
-                    check_tcam_input_conflict(group.first, input, tcam_use);
-                else if (input.lo % input.what->reg.size != input.what->lo)
-                    error(input.what.lineno, "%s misaligned on input_xbar", input.what.name()); }
+                check_input(group.first, input, tcam_use); }
         auto &use = table->stage->ixbar_use;
         for (InputXbar *other : use[group.first]) {
             if (other->groups.count(group.first) &&

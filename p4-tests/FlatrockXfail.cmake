@@ -39,7 +39,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Assembler BUG"
+  "Flatrock .* not implemented yet!"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 

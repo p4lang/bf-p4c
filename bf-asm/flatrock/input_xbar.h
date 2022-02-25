@@ -10,6 +10,7 @@ namespace Flatrock {
 
 class InputXbar : public ::InputXbar {
     friend class ::InputXbar;
+    void check_input(Group group, Input &input, TcamUseCache &tcam_use) override;
     int group_max_index(Group::type_t t) const override;
     Group group_name(bool ternary, const value_t &value) const override;
     int group_size(Group::type_t t) const override;
