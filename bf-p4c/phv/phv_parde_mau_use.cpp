@@ -18,6 +18,8 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     use_i.clear();
     for (auto &x : deparser_i) x.clear();
     for (auto &x : extracted_i) x.clear();
+    for (auto &x : extracted_from_pkt_i) x.clear();
+    for (auto &x : extracted_from_const_i) x.clear();
     written_i.clear();
     used_alu_i.clear();
     return rv;
@@ -40,8 +42,13 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
     BUG_CHECK(f, "Extract to non-PHV destination: %1%", e);
     extracted_i[thread][f->id] = true;
 
-    auto rval = e->source->to<IR::BFN::ConstantRVal>();
-    if (rval)
+    auto ibufRVal = e->source->to<IR::BFN::PacketRVal>();
+    if (ibufRVal) {
+        extracted_from_pkt_i[thread][f->id] = true;
+        // std::cerr << "EFP: " << f->id << std::endl;
+    }
+    auto crval = e->source->to<IR::BFN::ConstantRVal>();
+    if (crval)
         extracted_from_const_i[thread][f->id] = true;
     return true;
 }
@@ -169,6 +176,15 @@ bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, boost::optional<gress_
         return extracted_i[*gress][f->id];
 }
 
+bool Phv_Parde_Mau_Use::is_extracted_from_pkt(const PHV::Field *f,
+        boost::optional<gress_t> gress) const {
+    BUG_CHECK(f, "Null field");
+    if (!gress)
+        return extracted_from_pkt_i[INGRESS][f->id] || extracted_from_pkt_i[EGRESS][f->id];
+    else
+        return extracted_from_pkt_i[*gress][f->id];
+}
+
 bool Phv_Parde_Mau_Use::is_extracted_from_constant(const PHV::Field *f,
         boost::optional<gress_t> gress) const {
     BUG_CHECK(f, "Null field");
@@ -177,7 +193,6 @@ bool Phv_Parde_Mau_Use::is_extracted_from_constant(const PHV::Field *f,
     else
         return extracted_from_const_i[*gress][f->id];
 }
-
 
 bool Phv_Parde_Mau_Use::is_allocation_required(const PHV::Field *f) const {
     return !f->is_ignore_alloc() && (is_referenced(f) || f->isGhostField());

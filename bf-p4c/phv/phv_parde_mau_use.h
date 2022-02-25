@@ -29,6 +29,9 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// Fields extracted in the parser.
     bitvec      extracted_i[GRESS_T_COUNT];
 
+    /// Fields extracted in the parser from the packet stream
+    bitvec      extracted_from_pkt_i[GRESS_T_COUNT];
+
     /// Fields extracted in the parser from a constant.
     bitvec      extracted_from_const_i[GRESS_T_COUNT];
 
@@ -71,6 +74,10 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
 
     /// @returns true if @p f is extracted in the (ingress or egress) parser.
     bool is_extracted(const PHV::Field *f, boost::optional<gress_t> gress = boost::none) const;
+
+    /// @returns true if @p f is extracted in the (ingress or egress) parser from packet data.
+    bool is_extracted_from_pkt(const PHV::Field *f,
+            boost::optional<gress_t> gress = boost::none) const;
 
     /// @returns true if @p f is extracted in the (ingress or egress) parser from a constant.
     bool is_extracted_from_constant(const PHV::Field *f,

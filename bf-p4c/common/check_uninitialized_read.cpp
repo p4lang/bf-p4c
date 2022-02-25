@@ -2,15 +2,52 @@
 
 bool CheckUninitializedRead::printed = false;
 
+bool CheckUninitializedRead::preorder(const IR::BFN::Pipe* pipe) {
+    pipe->apply(uses);
+    return true;
+}
+
 bool CheckUninitializedRead::preorder(const IR::BFN::DeparserParameter* param) {
     pov_protected_fields.insert(phv.field(param->source->field));
     return false;
 }
-bool CheckUninitializedRead::preorder(const IR::BFN::Digest * digest) {
+
+bool CheckUninitializedRead::preorder(const IR::BFN::Digest* digest) {
     pov_protected_fields.insert(phv.field(digest->selector->field));
     return false;
 }
 
+bool CheckUninitializedRead::copackedFieldExtracted(const FieldDefUse::locpair& use) {
+    // Walk through the slices corresponding to the use
+    auto read = PHV::FieldUse(PHV::FieldUse::READ);
+    const auto &allocs = phv.get_alloc(use.second, PHV::AllocContext::of_unit(use.first), &read);
+    for (const auto &sl : allocs) {
+        auto c = sl.container();
+        if (c.is(PHV::Kind::dark) || c.is(PHV::Kind::tagalong)) continue;
+
+        // Walk through all slices in the container that are written in the parser and see if
+        // any are not mutually exclusive and are extracted from the packet.
+        auto write = PHV::FieldUse(PHV::FieldUse::WRITE);
+        for (auto &other : phv.get_slices_in_container(c, PHV::AllocContext::PARSER, &write)) {
+            if (other.field() == sl.field()) continue;
+            if (phv.isFieldMutex(other.field(), sl.field())) continue;
+
+            if (Device::currentDevice() == Device::JBAY
+#ifdef HAVE_CLOUDBREAK
+                || Device::currentDevice() == Device::CLOUDBREAK
+#endif /* HAVE_CLOUDBREAK */
+            ) {
+                if (sl.container_slice().lo / 8 > other.container_slice().hi / 8 ||
+                    sl.container_slice().hi / 8 < other.container_slice().lo / 8)
+                    continue;
+            }
+
+            if (uses.is_extracted_from_pkt(other.field())) return true;
+        }
+    }
+
+    return false;
+}
 
 void CheckUninitializedRead::end_apply() {
     auto is_ignored_field = [&](const PHV::Field &field){
@@ -52,14 +89,34 @@ void CheckUninitializedRead::end_apply() {
         LOG3("checking " << field);
         if (is_ignored_field(field)) continue;
         for (const auto &use : defuse.getAllUses(field.id)) {
-            const auto & defs_of_use = defuse.getDefs(use);
+            // Are the slices initialized in always-run actions?
+            // This should not be needed, but is currently required because defuse
+            // analysis doesn't correctly handle ARA tables. (See: P4C-4331)
+            auto read = PHV::FieldUse(PHV::FieldUse::READ);
+            const auto &allocs =
+                phv.get_alloc(use.second, PHV::AllocContext::of_unit(use.first), &read);
+            bool has_ara = allocs.size() > 0;
+            for (const auto &alloc : allocs) {
+                has_ara &= alloc.hasInitPrimitive();
+            }
+            if (has_ara) continue;
+
+            // If any other fields are packed in the same container(s) as this one, and if any of
+            // those fields are extracted from packet data, then make sure we don't have an
+            // ImplicitParerInit, otherwise the packet extract will corrupt this field.
+            bool pkt_extract = copackedFieldExtracted(use);
+            const auto &defs_of_use = defuse.getDefs(use);
             bool uninit = defs_of_use.empty();
             if (!uninit) {
                 for (const auto &def : defs_of_use) {
                     if (def.second->is<ImplicitParserInit>() &&
-                        pragmas.pa_no_init().getFields().count(&field)) {
-                        LOG3("Use: (" << DBPrint::Brief << use.first << ", " << use.second <<
-                             ") has a ImplicitParserInit def but pa_no_init is on");
+                        (pragmas.pa_no_init().getFields().count(&field) || pkt_extract)) {
+                        LOG3("Use: ("
+                             << DBPrint::Brief << use.first << ", " << use.second
+                             << ") has an ImplicitParserInit def but "
+                             << (pkt_extract
+                                     ? "a field in the same container is extracted from packet data"
+                                     : "pa_no_init is on"));
                         uninit = true;
                         break;
                     }
@@ -81,10 +138,16 @@ void CheckUninitializedRead::end_apply() {
                     ") does not have defs");
             }
             if (uninit) {
-                ::warning(
-                    "%s is read in %s, but it is totally or partially uninitialized",
-                    field.name,
-                    use.first);
+                if (pkt_extract)
+                    ::warning(
+                        "%s is read in %s, but it is totally or partially uninitialized after "
+                        "being corrupted by a parser extraction to the same container(s)",
+                        field.name, use.first);
+                else
+                    ::warning(
+                        "%s is read in %s, but it is totally or partially uninitialized",
+                        field.name,
+                        use.first);
             }
         }
     }
