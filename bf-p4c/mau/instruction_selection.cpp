@@ -609,16 +609,17 @@ class DoInstructionSelection::SplitInstructions : public Transform {
 // table "ingress_assign_const_to_phv_0" vs "ingress_assign_const_to_phv_1". Ultimately the
 // metadata PHV selected should be the same because of overlay.
 
-// TODO(wuc): potential optimization:
-// consider a IR tree like this:
-//                (TableSeq a)
-//                  /     \
-//       (TableSeq b)      (TableSeq c)
-//         /    \             /    \
-//      SubSat1 ...          ...   SubSat2
-// In current solution, an action will be inserted into TableSeq b and an action will be inserted
-// into TableSeq C to initialize SubSat1 and SubSat2 respectively. However, it can be more optimal
-// if we only insert one action in TableSeq a to initialize SubSat1 and SubSat2 together.
+/* TODO(wuc): potential optimization:
+ * consider a IR tree like this:
+ *                (TableSeq a)
+ *                  /     \
+ *       (TableSeq b)      (TableSeq c)
+ *         /    \             /    \
+ *      SubSat1 ...          ...   SubSat2
+ * In current solution, an action will be inserted into TableSeq b and an action will be inserted
+ * into TableSeq C to initialize SubSat1 and SubSat2 respectively. However, it can be more optimal
+ * if we only insert one action in TableSeq a to initialize SubSat1 and SubSat2 together.
+ */
 const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts) {
     static int id = 0;
 
